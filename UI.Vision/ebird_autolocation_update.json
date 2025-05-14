@@ -1,0 +1,294 @@
+{
+  "Name": "eBird AutoLocation Update",
+  "CreationDate": "2025-5-15",
+  "Commands": [
+    {
+      "Command": "storeText",
+      "Target": "xpath=//span[contains(@class,'Heading-sub--inline')]",
+      "Value": "gps",
+      "Description": "Extract GPS coordinates from the page (from detailed location header)"
+    },
+    {
+      "Command": "echo",
+      "Target": "GPS Location: ${gps}",
+      "Value": "blue",
+      "Description": "Display extracted location text"
+    },
+    {
+      "Command": "executeScript",
+      "Target": "return document.evaluate(\"//span[contains(text(),'Personal Location')]\", document, null, XPathResult.BOOLEAN_TYPE, null).booleanValue ? 'personal' : 'shared';",
+      "Value": "locationType",
+      "Description": "Set location type label: 'personal' or 'shared'"
+    },
+    {
+      "Command": "echo",
+      "Target": "Location type: ${locationType}",
+      "Value": "blue",
+      "Description": "Show location type"
+    },
+    {
+      "Command": "store",
+      "Target": "${gps}",
+      "Value": "!clipboard",
+      "Description": "Copy extracted location text to clipboard for external use"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var parts = ${gps}.split(','); if (parts.length != 2) return false; var lat = parseFloat(parts[0]); var lon = parseFloat(parts[1]); return (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180);",
+      "Value": "isValidGPS",
+      "Description": "Validate GPS structure and numeric latitude/longitude bounds"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${isValidGPS} == false",
+      "Value": "",
+      "Description": "Exit early if GPS values are invalid"
+    },
+    {
+      "Command": "echo",
+      "Target": "❌ Invalid GPS format in location text.",
+      "Value": "red",
+      "Description": "Show error for invalid GPS"
+    },
+    {
+      "Command": "throwError",
+      "Target": "Stopping due to invalid GPS.",
+      "Value": "",
+      "Description": "Exit macro if GPS fails validation"
+    },
+    {
+      "Command": "else",
+      "Target": "",
+      "Value": "",
+      "Description": "Valid GPS data was found"
+    },
+    {
+      "Command": "echo",
+      "Target": "Valid GPS data found",
+      "Value": "blue",
+      "Description": "Display confirmation that valid GPS data was found"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End block for GPS validation"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var coords = ${gps}.split(','); return coords[0].trim();",
+      "Value": "lat",
+      "Description": "Extract latitude from GPS string"
+    },
+    {
+      "Command": "echo",
+      "Target": "Latitude: ${lat}",
+      "Value": "blue",
+      "Description": "Display parsed lat/lon"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var coords = ${gps}.split(','); return coords[1].trim();",
+      "Value": "lon",
+      "Description": "Extract longitude from GPS string"
+    },
+    {
+      "Command": "echo",
+      "Target": "Longitude: ${lon}",
+      "Value": "blue",
+      "Description": "Display parsed lat/lon"
+    },
+    {
+      "Command": "XRun",
+      "Target": "/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py",
+      "Value": "",
+      "Description": "Run script to format name"
+    },
+    {
+      "Command": "label",
+      "Target": "waitForFormatted",
+      "Value": "",
+      "Description": "Start polling loop"
+    },
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "temp",
+      "Description": "Get clipboard"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${temp}'; if (t.indexOf('(') > -1 && t.indexOf(',') > -1) { return true; } else { return false; }",
+      "Value": "formattedReady",
+      "Description": "Check if clipboard looks like a formatted name (contains '(' and ',')"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${formattedReady} == false",
+      "Value": "",
+      "Description": "Repeat if not ready"
+    },
+    {
+      "Command": "pause",
+      "Target": "300",
+      "Value": "",
+      "Description": "Short delay"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "waitForFormatted",
+      "Value": "",
+      "Description": "Loop again"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End polling"
+    },
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "formatted",
+      "Description": "Save formatted location"
+    },
+    {
+      "Command": "echo",
+      "Target": "Formatted Name: ${formatted}",
+      "Value": "blue",
+      "Description": "Log formatted result"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var str = ${formatted}; return str.indexOf('Unknown') === 0;",
+      "Value": "isUnknown",
+      "Description": "Check if formatted name begins with 'Unknown'"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${isUnknown} == true",
+      "Value": "",
+      "Description": "Abort if 'Unknown'"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠ Location is 'Unknown'. Manual fix needed.",
+      "Value": "red",
+      "Description": "Warn about unknown"
+    },
+    {
+      "Command": "throwError",
+      "Target": "'Unknown' name returned. Stopping.",
+      "Value": "",
+      "Description": "Stop macro"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End check"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${locationType} == 'personal'",
+      "Value": "",
+      "Description": "If it's a personal location"
+    },
+    {
+      "Command": "type",
+      "Target": "id=renameLoc",
+      "Value": "${formatted}",
+      "Description": "Enter new formatted checklist name"
+    },
+    {
+      "Command": "click",
+      "Target": "name=renameBut",
+      "Value": "",
+      "Description": ""
+    },
+    {
+      "Command": "echo",
+      "Target": "✅ Personal location renamed",
+      "Value": "green",
+      "Description": "Log success"
+    },
+    {
+      "Command": "else",
+      "Target": "",
+      "Value": "",
+      "Description": "ELSE shared location"
+    },
+    {
+      "Command": "echo",
+      "Target": "Personalising shared checklist location",
+      "Value": "blue",
+      "Description": "Log formatted result"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "linkText=My Checklists",
+      "Value": "",
+      "Description": "Navigate to checklist"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=(//li[contains(@class,'ResultsStats--manageMyChecklists')]//a[contains(@href,'/checklist/')])[1]",
+      "Value": "",
+      "Description": "Open first checklist"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//a[contains(text(),'Edit Location')]",
+      "Value": "",
+      "Description": "Click Edit"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//a[contains(text(),'Use Latitude/Longitude')]",
+      "Value": "",
+      "Description": "Choose GPS entry"
+    },
+    {
+      "Command": "type",
+      "Target": "name=lat",
+      "Value": "${lat}",
+      "Description": "Enter lat"
+    },
+    {
+      "Command": "type",
+      "Target": "name=lng",
+      "Value": "${lon}",
+      "Description": "Enter lon"
+    },
+    {
+      "Command": "click",
+      "Target": "xpath=//button[@name='continue']",
+      "Value": "",
+      "Description": "Submit coords"
+    },
+    {
+      "Command": "type",
+      "Target": "id=name",
+      "Value": "${formatted}",
+      "Description": "Input name"
+    },
+    {
+      "Command": "click",
+      "Target": "xpath=//button[@name='continue']",
+      "Value": "",
+      "Description": "Submit name"
+    },
+    {
+      "Command": "echo",
+      "Target": "✅ Finished personalising shared checklist location",
+      "Value": "green",
+      "Description": "Log success"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "Close if block"
+    }
+  ]
+}
