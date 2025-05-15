@@ -43,7 +43,8 @@ if data['status'] == 'OK':
         locality = "Unknown"
 
     formatted_name = f"{locality} ( {lat}, {lon} )"
-    pyperclip.copy(formatted_name)
+    import subprocess
+    subprocess.run(['/usr/bin/pbcopy'], input=formatted_name.encode())
     print(formatted_name)
 else:
     print(f"Geocoding failed: {data.get('status', 'Unknown error')}")
