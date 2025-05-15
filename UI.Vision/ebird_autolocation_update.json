@@ -88,15 +88,39 @@
     },
     {
       "Command": "executeScript",
-      "Target": "return document.evaluate(\"//span[contains(text(),'Personal Location')]\", document, null, XPathResult.BOOLEAN_TYPE, null).booleanValue ? 'personal' : 'shared';",
+      "Target": "var t = document.body.innerText; var p = t.includes('Personal Location'); var s = t.includes('Shared location owned by'); if (p && s) { return 'shared'; } if (p && !s) { return 'personal'; } return 'other';",
       "Value": "locationType",
-      "Description": "Set location type label: 'personal' or 'shared'"
+      "Description": "Detect shared vs personal vs other"
     },
     {
       "Command": "echo",
       "Target": "Location type: ${locationType}",
       "Value": "blue",
       "Description": "Show location type"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${locationType} == 'other'",
+      "Value": "",
+      "Description": ""
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Unsupported location type (probably a Hotspot). Skipping.",
+      "Value": "red",
+      "Description": ""
+    },
+    {
+      "Command": "throwError",
+      "Target": "Location type was not personal or shared. Aborting.",
+      "Value": "",
+      "Description": ""
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": ""
     },
     {
       "Command": "store",
