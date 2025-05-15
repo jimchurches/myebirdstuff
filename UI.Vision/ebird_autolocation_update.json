@@ -2,6 +2,63 @@
   "Name": "eBird AutoLocation Update",
   "CreationDate": "2025-5-15",
   "Commands": [
+      {
+    "Command": "echo",
+    "Target": "🛠️  Set platform to 'mac' or 'win' at the top of the macro!",
+    "Value": "blue"
+  },
+{
+  "Command": "if_v2",
+  "Target": "${platform} == 'mac'"
+},
+{
+  "Command": "store",
+  "Target": "/usr/bin/python3",
+  "Value": "pythonPath"
+},
+{
+  "Command": "store",
+  "Target": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py\"",
+  "Value": "scriptPath"
+},
+{
+  "Command": "else"
+},
+{
+  "Command": "store",
+  "Target": "C:\\Python39\\python.exe",
+  "Value": "pythonPath"
+},
+{
+  "Command": "store",
+  "Target": "\"C:\\Users\\James\\Documents\\eBirdChecklistNameFromGPS\\eBirdChecklistNameFromGPS.py\"",
+  "Value": "scriptPath"
+},
+{
+  "Command": "end"
+},
+
+{
+  "Command": "store",
+  "Target": "mac",  // or "win"
+  "Value": "platform"
+},
+{
+  "Command": "echo",
+  "Target": "🛠️ Platform: ${platform}",
+  "Value": "blue"
+},
+{
+  "Command": "echo",
+  "Target": "🐍 Python Path: ${pythonPath}",
+  "Value": "blue"
+},
+{
+  "Command": "echo",
+  "Target": "📜 Script Path: ${scriptPath}",
+  "Value": "blue"
+},
+
     {
       "Command": "storeText",
       "Target": "xpath=//span[contains(@class,'Heading-sub--inline')]",
