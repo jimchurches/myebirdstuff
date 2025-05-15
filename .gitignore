@@ -1,2 +1,4 @@
+.DS_Store
+
 # Don't track secrets
 config_secret.py
