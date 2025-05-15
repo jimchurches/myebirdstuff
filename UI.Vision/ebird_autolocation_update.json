@@ -100,8 +100,8 @@
     },
     {
       "Command": "XRun",
-      "Target": "/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py",
-      "Value": "",
+      "Target": "/usr/bin/python3",
+      "Value": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py\"",
       "Description": "Run script to format name"
     },
        {
