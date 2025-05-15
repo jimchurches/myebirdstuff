@@ -104,11 +104,6 @@
       "Value": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py\"",
       "Description": "Run script to format name"
     },
-       {
-      "Command": "echo",
-      "Target": "Clipboard xxx: ${!clipboard}",
-      "Value": "blue"
-    },
     {
       "Command": "store",
       "Target": "0",
