@@ -3,6 +3,7 @@ eBird Automation
 
 Various tools and utilities I've written to help me with eBird.
 
+# Location naming
 
 I create a lot of personal locations. I think the fidelity of personal locations is more scientifically relevant than using a generalised hotspot. Don’t get me wrong — if I’m at a location with an obvious hotspot, I’ll use it. But Australia is big, and I avoid using hotspots if they’re too broad or not actually near where I’m birding. eBird encourages this — they want you to be precise. You’ll find this in various help pages and articles, including this one:
 
