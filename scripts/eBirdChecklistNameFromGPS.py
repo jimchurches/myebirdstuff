@@ -1,11 +1,15 @@
+#!/usr/bin/env python3
+
+import os
 import sys
+import json
 import requests
 import pyperclip
 
 # Get GPS from clipboard
-text = pyperclip.paste()
+gps = pyperclip.paste()
 try:
-    lat, lon = [s.strip() for s in text.split(',')]
+    lat, lon = [s.strip() for s in gps.split(',')]
 except ValueError:
     print("Invalid clipboard format. Expected: lat, lon")
     sys.exit(1)
@@ -16,7 +20,20 @@ try:
 except ImportError:
     from config_template import GOOGLE_API_KEY
 
-# Preferred types in order
+# Optional debug flag
+debug_mode = '--debug' in sys.argv
+
+url = f'https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_API_KEY}'
+
+# Perform the API request
+response = requests.get(url)
+data = response.json()
+
+if debug_mode:
+    print(json.dumps(data, indent=2))
+    sys.exit(0)
+
+# Preferred types to search for, in order
 preferred_types = [
     'sublocality',
     'locality',
@@ -27,28 +44,32 @@ preferred_types = [
     'administrative_area_level_2'
 ]
 
-# Call Google Maps API
-url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_API_KEY}"
-response = requests.get(url)
-data = response.json()
+name = None
+seen_types = set()
 
-# Extract location
-location_name = None
-if data.get('status') == 'OK':
-    for result in data.get('results', []):
-        components = result.get('address_components', [])
-        for level in preferred_types:
-            match = next((c['long_name'] for c in components if level in c['types']), None)
-            if match:
-                location_name = match
+# Search through all address components
+if data.get("results"):
+    for result in data["results"]:
+        for component in result["address_components"]:
+            seen_types.update(component["types"])
+            for preferred in preferred_types:
+                if preferred in component["types"]:
+                    name = component["long_name"]
+                    break
+            if name:
                 break
-        if location_name:
+        if name:
             break
 
-if not location_name:
-    location_name = "Unknown"
+if not name:
+    print("⚠️ No preferred type match found. Types seen:")
+    for t in sorted(seen_types):
+        print(f" - {t}")
+    name = "Unknown"
 
-# Format and copy result
-final_name = f"{location_name} ( {lat}, {lon} )"
-print(final_name)
-pyperclip.copy(final_name)
+# Format the result
+output = f"{name} ( {lat}, {lon} )"
+
+# Output
+pyperclip.copy(output)
+print(output)
