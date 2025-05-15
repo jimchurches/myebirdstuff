@@ -105,46 +105,77 @@
       "Description": "Run script to format name"
     },  
     {
+      "Command": "store",
+      "Target": "0",
+      "Value": "retryCount"
+    },
+    {
       "Command": "label",
-      "Target": "waitForFormatted",
-      "Value": "",
-      "Description": "Start polling loop"
+      "Target": "waitForFormatted"
     },
     {
       "Command": "store",
       "Target": "${!clipboard}",
-      "Value": "temp",
-      "Description": "Get clipboard"
+      "Value": "temp"
+    },
+    {
+      "Command": "echo",
+      "Target": "Clipboard: ${temp}",
+      "Value": "blue"
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var t = '${temp}'; if (t.indexOf('(') > -1 && t.indexOf(',') > -1) { return true; } else { return false; }",
-      "Value": "formattedReady",
-      "Description": "Check if clipboard looks like a formatted name (contains '(' and ',')"
+      "Target": "var t = '${temp}'.trim(); if (t.indexOf('(') > -1 && t.indexOf(',') > -1) { return true; } else { return false; }",
+      "Value": "formattedReady"
     },
     {
       "Command": "if_v2",
-      "Target": "${formattedReady} == false",
-      "Value": "",
-      "Description": "Repeat if not ready"
-    },
-    {
-      "Command": "pause",
-      "Target": "300",
-      "Value": "",
-      "Description": "Short delay"
+      "Target": "${formattedReady} == true"
     },
     {
       "Command": "gotoLabel",
-      "Target": "waitForFormatted",
-      "Value": "",
-      "Description": "Loop again"
+      "Target": "afterFormattedWait"
     },
     {
-      "Command": "end",
-      "Target": "",
-      "Value": "",
-      "Description": "End polling"
+      "Command": "end"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "return parseInt(${retryCount}) + 1;",
+      "Value": "retryCount"
+    },
+    {
+      "Command": "echo",
+      "Target": "🌀 Retry loop: ${retryCount}/5",
+      "Value": "blue"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${retryCount} > 5"
+    },
+    {
+      "Command": "echo",
+      "Target": "❌ Timeout waiting for clipboard update",
+      "Value": "red"
+    },
+    {
+      "Command": "throwError",
+      "Target": "Formatted location was never returned. Stopping."
+    },
+    {
+      "Command": "end"
+    },
+    {
+      "Command": "pause",
+      "Target": "300"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "waitForFormatted"
+    },
+    {
+      "Command": "label",
+      "Target": "afterFormattedWait"
     },
     {
       "Command": "store",
@@ -160,7 +191,7 @@
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var str = ${formatted}; return str.indexOf('Unknown') === 0;",
+      "Target": "var str = '${formatted}'.trim(); return str.indexOf('Unknown') === 0;",
       "Value": "isUnknown",
       "Description": "Check if formatted name begins with 'Unknown'"
     },
