@@ -24,11 +24,12 @@ if data['status'] == 'OK':
     components = data['results'][0]['address_components']
 
     preferred_types = [
+        'sublocality',        
         'locality',
+        'postal_town',
+        'neighborhood',
         'administrative_area_level_4',
         'administrative_area_level_3',
-        'sublocality',
-        'neighborhood',
         'administrative_area_level_2'
     ]
 
