@@ -48,3 +48,4 @@ if data['status'] == 'OK':
 else:
     print(f"Geocoding failed: {data.get('status', 'Unknown error')}")
     sys.exit(1)
+
