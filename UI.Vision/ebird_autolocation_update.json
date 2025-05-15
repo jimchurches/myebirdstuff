@@ -167,7 +167,7 @@
     },
     {
       "Command": "pause",
-      "Target": "300"
+      "Target": "500"
     },
     {
       "Command": "gotoLabel",
