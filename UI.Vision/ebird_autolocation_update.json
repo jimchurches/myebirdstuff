@@ -237,10 +237,34 @@
       "Description": ""
     },
     {
-      "Command": "gotoLabel",
-      "Target": "afterFormattedWait",
+      "Command": "executeScript_Sandbox",
+      "Target": "var str = ${temp}; return str.indexOf('Unknown') === 0;",
+      "Value": "isUnknown",
+      "Description": "Check if formatted name begins with 'Unknown'"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${isUnknown} == true",
       "Value": "",
-      "Description": ""
+      "Description": "Abort if 'Unknown'"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠ Location is 'Unknown'. Manual fix needed.",
+      "Value": "red",
+      "Description": "Warn about unknown"
+    },
+    {
+      "Command": "throwError",
+      "Target": "'Unknown' name returned. Stopping.",
+      "Value": "",
+      "Description": "Stop macro"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End check"
     },
     {
       "Command": "end",
@@ -312,37 +336,37 @@
       "Command": "echo",
       "Target": "Formatted Name: ${formatted}",
       "Value": "blue",
-      "Description": "Log formatted result"
+      "Description": ""
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var str = '${formatted}'.trim(); return str.indexOf('Unknown') === 0;",
+      "Target": "var str = \"${formatted}\".trim(); if (str.indexOf(\"Unknown\") === 0) { return true; } else { return false; }",
       "Value": "isUnknown",
-      "Description": "Check if formatted name begins with 'Unknown'"
+      "Description": ""
     },
     {
       "Command": "if_v2",
       "Target": "${isUnknown} == true",
       "Value": "",
-      "Description": "Abort if 'Unknown'"
+      "Description": ""
     },
     {
       "Command": "echo",
-      "Target": "⚠ Location is 'Unknown'. Manual fix needed.",
+      "Target": "⚠️ Name starts with 'Unknown'. Manual fix needed.",
       "Value": "red",
-      "Description": "Warn about unknown"
+      "Description": ""
     },
     {
       "Command": "throwError",
-      "Target": "'Unknown' name returned. Stopping.",
+      "Target": "Formatted location was 'Unknown'. Stopping.",
       "Value": "",
-      "Description": "Stop macro"
+      "Description": ""
     },
     {
       "Command": "end",
       "Target": "",
       "Value": "",
-      "Description": "End check"
+      "Description": ""
     },
     {
       "Command": "if_v2",
