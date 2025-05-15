@@ -103,7 +103,7 @@
       "Target": "/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py",
       "Value": "",
       "Description": "Run script to format name"
-    },
+    },  
     {
       "Command": "label",
       "Target": "waitForFormatted",
