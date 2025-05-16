@@ -19,6 +19,20 @@ So I solved it. I wrote a macro in UI.Vision that does it for me. I go to My eBi
 
 This setup is tailored to my quirks. I don’t expect anyone else to use it. But maybe it’ll give someone a few clues about how to automate eBird tasks with UI.Vision if they’ve got their own itch to scratch.  There might also be clues in the helper script, written in Python, around working with goelocation data.
 
+## What is UI.Vision?
+
+UI.Vision is a Robotic Process Automaton (RPA) tool for browsers.  You can find details here:
+
+[UI.Vision](https://ui.vision)
+
+I'm not going to try and explain what this sort of tool does, follow the link and you will get the idea quickly.
+
+I have written the solution using Edge on macOS as UI.Vision is not supported in Safari.   I picked Edge as I use a Windows laptop that is sometimes with me in the field.  I haven't yet tested the solution on my Windows machine, but both UI.Vision and Python are cross platform.  In anticipation of putting the solution on my laptop, I've included some code in the UI.Vision macro to help this cross platform use (paths on the two operating systems are different).
+
+## Google Geocoding
+
+I use Google's Geocoding API for reverse geocoding (gps --> name).  Its free for low volumes of queries, and low volumes is thousands a month so for this purpose I'm never going to get close to the volume of queries where I could be charged.  An API key is required and is removed from my code here as that is private (like a password).  You'll find how to get one with a quick Google search.  You'll need to drop your key into the code; look at the Python script and you'll find where to do that easy enough.
+
 #  Bird data Apple Shortcut
 
 I have a shortcut that with a `Hey Siri - Log bird data` will capture some dication (obviously I just say the name of the bird I can see or short sentance with some extra info) that will take that dication, turn it into text and save it to a log in Notes.  It appends date/time and GPS info to each dication.  I use it when driving to capture details about birds I want to record in eBird.  I've logged a $450 Wedge-tailed Eagle (a camera caught me touching my phone) so I don't try to log when driving any more.  I don't try to record every single bird I see when driving, but I do like to capture at least the raptors and occationaly other interesting birds.  This will help.  A bit of manual messing around when home, but it means I capture birds I'm interested in.
