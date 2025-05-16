@@ -1,6 +1,6 @@
 {
   "Name": "eBird AutoLocation Update",
-  "CreationDate": "2025-5-15",
+  "CreationDate": "2025-5-16",
   "Commands": [
     {
       "Command": "store",
@@ -111,10 +111,16 @@
       "Description": ""
     },
     {
-      "Command": "throwError",
-      "Target": "Location type was not personal or shared. Aborting.",
+      "Command": "pause",
+      "Target": "1500",
       "Value": "",
-      "Description": ""
+      "Description": "Pause for the user to see the warning message then continue ..."
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Go to the end of the macro to exit gracefully"
     },
     {
       "Command": "end",
@@ -324,13 +330,19 @@
       "Command": "echo",
       "Target": "❌ Name starts with 'Unknown'. Manual fix needed.",
       "Value": "red",
-      "Description": ""
+      "Description": "Print an error about the 'unknown' value"
     },
     {
-      "Command": "throwError",
-      "Target": "",
+      "Command": "pause",
+      "Target": "1500",
       "Value": "",
-      "Description": "Stop macro"
+      "Description": "Pause for the user to see the warning message then continue ..."
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Go to the end of the macro to exit gracefully"
     },
     {
       "Command": "end",
@@ -343,6 +355,48 @@
       "Target": "${locationType} == 'personal'",
       "Value": "",
       "Description": "If it's a personal location"
+    },
+    {
+      "Command": "storeText",
+      "Target": "id=locName",
+      "Value": "currentName",
+      "Description": ""
+    },
+    {
+      "Command": "echo",
+      "Target": "🆚 Comparing current: ${currentName} ↔︎ new: ${formatted}",
+      "Value": "blue",
+      "Description": ""
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${currentName} == ${formatted}",
+      "Value": "",
+      "Description": ""
+    },
+    {
+      "Command": "echo",
+      "Target": "🔁 Skipping the rename; the name is already correct.",
+      "Value": "green",
+      "Description": ""
+    },
+    {
+      "Command": "pause",
+      "Target": "1500",
+      "Value": "",
+      "Description": "Pause for the user to see the warning message then continue ..."
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": ""
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "Close if rename block"
     },
     {
       "Command": "type",
@@ -439,6 +493,12 @@
       "Target": "",
       "Value": "",
       "Description": "Close if block"
+    },
+    {
+      "Command": "label",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": ""
     }
   ]
 }
