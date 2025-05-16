@@ -11,7 +11,7 @@ gps = pyperclip.paste()
 try:
     lat, lon = [s.strip() for s in gps.split(',')]
 except ValueError:
-    print("Invalid clipboard format. Expected: lat, lon")
+    print("❌ Invalid clipboard format. Expected: lat, lon")
     sys.exit(1)
 
 # Load API key
@@ -35,41 +35,39 @@ if debug_mode:
 
 # Preferred types to search for, in order
 preferred_types = [
+    'neighborhood',
     'sublocality',
     'locality',
     'postal_town',
-    'neighborhood',
     'administrative_area_level_4',
     'administrative_area_level_3',
     'administrative_area_level_2'
 ]
 
-name = None
+candidates = []
 seen_types = set()
 
 # Search through all address components
-if data.get("results"):
-    for result in data["results"]:
-        for component in result["address_components"]:
-            seen_types.update(component["types"])
-            for preferred in preferred_types:
-                if preferred in component["types"]:
-                    name = component["long_name"]
-                    break
-            if name:
-                break
-        if name:
-            break
+for result in data.get("results", []):
+    for component in result.get("address_components", []):
+        types = component.get("types", [])
+        seen_types.update(types)
+        for p_type in preferred_types:
+            if p_type in types:
+                candidates.append((preferred_types.index(p_type), component.get("long_name")))
+                break  # Only record the first match from this component
 
-if not name:
+# Decide on name
+if candidates:
+    candidates.sort(key=lambda x: x[0])  # sort by preferred_types index
+    name = candidates[0][1]
+else:
     print("⚠️ No preferred type match found. Types seen:")
     for t in sorted(seen_types):
         print(f" - {t}")
     name = "Unknown"
 
-# Format the result
+# Format output
 output = f"{name} ( {lat}, {lon} )"
-
-# Output
 pyperclip.copy(output)
 print(output)
