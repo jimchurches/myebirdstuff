@@ -6,73 +6,73 @@
       "Command": "store",
       "Target": "mac",
       "Value": "platform",
-      "Description": ""
+      "Description": "Store value 'mac' into variable 'platform'"
     },
     {
       "Command": "echo",
       "Target": "🛠️  Set platform to 'mac' or 'win' at the top of the macro!",
-      "Value": "blue",
-      "Description": ""
+      "Value": "grey",
+      "Description": "Display message"
     },
     {
       "Command": "if_v2",
       "Target": "${platform} == 'mac'",
       "Value": "",
-      "Description": ""
+      "Description": "Start conditional block: ${platform} == 'mac'"
     },
     {
       "Command": "store",
       "Target": "/usr/bin/python3",
       "Value": "pythonPath",
-      "Description": ""
+      "Description": "Store value macOS Python path into variable 'pythonPath'"
     },
     {
       "Command": "store",
       "Target": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py\"",
       "Value": "scriptPath",
-      "Description": ""
+      "Description": "Store 'macOS' relevent script path into variable 'scriptPath'. Update as required"
     },
     {
       "Command": "else",
       "Target": "",
       "Value": "",
-      "Description": ""
+      "Description": "Else block (alternative path)"
     },
     {
       "Command": "store",
       "Target": "C:\\Python39\\python.exe",
       "Value": "pythonPath",
-      "Description": ""
+      "Description": "Store value Windows Python path into variable 'pythonPath'"
     },
     {
       "Command": "store",
       "Target": "\"C:\\Users\\James\\Documents\\eBirdChecklistNameFromGPS\\eBirdChecklistNameFromGPS.py\"",
       "Value": "scriptPath",
-      "Description": ""
+      "Description": "Store Windows releven script path into variable 'scriptPath'.  Update as required"
     },
     {
       "Command": "end",
       "Target": "",
       "Value": "",
-      "Description": ""
+      "Description": "End of conditional or loop block"
     },
     {
       "Command": "echo",
       "Target": "🛠️ Platform: ${platform}",
-      "Value": "blue",
-      "Description": ""
+      "Value": "grey",
+      "Description": "Display message"
     },
     {
       "Command": "echo",
       "Target": "🐍 Python Path: ${pythonPath}",
-      "Value": "blue",
-      "Description": ""
+      "Value": "grey",
+      "Description": "Display message"
     },
     {
       "Command": "echo",
-      "Target": "📜 Script Path: ${scriptPath}",
-      "Value": "blue",
-      "Description": ""
+      "Target": "📚 Script Path: ${scriptPath}",
+      "Value": "grey",
+      "Description": "Display message"
     },
     {
       "Command": "storeText",
@@ -82,7 +82,7 @@
     },
     {
       "Command": "echo",
-      "Target": "GPS Location: ${gps}",
+      "Target": "📍 GPS Location: ${gps}",
       "Value": "blue",
       "Description": "Display extracted location text"
     },
@@ -94,7 +94,7 @@
     },
     {
       "Command": "echo",
-      "Target": "Location type: ${locationType}",
+      "Target": "🌐 Location type: ${locationType}",
       "Value": "blue",
       "Description": "Show location type"
     },
@@ -102,13 +102,13 @@
       "Command": "if_v2",
       "Target": "${locationType} == 'other'",
       "Value": "",
-      "Description": ""
+      "Description": "Start conditional block: ${locationType} == 'other'"
     },
     {
       "Command": "echo",
       "Target": "⚠️ Unsupported location type (probably a Hotspot). Skipping.",
       "Value": "red",
-      "Description": ""
+      "Description": "Display message"
     },
     {
       "Command": "pause",
@@ -126,7 +126,7 @@
       "Command": "end",
       "Target": "",
       "Value": "",
-      "Description": ""
+      "Description": "End of conditional or loop block"
     },
     {
       "Command": "store",
@@ -166,7 +166,7 @@
     },
     {
       "Command": "echo",
-      "Target": "Valid GPS data found",
+      "Target": "🎉 Valid GPS data found",
       "Value": "blue",
       "Description": "Display confirmation that valid GPS data was found"
     },
@@ -184,7 +184,7 @@
     },
     {
       "Command": "echo",
-      "Target": "Latitude: ${lat}",
+      "Target": "📍 Latitude: ${lat}",
       "Value": "blue",
       "Description": "Display parsed lat/lon"
     },
@@ -196,7 +196,7 @@
     },
     {
       "Command": "echo",
-      "Target": "Longitude: ${lon}",
+      "Target": "📍 Longitude: ${lon}",
       "Value": "blue",
       "Description": "Display parsed lat/lon"
     },
@@ -210,97 +210,97 @@
       "Command": "store",
       "Target": "0",
       "Value": "retryCount",
-      "Description": ""
+      "Description": "Store value '0' into variable 'retryCount'"
     },
     {
       "Command": "label",
       "Target": "waitForFormatted",
       "Value": "",
-      "Description": ""
+      "Description": "Define label"
     },
     {
       "Command": "store",
       "Target": "${!clipboard}",
       "Value": "temp",
-      "Description": ""
+      "Description": "Store value '${!clipboard}' into variable 'temp'"
     },
     {
       "Command": "echo",
-      "Target": "Clipboard: ${temp}",
-      "Value": "blue",
-      "Description": ""
+      "Target": "📎 Clipboard: ${temp}",
+      "Value": "grey",
+      "Description": "Display message"
     },
     {
       "Command": "executeScript_Sandbox",
       "Target": "var t = '${temp}'.trim(); if (t.indexOf('(') > -1 && t.indexOf(',') > -1) { return true; } else { return false; }",
       "Value": "formattedReady",
-      "Description": ""
+      "Description": "Execute custom JavaScript in sandboxed environment"
     },
     {
       "Command": "if_v2",
       "Target": "${formattedReady} == false",
       "Value": "",
-      "Description": ""
+      "Description": "Start conditional block: ${formattedReady} == false"
     },
     {
       "Command": "executeScript_Sandbox",
       "Target": "return parseInt(${retryCount}) + 1;",
       "Value": "retryCount",
-      "Description": ""
+      "Description": "Execute custom JavaScript in sandboxed environment"
     },
     {
       "Command": "echo",
       "Target": "🌀 Retry loop: ${retryCount}/5",
-      "Value": "blue",
-      "Description": ""
+      "Value": "grey",
+      "Description": "Display message"
     },
     {
       "Command": "if_v2",
       "Target": "${retryCount} > 5",
       "Value": "",
-      "Description": ""
+      "Description": "Start conditional block: ${retryCount} > 5"
     },
     {
       "Command": "echo",
       "Target": "❌ Timeout waiting for clipboard update",
       "Value": "red",
-      "Description": ""
+      "Description": "Display message"
     },
     {
       "Command": "throwError",
       "Target": "Formatted location was never returned. Stopping.",
       "Value": "",
-      "Description": ""
+      "Description": "Stop macro execution with error: Formatted location was never returned. Stopping."
     },
     {
       "Command": "end",
       "Target": "",
       "Value": "",
-      "Description": ""
+      "Description": "End of conditional or loop block"
     },
     {
       "Command": "pause",
       "Target": "500",
       "Value": "",
-      "Description": ""
+      "Description": "Pause execution for 500 milliseconds"
     },
     {
       "Command": "gotoLabel",
       "Target": "waitForFormatted",
       "Value": "",
-      "Description": ""
+      "Description": "Jump to label: waitForFormatted"
     },
     {
       "Command": "end",
       "Target": "",
       "Value": "",
-      "Description": ""
+      "Description": "End of conditional or loop block"
     },
     {
       "Command": "label",
       "Target": "afterFormattedWait",
       "Value": "",
-      "Description": ""
+      "Description": "Define label: afterFormattedWait"
     },
     {
       "Command": "store",
@@ -310,9 +310,9 @@
     },
     {
       "Command": "echo",
-      "Target": "Formatted Name: ${formatted}",
+      "Target": "✍️ Formatted Name: ${formatted}",
       "Value": "blue",
-      "Description": ""
+      "Description": "Display message: Formatted Name: ${formatted}"
     },
     {
       "Command": "executeScript_Sandbox",
@@ -360,25 +360,25 @@
       "Command": "storeText",
       "Target": "id=locName",
       "Value": "currentName",
-      "Description": ""
+      "Description": "Extract text from: id=locName, store in 'currentName'"
     },
     {
       "Command": "echo",
-      "Target": "🆚 Comparing current: ${currentName} ↔︎ new: ${formatted}",
+      "Target": "🔎 Comparing current: ${currentName} ↔︎ new: ${formatted}",
       "Value": "blue",
-      "Description": ""
+      "Description": "Display message"
     },
     {
       "Command": "if_v2",
       "Target": "${currentName} == ${formatted}",
       "Value": "",
-      "Description": ""
+      "Description": "Start conditional block: ${currentName} == ${formatted}"
     },
     {
       "Command": "echo",
       "Target": "🔁 Skipping the rename; the name is already correct.",
       "Value": "green",
-      "Description": ""
+      "Description": "Display message"
     },
     {
       "Command": "pause",
@@ -390,7 +390,7 @@
       "Command": "gotoLabel",
       "Target": "theVeryEnd",
       "Value": "",
-      "Description": ""
+      "Description": "Jump to label: theVeryEnd"
     },
     {
       "Command": "end",
@@ -408,7 +408,7 @@
       "Command": "click",
       "Target": "name=renameBut",
       "Value": "",
-      "Description": ""
+      "Description": "Click on UI element: name=renameBut"
     },
     {
       "Command": "echo",
@@ -424,7 +424,7 @@
     },
     {
       "Command": "echo",
-      "Target": "Personalising shared checklist location",
+      "Target": "✍️ Personalising shared checklist location",
       "Value": "blue",
       "Description": "Log formatted result"
     },
@@ -498,7 +498,7 @@
       "Command": "label",
       "Target": "theVeryEnd",
       "Value": "",
-      "Description": ""
+      "Description": "Define label: theVeryEnd"
     }
   ]
 }
