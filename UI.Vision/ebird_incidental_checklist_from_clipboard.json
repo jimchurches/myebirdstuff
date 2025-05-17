@@ -112,27 +112,27 @@
     },
     {
       "Command": "echo",
-      "Target": "🔎 Input: ${rawEntry}",
+      "Target": "🔎 Clipboard data: ${rawEntry}",
       "Value": "grey",
       "Description": "Show full input line from clipboard"
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var t = \"\" + ${rawEntry}; return t.indexOf('GPS') > -1 && t.split('|').length >= 3 ? 'true' : 'false';",
+      "Target": "var t = \"\" + ${rawEntry}; return t.indexOf('Date/time:') > -1 && t.indexOf('GPS') > -1 && t.split('|').length >= 3 ? 'true' : 'false';",
       "Value": "clipboardValid",
-      "Description": "📋 Defensive clipboard check using pure string concat"
+      "Description": "Stricter format check: must include Date/time:, GPS and pipes"
     },
     {
       "Command": "echo",
-      "Target": "Clipboard valid?: ${clipboardValid}",
-      "Value": "blue",
+      "Target": "🔎 Clipboard valid: ${clipboardValid}",
+      "Value": "grey",
       "Description": "Show what we actually captured"
     },
     {
       "Command": "if_v2",
       "Target": "${clipboardValid} == 'false'",
       "Value": "",
-      "Description": "🚫 Stop if input is not valid"
+      "Description": "Stop if input is not valid"
     },
     {
       "Command": "echo",
@@ -192,7 +192,7 @@
       "Command": "executeScript_Sandbox",
       "Target": "var parts = ${rawEntry}.split('|'); return parts[1].replace('GPS:', '').trim();",
       "Value": "gpsRaw",
-      "Description": "📍 Extract GPS"
+      "Description": "Extract GPS"
     },
     {
       "Command": "executeScript_Sandbox",
@@ -240,25 +240,25 @@
       "Command": "executeScript_Sandbox",
       "Target": "var coords = ${gpsRaw}.split(','); return coords[0].trim();",
       "Value": "lat",
-      "Description": "🌐 Extract Latitude"
+      "Description": "Extract Latitude"
     },
     {
       "Command": "executeScript_Sandbox",
       "Target": "var coords = ${gpsRaw}.split(','); return coords[1].trim();",
       "Value": "lon",
-      "Description": "🌐 Extract Longitude"
+      "Description": "Extract Longitude"
     },
     {
       "Command": "store",
       "Target": "${gpsRaw}",
       "Value": "!clipboard",
-      "Description": "📋 Copy raw GPS to clipboard for name formatter"
+      "Description": "Copy raw GPS to clipboard for name formatter"
     },
     {
       "Command": "XRun",
       "Target": "/usr/bin/python3",
       "Value": "/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py",
-      "Description": "🔧 Run Python script to format location name"
+      "Description": "Run Python script to format location name"
     },
     {
       "Command": "pause",
