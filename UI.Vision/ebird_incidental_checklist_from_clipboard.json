@@ -1,6 +1,6 @@
 {
   "Name": "eBird Incidental Checklist Create",
-  "CreationDate": "2025-5-17",
+  "CreationDate": "2025-5-18",
   "Commands": [
     {
       "Command": "store",
@@ -166,7 +166,7 @@
     },
     {
       "Command": "echo",
-      "Target": "📅 Raw date and time data: ${datetimeRaw}",
+      "Target": "🗓 Raw date and time data: ${datetimeRaw}",
       "Value": "blue",
       "Description": "Log full datetime string"
     },
@@ -187,6 +187,42 @@
       "Target": "var parts = ${rawEntry}.split('|'); return parts[1].replace('GPS:', '').trim();",
       "Value": "gpsRaw",
       "Description": "Extract GPS"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${timePart}'.replace(/“|”|\"|\\u202f/g, '').trim(); return t.split(':')[1];",
+      "Value": "oMin",
+      "Description": "Extract minute"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var coords = ${gpsRaw}.split(','); return coords[0].trim();",
+      "Value": "lat",
+      "Description": "Extract Latitude"
+    },
+    {
+      "Command": "echo",
+      "Target": "📍 Latitude: ${lat}",
+      "Value": "blue",
+      "Description": "Display parsed latitude"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var coords = ${gpsRaw}.split(','); return coords[1].trim();",
+      "Value": "lon",
+      "Description": "Extract Longitude"
+    },
+    {
+      "Command": "echo",
+      "Target": "📍 Longitude: ${lon}",
+      "Value": "blue",
+      "Description": "Display parsed latitude"
+    },
+    {
+      "Command": "store",
+      "Target": "${gpsRaw}",
+      "Value": "!clipboard",
+      "Description": "Copy raw GPS to clipboard for name formatter"
     },
     {
       "Command": "executeScript_Sandbox",
@@ -225,52 +261,160 @@
       "Description": "Extract hour"
     },
     {
-      "Command": "executeScript_Sandbox",
-      "Target": "var t = '${timePart}'.replace(/“|”|\"|\\u202f/g, '').trim(); return t.split(':')[1];",
-      "Value": "oMin",
-      "Description": "Extract minute"
-    },
-    {
-      "Command": "executeScript_Sandbox",
-      "Target": "var coords = ${gpsRaw}.split(','); return coords[0].trim();",
-      "Value": "lat",
-      "Description": "Extract Latitude"
-    },
-    {
-      "Command": "executeScript_Sandbox",
-      "Target": "var coords = ${gpsRaw}.split(','); return coords[1].trim();",
-      "Value": "lon",
-      "Description": "Extract Longitude"
-    },
-    {
-      "Command": "store",
-      "Target": "${gpsRaw}",
-      "Value": "!clipboard",
-      "Description": "Copy raw GPS to clipboard for name formatter"
-    },
-    {
       "Command": "XRun",
       "Target": "${pythonPath}",
       "Value": "${scriptPath}",
-      "Description": "🔧 Run Python script to format location name (uses platform-specific paths)"
+      "Description": "Run Python script to format location name (uses platform-specific paths)"
+    },
+    {
+      "Command": "store",
+      "Target": "0",
+      "Value": "retryCount",
+      "Description": "Store value '0' into variable 'retryCount'"
+    },
+    {
+      "Command": "label",
+      "Target": "waitForFormatted",
+      "Value": "",
+      "Description": "Define label"
+    },
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "temp",
+      "Description": "Store value '${!clipboard}' into variable 'temp'"
+    },
+    {
+      "Command": "echo",
+      "Target": "📎 Clipboard: ${temp}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${temp}'.trim(); if (t.indexOf('(') > -1 && t.indexOf(',') > -1) { return true; } else { return false; }",
+      "Value": "formattedReady",
+      "Description": "Execute custom JavaScript in sandboxed environment"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${formattedReady} == false",
+      "Value": "",
+      "Description": "Start conditional block: ${formattedReady} == false"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "return parseInt(${retryCount}) + 1;",
+      "Value": "retryCount",
+      "Description": "Execute custom JavaScript in sandboxed environment"
+    },
+    {
+      "Command": "echo",
+      "Target": "🌀 Retry loop: ${retryCount}/5",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${retryCount} > 5",
+      "Value": "",
+      "Description": "Start conditional block: ${retryCount} > 5"
+    },
+    {
+      "Command": "echo",
+      "Target": "❌ Timeout waiting for clipboard update",
+      "Value": "red",
+      "Description": "Display message"
+    },
+    {
+      "Command": "throwError",
+      "Target": "Formatted location was never returned. Stopping.",
+      "Value": "",
+      "Description": "Stop macro execution with error: Formatted location was never returned. Stopping."
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End of conditional or loop block"
     },
     {
       "Command": "pause",
       "Target": "500",
       "Value": "",
-      "Description": "Wait for clipboard to update"
+      "Description": "Pause execution for 500 milliseconds"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "waitForFormatted",
+      "Value": "",
+      "Description": "Jump to label: waitForFormatted"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End of conditional or loop block"
+    },
+    {
+      "Command": "label",
+      "Target": "afterFormattedWait",
+      "Value": "",
+      "Description": "Define label: afterFormattedWait"
     },
     {
       "Command": "store",
       "Target": "${!clipboard}",
-      "Value": "locationName",
-      "Description": "Save formatted name from clipboard"
+      "Value": "formatted",
+      "Description": "Save formatted location"
+    },
+    {
+      "Command": "echo",
+      "Target": "✍️ Formatted location name: ${formatted}",
+      "Value": "blue",
+      "Description": "Display message: Formatted Name: ${formatted}"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var str = ${temp}; return str.indexOf('Unknown') === 0;",
+      "Value": "isUnknown",
+      "Description": "Check if formatted name begins with 'Unknown'"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${isUnknown} == true",
+      "Value": "",
+      "Description": "Abort if 'Unknown'"
+    },
+    {
+      "Command": "echo",
+      "Target": "❌ Name starts with 'Unknown'. Manual fix needed.",
+      "Value": "red",
+      "Description": "Print an error about the 'unknown' value"
+    },
+    {
+      "Command": "pause",
+      "Target": "1500",
+      "Value": "",
+      "Description": "Pause for the user to see the warning message then continue ..."
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Go to the end of the macro to exit gracefully"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End check"
     },
     {
       "Command": "clickAndWait",
       "Target": "linkText=Use Latitude/Longitude",
       "Value": "",
-      "Description": "Step 1: Enter coordinates"
+      "Description": "Enter coordinates"
     },
     {
       "Command": "type",
