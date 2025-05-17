@@ -1,0 +1,246 @@
+{
+  "Name": "eBird Incidental Checklist from Clipboard",
+  "CreationDate": "2025-5-17",
+  "Commands": [
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "rawEntry",
+      "Description": "📋 Grab raw entry from clipboard"
+    },
+    {
+      "Command": "echo",
+      "Target": "🟢 Input: ${rawEntry}",
+      "Value": "green",
+      "Description": "Show full input line from clipboard"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var parts = ${rawEntry}.split('|'); return parts[0].trim();",
+      "Value": "datetimeRaw",
+      "Description": "🗓 Extract datetime block"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var parts = ${rawEntry}.split('|'); return parts[1].replace('GPS:', '').trim();",
+      "Value": "gpsRaw",
+      "Description": "📍 Extract GPS"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var parts = ${rawEntry}.split('|'); return parts.slice(2).join('|').replace('Record(s):', '').trim();",
+      "Value": "commentText",
+      "Description": "🗣 Extract dictation comment"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dt = ${datetimeRaw}.split(':')[1].trim(); return dt.split(' at ')[0].trim();",
+      "Value": "datePart",
+      "Description": "📅 Extract date"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dt = ${datetimeRaw}.split(':')[1].trim(); return dt.split(' at ')[1].replace(' ', ' ').trim();",
+      "Value": "timePart",
+      "Description": "⏰ Extract time"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var coords = ${gpsRaw}.split(','); return coords[0].trim();",
+      "Value": "lat",
+      "Description": "🌐 Extract Latitude"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var coords = ${gpsRaw}.split(','); return coords[1].trim();",
+      "Value": "lon",
+      "Description": "🌐 Extract Longitude"
+    },
+    {
+      "Command": "store",
+      "Target": "${gpsRaw}",
+      "Value": "!clipboard",
+      "Description": "📋 Copy raw GPS to clipboard for name formatter"
+    },
+    {
+      "Command": "XRun",
+      "Target": "/usr/bin/python3",
+      "Value": "/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py",
+      "Description": "🔧 Run Python script to format location name"
+    },
+    {
+      "Command": "pause",
+      "Target": "500",
+      "Value": "",
+      "Description": "Wait for clipboard to update"
+    },
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "locationName",
+      "Description": "📋 Save formatted name from clipboard"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "linkText=Use Latitude/Longitude",
+      "Value": "",
+      "Description": "🧭 Step 1: Enter coordinates"
+    },
+    {
+      "Command": "type",
+      "Target": "name=lat",
+      "Value": "${lat}",
+      "Description": "Type latitude"
+    },
+    {
+      "Command": "type",
+      "Target": "name=lng",
+      "Value": "${lon}",
+      "Description": "Type longitude"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//button[@name='continue']",
+      "Value": "",
+      "Description": "Submit coordinates"
+    },
+    {
+      "Command": "type",
+      "Target": "id=name",
+      "Value": "${locationName}",
+      "Description": "Paste formatted location name"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//button[@name='continue']",
+      "Value": "",
+      "Description": "Continue to date/effort screen"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'; return dp.split(' ')[1].substring(0,3);",
+      "Value": "oMonth",
+      "Description": "Extract 3-letter month and return it"
+    },
+    {
+      "Command": "echo",
+      "Target": "🗓 Observation month: ${oMonth}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[0];",
+      "Value": "oDay",
+      "Description": "Clean and extract numeric day"
+    },
+    {
+      "Command": "echo",
+      "Target": "🗓 Observation day: ${oDay}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[2];",
+      "Value": "oYear",
+      "Description": "Extract year"
+    },
+    {
+      "Command": "echo",
+      "Target": "🗓 Observation year: ${oYear}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${timePart}'.replace(/“|”|\"/g, '').trim(); return t.split(':')[0];",
+      "Value": "oHour",
+      "Description": "Extract hour"
+    },
+    {
+      "Command": "echo",
+      "Target": "⏰ Observation start hour: ${oHour}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${timePart}'.replace(/“|”|\"/g, '').trim(); return t.split(':')[1];",
+      "Value": "oMin",
+      "Description": "Extract minute"
+    },
+    {
+      "Command": "echo",
+      "Target": "⏰ Observation start minute: ${oHour}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "select",
+      "Target": "id=p-day",
+      "Value": "label=${oDay}",
+      "Description": "Select observation month"
+    },
+    {
+      "Command": "select",
+      "Target": "id=p-month",
+      "Value": "label=${oMonth}",
+      "Description": "Select observation day"
+    },
+    {
+      "Command": "select",
+      "Target": "id=p-year",
+      "Value": "label=${oYear}",
+      "Description": "Select observation year"
+    },
+    {
+      "Command": "type",
+      "Target": "id=P20",
+      "Value": "P20",
+      "Description": "Select 'Incidental' type"
+    },
+    {
+      "Command": "type",
+      "Target": "id=p-shared-hr",
+      "Value": "${oHour}",
+      "Description": "Enter checklist start (hour)"
+    },
+    {
+      "Command": "type",
+      "Target": "id=p-shared-min",
+      "Value": "${oMin}",
+      "Description": "Type checklist start (minute)"
+    },
+    {
+      "Command": "type",
+      "Target": "id=p-party-size",
+      "Value": "1",
+      "Description": "Type party size (currently hardcoded as 1"
+    },
+    {
+      "Command": "type",
+      "Target": "id=p-comments",
+      "Value": "${commentText}",
+      "Description": "💬 Paste dictation as comment"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//button[@name='continue']",
+      "Value": "",
+      "Description": "Proceed to species list"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//button[contains(text(),'xSubmit')]",
+      "Value": "",
+      "Description": "✅ Submit checklist"
+    },
+    {
+      "Command": "echo",
+      "Target": "🎉 Checklist created successfully!",
+      "Value": "green",
+      "Description": "Final confirmation"
+    }
+  ]
+}
