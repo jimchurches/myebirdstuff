@@ -472,12 +472,6 @@
     },
     {
       "Command": "echo",
-      "Target": "⏰ Checklist start time: ${timePart}",
-      "Value": "grey",
-      "Description": "Debug time format before parsing"
-    },
-    {
-      "Command": "echo",
       "Target": "⏰ Checklist start hour: ${oHour}",
       "Value": "blue",
       "Description": "Display message"
