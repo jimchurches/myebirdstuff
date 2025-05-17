@@ -1,24 +1,192 @@
 {
-  "Name": "eBird Incidental Checklist from Clipboard",
+  "Name": "eBird Incidental Checklist Create",
   "CreationDate": "2025-5-17",
   "Commands": [
     {
       "Command": "store",
-      "Target": "${!clipboard}",
-      "Value": "rawEntry",
-      "Description": "📋 Grab raw entry from clipboard"
+      "Target": "mac",
+      "Value": "platform",
+      "Description": "Store value 'mac' into variable 'platform'"
     },
     {
       "Command": "echo",
-      "Target": "🟢 Input: ${rawEntry}",
-      "Value": "green",
+      "Target": "🛠️  Set platform to 'mac' or 'win' at the top of the macro!",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${platform} == 'mac'",
+      "Value": "",
+      "Description": "Start conditional block: ${platform} == 'mac'"
+    },
+    {
+      "Command": "store",
+      "Target": "/usr/bin/python3",
+      "Value": "pythonPath",
+      "Description": "Store value macOS Python path into variable 'pythonPath'"
+    },
+    {
+      "Command": "store",
+      "Target": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py\"",
+      "Value": "scriptPath",
+      "Description": "Store 'macOS' relevent script path into variable 'scriptPath'. Update as required"
+    },
+    {
+      "Command": "else",
+      "Target": "",
+      "Value": "",
+      "Description": "Else block (alternative path)"
+    },
+    {
+      "Command": "store",
+      "Target": "C:\\Python39\\python.exe",
+      "Value": "pythonPath",
+      "Description": "Store value Windows Python path into variable 'pythonPath'"
+    },
+    {
+      "Command": "store",
+      "Target": "\"C:\\Users\\James\\Documents\\eBirdChecklistNameFromGPS\\eBirdChecklistNameFromGPS.py\"",
+      "Value": "scriptPath",
+      "Description": "Store Windows releven script path into variable 'scriptPath'.  Update as required"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End of conditional or loop block"
+    },
+    {
+      "Command": "echo",
+      "Target": "🛠️ Platform: ${platform}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🐍 Python Path: ${pythonPath}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "📚 Script Path: ${scriptPath}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "store",
+      "Target": "true",
+      "Value": "noSubmit",
+      "Description": "🐞 Toggle to 'true' when testing/debugging; Stops the final submit step"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${noSubmit} == 'true'",
+      "Value": "",
+      "Description": "If noSubmit print a message"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Testing mode:  Checklist will not be submitted to eBird",
+      "Value": "orange",
+      "Description": "Show warning message"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Testing mode:  The new location will be created without an attached checklist.  Clean the location up after testing.  Find it under 'Locations' in My eBird",
+      "Value": "orange",
+      "Description": "Show warning message"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "End conditional output"
+    },
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "rawEntry",
+      "Description": "Grab raw entry from clipboard"
+    },
+    {
+      "Command": "echo",
+      "Target": "🔎 Input: ${rawEntry}",
+      "Value": "grey",
       "Description": "Show full input line from clipboard"
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var parts = ${rawEntry}.split('|'); return parts[0].trim();",
+      "Target": "var t = \"\" + ${rawEntry}; return t.indexOf('GPS') > -1 && t.split('|').length >= 3 ? 'true' : 'false';",
+      "Value": "clipboardValid",
+      "Description": "📋 Defensive clipboard check using pure string concat"
+    },
+    {
+      "Command": "echo",
+      "Target": "Clipboard valid?: ${clipboardValid}",
+      "Value": "blue",
+      "Description": "Show what we actually captured"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${clipboardValid} == 'false'",
+      "Value": "",
+      "Description": "🚫 Stop if input is not valid"
+    },
+    {
+      "Command": "echo",
+      "Target": "❌ Clipboard does not contain valid bird log data. Please copy a valid entry.",
+      "Value": "red",
+      "Description": "Notify user"
+    },
+    {
+      "Command": "pause",
+      "Target": "3000",
+      "Value": "",
+      "Description": "Pause to show error"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Jump to label: theVeryEnd"
+    },
+    {
+      "Command": "end",
+      "Target": "",
+      "Value": "",
+      "Description": "Stop macro early"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var raw = '${rawEntry}'; var dt = raw.split('|')[0]; return dt.replace('Date/time:', '').replace(/['\"“”]/g, '').trim();",
       "Value": "datetimeRaw",
-      "Description": "🗓 Extract datetime block"
+      "Description": "Clean datetime (no quotes, no smart characters)"
+    },
+    {
+      "Command": "echo",
+      "Target": "📅 Raw date and time data: ${datetimeRaw}",
+      "Value": "blue",
+      "Description": "Log full datetime string"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dt = '${datetimeRaw}'; return dt.split(' at ')[0].trim();",
+      "Value": "datePart",
+      "Description": "Extract date component"
+    },
+    {
+      "Command": "echo",
+      "Target": "📆 datePart = ${datePart}",
+      "Value": "blue",
+      "Description": "Log extracted date part"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dt = '${datetimeRaw}'; return dt.split(' at ')[1].trim();",
+      "Value": "timePart",
+      "Description": "Extract time component"
     },
     {
       "Command": "executeScript_Sandbox",
@@ -30,19 +198,43 @@
       "Command": "executeScript_Sandbox",
       "Target": "var parts = ${rawEntry}.split('|'); return parts.slice(2).join('|').replace('Record(s):', '').trim();",
       "Value": "commentText",
-      "Description": "🗣 Extract dictation comment"
+      "Description": "Extract dictation comment"
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var dt = ${datetimeRaw}.split(':')[1].trim(); return dt.split(' at ')[0].trim();",
-      "Value": "datePart",
-      "Description": "📅 Extract date"
-    },
-    {
-      "Command": "executeScript_Sandbox",
-      "Target": "var dt = ${datetimeRaw}.split(':')[1].trim(); return dt.split(' at ')[1].replace(' ', ' ').trim();",
+      "Target": "var dt = '${datetimeRaw}'; return dt.split(' at ')[1].trim();",
       "Value": "timePart",
-      "Description": "⏰ Extract time"
+      "Description": "Extract time component"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[0];",
+      "Value": "oDay",
+      "Description": "Clean and extract numeric day"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'; return dp.split(' ')[1].substring(0,3);",
+      "Value": "oMonth",
+      "Description": "Extract 3-letter month and return it"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[2];",
+      "Value": "oYear",
+      "Description": "Extract year"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${timePart}'.replace(/“|”|\"/g, '').trim(); return t.split(':')[0];",
+      "Value": "oHour",
+      "Description": "Extract hour"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${timePart}'.replace(/“|”|\"|\\u202f/g, '').trim(); return t.split(':')[1];",
+      "Value": "oMin",
+      "Description": "Extract minute"
     },
     {
       "Command": "executeScript_Sandbox",
@@ -78,13 +270,13 @@
       "Command": "store",
       "Target": "${!clipboard}",
       "Value": "locationName",
-      "Description": "📋 Save formatted name from clipboard"
+      "Description": "Save formatted name from clipboard"
     },
     {
       "Command": "clickAndWait",
       "Target": "linkText=Use Latitude/Longitude",
       "Value": "",
-      "Description": "🧭 Step 1: Enter coordinates"
+      "Description": "Step 1: Enter coordinates"
     },
     {
       "Command": "type",
@@ -117,62 +309,38 @@
       "Description": "Continue to date/effort screen"
     },
     {
-      "Command": "executeScript_Sandbox",
-      "Target": "var dp = '${datePart}'; return dp.split(' ')[1].substring(0,3);",
-      "Value": "oMonth",
-      "Description": "Extract 3-letter month and return it"
-    },
-    {
       "Command": "echo",
-      "Target": "🗓 Observation month: ${oMonth}",
+      "Target": "🗓 Checklist month: ${oMonth}",
       "Value": "blue",
       "Description": "Display message"
     },
     {
-      "Command": "executeScript_Sandbox",
-      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[0];",
-      "Value": "oDay",
-      "Description": "Clean and extract numeric day"
-    },
-    {
       "Command": "echo",
-      "Target": "🗓 Observation day: ${oDay}",
+      "Target": "🗓 Checklist day: ${oDay}",
       "Value": "blue",
       "Description": "Display message"
     },
     {
-      "Command": "executeScript_Sandbox",
-      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[2];",
-      "Value": "oYear",
-      "Description": "Extract year"
-    },
-    {
       "Command": "echo",
-      "Target": "🗓 Observation year: ${oYear}",
+      "Target": "🗓 Checklist year: ${oYear}",
       "Value": "blue",
       "Description": "Display message"
     },
     {
-      "Command": "executeScript_Sandbox",
-      "Target": "var t = '${timePart}'.replace(/“|”|\"/g, '').trim(); return t.split(':')[0];",
-      "Value": "oHour",
-      "Description": "Extract hour"
+      "Command": "echo",
+      "Target": "⏰ Checklist start time: ${timePart}",
+      "Value": "grey",
+      "Description": "Debug time format before parsing"
     },
     {
       "Command": "echo",
-      "Target": "⏰ Observation start hour: ${oHour}",
+      "Target": "⏰ Checklist start hour: ${oHour}",
       "Value": "blue",
       "Description": "Display message"
     },
     {
-      "Command": "executeScript_Sandbox",
-      "Target": "var t = '${timePart}'.replace(/“|”|\"/g, '').trim(); return t.split(':')[1];",
-      "Value": "oMin",
-      "Description": "Extract minute"
-    },
-    {
       "Command": "echo",
-      "Target": "⏰ Observation start minute: ${oHour}",
+      "Target": "⏰ Checklist start minute: ${oMin}",
       "Value": "blue",
       "Description": "Display message"
     },
@@ -180,13 +348,13 @@
       "Command": "select",
       "Target": "id=p-day",
       "Value": "label=${oDay}",
-      "Description": "Select observation month"
+      "Description": "Select observation day"
     },
     {
       "Command": "select",
       "Target": "id=p-month",
       "Value": "label=${oMonth}",
-      "Description": "Select observation day"
+      "Description": "Select observation month"
     },
     {
       "Command": "select",
@@ -195,10 +363,10 @@
       "Description": "Select observation year"
     },
     {
-      "Command": "type",
+      "Command": "click",
       "Target": "id=P20",
-      "Value": "P20",
-      "Description": "Select 'Incidental' type"
+      "Value": "",
+      "Description": "Select 'Incidental' as observation type"
     },
     {
       "Command": "type",
@@ -226,13 +394,37 @@
     },
     {
       "Command": "clickAndWait",
-      "Target": "xpath=//button[@name='continue']",
+      "Target": "xpath=//*[@id=\"btn-eff-continue\"]/span",
       "Value": "",
-      "Description": "Proceed to species list"
+      "Description": "Click the continue button"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${noSubmit} == 'true'",
+      "Value": "",
+      "Description": "If noSubmit is true, skip actual submission"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Testing mode: Submission skipped",
+      "Value": "orange",
+      "Description": "Test mode echo"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Testing mode:  The new location will have been created without an attached checklist.  Clean this up after testing.  Find it under 'Locations' in My eBird",
+      "Value": "orange",
+      "Description": "Test mode echo"
+    },
+    {
+      "Command": "else",
+      "Target": "",
+      "Value": "",
+      "Description": "Otherwise, submit for real"
     },
     {
       "Command": "clickAndWait",
-      "Target": "xpath=//button[contains(text(),'xSubmit')]",
+      "Target": "xpath=//button[contains(text(),'Submit')]",
       "Value": "",
       "Description": "✅ Submit checklist"
     },
@@ -241,6 +433,18 @@
       "Target": "🎉 Checklist created successfully!",
       "Value": "green",
       "Description": "Final confirmation"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End of submit conditional"
+    },
+    {
+      "Command": "label",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Define label: theVeryEnd"
     }
   ]
 }
