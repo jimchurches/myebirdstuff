@@ -365,14 +365,14 @@
     {
       "Command": "store",
       "Target": "${!clipboard}",
-      "Value": "formatted",
+      "Value": "newLocation",
       "Description": "Save formatted location"
     },
     {
       "Command": "echo",
-      "Target": "✍️ Formatted location name: ${formatted}",
+      "Target": "✍️ Formatted location name: ${newLocation}",
       "Value": "blue",
-      "Description": "Display message: Formatted Name: ${formatted}"
+      "Description": "Display message: New location name"
     },
     {
       "Command": "executeScript_Sandbox",
@@ -437,7 +437,7 @@
     {
       "Command": "type",
       "Target": "id=name",
-      "Value": "${locationName}",
+      "Value": "${newLocation}",
       "Description": "Paste formatted location name"
     },
     {
@@ -445,6 +445,12 @@
       "Target": "xpath=//button[@name='continue']",
       "Value": "",
       "Description": "Continue to date/effort screen"
+    },
+    {
+      "Command": "echo",
+      "Target": "🌐 New location submitted",
+      "Value": "blue",
+      "Description": "Display message"
     },
     {
       "Command": "echo",
