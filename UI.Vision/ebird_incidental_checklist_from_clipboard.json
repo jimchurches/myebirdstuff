@@ -177,12 +177,6 @@
       "Description": "Extract date component"
     },
     {
-      "Command": "echo",
-      "Target": "📆 datePart = ${datePart}",
-      "Value": "blue",
-      "Description": "Log extracted date part"
-    },
-    {
       "Command": "executeScript_Sandbox",
       "Target": "var dt = '${datetimeRaw}'; return dt.split(' at ')[1].trim();",
       "Value": "timePart",
@@ -256,9 +250,9 @@
     },
     {
       "Command": "XRun",
-      "Target": "/usr/bin/python3",
-      "Value": "/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py",
-      "Description": "Run Python script to format location name"
+      "Target": "${pythonPath}",
+      "Value": "${scriptPath}",
+      "Description": "🔧 Run Python script to format location name (uses platform-specific paths)"
     },
     {
       "Command": "pause",
