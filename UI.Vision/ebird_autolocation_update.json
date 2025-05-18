@@ -51,7 +51,7 @@
       "Description": "Store Windows releven script path into variable 'scriptPath'.  Update as required"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End of conditional or loop block"
@@ -123,7 +123,7 @@
       "Description": "Go to the end of the macro to exit gracefully"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End of conditional or loop block"
@@ -171,7 +171,7 @@
       "Description": "Display confirmation that valid GPS data was found"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End block for GPS validation"
@@ -273,7 +273,7 @@
       "Description": "Stop macro execution with error: Formatted location was never returned. Stopping."
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End of conditional or loop block"
@@ -291,7 +291,7 @@
       "Description": "Jump to label: waitForFormatted"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End of conditional or loop block"
@@ -345,7 +345,7 @@
       "Description": "Go to the end of the macro to exit gracefully"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End check"
@@ -393,7 +393,7 @@
       "Description": "Jump to label: theVeryEnd"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "Close if rename block"
@@ -489,7 +489,7 @@
       "Description": "Log success"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "Close if block"
