@@ -1,132 +1,672 @@
-#!/usr/bin/env python3
-
-import os
-import sys
-import json
-import requests
-import pyperclip
-
-# Flags
-debug_mode = '--debug' in sys.argv
-rich_output = '--rich' in sys.argv
-
-# Load GPS from clipboard
-gps = pyperclip.paste()
-try:
-    lat, lon = [s.strip() for s in gps.split(',')]
-except ValueError:
-    print("❌ Invalid clipboard format. Expected: lat, lon")
-    sys.exit(1)
-
-# Load API key
-try:
-    from config_secret import GOOGLE_API_KEY
-except ImportError:
-    from config_template import GOOGLE_API_KEY
-
-# API call
-url = f'https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_API_KEY}'
-response = requests.get(url)
-data = response.json()
-
-if debug_mode:
-    print(json.dumps(data, indent=2))
-    sys.exit(0)
-
-# Suburb and override logic for Canberra
-CanberraFocus = True
-canberra_regions = ['Belconnen', 'Canberra Central', 'Gungahlin', 'Jerrabomberra', 'Majura', 'Molonglo Valley', 'Tuggeranong', 'Woden Valley', 'Weston Creek']
-canberra_suburbs = ['Acton', 'Ainslie', 'Amaroo', 'Aranda', 'Banks', 'Barton', "Beard", 'Belconnen', 'Bonner', 'Braddon', 'Bruce', 'Calwell',
-    'Campbell', 'Chapman', 'Charnwood', 'Chifley', 'Conder', 'Cook', 'Curtin', 'Deakin', 'Dickson', 'Downer', 'Duffy',
-    'Dunlop', 'Evatt', 'Fadden', 'Farrer', 'Fisher', 'Florey', 'Flynn', 'Forde', 'Forrest', 'Franklin', 'Fraser', 'Garran',
-    'Gilmore', 'Giralang', 'Gordon', 'Gowrie', 'Greenway', 'Griffith', 'Hackett', 'Harrison', 'Hawker', 'Higgins', 'Holder',
-    'Holt', 'Hughes', 'Hume', 'Isaacs', 'Isabella Plains', 'Kaleen', 'Kambah', 'Kingston', 'Latham', 'Lawson', 'Lyneham', 'Lyons',
-    'Macarthur', 'Macgregor', 'Macquarie', 'Majura', 'Manuka', 'Mawson', 'McKellar', 'Melba', 'Monash', 'Narrabundah',
-    'Ngunnawal', 'Nicholls', "O'Connor", "O'Malley", 'Oxley', 'Page', 'Palmerston', 'Parkes', 'Pearce', 'Phillip', 'Pialligo', 'Red Hill',
-    'Reid', 'Rivett', 'Scullin', 'Spence', 'Stirling', 'Symonston', 'Taylor', 'Tharwa', 'Theodore', 'Torrens', 'Turner', 'Watson',
-    'Weetangera', 'Weston', 'Wright', 'Wanniassa', 'Yarralumla']
-misfire_names = {
-    # 'Uriarra Village': 'Coree',
+{
+  "Name": "eBird Incidental Checklist Create",
+  "CreationDate": "2025-5-19",
+  "Commands": [
+    {
+      "Command": "store",
+      "Target": "mac",
+      "Value": "platform",
+      "Description": "Store value 'mac' into variable 'platform'"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${platform} == 'mac'",
+      "Value": "",
+      "Description": "Start conditional block: ${platform} == 'mac'"
+    },
+    {
+      "Command": "store",
+      "Target": "/usr/bin/python3",
+      "Value": "pythonPath",
+      "Description": "Store value macOS Python path into variable 'pythonPath'"
+    },
+    {
+      "Command": "store",
+      "Target": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py\"",
+      "Value": "scriptPath",
+      "Description": "Store 'macOS' relevent script path into variable 'scriptPath'. Update as required"
+    },
+    {
+      "Command": "else",
+      "Target": "",
+      "Value": "",
+      "Description": "Else block (alternative path)"
+    },
+    {
+      "Command": "store",
+      "Target": "C:\\Python39\\python.exe",
+      "Value": "pythonPath",
+      "Description": "Store value Windows Python path into variable 'pythonPath'"
+    },
+    {
+      "Command": "store",
+      "Target": "\"C:\\Users\\James\\Documents\\eBirdChecklistNameFromGPS\\eBirdChecklistNameFromGPS.py\"",
+      "Value": "scriptPath",
+      "Description": "Store Windows releven script path into variable 'scriptPath'.  Update as required"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End of conditional or loop block"
+    },
+    {
+      "Command": "store",
+      "Target": "true",
+      "Value": "testingMode",
+      "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
+    },
+    {
+      "Command": "store",
+      "Target": "false",
+      "Value": "autoSubmit",
+      "Description": "When true, automatically submit checklist.  When false, the macros stops processing when the blank bird list is displayed to the user"
+    },
+    {
+      "Command": "store",
+      "Target": "true",
+      "Value": "skipComment",
+      "Description": "When true, dictated bird data will not be included in the checklist comments. Only used if 'autoSubmit' is false"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "return (${autoSubmit} == 'false' && ${skipComment} == 'true') ? 'true' : 'false';",
+      "Value": "dontComment",
+      "Description": "Do we skip comments or not?"
+    },
+    {
+      "Command": "echo",
+      "Target": "🛠️ Testing Mode: ${testingMode}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🛠️ Auto Submit Mode: ${autoSubmit}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🛠️ Skip checklist comments: ${skipComment}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🛠️ Platform: ${platform}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🐍 Python Path: ${pythonPath}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "📚 Script Path: ${scriptPath}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${testingMode} == 'true'",
+      "Value": "",
+      "Description": "If testingMode print a messages"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ TESTING: Checklist will not be submitted to eBird",
+      "Value": "orange",
+      "Description": "Show warning message"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ TESTING: The new location will be created without an attached checklist.  Clean the location up after testing.  Find it under 'Locations' in My eBird",
+      "Value": "orange",
+      "Description": "Show warning message"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End conditional output"
+    },
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "rawEntry",
+      "Description": "Grab raw entry from clipboard"
+    },
+    {
+      "Command": "echo",
+      "Target": "🔎 Clipboard data: ${rawEntry}",
+      "Value": "grey",
+      "Description": "Show full input line from clipboard"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = \"\" + ${rawEntry}; try { var gps = t.split('|')[1].replace('GPS:', '').trim(); var coords = gps.split(','); var lat = parseFloat(coords[0]); var lon = parseFloat(coords[1]); return (t.indexOf('Date/time:') > -1 && t.indexOf('Record(s):') > -1 && coords.length == 2 && !isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) ? 'true' : 'false'; } catch(e) { return 'false'; }",
+      "Value": "clipboardValid",
+      "Description": "Validate incoming log data as best we can.  Not perfect"
+    },
+    {
+      "Command": "echo",
+      "Target": "🔎 Clipboard valid: ${clipboardValid}",
+      "Value": "grey",
+      "Description": "Show what we actually captured"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${clipboardValid} == 'false'",
+      "Value": "",
+      "Description": "Stop if input is not valid"
+    },
+    {
+      "Command": "echo",
+      "Target": "❌ Clipboard does not contain valid bird log data. Please copy a valid entry.",
+      "Value": "red",
+      "Description": "Notify user"
+    },
+    {
+      "Command": "pause",
+      "Target": "3000",
+      "Value": "",
+      "Description": "Pause to show error"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Jump to label: theVeryEnd"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "Stop macro early"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var raw = '${rawEntry}'; var dt = raw.split('|')[0]; return dt.replace('Date/time:', '').replace(/['\"“”]/g, '').trim();",
+      "Value": "datetimeRaw",
+      "Description": "Clean datetime (no quotes, no smart characters)"
+    },
+    {
+      "Command": "echo",
+      "Target": "🗓 Raw date and time data: ${datetimeRaw}",
+      "Value": "blue",
+      "Description": "Log full datetime string"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dt = '${datetimeRaw}'; return dt.split(' at ')[0].trim();",
+      "Value": "datePart",
+      "Description": "Extract date component"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dt = '${datetimeRaw}'; return dt.split(' at ')[1].trim();",
+      "Value": "timePart",
+      "Description": "Extract time component"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var parts = ${rawEntry}.split('|'); return parts[1].replace('GPS:', '').trim();",
+      "Value": "gpsRaw",
+      "Description": "Extract GPS"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${timePart}'.replace(/“|”|\"|\\u202f/g, '').trim(); return t.split(':')[1];",
+      "Value": "oMin",
+      "Description": "Extract minute"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var coords = ${gpsRaw}.split(','); return coords[0].trim();",
+      "Value": "lat",
+      "Description": "Extract Latitude"
+    },
+    {
+      "Command": "echo",
+      "Target": "📍 Latitude: ${lat}",
+      "Value": "blue",
+      "Description": "Display parsed latitude"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var coords = ${gpsRaw}.split(','); return coords[1].trim();",
+      "Value": "lon",
+      "Description": "Extract Longitude"
+    },
+    {
+      "Command": "echo",
+      "Target": "📍 Longitude: ${lon}",
+      "Value": "blue",
+      "Description": "Display parsed latitude"
+    },
+    {
+      "Command": "store",
+      "Target": "${gpsRaw}",
+      "Value": "!clipboard",
+      "Description": "Copy raw GPS to clipboard for name formatter"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var parts = ${rawEntry}.split('|'); return parts.slice(2).join('|').replace('Record(s):', '').trim();",
+      "Value": "commentText",
+      "Description": "Extract dictation comment"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dt = '${datetimeRaw}'; return dt.split(' at ')[1].trim();",
+      "Value": "timePart",
+      "Description": "Extract time component"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[0];",
+      "Value": "oDay",
+      "Description": "Clean and extract numeric day"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'; return dp.split(' ')[1].substring(0,3);",
+      "Value": "oMonth",
+      "Description": "Extract 3-letter month and return it"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[2];",
+      "Value": "oYear",
+      "Description": "Extract year"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${timePart}'.replace(/“|”|\"/g, '').trim(); return t.split(':')[0];",
+      "Value": "oHour",
+      "Description": "Extract hour"
+    },
+    {
+      "Command": "XRun",
+      "Target": "${pythonPath}",
+      "Value": "${scriptPath}",
+      "Description": "Run Python script to format location name (uses platform-specific paths)"
+    },
+    {
+      "Command": "store",
+      "Target": "0",
+      "Value": "retryCount",
+      "Description": "Store value '0' into variable 'retryCount'"
+    },
+    {
+      "Command": "label",
+      "Target": "waitForFormatted",
+      "Value": "",
+      "Description": "Define label"
+    },
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "temp",
+      "Description": "Store value '${!clipboard}' into variable 'temp'"
+    },
+    {
+      "Command": "echo",
+      "Target": "📎 Clipboard: ${temp}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var t = '${temp}'.trim(); if (t.indexOf('(') > -1 && t.indexOf(',') > -1) { return true; } else { return false; }",
+      "Value": "formattedReady",
+      "Description": "Execute custom JavaScript in sandboxed environment"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${formattedReady} == false",
+      "Value": "",
+      "Description": "Start conditional block: ${formattedReady} == false"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "return parseInt(${retryCount}) + 1;",
+      "Value": "retryCount",
+      "Description": "Execute custom JavaScript in sandboxed environment"
+    },
+    {
+      "Command": "echo",
+      "Target": "🌀 Retry loop: ${retryCount}/5",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${retryCount} > 5",
+      "Value": "",
+      "Description": "Start conditional block: ${retryCount} > 5"
+    },
+    {
+      "Command": "echo",
+      "Target": "❌ Timeout waiting for clipboard update",
+      "Value": "red",
+      "Description": "Display message"
+    },
+    {
+      "Command": "throwError",
+      "Target": "Formatted location was never returned. Stopping.",
+      "Value": "",
+      "Description": "Stop macro execution with error: Formatted location was never returned. Stopping."
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End of conditional or loop block"
+    },
+    {
+      "Command": "pause",
+      "Target": "500",
+      "Value": "",
+      "Description": "Pause execution for 500 milliseconds"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "waitForFormatted",
+      "Value": "",
+      "Description": "Jump to label: waitForFormatted"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End of conditional or loop block"
+    },
+    {
+      "Command": "label",
+      "Target": "afterFormattedWait",
+      "Value": "",
+      "Description": "Define label: afterFormattedWait"
+    },
+    {
+      "Command": "store",
+      "Target": "${!clipboard}",
+      "Value": "newLocation",
+      "Description": "Save formatted location"
+    },
+    {
+      "Command": "echo",
+      "Target": "✍️ Formatted location name: ${newLocation}",
+      "Value": "blue",
+      "Description": "Display message: New location name"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var str = ${temp}; return str.indexOf('Unknown') === 0;",
+      "Value": "isUnknown",
+      "Description": "Check if formatted name begins with 'Unknown'"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${isUnknown} == true",
+      "Value": "",
+      "Description": "Abort if 'Unknown'"
+    },
+    {
+      "Command": "echo",
+      "Target": "❌ Name starts with 'Unknown'. Manual fix needed.",
+      "Value": "red",
+      "Description": "Print an error about the 'unknown' value"
+    },
+    {
+      "Command": "pause",
+      "Target": "1500",
+      "Value": "",
+      "Description": "Pause for the user to see the warning message then continue ..."
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Go to the end of the macro to exit gracefully"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End check"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "linkText=Use Latitude/Longitude",
+      "Value": "",
+      "Description": "Enter coordinates"
+    },
+    {
+      "Command": "type",
+      "Target": "name=lat",
+      "Value": "${lat}",
+      "Description": "Type latitude"
+    },
+    {
+      "Command": "type",
+      "Target": "name=lng",
+      "Value": "${lon}",
+      "Description": "Type longitude"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//button[@name='continue']",
+      "Value": "",
+      "Description": "Submit coordinates"
+    },
+    {
+      "Command": "type",
+      "Target": "id=name",
+      "Value": "${newLocation}",
+      "Description": "Paste formatted location name"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//button[@name='continue']",
+      "Value": "",
+      "Description": "Continue to date/effort screen"
+    },
+    {
+      "Command": "echo",
+      "Target": "🌐 New location submitted",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🗓 Checklist month: ${oMonth}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🗓 Checklist day: ${oDay}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🗓 Checklist year: ${oYear}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "⏰ Checklist start hour: ${oHour}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "⏰ Checklist start minute: ${oMin}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "select",
+      "Target": "id=p-day",
+      "Value": "label=${oDay}",
+      "Description": "Select observation day"
+    },
+    {
+      "Command": "select",
+      "Target": "id=p-month",
+      "Value": "label=${oMonth}",
+      "Description": "Select observation month"
+    },
+    {
+      "Command": "select",
+      "Target": "id=p-year",
+      "Value": "label=${oYear}",
+      "Description": "Select observation year"
+    },
+    {
+      "Command": "click",
+      "Target": "id=P20",
+      "Value": "",
+      "Description": "Select 'Incidental' as observation type"
+    },
+    {
+      "Command": "type",
+      "Target": "id=p-shared-hr",
+      "Value": "${oHour}",
+      "Description": "Enter checklist start (hour)"
+    },
+    {
+      "Command": "type",
+      "Target": "id=p-shared-min",
+      "Value": "${oMin}",
+      "Description": "Type checklist start (minute)"
+    },
+    {
+      "Command": "type",
+      "Target": "id=p-party-size",
+      "Value": "1",
+      "Description": "Type party size (currently hardcoded as 1"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${dontComment} == 'false'",
+      "Value": "",
+      "Description": "To comment or not to comment, that is the question ...."
+    },
+    {
+      "Command": "echo",
+      "Target": "✍️ Checklist comment: ${commentText}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
+      "Command": "type",
+      "Target": "id=p-comments",
+      "Value": "${commentText}",
+      "Description": "Paste dictation as comment"
+    },
+    {
+      "Command": "else",
+      "Target": "",
+      "Value": "",
+      "Description": "Else block (checklist comment)"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Checklist comment skipped",
+      "Value": "Orange",
+      "Description": "Display message"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End of comment conditional"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//*[@id=\"btn-eff-continue\"]/span",
+      "Value": "",
+      "Description": "Click the continue button"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${testingMode} == 'true'",
+      "Value": "",
+      "Description": "If testingMode is true, skip actual submission"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Testing mode: Checklist submission skipped",
+      "Value": "orange",
+      "Description": "Test mode echo"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Testing mode:  The new location will have been created without an attached checklist.  Clean this up after testing.  Find it under 'Locations' in My eBird",
+      "Value": "orange",
+      "Description": "Test mode echo"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Stop here"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "Testing mode"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${autoSubmit} == 'false'",
+      "Value": "",
+      "Description": "User wants to add birds manually"
+    },
+    {
+      "Command": "echo",
+      "Target": "✅ Checklist created. Enter bird data and submit manually.",
+      "Value": "green",
+      "Description": "Manual submit notice"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Stop here"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End create but not submit conditional"
+    },
+    {
+      "Command": "clickAndWait",
+      "Target": "xpath=//button[contains(text(),'Submit')]",
+      "Value": "",
+      "Description": "Submit checklist"
+    },
+    {
+      "Command": "echo",
+      "Target": "🎉 Checklist created successfully!",
+      "Value": "green",
+      "Description": "Final confirmation"
+    },
+    {
+      "Command": "label",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Define label: theVeryEnd"
+    }
+  ]
 }
-
-preferred_types = [
-    'neighborhood',
-    'sublocality',
-    'locality',
-    'postal_town',
-    'administrative_area_level_4',
-    'administrative_area_level_3',
-    'administrative_area_level_2',
-    'administrative_area_level_1',
-    'country'
-]
-
-candidates = []
-seen_types = set()
-
-from collections import Counter
-
-locality_names = [name for result in data.get("results", [])
-                  for component in result.get("address_components", [])
-                  if 'locality' in component.get("types", [])
-                  for name in [component.get("long_name")]]
-
-chosen_suburb = None
-chosen_region = None
-
-for result in data.get("results", []):
-    for component in result.get("address_components", []):
-        types = component.get("types", [])
-        seen_types.update(types)
-        name = component.get("long_name")
-
-        # Track possible Canberra-specific overrides
-        if 'locality' in types and name in canberra_suburbs:
-            chosen_suburb = name
-        if 'neighborhood' in types and name in canberra_regions:
-            chosen_region = name
-
-        # Track naming candidates by preference
-        for p_type in preferred_types:
-            if p_type in types:
-                candidates.append((preferred_types.index(p_type), name, p_type))
-                break
-
-# Determine most common suburb from localities
-chosen_suburb = None
-chosen_suburb = None
-if locality_names:
-    counts = Counter(locality_names)
-    top_two = counts.most_common(2)
-
-    if len(top_two) == 1 or top_two[0][1] > top_two[1][1]:
-        # Clear winner
-        chosen_suburb = top_two[0][0]
-    else:
-        # Tie — fall back to neighbourhood logic
-        chosen_suburb = None
-
-if CanberraFocus and chosen_suburb and chosen_region:
-    chosen_name = chosen_suburb
-    override_note = f"🎯 Canberra override: using suburb '{chosen_suburb}' instead of region '{chosen_region}'"
-else:
-    candidates.sort(key=lambda x: x[0])
-    candidate_name = candidates[0][1] if candidates else "Unknown"
-    chosen_name = misfire_names.get(candidate_name, candidate_name)
-    override_note = ""
-
-# Sort before output
-candidates.sort(key=lambda x: x[0])    
-
-# Output block
-if rich_output:
-    print("📦 Candidate address components:")
-    for i, (rank, name, tag) in enumerate(candidates):
-        print(f" {i+1:>2}. {name:<25} ({tag})")
-    if override_note:
-        print(override_note)
-    print("")
-
-output = f"{chosen_name} ( {lat}, {lon} )"
-pyperclip.copy(output)
-print(output)
