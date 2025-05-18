@@ -4,6 +4,30 @@
   "Commands": [
     {
       "Command": "store",
+      "Target": "true",
+      "Value": "testingMode",
+      "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
+    },
+    {
+      "Command": "store",
+      "Target": "false",
+      "Value": "autoSubmit",
+      "Description": "When true, automatically submit checklist.  When false, the macros stops processing when the blank bird list is displayed to the user"
+    },
+    {
+      "Command": "store",
+      "Target": "false",
+      "Value": "skipComment",
+      "Description": "When true, dictated bird data will not be included in the checklist comments. Only used if 'autoSubmit' is false"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "return (${autoSubmit} == 'false' && ${skipComment} == 'true') ? 'true' : 'false';",
+      "Value": "dontComment",
+      "Description": "Do we skip comments or not?"
+    },
+    {
+      "Command": "store",
       "Target": "mac",
       "Value": "platform",
       "Description": "Store value 'mac' into variable 'platform'"
@@ -49,30 +73,6 @@
       "Target": "",
       "Value": "",
       "Description": "End of conditional or loop block"
-    },
-    {
-      "Command": "store",
-      "Target": "true",
-      "Value": "testingMode",
-      "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
-    },
-    {
-      "Command": "store",
-      "Target": "false",
-      "Value": "autoSubmit",
-      "Description": "When true, automatically submit checklist.  When false, the macros stops processing when the blank bird list is displayed to the user"
-    },
-    {
-      "Command": "store",
-      "Target": "true",
-      "Value": "skipComment",
-      "Description": "When true, dictated bird data will not be included in the checklist comments. Only used if 'autoSubmit' is false"
-    },
-    {
-      "Command": "executeScript_Sandbox",
-      "Target": "return (${autoSubmit} == 'false' && ${skipComment} == 'true') ? 'true' : 'false';",
-      "Value": "dontComment",
-      "Description": "Do we skip comments or not?"
     },
     {
       "Command": "echo",
@@ -142,7 +142,7 @@
     },
     {
       "Command": "echo",
-      "Target": "🔎 Clipboard data: ${rawEntry}",
+      "Target": "📎 Clipboard data: ${rawEntry}",
       "Value": "grey",
       "Description": "Show full input line from clipboard"
     },
@@ -197,7 +197,7 @@
     {
       "Command": "echo",
       "Target": "🗓 Raw date and time data: ${datetimeRaw}",
-      "Value": "blue",
+      "Value": "grey",
       "Description": "Log full datetime string"
     },
     {
@@ -313,12 +313,6 @@
       "Target": "${!clipboard}",
       "Value": "temp",
       "Description": "Store value '${!clipboard}' into variable 'temp'"
-    },
-    {
-      "Command": "echo",
-      "Target": "📎 Clipboard: ${temp}",
-      "Value": "grey",
-      "Description": "Display message"
     },
     {
       "Command": "executeScript_Sandbox",
@@ -562,7 +556,7 @@
     },
     {
       "Command": "echo",
-      "Target": "✍️ Checklist comment: ${commentText}",
+      "Target": "Checklist comments: ${commentText}",
       "Value": "blue",
       "Description": "Display message"
     },
@@ -576,19 +570,19 @@
       "Command": "else",
       "Target": "",
       "Value": "",
-      "Description": "Else block (checklist comment)"
+      "Description": "Else block (comments)"
     },
     {
       "Command": "echo",
-      "Target": "⚠️ Checklist comment skipped",
-      "Value": "Orange",
+      "Target": "⚠️ Checklist comments skipped",
+      "Value": "orange",
       "Description": "Display message"
     },
     {
       "Command": "endif",
       "Target": "",
       "Value": "",
-      "Description": "End of comment conditional"
+      "Description": "End of comments conditional"
     },
     {
       "Command": "clickAndWait",
@@ -613,6 +607,12 @@
       "Target": "⚠️ Testing mode:  The new location will have been created without an attached checklist.  Clean this up after testing.  Find it under 'Locations' in My eBird",
       "Value": "orange",
       "Description": "Test mode echo"
+    },
+    {
+      "Command": "echo",
+      "Target": "🎉 Testing run completed successfully!",
+      "Value": "green",
+      "Description": "Testing confirmation"
     },
     {
       "Command": "gotoLabel",
@@ -652,7 +652,7 @@
     },
     {
       "Command": "clickAndWait",
-      "Target": "xpath=//button[contains(text(),'Submit')]",
+      "Target": "css=#btn-continue > span",
       "Value": "",
       "Description": "Submit checklist"
     },
