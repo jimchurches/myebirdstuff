@@ -1,7 +1,31 @@
 {
   "Name": "eBird Incidental Checklist Create",
-  "CreationDate": "2025-5-18",
+  "CreationDate": "2025-5-19",
   "Commands": [
+    {
+      "Command": "store",
+      "Target": "false",
+      "Value": "testingMode",
+      "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
+    },
+    {
+      "Command": "store",
+      "Target": "true",
+      "Value": "autoSubmit",
+      "Description": "When true, automatically submit checklist.  When false, the macros stops processing when the blank bird list is displayed to the user"
+    },
+    {
+      "Command": "store",
+      "Target": "false",
+      "Value": "skipComment",
+      "Description": "When true, dictated bird data will not be included in the checklist comments. Only used if 'autoSubmit' is false"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "return (${autoSubmit} == 'false' && ${skipComment} == 'true') ? 'true' : 'false';",
+      "Value": "dontComment",
+      "Description": "Do we skip comments or not?"
+    },
     {
       "Command": "store",
       "Target": "mac",
@@ -45,28 +69,10 @@
       "Description": "Store Windows releven script path into variable 'scriptPath'.  Update as required"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End of conditional or loop block"
-    },
-    {
-      "Command": "store",
-      "Target": "true",
-      "Value": "testingMode",
-      "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
-    },
-    {
-      "Command": "store",
-      "Target": "false",
-      "Value": "autoSubmit",
-      "Description": "When true, automatically submit checklist.  When false, the macros stops processing when the blank bird list is displayed to the user"
-    },
-    {
-      "Command": "store",
-      "Target": "false",
-      "Value": "skipComment",
-      "Description": "When true, dictated bird data will not be included in the checklist comments.  Data may not be required when 'autoSubmit is set to false and bird data is being entered before final submission"
     },
     {
       "Command": "echo",
@@ -82,7 +88,7 @@
     },
     {
       "Command": "echo",
-      "Target": "🛠️ Include dictated bird data in checklist comments: ${skipComment}",
+      "Target": "🛠️ Skip checklist comments: ${skipComment}",
       "Value": "grey",
       "Description": "Display message"
     },
@@ -123,7 +129,7 @@
       "Description": "Show warning message"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End conditional output"
@@ -136,7 +142,7 @@
     },
     {
       "Command": "echo",
-      "Target": "🔎 Clipboard data: ${rawEntry}",
+      "Target": "📎 Clipboard data: ${rawEntry}",
       "Value": "grey",
       "Description": "Show full input line from clipboard"
     },
@@ -177,7 +183,7 @@
       "Description": "Jump to label: theVeryEnd"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "Stop macro early"
@@ -191,7 +197,7 @@
     {
       "Command": "echo",
       "Target": "🗓 Raw date and time data: ${datetimeRaw}",
-      "Value": "blue",
+      "Value": "grey",
       "Description": "Log full datetime string"
     },
     {
@@ -309,12 +315,6 @@
       "Description": "Store value '${!clipboard}' into variable 'temp'"
     },
     {
-      "Command": "echo",
-      "Target": "📎 Clipboard: ${temp}",
-      "Value": "grey",
-      "Description": "Display message"
-    },
-    {
       "Command": "executeScript_Sandbox",
       "Target": "var t = '${temp}'.trim(); if (t.indexOf('(') > -1 && t.indexOf(',') > -1) { return true; } else { return false; }",
       "Value": "formattedReady",
@@ -357,7 +357,7 @@
       "Description": "Stop macro execution with error: Formatted location was never returned. Stopping."
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End of conditional or loop block"
@@ -375,7 +375,7 @@
       "Description": "Jump to label: waitForFormatted"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End of conditional or loop block"
@@ -429,7 +429,7 @@
       "Description": "Go to the end of the macro to exit gracefully"
     },
     {
-      "Command": "end",
+      "Command": "endif",
       "Target": "",
       "Value": "",
       "Description": "End check"
@@ -549,10 +549,40 @@
       "Description": "Type party size (currently hardcoded as 1"
     },
     {
+      "Command": "if_v2",
+      "Target": "${dontComment} == 'false'",
+      "Value": "",
+      "Description": "To comment or not to comment, that is the question ...."
+    },
+    {
+      "Command": "echo",
+      "Target": "Checklist comments: ${commentText}",
+      "Value": "blue",
+      "Description": "Display message"
+    },
+    {
       "Command": "type",
       "Target": "id=p-comments",
       "Value": "${commentText}",
-      "Description": "💬 Paste dictation as comment"
+      "Description": "Paste dictation as comment"
+    },
+    {
+      "Command": "else",
+      "Target": "",
+      "Value": "",
+      "Description": "Else block (comments)"
+    },
+    {
+      "Command": "echo",
+      "Target": "⚠️ Checklist comments skipped",
+      "Value": "orange",
+      "Description": "Display message"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End of comments conditional"
     },
     {
       "Command": "clickAndWait",
@@ -579,28 +609,58 @@
       "Description": "Test mode echo"
     },
     {
-      "Command": "else",
+      "Command": "echo",
+      "Target": "🎉 Testing run completed successfully!",
+      "Value": "green",
+      "Description": "Testing confirmation"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Stop here"
+    },
+    {
+      "Command": "endif",
       "Target": "",
       "Value": "",
-      "Description": "Otherwise, submit for real"
+      "Description": "Testing mode"
+    },
+    {
+      "Command": "if_v2",
+      "Target": "${autoSubmit} == 'false'",
+      "Value": "",
+      "Description": "User wants to add birds manually"
+    },
+    {
+      "Command": "echo",
+      "Target": "✅ Checklist created. Enter bird data and submit manually.",
+      "Value": "green",
+      "Description": "Manual submit notice"
+    },
+    {
+      "Command": "gotoLabel",
+      "Target": "theVeryEnd",
+      "Value": "",
+      "Description": "Stop here"
+    },
+    {
+      "Command": "endif",
+      "Target": "",
+      "Value": "",
+      "Description": "End create but not submit conditional"
     },
     {
       "Command": "clickAndWait",
-      "Target": "xpath=//button[contains(text(),'Submit')]",
+      "Target": "css=#btn-continue > span",
       "Value": "",
-      "Description": "✅ Submit checklist"
+      "Description": "Submit checklist"
     },
     {
       "Command": "echo",
       "Target": "🎉 Checklist created successfully!",
       "Value": "green",
       "Description": "Final confirmation"
-    },
-    {
-      "Command": "endif",
-      "Target": "",
-      "Value": "",
-      "Description": "End of submit conditional"
     },
     {
       "Command": "label",
