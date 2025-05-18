@@ -1,0 +1,79 @@
+# TODO: eBird Checklist Automation
+
+Tracking outstanding work and future enhancements for the eBird automation workflow.
+
+---
+
+## 🔧 Outstanding Tasks
+
+### ✅ Improve Clipboard Validator Logic
+
+- Current logic checks for:
+  - Presence of `Date/time:` and `Record(s):`
+  - Parseable GPS coordinates
+- Improvements:
+  - Use regex for stricter format checking
+  - Catch malformed or truncated input early
+  - Make validator logic more defensive
+- Reference: validator code reviewed 18 May 2025
+
+---
+
+### 📘 README Drafting and Editing
+
+- Location naming macro section: mostly complete, needs review
+- Checklist creation macro:
+  - Needs a clear overview and example use case
+  - Explain input variables and conditional flags
+  - Describe assumptions (e.g., user manually enters bird data)
+- Important note:
+  - The Apple Shortcut dictation is *not* parsed into individual species
+  - The macro exists to streamline checklist creation, not record birds
+  - Intended for use while driving or casual observation — not a field data tool (use the eBird app instead)
+
+---
+
+### ⚠️ Add README Warnings and Disclaimers
+
+Add a prominent note at the top of the README:
+
+> **Warning**  
+> This macro interacts with the live eBird system.  
+> - Do not upload fake or test data  
+> - Clean up test checklists and locations immediately  
+> - Avoid bulk automation that floods eBird with submissions  
+> - Respect eBird’s role in science and community birding  
+
+---
+
+### 🛠️ Document the Apple Shortcut
+
+- Describe the purpose: voice dictation of bird sightings while driving
+- Provide:
+  - Step-by-step walkthrough of each action block
+  - Screenshots (optional but helpful)
+  - Export file note: `.shortcuts` are binary, not plain text
+
+---
+
+### 📄 Document Shortcut Data Format
+
+- Input format (from Notes):
+  ```
+  Date/time: 18 May 2025 at 07:45 | GPS: -35.1234, 149.1234 | Record(s): one Wedge-tailed Eagle
+  ```
+- Document:
+  - How this structure feeds into the macro
+  - Why it's machine-oriented over human-readable
+  - How to adapt it to suit other workflows (e.g., using markdown or plain sentences)
+
+---
+
+### 🧪 Batch Processing of Apple Shortcut Data (Future Idea)
+
+- Currently not planned, but may revisit
+- Potential use case: long trips with many voice notes
+- Idea:
+  - Paste multiple dictation entries into the clipboard
+  - Loop through and create checklists one by one
+- eBird has a bulk upload format, but that's a much more complex project
