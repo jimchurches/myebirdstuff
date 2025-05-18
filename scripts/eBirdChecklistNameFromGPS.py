@@ -6,7 +6,11 @@ import json
 import requests
 import pyperclip
 
-# Get GPS from clipboard
+# Flags
+debug_mode = '--debug' in sys.argv
+rich_output = '--rich' in sys.argv
+
+# Load GPS from clipboard
 gps = pyperclip.paste()
 try:
     lat, lon = [s.strip() for s in gps.split(',')]
@@ -20,12 +24,8 @@ try:
 except ImportError:
     from config_template import GOOGLE_API_KEY
 
-# Optional debug flag
-debug_mode = '--debug' in sys.argv
-
+# API call
 url = f'https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_API_KEY}'
-
-# Perform the API request
 response = requests.get(url)
 data = response.json()
 
@@ -33,7 +33,22 @@ if debug_mode:
     print(json.dumps(data, indent=2))
     sys.exit(0)
 
-# Preferred types to search for, in order
+# Suburb and override logic for Canberra
+CanberraFocus = True
+canberra_regions = ['Belconnen', 'Canberra Central', 'Gungahlin', 'Molonglo Valley', 'Tuggeranong', 'Woden Valley', 'Weston Creek']
+canberra_suburbs = ['Acton', 'Ainslie', 'Amaroo', 'Aranda', 'Banks', 'Barton', 'Belconnen', 'Bonner', 'Braddon', 'Bruce', 'Calwell',
+    'Campbell', 'Chapman', 'Charnwood', 'Chifley', 'Conder', 'Cook', 'Curtin', 'Deakin', 'Dickson', 'Downer', 'Duffy',
+    'Dunlop', 'Evatt', 'Fadden', 'Farrer', 'Fisher', 'Florey', 'Flynn', 'Forde', 'Forrest', 'Franklin', 'Fraser', 'Garran',
+    'Gilmore', 'Giralang', 'Gordon', 'Gowrie', 'Greenway', 'Griffith', 'Hackett', 'Harrison', 'Hawker', 'Higgins', 'Holder',
+    'Holt', 'Hughes', 'Isaacs', 'Isabella Plains', 'Kaleen', 'Kambah', 'Kingston', 'Latham', 'Lawson', 'Lyneham', 'Lyons',
+    'Macarthur', 'Macgregor', 'Macquarie', 'Majura', 'Manuka', 'Mawson', 'McKellar', 'Melba', 'Monash', 'Narrabundah',
+    'Ngunnawal', 'Nicholls', "O'Connor", "O'Malley", 'Oxley', 'Page', 'Palmerston', 'Parkes', 'Pearce', 'Phillip', 'Red Hill',
+    'Reid', 'Rivett', 'Scullin', 'Spence', 'Stirling', 'Taylor', 'Tharwa', 'Theodore', 'Torrens', 'Turner', 'Watson',
+    'Weetangera', 'Weston', 'Wright', 'Wanniassa', 'Yarralumla']
+misfire_names = {
+    # 'Uriarra Village': 'Coree',
+}
+
 preferred_types = [
     'neighborhood',
     'sublocality',
@@ -46,28 +61,43 @@ preferred_types = [
 
 candidates = []
 seen_types = set()
+chosen_suburb = None
+chosen_region = None
 
-# Search through all address components
 for result in data.get("results", []):
     for component in result.get("address_components", []):
+        name = component.get("long_name")
         types = component.get("types", [])
         seen_types.update(types)
+
+        if 'locality' in types and name in canberra_suburbs:
+            chosen_suburb = name
+        if 'neighborhood' in types and name in canberra_regions:
+            chosen_region = name
+
         for p_type in preferred_types:
             if p_type in types:
-                candidates.append((preferred_types.index(p_type), component.get("long_name")))
-                break  # Only record the first match from this component
+                candidates.append((preferred_types.index(p_type), name, p_type))
+                break
 
-# Decide on name
-if candidates:
-    candidates.sort(key=lambda x: x[0])  # sort by preferred_types index
-    name = candidates[0][1]
+if CanberraFocus and chosen_suburb and chosen_region:
+    chosen_name = chosen_suburb
+    override_note = f"🎯 Canberra override: using suburb '{chosen_suburb}' instead of region '{chosen_region}'"
 else:
-    print("⚠️ No preferred type match found. Types seen:")
-    for t in sorted(seen_types):
-        print(f" - {t}")
-    name = "Unknown"
+    candidates.sort(key=lambda x: x[0])
+    candidate_name = candidates[0][1] if candidates else "Unknown"
+    chosen_name = misfire_names.get(candidate_name, candidate_name)
+    override_note = ""
 
-# Format output
-output = f"{name} ( {lat}, {lon} )"
+# Output block
+if rich_output:
+    print("📦 Candidate address components:")
+    for i, (rank, name, tag) in enumerate(candidates):
+        print(f" {i+1:>2}. {name:<25} ({tag})")
+    if override_note:
+        print(override_note)
+    print("")
+
+output = f"{chosen_name} ( {lat}, {lon} )"
 pyperclip.copy(output)
 print(output)
