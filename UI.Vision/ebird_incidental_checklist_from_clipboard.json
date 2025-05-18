@@ -9,12 +9,6 @@
       "Description": "Store value 'mac' into variable 'platform'"
     },
     {
-      "Command": "echo",
-      "Target": "🛠️  Set platform to 'mac' or 'win' at the top of the macro!",
-      "Value": "grey",
-      "Description": "Display message"
-    },
-    {
       "Command": "if_v2",
       "Target": "${platform} == 'mac'",
       "Value": "",
@@ -57,6 +51,48 @@
       "Description": "End of conditional or loop block"
     },
     {
+      "Command": "store",
+      "Target": "true",
+      "Value": "noSubmit",
+      "Description": "🐞 Toggle to 'true' when testing/debugging; Stops the final submit step"
+    },
+    {
+      "Command": "store",
+      "Target": "false",
+      "Value": "autoSubmit",
+      "Description": "When true, automatically submit checklist.  When false, the macros stops processing when the blank bird list is displayed to the user"
+    },
+    {
+      "Command": "store",
+      "Target": "false",
+      "Value": "testingMode",
+      "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
+    },
+    {
+      "Command": "store",
+      "Target": "false",
+      "Value": "skipComment",
+      "Description": "When true, dictated bird data will not be included in the checklist comments.  Data may not be required when 'autoSubmit is set to false and bird data is being entered before final submission"
+    },
+        {
+      "Command": "echo",
+      "Target": "🛠️ Auto Submit Mode: ${autoSubmit}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🛠️ Testing Mode: ${testingMode}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
+      "Command": "echo",
+      "Target": "🛠️ Include dictated bird data in checklist comments: ${skipComment}",
+      "Value": "grey",
+      "Description": "Display message"
+    },
+    {
       "Command": "echo",
       "Target": "🛠️ Platform: ${platform}",
       "Value": "grey",
@@ -75,26 +111,20 @@
       "Description": "Display message"
     },
     {
-      "Command": "store",
-      "Target": "true",
-      "Value": "noSubmit",
-      "Description": "🐞 Toggle to 'true' when testing/debugging; Stops the final submit step"
-    },
-    {
       "Command": "if_v2",
-      "Target": "${noSubmit} == 'true'",
+      "Target": "${testingMode} == 'true'",
       "Value": "",
-      "Description": "If noSubmit print a message"
+      "Description": "If testingMode print a messages"
     },
     {
       "Command": "echo",
-      "Target": "⚠️ Testing mode:  Checklist will not be submitted to eBird",
+      "Target": "⚠️ TESTING: Checklist will not be submitted to eBird",
       "Value": "orange",
       "Description": "Show warning message"
     },
     {
       "Command": "echo",
-      "Target": "⚠️ Testing mode:  The new location will be created without an attached checklist.  Clean the location up after testing.  Find it under 'Locations' in My eBird",
+      "Target": "⚠️ TESTING: The new location will be created without an attached checklist.  Clean the location up after testing.  Find it under 'Locations' in My eBird",
       "Value": "orange",
       "Description": "Show warning message"
     },
