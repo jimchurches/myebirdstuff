@@ -53,8 +53,8 @@
     {
       "Command": "store",
       "Target": "true",
-      "Value": "noSubmit",
-      "Description": "🐞 Toggle to 'true' when testing/debugging; Stops the final submit step"
+      "Value": "testingMode",
+      "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
     },
     {
       "Command": "store",
@@ -65,24 +65,18 @@
     {
       "Command": "store",
       "Target": "false",
-      "Value": "testingMode",
-      "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
-    },
-    {
-      "Command": "store",
-      "Target": "false",
       "Value": "skipComment",
       "Description": "When true, dictated bird data will not be included in the checklist comments.  Data may not be required when 'autoSubmit is set to false and bird data is being entered before final submission"
     },
-        {
+    {
       "Command": "echo",
-      "Target": "🛠️ Auto Submit Mode: ${autoSubmit}",
+      "Target": "🛠️ Testing Mode: ${testingMode}",
       "Value": "grey",
       "Description": "Display message"
     },
     {
       "Command": "echo",
-      "Target": "🛠️ Testing Mode: ${testingMode}",
+      "Target": "🛠️ Auto Submit Mode: ${autoSubmit}",
       "Value": "grey",
       "Description": "Display message"
     },
@@ -568,13 +562,13 @@
     },
     {
       "Command": "if_v2",
-      "Target": "${noSubmit} == 'true'",
+      "Target": "${testingMode} == 'true'",
       "Value": "",
-      "Description": "If noSubmit is true, skip actual submission"
+      "Description": "If testingMode is true, skip actual submission"
     },
     {
       "Command": "echo",
-      "Target": "⚠️ Testing mode: Submission skipped",
+      "Target": "⚠️ Testing mode: Checklist submission skipped",
       "Value": "orange",
       "Description": "Test mode echo"
     },
