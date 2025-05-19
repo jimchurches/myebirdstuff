@@ -8,15 +8,9 @@ Tracking outstanding work and future enhancements for the eBird automation workf
 
 ### 📘 README Drafting and Editing
 
-- Location naming macro section: mostly complete, needs review
-- Checklist creation macro:
-  - Needs a clear overview and example use case
-  - Explain input variables and conditional flags
-  - Describe assumptions (e.g., user manually enters bird data)
-- Important note:
-  - The Apple Shortcut dictation is *not* parsed into individual species
-  - The macro exists to streamline checklist creation, not record birds
-  - Intended for use while driving or casual observation — not a field data tool (use the eBird app instead)
+- Review the README file for content and clarity
+- Written peacemeal as I sent, may not flow
+- Best to do that after using the tools for a bit
 
 ---
 
