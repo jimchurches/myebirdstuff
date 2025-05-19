@@ -31,30 +31,6 @@ Add a prominent note at the top of the README:
 > - Avoid bulk automation that floods eBird with submissions  
 > - Respect eBird’s role in science and community birding  
 
----
-
-### 🛠️ Document the Apple Shortcut
-
-- Describe the purpose: voice dictation of bird sightings while driving
-- Provide:
-  - Step-by-step walkthrough of each action block
-  - Screenshots (optional but helpful)
-  - Export file note: `.shortcuts` are binary, not plain text
-
----
-
-### 📄 Document Shortcut Data Format
-
-- Input format (from Notes):
-  ```
-  Date/time: 18 May 2025 at 07:45 | GPS: -35.1234, 149.1234 | Record(s): one Wedge-tailed Eagle
-  ```
-- Document:
-  - How this structure feeds into the macro
-  - Why it's machine-oriented over human-readable
-  - How to adapt it to suit other workflows (e.g., using markdown or plain sentences)
-
----
 
 ### 🗺️ Improve GPS Location Naming Logic
 
