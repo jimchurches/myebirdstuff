@@ -6,19 +6,6 @@ Tracking outstanding work and future enhancements for the eBird automation workf
 
 ## 🔧 Outstanding Tasks
 
-### ✅ Improve Clipboard Validator Logic
-
-- Current logic checks for:
-  - Presence of `Date/time:` and `Record(s):`
-  - Parseable GPS coordinates
-- Improvements:
-  - Use regex for stricter format checking
-  - Catch malformed or truncated input early
-  - Make validator logic more defensive
-- Reference: validator code reviewed 18 May 2025
-
----
-
 ### 📘 README Drafting and Editing
 
 - Location naming macro section: mostly complete, needs review
