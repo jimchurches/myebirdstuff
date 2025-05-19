@@ -188,6 +188,8 @@ This macro works alongside the [Apple Shortcut described above](#bird-data-loggi
 
 I created this workflow after getting a $450 fine for touching my phone to log a Wedge-tailed Eagle while driving. The Shortcut allows hands-free voice logging, and this macro helps me later turn those logs into proper eBird records.
 
+> ‼️ You certainly don't need this macro to use the Apple Shortcut; you can manually create checklists based on the data recorded in Notes.
+
 Here's how it works:
 
 - You copy a single line of text from Notes into your clipboard  
@@ -201,9 +203,18 @@ Here's how it works:
 - It creates an **Incidental Checklist** pre-filled with the correct details  
 - The dictation text goes into the checklist comments (optional – see below)
 
-Once the checklist is created, you just update it manually with the correct birds, remove the comment if you like, and submit. Done.
+Once the checklist is created, you just update it manually with the correct birds, remove the comment if you like (you should), and submit. Done.
 
 The macro does **not** try to parse the bird list from the dictation — that’s too error-prone and outside the scope of what I need.
+
+You have two choices on when to enter the actual list of birds for the checkist:
+
+* If `autoSubmit` is false (see below), the checklist creation process will stop on the final page, the bird list, and you can enter the bird(s) before manually
+  submitting the checklist.
+
+* If `autoSubmit` is true, the checklist will be created and submitted.  You can then open the checklist and your dictation text from Notes will be in
+  the checklist comments.  You can edit the checklist and add your bird(s) and you should now delete the checklist comment (it is there to help you list
+  the correct bird(s))
 
 #### Flow Control Options
 
@@ -218,6 +229,8 @@ The macro uses three variables at the start to control its behaviour:
 - `autoSubmit`:  
   When `true`, the checklist is automatically submitted.  
   When `false`, the macro stops before submission, so you can review or edit the list manually.
+  The dictatoin text for your data will always be written to the checklist comment so you can
+  use it to update the bird list later.  `skipComment` is ignored.
 
 - `skipComment`:  
   Only relevant when `autoSubmit` is `false`.  
