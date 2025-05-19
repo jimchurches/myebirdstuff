@@ -37,3 +37,19 @@ Tracking outstanding work and future enhancements for the eBird automation workf
   - Paste multiple dictation entries into the clipboard
   - Loop through and create checklists one by one
 - eBird has a bulk upload format, but that's a much more complex project
+- 
+
+### Analyse Personal Locations for Duplicates and Clusters
+
+- Use the [eBird API](https://documenter.getpostman.com/view/664302/ebird-api-20/2HTbHW) to fetch all personal locations
+- Research if this is even possible and if possible ...
+- Identify:
+  - Exact duplicate coordinates with different names
+  - Same or similar names with slightly different coordinates
+  - Locations within a small radius of each other (e.g. 50–200 metres)
+- Consider:
+  - Logging last used date for sorting or filtering
+  - Exporting results to CSV or GeoJSON for visual review
+- Goal is to manually clean up redundant locations in eBird
+- This is a **manual clean-up aid**, not an automated merge tool
+- Optional future step: script to pre-format the findings into a list of links for easy access in eBird
