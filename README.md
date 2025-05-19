@@ -3,6 +3,21 @@ eBird Automation
 
 Various tools and utilities I've written to help me with eBird.
 
+## Table of Contents
+- [myebirdstuff](#myebirdstuff)
+  - [Table of Contents](#table-of-contents)
+  - [Location naming](#location-naming)
+    - [What is UI.Vision?](#what-is-uivision)
+    - [Google Geocoding](#google-geocoding)
+  - [Incidental Checklist Creation from Clipboard Data](#incidental-checklist-creation-from-clipboard-data)
+  - [🎙️ Bird Data Logging with Apple Shortcut](#️-bird-data-logging-with-apple-shortcut)
+    - [What It Does](#what-it-does)
+    - [Output Format](#output-format)
+    - [Why This Exists](#why-this-exists)
+    - [What Happens After Logging](#what-happens-after-logging)
+    - [Customisation Tips](#customisation-tips)
+
+
 ## Location naming
 
 I create a lot of personal locations. I think the fidelity of personal locations is more scientifically relevant than using a generalised hotspot. Don’t get me wrong — if I’m at a location with an obvious hotspot, I’ll use it. But Australia is big, and I avoid using hotspots if they’re too broad or not actually near where I’m birding. eBird encourages this — they want you to be precise. You’ll find this in various help pages and articles, including this one:
@@ -18,6 +33,7 @@ I don’t try to do this in the field. Often someone else is creating the checkl
 So I solved it. I wrote a macro in UI.Vision that does it for me. I go to My eBird, open each new location manually, and run the macro. Done. It renames any personal location, or if it’s a shared one, it edits the checklist and creates a new personal location using my naming scheme. That doesn’t affect the original owner — once a checklist is shared, they become separate (photos are still shared, but not the location).
 
 This setup is tailored to my quirks. I don’t expect anyone else to use it. But maybe it’ll give someone a few clues about how to automate eBird tasks with UI.Vision if they’ve got their own itch to scratch.  There might also be clues in the helper script, written in Python, around working with goelocation data.
+
 
 ### What is UI.Vision?
 
@@ -43,7 +59,6 @@ The UI.Vision macro reads a single data entry from the clipboard, creates an inc
 
 I have no intention of using this method when out walking or when I have access to my phone to log a checklist on the spot.  The purpose of the Apple shortcut is explained below somewhere, but my idea is to use it when driving to capture birds I'm interested in. Raptors are the obvious candiates for me, but anything seen when driving that is interesting enough to log.
 
-
 ## 🎙️ Bird Data Logging with Apple Shortcut
 
 **Download the Shortcut**  
@@ -55,7 +70,7 @@ It works on both **macOS** and **iOS**.
 
 ---
 
-### ✅ What It Does
+### What It Does
 
 When triggered (e.g. with `Hey Siri, log bird data`), the Shortcut:
 
@@ -71,7 +86,7 @@ It gives you a time-stamped log of sightings, ready for later.
 
 ---
 
-### 📄 Output Format
+### Output Format
 
 Each entry in the Notes log looks like this:
 
@@ -84,7 +99,7 @@ simple and easy to follow.  It can be viewed, used and edited on both iOS and ma
 
 ---
 
-### 🧠 Why This Exists
+### Why This Exists
 
 Logging birds while driving is dangerous and illegal. I created this Shortcut after being fined $450 for
 touching my phone to log a Wedge-tailed Eagle  with the eBird mobile app while driving.  Totally my
@@ -98,7 +113,7 @@ Apple Car Play isn't required, but makes it easy, I don't need to remember to le
 
 ---
 
-### 📝 What Happens After Logging
+### What Happens After Logging
 
 Later, you can manually transfer the log entry into a proper eBird checklist.  I envisioned this as a manual process and it probably will be if you use this little tool.
 
@@ -121,7 +136,7 @@ for anyone.  My custom location naming might be a step to far for you and may no
 
 ---
 
-### ⚙️ Customisation Tips
+### Customisation Tips
 
 - You can edit the Shortcut to change the output format, note name, or structure
 - The individual record format is machine-readable, not designed for beauty as I process it with UI.Vision (see above)
