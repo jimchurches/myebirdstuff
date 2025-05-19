@@ -4,13 +4,13 @@
   "Commands": [
     {
       "Command": "store",
-      "Target": "false",
+      "Target": "true",
       "Value": "testingMode",
       "Description": "Use 'true' when testing, doesn't create real checklist (will still create a location).  Warning messages included"
     },
     {
       "Command": "store",
-      "Target": "true",
+      "Target": "false",
       "Value": "autoSubmit",
       "Description": "When true, automatically submit checklist.  When false, the macros stops processing when the blank bird list is displayed to the user"
     },
@@ -146,11 +146,23 @@
       "Value": "grey",
       "Description": "Show full input line from clipboard"
     },
-    {
+        {
       "Command": "executeScript_Sandbox",
       "Target": "var t = \"\" + ${rawEntry}; try { var gps = t.split('|')[1].replace('GPS:', '').trim(); var coords = gps.split(','); var lat = parseFloat(coords[0]); var lon = parseFloat(coords[1]); return (t.indexOf('Date/time:') > -1 && t.indexOf('Record(s):') > -1 && coords.length == 2 && !isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) ? 'true' : 'false'; } catch(e) { return 'false'; }",
-      "Value": "clipboardValid",
+      "Value": "DELETEOLDclipboardValid",
       "Description": "Validate incoming log data as best we can.  Not perfect"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var raw = \"\" + ${rawEntry}; raw = raw.replace(/[\\\"“”‘’]/g, '').trim(); var parts = raw.split('|'); return JSON.stringify(parts);",
+      "Value": "entryParts",
+      "Description": "Split raw clipboard entry into parts and store as JSON string"
+    },
+    {
+      "Command": "executeScript_Sandbox",
+      "Target": "var parts = JSON.parse(${entryParts}); if (parts.length < 3) return 'false'; var dt = parts[0].trim(); var gps = parts[1].replace('GPS:', '').trim(); var coords = gps.split(','); var lat = parseFloat(coords[0]); var lon = parseFloat(coords[1]); if (dt.indexOf('Date/time:') === -1 || dt.indexOf(' at ') === -1) return 'false'; if (parts[2].indexOf('Record(s):') === -1) return 'false'; if (coords.length !== 2 || isNaN(lat) || isNaN(lon)) return 'false'; if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return 'false'; return 'true';",
+      "Value": "clipboardValid",
+      "Description": "Validate clipboard format using cleaned and parsed parts"
     },
     {
       "Command": "echo",
@@ -508,15 +520,15 @@
     },
     {
       "Command": "select",
-      "Target": "id=p-day",
-      "Value": "label=${oDay}",
-      "Description": "Select observation day"
-    },
-    {
-      "Command": "select",
       "Target": "id=p-month",
       "Value": "label=${oMonth}",
       "Description": "Select observation month"
+    },
+    {
+      "Command": "select",
+      "Target": "id=p-day",
+      "Value": "label=${oDay}",
+      "Description": "Select observation day"
     },
     {
       "Command": "select",
