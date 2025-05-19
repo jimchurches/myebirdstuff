@@ -9,7 +9,7 @@ Tracking outstanding work and future enhancements for the eBird automation workf
 ### 📘 README Drafting and Editing
 
 - Review the README file for content and clarity
-- Written peacemeal as I sent, may not flow
+- Written peacemeal as I sat working on my ideas, may not flow
 - Best to do that after using the tools for a bit
 
 ---
