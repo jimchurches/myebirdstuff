@@ -37,7 +37,8 @@ Tracking outstanding work and future enhancements for the eBird automation workf
   - Paste multiple dictation entries into the clipboard
   - Loop through and create checklists one by one
 - eBird has a bulk upload format, but that's a much more complex project
-- 
+
+---
 
 ### Analyse Personal Locations for Duplicates and Clusters
 
@@ -53,3 +54,34 @@ Tracking outstanding work and future enhancements for the eBird automation workf
 - Goal is to manually clean up redundant locations in eBird
 - This is a **manual clean-up aid**, not an automated merge tool
 - Optional future step: script to pre-format the findings into a list of links for easy access in eBird
+
+✋  The eBird API doesn't give access to personal locations, but you can download your eBird data and pass it to
+    ChatGPT and say "can you identify duplicate locations" and it spits back a list.  No coding required.  eBird
+    has a `Locaton ID` in the data and ChatGPT was able to compare GPS information to the `Location ID` and 
+    found the duplicates, even if names didn't match.  I then just manually cleaned up my duplicates in eBird.
+    
+    Easy to do:
+       - Got to location page
+       - Search for one of the names in the duplicate list (in my case most are duplicate names from my
+         locaton name renaming activities, though a couple were completely different).
+       - CLick through to the location details and find the My Checklists link and go to the checklist(s).
+       - Click through to the actual checklist and using 'edit location' change the location using the 'Choose
+         from your lcoation' link.  The one you are editing has a checkmark against it, in my case since most
+         have the same name the alternative is immidately adjasent and easy to find.  (repeat if there is more
+         than one checklist logged against the location).
+       - Back on the locations page, search by the least used locations and unused lcoations show up with 0
+         associated checklists. Delete the now unused location
+       - Easy.
+
+       Only reason to do this is to locaitons show up in the mobile app without duplicates or if you like clicking
+       a location and getting your historical lists at that place.  I don't think these duplicates matter at all
+       for research or the eBird DB, eBird would be using the locationID and researches the GPS data.
+
+       And I like things neat ....
+
+       Now, could I automate this duplicate clean-up.  Thinking about that, probably, but I think it is such a minor
+       issue it is not worth doing.   My original aim with this task was to identify duplicates.
+
+       I will see if ChatGPT can also identify locations that are perhaps less than 100m apart so I can consolidate
+       them.  Again, not imporatnt, but makes reusing locations a little easier and is just intersting for a data
+       nerd.
