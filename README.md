@@ -6,6 +6,7 @@ Various tools and utilities I've written to help me with eBird.
 ## Table of Contents
 - [myebirdstuff](#myebirdstuff)
   - [Table of Contents](#table-of-contents)
+  - [Responsible Use of eBird and These Tools](#Responsible-Use-of-eBird-and-These-Tools)
   - [Location naming](#location-naming)
     - [What is UI.Vision?](#what-is-uivision)
     - [Google Geocoding](#google-geocoding)
@@ -17,6 +18,35 @@ Various tools and utilities I've written to help me with eBird.
     - [What Happens After Logging](#what-happens-after-logging)
     - [Customisation Tips](#customisation-tips)
 
+## Responsible Use of eBird and These Tools
+
+⚠️  **This automation interacts directly with the live eBird system. Please use it responsibly.** ⚠️ 
+
+eBird is a global, citizen-science platform used by researchers, conservationists, and the birding community. Your data becomes part of that ecosystem — treat it with care.
+
+### Do Not:
+
+🚫 🚫 🚫 
+
+- Submit fake or incomplete test checklists
+- Create personal locations that clutter the system or misrepresent observations
+- Flood eBird with automated submissions or bulk uploads
+
+### Always:
+
+✅ ✅ ✅ 
+
+- **Test responsibly**: Use temporary data, submit sparingly, and delete test entries immediately
+- **Check your data**: Ensure each submission is accurate and meaningful
+- **Respect the purpose of eBird**: It’s a scientific and community tool, not a sandbox for experiments
+
+### Recommendations:
+
+- Use `testingMode` in the checklist creation macro to **avoid real submissions during development**
+- Clean up your locations and checklists after testing, don't leave test data in eBird
+- Keep automation focused on saving time — not bypassing thoughtful observation
+
+This project was built for my personal workflow and is shared here in case it’s useful to others. Please be mindful of eBird’s mission if you adapt it.
 
 ## Location naming
 

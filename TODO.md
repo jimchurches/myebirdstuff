@@ -20,18 +20,6 @@ Tracking outstanding work and future enhancements for the eBird automation workf
 
 ---
 
-### ⚠️ Add README Warnings and Disclaimers
-
-Add a prominent note at the top of the README:
-
-> **Warning**  
-> This macro interacts with the live eBird system.  
-> - Do not upload fake or test data  
-> - Clean up test checklists and locations immediately  
-> - Avoid bulk automation that floods eBird with submissions  
-> - Respect eBird’s role in science and community birding  
-
-
 ### 🗺️ Improve GPS Location Naming Logic
 
 - Continue refining the logic used to generate location names from GPS coordinates
