@@ -14,12 +14,6 @@ Tracking outstanding work and future enhancements for the eBird automation workf
 
 ---
 
-## Bug Fix - Incidental Checklist Submit Macro
-
-- When dication records an aprososhpy in the text (e.g. Four Australian Raven's as it has down for one of my records)
-  the macro fails.  I think it fails on the incoming text format step, but will have to test that.
-
----
 ## Feature Improvement - Shortcut
 
 - When interacting with Siri you say 'Log bird data' and then it pauses then asks 'whats the text'.  When driving 
