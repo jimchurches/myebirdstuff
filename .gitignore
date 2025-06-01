@@ -2,3 +2,4 @@
 
 # Don't track secrets
 config_secret.py
+*.ipynb_checkpoints
