@@ -1,6 +1,6 @@
 {
   "Name": "eBird Incidental Checklist Create",
-  "CreationDate": "2025-5-19",
+  "CreationDate": "2025-6-2",
   "Commands": [
     {
       "Command": "store",
@@ -274,7 +274,7 @@
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var dp = '${datePart}'.replace(/“|”|\"/g, '').trim(); return dp.split(' ')[0];",
+      "Target": "var dp = '${datePart}'.replace(/[“”\"]/g, '').trim(); return parseInt(dp.split(' ')[0], 10);",
       "Value": "oDay",
       "Description": "Clean and extract numeric day"
     },
