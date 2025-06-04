@@ -13,35 +13,38 @@
 #     name: python3
 # ---
 
+# %% editable=true slideshow={"slide_type": ""}
 import os
 import sys
 import pandas as pd
 import folium
+import tempfile  
 import ipywidgets as widgets
-from IPython.display import display, HTML
+
 
 from whoosh.fields import Schema, TEXT
 from whoosh.analysis import StemmingAnalyzer
 from whoosh.index import create_in
 from whoosh.qparser import QueryParser, OrGroup
-import tempfile
+from ipywidgets import Checkbox, VBox
+
+from IPython.display import display, HTML
+display(HTML("<style>.output_map iframe {width: 100% !important; height: 600px;}</style>"))
 
 # --------------------------------------------
 # ✅ Configuration & Paths
 # --------------------------------------------
-
 MAP_STYLE = "default"
-EXPORT_GOOGLE_CSV = False
-DISPLAY_SPECIES_LIST = False
+scripts_path = os.path.abspath("../scripts")
+sys.path.append(scripts_path)
 
 try:
-    from config_secret import DATA_FOLDER  
+    from config_secret import DATA_FOLDER
 except ImportError:
     from config_template import DATA_FOLDER
 
 csv_output_path = os.path.join(DATA_FOLDER, "ebird_locations.csv")
 map_output_path = os.path.join(DATA_FOLDER, "ebird_map.html")
-
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # --------------------------------------------
@@ -53,9 +56,24 @@ df = pd.read_csv(file_path)
 
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
+selected_species_name = ""
+
+df = pd.read_csv(file_path)
+
+location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
+species_list = sorted(df["Common Name"].dropna().unique().tolist())
+
+# Build mapping from Common Name to Scientific Name
+name_map = (
+    df[['Common Name', 'Scientific Name']]
+    .dropna()
+    .drop_duplicates()
+    .set_index('Common Name')['Scientific Name']
+    .to_dict()
+)
 
 # --------------------------------------------
-# ✅ Filter Function for Subspecies / Slash Logic
+# ✅ Species Filter (for subspecies / slashes)
 # --------------------------------------------
 
 def filter_species(df, base_species):
@@ -66,55 +84,7 @@ def filter_species(df, base_species):
     return filtered_df[~filtered_df["Scientific Name"].str.contains("/", regex=False)]
 
 # --------------------------------------------
-# ✅ Build Interactive Map
-# --------------------------------------------
-
-map_center = [location_data['Latitude'].mean(), location_data['Longitude'].mean()]
-tile_options = {
-    "default": "OpenStreetMap",
-    "satellite": "Esri WorldImagery",
-    "google": "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-    "carto": "CartoDB Positron"
-}
-m = folium.Map(location=map_center, zoom_start=6, tiles=tile_options.get(MAP_STYLE, "OpenStreetMap"))
-
-for _, row in location_data.iterrows():
-    visited_dates = df[df["Location ID"] == row["Location ID"]]["Date"].unique()
-    visited_text = "<br>".join(visited_dates) if visited_dates.size > 0 else "No recorded visits"
-    popup_content = folium.Popup(f"<b>{row['Location']}</b><br><b>Visited:</b><br>{visited_text}", max_width=800)
-    folium.CircleMarker(
-        location=[row['Latitude'], row['Longitude']],
-        radius=4,
-        color="green",
-        fill=True,
-        fill_color="lightgreen",
-        fill_opacity=0.6,
-        popup=popup_content
-    ).add_to(m)
-
-m.save(map_output_path)
-print(f"✍️ Mapping file saved to your data folder named '{os.path.basename(os.path.normpath(DATA_FOLDER))}'")
-
-# --------------------------------------------
-# ✅ Display Optional Species Table
-# --------------------------------------------
-
-if DISPLAY_SPECIES_LIST:
-    table_html = "<table style='border-collapse: collapse;'><tr>"
-    for i, species in enumerate(species_list):
-        table_html += f"<td style='padding: 5px; border: 1px solid #ccc;'>{species}</td>"
-        if (i + 1) % 5 == 0:
-            table_html += "</tr><tr>"
-    table_html += "</tr></table>"
-    print("✍️ List of species found in your eBird data")
-    display(HTML(table_html))
-
-if EXPORT_GOOGLE_CSV:
-    location_data.to_csv(csv_output_path, index=False)
-    print("✍️ Google CSV export written to your data folder.")
-
-# --------------------------------------------
-# ✅ Setup Whoosh Index for Autocomplete
+# ✅ Autocomplete UI Setup
 # --------------------------------------------
 
 schema = Schema(common_name=TEXT(stored=True, analyzer=StemmingAnalyzer()))
@@ -125,20 +95,20 @@ for name in species_list:
     writer.add_document(common_name=name)
 writer.commit()
 
-# --------------------------------------------
-# ✅ Autocomplete UI with Priority Ranking
-# --------------------------------------------
-
 search_box = widgets.Text(placeholder="Type species name...", description="Search:")
 dropdown = widgets.Select(options=[], description="Matches:", rows=10)
 output = widgets.Output()
+hide_non_matching_checkbox = Checkbox(
+    value=False,
+    description='Hide locations where species was not seen',
+    indent=False
+)
 
 def update_suggestions(change):
     query = change["new"].strip().lower()
     if len(query) < 3:
         dropdown.options = []
         return
-
     with ix.searcher() as searcher:
         qp = QueryParser("common_name", ix.schema, group=OrGroup)
         tokens = query.split()
@@ -147,25 +117,155 @@ def update_suggestions(change):
         except Exception:
             dropdown.options = []
             return
-
         results = searcher.search(q, limit=None)
-
         def score(r):
             name = r["common_name"].lower()
             base = 100 - r.rank
             if name.startswith(tokens[0]):
                 base += 50
             return base
-
         ranked = sorted(results, key=score, reverse=True)
         dropdown.options = [r["common_name"] for r in ranked[:10]]
 
-def on_select(change):
-    with output:
-        output.clear_output()
-        print(f"🔎 You selected: {change['new']}")
-
 search_box.observe(update_suggestions, names="value")
-dropdown.observe(on_select, names="value")
 
-display(search_box, dropdown, output)
+
+# --------------------------------------------
+# ✅ Map Drawing Function (called dynamically)
+# --------------------------------------------
+species_map = None
+map_output = widgets.Output()
+
+def create_map(map_center):
+    """Create a Folium map with the selected MAP_STYLE."""
+    if MAP_STYLE == "default":
+        return folium.Map(location=map_center, zoom_start=6)
+    elif MAP_STYLE == "satellite":
+        return folium.Map(location=map_center, zoom_start=6, tiles="Esri WorldImagery", attr="Esri")
+    elif MAP_STYLE == "google":
+        return folium.Map(
+            location=map_center,
+            zoom_start=6,
+            tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+            attr="Google"
+        )
+    elif MAP_STYLE == "carto":
+        return folium.Map(location=map_center, zoom_start=6, tiles="CartoDB Positron", attr="CartoDB")
+    else:
+        # Fallback to OpenStreetMap if MAP_STYLE is unrecognised
+        return folium.Map(location=map_center, zoom_start=6)
+
+
+def draw_map_with_species_overlay(selected_species):
+    global species_map
+    map_center = [location_data['Latitude'].mean(), location_data['Longitude'].mean()]
+    species_map = create_map(map_center)
+
+    # If no species selected, skip filtering and draw all locations as green
+    if not selected_species:
+        for _, row in location_data.iterrows():
+            base_records = df[df['Location ID'] == row['Location ID']]
+            visit_dates = base_records['Date'].unique()
+            popup = folium.Popup(f"<b>{row['Location']}</b><br><b>Visited:</b><br>{'<br>'.join(visit_dates)}", max_width=800)
+            folium.CircleMarker(
+                location=[row['Latitude'], row['Longitude']],
+                radius=4,
+                color="green",
+                fill=True,
+                fill_color="lightgreen",
+                fill_opacity=0.6,
+                popup=popup
+            ).add_to(species_map)
+    else:
+        filtered = filter_species(df, selected_species)
+        seen_location_ids = set(filtered['Location ID'])
+
+        for _, row in location_data.iterrows():
+            loc_id = row['Location ID']
+            is_species_location = loc_id in seen_location_ids
+
+            if hide_non_matching_checkbox.value and not is_species_location:
+                continue
+
+            base_records = df[df['Location ID'] == loc_id]
+            visit_dates = base_records['Date'].unique()
+            base_popup = f"<b>{row['Location']}</b><br><b>Visited:</b><br>{'<br>'.join(visit_dates)}"
+
+            if is_species_location:
+                sub = filtered[filtered['Location ID'] == loc_id]
+                obs_details = "".join(
+                    f"<br>{r['Date']} — {r['Common Name']} ({r['Count']})" for _, r in sub.iterrows()
+                )
+                popup_content = folium.Popup(base_popup + "<br><b>Seen:</b>" + obs_details, max_width=800)
+                color, fill = "red", "red"
+            else:
+                popup_content = folium.Popup(base_popup, max_width=800)
+                color, fill = "green", "lightgreen"
+
+            folium.CircleMarker(
+                location=[row['Latitude'], row['Longitude']],
+                radius=4,
+                color=color,
+                fill=True,
+                fill_color=fill,
+                fill_opacity=0.6,
+                popup=popup_content
+            ).add_to(species_map)
+
+    with map_output:
+        map_output.clear_output()
+        display(HTML("<div class='output_map'>"))
+        display(species_map)
+        display(HTML("</div>"))
+
+# --------------------------------------------
+# ✅ Observers for UI Interactions
+# --------------------------------------------
+
+def on_species_selected(change):
+    global selected_species_name
+    output.clear_output()
+    selected_species_name = name_map.get(change['new'], "").strip()
+    with output:
+        print(f"🔎 Selected species: {change['new']} → Scientific: {selected_species_name}")
+    draw_map_with_species_overlay(selected_species_name)
+
+def on_toggle_change(change):
+    global selected_species_name
+    with output:
+        print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_name}")
+    if selected_species_name:
+        draw_map_with_species_overlay(selected_species_name)
+
+def on_search_box_cleared(change):
+    if change["new"].strip() == "":
+        dropdown.options = []
+        dropdown.value = None
+        hide_non_matching_checkbox.value = False  # Reset toggle
+        with output:
+            output.clear_output()
+            print("🧹 Search cleared — showing all locations")
+        draw_map_with_species_overlay("")
+
+
+dropdown.observe(on_species_selected, names='value')
+hide_non_matching_checkbox.observe(on_toggle_change, names='value')
+search_box.observe(on_search_box_cleared, names="value")
+
+# --------------------------------------------
+# ✅ Display Initial UI
+# --------------------------------------------
+
+
+display(VBox([search_box, dropdown, hide_non_matching_checkbox, output]))
+
+
+# %%
+# Show the map in its own cell
+# Initial map load (all green markers)
+draw_map_with_species_overlay("")
+
+display(map_output)
+
+
+# %%
