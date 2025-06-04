@@ -169,6 +169,3 @@ search_box.observe(update_suggestions, names="value")
 dropdown.observe(on_select, names="value")
 
 display(search_box, dropdown, output)
-
-
-# %%
