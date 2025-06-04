@@ -22,7 +22,7 @@
     },
     {
       "Command": "store",
-      "Target": "/usr/bin/python3",
+      "Target": "/Users/jameschurches/.pyenv/shims/python3",
       "Value": "pythonPath",
       "Description": "Store value macOS Python path into variable 'pythonPath'"
     },
