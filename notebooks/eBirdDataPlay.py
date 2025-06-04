@@ -13,7 +13,9 @@
 #     name: python3
 # ---
 
-# %% editable=true slideshow={"slide_type": ""}
+# %%
+
+# %%
 import os
 import sys
 import pandas as pd
