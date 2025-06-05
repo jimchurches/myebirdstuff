@@ -31,12 +31,16 @@ from whoosh.qparser import QueryParser, OrGroup
 from ipywidgets import Checkbox, VBox
 
 from IPython.display import display, HTML
-display(HTML("<style>.output_map iframe {width: 100% !important; height: 600px;}</style>"))
+display(HTML("<style>.output_map iframe {width: 100% !important; height: 100%;}</style>"))
+
 
 # --------------------------------------------
 # ✅ Configuration & Paths
 # --------------------------------------------
 MAP_STYLE = "default"
+MARK_LIFER = True   # Toggle to mark lifer record with a different colour (currently blue) when viewing species
+EXPORT_HTML = False  # Set to True to write map HTML after each draw
+
 scripts_path = os.path.abspath("../scripts")
 sys.path.append(scripts_path)
 
@@ -59,11 +63,6 @@ df = pd.read_csv(file_path)
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 selected_species_name = ""
-
-df = pd.read_csv(file_path)
-
-location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
-species_list = sorted(df["Common Name"].dropna().unique().tolist())
 
 # Build mapping from Common Name to Scientific Name
 name_map = (
@@ -154,21 +153,23 @@ def create_map(map_center):
     elif MAP_STYLE == "carto":
         return folium.Map(location=map_center, zoom_start=6, tiles="CartoDB Positron", attr="CartoDB")
     else:
-        # Fallback to OpenStreetMap if MAP_STYLE is unrecognised
         return folium.Map(location=map_center, zoom_start=6)
-
 
 def draw_map_with_species_overlay(selected_species):
     global species_map
     map_center = [location_data['Latitude'].mean(), location_data['Longitude'].mean()]
     species_map = create_map(map_center)
 
-    # If no species selected, skip filtering and draw all locations as green
     if not selected_species:
         for _, row in location_data.iterrows():
             base_records = df[df['Location ID'] == row['Location ID']]
-            visit_dates = base_records['Date'].unique()
-            popup = folium.Popup(f"<b>{row['Location']}</b><br><b>Visited:</b><br>{'<br>'.join(visit_dates)}", max_width=800)
+            visit_info = "<br>".join(
+                f"{d} {str(t) if pd.notna(t) else 'unknown'}"
+                for d, t in sorted(
+                    {(d, str(t) if pd.notna(t) else 'unknown') for d, t in zip(base_records["Date"], base_records["Time"])}
+                )
+            )
+            popup = folium.Popup(f"<b>{row['Location']}</b><br><b>Visited:</b><br>{visit_info}", max_width=800)
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
@@ -182,6 +183,12 @@ def draw_map_with_species_overlay(selected_species):
         filtered = filter_species(df, selected_species)
         seen_location_ids = set(filtered['Location ID'])
 
+        # Determine lifer (first observation by date+time)
+        lifer_location = None
+        if MARK_LIFER and not filtered.empty:
+            filtered['datetime'] = pd.to_datetime(filtered['Date'] + ' ' + filtered['Time'])
+            lifer_location = filtered.sort_values('datetime').iloc[0]['Location ID']
+
         for _, row in location_data.iterrows():
             loc_id = row['Location ID']
             is_species_location = loc_id in seen_location_ids
@@ -190,16 +197,25 @@ def draw_map_with_species_overlay(selected_species):
                 continue
 
             base_records = df[df['Location ID'] == loc_id]
-            visit_dates = base_records['Date'].unique()
-            base_popup = f"<b>{row['Location']}</b><br><b>Visited:</b><br>{'<br>'.join(visit_dates)}"
+            visit_info = "<br>".join(
+                f"{d} {str(t) if pd.notna(t) else 'unknown'}"
+                for d, t in sorted(
+                    {(d, str(t) if pd.notna(t) else 'unknown') for d, t in zip(base_records["Date"], base_records["Time"])}
+                )
+            )
+            base_popup = f"<b>{row['Location']}</b><br><b>Visited:</b><br>{visit_info}"
 
             if is_species_location:
                 sub = filtered[filtered['Location ID'] == loc_id]
                 obs_details = "".join(
-                    f"<br>{r['Date']} — {r['Common Name']} ({r['Count']})" for _, r in sub.iterrows()
+                    f"<br>{r['Date']} {r['Time']} — {r['Common Name']} ({r['Count']})" for _, r in sub.iterrows()
                 )
                 popup_content = folium.Popup(base_popup + "<br><b>Seen:</b>" + obs_details, max_width=800)
-                color, fill = "red", "red"
+
+                if MARK_LIFER and loc_id == lifer_location:
+                    color, fill = "blue", "blue"
+                else:
+                    color, fill = "red", "red"
             else:
                 popup_content = folium.Popup(base_popup, max_width=800)
                 color, fill = "green", "lightgreen"
@@ -219,6 +235,9 @@ def draw_map_with_species_overlay(selected_species):
         display(HTML("<div class='output_map'>"))
         display(species_map)
         display(HTML("</div>"))
+        if EXPORT_HTML:
+            species_map.save(map_output_path)
+
 
 # --------------------------------------------
 # ✅ Observers for UI Interactions
@@ -258,8 +277,8 @@ search_box.observe(on_search_box_cleared, names="value")
 # ✅ Display Initial UI
 # --------------------------------------------
 
-
 display(VBox([search_box, dropdown, hide_non_matching_checkbox, output]))
+
 
 
 # %%
