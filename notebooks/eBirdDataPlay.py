@@ -20,9 +20,9 @@ import os
 import sys
 import pandas as pd
 import folium
-import tempfile  
+import tempfile 
+import asyncio
 import ipywidgets as widgets
-
 
 from whoosh.fields import Schema, TEXT
 from whoosh.analysis import StemmingAnalyzer
@@ -135,8 +135,58 @@ search_box.observe(update_suggestions, names="value")
 # ✅ Map Drawing Function (called dynamically)
 # --------------------------------------------
 species_map = None
+last_search_task = None
 map_output = widgets.Output()
+debounce_delay = 0.5   # Delay time for debounce (in seconds)
 
+def on_species_selected(change):
+    global selected_species_name
+    output.clear_output()
+    selected_species_name = name_map.get(change['new'], "").strip()
+    with output:
+        print(f"🔎 Selected species: {change['new']} → Scientific: {selected_species_name}")
+    draw_map_with_species_overlay(selected_species_name)
+
+def on_toggle_change(change):
+    global selected_species_name
+    with output:
+        print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_name}")
+    if selected_species_name:
+        draw_map_with_species_overlay(selected_species_name)
+
+def on_search_box_cleared(change):
+    global last_search_task
+
+    search_value = change["new"].strip()
+
+    # Cancel any previous redraw task
+    if last_search_task and not last_search_task.done():
+        last_search_task.cancel()
+
+    # If truly cleared — reset toggle and show all
+    if search_value == "":
+        dropdown.options = []
+        dropdown.value = None
+        hide_non_matching_checkbox.value = False
+        output.clear_output()
+        with output:
+            print("🧹 Search cleared — showing all locations")
+        draw_map_with_species_overlay("")
+    else:
+        # Debounce redraw to avoid slowing down typing
+        async def delayed_search():
+            try:
+                await asyncio.sleep(debounce_delay)
+                # Do not trigger map redraw unless dropdown value has changed
+                if dropdown.value:
+                    draw_map_with_species_overlay(selected_species_name)
+            except asyncio.CancelledError:
+                pass  # Cancelled due to more typing
+
+        last_search_task = asyncio.create_task(delayed_search())
+
+
+''''
 def create_map(map_center):
     """Create a Folium map with the selected MAP_STYLE."""
     if MAP_STYLE == "default":
@@ -237,7 +287,7 @@ def draw_map_with_species_overlay(selected_species):
         display(HTML("</div>"))
         if EXPORT_HTML:
             species_map.save(map_output_path)
-
+'''
 
 # --------------------------------------------
 # ✅ Observers for UI Interactions
@@ -268,25 +318,17 @@ def on_search_box_cleared(change):
             print("🧹 Search cleared — showing all locations")
         draw_map_with_species_overlay("")
 
-
 dropdown.observe(on_species_selected, names='value')
 hide_non_matching_checkbox.observe(on_toggle_change, names='value')
 search_box.observe(on_search_box_cleared, names="value")
 
-# --------------------------------------------
-# ✅ Display Initial UI
-# --------------------------------------------
-
-display(VBox([search_box, dropdown, hide_non_matching_checkbox, output]))
-
-
-
 # %%
 # Show the map in its own cell
 # Initial map load (all green markers)
-draw_map_with_species_overlay("")
 
+draw_map_with_species_overlay("")
 display(map_output)
+
 
 
 # %%
