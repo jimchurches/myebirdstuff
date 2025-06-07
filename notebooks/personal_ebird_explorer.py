@@ -54,7 +54,7 @@
 #
 # ---
 #
-# ### ⚙️ One Small Setup Note
+# ### ⚙️ One Small Setup Note 
 #
 # By default, the notebook expects your eBird data file to be named `MyEBirdData.csv`. This is controlled by a variable in the first code cell — you can change it if needed.
 #
