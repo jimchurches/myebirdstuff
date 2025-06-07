@@ -23,6 +23,7 @@ Various tools and utilities I've written to help me with eBird.
     - [Incidental Checklist Creation from Clipboard Data](#incidental-checklist-creation-from-clipboard-data)
       - [Flow Control Options](#flow-control-options)
       - [Important Notes](#important-notes)
+    - [eBird Data Visualisation Tool](#eBird_Data_Visualisation_Tool)
 
 
 ## Bird Data Logging with Apple Shortcut
@@ -256,4 +257,11 @@ data created by the [Apple Shortcut described above](#bird-data-logging-with-app
 Just don’t forget: the macro interacts with the live eBird system. Respect the data.
 
 
+## eBird Data Visualisation Tool
+
+This repository includes a Jupyter notebook that lets you explore your personal eBird data with an interactive map.
+
+You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
+
+> 📘 For full details and instructions, open the notebook: `eBirdDataPlay.ipynb`
 
