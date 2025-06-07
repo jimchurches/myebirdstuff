@@ -152,6 +152,32 @@ display(HTML("""
 </style>
 """))
 
+
+# %% [markdown]
+# ### 🧰 Date/Time Helper Function
+#
+# This utility function ensures consistency in handling date and time columns:
+# - Parses `Date` to proper datetime objects
+# - Fills missing `Time` values with `"00:00"`
+# - Combines both into a new `datetime` column
+#
+# Use this function on both the full and filtered datasets when you need a datetime for sorting or filtering lifers.
+#
+
+# %%
+# --------------------------------------------
+# ✅ Helper: Add datetime column from Date + Time
+# --------------------------------------------
+def add_datetime_column(df):
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df["Time"] = df["Time"].fillna("00:00")
+    df["datetime"] = pd.to_datetime(
+        df["Date"].astype(str) + " " + df["Time"],
+        errors="coerce"
+    )
+    return df
+
+
 # %% [markdown]
 # ### ⚙️ Load Config and eBird Data
 #
@@ -193,7 +219,7 @@ os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # Load data
 df = pd.read_csv(file_path)
-df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+df = add_datetime_column(df)
 
 # Apply date filter if enabled
 if FILTER_BY_DATE:
@@ -316,18 +342,10 @@ def filter_species(df, base_species):
 
 # Reload full dataset to avoid filtering effects
 full_df = pd.read_csv(file_path)
-full_df["Date"] = pd.to_datetime(full_df["Date"], errors="coerce")
-full_df["Time"] = full_df["Time"].fillna("00:00")
+full_df = add_datetime_column(full_df)
 
-# Combine Date and Time safely
-df["datetime"] = pd.to_datetime(
-    df["Date"].astype(str) + " " + df["Time"],
-    errors="coerce"
-)
-full_df["datetime"] = pd.to_datetime(
-    full_df["Date"].astype(str) + " " + full_df["Time"],
-    errors="coerce"
-)
+# Ensure filtered df has datetime too (for consistency and potential future use)
+df = add_datetime_column(df)
 
 # Build lifer location dictionary: scientific name → first seen location
 true_lifer_locations = (
