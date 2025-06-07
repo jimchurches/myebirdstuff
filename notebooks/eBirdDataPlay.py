@@ -611,37 +611,5 @@ with map_output:
 # --------------------------------------------
 # ✅ Show interactive output area (map + messages)
 # --------------------------------------------
-
 display(map_output)
 
-
-# %%
-#DEBUG CELL
-
-'''
-# Set search box and simulate user action
-search_box.value = 'Grey Teal'
-update_suggestions({'new': search_box.value})  # simulate onchange
-
-# Grab first suggestion if dropdown populated
-import time
-time.sleep(0.1)  # slight delay to let UI catch up if needed
-
-options = dropdown.options
-if options:
-    print(f"✅ Available dropdown options: {options}")
-    if 'Grey Teal' in options:
-        dropdown.value = 'Grey Teal'
-    else:
-        print("❌ 'Grey Teal' not in dropdown options")
-else:
-    print("⚠️ No dropdown options available. Check if species exists or update_suggestions worked.")
-
-print(true_lifer_locations.get("Grey Teal"))
-'''
-
-
-
-# %%
-
-# %%
