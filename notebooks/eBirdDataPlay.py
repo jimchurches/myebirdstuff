@@ -14,6 +14,56 @@
 # ---
 
 # %% [markdown]
+# ## 🗺️ Explore Your eBird Data on a Map
+#
+# This notebook lets you explore your personal eBird records in an interactive, visual way.
+#
+# Once you’ve downloaded your full eBird data export, this tool maps every location you’ve submitted a checklist from — whether it’s a hotspot or a personal location. You can search for a species, filter by date, highlight lifers, and explore your birding history on a map.
+#
+# ### ✅ What This Notebook Does
+#
+# - Loads your eBird data export (CSV format)
+# - Draws a map of all checklist locations (green by default)
+# - Highlights locations where a selected species was seen (red)
+# - Optionally marks your lifer location for that species (blue)
+# - Lets you hide non-matching locations
+# - Offers type-ahead search that mimics eBird’s own species search behaviour
+# - Supports date-range filtering
+# - Adds detailed popups showing:
+#   - All visits to each location
+#   - Sightings of the selected species (if relevant)
+#
+# > 📍 You’ll find the interactive **search box and map display towards the end of the notebook**. Once everything’s loaded, scroll down to use it.
+#
+# ---
+#
+# ### 🚀 Getting Started
+#
+# To run this notebook, you’ll need:
+#
+# - Python
+# - Jupyter Notebook or JupyterLab
+#
+# It works on macOS, Windows, or Linux.
+#
+# Jupyter notebooks are interactive coding environments used for working with data — this one is designed specifically to help you explore your birding records.
+#
+# If you haven’t set up Python or Jupyter before, don’t worry — just ask ChatGPT, Microsoft Copilot, or your favourite chat bot to walk you through it.  Hey, you could even use a Google search.
+#
+# Once up and running, the menu items **Run All Cells** and **Restart Kernel and Clear Outputs of All Cells** are your friends.
+#
+# ---
+#
+# ### ⚙️ One Small Setup Note
+#
+# By default, the notebook expects your eBird data file to be named `MyEBirdData.csv`. This is controlled by a variable in the first code cell — you can change it if needed.
+#
+# Folder paths and output settings are pulled from a small config file used elsewhere in the codebase. You might need to **create or update that config file in the `scripts` folder**.  You could even just hack the code in the third code cell and hard code some paths.  Depends on what you are comfortable with.
+#
+# Other than that, just run the notebook from top to bottom — it should work straight away.
+#
+
+# %% [markdown]
 # ### 🛠️ User Configuration
 #
 # Set these variables to control how the map behaves.
@@ -54,7 +104,7 @@ MAP_STYLE = "default"
 MARK_LIFER = True
 
 # Optional date range filtering (set to False to disable)
-FILTER_BY_DATE = True
+FILTER_BY_DATE = False
 FILTER_START_DATE = "2025-01-01"
 FILTER_END_DATE = "2025-12-31"
 
@@ -102,6 +152,22 @@ display(HTML("""
 </style>
 """))
 
+# %% [markdown]
+# ## ⚙️ Load Config and eBird Data
+#
+# This cell handles the initial setup and data loading:
+#
+# - Adds the `scripts` folder to the Python path
+# - Loads folder paths from either `config_secret.py` or `config_template.py`
+# - Builds the full path to your eBird data file and output map file
+# - Loads the CSV and parses the "Date" column into proper datetime objects
+# - Optionally filters the data by a specified date range
+# - Extracts a list of unique locations and species for later use
+# - Builds a dictionary that maps common names to scientific names
+#
+# > 📝 The date filter (enabled by `FILTER_BY_DATE = True`) ensures all map features — including species lists, lifer logic, and visibility — only use data within the selected range. However, popups still show full history from that location.
+#
+
 # %%
 # --------------------------------------------
 # ✅ Configuration & Data Loading
@@ -132,7 +198,7 @@ if FILTER_BY_DATE:
         end = datetime.strptime(FILTER_END_DATE, "%Y-%m-%d")
         assert start <= end, "Start date must be before end date"
         df = df[(df["Date"] >= start) & (df["Date"] <= end)]
-        print(f"📅 Filtered data rows: {len(df)} from {start.date()} to {end.date()}")
+        #print(f"📅 Filtered data rows: {len(df)} from {start.date()} to {end.date()}")
     except Exception as e:
         raise ValueError(f"Invalid date filter settings: {e}")
 
@@ -141,7 +207,7 @@ location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_du
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 selected_species_name = ""
 
-print(f"📋 Species list (count: {len(species_list)}): {species_list[:5]}...")
+#print(f"📋 Species list (count: {len(species_list)}): {species_list[:5]}...")
 
 # Build common → scientific name map
 name_map = (
@@ -204,6 +270,38 @@ def filter_species(df, base_species):
 
 # %%
 # --------------------------------------------
+# ✅ Build True Lifer Table (from full dataset)
+# --------------------------------------------
+
+# Reload full dataset to avoid filtering effects
+full_df = pd.read_csv(file_path)
+full_df["Date"] = pd.to_datetime(full_df["Date"], errors="coerce")
+full_df["Time"] = full_df["Time"].fillna("00:00")
+
+# Combine Date and Time safely
+# Combine Date and Time safely
+df["datetime"] = pd.to_datetime(
+    df["Date"].astype(str) + " " + df["Time"],
+    errors="coerce"
+)
+full_df["datetime"] = pd.to_datetime(
+    full_df["Date"].astype(str) + " " + full_df["Time"],
+    errors="coerce"
+)
+
+
+# Build lifer location dictionary: scientific name → first seen location
+true_lifer_locations = (
+    full_df.sort_values("datetime")
+    .dropna(subset=["Scientific Name", "Location ID"])
+    .groupby("Scientific Name")
+    .first()["Location ID"]
+    .to_dict()
+)
+
+
+# %%
+# --------------------------------------------
 # ✅ UI Event Handlers
 # --------------------------------------------
 
@@ -215,8 +313,8 @@ def on_species_selected(change):
     selected = change.get("new")
     search_text = search_box.value.strip()
 
-    print(f"🧩 Dropdown changed: '{selected}'")
-    print(f"🔡 Search box text: '{search_text}'")
+    #print(f"🧩 Dropdown changed: '{selected}'")
+    #print(f"🔡 Search box text: '{search_text}'")
 
     # Show full map if search fully cleared
     if selected is None and search_text == "":
@@ -315,7 +413,7 @@ def update_suggestions(change):
             return base
 
         ranked = sorted(results, key=score, reverse=True)
-        print(f"🎯 Search matches found: {[r['common_name'] for r in ranked[:10]]}")
+        #print(f"🎯 Search matches found: {[r['common_name'] for r in ranked[:10]]}")
         dropdown.options = [r["common_name"] for r in ranked[:10]]
 
 # ✅ Register observers
@@ -351,10 +449,10 @@ def create_map(map_center):
 # ✅ Draw map with species overlay
 def draw_map_with_species_overlay(selected_species):
     global species_map
-    print(f"🔍 Drawing map for species: '{selected_species}'")
-    print(f"📌 Total rows in df: {len(df)}")
-    print(f"📌 Unique species in df: {df['Common Name'].nunique()}")
-    print(f"📌 Unique locations: {df['Location ID'].nunique()}")
+    #print(f"🔍 Drawing map for species: '{selected_species}'")
+    #print(f"📌 Total rows in df: {len(df)}")
+    #print(f"📌 Unique species in df: {df['Common Name'].nunique()}")
+    #print(f"📌 Unique locations: {df['Location ID'].nunique()}")
 
     map_center = [location_data['Latitude'].mean(), location_data['Longitude'].mean()]
     species_map = create_map(map_center)
@@ -385,8 +483,8 @@ def draw_map_with_species_overlay(selected_species):
     else:
         # Case 2: Filtered by species
         filtered = filter_species(df, selected_species)
-        print(f"🔎 Matching observations for '{selected_species}': {len(filtered)}")
-        print(f"🧭 Locations with this species: {filtered['Location ID'].nunique()}")
+        #print(f"🔎 Matching observations for '{selected_species}': {len(filtered)}")
+        #print(f"🧭 Locations with this species: {filtered['Location ID'].nunique()}")
 
         seen_location_ids = set(filtered['Location ID'])
 
@@ -396,17 +494,12 @@ def draw_map_with_species_overlay(selected_species):
                 print(f"⚠️ No sightings of '{selected_species}' in current data — check date range or filters.")
             return
 
-        # Lifer logic
+        # ✅ Lifer logic
         lifer_location = None
         if MARK_LIFER and not filtered.empty:
-            time_filled = filtered['Time'].fillna("00:00")  
-            filtered['datetime'] = pd.to_datetime(          
-                filtered['Date'].astype(str) + ' ' + time_filled,
-                format='%Y-%m-%d %H:%M',
-                errors='coerce'
-            )
-            lifer_location = filtered.sort_values('datetime').iloc[0]['Location ID']
-
+            true_lifer_loc = true_lifer_locations.get(selected_species)
+            if true_lifer_loc in filtered['Location ID'].values:
+                lifer_location = true_lifer_loc
 
         # Pass 1: green non-matching markers
         for _, row in location_data.iterrows():
@@ -447,7 +540,8 @@ def draw_map_with_species_overlay(selected_species):
             base_popup = f"<b>{row['Location']}</b><br><b>Visited:</b><br>{visit_info}"
             sub = filtered[filtered['Location ID'] == loc_id]
             obs_details = "".join(
-                f"<br>{r['Date']} {r['Time']} — {r['Common Name']} ({r['Count']})" for _, r in sub.iterrows()
+                f"<br>{r['Date'].strftime('%Y-%m-%d') if pd.notna(r['Date']) else 'unknown'} {r['Time']} — {r['Common Name']} ({r['Count']})"
+                for _, r in sub.iterrows()
             )
             popup_content = folium.Popup(base_popup + "<br><b>Seen:</b>" + obs_details, max_width=800)
 
@@ -522,6 +616,9 @@ display(map_output)
 
 
 # %%
+#DEBUG CELL
+
+'''
 # Set search box and simulate user action
 search_box.value = 'Grey Teal'
 update_suggestions({'new': search_box.value})  # simulate onchange
@@ -540,6 +637,8 @@ if options:
 else:
     print("⚠️ No dropdown options available. Check if species exists or update_suggestions worked.")
 
+print(true_lifer_locations.get("Grey Teal"))
+'''
 
 
 
