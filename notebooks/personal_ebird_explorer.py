@@ -1,27 +1,14 @@
-# ---
-# jupyter:
-#   jupytext:
-#     formats: ipynb,py:percent
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.17.2
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-# ---
+#!/usr/bin/env python
+# coding: utf-8
 
-# %% [markdown]
 # ## 🗺️ Explore Your eBird Data on a Map
-#
+# 
 # This notebook lets you explore your personal eBird records in an interactive, visual way.
-#
+# 
 # Once you’ve downloaded your full eBird data export, this tool maps every location you’ve submitted a checklist from — whether it’s a hotspot or a personal location. You can search for a species, filter by date, highlight lifers, and explore your birding history on a map.
-#
+# 
 # ### ✅ What This Notebook Does
-#
+# 
 # - Loads your eBird data export (CSV format)
 # - Draws a map of all checklist locations (green by default)
 # - Highlights locations where a selected species was seen (red)
@@ -30,44 +17,45 @@
 # - Offers type-ahead search that mimics eBird’s own species search behaviour
 # - Supports date-range filtering
 # - Adds detailed popups showing:
-#   - All visits to each location
+#   - All visits to each location 
 #   - Sightings of the selected species (if relevant)
-#
+# 
 # > 📍 You’ll find the interactive **search box and map display towards the end of the notebook**. Once everything’s loaded, scroll down to use it.
-#
+# 
 # ---
-#
+# 
 # ### 🚀 Getting Started
-#
+# 
 # To run this notebook, you’ll need:
-#
+# 
 # - Python
 # - Jupyter Notebook or JupyterLab
-#
+# 
 # It works on macOS, Windows, or Linux.
-#
+# 
 # Jupyter notebooks are interactive coding environments used for working with data — this one is designed specifically to help you explore your birding records.
-#
-# If you haven’t set up Python or Jupyter before, don’t worry — just ask ChatGPT, Microsoft Copilot, or your favourite chat bot to walk you through it.  Hey, you could even use a Google search.
-#
+# 
+# If you haven’t set up Python or Jupyter before, don’t worry — just ask ChatGPT, Microsoft Copilot, or your favourite chat bot to walk you through it.  Hey, you could even use a Google search.  
+# 
+# You'll probably need to install some Python modules also.  These modules will include:  `ipywidgets`, `pandas`, `whoosh` and `folium`.
+# 
 # Once up and running, the menu items **Run All Cells** and **Restart Kernel and Clear Outputs of All Cells** are your friends.
-#
+# 
 # ---
-#
-# ### ⚙️ One Small Setup Note 
-#
+# 
+# ### ⚙️ One Small Setup Note
+# 
 # By default, the notebook expects your eBird data file to be named `MyEBirdData.csv`. This is controlled by a variable in the first code cell — you can change it if needed.
-#
+# 
 # Folder paths and output settings are pulled from a small config file used elsewhere in the codebase. You might need to **create or update that config file in the `scripts` folder**.  You could even just hack the code in the third code cell and hard code some paths.  Depends on what you are comfortable with.
-#
+# 
 # Other than that, just run the notebook from top to bottom — it should work straight away.
-#
+# 
 
-# %% [markdown]
 # ### 🛠️ User Configuration
-#
+# 
 # Set these variables to control how the map behaves.
-#
+# 
 # - `EBIRD_DATA_FILE_NAME`: the name of your eBird export file (must be in the same folder).
 # - `OUTPUT_HTML_FILE_NAME`: name of the saved HTML map file (overwritten each update).
 # - `EXPORT_HTML`:  
@@ -82,10 +70,12 @@
 #   - `False` — include all data
 # - `FILTER_START_DATE`, `FILTER_END_DATE`: format as `YYYY-MM-DD`  
 #   These only apply if `FILTER_BY_DATE` is `True`.
-#
+# 
 # > NOTE: Paths (not file names) are stored in the config files in the scritps folder of the code repo.  You can easily move paths here if you wish.
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ User Variables — Change These as Needed
 # --------------------------------------------
@@ -108,21 +98,23 @@ FILTER_BY_DATE = False
 FILTER_START_DATE = "2025-01-01"
 FILTER_END_DATE = "2025-12-31"
 
-# %% [markdown]
+
 # ### 📦 Imports and Setup
-#
+# 
 # This cell loads all the required Python libraries:
-#
+# 
 # - **pandas**, **folium** – for data handling and map rendering  
 # - **ipywidgets** – for interactive dropdowns, checkboxes, and layout  
 # - **Whoosh** – for fast fuzzy text search on species names  
 # - **IPython.display** – to control how HTML and maps are shown in the notebook  
 # - **tempfile**, **threading**, **os**, **sys**, **datetime** – used for behind-the-scenes file and thread management
-#
+# 
 # It also applies some custom CSS to make the output map stretch to full width.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Imports and Display CSS
 # --------------------------------------------
@@ -153,18 +145,19 @@ display(HTML("""
 """))
 
 
-# %% [markdown]
 # ### 🧰 Date/Time Helper Function
-#
+# 
 # This utility function ensures consistency in handling date and time columns:
 # - Parses `Date` to proper datetime objects
 # - Fills missing `Time` values with `"00:00"`
 # - Combines both into a new `datetime` column
-#
+# 
 # Use this function on both the full and filtered datasets when you need a datetime for sorting or filtering lifers.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Helper: Add datetime column from Date + Time
 # --------------------------------------------
@@ -178,11 +171,10 @@ def add_datetime_column(df):
     return df
 
 
-# %% [markdown]
 # ### ⚙️ Load Config and eBird Data
-#
+# 
 # This cell handles the core setup and data load:
-#
+# 
 # - Adds the `scripts` folder to the Python path  
 # - Loads folder paths from either `config_secret.py` or fallback `config_template.py`  
 # - Builds paths to your eBird data file and HTML map export  
@@ -190,21 +182,27 @@ def add_datetime_column(df):
 # - Optionally filters the **main dataset (`df`)** by a specified date range  
 # - Extracts a unique set of locations and species from the filtered data  
 # - Builds a lookup map from common names → scientific names
-#
+# 
 # 📝 **Important:**  
 # - The date filter only affects the main working dataset (`df`)  
 # - Lifers are still calculated from the **full dataset**, unaffected by date filtering  
 # - Popups and location visits reflect the filtered `df` — not full visit history
-#
-#
+# 
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Configuration & Data Loading
 # --------------------------------------------
 
 scripts_path = os.path.abspath("../scripts")
 sys.path.append(scripts_path)
+
+#print(f"🔡 Scripts path: '{scripts_path}'")
+#print(f"🔍 Checking for config_secret.py: {os.path.exists(os.path.join(scripts_path, 'config_secret.py'))}")
+
 
 # Load secret or fallback config
 try:
@@ -214,6 +212,7 @@ except ImportError:
 
 # Build full file path
 file_path = os.path.join(DATA_FOLDER, EBIRD_DATA_FILE_NAME)
+#print(f"🔡 Data file path: '{file_path}'")
 map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
@@ -249,13 +248,14 @@ name_map = (
 )
 
 
-# %% [markdown]
 # ### 🔍 Build Whoosh Index for Species Autocomplete
-#
+# 
 # Creates an in-memory search index of species names for fast, fuzzy autocomplete.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅  Build Whoosh index for species autocomplete
 # --------------------------------------------
@@ -269,13 +269,14 @@ for name in species_list:
 writer.commit()
 
 
-# %% [markdown]
 # ### 🗺️ Initialise Global Map Objects
-#
+# 
 # Sets up the global map and output widgets used for rendering and interaction.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Initialise global map objects
 # --------------------------------------------
@@ -284,13 +285,14 @@ map_output = widgets.Output()
 output = widgets.Output()
 
 
-# %% [markdown]
 # ### 🔍 Autocomplete UI Widgets
-#
+# 
 # Defines the text input, dropdown list, and checkbox used for species search and filtering.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Autocomplete UI Widgets
 # --------------------------------------------
@@ -303,13 +305,14 @@ hide_non_matching_checkbox = Checkbox(
 )
 
 
-# %% [markdown]
 # ### 🧪 Species Filter (handles slashes and subspecies)
-#
+# 
 # Filters the dataset for a given base species name, excluding subspecies and slash group variants unless explicitly searched.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Species Filter (for subspecies / slashes)
 # --------------------------------------------
@@ -322,20 +325,21 @@ def filter_species(df, base_species):
     return filtered_df[~filtered_df["Scientific Name"].str.contains("/", regex=False)]
 
 
-# %% [markdown]
 # ### 🐣 Build True Lifer Table
-#
+# 
 # Creates a lookup dictionary of true lifer locations for each species by:
-#
+# 
 # - Reloading the full dataset to avoid effects of any active filters
 # - Parsing and combining dates and times into full datetime objects
 # - Sorting the full data chronologically
 # - Finding the first-ever sighting (lifer) location per species based on datetime
-#
+# 
 # Used to correctly mark lifers regardless of current date filters.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Build True Lifer Table (from full dataset)
 # --------------------------------------------
@@ -357,29 +361,30 @@ true_lifer_locations = (
 )
 
 
-# %% [markdown]
 # ### 🎛️ UI Event Handlers
-#
+# 
 # Handles user interaction with species search and filter controls:
-#
+# 
 # - `on_species_selected`: 
 #   - Updates the selected species when a dropdown item is clicked
 #   - Looks up the scientific name from the common name
 #   - Draws the species map
 #   - Clears the map if the search box and dropdown are both empty
-#
+# 
 # - `on_toggle_change`: 
 #   - Redraws the map when the "hide non-matching" checkbox is toggled
 #   - Only has an effect if a species is currently selected
-#
+# 
 # - `on_search_box_cleared`: 
 #   - Waits briefly after clearing the search box (debounce)
 #   - If still empty, resets the dropdown, checkbox, and full map view
-#
+# 
 # These handlers drive the main species filtering logic and keep the map UI reactive.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ UI Event Handlers
 # --------------------------------------------
@@ -453,20 +458,21 @@ def on_search_box_cleared(change):
 
 
 
-# %% [markdown]
 # ### 🔍 Build Whoosh Index for Autocomplete
-#
+# 
 # This block sets up a temporary Whoosh search index for fuzzy species name matching:
-#
+# 
 # - Defines a simple schema with stemming for partial match support
 # - Creates a new in-memory index each time the notebook runs
 # - Adds each species name as a searchable document
 # - Commits the index for later use by the autocomplete logic
-#
+# 
 # 🧠 This allows real-time fuzzy search suggestions as you type in the search box.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # # ✅ Build Whoosh Index for Autocomplete
 # --------------------------------------------
@@ -480,20 +486,21 @@ for name in species_list:
 writer.commit()
 
 
-# %% [markdown]
 # ### 🔡 Autocomplete Search Logic
-#
+# 
 # This function handles fuzzy autocomplete updates when the user types in the search box:
-#
+# 
 # - Ignores input shorter than 3 characters
 # - Uses Whoosh to run a partial (wildcard) search across species names
 # - Parses and scores matches, giving a bonus to names that start with the first typed token
 # - Updates the dropdown with the top 10 most relevant matches
-#
+# 
 # 📌 Keeps suggestions focused and relevant as the user types, even with typos or partial input.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Autocomplete Search Logic 
 # --------------------------------------------
@@ -526,19 +533,20 @@ def update_suggestions(change):
 
 
 
-# %% [markdown]
 # ### 🧷 Register Widget Observers
-#
+# 
 # Connects UI elements to their respective callback functions:
-#
+# 
 # - `search_box`: updates suggestions and clears search
 # - `dropdown`: triggers map redraw on selection
 # - `hide_non_matching_checkbox`: toggles visibility of non-matching markers
-#
+# 
 # 📌 Enables real-time interaction between widgets and map updates.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Register observers
 # --------------------------------------------
@@ -548,20 +556,21 @@ dropdown.observe(on_species_selected, names="value")
 hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
-# %% [markdown]
 # ### 🗺️ Create Base Map with Tile Style
-#
+# 
 # Initialises the Folium map using the selected `MAP_STYLE`:
-#
+# 
 # - `"default"`: Standard OpenStreetMap tiles
 # - `"satellite"`: Esri WorldImagery (aerial view)
 # - `"google"`: Google satellite tiles (unofficial)
 # - `"carto"`: CartoDB Positron (clean, minimalist look)
-#
+# 
 # Used as the foundation for all map rendering.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Create base map with selected tile style
 # --------------------------------------------
@@ -583,31 +592,32 @@ def create_map(map_center):
         return folium.Map(location=map_center, zoom_start=6)
 
 
-# %% [markdown]
 # ### 🗺️ Draw Map with Species Overlay
-#
+# 
 # Creates and displays the interactive map with observation markers.
-#
+# 
 # Handles two main cases:
-#
+# 
 # - **No species selected**:  
 #   - Places **green** markers at all locations in the dataset  
 #   - Popups show full visit history (dates and times)
-#
+# 
 # - **Species selected**:  
 #   - Filters dataset using `filter_species()`
 #   - Adds **red** markers at locations where species was seen  
 #   - Optionally adds a **blue** marker for the lifer location (first-ever sighting of that species)
 #   - Green markers are still shown for locations with no sightings unless the checkbox hides them
-#
+# 
 # Extra features:
 # - Automatically centres the map using the average coordinates
 # - Dynamically updates the map in the notebook output
 # - Saves map as HTML if `EXPORT_HTML = True`
 # - Ensures large, readable popups using HTML formatting
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Draw map with species overlay
 # --------------------------------------------
@@ -745,21 +755,22 @@ def draw_map_with_species_overlay(selected_species):
 
 
 
-# %% [markdown]
 # ### 🧭 Display UI and Draw Initial Map
-#
+# 
 # - Displays the species search UI using `VBox`:
 #   - Text search box
 #   - Dropdown for suggestions
 #   - Checkbox to hide non-matching markers
 #   - Output log panel
-#
+# 
 # - Renders the initial map with **no species filter** (all locations shown in green)
-#
+# 
 # - Injects a small script to ensure the map has a consistent display height inside the notebook
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Display UI and Draw Initial Map
 # --------------------------------------------
@@ -785,15 +796,16 @@ with map_output:
     """))
 
 
-# %% [markdown]
 # ### 🗺️ Show Map Output Area
-#
+# 
 # Displays the interactive map and message log area (`map_output`) below the UI.
-#
+# 
 # All maps and status messages are rendered into this output widget.
-#
+# 
 
-# %%
+# In[ ]:
+
+
 # --------------------------------------------
 # ✅ Show interactive output area (map + messages)
 # --------------------------------------------
