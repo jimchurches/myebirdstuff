@@ -259,7 +259,7 @@ Just don’t forget: the macro interacts with the live eBird system. Respect the
 
 ## eBird Data Visualisation Tool
 
-This repository includes a Jupyter notebook that lets you explore your personal eBird data with an interactive map.
+This repository includes a Jupyter notebook called `personal_ebird_explorer.ipynb` that lets you explore your personal eBird data with an interactive map.
 
 You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
 
