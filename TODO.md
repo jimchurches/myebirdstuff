@@ -19,7 +19,9 @@ Tracking outstanding work and future enhancements for the eBird automation workf
 - When interacting with Siri you say 'Log bird data' and then it pauses then asks 'whats the text'.  When driving 
   I've found I thin Siri has heard me wrong and wants to send a text.  Stupid, but that has happened several times.
   Can I change the prompt?  I've had a quick look at the shortcut and can't see an option, but need to investigate
-  a little more.  A prompt 'What bird?' might be better.  Stupid little thing, not urgen.
+  a little more.  A prompt 'What bird?' might be better.  Stupid little thing, not urgent
+
+  > Note: As far as I can tell, that 'what's the text' can not be change.
 
 ---
 
