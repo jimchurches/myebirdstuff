@@ -1,1 +1,8 @@
-*.ipynb filter=nbstripout
+*.ipynb text eol=lf                 # Forces Unix-style line endings across systems
+*.ipynb filter=nbstripout           # Strips output on commit (via nbstripout)
+*.ipynb diff=jupyternotebook        # Uses nbdime for human-readable diffs
+*.ipynb merge=jupyternotebook       # Uses nbdime to intelligently merge notebooks
+
+
+
+
