@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ## 🗺️ Explore Your eBird Data on a Map
 #
 # This notebook lets you explore your personal eBird records in an interactive, visual way.
@@ -64,8 +64,12 @@
 #
 # Other than that, just run the notebook from top to bottom — it should work straight away.
 #
+# ### 🎩✨ Voila
+#
+# Yes, this should work with voila.  Tested for about five minutes after figuring out how to hide all the doco.  Voila let's you see this notebook as a dashboard with just the input UI elements and the map.  The code and the docoumentation is hidden.  Launch viola from the notebooks folder and configuration in `voila.json` will hide the markdown documentation cells so just the search box and map will display.  You don't need to do this, this notebook works nicely here in Jupyter Labs also if you don't mind the clutter.
+#
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🛠️ User Configuration
 #
 # Set these variables to control how the map behaves.
@@ -87,7 +91,7 @@
 #
 # > NOTE: Paths (not file names) are stored in the config files in the scritps folder of the code repo.  You can easily move paths here if you wish.
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
 # ✅ User Variables — Change These as Needed
 # --------------------------------------------
@@ -110,7 +114,7 @@ FILTER_BY_DATE = False
 FILTER_START_DATE = "2025-01-01"
 FILTER_END_DATE = "2025-12-31"
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 📦 Imports and Setup
 #
 # This cell loads all the required Python libraries:
@@ -134,6 +138,7 @@ import pandas as pd
 import folium
 import tempfile  
 import threading
+import importlib.util
 import ipywidgets as widgets
 
 from datetime import datetime
@@ -155,7 +160,7 @@ display(HTML("""
 """))
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🧰 Date/Time Helper Function
 #
 # This utility function ensures consistency in handling date and time columns:
@@ -180,13 +185,12 @@ def add_datetime_column(df):
     return df
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### ⚙️ Load Config and eBird Data
 #
 # This cell handles the core setup and data load:
 #
-# - Adds the `scripts` folder to the Python path  
-# - Loads folder paths from either `config_secret.py` or fallback `config_template.py`  
+# - Dynamically loads config from `config_secret.py` if it exists, or falls back to `config_template.py`  
 # - Builds paths to your eBird data file and HTML map export  
 # - Loads the CSV and parses the `"Date"` column  
 # - Optionally filters the **main dataset (`df`)** by a specified date range  
@@ -199,28 +203,29 @@ def add_datetime_column(df):
 # - Popups and location visits reflect the filtered `df` — not full visit history
 #
 #
+#
 
 # %%
 # --------------------------------------------
 # ✅ Configuration & Data Loading
 # --------------------------------------------
+# Load DATA_FOLDER from config_secret.py (if it exists) or fallback to config_template.py
+def load_config_variable(var_name: str, fallback_module="config_template"):
+    config_module_path = os.path.abspath("../scripts/config_secret.py")
+    if os.path.exists(config_module_path):
+        spec = importlib.util.spec_from_file_location("config_secret", config_module_path)
+        config = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config)
+    else:
+        config = importlib.import_module(fallback_module)
 
-scripts_path = os.path.abspath("../scripts")
-sys.path.append(scripts_path)
+    return getattr(config, var_name)
 
-#print(f"🔡 Scripts path: '{scripts_path}'")
-#print(f"🔍 Checking for config_secret.py: {os.path.exists(os.path.join(scripts_path, 'config_secret.py'))}")
- 
+# Get the data folder from config
+DATA_FOLDER = load_config_variable("DATA_FOLDER")
 
-# Load secret or fallback config
-try:
-    from config_secret import DATA_FOLDER
-except ImportError:
-    from config_template import DATA_FOLDER
-
-# Build full file path
+# Build full file paths
 file_path = os.path.join(DATA_FOLDER, EBIRD_DATA_FILE_NAME)
-#print(f"🔡 Data file path: '{file_path}'")
 map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
@@ -235,7 +240,6 @@ if FILTER_BY_DATE:
         end = datetime.strptime(FILTER_END_DATE, "%Y-%m-%d")
         assert start <= end, "Start date must be before end date"
         df = df[(df["Date"] >= start) & (df["Date"] <= end)]
-        #print(f"📅 Filtered data rows: {len(df)} from {start.date()} to {end.date()}")
     except Exception as e:
         raise ValueError(f"Invalid date filter settings: {e}")
 
@@ -243,8 +247,6 @@ if FILTER_BY_DATE:
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 selected_species_name = ""
-
-#print(f"📋 Species list (count: {len(species_list)}): {species_list[:5]}...")
 
 # Build common → scientific name map
 name_map = (
@@ -256,7 +258,8 @@ name_map = (
 )
 
 
-# %% [markdown]
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🔍 Build Whoosh Index for Species Autocomplete
 #
 # Creates an in-memory search index of species names for fast, fuzzy autocomplete.
@@ -276,7 +279,7 @@ for name in species_list:
 writer.commit()
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🗺️ Initialise Global Map Objects
 #
 # Sets up the global map and output widgets used for rendering and interaction.
@@ -291,7 +294,7 @@ map_output = widgets.Output()
 output = widgets.Output()
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🔍 Autocomplete UI Widgets
 #
 # Defines the text input, dropdown list, and checkbox used for species search and filtering.
@@ -310,7 +313,7 @@ hide_non_matching_checkbox = Checkbox(
 )
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🧪 Species Filter (handles slashes and subspecies)
 #
 # Filters the dataset for a given base species name, excluding subspecies and slash group variants unless explicitly searched.
@@ -329,7 +332,7 @@ def filter_species(df, base_species):
     return filtered_df[~filtered_df["Scientific Name"].str.contains("/", regex=False)]
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🐣 Build True Lifer Table
 #
 # Creates a lookup dictionary of true lifer locations for each species by:
@@ -364,7 +367,7 @@ true_lifer_locations = (
 )
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🎛️ UI Event Handlers
 #
 # Handles user interaction with species search and filter controls:
@@ -460,7 +463,7 @@ def on_search_box_cleared(change):
 
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🔍 Build Whoosh Index for Autocomplete
 #
 # This block sets up a temporary Whoosh search index for fuzzy species name matching:
@@ -487,7 +490,7 @@ for name in species_list:
 writer.commit()
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🔡 Autocomplete Search Logic
 #
 # This function handles fuzzy autocomplete updates when the user types in the search box:
@@ -533,7 +536,7 @@ def update_suggestions(change):
 
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🧷 Register Widget Observers
 #
 # Connects UI elements to their respective callback functions:
@@ -555,7 +558,7 @@ dropdown.observe(on_species_selected, names="value")
 hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🗺️ Create Base Map with Tile Style
 #
 # Initialises the Folium map using the selected `MAP_STYLE`:
@@ -590,7 +593,7 @@ def create_map(map_center):
         return folium.Map(location=map_center, zoom_start=6)
 
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🗺️ Draw Map with Species Overlay
 #
 # Creates and displays the interactive map with observation markers.
@@ -736,23 +739,25 @@ def draw_map_with_species_overlay(selected_species):
         display(HTML("<div class='output_map'>"))
         display(species_map)
         display(HTML("</div>"))
-        if EXPORT_HTML:
-            species_map.save(map_output_path)
-        display(HTML("""
-        <script>
-        setTimeout(() => {
-          const iframe = document.querySelector('.output_map iframe');
-          if (iframe) {
-            iframe.style.minHeight = '600px';
-            iframe.parentElement.style.minHeight = '600px';
-          }
-        }, 100);
-        </script>
-        """))
+    
+        # 👇 Only inject resize script if NOT running in Voila
+        if "VOILA_APP" not in os.environ:
+            display(HTML("""
+            <script>
+            setTimeout(() => {
+              const iframe = document.querySelector('.output_map iframe');
+              if (iframe) {
+                iframe.style.minHeight = '600px';
+                iframe.parentElement.style.minHeight = '600px';
+              }
+            }, 100);
+            </script>
+            """))
 
 
 
-# %% [markdown]
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🧭 Display UI and Draw Initial Map
 #
 # - Displays the species search UI using `VBox`:
@@ -778,21 +783,25 @@ display(VBox([search_box, dropdown, hide_non_matching_checkbox, output]))
 draw_map_with_species_overlay("")
 
 # ✅ Force minimum height for map display
+import os
+
 with map_output:
-    display(HTML("""
-    <script>
-    setTimeout(() => {
-      const iframe = document.querySelector('.output_map iframe');
-      if (iframe) {
-        iframe.style.minHeight = '600px';
-        iframe.parentElement.style.minHeight = '600px';
-      }
-    }, 100);
-    </script>
-    """))
+    if "VOILA_APP" not in os.environ:
+        display(HTML("""
+        <script>
+        setTimeout(() => {
+          const iframe = document.querySelector('.output_map iframe');
+          if (iframe) {
+            iframe.style.minHeight = '600px';
+            iframe.parentElement.style.minHeight = '600px';
+          }
+        }, 100);
+        </script>
+        """))
 
 
-# %% [markdown]
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🗺️ Show Map Output Area
 #
 # Displays the interactive map and message log area (`map_output`) below the UI.
@@ -800,7 +809,7 @@ with map_output:
 # All maps and status messages are rendered into this output widget.
 #
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
 # ✅ Show interactive output area (map + messages)
 # --------------------------------------------
