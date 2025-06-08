@@ -7,7 +7,7 @@
 # 
 # Once you’ve downloaded your full eBird data export, this tool maps every location you’ve submitted a checklist from — whether it’s a hotspot or a personal location. You can search for a species, filter by date, highlight lifers, and explore your birding history on a map.
 # 
-# ### ✅ What This Notebook Does
+# ### ✅ What This Notebook Does 
 # 
 # - Loads your eBird data export (CSV format)
 # - Draws a map of all checklist locations (green by default)
@@ -73,7 +73,7 @@
 # 
 # > NOTE: Paths (not file names) are stored in the config files in the scritps folder of the code repo.  You can easily move paths here if you wish.
 
-# In[ ]:
+# In[18]:
 
 
 # --------------------------------------------
@@ -112,7 +112,7 @@ FILTER_END_DATE = "2025-12-31"
 # It also applies some custom CSS to make the output map stretch to full width.
 # 
 
-# In[ ]:
+# In[19]:
 
 
 # --------------------------------------------
@@ -155,7 +155,7 @@ display(HTML("""
 # Use this function on both the full and filtered datasets when you need a datetime for sorting or filtering lifers.
 # 
 
-# In[ ]:
+# In[20]:
 
 
 # --------------------------------------------
@@ -190,7 +190,7 @@ def add_datetime_column(df):
 # 
 # 
 
-# In[ ]:
+# In[21]:
 
 
 # --------------------------------------------
@@ -253,7 +253,7 @@ name_map = (
 # Creates an in-memory search index of species names for fast, fuzzy autocomplete.
 # 
 
-# In[ ]:
+# In[22]:
 
 
 # --------------------------------------------
@@ -274,7 +274,7 @@ writer.commit()
 # Sets up the global map and output widgets used for rendering and interaction.
 # 
 
-# In[ ]:
+# In[23]:
 
 
 # --------------------------------------------
@@ -290,7 +290,7 @@ output = widgets.Output()
 # Defines the text input, dropdown list, and checkbox used for species search and filtering.
 # 
 
-# In[ ]:
+# In[24]:
 
 
 # --------------------------------------------
@@ -310,7 +310,7 @@ hide_non_matching_checkbox = Checkbox(
 # Filters the dataset for a given base species name, excluding subspecies and slash group variants unless explicitly searched.
 # 
 
-# In[ ]:
+# In[25]:
 
 
 # --------------------------------------------
@@ -337,7 +337,7 @@ def filter_species(df, base_species):
 # Used to correctly mark lifers regardless of current date filters.
 # 
 
-# In[ ]:
+# In[26]:
 
 
 # --------------------------------------------
@@ -382,7 +382,7 @@ true_lifer_locations = (
 # These handlers drive the main species filtering logic and keep the map UI reactive.
 # 
 
-# In[ ]:
+# In[27]:
 
 
 # --------------------------------------------
@@ -470,7 +470,7 @@ def on_search_box_cleared(change):
 # 🧠 This allows real-time fuzzy search suggestions as you type in the search box.
 # 
 
-# In[ ]:
+# In[28]:
 
 
 # --------------------------------------------
@@ -498,7 +498,7 @@ writer.commit()
 # 📌 Keeps suggestions focused and relevant as the user types, even with typos or partial input.
 # 
 
-# In[ ]:
+# In[29]:
 
 
 # --------------------------------------------
@@ -544,7 +544,7 @@ def update_suggestions(change):
 # 📌 Enables real-time interaction between widgets and map updates.
 # 
 
-# In[ ]:
+# In[30]:
 
 
 # --------------------------------------------
@@ -568,7 +568,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 # Used as the foundation for all map rendering.
 # 
 
-# In[ ]:
+# In[31]:
 
 
 # --------------------------------------------
@@ -615,7 +615,7 @@ def create_map(map_center):
 # - Ensures large, readable popups using HTML formatting
 # 
 
-# In[ ]:
+# In[32]:
 
 
 # --------------------------------------------
@@ -768,7 +768,7 @@ def draw_map_with_species_overlay(selected_species):
 # - Injects a small script to ensure the map has a consistent display height inside the notebook
 # 
 
-# In[ ]:
+# In[33]:
 
 
 # --------------------------------------------
@@ -803,7 +803,7 @@ with map_output:
 # All maps and status messages are rendered into this output widget.
 # 
 
-# In[ ]:
+# In[34]:
 
 
 # --------------------------------------------
