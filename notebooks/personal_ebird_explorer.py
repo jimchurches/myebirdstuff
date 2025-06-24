@@ -619,20 +619,16 @@ def create_map(map_center):
 
 # %%
 # --------------------------------------------
-# ✅ Draw map with species overlay
+# ✅ Draw map with species overlay (refactored for lifer-on-top and single loop)
 # --------------------------------------------
 def draw_map_with_species_overlay(selected_species):
     global species_map
-    #print(f"🔍 Drawing map for species: '{selected_species}'")
-    #print(f"📌 Total rows in df: {len(df)}")
-    #print(f"📌 Unique species in df: {df['Common Name'].nunique()}")
-    #print(f"📌 Unique locations: {df['Location ID'].nunique()}")
 
     map_center = [location_data['Latitude'].mean(), location_data['Longitude'].mean()]
     species_map = create_map(map_center)
 
     if not selected_species:
-        # Case 1: All locations 
+        # Case 1: No species selected – draw all as green
         for _, row in location_data.iterrows():
             base_records = df[df['Location ID'] == row['Location ID']]
             visit_info = "<br>".join(
@@ -657,9 +653,6 @@ def draw_map_with_species_overlay(selected_species):
     else:
         # Case 2: Filtered by species
         filtered = filter_species(df, selected_species)
-        #print(f"🔎 Matching observations for '{selected_species}': {len(filtered)}")
-        #print(f"🧭 Locations with this species: {filtered['Location ID'].nunique()}")
-
         seen_location_ids = set(filtered['Location ID'])
 
         if filtered.empty:
@@ -668,61 +661,52 @@ def draw_map_with_species_overlay(selected_species):
                 print(f"⚠️ No sightings of '{selected_species}' in current data — check date range or filters.")
             return
 
-        # ✅ Lifer logic
         lifer_location = None
-        if MARK_LIFER and not filtered.empty:
+        if MARK_LIFER:
             true_lifer_loc = true_lifer_locations.get(selected_species)
-            if true_lifer_loc in filtered['Location ID'].values:
+            if true_lifer_loc in seen_location_ids:
                 lifer_location = true_lifer_loc
 
-        # Pass 1: Standard non-matching markers
-        for _, row in location_data.iterrows():
-            loc_id = row['Location ID']
-            if loc_id in seen_location_ids or hide_non_matching_checkbox.value:
+        # Prepare classification flags
+        location_data_local = location_data.copy()
+        location_data_local["has_species_match"] = location_data_local["Location ID"].isin(seen_location_ids)
+        location_data_local["is_lifer"] = location_data_local["Location ID"] == lifer_location
+
+        # Sort so lifer is drawn last
+        location_data_local = location_data_local.sort_values(by=["has_species_match", "is_lifer"])
+
+        # Single loop for marker drawing
+        for _, row in location_data_local.iterrows():
+            loc_id = row["Location ID"]
+
+            if not row["has_species_match"] and hide_non_matching_checkbox.value:
                 continue
-            base_records = df[df['Location ID'] == loc_id]
+
+            base_records = df[df["Location ID"] == loc_id]
             visit_info = "<br>".join(
                 f"{d} {str(t) if pd.notna(t) else 'unknown'}"
                 for d, t in sorted(
                     {(d, str(t) if pd.notna(t) else 'unknown') for d, t in zip(base_records["Date"], base_records["Time"])}
                 )
             )
-            popup = folium.Popup(f"<b>{row['Location']}</b><br><b>Visited:</b><br>{visit_info}", max_width=800)
-            folium.CircleMarker(
-                location=[row['Latitude'], row['Longitude']],
-                radius=4,
-                color="green",
-                fill=True,
-                fill_color="lightgreen",
-                fill_opacity=0.6,
-                popup=popup
-            ).add_to(species_map)
 
-        # Pass 2: Selected species markers
-        for _, row in location_data.iterrows():
-            loc_id = row['Location ID']
-            if loc_id not in seen_location_ids:
-                continue
-
-            base_records = df[df['Location ID'] == loc_id]
-            visit_info = "<br>".join(
-                f"{d} {str(t) if pd.notna(t) else 'unknown'}"
-                for d, t in sorted(
-                    {(d, str(t) if pd.notna(t) else 'unknown') for d, t in zip(base_records["Date"], base_records["Time"])}
-                )
-            )
             base_popup = f"<b>{row['Location']}</b><br><b>Visited:</b><br>{visit_info}"
-            sub = filtered[filtered['Location ID'] == loc_id]
-            obs_details = "".join(
-                f"<br>{r['Date'].strftime('%Y-%m-%d') if pd.notna(r['Date']) else 'unknown'} {r['Time']} — {r['Common Name']} ({r['Count']})"
-                for _, r in sub.iterrows()
-            )
-            popup_content = folium.Popup(base_popup + "<br><b>Seen:</b>" + obs_details, max_width=800)
-
-            if MARK_LIFER and loc_id == lifer_location:
-                color, fill, radius, fill_opacity = "purple", "yellow", 5, 0.9 
+            if row["has_species_match"]:
+                sub = filtered[filtered["Location ID"] == loc_id]
+                obs_details = "".join(
+                    f"<br>{r['Date'].strftime('%Y-%m-%d') if pd.notna(r['Date']) else 'unknown'} {r['Time']} — {r['Common Name']} ({r['Count']})"
+                    for _, r in sub.iterrows()
+                )
+                popup_content = folium.Popup(base_popup + "<br><b>Seen:</b>" + obs_details, max_width=800)
             else:
+                popup_content = folium.Popup(base_popup, max_width=800)
+
+            if row["is_lifer"]:
+                color, fill, radius, fill_opacity = "purple", "yellow", 5, 0.9
+            elif row["has_species_match"]:
                 color, fill, radius, fill_opacity = "purple", "red", 4, 0.8
+            else:
+                color, fill, radius, fill_opacity = "green", "lightgreen", 4, 0.6
 
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
@@ -739,8 +723,7 @@ def draw_map_with_species_overlay(selected_species):
         display(HTML("<div class='output_map'>"))
         display(species_map)
         display(HTML("</div>"))
-    
-        # 👇 Only inject resize script if NOT running in Voila
+
         if "VOILA_APP" not in os.environ:
             display(HTML("""
             <script>
@@ -753,7 +736,6 @@ def draw_map_with_species_overlay(selected_species):
             }, 100);
             </script>
             """))
-
 
 
 
