@@ -632,7 +632,7 @@ def draw_map_with_species_overlay(selected_species):
     species_map = create_map(map_center)
 
     if not selected_species:
-        # Case 1: All locations (green)
+        # Case 1: All locations 
         for _, row in location_data.iterrows():
             base_records = df[df['Location ID'] == row['Location ID']]
             visit_info = "<br>".join(
@@ -675,7 +675,7 @@ def draw_map_with_species_overlay(selected_species):
             if true_lifer_loc in filtered['Location ID'].values:
                 lifer_location = true_lifer_loc
 
-        # Pass 1: green non-matching markers
+        # Pass 1: Standard non-matching markers
         for _, row in location_data.iterrows():
             loc_id = row['Location ID']
             if loc_id in seen_location_ids or hide_non_matching_checkbox.value:
@@ -698,7 +698,7 @@ def draw_map_with_species_overlay(selected_species):
                 popup=popup
             ).add_to(species_map)
 
-        # Pass 2: red/blue species markers
+        # Pass 2: Selected species markers
         for _, row in location_data.iterrows():
             loc_id = row['Location ID']
             if loc_id not in seen_location_ids:
@@ -720,17 +720,17 @@ def draw_map_with_species_overlay(selected_species):
             popup_content = folium.Popup(base_popup + "<br><b>Seen:</b>" + obs_details, max_width=800)
 
             if MARK_LIFER and loc_id == lifer_location:
-                color, fill = "blue", "blue"
+                color, fill, radius, fill_opacity = "purple", "yellow", 5, 0.9 
             else:
-                color, fill = "red", "red"
+                color, fill, radius, fill_opacity = "purple", "red", 4, 0.8
 
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
-                radius=4,
+                radius=radius,
                 color=color,
                 fill=True,
                 fill_color=fill,
-                fill_opacity=0.6,
+                fill_opacity=fill_opacity,
                 popup=popup_content
             ).add_to(species_map)
 
