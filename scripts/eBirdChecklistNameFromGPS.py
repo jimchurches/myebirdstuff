@@ -1,150 +1,370 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import json
+from collections import Counter
+from typing import Dict, List, Tuple, Optional
+
 import requests
 import pyperclip
-from collections import Counter
 
-# Flags
-debug_mode = '--debug' in sys.argv
-rich_output = '--rich' in sys.argv
+# ----------------- Config / constants -----------------
 
-# Load GPS from clipboard
-gps = pyperclip.paste()
-try:
-    lat, lon = [s.strip() for s in gps.split(',')]
-except ValueError:
-    print("❌ Invalid clipboard format. Expected: lat, lon")
-    sys.exit(1)
+CANBERRA_FOCUS = True
 
-# Load API key
-try:
-    from config_secret import GOOGLE_API_KEY
-except ImportError:
-    from config_template import GOOGLE_API_KEY
+CANBERRA_REGIONS = [
+    "Belconnen", "Canberra Central", "Gungahlin", "Jerrabomberra", "Majura",
+    "Molonglo Valley", "Tuggeranong", "Woden Valley", "Weston Creek",
+]
 
-# API call
-url = f'https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_API_KEY}'
-response = requests.get(url)
-data = response.json()
+CANBERRA_SUBURBS = [
+    "Acton", "Ainslie", "Amaroo", "Aranda", "Banks", "Barton", "Beard",
+    "Belconnen", "Bonner", "Braddon", "Bruce", "Calwell", "Campbell",
+    "Chapman", "Charnwood", "Chifley", "Conder", "Cook", "Curtin", "Deakin",
+    "Dickson", "Downer", "Duffy", "Dunlop", "Evatt", "Fadden", "Farrer",
+    "Fisher", "Florey", "Flynn", "Forde", "Forrest", "Franklin", "Fraser",
+    "Garran", "Gilmore", "Giralang", "Gordon", "Gowrie", "Greenway",
+    "Griffith", "Hackett", "Harrison", "Hawker", "Higgins", "Holder",
+    "Holt", "Hughes", "Hume", "Isaacs", "Isabella Plains", "Kaleen",
+    "Kambah", "Kingston", "Latham", "Lawson", "Lyneham", "Lyons",
+    "Macarthur", "Macgregor", "Macquarie", "Majura", "Manuka", "Mawson",
+    "McKellar", "Melba", "Monash", "Narrabundah", "Ngunnawal", "Nicholls",
+    "O'Connor", "O'Malley", "Oxley", "Page", "Palmerston", "Parkes",
+    "Pearce", "Phillip", "Pialligo", "Red Hill", "Reid", "Rivett",
+    "Scullin", "Spence", "Stirling", "Symonston", "Taylor", "Tharwa",
+    "Theodore", "Torrens", "Turner", "Watson", "Weetangera", "Weston",
+    "Whitlam", "Wright", "Wanniassa", "Yarralumla",
+]
 
-if debug_mode:
-    print(json.dumps(data, indent=2))
-    sys.exit(0)
-
-# ---- Country detection (for India behaviour) ----
-is_india = False
-for result in data.get("results", []):
-    for component in result.get("address_components", []):
-        types = component.get("types", [])
-        if 'country' in types:
-            long_name = component.get("long_name", "")
-            short_name = component.get("short_name", "")
-            if long_name == "India" or short_name == "IN":
-                is_india = True
-                break
-    if is_india:
-        break
-
-# Suburb and override logic for Canberra
-CanberraFocus = True
-canberra_regions = ['Belconnen', 'Canberra Central', 'Gungahlin', 'Jerrabomberra', 'Majura', 'Molonglo Valley', 'Tuggeranong', 'Woden Valley', 'Weston Creek']
-canberra_suburbs = ['Acton', 'Ainslie', 'Amaroo', 'Aranda', 'Banks', 'Barton', "Beard", 'Belconnen', 'Bonner', 'Braddon', 'Bruce', 'Calwell',
-    'Campbell', 'Chapman', 'Charnwood', 'Chifley', 'Conder', 'Cook', 'Curtin', 'Deakin', 'Dickson', 'Downer', 'Duffy',
-    'Dunlop', 'Evatt', 'Fadden', 'Farrer', 'Fisher', 'Florey', 'Flynn', 'Forde', 'Forrest', 'Franklin', 'Fraser', 'Garran',
-    'Gilmore', 'Giralang', 'Gordon', 'Gowrie', 'Greenway', 'Griffith', 'Hackett', 'Harrison', 'Hawker', 'Higgins', 'Holder',
-    'Holt', 'Hughes', 'Hume', 'Isaacs', 'Isabella Plains', 'Kaleen', 'Kambah', 'Kingston', 'Latham', 'Lawson', 'Lyneham', 'Lyons',
-    'Macarthur', 'Macgregor', 'Macquarie', 'Majura', 'Manuka', 'Mawson', 'McKellar', 'Melba', 'Monash', 'Narrabundah',
-    'Ngunnawal', 'Nicholls', "O'Connor", "O'Malley", 'Oxley', 'Page', 'Palmerston', 'Parkes', 'Pearce', 'Phillip', 'Pialligo', 'Red Hill',
-    'Reid', 'Rivett', 'Scullin', 'Spence', 'Stirling', 'Symonston', 'Taylor', 'Tharwa', 'Theodore', 'Torrens', 'Turner', 'Watson',
-    'Weetangera', 'Weston', 'Whitlam', 'Wright', 'Wanniassa', 'Yarralumla']
-misfire_names = {
-    # 'Uriarra Village': 'Coree',
+MISFIRE_NAMES: Dict[str, str] = {
+    # "Uriarra Village": "Coree",
 }
 
-preferred_types = [
-    'neighborhood',
-    'sublocality',
-    'locality',
-    'postal_town',
-    'administrative_area_level_4',
-    'administrative_area_level_3',
-    'administrative_area_level_2',
-    'administrative_area_level_1',
-    'country'
+PREFERRED_TYPES = [
+    "neighborhood",
+    "sublocality",
+    "locality",
+    "postal_town",
+    "administrative_area_level_4",
+    "administrative_area_level_3",
+    "administrative_area_level_2",
+    "administrative_area_level_1",
+    "country",
 ]
 
-candidates = []
-seen_types = set()
 
-locality_names = [
-    name
-    for result in data.get("results", [])
-    for component in result.get("address_components", [])
-    if 'locality' in component.get("types", [])
-    for name in [component.get("long_name")]
-]
+# ----------------- Core helpers -----------------
 
-chosen_suburb = None
-chosen_region = None
+def load_api_key() -> str:
+    try:
+        from config_secret import GOOGLE_API_KEY
+    except ImportError:
+        from config_template import GOOGLE_API_KEY
+    return GOOGLE_API_KEY
 
-for result in data.get("results", []):
-    for component in result.get("address_components", []):
-        types = component.get("types", [])
-        seen_types.update(types)
-        name = component.get("long_name")
 
-        # Track possible Canberra-specific overrides
-        if 'locality' in types and name in canberra_suburbs:
-            chosen_suburb = name
-        if 'neighborhood' in types and name in canberra_regions:
-            chosen_region = name
+def parse_gps_arg_or_clipboard(argv: List[str]) -> Tuple[str, str, bool]:
+    """
+    GPS source priority:
+      1. Positional arguments (ignoring flags starting with '--'):
+         - "lat,lon" or "lat, lon" as a single arg
+         - or lat lon as two separate args
+      2. Clipboard if no positional args.
 
-        # Track naming candidates by preference
-        for p_type in preferred_types:
-            if p_type in types:
-                # India-specific rule: ignore very fine-grained levels
-                if is_india and p_type in ('neighborhood', 'sublocality'):
-                    # Skip this candidate for India
-                    continue
-                candidates.append((preferred_types.index(p_type), name, p_type))
-                break
+    Returns:
+        lat_str, lon_str, use_clipboard
+    """
+    args = argv[1:]
 
-# Determine most common suburb from localities
-if locality_names:
-    counts = Counter(locality_names)
-    top_two = counts.most_common(2)
+    # Treat only '--something' as flags; allow negative numbers like '-35.2' as positional
+    positional = [a for a in args if not a.startswith("--")]
 
-    if len(top_two) == 1 or top_two[0][1] > top_two[1][1]:
-        # Clear winner
-        chosen_suburb = top_two[0][0]
+    if positional:
+        # We are using arguments -> do NOT touch clipboard on output
+        use_clipboard = False
+
+        if len(positional) == 1:
+            # Single arg like "lat,lon" or "lat, lon"
+            gps_raw = positional[0]
+            try:
+                lat_str, lon_str = [s.strip() for s in gps_raw.split(",")]
+            except ValueError:
+                print("❌ Invalid format. Expected: 'lat, lon' in single argument.")
+                sys.exit(1)
+        else:
+            # Two or more positionals: treat first two as lat and lon
+            lat_str = positional[0].rstrip(",")
+            lon_str = positional[1].lstrip(",")
     else:
-        # Tie — fall back to neighbourhood logic
-        chosen_suburb = None
+        # No positional args – fall back to clipboard, and update it later
+        use_clipboard = True
+        gps_raw = pyperclip.paste()
+        try:
+            lat_str, lon_str = [s.strip() for s in gps_raw.split(",")]
+        except ValueError:
+            print("❌ Invalid format in clipboard. Expected: lat, lon")
+            sys.exit(1)
 
-if CanberraFocus and chosen_suburb and chosen_region:
-    chosen_name = chosen_suburb
-    override_note = f"🎯 Canberra override: using suburb '{chosen_suburb}' instead of region '{chosen_region}'"
-else:
-    candidates.sort(key=lambda x: x[0])
-    candidate_name = candidates[0][1] if candidates else "Unknown"
-    chosen_name = misfire_names.get(candidate_name, candidate_name)
+    # Validate numeric
+    try:
+        float(lat_str)
+        float(lon_str)
+    except ValueError:
+        print("❌ GPS values are not valid numbers.")
+        sys.exit(1)
+
+    return lat_str, lon_str, use_clipboard
+
+
+def fetch_geocode(lat: str, lon: str, api_key: str) -> Dict:
+    url = (
+        "https://maps.googleapis.com/maps/api/geocode/json"
+        f"?latlng={lat},{lon}&key={api_key}"
+    )
+    try:
+        resp = requests.get(url, timeout=10)
+    except requests.RequestException as e:
+        print(f"❌ Network error contacting Google Maps API: {e}")
+        sys.exit(1)
+
+    try:
+        data = resp.json()
+    except ValueError:
+        print("❌ Failed to parse JSON from Google Maps API.")
+        sys.exit(1)
+
+    status = data.get("status", "UNKNOWN")
+    if status != "OK":
+        print(f"❌ Geocode API returned status: {status}")
+        # You could special-case ZERO_RESULTS here if you want
+        sys.exit(1)
+
+    return data
+
+
+def detect_is_india(geocode_data: Dict) -> bool:
+    for result in geocode_data.get("results", []):
+        for comp in result.get("address_components", []):
+            types = comp.get("types", [])
+            if "country" in types:
+                if comp.get("short_name") == "IN" or comp.get("long_name") == "India":
+                    return True
+    return False
+
+
+def build_candidates(
+    geocode_data: Dict,
+    q_lat: float,
+    q_lon: float,
+    is_india: bool,
+) -> Tuple[
+    List[Tuple[int, str, str]],
+    Counter,
+    Dict[str, float],
+    Optional[str],
+    Optional[str],
+]:
+    """
+    Returns:
+      - candidates: list of (rank, name, type)
+      - locality_counts: name -> count
+      - locality_distances: name -> min squared distance
+      - chosen_suburb (for Canberra override)
+      - chosen_region (for Canberra override)
+    """
+    candidates: List[Tuple[int, str, str]] = []
+    locality_counts: Counter = Counter()
+    locality_distances: Dict[str, float] = {}
+    chosen_suburb: Optional[str] = None
+    chosen_region: Optional[str] = None
+
+    for result in geocode_data.get("results", []):
+        loc = result.get("geometry", {}).get("location", {})
+        r_lat = loc.get("lat")
+        r_lon = loc.get("lng")
+
+        d2 = None
+        if isinstance(r_lat, (int, float)) and isinstance(r_lon, (int, float)):
+            d2 = (q_lat - r_lat) ** 2 + (q_lon - r_lon) ** 2
+
+        for comp in result.get("address_components", []):
+            types = comp.get("types", [])
+            name = comp.get("long_name")
+
+            # Locality stats for global naming
+            if "locality" in types:
+                locality_counts[name] += 1
+                if d2 is not None:
+                    prev = locality_distances.get(name)
+                    if prev is None or d2 < prev:
+                        locality_distances[name] = d2
+
+            # Canberra-specific tracking
+            if "locality" in types and name in CANBERRA_SUBURBS:
+                chosen_suburb = name
+            if "neighborhood" in types and name in CANBERRA_REGIONS:
+                chosen_region = name
+
+            # General candidate list
+            for p_type in PREFERRED_TYPES:
+                if p_type in types:
+                    if is_india and p_type in ("neighborhood", "sublocality"):
+                        # Ignore hyper-local levels in India
+                        continue
+                    candidates.append((PREFERRED_TYPES.index(p_type), name, p_type))
+                    break
+
+    return candidates, locality_counts, locality_distances, chosen_suburb, chosen_region
+
+
+def compute_best_locality(
+    locality_counts: Counter,
+    locality_distances: Dict[str, float],
+) -> Optional[str]:
+    """
+    Best locality by:
+      1. Highest frequency
+      2. If tie, smallest distance to query
+    """
+    if not locality_counts:
+        return None
+
+    most_common = locality_counts.most_common()
+    top_count = most_common[0][1]
+    tied = [name for name, c in most_common if c == top_count]
+
+    if len(tied) == 1:
+        return tied[0]
+
+    best_name = None
+    best_d2 = float("inf")
+    for name in tied:
+        d2 = locality_distances.get(name)
+        if d2 is not None and d2 < best_d2:
+            best_d2 = d2
+            best_name = name
+
+    return best_name if best_name is not None else tied[0]
+
+
+def choose_best_name(
+    candidates: List[Tuple[int, str, str]],
+    locality_counts: Counter,
+    locality_distances: Dict[str, float],
+    chosen_suburb: Optional[str],
+    chosen_region: Optional[str],
+) -> Tuple[str, str]:
+    """
+    Decide final chosen_name and optional override_note.
+    """
     override_note = ""
 
-# Sort before output (ensures rich output is ordered)
-candidates.sort(key=lambda x: x[0])
+    # Canberra override if applicable
+    if CANBERRA_FOCUS and chosen_suburb and chosen_region:
+        chosen_name = chosen_suburb
+        override_note = (
+            f"🎯 Canberra override: using suburb '{chosen_suburb}' "
+            f"instead of region '{chosen_region}'"
+        )
+        return chosen_name, override_note
 
-# Output block
-if rich_output:
-    print("📦 Candidate address components:")
-    for i, (rank, name, tag) in enumerate(candidates):
-        print(f" {i+1:>2}. {name:<25} ({tag})")
-    if override_note:
+    # Global best locality (frequency then distance)
+    best_locality = compute_best_locality(locality_counts, locality_distances)
+
+    if best_locality:
+        chosen_name = MISFIRE_NAMES.get(best_locality, best_locality)
+        return chosen_name, override_note
+
+    # Fallback: first ranked candidate
+    candidates.sort(key=lambda x: x[0])
+    candidate_name = candidates[0][1] if candidates else "Unknown"
+    chosen_name = MISFIRE_NAMES.get(candidate_name, candidate_name)
+    return chosen_name, override_note
+
+
+# ----------------- Main -----------------
+
+def main() -> None:
+    # Flags:
+    show_json = "--json" in sys.argv or "--debug" in sys.argv
+    show_rich = "--rich" in sys.argv or "--debug" in sys.argv
+    show_candidates = "--candidates" in sys.argv or "--debug" in sys.argv
+
+    lat_str, lon_str, use_clipboard = parse_gps_arg_or_clipboard(sys.argv)
+    q_lat = float(lat_str)
+    q_lon = float(lon_str)
+
+    api_key = load_api_key()
+    data = fetch_geocode(lat_str, lon_str, api_key)
+
+    # 1) JSON layer
+    if show_json:
+        print("==== Geocode JSON ====")
+        print(json.dumps(data, indent=2))
+        print("======================\n")
+
+    is_india = detect_is_india(data)
+
+    (
+        candidates,
+        locality_counts,
+        locality_distances,
+        chosen_suburb,
+        chosen_region,
+    ) = build_candidates(data, q_lat, q_lon, is_india)
+
+    # 2) Rich candidate table (ordered view)
+    #    This is your usual semi-processed "localities" view.
+    candidates.sort(key=lambda x: x[0])
+    if show_rich:
+        print("📦 Candidate address components:")
+        for i, (rank, name, tag) in enumerate(candidates, start=1):
+            print(f" {i:>2}. {name:<25} ({tag})")
+        print("")
+
+    # 3) Candidate / locality decision debug
+    if show_candidates:
+        print("==== Candidate / locality debug ====")
+        if locality_counts:
+            print("Locality counts:")
+            for name, count in locality_counts.most_common():
+                print(f"  {name}: {count}")
+        else:
+            print("  (no localities found)")
+
+        if locality_distances:
+            print("\nLocality distances (squared degrees):")
+            for name, d2 in sorted(locality_distances.items(), key=lambda x: x[1]):
+                print(f"  {name}: {d2:.10f}")
+        best_loc = compute_best_locality(locality_counts, locality_distances)
+        print(f"\nBest locality (freq + distance): {best_loc}")
+        if CANBERRA_FOCUS:
+            print(f"Canberra suburb candidate: {chosen_suburb}")
+            print(f"Canberra region candidate: {chosen_region}")
+        print("===============================\n")
+
+    chosen_name, override_note = choose_best_name(
+        candidates,
+        locality_counts,
+        locality_distances,
+        chosen_suburb,
+        chosen_region,
+    )
+
+    # If rich and/or candidates printed, and a Canberra override applied,
+    # it's still useful to see the note once more:
+    if override_note and not show_rich and not show_candidates:
+        # Only print it here if it hasn't already appeared above
         print(override_note)
-    print("")
 
-output = f"{chosen_name} ( {lat}, {lon} )"
-pyperclip.copy(output)
-print(output)
+    output = f"{chosen_name} ( {lat_str}, {lon_str} )"
+
+    # Only write to clipboard if GPS came from clipboard
+    if use_clipboard:
+        pyperclip.copy(output)
+
+    print(output)
+
+
+if __name__ == "__main__":
+    main()
