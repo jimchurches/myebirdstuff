@@ -5,6 +5,7 @@ import sys
 import json
 import requests
 import pyperclip
+from collections import Counter
 
 # Flags
 debug_mode = '--debug' in sys.argv
@@ -33,6 +34,20 @@ if debug_mode:
     print(json.dumps(data, indent=2))
     sys.exit(0)
 
+# ---- Country detection (for India behaviour) ----
+is_india = False
+for result in data.get("results", []):
+    for component in result.get("address_components", []):
+        types = component.get("types", [])
+        if 'country' in types:
+            long_name = component.get("long_name", "")
+            short_name = component.get("short_name", "")
+            if long_name == "India" or short_name == "IN":
+                is_india = True
+                break
+    if is_india:
+        break
+
 # Suburb and override logic for Canberra
 CanberraFocus = True
 canberra_regions = ['Belconnen', 'Canberra Central', 'Gungahlin', 'Jerrabomberra', 'Majura', 'Molonglo Valley', 'Tuggeranong', 'Woden Valley', 'Weston Creek']
@@ -44,7 +59,7 @@ canberra_suburbs = ['Acton', 'Ainslie', 'Amaroo', 'Aranda', 'Banks', 'Barton', "
     'Macarthur', 'Macgregor', 'Macquarie', 'Majura', 'Manuka', 'Mawson', 'McKellar', 'Melba', 'Monash', 'Narrabundah',
     'Ngunnawal', 'Nicholls', "O'Connor", "O'Malley", 'Oxley', 'Page', 'Palmerston', 'Parkes', 'Pearce', 'Phillip', 'Pialligo', 'Red Hill',
     'Reid', 'Rivett', 'Scullin', 'Spence', 'Stirling', 'Symonston', 'Taylor', 'Tharwa', 'Theodore', 'Torrens', 'Turner', 'Watson',
-    'Weetangera', 'Weston', 'Wright', 'Wanniassa', 'Yarralumla']
+    'Weetangera', 'Weston', 'Whitlam', 'Wright', 'Wanniassa', 'Yarralumla']
 misfire_names = {
     # 'Uriarra Village': 'Coree',
 }
@@ -64,12 +79,13 @@ preferred_types = [
 candidates = []
 seen_types = set()
 
-from collections import Counter
-
-locality_names = [name for result in data.get("results", [])
-                  for component in result.get("address_components", [])
-                  if 'locality' in component.get("types", [])
-                  for name in [component.get("long_name")]]
+locality_names = [
+    name
+    for result in data.get("results", [])
+    for component in result.get("address_components", [])
+    if 'locality' in component.get("types", [])
+    for name in [component.get("long_name")]
+]
 
 chosen_suburb = None
 chosen_region = None
@@ -89,12 +105,14 @@ for result in data.get("results", []):
         # Track naming candidates by preference
         for p_type in preferred_types:
             if p_type in types:
+                # India-specific rule: ignore very fine-grained levels
+                if is_india and p_type in ('neighborhood', 'sublocality'):
+                    # Skip this candidate for India
+                    continue
                 candidates.append((preferred_types.index(p_type), name, p_type))
                 break
 
 # Determine most common suburb from localities
-chosen_suburb = None
-chosen_suburb = None
 if locality_names:
     counts = Counter(locality_names)
     top_two = counts.most_common(2)
@@ -115,8 +133,8 @@ else:
     chosen_name = misfire_names.get(candidate_name, candidate_name)
     override_note = ""
 
-# Sort before output
-candidates.sort(key=lambda x: x[0])    
+# Sort before output (ensures rich output is ordered)
+candidates.sort(key=lambda x: x[0])
 
 # Output block
 if rich_output:
