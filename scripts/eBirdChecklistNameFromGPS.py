@@ -313,7 +313,7 @@ def choose_best_name(
     # Fallback: first ranked candidate
     candidates.sort(key=lambda x: x[0])
     candidate_name = candidates[0][1] if candidates else "Unknown"
-    chosen_name = MISFIRE_NAMES.get(candidate_name, candidate_name)
+    chosen_name = candidate_name
     return chosen_name, override_note
 
 
