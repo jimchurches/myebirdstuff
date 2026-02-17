@@ -724,6 +724,10 @@ def draw_map_with_species_overlay(selected_species):
         display(species_map)
         display(HTML("</div>"))
 
+        # Save map to HTML if enabled
+        if EXPORT_HTML:
+            species_map.save(map_output_path)
+
         if "VOILA_APP" not in os.environ:
             display(HTML("""
             <script>
