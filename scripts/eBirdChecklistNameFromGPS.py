@@ -13,32 +13,47 @@ import pyperclip
 CANBERRA_FOCUS = True
 
 CANBERRA_REGIONS = [
-    "Belconnen", "Canberra Central", "Gungahlin", "Jerrabomberra", "Majura",
-    "Molonglo Valley", "Tuggeranong", "Woden Valley", "Weston Creek",
+    # -- Urban districts
+    "Belconnen",
+    "Canberra Central",
+    "Gungahlin",
+    "Molonglo Valley",
+    "Tuggeranong",
+    "Weston Creek",
+    "Woden Valley",
+    # -- Rural districts
+    "Booth",
+    "Coree",
+    "Cotter River",
+    "Majura",
+    "Molonglo Valley",
+    "Naas",
+    "Paddys River",
+    "Rendezvous Creek",
+    "Stromlo",
+    "Uriarra",
 ]
 
 CANBERRA_SUBURBS = [
-    "Acton", "Ainslie", "Amaroo", "Aranda", "Banks", "Barton", "Beard",
-    "Belconnen", "Bonner", "Braddon", "Bruce", "Calwell", "Campbell",
-    "Chapman", "Charnwood", "Chifley", "Conder", "Cook", "Curtin", "Deakin",
-    "Dickson", "Downer", "Duffy", "Dunlop", "Evatt", "Fadden", "Farrer",
-    "Fisher", "Florey", "Flynn", "Forde", "Forrest", "Franklin", "Fraser",
-    "Garran", "Gilmore", "Giralang", "Gordon", "Gowrie", "Greenway",
-    "Griffith", "Hackett", "Harrison", "Hawker", "Higgins", "Holder",
-    "Holt", "Hughes", "Hume", "Isaacs", "Isabella Plains", "Kaleen",
-    "Kambah", "Kingston", "Latham", "Lawson", "Lyneham", "Lyons",
-    "Macarthur", "Macgregor", "Macquarie", "Majura", "Manuka", "Mawson",
-    "McKellar", "Melba", "Monash", "Narrabundah", "Ngunnawal", "Nicholls",
-    "O'Connor", "O'Malley", "Oxley", "Page", "Palmerston", "Parkes",
-    "Pearce", "Phillip", "Pialligo", "Red Hill", "Reid", "Rivett",
-    "Scullin", "Spence", "Stirling", "Symonston", "Taylor", "Tharwa",
-    "Theodore", "Torrens", "Turner", "Watson", "Weetangera", "Weston",
-    "Whitlam", "Wright", "Wanniassa", "Yarralumla",
+    "Acton", "Ainslie", "Amaroo","Aranda",
+    "Banks", "Barton", "Beard", "Belconnen", "Bonner", "Braddon", "Bruce",
+    "Calwell", "Campbell", "Canberra Airport", "Chapman", "Charnwood", "Chifley", "Conder", "Cook", "Curtin",
+    "Deakin", "Dickson", "Downer", "Duffy", "Dunlop",
+    "Evatt",
+    "Fadden", "Farrer", "Fisher", "Florey", "Flynn", "Forde", "Forrest", "Franklin", "Fraser", "Fyshwick",
+    "Garran", "Gilmore", "Giralang", "Gordon", "Gowrie", "Greenway", "Griffith",
+    "Hackett", "Harman", "Harrison", "Hawker", "Higgins", "Holder", "Holt", "Hughes", "Hume",
+    "Isaacs", "Isabella Plains",
+    "Kaleen", "Kambah", "Kingston", "Latham", "Lawson", "Lyneham", "Lyons",
+    "Macarthur", "Macgregor", "Macquarie", "Majura", "Manuka", "Mawson", "McKellar", "Melba", "Monash",
+    "Narrabundah", "Ngunnawal", "Nicholls",
+    "O'Connor", "O'Malley", "Oxley", "Page",
+    "Palmerston", "Parkes", "Pearce", "Phillip", "Pialligo",
+    "Red Hill", "Reid", "Rivett",
+    "Scullin", "Spence", "Stirling", "Symonston",
+    "Taylor", "Tharwa", "Theodore", "Torrens", "Turner",
+    "Watson", "Weetangera", "Weston", "Whitlam", "Wright", "Wanniassa", "Yarralumla",
 ]
-
-MISFIRE_NAMES: Dict[str, str] = {
-    # "Uriarra Village": "Coree",
-}
 
 PREFERRED_TYPES = [
     "neighborhood",
@@ -141,7 +156,7 @@ def fetch_geocode(lat: str, lon: str, api_key: str) -> Dict:
 
     return data
 
-
+# See comment about India related locations further below
 def detect_is_india(geocode_data: Dict) -> bool:
     for result in geocode_data.get("results", []):
         for comp in result.get("address_components", []):
@@ -177,11 +192,15 @@ def build_candidates(
     locality_distances: Dict[str, float] = {}
     chosen_suburb: Optional[str] = None
     chosen_region: Optional[str] = None
+    chosen_suburb_d2: Optional[float] = None
+    chosen_region_d2: Optional[float] = None
 
     for result in geocode_data.get("results", []):
         loc = result.get("geometry", {}).get("location", {})
         r_lat = loc.get("lat")
         r_lon = loc.get("lng")
+        result_types = set(result.get("types", []))
+        is_plus_code_result = "plus_code" in result_types
 
         d2 = None
         if isinstance(r_lat, (int, float)) and isinstance(r_lon, (int, float)):
@@ -191,19 +210,36 @@ def build_candidates(
             types = comp.get("types", [])
             name = comp.get("long_name")
 
-            # Locality stats for global naming
-            if "locality" in types:
+            # Only trust locality from "real" results (not plus_code; optionally not postal_code)
+            if "locality" in types and not is_plus_code_result:
+                # existing locality_counts / locality_distances logic
                 locality_counts[name] += 1
-                if d2 is not None:
-                    prev = locality_distances.get(name)
-                    if prev is None or d2 < prev:
-                        locality_distances[name] = d2
+                prev = locality_distances.get(name)
+                if prev is None or d2 < prev:
+                    locality_distances[name] = d2                        
 
-            # Canberra-specific tracking
-            if "locality" in types and name in CANBERRA_SUBURBS:
-                chosen_suburb = name
+            # Canberra-specific tracking (choose closest suburb/region, not last seen)
+            # Track suburb
+            if "locality" in types and name in CANBERRA_SUBURBS and not is_plus_code_result:
+                if d2 is None:
+                    if chosen_suburb is None:
+                        chosen_suburb = name
+                        chosen_suburb_d2 = None
+                else:
+                    if chosen_suburb_d2 is None or d2 < chosen_suburb_d2:
+                        chosen_suburb = name
+                        chosen_suburb_d2 = d2
+
+            # Track region
             if "neighborhood" in types and name in CANBERRA_REGIONS:
-                chosen_region = name
+                if d2 is None:
+                    if chosen_region is None:
+                        chosen_region = name
+                        chosen_region_d2 = None
+                else:
+                    if chosen_region_d2 is None or d2 < chosen_region_d2:
+                        chosen_region = name
+                        chosen_region_d2 = d2
 
             # General candidate list
             for p_type in PREFERRED_TYPES:
@@ -259,21 +295,20 @@ def choose_best_name(
     """
     override_note = ""
 
-    # Canberra override if applicable
-    if CANBERRA_FOCUS and chosen_suburb and chosen_region:
-        chosen_name = chosen_suburb
-        override_note = (
-            f"🎯 Canberra override: using suburb '{chosen_suburb}' "
-            f"instead of region '{chosen_region}'"
-        )
-        return chosen_name, override_note
+    # Canberra override hierarchy:
+    # suburb → district/region → fallback
+    if CANBERRA_FOCUS:
+
+        if chosen_suburb:
+            override_note = f"🎯 Canberra suburb override: {chosen_suburb}"
+            return chosen_suburb, override_note
+
+        if chosen_region:
+            override_note = f"🎯 ACT district override: {chosen_region}"
+            return chosen_region, override_note
 
     # Global best locality (frequency then distance)
     best_locality = compute_best_locality(locality_counts, locality_distances)
-
-    if best_locality:
-        chosen_name = MISFIRE_NAMES.get(best_locality, best_locality)
-        return chosen_name, override_note
 
     # Fallback: first ranked candidate
     candidates.sort(key=lambda x: x[0])
@@ -303,6 +338,11 @@ def main() -> None:
         print(json.dumps(data, indent=2))
         print("======================\n")
 
+    # Indian results had to much detail and I wanted to make the results zoom out just a bit
+    # Basically it would name the location after the smallest village/hamlet when just the
+    # slightly bigger regional area would work nicely.  This flag is part of that logic.  All 
+    # the India logic should be removed at a re-factor I'm about to do and this an other Indian 
+    # logic can then probably be removed.
     is_india = detect_is_india(data)
 
     (
