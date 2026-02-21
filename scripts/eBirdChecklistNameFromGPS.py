@@ -45,7 +45,7 @@ CANBERRA_SUBURBS = [
     "Hackett", "Harman", "Harrison", "Hawker", "Higgins", "Holder", "Holt", "Hughes", "Hume",
     "Isaacs", "Isabella Plains",
     "Kaleen", "Kambah", "Kingston", "Latham", "Lawson", "Lyneham", "Lyons",
-    "Macarthur", "Macgregor", "Macquarie", "Majura", "Manuka", "Mawson", "McKellar", "Melba", "Monash",
+    "Macarthur", "Macgregor", "Macquarie", "Majura", "Manuka", "Mawson", "McKellar", "Melba", "Molonglo", "Monash",
     "Narrabundah", "Ngunnawal", "Nicholls",
     "O'Connor", "O'Malley", "Oxley", "Page",
     "Palmerston", "Parkes", "Pearce", "Phillip", "Pialligo",
@@ -67,6 +67,31 @@ PREFERRED_TYPES = [
     "country",
 ]
 
+ADMIN_PRIORITY = [
+    "locality",
+    "postal_town",
+    "neighborhood",
+    "administrative_area_level_2",
+    "administrative_area_level_1",
+]
+
+EXCLUDED_TYPES = {
+    "plus_code",
+    "street_number",
+    "route",
+    "establishment",
+    "point_of_interest",
+}
+
+TYPE_PRIORITY = {
+    "locality": 100,
+    "neighborhood": 95,
+    "administrative_area_level_4": 80,
+    "administrative_area_level_3": 70,
+    "administrative_area_level_2": 70,
+    "administrative_area_level_1": 10,
+    "country": 0,
+}
 
 # ----------------- Core helpers -----------------
 
@@ -282,6 +307,117 @@ def compute_best_locality(
 
     return best_name if best_name is not None else tied[0]
 
+def extract_best_admin_name(results, target_lat, target_lng):
+    """
+    Select the best administrative name using:
+    - type priority
+    - polygon area (prefer smaller but reject tiny villages)
+    - distance from centroid
+    """
+
+    TYPE_PRIORITY = {
+        "locality": 100,
+        "neighborhood": 95,
+        "administrative_area_level_4": 80,
+        "administrative_area_level_3": 70,
+        "administrative_area_level_2": 60,
+        "administrative_area_level_1": 10,
+        "country": 0,
+    }
+
+    MIN_LOCALITY_AREA_RATIO = 0.02  # reject villages <2% of largest region
+
+    candidates = []
+
+    for result in results:
+
+        geometry = result.get("geometry", {})
+        bounds = geometry.get("bounds") or geometry.get("viewport")
+
+        if not bounds:
+            continue
+
+        northeast = bounds.get("northeast")
+        southwest = bounds.get("southwest")
+
+        if not northeast or not southwest:
+            continue
+
+        lat_span = abs(northeast["lat"] - southwest["lat"])
+        lng_span = abs(northeast["lng"] - southwest["lng"])
+        area = lat_span * lng_span
+
+        center_lat = geometry["location"]["lat"]
+        center_lng = geometry["location"]["lng"]
+
+        distance_sq = (
+            (center_lat - target_lat) ** 2 +
+            (center_lng - target_lng) ** 2
+        )
+
+        for component in result.get("address_components", []):
+
+            name = component.get("long_name")
+            types = component.get("types", [])
+
+            matched_type = None
+
+            for t in types:
+                if t in TYPE_PRIORITY:
+                    matched_type = t
+                    break
+
+            if not matched_type:
+                continue
+
+            priority = TYPE_PRIORITY[matched_type]
+
+            candidates.append({
+                "name": name,
+                "type": matched_type,
+                "priority": priority,
+                "area": area,
+                "distance": distance_sq
+            })
+
+    if not candidates:
+        return None
+
+    # find largest region area
+    largest_area = max(c["area"] for c in candidates if c["area"] > 0)
+
+    # reject tiny villages/localities
+    filtered = []
+
+    for c in candidates:
+
+        if (
+            c["type"] == "locality" and
+            c["area"] < largest_area * MIN_LOCALITY_AREA_RATIO
+        ):
+            continue
+
+        filtered.append(c)
+
+    if filtered:
+        candidates = filtered
+
+    # scoring function
+    def score(c):
+
+        area_score = 1 / (c["area"] + 1e-12)
+        distance_score = 1 / (c["distance"] + 1e-12)
+
+        return (
+            c["priority"] * 1000000 +
+            area_score * 1000 +
+            distance_score
+        )
+
+    best = max(candidates, key=score)
+
+    return best["name"]
+
 
 def choose_best_name(
     candidates: List[Tuple[int, str, str]],
@@ -313,10 +449,9 @@ def choose_best_name(
     # Fallback: first ranked candidate
     candidates.sort(key=lambda x: x[0])
     candidate_name = candidates[0][1] if candidates else "Unknown"
-    chosen_name = candidate_name
-    return chosen_name, override_note
 
-
+    return candidate_name, override_note
+   
 # ----------------- Main -----------------
 
 def main() -> None:
@@ -390,6 +525,19 @@ def main() -> None:
         chosen_suburb,
         chosen_region,
     )
+
+    if "--debug" in sys.argv:
+        chosen_name_new = extract_best_admin_name(
+            data.get("results", []),
+            q_lat,
+            q_lon
+        )  
+        print("")
+        print("==== OLD vs NEW comparison ====")
+        print(f"OLD system result: {chosen_name}")
+        print(f"NEW system result: {chosen_name_new}")
+        print("===============================")
+        print("")    
 
     # If rich and/or candidates printed, and a Canberra override applied,
     # it's still useful to see the note once more:
