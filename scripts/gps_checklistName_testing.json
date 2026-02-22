@@ -27487,7 +27487,7 @@
     "lng": "149.034589",
     "expected": "Molonglo",
     "v2result": "Molonglo Valley",
-    "notes": "Canberra suburb (currently farmland, but assume urban development pending).  Current script doesn't give the correct result, but I belive that is only because Molonglo is not in the Canberra Suburb data hardcoded in the script (in fact, I fixed the v2 script and it now works)",
+    "notes": "Canberra suburb --> Molonglo is a suburb currently under development in the Molonglo Valley district of Canberra.  It will be the commerical centre of the Molonglo Valley.  OSM and Google Maps agree this is Molonglo.  It is near the boarder with Denman Prospect (approx 60 meters) but is clearly in the currently in Molonglo",
     "json_extracted": "20260221",
     "geocode_json": {
         "plus_code": {
@@ -28734,9 +28734,9 @@
     "country": "Australia",
     "lat": "-35.289361",
     "lng": "149.081196",
-    "expected": "Canberra Central ",
+    "expected": "Canberra Central",
     "v2result": "Acton",
-    "notes": "This location is not in any of the Canberra Central suburbs so should jump up to Canberra Central as the name tag. Acton is a long way away and not remotely relevent, same with Yarralumla",
+    "notes": "This location is not in any of the Canberra Central suburbs so should jump up to Canberra Central as the name tag. Acton is a long way away and not remotely relevent, same with Yarralumla. There appers to be a large area of Canberra Central that wraps around LBG that is not part of any specific suburb.  Gogole Maps calls this area Canberra Central' and if I map the boarders of Canberra Central the location is inside those boarders (though only 40m to the Molonglo Valley boarder), OSM has a bet both ways and gives it an address in both the district of Molonglo Valley and Canberra Central",
     "json_extracted": "20260221",
     "geocode_json": {
         "plus_code": {
