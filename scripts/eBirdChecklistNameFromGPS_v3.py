@@ -126,6 +126,26 @@ def fetch_geocode(lat: float, lng: float, api_key: str, debug=False):
 # ------------------------------------------------------------
 
 
+def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -> str:
+    """
+    Temporary minimal implementation.
+    Returns locality if present, otherwise formatted_address.
+    """
+
+    results = data.get("results", [])
+
+    for result in results:
+        for component in result.get("address_components", []):
+            if "locality" in component.get("types", []):
+                return component.get("long_name")
+
+    # fallback
+    if results:
+        return results[0].get("formatted_address", "Unknown")
+
+    return "Unknown"
+
+
 def resolve_location(lat: float, lng: float, api_key: str, debug=False) -> str:
 
     data = fetch_geocode(lat, lng, api_key, debug)
