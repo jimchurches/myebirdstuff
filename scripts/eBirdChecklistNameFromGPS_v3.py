@@ -81,11 +81,18 @@ def parse_coords_from_text(text: str) -> Tuple[float, float, int, int]:
     lat_dp = len(lat_str.split(".", 1)[1]) if "." in lat_str else 0
     lng_dp = len(lng_str.split(".", 1)[1]) if "." in lng_str else 0
 
-    # Optional sanity check (helpful to catch garbage)
+    # Optional sanity check (helpful to catch garbage / swapped order)
+    # If values look swapped (first looks like a longitude), swap them.
+    if not (-90 <= lat <= 90) and (-90 <= lng <= 90) and (-180 <= lat <= 180):
+        lat, lng = lng, lat
+        lat_str, lng_str = lng_str, lat_str
+        lat_dp, lng_dp = lng_dp, lat_dp
+
     if not (-90 <= lat <= 90 and -180 <= lng <= 180):
         raise ValueError(f"Extracted values out of range: lat={lat}, lng={lng} from {text!r}")
 
     return lat, lng, lat_dp, lng_dp
+
 
 
 # ------------------------------------------------------------
@@ -211,7 +218,7 @@ def main() -> None:
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
     parser.add_argument("--testfile", help="Run a JSON test file.")
 
-    args = parser.parse_args()
+    args, extras = parser.parse_known_args()
 
     api_key = load_api_key()
 
@@ -222,7 +229,7 @@ def main() -> None:
     if args.clipboard:
         coord_text = pyperclip.paste()
     else:
-        coord_text = " ".join(args.coords).replace(",", " ")
+        coord_text = " ".join(list(args.coords) + list(extras))
 
     # 2) Parse coordinates (robust to commas/spaces/formatted strings)
     lat, lng, lat_dp, lng_dp = parse_coords_from_text(coord_text)
