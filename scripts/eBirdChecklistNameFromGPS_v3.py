@@ -203,7 +203,7 @@ def copy_to_clipboard(text: str):
 # ------------------------------------------------------------
 
 
-def run_test_file(testfile: str, api_key: str, debug: bool = False, live: bool = False ) -> int:
+def run_test_file(testfile: str, api_key: str, debug: bool = False, live: bool = False) -> int:
     """
     Run resolver tests from a JSON file.
 
@@ -211,37 +211,52 @@ def run_test_file(testfile: str, api_key: str, debug: bool = False, live: bool =
         lat
         lng
         expected
-        geocode_json (optional)
+        geocode_json (required unless --live is used)
     """
-
     with open(testfile, "r", encoding="utf-8") as f:
         cases = json.load(f)
 
     passed = 0
     failed = 0
+    skipped = 0
+
+    if not isinstance(cases, list):
+        print("ERROR: Test file must contain a JSON list of test cases.")
+        return 1
 
     for i, case in enumerate(cases, 1):
+        # Basic structural validation (don’t crash on junk/blank entries)
+        if not isinstance(case, dict):
+            print(f"Test {i:02} ERROR test case is not an object/dict")
+            failed += 1
+            continue
+
+        if "lat" not in case or "lng" not in case:
+            print(f"Test {i:02} ERROR missing 'lat' and/or 'lng' in test case")
+            failed += 1
+            continue
 
         lat = case["lat"]
         lng = case["lng"]
         expected = case.get("expected")
 
-        name = None
-
         try:
+            if live:
+                # --live means: always call the API, ignore embedded geocode_json
+                name = resolve_location(lat, lng, api_key, debug)
 
-            if case.get("geocode_json"):
-                name = resolve_location_from_data(
-                    case["geocode_json"],
-                    lat,
-                    lng,
-                    debug
-                )
             else:
-                name = resolve_location(
+                # non-live means: must have embedded geocode_json
+                geocode_json = case.get("geocode_json")
+                if not geocode_json:
+                    print(f"Test {i:02} ERROR missing 'geocode_json' (run with --live to fetch from API)")
+                    failed += 1
+                    continue
+
+                name = resolve_location_from_data(
+                    geocode_json,
                     lat,
                     lng,
-                    api_key,
                     debug
                 )
 
@@ -252,6 +267,7 @@ def run_test_file(testfile: str, api_key: str, debug: bool = False, live: bool =
 
         if expected is None:
             print(f"Test {i:02} SKIP (no expected value)")
+            skipped += 1
             continue
 
         if name == expected:
@@ -262,8 +278,7 @@ def run_test_file(testfile: str, api_key: str, debug: bool = False, live: bool =
             failed += 1
 
     print()
-    print(f"Summary: {passed} passed, {failed} failed")
-
+    print(f"Summary: {passed} passed, {failed} failed, {skipped} skipped")
     return failed
 
 
