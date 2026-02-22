@@ -203,7 +203,7 @@ def copy_to_clipboard(text: str):
 # ------------------------------------------------------------
 
 
-def run_test_file(testfile: str, api_key: str, debug: bool = False) -> int:
+def run_test_file(testfile: str, api_key: str, debug: bool = False, live: bool = False ) -> int:
     """
     Run resolver tests from a JSON file.
 
@@ -292,7 +292,14 @@ def main() -> None:
     api_key = load_api_key()
 
     if args.testfile:
-        raise SystemExit(run_test_file(args.testfile, api_key=api_key, debug=args.debug))
+        raise SystemExit(
+            run_test_file(
+                args.testfile,
+                api_key=api_key,
+                debug=args.debug,
+                live=args.live
+            )
+        )
 
     # 1) Get coordinate text from clipboard or argv tokens
     if args.clipboard:
