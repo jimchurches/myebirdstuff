@@ -25730,7 +25730,421 @@
     "notes": "This location is not in any of the surrounding suburbs so should be formatted up a level at the region/district of Western Creek (Curtin isn't even in the Western Creek region/district).  Currently in my eBird data as Molonglo Valley so this one has always been wrong in my data (fixed now manually)",
     "json_extracted": "20260221",
     "geocode_json": {
-
+        "plus_code": {
+            "compound_code": "M3M7+R67 Weston ACT, Australia",
+            "global_code": "4RPFM3M7+R67"
+        },
+        "results": [
+            {
+            "address_components": [
+                {
+                "long_name": "M3M7+R6",
+                "short_name": "M3M7+R6",
+                "types": [
+                    "plus_code"
+                ]
+                },
+                {
+                "long_name": "Weston",
+                "short_name": "Weston",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "M3M7+R6 Weston ACT, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.315375,
+                    "lng": 149.063125
+                },
+                "southwest": {
+                    "lat": -35.3155,
+                    "lng": 149.063
+                }
+                },
+                "location": {
+                "lat": -35.31545300000001,
+                "lng": 149.063035
+                },
+                "location_type": "GEOMETRIC_CENTER",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.31408851970851,
+                    "lng": 149.0644114802915
+                },
+                "southwest": {
+                    "lat": -35.3167864802915,
+                    "lng": 149.0617135197085
+                }
+                }
+            },
+            "place_id": "GhIJajaPw2CoQcARG_D5YQSiYkA",
+            "plus_code": {
+                "compound_code": "M3M7+R6 Weston ACT, Australia",
+                "global_code": "4RPFM3M7+R6"
+            },
+            "types": [
+                "plus_code"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Tuggeranong Parkway",
+                "short_name": "Tuggeranong Pkwy",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Curtin",
+                "short_name": "Curtin",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2605",
+                "short_name": "2605",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Tuggeranong Pkwy, Curtin ACT 2605, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.314928,
+                    "lng": 149.0629177
+                },
+                "southwest": {
+                    "lat": -35.3155726,
+                    "lng": 149.0627865
+                }
+                },
+                "location": {
+                "lat": -35.3152503,
+                "lng": 149.0628521
+                },
+                "location_type": "GEOMETRIC_CENTER",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.31390131970849,
+                    "lng": 149.0642010802915
+                },
+                "southwest": {
+                    "lat": -35.31659928029149,
+                    "lng": 149.0615031197085
+                }
+                }
+            },
+            "place_id": "ChIJFcKXMHezF2sRgGHM5CNzzuc",
+            "types": [
+                "route"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Weston Creek",
+                "short_name": "Weston Creek",
+                "types": [
+                    "neighborhood",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Weston Creek, ACT 2611, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.2995585,
+                    "lng": 149.0829848
+                },
+                "southwest": {
+                    "lat": -35.3668863,
+                    "lng": 149.0224367
+                }
+                },
+                "location": {
+                "lat": -35.3422805,
+                "lng": 149.0523287
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.2995585,
+                    "lng": 149.0829848
+                },
+                "southwest": {
+                    "lat": -35.3668863,
+                    "lng": 149.0224367
+                }
+                }
+            },
+            "place_id": "ChIJM22mh2a0F2sRCu8hGnEWvBg",
+            "types": [
+                "neighborhood",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                    "postal_code"
+                ]
+                },
+                {
+                "long_name": "Coree",
+                "short_name": "Coree",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Coree ACT 2611, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.1683239,
+                    "lng": 149.0883095
+                },
+                "southwest": {
+                    "lat": -35.7366479,
+                    "lng": 148.4975241
+                }
+                },
+                "location": {
+                "lat": -35.4477412,
+                "lng": 148.7831534
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.1683239,
+                    "lng": 149.0883095
+                },
+                "southwest": {
+                    "lat": -35.7366479,
+                    "lng": 148.4975241
+                }
+                }
+            },
+            "place_id": "ChIJz3mYy7TIF2sREPuLx3HqABw",
+            "postcode_localities": [
+                "Bimberi",
+                "Brindabella",
+                "Chapman",
+                "Cooleman",
+                "Coombs",
+                "Coree",
+                "Cotter River",
+                "Denman Prospect",
+                "Duffy",
+                "Fisher",
+                "Holder",
+                "Molonglo",
+                "Molonglo Valley",
+                "Rivett",
+                "Stirling",
+                "Stromlo",
+                "Uriarra",
+                "Uriarra Village",
+                "Waramanga",
+                "Weston",
+                "Wright"
+            ],
+            "types": [
+                "postal_code"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.1244158,
+                    "lng": 149.3992871
+                },
+                "southwest": {
+                    "lat": -35.9205301,
+                    "lng": 148.7627901
+                }
+                },
+                "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.1244158,
+                    "lng": 149.3992871
+                },
+                "southwest": {
+                    "lat": -35.9205301,
+                    "lng": 148.7627901
+                }
+                }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+                "administrative_area_level_1",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -9.0880124,
+                    "lng": 159.5150123
+                },
+                "southwest": {
+                    "lat": -55.3228176,
+                    "lng": 112.6997261
+                }
+                },
+                "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -9.0880124,
+                    "lng": 159.5150123
+                },
+                "southwest": {
+                    "lat": -55.3228176,
+                    "lng": 112.6997261
+                }
+                }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+                "country",
+                "political"
+            ]
+            }
+        ],
+        "status": "OK"
     }
   },
   {
