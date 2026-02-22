@@ -142,6 +142,14 @@ def resolve_location(lat: float, lng: float, api_key: str, debug=False) -> str:
     return "Unknown Location"
 
 
+def resolve_location_from_data(data: dict, lat: float, lng: float, debug: bool=False) -> str:
+    """
+    Resolve location using already-fetched geocode JSON.
+    Used by testfile mode to avoid live API calls.
+    """
+    return extract_best_name(data, lat, lng, debug)
+
+
 # ------------------------------------------------------------
 # Output formatting
 # ------------------------------------------------------------
@@ -175,29 +183,68 @@ def copy_to_clipboard(text: str):
 # ------------------------------------------------------------
 
 
-def run_test_file(path: str, api_key: str, debug=False):
+def run_test_file(testfile: str, api_key: str, debug: bool = False) -> int:
+    """
+    Run resolver tests from a JSON file.
 
-    with open(path) as f:
-        tests = json.load(f)
+    Each test case should contain:
+        lat
+        lng
+        expected
+        geocode_json (optional)
+    """
+
+    with open(testfile, "r", encoding="utf-8") as f:
+        cases = json.load(f)
 
     passed = 0
+    failed = 0
 
-    for test in tests:
+    for i, case in enumerate(cases, 1):
 
-        lat = test["lat"]
-        lng = test["lng"]
-        expected = test["expected"]
+        lat = case["lat"]
+        lng = case["lng"]
+        expected = case.get("expected")
 
-        name = resolve_location(lat, lng, api_key, debug)
+        name = None
+
+        try:
+
+            if case.get("geocode_json"):
+                name = resolve_location_from_data(
+                    case["geocode_json"],
+                    lat,
+                    lng,
+                    debug
+                )
+            else:
+                name = resolve_location(
+                    lat,
+                    lng,
+                    api_key,
+                    debug
+                )
+
+        except Exception as e:
+            print(f"Test {i:02} ERROR resolving location: {e}")
+            failed += 1
+            continue
+
+        if expected is None:
+            print(f"Test {i:02} SKIP (no expected value)")
+            continue
 
         if name == expected:
+            print(f"Test {i:02} PASS  {name}")
             passed += 1
         else:
-            print(f"FAIL: {lat},{lng}")
-            print(f"Expected: {expected}")
-            print(f"Got: {name}")
+            print(f"Test {i:02} FAIL  got='{name}' expected='{expected}'")
+            failed += 1
 
-    print(f"{passed}/{len(tests)} passed")
+    print()
+    print(f"Summary: {passed} passed, {failed} failed")
+
+    return failed
 
 
 # ------------------------------------------------------------
@@ -217,6 +264,8 @@ def main() -> None:
     parser.add_argument("--clipboard", action="store_true", help="Read coordinates from clipboard.")
     parser.add_argument("--debug", action="store_true", help="Enable debug output.")
     parser.add_argument("--testfile", help="Run a JSON test file.")
+    parser.add_argument("--live", action="store_true", help="For --testfile runs, ignore embedded geocode_json and fetch live from the API.",
+)
 
     args, extras = parser.parse_known_args()
 
