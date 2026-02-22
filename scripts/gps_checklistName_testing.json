@@ -4272,7 +4272,7 @@
     "country": "India",
     "lat":"15.28855",
     "lng":"73.948505",
-    "expected":"Seraulim",
+    "expected":"Mungul",
     "v2result":"Seraulim",
     "notes": "The Google Plus code uses Mungul, as does the What's Here option in the context menu.  Seraulim and Mungul seem to be almost (but not quite) identical regions/districts that overalp almost exactly.  I took the v2 scripts default (Seraulim) as it appeard as correct as the Google Maps result (Mungul) so wasn't worth figuring out the difference; both are just as usable for my purposes and I wouldn't consider it an error if future interations of my script flipped this and used Mungul",
     "json_extracted":"20260220",
@@ -6141,6 +6141,1726 @@
                 }
             },
             "place_id": "ChIJ8_UwhdxbpBIRUMijIeD6AAE",
+            "types": [
+                "administrative_area_level_1",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 43.8504,
+                    "lng": 4.6362
+                },
+                "southwest": {
+                    "lat": 27.4985,
+                    "lng": -18.2648001
+                }
+                },
+                "location": {
+                "lat": 40.46366700000001,
+                "lng": -3.74922
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 43.8504,
+                    "lng": 4.6362
+                },
+                "southwest": {
+                    "lat": 27.4985,
+                    "lng": -18.2648001
+                }
+                }
+            },
+            "place_id": "ChIJi7xhMnjjQgwR7KNoB5Qs7KY",
+            "types": [
+                "country",
+                "political"
+            ]
+            }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Baix Llobregat",
+    "country": "Spain",
+    "lat": "41.361571",
+    "lng": "1.933910",
+    "expected":"Vallirana",
+    "v2result": "Vallirana",
+    "notes": "A new test case after Cursor wrote working code for Spain, just to check another juristicion in Spain.  Not used in my eBird data",
+    "json_extracted":"20260222",
+    "geocode_json": {
+        "plus_code": {
+            "compound_code": "9W6M+JHF Vallirana, Spain",
+            "global_code": "8FH39W6M+JHF"
+        },
+        "results": [
+            {
+            "address_components": [
+                {
+                "long_name": "9W6M+JH",
+                "short_name": "9W6M+JH",
+                "types": [
+                    "plus_code"
+                ]
+                },
+                {
+                "long_name": "Vallirana",
+                "short_name": "Vallirana",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalonia",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "08759",
+                "short_name": "08759",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "9W6M+JH Vallirana, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 41.361625,
+                    "lng": 1.934
+                },
+                "southwest": {
+                    "lat": 41.3615,
+                    "lng": 1.933875
+                }
+                },
+                "location": {
+                "lat": 41.3615713,
+                "lng": 1.93391
+                },
+                "location_type": "GEOMETRIC_CENTER",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.3629114802915,
+                    "lng": 1.935286480291502
+                },
+                "southwest": {
+                    "lat": 41.3602135197085,
+                    "lng": 1.932588519708498
+                }
+                }
+            },
+            "place_id": "GhIJC1bm90euREARi4S2nEvx_j8",
+            "plus_code": {
+                "compound_code": "9W6M+JH Vallirana, Spain",
+                "global_code": "8FH39W6M+JH"
+            },
+            "types": [
+                "plus_code"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "40",
+                "short_name": "40",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Carrer Bona-Vall",
+                "short_name": "Carrer Bona-Vall",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Vallirana",
+                "short_name": "Vallirana",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalunya",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "08759",
+                "short_name": "08759",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Carrer Bona-Vall, 40, 08759 Vallirana, Barcelona, Spain",
+            "geometry": {
+                "location": {
+                "lat": 41.3601925,
+                "lng": 1.9323369
+                },
+                "location_type": "ROOFTOP",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.36154148029149,
+                    "lng": 1.933685880291502
+                },
+                "southwest": {
+                    "lat": 41.35884351970849,
+                    "lng": 1.930987919708498
+                }
+                }
+            },
+            "navigation_points": [
+                {
+                "location": {
+                    "latitude": 41.3601942,
+                    "longitude": 1.9322752
+                }
+                }
+            ],
+            "place_id": "ChIJwb_xhmuEpBIRzkIUvYyKXtg",
+            "plus_code": {
+                "compound_code": "9W6J+3W Vallirana, Spain",
+                "global_code": "8FH39W6J+3W"
+            },
+            "types": [
+                "street_address"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "3",
+                "short_name": "3",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Carrer Llorers",
+                "short_name": "Carrer Llorers",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Vallirana",
+                "short_name": "Vallirana",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalunya",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "08759",
+                "short_name": "08759",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Carrer Llorers, 3, 08759 Vallirana, Barcelona, Spain",
+            "geometry": {
+                "location": {
+                "lat": 41.3610506,
+                "lng": 1.9313337
+                },
+                "location_type": "ROOFTOP",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.3623995802915,
+                    "lng": 1.932682680291502
+                },
+                "southwest": {
+                    "lat": 41.3597016197085,
+                    "lng": 1.929984719708498
+                }
+                }
+            },
+            "navigation_points": [
+                {
+                "location": {
+                    "latitude": 41.3609999,
+                    "longitude": 1.9313014
+                }
+                }
+            ],
+            "place_id": "ChIJtVr3bWuEpBIRTCYITWSP7XU",
+            "types": [
+                "street_address",
+                "subpremise"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "24",
+                "short_name": "24",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Carrer Bona-Vall",
+                "short_name": "Carrer Bona-Vall",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Vallirana",
+                "short_name": "Vallirana",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalunya",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "08759",
+                "short_name": "08759",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Carrer Bona-Vall, 24, 08759 Vallirana, Barcelona, Spain",
+            "geometry": {
+                "location": {
+                "lat": 41.3618221,
+                "lng": 1.9311672
+                },
+                "location_type": "ROOFTOP",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.3631710802915,
+                    "lng": 1.932516180291502
+                },
+                "southwest": {
+                    "lat": 41.3604731197085,
+                    "lng": 1.929818219708498
+                }
+                }
+            },
+            "navigation_points": [
+                {
+                "location": {
+                    "latitude": 41.3618083,
+                    "longitude": 1.931187
+                }
+                }
+            ],
+            "place_id": "ChIJCbFhEGuEpBIRglpRWjY_KBM",
+            "types": [
+                "premise",
+                "street_address"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "34",
+                "short_name": "34",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Carrer Bona-Vall",
+                "short_name": "Carrer Bona-Vall",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Vallirana",
+                "short_name": "Vallirana",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalunya",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "08759",
+                "short_name": "08759",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Carrer Bona-Vall, 34, 08759 Vallirana, Barcelona, Spain",
+            "geometry": {
+                "location": {
+                "lat": 41.3607637,
+                "lng": 1.9319312
+                },
+                "location_type": "RANGE_INTERPOLATED",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.3621126802915,
+                    "lng": 1.933280180291502
+                },
+                "southwest": {
+                    "lat": 41.3594147197085,
+                    "lng": 1.930582219708498
+                }
+                }
+            },
+            "place_id": "EjdDYXJyZXIgQm9uYS1WYWxsLCAzNCwgMDg3NTkgVmFsbGlyYW5hLCBCYXJjZWxvbmEsIFNwYWluIhoSGAoUChIJNyjcD2uEpBIRQcGberm2DGEQIg",
+            "types": [
+                "street_address"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "11",
+                "short_name": "11",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Carrer Bona-Vall",
+                "short_name": "Carrer Bona-Vall",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Vallirana",
+                "short_name": "Vallirana",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalunya",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "08759",
+                "short_name": "08759",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Carrer Bona-Vall, 11, 08759 Vallirana, Barcelona, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 41.3632798,
+                    "lng": 1.9322108
+                },
+                "southwest": {
+                    "lat": 41.3602968,
+                    "lng": 1.9304296
+                }
+                },
+                "location": {
+                "lat": 41.3617894,
+                "lng": 1.9312784
+                },
+                "location_type": "GEOMETRIC_CENTER",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.3632798,
+                    "lng": 1.932669180291502
+                },
+                "southwest": {
+                    "lat": 41.3602968,
+                    "lng": 1.929971219708498
+                }
+                }
+            },
+            "place_id": "ChIJNyjcD2uEpBIRQMGberm2DGE",
+            "types": [
+                "route"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "08759",
+                "short_name": "08759",
+                "types": [
+                    "postal_code"
+                ]
+                },
+                {
+                "long_name": "Vallirana",
+                "short_name": "Vallirana",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalonia",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "08759 Vallirana, Barcelona, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 41.39867,
+                    "lng": 1.9542254
+                },
+                "southwest": {
+                    "lat": 41.3500045,
+                    "lng": 1.8697546
+                }
+                },
+                "location": {
+                "lat": 41.3752229,
+                "lng": 1.9196949
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.39867,
+                    "lng": 1.9542254
+                },
+                "southwest": {
+                    "lat": 41.3500045,
+                    "lng": 1.8697546
+                }
+                }
+            },
+            "place_id": "ChIJXYRewCeEpBIR8GNHeuP6ABw",
+            "types": [
+                "postal_code"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Vallirana",
+                "short_name": "Vallirana",
+                "types": [
+                    "administrative_area_level_4",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalonia",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Vallirana, Barcelona, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 41.3987309,
+                    "lng": 1.9541029
+                },
+                "southwest": {
+                    "lat": 41.34980789999999,
+                    "lng": 1.8693418
+                }
+                },
+                "location": {
+                "lat": 41.3848721,
+                "lng": 1.9317358
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.3987309,
+                    "lng": 1.9541029
+                },
+                "southwest": {
+                    "lat": 41.34980789999999,
+                    "lng": 1.8693418
+                }
+                }
+            },
+            "place_id": "ChIJXYRewCeEpBIRUBSkIeD6AAQ",
+            "types": [
+                "administrative_area_level_4",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Baix Llobregat",
+                "short_name": "Baix Llobregat",
+                "types": [
+                    "administrative_area_level_3",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalonia",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Baix Llobregat, Barcelona, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 41.6034977,
+                    "lng": 2.1675955
+                },
+                "southwest": {
+                    "lat": 41.2636403,
+                    "lng": 1.794343
+                }
+                },
+                "location": {
+                "lat": 41.3854391,
+                "lng": 2.0487942
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 41.6034977,
+                    "lng": 2.1675955
+                },
+                "southwest": {
+                    "lat": 41.2636403,
+                    "lng": 1.794343
+                }
+                }
+            },
+            "place_id": "ChIJiZFPGvKPpBIRqsDdBWhS4OM",
+            "types": [
+                "administrative_area_level_3",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Barcelona",
+                "short_name": "B",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Catalonia",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Barcelona, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 42.3229607,
+                    "lng": 2.7775836
+                },
+                "southwest": {
+                    "lat": 41.1927453,
+                    "lng": 1.3603969
+                }
+                },
+                "location": {
+                "lat": 41.7435073,
+                "lng": 1.9881527
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 42.3229607,
+                    "lng": 2.7775836
+                },
+                "southwest": {
+                    "lat": 41.1927453,
+                    "lng": 1.3603969
+                }
+                }
+            },
+            "place_id": "ChIJZb1_yQvmpBIRsMmjIeD6AAM",
+            "types": [
+                "administrative_area_level_2",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Catalonia",
+                "short_name": "CT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Catalonia, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 42.8614392,
+                    "lng": 3.3325539
+                },
+                "southwest": {
+                    "lat": 40.5230731,
+                    "lng": 0.1590704
+                }
+                },
+                "location": {
+                "lat": 41.5911589,
+                "lng": 1.5208624
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 42.8614392,
+                    "lng": 3.3325539
+                },
+                "southwest": {
+                    "lat": 40.5230731,
+                    "lng": 0.1590704
+                }
+                }
+            },
+            "place_id": "ChIJ8_UwhdxbpBIRUMijIeD6AAE",
+            "types": [
+                "administrative_area_level_1",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 43.8504,
+                    "lng": 4.6362
+                },
+                "southwest": {
+                    "lat": 27.4985,
+                    "lng": -18.2648001
+                }
+                },
+                "location": {
+                "lat": 40.46366700000001,
+                "lng": -3.74922
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 43.8504,
+                    "lng": 4.6362
+                },
+                "southwest": {
+                    "lat": 27.4985,
+                    "lng": -18.2648001
+                }
+                }
+            },
+            "place_id": "ChIJi7xhMnjjQgwR7KNoB5Qs7KY",
+            "types": [
+                "country",
+                "political"
+            ]
+            }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Centro",
+    "country": "Spain",
+    "lat": "36.534815",
+    "lng": "-6.298976",
+    "expected": "Centro",
+    "v2result": "Centro",
+    "notes": "A new test case after Cursor wrote working code for Spain, just to check another juristicion in Spain.  Not used in my eBird data",
+    "json_extracted": "20260222",
+    "geocode_json": {
+        "plus_code": {
+            "compound_code": "GPM2+WCC C\u00e1diz, Spain",
+            "global_code": "8C8MGPM2+WCC"
+        },
+        "results": [
+            {
+            "address_components": [
+                {
+                "long_name": "1",
+                "short_name": "1",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Plaza San Antonio",
+                "short_name": "Pl. San Antonio",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "C\u00e1diz",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andaluc\u00eda",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "11003",
+                "short_name": "11003",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Pl. San Antonio, 1, 11003 C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 36.5349204,
+                    "lng": -6.2988199
+                },
+                "southwest": {
+                    "lat": 36.5347401,
+                    "lng": -6.2992121
+                }
+                },
+                "location": {
+                "lat": 36.5348303,
+                "lng": -6.299016099999999
+                },
+                "location_type": "ROOFTOP",
+                "viewport": {
+                "northeast": {
+                    "lat": 36.5361792302915,
+                    "lng": -6.297667019708498
+                },
+                "southwest": {
+                    "lat": 36.5334812697085,
+                    "lng": -6.300364980291502
+                }
+                }
+            },
+            "navigation_points": [
+                {
+                "location": {
+                    "latitude": 36.5348479,
+                    "longitude": -6.2990387
+                },
+                "restricted_travel_modes": [
+                    "DRIVE"
+                ]
+                },
+                {
+                "location": {
+                    "latitude": 36.5350244,
+                    "longitude": -6.2987949
+                },
+                "restricted_travel_modes": [
+                    "WALK"
+                ]
+                }
+            ],
+            "place_id": "ChIJz3t_1GDRDQ0RHAowQt4GeSQ",
+            "types": [
+                "premise",
+                "street_address"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "GPM2+WC",
+                "short_name": "GPM2+WC",
+                "types": [
+                    "plus_code"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "C\u00e1diz",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andalusia",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "GPM2+WC C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 36.534875,
+                    "lng": -6.298875
+                },
+                "southwest": {
+                    "lat": 36.53475,
+                    "lng": -6.298999999999999
+                }
+                },
+                "location": {
+                "lat": 36.5348154,
+                "lng": -6.2989764
+                },
+                "location_type": "GEOMETRIC_CENTER",
+                "viewport": {
+                "northeast": {
+                    "lat": 36.5361614802915,
+                    "lng": -6.297588519708498
+                },
+                "southwest": {
+                    "lat": 36.5334635197085,
+                    "lng": -6.300286480291502
+                }
+                }
+            },
+            "place_id": "GhIJ1jK-1HREQkARbxqR3iYyGcA",
+            "plus_code": {
+                "compound_code": "GPM2+WC C\u00e1diz, Spain",
+                "global_code": "8C8MGPM2+WC"
+            },
+            "types": [
+                "plus_code"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "V\u00eda Sin Nombre",
+                "short_name": "V\u00eda Sin Nombre",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "C\u00e1diz",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andaluc\u00eda",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "11003",
+                "short_name": "11003",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "V\u00eda Sin Nombre, 11003 C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 36.5349282,
+                    "lng": -6.2990214
+                },
+                "southwest": {
+                    "lat": 36.5348942,
+                    "lng": -6.299092799999999
+                }
+                },
+                "location": {
+                "lat": 36.5349147,
+                "lng": -6.299059799999999
+                },
+                "location_type": "GEOMETRIC_CENTER",
+                "viewport": {
+                "northeast": {
+                    "lat": 36.53626018029149,
+                    "lng": -6.297708119708497
+                },
+                "southwest": {
+                    "lat": 36.53356221970849,
+                    "lng": -6.300406080291501
+                }
+                }
+            },
+            "place_id": "ChIJ8y9m02DRDQ0R1inKcPZmo74",
+            "types": [
+                "route"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "11003",
+                "short_name": "11003",
+                "types": [
+                    "postal_code"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "C\u00e1diz",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andalusia",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "11003 C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 36.538386,
+                    "lng": -6.296069
+                },
+                "southwest": {
+                    "lat": 36.5323077,
+                    "lng": -6.3067939
+                }
+                },
+                "location": {
+                "lat": 36.5355955,
+                "lng": -6.3006788
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 36.538386,
+                    "lng": -6.296069
+                },
+                "southwest": {
+                    "lat": 36.5323077,
+                    "lng": -6.3067939
+                }
+                }
+            },
+            "place_id": "ChIJq1BbVmfRDQ0R8BmnyABkBBw",
+            "types": [
+                "postal_code"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Centro",
+                "short_name": "Centro",
+                "types": [
+                    "neighborhood",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "C\u00e1diz",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andaluc\u00eda",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Centro, C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 36.538373,
+                    "lng": -6.293223900000001
+                },
+                "southwest": {
+                    "lat": 36.5293464,
+                    "lng": -6.306726299999999
+                }
+                },
+                "location": {
+                "lat": 36.5350983,
+                "lng": -6.2992399
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 36.538373,
+                    "lng": -6.293223900000001
+                },
+                "southwest": {
+                    "lat": 36.5293464,
+                    "lng": -6.306726299999999
+                }
+                }
+            },
+            "place_id": "ChIJm05qr2DRDQ0R8cUlFJA0XPE",
+            "types": [
+                "neighborhood",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "C\u00e1diz",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andalusia",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 36.5432066,
+                    "lng": -6.255334599999999
+                },
+                "southwest": {
+                    "lat": 36.4895662,
+                    "lng": -6.3095997
+                }
+                },
+                "location": {
+                "lat": 36.5210142,
+                "lng": -6.2804565
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 36.5432066,
+                    "lng": -6.255334599999999
+                },
+                "southwest": {
+                    "lat": 36.4895662,
+                    "lng": -6.3095997
+                }
+                }
+            },
+            "place_id": "ChIJDyTsJFfSDQ0RADugjP1jBAQ",
+            "types": [
+                "locality",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "C\u00e1diz",
+                "types": [
+                    "administrative_area_level_4",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andalusia",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 36.543209,
+                    "lng": -6.2256636
+                },
+                "southwest": {
+                    "lat": 36.4414677,
+                    "lng": -6.3177946
+                }
+                },
+                "location": {
+                "lat": 36.5210105,
+                "lng": -6.2804616
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 36.543209,
+                    "lng": -6.2256636
+                },
+                "southwest": {
+                    "lat": 36.4414677,
+                    "lng": -6.3177946
+                }
+                }
+            },
+            "place_id": "ChIJcT7xI1fSDQ0RTgEOXviJs8M",
+            "types": [
+                "administrative_area_level_4",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Bay of C\u00e1diz",
+                "short_name": "Bay of C\u00e1diz",
+                "types": [
+                    "administrative_area_level_3",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andalusia",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Bay of C\u00e1diz, C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 36.7189228,
+                    "lng": -5.980130700000001
+                },
+                "southwest": {
+                    "lat": 36.3299761,
+                    "lng": -6.323320799999999
+                }
+                },
+                "location": {
+                "lat": 36.4164608,
+                "lng": -6.1461862
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 36.7189228,
+                    "lng": -5.980130700000001
+                },
+                "southwest": {
+                    "lat": 36.3299761,
+                    "lng": -6.323320799999999
+                }
+                }
+            },
+            "place_id": "ChIJY4hJz_fLDQ0RvWg55CTLRxU",
+            "types": [
+                "administrative_area_level_3",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "C\u00e1diz",
+                "short_name": "CA",
+                "types": [
+                    "administrative_area_level_2",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Andalusia",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "C\u00e1diz, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 37.0524453,
+                    "lng": -5.086769400000001
+                },
+                "southwest": {
+                    "lat": 36.00027499999999,
+                    "lng": -6.472066300000001
+                }
+                },
+                "location": {
+                "lat": 36.6361857,
+                "lng": -5.898713900000001
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 37.0524453,
+                    "lng": -5.086769400000001
+                },
+                "southwest": {
+                    "lat": 36.00027499999999,
+                    "lng": -6.472066300000001
+                }
+                }
+            },
+            "place_id": "ChIJaxjPWk6qDQ0R4MmfjP1jBAM",
+            "types": [
+                "administrative_area_level_2",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Andalusia",
+                "short_name": "AN",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Spain",
+                "short_name": "ES",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Andalusia, Spain",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": 38.7290874,
+                    "lng": -1.6301238
+                },
+                "southwest": {
+                    "lat": 35.937646,
+                    "lng": -7.522686299999998
+                }
+                },
+                "location": {
+                "lat": 37.5442706,
+                "lng": -4.7277528
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": 38.7290874,
+                    "lng": -1.6301238
+                },
+                "southwest": {
+                    "lat": 35.937646,
+                    "lng": -7.522686299999998
+                }
+                }
+            },
+            "place_id": "ChIJRcWdz7HZEQ0RD_Pxd01lycE",
             "types": [
                 "administrative_area_level_1",
                 "political"
@@ -18871,7 +20591,7 @@
     "lng": "149.141563",
     "expected": "Parkes",
     "v2result": "Campbell",
-    "notes": "Australian Capital Territory -> Suburban Canberra.  In eBird this is correctly recorded as Parkes.  I assume that means the script use to get this right, though possible I created it manually.  Regression?  New script will get it right :-)",
+    "notes": "Australian Capital Territory -> Suburban Canberra. This location is in Parkes; OSM shows it as Parkes. Google Maps shows it in Parkes.  THe boundary between Parkes and Reid and Campbell runs down the southern side of Constituation Ave and this location is only about 20m from that boundary.  I live on Constitution Ave so I can vouch for the mapping sits being valid here.",
     "json_extracted": "20260220",
     "geocode_json": {
         "plus_code": {
@@ -20193,11 +21913,11 @@
     }
   },
   {
-    "name": "Holt",
+    "name": "Strathnairn",
     "country": "Australia",
     "lat": "-35.228527",
     "lng": "148.994532",
-    "expected": "Holt",
+    "expected": "Strathnairn",
     "v2result": "Holt",
     "notes": "Australian Capital Territory -> Suburban Canberra.",
     "json_extracted": "20260220",
@@ -21864,13 +23584,13 @@
     }
   },
   {
-    "name": "Hume",
+    "name": "Tuggeranong",
     "country": "Australia",
     "lat": "-35.401784",
     "lng": "149.1478",
-    "expected": "Hume",
+    "expected": "Tuggeranong",
     "v2result": "Hume",
-    "notes": "Australian Capital Territory -> Industrial Suburb in Canberra",
+    "notes": "Australian Capital Territory -> Rural location.  Hume is only meters away across the road.",
     "json_extracted": "20260221",
     "geocode_json": {
         "plus_code": {
@@ -22427,6 +24147,868 @@
             "types": [
                 "administrative_area_level_1",
                 "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -9.0880124,
+                    "lng": 159.5150123
+                },
+                "southwest": {
+                    "lat": -55.3228176,
+                    "lng": 112.6997261
+                }
+                },
+                "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -9.0880124,
+                    "lng": 159.5150123
+                },
+                "southwest": {
+                    "lat": -55.3228176,
+                    "lng": 112.6997261
+                }
+                }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+                "country",
+                "political"
+            ]
+            }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Hume",
+    "country": "Australia",
+    "lat": "-35.40037",
+    "lng": "149.154702",
+    "expected": "Hume",
+    "v2result": "Hume",
+    "notes": "Australian Capital Territory -> Industrial suburb in rural(ish) district",
+    "json_extracted": "20260222",
+    "geocode_json": {
+        "plus_code": {
+            "compound_code": "H5X3+VV4 Hume ACT, Australia",
+            "global_code": "4RPFH5X3+VV4"
+        },
+        "results": [
+            {
+            "address_components": [
+                {
+                "long_name": "H5X3+VV",
+                "short_name": "H5X3+VV",
+                "types": [
+                    "plus_code"
+                ]
+                },
+                {
+                "long_name": "Hume",
+                "short_name": "Hume",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "H5X3+VV Hume ACT, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.40025,
+                    "lng": 149.15475
+                },
+                "southwest": {
+                    "lat": -35.400375,
+                    "lng": 149.154625
+                }
+                },
+                "location": {
+                "lat": -35.40037,
+                "lng": 149.154702
+                },
+                "location_type": "GEOMETRIC_CENTER",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.3989635197085,
+                    "lng": 149.1560364802915
+                },
+                "southwest": {
+                    "lat": -35.4016614802915,
+                    "lng": 149.1533385197085
+                }
+                }
+            },
+            "place_id": "GhIJVyb8Uj-zQcARBtSbUfOkYkA",
+            "plus_code": {
+                "compound_code": "H5X3+VV Hume ACT, Australia",
+                "global_code": "4RPFH5X3+VV"
+            },
+            "types": [
+                "plus_code"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "6",
+                "short_name": "6",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Nick Ellis Place",
+                "short_name": "Nick Ellis Pl",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Hume",
+                "short_name": "Hume",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "6 Nick Ellis Pl, Hume ACT 2620, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.4016878,
+                    "lng": 149.1547547
+                },
+                "southwest": {
+                    "lat": -35.4020074,
+                    "lng": 149.1542691
+                }
+                },
+                "location": {
+                "lat": -35.4018364,
+                "lng": 149.1545016
+                },
+                "location_type": "ROOFTOP",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.4004986197085,
+                    "lng": 149.1558608802915
+                },
+                "southwest": {
+                    "lat": -35.4031965802915,
+                    "lng": 149.1531629197085
+                }
+                }
+            },
+            "navigation_points": [
+                {
+                "location": {
+                    "latitude": -35.4020649,
+                    "longitude": 149.1541599
+                }
+                }
+            ],
+            "place_id": "ChIJ__1q3lZKFmsRKqFYLeCZgOA",
+            "types": [
+                "premise",
+                "street_address"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Unit 4",
+                "short_name": "Unit 4",
+                "types": [
+                    "subpremise"
+                ]
+                },
+                {
+                "long_name": "4",
+                "short_name": "4",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Nick Ellis Place",
+                "short_name": "Nick Ellis Pl",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Hume",
+                "short_name": "Hume",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Unit 4/4 Nick Ellis Pl, Hume ACT 2620, Australia",
+            "geometry": {
+                "location": {
+                "lat": -35.40182679999999,
+                "lng": 149.1547068
+                },
+                "location_type": "ROOFTOP",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.4004778197085,
+                    "lng": 149.1560557802915
+                },
+                "southwest": {
+                    "lat": -35.40317578029149,
+                    "lng": 149.1533578197085
+                }
+                }
+            },
+            "navigation_points": [
+                {
+                "location": {
+                    "latitude": -35.4021412,
+                    "longitude": 149.1542367
+                }
+                }
+            ],
+            "place_id": "ChIJ78fldUpMFmsRPtsOfPE86fM",
+            "plus_code": {
+                "compound_code": "H5X3+7V Hume ACT, Australia",
+                "global_code": "4RPFH5X3+7V"
+            },
+            "types": [
+                "establishment",
+                "point_of_interest"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "98",
+                "short_name": "98",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Tralee Street",
+                "short_name": "Tralee St",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Hume",
+                "short_name": "Hume",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "98 Tralee St, Hume ACT 2620, Australia",
+            "geometry": {
+                "location": {
+                "lat": -35.4002863,
+                "lng": 149.156601
+                },
+                "location_type": "ROOFTOP",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.3989373197085,
+                    "lng": 149.1579499802915
+                },
+                "southwest": {
+                    "lat": -35.40163528029149,
+                    "lng": 149.1552520197085
+                }
+                }
+            },
+            "navigation_points": [
+                {
+                "location": {
+                    "latitude": -35.4002872,
+                    "longitude": 149.15667
+                }
+                }
+            ],
+            "place_id": "ChIJ3QUjWFFKFmsR1ZKC2bRb5xg",
+            "plus_code": {
+                "compound_code": "H5X4+VJ Hume ACT, Australia",
+                "global_code": "4RPFH5X4+VJ"
+            },
+            "types": [
+                "street_address"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "7",
+                "short_name": "7",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Nick Ellis Place",
+                "short_name": "Nick Ellis Pl",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Hume",
+                "short_name": "Hume",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "7 Nick Ellis Pl, Hume ACT 2620, Australia",
+            "geometry": {
+                "location": {
+                "lat": -35.4020244,
+                "lng": 149.154021
+                },
+                "location_type": "RANGE_INTERPOLATED",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.40067541970851,
+                    "lng": 149.1553699802915
+                },
+                "southwest": {
+                    "lat": -35.40337338029151,
+                    "lng": 149.1526720197085
+                }
+                }
+            },
+            "place_id": "Eik3IE5pY2sgRWxsaXMgUGwsIEh1bWUgQUNUIDI2MjAsIEF1c3RyYWxpYSIaEhgKFAoSCVUidh5XShZrETK-gewzL8zbEAc",
+            "types": [
+                "street_address"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "98",
+                "short_name": "98",
+                "types": [
+                    "street_number"
+                ]
+                },
+                {
+                "long_name": "Tralee Street",
+                "short_name": "Tralee St",
+                "types": [
+                    "route"
+                ]
+                },
+                {
+                "long_name": "Hume",
+                "short_name": "Hume",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "98 Tralee St, Hume ACT 2620, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.3988581,
+                    "lng": 149.1566217
+                },
+                "southwest": {
+                    "lat": -35.400766,
+                    "lng": 149.1565829
+                }
+                },
+                "location": {
+                "lat": -35.399812,
+                "lng": 149.1566022
+                },
+                "location_type": "GEOMETRIC_CENTER",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.3984630697085,
+                    "lng": 149.1579512802915
+                },
+                "southwest": {
+                    "lat": -35.4011610302915,
+                    "lng": 149.1552533197085
+                }
+                }
+            },
+            "place_id": "ChIJc9w3-1NKFmsRGDeGFozg5cg",
+            "types": [
+                "route"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Hume",
+                "short_name": "Hume",
+                "types": [
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                    "postal_code"
+                ]
+                }
+            ],
+            "formatted_address": "Hume ACT 2620, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.3655392,
+                    "lng": 149.1904773
+                },
+                "southwest": {
+                    "lat": -35.4106746,
+                    "lng": 149.1456942
+                }
+                },
+                "location": {
+                "lat": -35.3937568,
+                "lng": 149.1631726
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.3655392,
+                    "lng": 149.1904773
+                },
+                "southwest": {
+                    "lat": -35.4106746,
+                    "lng": 149.1456942
+                }
+                }
+            },
+            "place_id": "ChIJB6V8qrBLFmsRIFhpp27qAAU",
+            "types": [
+                "locality",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Jerrabomberra",
+                "short_name": "Jerrabomberra",
+                "types": [
+                    "neighborhood",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Jerrabomberra, ACT, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.3303545,
+                    "lng": 149.233254
+                },
+                "southwest": {
+                    "lat": -35.4018254,
+                    "lng": 149.1185353
+                }
+                },
+                "location": {
+                "lat": -35.3921033,
+                "lng": 149.1615605
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.3303545,
+                    "lng": 149.233254
+                },
+                "southwest": {
+                    "lat": -35.4018254,
+                    "lng": 149.1185353
+                }
+                }
+            },
+            "place_id": "ChIJ5aqbzaFOFmsRzbT-X41D0aI",
+            "types": [
+                "neighborhood",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Canberra",
+                "short_name": "Canberra",
+                "types": [
+                    "colloquial_area",
+                    "locality",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Canberra ACT, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.1476991,
+                    "lng": 149.2636434
+                },
+                "southwest": {
+                    "lat": -35.4802604,
+                    "lng": 148.9959216
+                }
+                },
+                "location": {
+                "lat": -35.2801846,
+                "lng": 149.1310324
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.1476991,
+                    "lng": 149.2636434
+                },
+                "southwest": {
+                    "lat": -35.4802604,
+                    "lng": 148.9959216
+                }
+                }
+            },
+            "place_id": "ChIJuzQLsqNMFmsRcFlpp27qAAQ",
+            "types": [
+                "colloquial_area",
+                "locality",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -35.1244158,
+                    "lng": 149.3992871
+                },
+                "southwest": {
+                    "lat": -35.9205301,
+                    "lng": 148.7627901
+                }
+                },
+                "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -35.1244158,
+                    "lng": 149.3992871
+                },
+                "southwest": {
+                    "lat": -35.9205301,
+                    "lng": 148.7627901
+                }
+                }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+                "administrative_area_level_1",
+                "political"
+            ]
+            },
+            {
+            "address_components": [
+                {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                    "postal_code"
+                ]
+                },
+                {
+                "long_name": "New South Wales",
+                "short_name": "New South Wales",
+                "types": [
+                    "administrative_area_level_1",
+                    "political"
+                ]
+                },
+                {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                    "country",
+                    "political"
+                ]
+                }
+            ],
+            "formatted_address": "New South Wales 2620, Australia",
+            "geometry": {
+                "bounds": {
+                "northeast": {
+                    "lat": -34.9442027,
+                    "lng": 149.40103
+                },
+                "southwest": {
+                    "lat": -35.92053,
+                    "lng": 148.7674985
+                }
+                },
+                "location": {
+                "lat": -35.631888,
+                "lng": 149.0123679
+                },
+                "location_type": "APPROXIMATE",
+                "viewport": {
+                "northeast": {
+                    "lat": -34.9442027,
+                    "lng": 149.40103
+                },
+                "southwest": {
+                    "lat": -35.92053,
+                    "lng": 148.7674985
+                }
+                }
+            },
+            "place_id": "ChIJE_HUfotIFmsR0B3TzLcJBhw",
+            "types": [
+                "postal_code"
             ]
             },
             {
@@ -28487,7 +31069,7 @@
     "lng": "148.84902",
     "expected": "Cotter River",
     "v2result": "Cotter River",
-    "notes": "Australian Capital Territory -> Rural",
+    "notes": "Australian Capital Territory -> Rural:  This location is about the middle of the Cotter River district in the ACT.  It is about 22km from the cloest boundary with the district of Coree.  There are no suburbs or 'areas' nearby that I am aware of.  Google Maps 'What's here' returns 'Australian Capital Territory'. OSM returns 'District of Cotter River'.  For ACT locations that are outside of suburbian locations, the neighborhood location represents the ACT district (in this case Cotter River) and is correct.",
     "json_extracted": "20260221",
     "geocode_json": {
         "plus_code": {
