@@ -137,7 +137,18 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
     for result in results:
         for component in result.get("address_components", []):
             if "locality" in component.get("types", []):
-                return component.get("long_name")
+
+                name = component.get("long_name", "").strip()
+
+                # Reject plus codes
+                if "+" in name and any(c.isdigit() for c in name):
+                    continue
+
+                # Reject full addresses
+                if "," in name and len(name.split()) > 3:
+                    continue
+
+                return name
 
     # fallback
     if results:
