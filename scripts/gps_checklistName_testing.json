@@ -1,18 +1,5 @@
 [
   {
-    "name": "",
-    "country": "",
-    "lat": "",
-    "lng": "",
-    "expected": "",
-    "v2result": "",
-    "notes": "",
-    "json_extracted": "20260221",
-    "geocode_json": {
-
-    }
-  },
-  {
     "name": "Arambol",
     "country": "India",
     "lat": 15.689755,
