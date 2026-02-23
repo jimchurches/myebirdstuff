@@ -918,6 +918,9 @@ def main() -> None:
         coord_text = pyperclip.paste()
     else:
         coord_text = " ".join(list(args.coords) + list(extras))
+    # If no args were given, fall back to clipboard (so "run with nothing" uses clipboard)
+    if (not coord_text or not coord_text.strip()) and not args.coords and not extras:
+        coord_text = pyperclip.paste() or ""
 
     # 2) Parse coordinates (robust to commas/spaces/formatted strings)
     lat, lng, lat_dp, lng_dp = parse_coords_from_text(coord_text)
