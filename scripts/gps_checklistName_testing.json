@@ -32253,7 +32253,7 @@
   {
     "name": "Stromlo",
     "country": "Australia",
-    "lat": "-35.291,",
+    "lat": "-35.291",
     "lng": "149.016126",
     "expected": "Stromlo",
     "v2result": "Stromlo",
@@ -35440,7 +35440,7 @@
   {
     "name": "Williamsdale",
     "country": "Australia",
-    "lat": "-35.585233,",
+    "lat": "-35.585233",
     "lng": "149.108477",
     "expected": "Williamsdale",
     "v2result": "Williamsdale",
@@ -39749,5 +39749,6174 @@
         ],
         "status": "OK"
     }
-  }   
+  },
+  {
+    "name": "Symonston",
+    "country": "AU",
+    "lat": "-35.339902",
+    "lng": "149.176536",
+    "expected": "Symonston",
+    "v2result": "Fyshwick",
+    "notes": "",
+    "json_extracted": "20260223",
+    "geocode_json": {
+        "plus_code": {
+        "compound_code": "M56G+2JM Symonston ACT, Australia",
+        "global_code": "4RPFM56G+2JM"
+        },
+        "results": [
+        {
+            "address_components": [
+            {
+                "long_name": "M56G+2J",
+                "short_name": "M56G+2J",
+                "types": [
+                "plus_code"
+                ]
+            },
+            {
+                "long_name": "Symonston",
+                "short_name": "Symonston",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "M56G+2J Symonston ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.339875,
+                "lng": 149.176625
+                },
+                "southwest": {
+                "lat": -35.34,
+                "lng": 149.1765
+                }
+            },
+            "location": {
+                "lat": -35.339902,
+                "lng": 149.176536
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3385885197085,
+                "lng": 149.1779114802915
+                },
+                "southwest": {
+                "lat": -35.34128648029149,
+                "lng": 149.1752135197085
+                }
+            }
+            },
+            "place_id": "GhIJKOyi6IGrQcARIlLTLqalYkA",
+            "plus_code": {
+            "compound_code": "M56G+2J Symonston ACT, Australia",
+            "global_code": "4RPFM56G+2J"
+            },
+            "types": [
+            "plus_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "377",
+                "short_name": "377",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "B52",
+                "short_name": "B52",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "377 B52, Fyshwick ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.338337,
+                "lng": 149.1779599
+            },
+            "location_type": "RANGE_INTERPOLATED",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3369880197085,
+                "lng": 149.1793088802915
+                },
+                "southwest": {
+                "lat": -35.3396859802915,
+                "lng": 149.1766109197085
+                }
+            }
+            },
+            "place_id": "EiUzNzcgQjUyLCBGeXNod2ljayBBQ1QgMjYwOSwgQXVzdHJhbGlhIhsSGQoUChIJL_8LnD5MFmsRKIPSmWd5fuAQ-QI",
+            "types": [
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Canberra Avenue",
+                "short_name": "B52",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Canberra Ave, Fyshwick ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3382709,
+                "lng": 149.1777703
+                },
+                "southwest": {
+                "lat": -35.3384796,
+                "lng": 149.1772547
+                }
+            },
+            "location": {
+                "lat": -35.3383782,
+                "lng": 149.1775106
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3370262697085,
+                "lng": 149.1788614802915
+                },
+                "southwest": {
+                "lat": -35.33972423029149,
+                "lng": 149.1761635197085
+                }
+            }
+            },
+            "place_id": "ChIJBVKPkj5MFmsRXIoBrEBxDOQ",
+            "types": [
+            "route"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Symonston",
+                "short_name": "Symonston",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Symonston ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3303545,
+                "lng": 149.1887009
+                },
+                "southwest": {
+                "lat": -35.3636238,
+                "lng": 149.1244212
+                }
+            },
+            "location": {
+                "lat": -35.3475978,
+                "lng": 149.1581326
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3303545,
+                "lng": 149.1887009
+                },
+                "southwest": {
+                "lat": -35.3636238,
+                "lng": 149.1244212
+                }
+            }
+            },
+            "place_id": "ChIJKTdSD35OFmsRMFhpp27qAAU",
+            "types": [
+            "locality",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Jerrabomberra",
+                "short_name": "Jerrabomberra",
+                "types": [
+                "neighborhood",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Jerrabomberra, ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3303545,
+                "lng": 149.233254
+                },
+                "southwest": {
+                "lat": -35.4018254,
+                "lng": 149.1185353
+                }
+            },
+            "location": {
+                "lat": -35.3921033,
+                "lng": 149.1615605
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3303545,
+                "lng": 149.233254
+                },
+                "southwest": {
+                "lat": -35.4018254,
+                "lng": 149.1185353
+                }
+            }
+            },
+            "place_id": "ChIJ5aqbzaFOFmsRzbT-X41D0aI",
+            "types": [
+            "neighborhood",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            },
+            {
+                "long_name": "Majura",
+                "short_name": "Majura",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Majura ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2055657,
+                "lng": 149.26351
+                },
+                "southwest": {
+                "lat": -35.3967364,
+                "lng": 149.1185353
+                }
+            },
+            "location": {
+                "lat": -35.2736652,
+                "lng": 149.2190324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2055657,
+                "lng": 149.26351
+                },
+                "southwest": {
+                "lat": -35.3967364,
+                "lng": 149.1185353
+                }
+            }
+            },
+            "place_id": "ChIJc5TQ0vBNFmsRQPiLx3HqABw",
+            "postcode_localities": [
+            "Fyshwick",
+            "Majura",
+            "Pialligo",
+            "Symonston"
+            ],
+            "types": [
+            "postal_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Canberra",
+                "short_name": "Canberra",
+                "types": [
+                "colloquial_area",
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Canberra ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            },
+            "location": {
+                "lat": -35.2801846,
+                "lng": 149.1310324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            }
+            },
+            "place_id": "ChIJuzQLsqNMFmsRcFlpp27qAAQ",
+            "types": [
+            "colloquial_area",
+            "locality",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            },
+            "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+            "administrative_area_level_1",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            },
+            "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+            "country",
+            "political"
+            ]
+        }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Jerrabomberra",
+    "country": "AU",
+    "lat": "-35.362321",
+    "lng": "149.167076",
+    "expected": "Jerrabomberra",
+    "v2result": "Symonston",
+    "notes": "This location is several hundred metres outside of Symonston, a suburb/locality in Jerrabomberra.  The location doesn't have a suburb/locality so should be catagorised as being in the ACT district of Jerrabomberra.",
+    "json_extracted": "20260223",
+    "geocode_json": {
+        "plus_code": {
+        "compound_code": "J5Q8+3RG Symonston ACT, Australia",
+        "global_code": "4RPFJ5Q8+3RG"
+        },
+        "results": [
+        {
+            "address_components": [
+            {
+                "long_name": "10423",
+                "short_name": "10423",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Monaro Highway",
+                "short_name": "Monaro Hwy",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Symonston",
+                "short_name": "Symonston",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "10423 Monaro Hwy, Symonston ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.3627754,
+                "lng": 149.1658777
+            },
+            "location_type": "ROOFTOP",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3614264197085,
+                "lng": 149.1672266802915
+                },
+                "southwest": {
+                "lat": -35.3641243802915,
+                "lng": 149.1645287197085
+                }
+            }
+            },
+            "navigation_points": [
+            {
+                "location": {
+                "latitude": -35.3626993,
+                "longitude": 149.1665015
+                },
+                "restricted_travel_modes": [
+                "DRIVE"
+                ]
+            },
+            {
+                "location": {
+                "latitude": -35.3633212,
+                "longitude": 149.1666155
+                },
+                "restricted_travel_modes": [
+                "WALK"
+                ]
+            }
+            ],
+            "place_id": "ChIJBa8ANolLFmsRjmT7weDq4KU",
+            "plus_code": {
+            "compound_code": "J5P8+V9 Symonston ACT, Australia",
+            "global_code": "4RPFJ5P8+V9"
+            },
+            "types": [
+            "establishment",
+            "point_of_interest"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "J5Q8+3R",
+                "short_name": "J5Q8+3R",
+                "types": [
+                "plus_code"
+                ]
+            },
+            {
+                "long_name": "Symonston",
+                "short_name": "Symonston",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "J5Q8+3R Symonston ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.36225,
+                "lng": 149.167125
+                },
+                "southwest": {
+                "lat": -35.362375,
+                "lng": 149.167
+                }
+            },
+            "location": {
+                "lat": -35.362321,
+                "lng": 149.167076
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3609635197085,
+                "lng": 149.1684114802915
+                },
+                "southwest": {
+                "lat": -35.3636614802915,
+                "lng": 149.1657135197085
+                }
+            }
+            },
+            "place_id": "GhIJt9PWiGCuQcARSX7Er1ilYkA",
+            "plus_code": {
+            "compound_code": "J5Q8+3R Symonston ACT, Australia",
+            "global_code": "4RPFJ5Q8+3R"
+            },
+            "types": [
+            "plus_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Monaro Highway",
+                "short_name": "Tourist Drive 5",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Symonston",
+                "short_name": "Symonston",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Monaro Hwy, Symonston ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3605647,
+                "lng": 149.1683766
+                },
+                "southwest": {
+                "lat": -35.3698729,
+                "lng": 149.1666615
+                }
+            },
+            "location": {
+                "lat": -35.36521949999999,
+                "lng": 149.1675132
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3605647,
+                "lng": 149.1688680302915
+                },
+                "southwest": {
+                "lat": -35.3698729,
+                "lng": 149.1661700697085
+                }
+            }
+            },
+            "place_id": "ChIJ5eETKYxLFmsRwu4bFxNWmRE",
+            "types": [
+            "route"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "10400",
+                "short_name": "10400",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "A23",
+                "short_name": "A23",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Symonston",
+                "short_name": "Symonston",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "10400 A23, Symonston ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.3696814,
+                "lng": 149.1683409
+            },
+            "location_type": "RANGE_INTERPOLATED",
+            "viewport": {
+                "northeast": {
+                "lat": -35.36833241970849,
+                "lng": 149.1696898802915
+                },
+                "southwest": {
+                "lat": -35.37103038029149,
+                "lng": 149.1669919197085
+                }
+            }
+            },
+            "place_id": "EigxMDQwMCBBMjMsIFN5bW9uc3RvbiBBQ1QgMjYwOSwgQXVzdHJhbGlhIhsSGQoUChIJ5eETKYxLFmsRw-4bFxNWmREQoFE",
+            "types": [
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2600",
+                "short_name": "2600",
+                "types": [
+                "postal_code"
+                ]
+            },
+            {
+                "long_name": "Harman",
+                "short_name": "Harman",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Harman ACT 2600, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2857139,
+                "lng": 149.2063597
+                },
+                "southwest": {
+                "lat": -35.3708365,
+                "lng": 149.0725926
+                }
+            },
+            "location": {
+                "lat": -35.3075699,
+                "lng": 149.1099161
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2857139,
+                "lng": 149.2063597
+                },
+                "southwest": {
+                "lat": -35.3708365,
+                "lng": 149.0725926
+                }
+            }
+            },
+            "place_id": "ChIJa6HF4TuzF2sRAPeLx3HqABw",
+            "postcode_localities": [
+            "Barton",
+            "Canberra",
+            "Capital Hill",
+            "Deakin",
+            "Harman",
+            "Parkes",
+            "Russell",
+            "Yarralumla"
+            ],
+            "types": [
+            "postal_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Jerrabomberra",
+                "short_name": "Jerrabomberra",
+                "types": [
+                "neighborhood",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Jerrabomberra, ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3303545,
+                "lng": 149.233254
+                },
+                "southwest": {
+                "lat": -35.4018254,
+                "lng": 149.1185353
+                }
+            },
+            "location": {
+                "lat": -35.3921033,
+                "lng": 149.1615605
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3303545,
+                "lng": 149.233254
+                },
+                "southwest": {
+                "lat": -35.4018254,
+                "lng": 149.1185353
+                }
+            }
+            },
+            "place_id": "ChIJ5aqbzaFOFmsRzbT-X41D0aI",
+            "types": [
+            "neighborhood",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Canberra",
+                "short_name": "Canberra",
+                "types": [
+                "colloquial_area",
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Canberra ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            },
+            "location": {
+                "lat": -35.2801846,
+                "lng": 149.1310324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            }
+            },
+            "place_id": "ChIJuzQLsqNMFmsRcFlpp27qAAQ",
+            "types": [
+            "colloquial_area",
+            "locality",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            },
+            "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+            "administrative_area_level_1",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            },
+            "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+            "country",
+            "political"
+            ]
+        }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Fyshwick",
+    "country": "AU",
+    "lat": "-35.329345",
+    "lng": "149.162032",
+    "expected": "Fyshwick",
+    "v2result": "",
+    "notes": "",
+    "json_extracted": "20260223",
+    "geocode_json": {
+        "plus_code": {
+        "compound_code": "M5C6+7R7 Fyshwick ACT, Australia",
+        "global_code": "4RPFM5C6+7R7"
+        },
+        "results": [
+        {
+            "address_components": [
+            {
+                "long_name": "3",
+                "short_name": "3",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Ipswich Street",
+                "short_name": "Ipswich St",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "3 Ipswich St, Fyshwick ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.3295825,
+                "lng": 149.1622533
+            },
+            "location_type": "ROOFTOP",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3282335197085,
+                "lng": 149.1636022802915
+                },
+                "southwest": {
+                "lat": -35.3309314802915,
+                "lng": 149.1609043197085
+                }
+            }
+            },
+            "navigation_points": [
+            {
+                "location": {
+                "latitude": -35.3296622,
+                "longitude": 149.1624125
+                }
+            }
+            ],
+            "place_id": "ChIJ2Ykk7IxNFmsRXslaYnTjG9I",
+            "plus_code": {
+            "compound_code": "M5C6+5W Fyshwick ACT, Australia",
+            "global_code": "4RPFM5C6+5W"
+            },
+            "types": [
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Ipswich St before Canberra Av",
+                "short_name": "Ipswich St before Canberra Av",
+                "types": [
+                "establishment",
+                "point_of_interest",
+                "transit_station"
+                ]
+            },
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Ipswich St before Canberra Av, Fyshwick ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.329094,
+                "lng": 149.162797
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.32774501970849,
+                "lng": 149.1641459802915
+                },
+                "southwest": {
+                "lat": -35.33044298029149,
+                "lng": 149.1614480197085
+                }
+            }
+            },
+            "navigation_points": [
+            {
+                "location": {
+                "latitude": -35.3291097,
+                "longitude": 149.1628284
+                }
+            }
+            ],
+            "place_id": "ChIJY3NGPEVMFmsRztRlBc_5cs4",
+            "plus_code": {
+            "compound_code": "M5C7+94 Fyshwick ACT, Australia",
+            "global_code": "4RPFM5C7+94"
+            },
+            "types": [
+            "establishment",
+            "point_of_interest",
+            "transit_station"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2",
+                "short_name": "2",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Ipswich Street",
+                "short_name": "Ipswich St",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "2 Ipswich St, Fyshwick ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3298593,
+                "lng": 149.1627396
+                },
+                "southwest": {
+                "lat": -35.330024,
+                "lng": 149.1625043
+                }
+            },
+            "location": {
+                "lat": -35.3299418,
+                "lng": 149.162621
+            },
+            "location_type": "ROOFTOP",
+            "viewport": {
+                "northeast": {
+                "lat": -35.32859266970851,
+                "lng": 149.1639709302915
+                },
+                "southwest": {
+                "lat": -35.33129063029151,
+                "lng": 149.1612729697085
+                }
+            }
+            },
+            "navigation_points": [
+            {
+                "location": {
+                "latitude": -35.3299065,
+                "longitude": 149.1624424
+                }
+            }
+            ],
+            "place_id": "ChIJz31T30RMFmsRZsIN-7p7A_o",
+            "types": [
+            "premise",
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2",
+                "short_name": "2",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Ipswich Street",
+                "short_name": "Ipswich St",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "2 Ipswich St, Fyshwick ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.33,
+                "lng": 149.1626
+            },
+            "location_type": "ROOFTOP",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3286510197085,
+                "lng": 149.1639489802915
+                },
+                "southwest": {
+                "lat": -35.33134898029149,
+                "lng": 149.1612510197085
+                }
+            }
+            },
+            "navigation_points": [
+            {
+                "location": {
+                "latitude": -35.3297355,
+                "longitude": 149.1625385
+                }
+            }
+            ],
+            "place_id": "ChIJwyvf3kRMFmsRuluwgn9qans",
+            "plus_code": {
+            "compound_code": "M5C7+22 Fyshwick ACT, Australia",
+            "global_code": "4RPFM5C7+22"
+            },
+            "types": [
+            "atm",
+            "establishment",
+            "finance",
+            "food",
+            "gas_station",
+            "point_of_interest",
+            "restaurant"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "9",
+                "short_name": "9",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Ipswich Street",
+                "short_name": "Ipswich St",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "9 Ipswich St, Fyshwick ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.3296062,
+                "lng": 149.1625453
+            },
+            "location_type": "RANGE_INTERPOLATED",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3282572197085,
+                "lng": 149.1638942802915
+                },
+                "southwest": {
+                "lat": -35.3309551802915,
+                "lng": 149.1611963197085
+                }
+            }
+            },
+            "place_id": "Eio5IElwc3dpY2ggU3QsIEZ5c2h3aWNrIEFDVCAyNjA5LCBBdXN0cmFsaWEiGhIYChQKEgklknsjRUwWaxGQbUZRMqKbIxAJ",
+            "types": [
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "M5C6+7R",
+                "short_name": "M5C6+7R",
+                "types": [
+                "plus_code"
+                ]
+            },
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "M5C6+7R Fyshwick ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.32925,
+                "lng": 149.162125
+                },
+                "southwest": {
+                "lat": -35.329375,
+                "lng": 149.162
+                }
+            },
+            "location": {
+                "lat": -35.329345,
+                "lng": 149.162032
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3279635197085,
+                "lng": 149.1634114802915
+                },
+                "southwest": {
+                "lat": -35.3306614802915,
+                "lng": 149.1607135197085
+                }
+            }
+            },
+            "place_id": "GhIJ8Qwa-ieqQcAR-Zy7XS-lYkA",
+            "plus_code": {
+            "compound_code": "M5C6+7R Fyshwick ACT, Australia",
+            "global_code": "4RPFM5C6+7R"
+            },
+            "types": [
+            "plus_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Monaro Highway",
+                "short_name": "M23",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Symonston",
+                "short_name": "Symonston",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Monaro Hwy, Symonston ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3283081,
+                "lng": 149.1622778
+                },
+                "southwest": {
+                "lat": -35.3300937,
+                "lng": 149.1617439
+                }
+            },
+            "location": {
+                "lat": -35.3291899,
+                "lng": 149.1619548
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3278519197085,
+                "lng": 149.1633598302915
+                },
+                "southwest": {
+                "lat": -35.3305498802915,
+                "lng": 149.1606618697085
+                }
+            }
+            },
+            "place_id": "ChIJW9F6LEVMFmsRpmdY-BAJRtw",
+            "types": [
+            "route"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Fyshwick",
+                "short_name": "Fyshwick",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Fyshwick ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3020775,
+                "lng": 149.1927164
+                },
+                "southwest": {
+                "lat": -35.342502,
+                "lng": 149.1486901
+                }
+            },
+            "location": {
+                "lat": -35.3233205,
+                "lng": 149.1693652
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3020775,
+                "lng": 149.1927164
+                },
+                "southwest": {
+                "lat": -35.342502,
+                "lng": 149.1486901
+                }
+            }
+            },
+            "place_id": "ChIJm2T-FH1OFmsR4FZpp27qAAU",
+            "types": [
+            "locality",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Canberra Central",
+                "short_name": "Canberra Central",
+                "types": [
+                "neighborhood",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Canberra Central, ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2255627,
+                "lng": 149.1927164
+                },
+                "southwest": {
+                "lat": -35.3479187,
+                "lng": 149.0702405
+                }
+            },
+            "location": {
+                "lat": -35.2809203,
+                "lng": 149.1300314
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2255627,
+                "lng": 149.1927164
+                },
+                "southwest": {
+                "lat": -35.3479187,
+                "lng": 149.0702405
+                }
+            }
+            },
+            "place_id": "ChIJq2rIrGxNFmsR12fakQaL3tQ",
+            "types": [
+            "neighborhood",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            },
+            {
+                "long_name": "Majura",
+                "short_name": "Majura",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Majura ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2055657,
+                "lng": 149.26351
+                },
+                "southwest": {
+                "lat": -35.3967364,
+                "lng": 149.1185353
+                }
+            },
+            "location": {
+                "lat": -35.2736652,
+                "lng": 149.2190324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2055657,
+                "lng": 149.26351
+                },
+                "southwest": {
+                "lat": -35.3967364,
+                "lng": 149.1185353
+                }
+            }
+            },
+            "place_id": "ChIJc5TQ0vBNFmsRQPiLx3HqABw",
+            "postcode_localities": [
+            "Fyshwick",
+            "Majura",
+            "Pialligo",
+            "Symonston"
+            ],
+            "types": [
+            "postal_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Canberra",
+                "short_name": "Canberra",
+                "types": [
+                "colloquial_area",
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Canberra ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            },
+            "location": {
+                "lat": -35.2801846,
+                "lng": 149.1310324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            }
+            },
+            "place_id": "ChIJuzQLsqNMFmsRcFlpp27qAAQ",
+            "types": [
+            "colloquial_area",
+            "locality",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            },
+            "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+            "administrative_area_level_1",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            },
+            "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+            "country",
+            "political"
+            ]
+        }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Yarralumla",
+    "country": "AU",
+    "lat": "-35.298014",
+    "lng": "149.110079",
+    "expected": "Yarralumla",
+    "v2result": "",
+    "notes": "",
+    "json_extracted": "20260223",
+    "geocode_json": {
+        "plus_code": {
+        "compound_code": "P426+Q2W Yarralumla ACT, Australia",
+        "global_code": "4RPFP426+Q2W"
+        },
+        "results": [
+        {
+            "address_components": [
+            {
+                "long_name": "P426+Q2",
+                "short_name": "P426+Q2",
+                "types": [
+                "plus_code"
+                ]
+            },
+            {
+                "long_name": "Yarralumla",
+                "short_name": "Yarralumla",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2600",
+                "short_name": "2600",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "P426+Q2 Yarralumla ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.298,
+                "lng": 149.110125
+                },
+                "southwest": {
+                "lat": -35.298125,
+                "lng": 149.11
+                }
+            },
+            "location": {
+                "lat": -35.29801399999999,
+                "lng": 149.110079
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2967135197085,
+                "lng": 149.1114114802915
+                },
+                "southwest": {
+                "lat": -35.2994114802915,
+                "lng": 149.1087135197085
+                }
+            }
+            },
+            "place_id": "GhIJBOCfUiWmQcARPh9lxIWjYkA",
+            "plus_code": {
+            "compound_code": "P426+Q2 Yarralumla ACT, Australia",
+            "global_code": "4RPFP426+Q2"
+            },
+            "types": [
+            "plus_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Alexandrina Drive",
+                "short_name": "Tourist Dr 2",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Yarralumla",
+                "short_name": "Yarralumla",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2600",
+                "short_name": "2600",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Tourist Dr 2, Yarralumla ACT 2600, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2980021,
+                "lng": 149.1130172
+                },
+                "southwest": {
+                "lat": -35.299974,
+                "lng": 149.1088782
+                }
+            },
+            "location": {
+                "lat": -35.29946400000001,
+                "lng": 149.1106163
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2976390697085,
+                "lng": 149.1130172
+                },
+                "southwest": {
+                "lat": -35.30033703029149,
+                "lng": 149.1088782
+                }
+            }
+            },
+            "place_id": "ChIJ8R7OQylNFmsRmNZN6BZ_SYI",
+            "types": [
+            "route"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Yarralumla",
+                "short_name": "Yarralumla",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2600",
+                "short_name": "2600",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Yarralumla ACT 2600, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2862261,
+                "lng": 149.1268902
+                },
+                "southwest": {
+                "lat": -35.3154898,
+                "lng": 149.0724373
+                }
+            },
+            "location": {
+                "lat": -35.3047905,
+                "lng": 149.1069294
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2862261,
+                "lng": 149.1268902
+                },
+                "southwest": {
+                "lat": -35.3154898,
+                "lng": 149.0724373
+                }
+            }
+            },
+            "place_id": "ChIJa6HF4TuzF2sRQFdpp27qAAU",
+            "types": [
+            "locality",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2600",
+                "short_name": "2600",
+                "types": [
+                "postal_code"
+                ]
+            },
+            {
+                "long_name": "Harman",
+                "short_name": "Harman",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Harman ACT 2600, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2857139,
+                "lng": 149.2063597
+                },
+                "southwest": {
+                "lat": -35.3708365,
+                "lng": 149.0725926
+                }
+            },
+            "location": {
+                "lat": -35.3075699,
+                "lng": 149.1099161
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2857139,
+                "lng": 149.2063597
+                },
+                "southwest": {
+                "lat": -35.3708365,
+                "lng": 149.0725926
+                }
+            }
+            },
+            "place_id": "ChIJa6HF4TuzF2sRAPeLx3HqABw",
+            "postcode_localities": [
+            "Barton",
+            "Canberra",
+            "Capital Hill",
+            "Deakin",
+            "Harman",
+            "Parkes",
+            "Russell",
+            "Yarralumla"
+            ],
+            "types": [
+            "postal_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Canberra Central",
+                "short_name": "Canberra Central",
+                "types": [
+                "neighborhood",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Canberra Central, ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2255627,
+                "lng": 149.1927164
+                },
+                "southwest": {
+                "lat": -35.3479187,
+                "lng": 149.0702405
+                }
+            },
+            "location": {
+                "lat": -35.2809203,
+                "lng": 149.1300314
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2255627,
+                "lng": 149.1927164
+                },
+                "southwest": {
+                "lat": -35.3479187,
+                "lng": 149.0702405
+                }
+            }
+            },
+            "place_id": "ChIJq2rIrGxNFmsR12fakQaL3tQ",
+            "types": [
+            "neighborhood",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Canberra",
+                "short_name": "Canberra",
+                "types": [
+                "colloquial_area",
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Canberra ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            },
+            "location": {
+                "lat": -35.2801846,
+                "lng": 149.1310324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            }
+            },
+            "place_id": "ChIJuzQLsqNMFmsRcFlpp27qAAQ",
+            "types": [
+            "colloquial_area",
+            "locality",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            },
+            "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+            "administrative_area_level_1",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            },
+            "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+            "country",
+            "political"
+            ]
+        }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Belconnen",
+    "country": "AU",
+    "lat": "-35.258831",
+    "lng": "149.027786",
+    "expected": "Belconnen",
+    "v2result": "",
+    "notes": "Rural location in Belconnen.  No suburb.",
+    "json_extracted": "20260223",
+    "geocode_json": {
+        "plus_code": {
+        "compound_code": "P2RH+F47 Hawker ACT, Australia",
+        "global_code": "4RPFP2RH+F47"
+        },
+        "results": [
+        {
+            "address_components": [
+            {
+                "long_name": "William Hovell Drive",
+                "short_name": "William Hovell Dr",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2615",
+                "short_name": "2615",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "William Hovell Dr, Australian Capital Territory 2615, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2567049,
+                "lng": 149.0291916
+                },
+                "southwest": {
+                "lat": -35.2601279,
+                "lng": 149.0265252
+                }
+            },
+            "location": {
+                "lat": -35.2585491,
+                "lng": 149.0276
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2567049,
+                "lng": 149.0292073802915
+                },
+                "southwest": {
+                "lat": -35.2601279,
+                "lng": 149.0265094197085
+                }
+            }
+            },
+            "place_id": "ChIJayWdwxayF2sRNrf273cIDgg",
+            "types": [
+            "route"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "P2RH+F4",
+                "short_name": "P2RH+F4",
+                "types": [
+                "plus_code"
+                ]
+            },
+            {
+                "long_name": "Hawker",
+                "short_name": "Hawker",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2614",
+                "short_name": "2614",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "P2RH+F4 Hawker ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.25875,
+                "lng": 149.027875
+                },
+                "southwest": {
+                "lat": -35.258875,
+                "lng": 149.02775
+                }
+            },
+            "location": {
+                "lat": -35.258831,
+                "lng": 149.027786
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2574635197085,
+                "lng": 149.0291614802915
+                },
+                "southwest": {
+                "lat": -35.2601614802915,
+                "lng": 149.0264635197085
+                }
+            }
+            },
+            "place_id": "GhIJchjMXyGhQcARLCl3n-OgYkA",
+            "plus_code": {
+            "compound_code": "P2RH+F4 Hawker ACT, Australia",
+            "global_code": "4RPFP2RH+F4"
+            },
+            "types": [
+            "plus_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "121",
+                "short_name": "121",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "William Hovell Drive",
+                "short_name": "William Hovell Dr",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "121 William Hovell Dr, Australian Capital Territory 2611, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.2625625,
+                "lng": 149.0318066
+            },
+            "location_type": "RANGE_INTERPOLATED",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2612135197085,
+                "lng": 149.0331555802915
+                },
+                "southwest": {
+                "lat": -35.2639114802915,
+                "lng": 149.0304576197085
+                }
+            }
+            },
+            "place_id": "EkMxMjEgV2lsbGlhbSBIb3ZlbGwgRHIsIEF1c3RyYWxpYW4gQ2FwaXRhbCBUZXJyaXRvcnkgMjYxMSwgQXVzdHJhbGlhIhoSGAoUChIJMcj_Vz6yF2sRmiQdjjp52PsQeQ",
+            "types": [
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Belconnen",
+                "short_name": "Belconnen",
+                "types": [
+                "neighborhood",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Belconnen, ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1687125,
+                "lng": 149.1249315
+                },
+                "southwest": {
+                "lat": -35.280384,
+                "lng": 148.9614384
+                }
+            },
+            "location": {
+                "lat": -35.2358639,
+                "lng": 149.0579622
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1687125,
+                "lng": 149.1249315
+                },
+                "southwest": {
+                "lat": -35.280384,
+                "lng": 148.9614384
+                }
+            }
+            },
+            "place_id": "ChIJ77Zp75atF2sRsgDOrKHeS90",
+            "types": [
+            "neighborhood",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                "postal_code"
+                ]
+            },
+            {
+                "long_name": "Coree",
+                "short_name": "Coree",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Coree ACT 2611, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1683239,
+                "lng": 149.0883095
+                },
+                "southwest": {
+                "lat": -35.7366479,
+                "lng": 148.4975241
+                }
+            },
+            "location": {
+                "lat": -35.4477412,
+                "lng": 148.7831534
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1683239,
+                "lng": 149.0883095
+                },
+                "southwest": {
+                "lat": -35.7366479,
+                "lng": 148.4975241
+                }
+            }
+            },
+            "place_id": "ChIJz3mYy7TIF2sREPuLx3HqABw",
+            "postcode_localities": [
+            "Bimberi",
+            "Brindabella",
+            "Chapman",
+            "Cooleman",
+            "Coombs",
+            "Coree",
+            "Cotter River",
+            "Denman Prospect",
+            "Duffy",
+            "Fisher",
+            "Holder",
+            "Molonglo",
+            "Molonglo Valley",
+            "Rivett",
+            "Stirling",
+            "Stromlo",
+            "Uriarra",
+            "Uriarra Village",
+            "Waramanga",
+            "Weston",
+            "Wright"
+            ],
+            "types": [
+            "postal_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            },
+            "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+            "administrative_area_level_1",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            },
+            "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+            "country",
+            "political"
+            ]
+        }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Stromlo",
+    "country": "AU",
+    "lat": "-35.242639",
+    "lng": "148.954517",
+    "expected": "Stromlo",
+    "v2result": "",
+    "notes": "ACT rural location.  No suburbs for many kilometers.  Near boarder with Coree and somewhat near boarder with Belconnen",
+    "json_extracted": "20260223",
+    "geocode_json": {
+        "plus_code": {
+        "compound_code": "QX43+WRR Strathnairn ACT, Australia",
+        "global_code": "4RPCQX43+WRR"
+        },
+        "results": [
+        {
+            "address_components": [
+            {
+                "long_name": "QX43+WR",
+                "short_name": "QX43+WR",
+                "types": [
+                "plus_code"
+                ]
+            },
+            {
+                "long_name": "Strathnairn",
+                "short_name": "Strathnairn",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "QX43+WR Strathnairn ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.242625,
+                "lng": 148.954625
+                },
+                "southwest": {
+                "lat": -35.24275,
+                "lng": 148.9545
+                }
+            },
+            "location": {
+                "lat": -35.242639,
+                "lng": 148.954517
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2413385197085,
+                "lng": 148.9559114802915
+                },
+                "southwest": {
+                "lat": -35.2440364802915,
+                "lng": 148.9532135197085
+                }
+            }
+            },
+            "place_id": "GhIJ-N10yw6fQcARO088Z4ueYkA",
+            "plus_code": {
+            "compound_code": "QX43+WR Strathnairn ACT, Australia",
+            "global_code": "4RPCQX43+WR"
+            },
+            "types": [
+            "plus_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "1320",
+                "short_name": "1320",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Uriarra Road",
+                "short_name": "Uriarra Rd",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Denman Prospect",
+                "short_name": "Denman Prospect",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "1320 Uriarra Rd, Denman Prospect ACT 2611, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2423291,
+                "lng": 148.9562805
+                },
+                "southwest": {
+                "lat": -35.2435537,
+                "lng": 148.9528149
+                }
+            },
+            "location": {
+                "lat": -35.2426768,
+                "lng": 148.9544562
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2415924197085,
+                "lng": 148.9562805
+                },
+                "southwest": {
+                "lat": -35.2442903802915,
+                "lng": 148.9528149
+                }
+            }
+            },
+            "place_id": "ChIJRVj6bEawF2sRsouzF9vtlDI",
+            "types": [
+            "route"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "1320",
+                "short_name": "1320",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Uriarra Road",
+                "short_name": "Uriarra Rd",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Denman Prospect",
+                "short_name": "Denman Prospect",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "1320 Uriarra Rd, Denman Prospect ACT 2611, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.2432374,
+                "lng": 148.9556222
+            },
+            "location_type": "RANGE_INTERPOLATED",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2418884197085,
+                "lng": 148.9569711802915
+                },
+                "southwest": {
+                "lat": -35.2445863802915,
+                "lng": 148.9542732197085
+                }
+            }
+            },
+            "place_id": "EjQxMzIwIFVyaWFycmEgUmQsIERlbm1hbiBQcm9zcGVjdCBBQ1QgMjYxMSwgQXVzdHJhbGlhIhsSGQoUChIJRVj6bEawF2sRsouzF9vtlDIQqAo",
+            "types": [
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Stromlo",
+                "short_name": "Stromlo",
+                "types": [
+                "neighborhood",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Stromlo, ACT 2611, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2382525,
+                "lng": 149.0344565
+                },
+                "southwest": {
+                "lat": -35.3881077,
+                "lng": 148.9439938
+                }
+            },
+            "location": {
+                "lat": -35.3317828,
+                "lng": 149.0087609
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2382525,
+                "lng": 149.0344565
+                },
+                "southwest": {
+                "lat": -35.3881077,
+                "lng": 148.9439938
+                }
+            }
+            },
+            "place_id": "ChIJD2HM_KW2F2sRsF1pp27qAAU",
+            "types": [
+            "neighborhood",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2611",
+                "short_name": "2611",
+                "types": [
+                "postal_code"
+                ]
+            },
+            {
+                "long_name": "Coree",
+                "short_name": "Coree",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Coree ACT 2611, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1683239,
+                "lng": 149.0883095
+                },
+                "southwest": {
+                "lat": -35.7366479,
+                "lng": 148.4975241
+                }
+            },
+            "location": {
+                "lat": -35.4477412,
+                "lng": 148.7831534
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1683239,
+                "lng": 149.0883095
+                },
+                "southwest": {
+                "lat": -35.7366479,
+                "lng": 148.4975241
+                }
+            }
+            },
+            "place_id": "ChIJz3mYy7TIF2sREPuLx3HqABw",
+            "postcode_localities": [
+            "Bimberi",
+            "Brindabella",
+            "Chapman",
+            "Cooleman",
+            "Coombs",
+            "Coree",
+            "Cotter River",
+            "Denman Prospect",
+            "Duffy",
+            "Fisher",
+            "Holder",
+            "Molonglo",
+            "Molonglo Valley",
+            "Rivett",
+            "Stirling",
+            "Stromlo",
+            "Uriarra",
+            "Uriarra Village",
+            "Waramanga",
+            "Weston",
+            "Wright"
+            ],
+            "types": [
+            "postal_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            },
+            "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+            "administrative_area_level_1",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            },
+            "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+            "country",
+            "political"
+            ]
+        }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Majura",
+    "country": "AU",
+    "lat": "-35.320109",
+    "lng": "149.209316",
+    "expected": "Majura",
+    "v2result": "",
+    "notes": "Pialligo is across the road.  The southern edge of Pialligo Ave seems to be the boarder.  This location is on the northern verge of that road.  Pialligo and Canberra Airport are the two localities (suburbs) in Majura.  This location should resolve to the district (Majura)",
+    "json_extracted": "20260223",
+    "geocode_json": {
+        "plus_code": {
+        "compound_code": "M6H5+XP4 Pialligo ACT, Australia",
+        "global_code": "4RPFM6H5+XP4"
+        },
+        "results": [
+        {
+            "address_components": [
+            {
+                "long_name": "469",
+                "short_name": "469",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Pialligo Avenue",
+                "short_name": "Pialligo Ave",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Pialligo",
+                "short_name": "Pialligo",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "469 Pialligo Ave, Pialligo ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.3200852,
+                "lng": 149.2101858
+            },
+            "location_type": "ROOFTOP",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3187362197085,
+                "lng": 149.2115347802915
+                },
+                "southwest": {
+                "lat": -35.3214341802915,
+                "lng": 149.2088368197085
+                }
+            }
+            },
+            "navigation_points": [
+            {
+                "location": {
+                "latitude": -35.3201778,
+                "longitude": 149.2101662
+                }
+            }
+            ],
+            "place_id": "ChIJX0tFnG9OFmsRhY49h1xUhZQ",
+            "plus_code": {
+            "compound_code": "M6H6+X3 Pialligo ACT, Australia",
+            "global_code": "4RPFM6H6+X3"
+            },
+            "types": [
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "460",
+                "short_name": "460",
+                "types": [
+                "street_number"
+                ]
+            },
+            {
+                "long_name": "Pialligo Avenue",
+                "short_name": "Pialligo Ave",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Pialligo",
+                "short_name": "Pialligo",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "460 Pialligo Ave, Pialligo ACT 2609, Australia",
+            "geometry": {
+            "location": {
+                "lat": -35.3201184,
+                "lng": 149.2089131
+            },
+            "location_type": "RANGE_INTERPOLATED",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3187694197085,
+                "lng": 149.2102620802915
+                },
+                "southwest": {
+                "lat": -35.32146738029149,
+                "lng": 149.2075641197085
+                }
+            }
+            },
+            "place_id": "Ei40NjAgUGlhbGxpZ28gQXZlLCBQaWFsbGlnbyBBQ1QgMjYwOSwgQXVzdHJhbGlhIhsSGQoUChIJuV4ZmnpOFmsR1wZCciFhdK0QzAM",
+            "types": [
+            "street_address"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "M6H5+XP",
+                "short_name": "M6H5+XP",
+                "types": [
+                "plus_code"
+                ]
+            },
+            {
+                "long_name": "Pialligo",
+                "short_name": "Pialligo",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "M6H5+XP Pialligo ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.32000000000001,
+                "lng": 149.209375
+                },
+                "southwest": {
+                "lat": -35.320125,
+                "lng": 149.20925
+                }
+            },
+            "location": {
+                "lat": -35.320109,
+                "lng": 149.209316
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3187135197085,
+                "lng": 149.2106614802915
+                },
+                "southwest": {
+                "lat": -35.3214114802915,
+                "lng": 149.2079635197085
+                }
+            }
+            },
+            "place_id": "GhIJ3xPrVPmoQcAR8tB3t7KmYkA",
+            "plus_code": {
+            "compound_code": "M6H5+XP Pialligo ACT, Australia",
+            "global_code": "4RPFM6H5+XP"
+            },
+            "types": [
+            "plus_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Pialligo Avenue",
+                "short_name": "Pialligo Ave",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Pialligo",
+                "short_name": "Pialligo",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Pialligo Ave, Pialligo ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3201408,
+                "lng": 149.2096027
+                },
+                "southwest": {
+                "lat": -35.320182,
+                "lng": 149.2091484
+                }
+            },
+            "location": {
+                "lat": -35.3201585,
+                "lng": 149.2093759
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3188124197085,
+                "lng": 149.2107245302915
+                },
+                "southwest": {
+                "lat": -35.32151038029149,
+                "lng": 149.2080265697085
+                }
+            }
+            },
+            "place_id": "ChIJP0Zwjm9OFmsRcBL6EthtkHo",
+            "types": [
+            "route"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Majura",
+                "short_name": "Majura",
+                "types": [
+                "neighborhood",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Majura, ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2057313,
+                "lng": 149.2634459
+                },
+                "southwest": {
+                "lat": -35.3422568,
+                "lng": 149.1512891
+                }
+            },
+            "location": {
+                "lat": -35.3072796,
+                "lng": 149.1808044
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2057313,
+                "lng": 149.2634459
+                },
+                "southwest": {
+                "lat": -35.3422568,
+                "lng": 149.1512891
+                }
+            }
+            },
+            "place_id": "ChIJc1CSy-1RFmsRw9mCdc9I1Xk",
+            "types": [
+            "neighborhood",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            },
+            {
+                "long_name": "Majura",
+                "short_name": "Majura",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Majura ACT 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2055657,
+                "lng": 149.26351
+                },
+                "southwest": {
+                "lat": -35.3967364,
+                "lng": 149.1185353
+                }
+            },
+            "location": {
+                "lat": -35.2736652,
+                "lng": 149.2190324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2055657,
+                "lng": 149.26351
+                },
+                "southwest": {
+                "lat": -35.3967364,
+                "lng": 149.1185353
+                }
+            }
+            },
+            "place_id": "ChIJc5TQ0vBNFmsRQPiLx3HqABw",
+            "postcode_localities": [
+            "Fyshwick",
+            "Majura",
+            "Pialligo",
+            "Symonston"
+            ],
+            "types": [
+            "postal_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Canberra",
+                "short_name": "Canberra",
+                "types": [
+                "colloquial_area",
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Canberra ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            },
+            "location": {
+                "lat": -35.2801846,
+                "lng": 149.1310324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+                },
+                "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+                }
+            }
+            },
+            "place_id": "ChIJuzQLsqNMFmsRcFlpp27qAAQ",
+            "types": [
+            "colloquial_area",
+            "locality",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            },
+            "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+            "administrative_area_level_1",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            },
+            "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+            "country",
+            "political"
+            ]
+        }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Kowen",
+    "country": "AU",
+    "lat": "-35.3018011839459",
+    "lng": "149.2532871973282",
+    "expected": "Kowen",
+    "v2result": "",
+    "notes": "ACT Rural district",
+    "json_extracted": "20260223",
+    "geocode_json": {
+        "plus_code": {
+        "compound_code": "M7X3+78F Canberra Airport ACT, Australia",
+        "global_code": "4RPFM7X3+78F"
+        },
+        "results": [
+        {
+            "address_components": [
+            {
+                "long_name": "M7X3+78",
+                "short_name": "M7X3+78",
+                "types": [
+                "plus_code"
+                ]
+            },
+            {
+                "long_name": "Canberra Airport",
+                "short_name": "Canberra Airport",
+                "types": [
+                "locality",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "M7X3+78 Canberra Airport ACT, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.30175,
+                "lng": 149.253375
+                },
+                "southwest": {
+                "lat": -35.301875,
+                "lng": 149.25325
+                }
+            },
+            "location": {
+                "lat": -35.3018012,
+                "lng": 149.2532872
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3004635197085,
+                "lng": 149.2546614802915
+                },
+                "southwest": {
+                "lat": -35.30316148029149,
+                "lng": 149.2519635197085
+                }
+            }
+            },
+            "place_id": "GhIJYPL1a6GmQcAR2g_C7RqoYkA",
+            "plus_code": {
+            "compound_code": "M7X3+78 Canberra Airport ACT, Australia",
+            "global_code": "4RPFM7X3+78"
+            },
+            "types": [
+            "plus_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Sutton Road",
+                "short_name": "Sutton Rd",
+                "types": [
+                "route"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2609",
+                "short_name": "2609",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Sutton Rd, Australian Capital Territory 2609, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.3010349,
+                "lng": 149.2522402
+                },
+                "southwest": {
+                "lat": -35.3023815,
+                "lng": 149.251811
+                }
+            },
+            "location": {
+                "lat": -35.3017025,
+                "lng": 149.2519994
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+                "northeast": {
+                "lat": -35.3003592197085,
+                "lng": 149.2533745802915
+                },
+                "southwest": {
+                "lat": -35.3030571802915,
+                "lng": 149.2506766197085
+                }
+            }
+            },
+            "place_id": "ChIJnRfOPyhQFmsRKrdMGQgxpSQ",
+            "types": [
+            "route"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Kowen",
+                "short_name": "Kowen",
+                "types": [
+                "neighborhood",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            },
+            {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                "postal_code"
+                ]
+            }
+            ],
+            "formatted_address": "Kowen, ACT 2620, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.2582233,
+                "lng": 149.3992869
+                },
+                "southwest": {
+                "lat": -35.3512624,
+                "lng": 149.2376921
+                }
+            },
+            "location": {
+                "lat": -35.3249213,
+                "lng": 149.3752261
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.2582233,
+                "lng": 149.3992869
+                },
+                "southwest": {
+                "lat": -35.3512624,
+                "lng": 149.2376921
+                }
+            }
+            },
+            "place_id": "ChIJocyrwV9aFmsRAF1pp27qAAU",
+            "types": [
+            "neighborhood",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australian Capital Territory",
+                "short_name": "ACT",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australian Capital Territory, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            },
+            "location": {
+                "lat": -35.4734679,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+                },
+                "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+                }
+            }
+            },
+            "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+            "types": [
+            "administrative_area_level_1",
+            "political"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "2620",
+                "short_name": "2620",
+                "types": [
+                "postal_code"
+                ]
+            },
+            {
+                "long_name": "New South Wales",
+                "short_name": "New South Wales",
+                "types": [
+                "administrative_area_level_1",
+                "political"
+                ]
+            },
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "New South Wales 2620, Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -34.9442027,
+                "lng": 149.40103
+                },
+                "southwest": {
+                "lat": -35.92053,
+                "lng": 148.7674985
+                }
+            },
+            "location": {
+                "lat": -35.631888,
+                "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -34.9442027,
+                "lng": 149.40103
+                },
+                "southwest": {
+                "lat": -35.92053,
+                "lng": 148.7674985
+                }
+            }
+            },
+            "place_id": "ChIJE_HUfotIFmsR0B3TzLcJBhw",
+            "types": [
+            "postal_code"
+            ]
+        },
+        {
+            "address_components": [
+            {
+                "long_name": "Australia",
+                "short_name": "AU",
+                "types": [
+                "country",
+                "political"
+                ]
+            }
+            ],
+            "formatted_address": "Australia",
+            "geometry": {
+            "bounds": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            },
+            "location": {
+                "lat": -25.274398,
+                "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+                "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+                },
+                "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+                }
+            }
+            },
+            "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+            "types": [
+            "country",
+            "political"
+            ]
+        }
+        ],
+        "status": "OK"
+    }
+  },
+  {
+    "name": "Mount Clear",
+    "country": "AU",
+    "lat": "-35.86965044070569",
+    "lng": "149.00701425420144",
+    "expected": "Mount Clear",
+    "v2result": "",
+    "notes": "Mount Clear is an ACT rural district",
+    "json_extracted": "20260223",
+    "geocode_json": {
+      "plus_code": {
+        "global_code": "4RPF42J4+4RJ"
+      },
+      "results": [
+        {
+          "address_components": [
+            {
+              "long_name": "4RPF42J4+4R",
+              "short_name": "4RPF42J4+4R",
+              "types": [
+                "plus_code"
+              ]
+            }
+          ],
+          "formatted_address": "4RPF42J4+4R",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.869625,
+                "lng": 149.007125
+              },
+              "southwest": {
+                "lat": -35.86975,
+                "lng": 149.007
+              }
+            },
+            "location": {
+              "lat": -35.8696504,
+              "lng": 149.0070143
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.8683385197085,
+                "lng": 149.0084114802915
+              },
+              "southwest": {
+                "lat": -35.8710364802915,
+                "lng": 149.0057135197085
+              }
+            }
+          },
+          "place_id": "GhIJBnpNtFDvQcARVqMNdjmgYkA",
+          "plus_code": {
+            "global_code": "4RPF42J4+4R"
+          },
+          "types": [
+            "plus_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Naas Valley Firetrail",
+              "short_name": "Naas Valley Firetrail",
+              "types": [
+                "route"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2620",
+              "short_name": "2620",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Naas Valley Firetrail, Australian Capital Territory 2620, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.8661853,
+                "lng": 149.0124757
+              },
+              "southwest": {
+                "lat": -35.86800720000001,
+                "lng": 149.0098149
+              }
+            },
+            "location": {
+              "lat": -35.8679967,
+              "lng": 149.0100794
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.86574726970851,
+                "lng": 149.0124942802915
+              },
+              "southwest": {
+                "lat": -35.86844523029151,
+                "lng": 149.0097963197085
+              }
+            }
+          },
+          "place_id": "ChIJDdIrQgB6PWsRKrhc-NA_xOQ",
+          "types": [
+            "route"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Mount Clear",
+              "short_name": "Mount Clear",
+              "types": [
+                "neighborhood",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2620",
+              "short_name": "2620",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Mount Clear, ACT 2620, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.7570823,
+                "lng": 149.0960459
+              },
+              "southwest": {
+                "lat": -35.92053,
+                "lng": 148.8866788
+              }
+            },
+            "location": {
+              "lat": -35.8265702,
+              "lng": 148.9455123
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.7570823,
+                "lng": 149.0960459
+              },
+              "southwest": {
+                "lat": -35.92053,
+                "lng": 148.8866788
+              }
+            }
+          },
+          "place_id": "ChIJ9YT6MD96PWsRFmEj62WcFHE",
+          "types": [
+            "neighborhood",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australian Capital Territory, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+              },
+              "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+              }
+            },
+            "location": {
+              "lat": -35.4734679,
+              "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+              },
+              "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+              }
+            }
+          },
+          "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "2620",
+              "short_name": "2620",
+              "types": [
+                "postal_code"
+              ]
+            },
+            {
+              "long_name": "New South Wales",
+              "short_name": "New South Wales",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "New South Wales 2620, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -34.9442027,
+                "lng": 149.40103
+              },
+              "southwest": {
+                "lat": -35.92053,
+                "lng": 148.7674985
+              }
+            },
+            "location": {
+              "lat": -35.631888,
+              "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -34.9442027,
+                "lng": 149.40103
+              },
+              "southwest": {
+                "lat": -35.92053,
+                "lng": 148.7674985
+              }
+            }
+          },
+          "place_id": "ChIJE_HUfotIFmsR0B3TzLcJBhw",
+          "types": [
+            "postal_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            },
+            "location": {
+              "lat": -25.274398,
+              "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            }
+          },
+          "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+          "types": [
+            "country",
+            "political"
+          ]
+        }
+      ],
+      "status": "OK"
+    }
+  },
+  {
+    "name": "Paddys River",
+    "country": "AU",
+    "lat": "-35.514626",
+    "lng": "148.926389",
+    "expected": "Paddys River",
+    "v2result": "",
+    "notes": "Paddys River is an ACT rural district.  My understanding is Tharwa is the only sub-locality, this location is not in the village of Tharwa",
+    "json_extracted": "20260223",
+    "geocode_json": {
+      "plus_code": {
+        "compound_code": "FWPG+4HR Tharwa ACT, Australia",
+        "global_code": "4RPCFWPG+4HR"
+      },
+      "results": [
+        {
+          "address_components": [
+            {
+              "long_name": "FWPG+4H",
+              "short_name": "FWPG+4H",
+              "types": [
+                "plus_code"
+              ]
+            },
+            {
+              "long_name": "Tharwa",
+              "short_name": "Tharwa",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2620",
+              "short_name": "2620",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "FWPG+4H Tharwa ACT, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.514625,
+                "lng": 148.9265
+              },
+              "southwest": {
+                "lat": -35.51475,
+                "lng": 148.926375
+              }
+            },
+            "location": {
+              "lat": -35.514626,
+              "lng": 148.926389
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.5133385197085,
+                "lng": 148.9277864802915
+              },
+              "southwest": {
+                "lat": -35.5160364802915,
+                "lng": 148.9250885197085
+              }
+            }
+          },
+          "place_id": "GhIJ7dXHQ9_BQcAR-UuL-qSdYkA",
+          "plus_code": {
+            "compound_code": "FWPG+4H Tharwa ACT, Australia",
+            "global_code": "4RPCFWPG+4H"
+          },
+          "types": [
+            "plus_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Corin Road",
+              "short_name": "Corin Rd",
+              "types": [
+                "route"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2620",
+              "short_name": "2620",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Corin Rd, Australian Capital Territory 2620, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.5107871,
+                "lng": 148.9283532
+              },
+              "southwest": {
+                "lat": -35.515211,
+                "lng": 148.925177
+              }
+            },
+            "location": {
+              "lat": -35.5132864,
+              "lng": 148.9273112
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.5107871,
+                "lng": 148.9283532
+              },
+              "southwest": {
+                "lat": -35.515211,
+                "lng": 148.925177
+              }
+            }
+          },
+          "place_id": "ChIJU-4K_fPPF2sR0EDwlOsJO5E",
+          "types": [
+            "route"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Paddys River",
+              "short_name": "Paddys River",
+              "types": [
+                "neighborhood",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2620",
+              "short_name": "2620",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Paddys River, ACT 2620, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.3195077,
+                "lng": 149.0762151
+              },
+              "southwest": {
+                "lat": -35.5354139,
+                "lng": 148.8676703
+              }
+            },
+            "location": {
+              "lat": -35.4038838,
+              "lng": 148.9835673
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.3195077,
+                "lng": 149.0762151
+              },
+              "southwest": {
+                "lat": -35.5354139,
+                "lng": 148.8676703
+              }
+            }
+          },
+          "place_id": "ChIJGYKSJBHJF2sR8Fxpp27qAAU",
+          "types": [
+            "neighborhood",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australian Capital Territory, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+              },
+              "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+              }
+            },
+            "location": {
+              "lat": -35.4734679,
+              "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+              },
+              "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+              }
+            }
+          },
+          "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "2620",
+              "short_name": "2620",
+              "types": [
+                "postal_code"
+              ]
+            },
+            {
+              "long_name": "New South Wales",
+              "short_name": "New South Wales",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "New South Wales 2620, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -34.9442027,
+                "lng": 149.40103
+              },
+              "southwest": {
+                "lat": -35.92053,
+                "lng": 148.7674985
+              }
+            },
+            "location": {
+              "lat": -35.631888,
+              "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -34.9442027,
+                "lng": 149.40103
+              },
+              "southwest": {
+                "lat": -35.92053,
+                "lng": 148.7674985
+              }
+            }
+          },
+          "place_id": "ChIJE_HUfotIFmsR0B3TzLcJBhw",
+          "types": [
+            "postal_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            },
+            "location": {
+              "lat": -25.274398,
+              "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            }
+          },
+          "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+          "types": [
+            "country",
+            "political"
+          ]
+        }
+      ],
+      "status": "OK"
+    }
+  },
+  {
+    "name": "Gungahlin",
+    "country": "AU",
+    "lat": "-35.198862",
+    "lng": "149.131019",
+    "expected": "Gungahlin",
+    "v2result": "",
+    "notes": "Rural paddocks in the district of Gungahlin, not currently part of any named Gungahlin suburb.  Vacent land (farm land?)",
+    "json_extracted": "20260223",
+    "geocode_json": {
+      "plus_code": {
+        "compound_code": "R42J+FC2 Gungahlin ACT, Australia",
+        "global_code": "4RPFR42J+FC2"
+      },
+      "results": [
+        {
+          "address_components": [
+            {
+              "long_name": "R42J+FC",
+              "short_name": "R42J+FC",
+              "types": [
+                "plus_code"
+              ]
+            },
+            {
+              "long_name": "Gungahlin",
+              "short_name": "Gungahlin",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2912",
+              "short_name": "2912",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "R42J+FC Gungahlin ACT, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.19875,
+                "lng": 149.131125
+              },
+              "southwest": {
+                "lat": -35.198875,
+                "lng": 149.131
+              }
+            },
+            "location": {
+              "lat": -35.198862,
+              "lng": 149.131019
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1974635197085,
+                "lng": 149.1324114802915
+              },
+              "southwest": {
+                "lat": -35.2001614802915,
+                "lng": 149.1297135197085
+              }
+            }
+          },
+          "place_id": "GhIJZTVdT3SZQcAR8gTCTjGkYkA",
+          "plus_code": {
+            "compound_code": "R42J+FC Gungahlin ACT, Australia",
+            "global_code": "4RPFR42J+FC"
+          },
+          "types": [
+            "plus_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Gungahlin Drive",
+              "short_name": "Gungahlin Dr",
+              "types": [
+                "route"
+              ]
+            },
+            {
+              "long_name": "Gungahlin",
+              "short_name": "Gungahlin",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2912",
+              "short_name": "2912",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Gungahlin Dr, Gungahlin ACT 2912, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1973739,
+                "lng": 149.1315273
+              },
+              "southwest": {
+                "lat": -35.1992706,
+                "lng": 149.1306745
+              }
+            },
+            "location": {
+              "lat": -35.1983127,
+              "lng": 149.1311327
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1969732697085,
+                "lng": 149.1324498802915
+              },
+              "southwest": {
+                "lat": -35.1996712302915,
+                "lng": 149.1297519197085
+              }
+            }
+          },
+          "place_id": "ChIJQWQKPGZTFmsRZlwmVjGUyXA",
+          "types": [
+            "route"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "12",
+              "short_name": "12",
+              "types": [
+                "street_number"
+              ]
+            },
+            {
+              "long_name": "Narryer Close",
+              "short_name": "Narryer Cl",
+              "types": [
+                "route"
+              ]
+            },
+            {
+              "long_name": "Palmerston",
+              "short_name": "Palmerston",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2913",
+              "short_name": "2913",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "12 Narryer Cl, Palmerston ACT 2913, Australia",
+          "geometry": {
+            "location": {
+              "lat": -35.1988602,
+              "lng": 149.1289695
+            },
+            "location_type": "ROOFTOP",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1975112197085,
+                "lng": 149.1303184802915
+              },
+              "southwest": {
+                "lat": -35.20020918029149,
+                "lng": 149.1276205197085
+              }
+            }
+          },
+          "navigation_points": [
+            {
+              "location": {
+                "latitude": -35.1978926,
+                "longitude": 149.1283007
+              }
+            }
+          ],
+          "place_id": "ChIJuSliTPhTFmsRSmBb2ZFwF0o",
+          "plus_code": {
+            "compound_code": "R42H+FH Palmerston ACT, Australia",
+            "global_code": "4RPFR42H+FH"
+          },
+          "types": [
+            "street_address"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Kentucky Grove",
+              "short_name": "Kentucky Grove",
+              "types": [
+                "premise"
+              ]
+            },
+            {
+              "long_name": "26",
+              "short_name": "26",
+              "types": [
+                "street_number"
+              ]
+            },
+            {
+              "long_name": "Narryer Close",
+              "short_name": "Narryer Cl",
+              "types": [
+                "route"
+              ]
+            },
+            {
+              "long_name": "Palmerston",
+              "short_name": "Palmerston",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2913",
+              "short_name": "2913",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Kentucky Grove, 26 Narryer Cl, Palmerston ACT 2913, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1973037,
+                "lng": 149.1298603
+              },
+              "southwest": {
+                "lat": -35.19752709999999,
+                "lng": 149.1293845
+              }
+            },
+            "location": {
+              "lat": -35.1974164,
+              "lng": 149.1296226
+            },
+            "location_type": "ROOFTOP",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1960664197085,
+                "lng": 149.1309713802915
+              },
+              "southwest": {
+                "lat": -35.1987643802915,
+                "lng": 149.1282734197085
+              }
+            }
+          },
+          "navigation_points": [
+            {
+              "location": {
+                "latitude": -35.1972838,
+                "longitude": 149.1295354
+              }
+            }
+          ],
+          "place_id": "ChIJLxV6tmdTFmsRh9LHZ2KJIt4",
+          "types": [
+            "premise",
+            "street_address"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "20",
+              "short_name": "20",
+              "types": [
+                "street_number"
+              ]
+            },
+            {
+              "long_name": "Narryer Close",
+              "short_name": "Narryer Cl",
+              "types": [
+                "route"
+              ]
+            },
+            {
+              "long_name": "Palmerston",
+              "short_name": "Palmerston",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2913",
+              "short_name": "2913",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "20 Narryer Cl, Palmerston ACT 2913, Australia",
+          "geometry": {
+            "location": {
+              "lat": -35.1975021,
+              "lng": 149.1289978
+            },
+            "location_type": "RANGE_INTERPOLATED",
+            "viewport": {
+              "northeast": {
+                "lat": -35.19615311970851,
+                "lng": 149.1303467802915
+              },
+              "southwest": {
+                "lat": -35.1988510802915,
+                "lng": 149.1276488197085
+              }
+            }
+          },
+          "place_id": "Ei0yMCBOYXJyeWVyIENsLCBQYWxtZXJzdG9uIEFDVCAyOTEzLCBBdXN0cmFsaWEiGhIYChQKEglVbHjBZ1MWaxFX1IFL7lGlzRAU",
+          "types": [
+            "street_address"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "2912",
+              "short_name": "2912",
+              "types": [
+                "postal_code"
+              ]
+            },
+            {
+              "long_name": "Gungahlin",
+              "short_name": "Gungahlin",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Gungahlin ACT 2912, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1518058,
+                "lng": 149.2007159
+              },
+              "southwest": {
+                "lat": -35.2309679,
+                "lng": 149.1100064
+              }
+            },
+            "location": {
+              "lat": -35.188067,
+              "lng": 149.1357507
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1518058,
+                "lng": 149.2007159
+              },
+              "southwest": {
+                "lat": -35.2309679,
+                "lng": 149.1100064
+              }
+            }
+          },
+          "place_id": "ChIJ-zQTZM9UFmsR4PeLx3HqABw",
+          "types": [
+            "postal_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Gungahlin",
+              "short_name": "Gungahlin",
+              "types": [
+                "neighborhood",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Gungahlin, ACT, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.2007159
+              },
+              "southwest": {
+                "lat": -35.231457,
+                "lng": 149.0624075
+              }
+            },
+            "location": {
+              "lat": -35.1818586,
+              "lng": 149.1286792
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.2007159
+              },
+              "southwest": {
+                "lat": -35.231457,
+                "lng": 149.0624075
+              }
+            }
+          },
+          "place_id": "ChIJQQUQt5BUFmsRf_j_F8hbWTQ",
+          "types": [
+            "neighborhood",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Canberra",
+              "short_name": "Canberra",
+              "types": [
+                "colloquial_area",
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Canberra ACT, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+              },
+              "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+              }
+            },
+            "location": {
+              "lat": -35.2801846,
+              "lng": 149.1310324
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1476991,
+                "lng": 149.2636434
+              },
+              "southwest": {
+                "lat": -35.4802604,
+                "lng": 148.9959216
+              }
+            }
+          },
+          "place_id": "ChIJuzQLsqNMFmsRcFlpp27qAAQ",
+          "types": [
+            "colloquial_area",
+            "locality",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australian Capital Territory, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+              },
+              "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+              }
+            },
+            "location": {
+              "lat": -35.4734679,
+              "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+              },
+              "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+              }
+            }
+          },
+          "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            },
+            "location": {
+              "lat": -25.274398,
+              "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            }
+          },
+          "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+          "types": [
+            "country",
+            "political"
+          ]
+        }
+      ],
+      "status": "OK"
+    }
+  }           
 ]
