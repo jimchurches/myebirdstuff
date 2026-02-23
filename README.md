@@ -263,5 +263,6 @@ This repository includes a Jupyter notebook called `personal_ebird_explorer.ipyn
 
 You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
 
-> 📘 For full details and instructions, open the notebook: `eBirdDataPlay.ipynb`
+> 📘 For full details and instructions, open the notebook: `notebooks/personal_ebird_explorer.ipynb`  
+> 📗 For **installation instructions** (Python, Jupyter, Voila, and dependencies on Windows and macOS), see **[INSTALL_EBIRD_EXPLORER.md](INSTALL_EBIRD_EXPLORER.md)**.
 
