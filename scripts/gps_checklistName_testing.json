@@ -46414,5 +46414,452 @@
       ],
       "status": "OK"
     }
-  }             
+  },
+  {
+    "name": "Norseman",
+    "country": "AU",
+    "lat": "-32.109504",
+    "lng": "121.9017",
+    "expected": "Norseman",
+    "v2result": "",
+    "notes": "This location is only about 100m from the Norseman/Frasher Range boarder.  Google Maps places it in Norseman.  OSM also shows it in Norseman visually, though the addres OSM has a bet each way.",
+    "json_extracted": "20260223",
+    "geocode_json": {
+      "plus_code": {
+        "global_code": "4QV3VWR2+5MW"
+      },
+      "results": [
+        {
+          "address_components": [
+            {
+              "long_name": "4QV3VWR2+5M",
+              "short_name": "4QV3VWR2+5M",
+              "types": [
+                "plus_code"
+              ]
+            }
+          ],
+          "formatted_address": "4QV3VWR2+5M",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -32.1095,
+                "lng": 121.90175
+              },
+              "southwest": {
+                "lat": -32.109625,
+                "lng": 121.901625
+              }
+            },
+            "location": {
+              "lat": -32.109504,
+              "lng": 121.9017
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -32.1082135197085,
+                "lng": 121.9030364802915
+              },
+              "southwest": {
+                "lat": -32.1109114802915,
+                "lng": 121.9003385197085
+              }
+            }
+          },
+          "place_id": "GhIJ_mMhOgQOQMARaLPqc7V5XkA",
+          "plus_code": {
+            "global_code": "4QV3VWR2+5M"
+          },
+          "types": [
+            "plus_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Eyre Highway",
+              "short_name": "National Highway 1",
+              "types": [
+                "route"
+              ]
+            },
+            {
+              "long_name": "Fraser Range",
+              "short_name": "Fraser Range",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Shire of Dundas",
+              "short_name": "Dundas",
+              "types": [
+                "administrative_area_level_2",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Western Australia",
+              "short_name": "WA",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "6443",
+              "short_name": "6443",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Eyre Hwy, Fraser Range WA 6443, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -32.1091927,
+                "lng": 121.9080487
+              },
+              "southwest": {
+                "lat": -32.1125329,
+                "lng": 121.8879745
+              }
+            },
+            "location": {
+              "lat": -32.1109279,
+              "lng": 121.8980266
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -32.1091927,
+                "lng": 121.9080487
+              },
+              "southwest": {
+                "lat": -32.1125329,
+                "lng": 121.8879745
+              }
+            }
+          },
+          "place_id": "ChIJU4rrsy3PUSoRVCU0bQG3LRs",
+          "types": [
+            "route"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Norseman",
+              "short_name": "Norseman",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Shire of Dundas",
+              "short_name": "Dundas",
+              "types": [
+                "administrative_area_level_2",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Western Australia",
+              "short_name": "WA",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "6443",
+              "short_name": "6443",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Norseman WA 6443, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -31.8666873,
+                "lng": 122.2073533
+              },
+              "southwest": {
+                "lat": -32.7654854,
+                "lng": 120.0096566
+              }
+            },
+            "location": {
+              "lat": -32.1976369,
+              "lng": 121.7789566
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -31.8666873,
+                "lng": 122.2073533
+              },
+              "southwest": {
+                "lat": -32.7654854,
+                "lng": 120.0096566
+              }
+            }
+          },
+          "place_id": "ChIJL5dV5Ix6TioRkNZ5JDj2AAQ",
+          "types": [
+            "locality",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Shire of Dundas",
+              "short_name": "Dundas",
+              "types": [
+                "administrative_area_level_2",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Western Australia",
+              "short_name": "WA",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "6443",
+              "short_name": "6443",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Dundas, WA 6443, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -31.213124,
+                "lng": 129.0014285
+              },
+              "southwest": {
+                "lat": -33.0399201,
+                "lng": 120.0096566
+              }
+            },
+            "location": {
+              "lat": -31.9046219,
+              "lng": 124.1531947
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -31.213124,
+                "lng": 129.0014285
+              },
+              "southwest": {
+                "lat": -33.0399201,
+                "lng": 120.0096566
+              }
+            }
+          },
+          "place_id": "ChIJb8MHqHcAWCoRpthoV1pYvGw",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "6443",
+              "short_name": "6443",
+              "types": [
+                "postal_code"
+              ]
+            },
+            {
+              "long_name": "Western Australia",
+              "short_name": "WA",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Western Australia 6443, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -31.1803306,
+                "lng": 129.0019186
+              },
+              "southwest": {
+                "lat": -33.0397909,
+                "lng": 120.0096569
+              }
+            },
+            "location": {
+              "lat": -31.9046219,
+              "lng": 124.1531947
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -31.1803306,
+                "lng": 129.0019186
+              },
+              "southwest": {
+                "lat": -33.0397909,
+                "lng": 120.0096569
+              }
+            }
+          },
+          "place_id": "ChIJM33d0U_8VyoR8D_2fDv2ABw",
+          "types": [
+            "postal_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Western Australia",
+              "short_name": "WA",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Western Australia, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -13.689492,
+                "lng": 129.0018537
+              },
+              "southwest": {
+                "lat": -35.134846,
+                "lng": 112.921114
+              }
+            },
+            "location": {
+              "lat": -27.6728168,
+              "lng": 121.6283098
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -13.689492,
+                "lng": 129.0018537
+              },
+              "southwest": {
+                "lat": -35.134846,
+                "lng": 112.921114
+              }
+            }
+          },
+          "place_id": "ChIJ0YTziS4qOSoRmaMAMt9KDm4",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            },
+            "location": {
+              "lat": -25.274398,
+              "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            }
+          },
+          "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+          "types": [
+            "country",
+            "political"
+          ]
+        }
+      ],
+      "status": "OK"
+    }
+  }               
 ]
