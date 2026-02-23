@@ -593,8 +593,20 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
     if not results:
         return "Unknown"
 
-    # If any result is in ACT, use only ACT results and ACT semantics (suburb = locality, district = neighborhood).
-    in_act = any(_is_act_result(r) for r in results)
+    # Decide ACT vs non-ACT by the "best" result (containment + specificity), not by "any result is ACT".
+    # So a point in Uriarra NSW near the ACT border gets Uriarra (NSW) not Coree (ACT) when the API returns both.
+    neutral_key = lambda r: _result_sort_key(r, lat, lng, in_act=False, country_code=None)
+    sorted_neutral = sorted(results, key=neutral_key)
+    preliminary_best = None
+    for r in sorted_neutral:
+        if _get_name_from_result_general(r, country_code=None):
+            preliminary_best = r
+            break
+    in_act = (
+        _is_act_result(preliminary_best)
+        if preliminary_best
+        else any(_is_act_result(r) for r in results)
+    )
     country_code = _detect_country_code(data) if not in_act else None
 
     # When a containing district (neighborhood) exists: deprioritize plus_code when its locality is not
