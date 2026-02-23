@@ -45918,5 +45918,501 @@
       ],
       "status": "OK"
     }
-  }           
+  },
+  {
+    "name": "Uriarra",
+    "country": "AU",
+    "lat": "-35.361158",
+    "lng": "148.773661",
+    "expected": "Uriarra",
+    "v2result": "",
+    "notes": "This location is in Uriarra NSW, very close to the boarder with Brindabella NSW. It is not in the ACT.",
+    "json_extracted": "20260223",
+    "geocode_json": {
+      "plus_code": {
+        "compound_code": "JQQF+GFM Uriarra NSW, Australia",
+        "global_code": "4RPCJQQF+GFM"
+      },
+      "results": [
+        {
+          "address_components": [
+            {
+              "long_name": "JQQF+GF",
+              "short_name": "JQQF+GF",
+              "types": [
+                "plus_code"
+              ]
+            },
+            {
+              "long_name": "Uriarra",
+              "short_name": "Uriarra",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "New South Wales",
+              "short_name": "NSW",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2611",
+              "short_name": "2611",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "JQQF+GF Uriarra NSW, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.361125,
+                "lng": 148.77375
+              },
+              "southwest": {
+                "lat": -35.36125,
+                "lng": 148.773625
+              }
+            },
+            "location": {
+              "lat": -35.361158,
+              "lng": 148.773661
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.3598385197085,
+                "lng": 148.7750364802915
+              },
+              "southwest": {
+                "lat": -35.3625364802915,
+                "lng": 148.7723385197085
+              }
+            }
+          },
+          "place_id": "GhIJKVjjbDquQcARGqa21MGYYkA",
+          "plus_code": {
+            "compound_code": "JQQF+GF Uriarra NSW, Australia",
+            "global_code": "4RPCJQQF+GF"
+          },
+          "types": [
+            "plus_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Brindabella Road",
+              "short_name": "Brindabella Rd",
+              "types": [
+                "route"
+              ]
+            },
+            {
+              "long_name": "Uriarra",
+              "short_name": "Uriarra",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Snowy Valleys Council",
+              "short_name": "Snowy Valleys Council",
+              "types": [
+                "administrative_area_level_2",
+                "political"
+              ]
+            },
+            {
+              "long_name": "New South Wales",
+              "short_name": "NSW",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2611",
+              "short_name": "2611",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Brindabella Rd, Uriarra NSW 2611, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.359167,
+                "lng": 148.7780601
+              },
+              "southwest": {
+                "lat": -35.3670911,
+                "lng": 148.7677481
+              }
+            },
+            "location": {
+              "lat": -35.3610421,
+              "lng": 148.7737723
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.359167,
+                "lng": 148.7780601
+              },
+              "southwest": {
+                "lat": -35.3670911,
+                "lng": 148.7677481
+              }
+            }
+          },
+          "place_id": "ChIJw8lwilLAF2sRVBC8wzDpBGU",
+          "types": [
+            "route"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Uriarra",
+              "short_name": "Uriarra",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "New South Wales",
+              "short_name": "NSW",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2611",
+              "short_name": "2611",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Uriarra NSW 2611, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1683244,
+                "lng": 148.961438
+              },
+              "southwest": {
+                "lat": -35.36707310000001,
+                "lng": 148.730651
+              }
+            },
+            "location": {
+              "lat": -35.2621836,
+              "lng": 148.8160846
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1683244,
+                "lng": 148.961438
+              },
+              "southwest": {
+                "lat": -35.36707310000001,
+                "lng": 148.730651
+              }
+            }
+          },
+          "place_id": "ChIJUfor59C7F2sRoONDkLQJBgQ",
+          "types": [
+            "locality",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "2611",
+              "short_name": "2611",
+              "types": [
+                "postal_code"
+              ]
+            },
+            {
+              "long_name": "Coree",
+              "short_name": "Coree",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Coree ACT 2611, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1683239,
+                "lng": 149.0883095
+              },
+              "southwest": {
+                "lat": -35.7366479,
+                "lng": 148.4975241
+              }
+            },
+            "location": {
+              "lat": -35.4477412,
+              "lng": 148.7831534
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1683239,
+                "lng": 149.0883095
+              },
+              "southwest": {
+                "lat": -35.7366479,
+                "lng": 148.4975241
+              }
+            }
+          },
+          "place_id": "ChIJz3mYy7TIF2sREPuLx3HqABw",
+          "postcode_localities": [
+            "Bimberi",
+            "Brindabella",
+            "Chapman",
+            "Cooleman",
+            "Coombs",
+            "Coree",
+            "Cotter River",
+            "Denman Prospect",
+            "Duffy",
+            "Fisher",
+            "Holder",
+            "Molonglo",
+            "Molonglo Valley",
+            "Rivett",
+            "Stirling",
+            "Stromlo",
+            "Uriarra",
+            "Uriarra Village",
+            "Waramanga",
+            "Weston",
+            "Wright"
+          ],
+          "types": [
+            "postal_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Snowy Valleys Council",
+              "short_name": "Snowy Valleys Council",
+              "types": [
+                "administrative_area_level_2",
+                "political"
+              ]
+            },
+            {
+              "long_name": "New South Wales",
+              "short_name": "NSW",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Snowy Valleys Council, NSW, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.0801433,
+                "lng": 148.8087153
+              },
+              "southwest": {
+                "lat": -36.8060801,
+                "lng": 147.687385
+              }
+            },
+            "location": {
+              "lat": -35.6307418,
+              "lng": 148.1892921
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.0801433,
+                "lng": 148.8087153
+              },
+              "southwest": {
+                "lat": -36.8060801,
+                "lng": 147.687385
+              }
+            }
+          },
+          "place_id": "ChIJy2bTydTWImsRhGavBFiB0_c",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "New South Wales",
+              "short_name": "NSW",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "New South Wales, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -28.15702,
+                "lng": 159.1054443
+              },
+              "southwest": {
+                "lat": -37.5052802,
+                "lng": 140.9992793
+              }
+            },
+            "location": {
+              "lat": -31.2532183,
+              "lng": 146.921099
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -28.15702,
+                "lng": 159.1054443
+              },
+              "southwest": {
+                "lat": -37.5052802,
+                "lng": 140.9992793
+              }
+            }
+          },
+          "place_id": "ChIJDUte93TLDWsRLZ_EIhGvgBc",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            },
+            "location": {
+              "lat": -25.274398,
+              "lng": 133.775136
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -9.0880124,
+                "lng": 159.5150123
+              },
+              "southwest": {
+                "lat": -55.3228176,
+                "lng": 112.6997261
+              }
+            }
+          },
+          "place_id": "ChIJ38WHZwf9KysRUhNblaFnglM",
+          "types": [
+            "country",
+            "political"
+          ]
+        }
+      ],
+      "status": "OK"
+    }
+  }             
 ]
