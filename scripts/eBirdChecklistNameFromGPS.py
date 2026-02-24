@@ -312,8 +312,6 @@ def _result_sort_key(
     act_has_containing_real_suburb: bool = False,
     act_min_neighborhood_area: Optional[float] = None,
     act_any_wrong_locality_result: bool = False,
-    default_containing_pure_locality_names: Optional[set] = None,
-    default_min_containing_pure_locality_area: Optional[float] = None,
 ) -> tuple:
     """
     Sort key for results: prefer (1) has locality/neighborhood, (2) bounds contain point,
@@ -427,44 +425,13 @@ def _result_sort_key(
         has_any_name = has_name or has_es_preferred
         return (0 if has_any_name else 1, 0 if has_es_preferred else 1, 0 if contains else 1, area, -type_rank)
 
-    # When we have the set of containing pure locality names (default sort only): prefer pure locality
-    # over route when they disagree (Norseman over Fraser Range), and prefer route over other
-    # localities when the route matches a pure locality (Stirling Range from route over Cranbrook).
-    if default_containing_pure_locality_names is None:
-        return (0 if has_name else 1, 0 if contains else 1, area, -type_rank)
-
+    # Default (Australia etc.): always deprioritize route; prefer locality/admin over road data.
+    # Route results carry locality names attached to roads (e.g. Fraser Range on Eyre Hwy); we prefer
+    # pure locality results (Norseman, Cranbrook, Stirling Range NP when it's a locality).
     result_types = result.get("types", [])
-    route_locality = _result_locality_name(result) if "route" in result_types else None
-    route_matches_pure = (
-        route_locality is not None and route_locality in default_containing_pure_locality_names
-    )
-    # Route also "matches" when it contains the point, is more specific (smaller area) than any containing pure locality,
-    # and its locality name looks like a park/reserve (so we prefer e.g. Stirling Range National Park over Cranbrook,
-    # but do not prefer Fraser Range over Norseman).
-    route_looks_like_park = (
-        route_locality is not None
-        and (
-            "National Park" in route_locality
-            or " Reserve" in route_locality
-            or "State Forest" in route_locality
-            or route_locality.endswith(" NP")
-        )
-    )
-    route_more_specific_than_containing = (
-        "route" in result_types
-        and contains
-        and default_min_containing_pure_locality_area is not None
-        and area < default_min_containing_pure_locality_area
-        and route_looks_like_park
-    )
-    # 0 = route with matching locality or more specific (best), 1 = pure locality or non-route, 2 = route with non-matching locality
-    if "route" in result_types and (route_matches_pure or route_more_specific_than_containing):
-        loc_rank = 0
-    elif "route" in result_types:
-        loc_rank = 2
-    else:
-        loc_rank = 1
-    return (0 if has_name else 1, 0 if contains else 1, loc_rank, area, -type_rank)
+    is_route = "route" in result_types
+    route_penalty = 1 if is_route else 0
+    return (0 if has_name else 1, 0 if contains else 1, route_penalty, area, -type_rank)
 
 
 def _is_act_result(result: dict) -> bool:
@@ -717,76 +684,6 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
                 act_any_wrong_locality_result = True
                 break
 
-    # For default (non-ACT) sort: names from pure locality results, plus names from the most specific
-    # containing results (min area) so a route can "match" when it's the best containing result
-    # (e.g. Stirling Range from route over Cranbrook). Norseman: plus_code has min area so set stays {Norseman}.
-    default_containing_pure_locality_names: Optional[set] = None
-    default_min_containing_pure_locality_area: Optional[float] = None
-    if not in_act:
-        default_containing_pure_locality_names = set()
-        for r in results:
-            t = r.get("types", [])
-            if "locality" not in t or "route" in t:
-                continue
-            name = _get_name_from_result_general(r, country_code=country_code)
-            if name:
-                default_containing_pure_locality_names.add(name)
-        # Add names from containing results that have the smallest area (so the best-containing result's name is in the set).
-        # Prefer non-route min-area results; only add from a route when no non-route min-area had a name.
-        # When we already have a containing pure locality, do not add from a route (keeps Norseman over Fraser Range).
-        had_containing_pure_locality = len(default_containing_pure_locality_names) > 0
-        min_containing_area = None
-        for r in results:
-            geom = r.get("geometry", {})
-            b = geom.get("bounds") or geom.get("viewport")
-            if not b or not _bounds_contain_point(b, lat, lng):
-                continue
-            a = _bounds_area(b)
-            if min_containing_area is None or a < min_containing_area:
-                min_containing_area = a
-        if min_containing_area is not None:
-            added_from_min = False
-            for r in results:
-                geom = r.get("geometry", {})
-                b = geom.get("bounds") or geom.get("viewport")
-                if not b or not _bounds_contain_point(b, lat, lng):
-                    continue
-                if _bounds_area(b) > min_containing_area * 1.001:
-                    continue
-                t = r.get("types", [])
-                if "route" in t:
-                    continue  # add from non-route min-area results first
-                name = _get_name_from_result_general(r, country_code=country_code)
-                if name:
-                    default_containing_pure_locality_names.add(name)
-                    added_from_min = True
-            if not added_from_min and not had_containing_pure_locality:
-                for r in results:
-                    geom = r.get("geometry", {})
-                    b = geom.get("bounds") or geom.get("viewport")
-                    if not b or not _bounds_contain_point(b, lat, lng):
-                        continue
-                    if _bounds_area(b) > min_containing_area * 1.001:
-                        continue
-                    t = r.get("types", [])
-                    if "route" not in t:
-                        continue
-                    name = _result_locality_name(r)
-                    if name:
-                        default_containing_pure_locality_names.add(name)
-                        break
-        for r in results:
-            t = r.get("types", [])
-            if "locality" not in t or "route" in t:
-                continue
-            geom = r.get("geometry", {})
-            b = geom.get("bounds") or geom.get("viewport")
-            if not b or not _bounds_contain_point(b, lat, lng):
-                continue
-            a = _bounds_area(b)
-            if default_min_containing_pure_locality_area is None or a < default_min_containing_pure_locality_area:
-                default_min_containing_pure_locality_area = a
-
     # Sort so the best-matching result is first. ACT and India: deprioritize plus_code-only results.
     sort_key_fn = lambda r: _result_sort_key(
         r, lat, lng,
@@ -797,8 +694,6 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
         act_has_containing_real_suburb=act_has_containing_real_suburb,
         act_min_neighborhood_area=act_min_neighborhood_area,
         act_any_wrong_locality_result=act_any_wrong_locality_result,
-        default_containing_pure_locality_names=default_containing_pure_locality_names,
-        default_min_containing_pure_locality_area=default_min_containing_pure_locality_area,
     )
     sorted_results = sorted(results, key=sort_key_fn)
 
