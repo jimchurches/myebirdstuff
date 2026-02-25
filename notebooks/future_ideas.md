@@ -1,0 +1,64 @@
+# eBird Explorer: Future Ideas
+
+Notes for when you come back to this—perhaps on a cold Canberra winter weekend. Documented after a discussion about sharing the personal eBird explorer with non-technical friends, especially across platforms (Windows was problematic).
+
+---
+
+## Is Python / Jupyter / Voila Still a Good Choice?
+
+**Yes.** For personal data exploration and a quick dashboard, the current stack (Jupyter + Voila + pandas + Folium + ipywidgets) is still a solid choice. Alternatives exist but aren’t clearly better:
+
+- **Streamlit** — Simpler for dashboards (no notebook format), single `.py` file, `streamlit run app.py`. Would be a viable alternative if starting fresh.
+- **Panel** — Similar to Voila; another way to turn notebooks into apps.
+
+If starting from scratch today, Streamlit might be considered, but Jupyter/Voila is still a good fit for the explore-then-dashboard workflow.
+
+---
+
+## Would a Web Page for Others Change the Answer?
+
+Somewhat. Sharing with others usually means either:
+
+- Hosting something somewhere, or
+- Creating a zero-install, in-browser experience.
+
+The tool (Jupyter vs Streamlit) matters less than how you distribute it. Hosted Streamlit and hosted Voila are roughly similar in effort.
+
+---
+
+## Making It Easy for Non-Technical People
+
+The main friction is: Python installation, pip, config paths, and the many small setup differences between Windows and macOS.
+
+### Option 1: Self-Contained HTML File (Easiest for Recipients)
+
+- **What:** One HTML file the user opens in a browser. A “Choose file” button lets them select their MyEBirdData.csv. Everything runs client-side (no server, no install).
+- **Tech:** Leaflet (maps), PapaParse or similar (CSV), vanilla JS or a small framework.
+- **Pros:** Zero install, no Python, works on any OS. “Put the HTML and your CSV in the same folder, double-click the HTML.”
+- **Cons:** Requires reimplementing the logic in JavaScript. Species search can be simpler (e.g. prefix match) rather than Whoosh-level fuzzy search.
+
+This is the most “just works” option for friends who don’t want to install anything.
+
+### Option 2: Hosted Web App
+
+- **What:** You host the app (Streamlit Cloud, Voila on a VPS, etc.). Users get a URL and upload their CSV in the browser.
+- **Pros:** Zero install for them.
+- **Cons:** Privacy (data goes through your server), hosting cost and maintenance.
+
+### Option 3: Simpler Python Packaging
+
+- **What:** One script, clear `pip install` instructions, no config file, sensible default paths.
+- **Pros:** Fewer “little stupid things” that break.
+- **Cons:** Still requires Python and pip; doesn’t remove the install step.
+
+---
+
+## Summary
+
+| Goal | Approach |
+|------|----------|
+| Personal use | Jupyter/Voila is fine; no need to change. |
+| Share with non-technical friends | Self-contained HTML file = no install, works everywhere. |
+| Share as a public web page | Hosted app (Streamlit or Voila); consider privacy and hosting. |
+
+For “friend on Windows, no fuss”: single HTML file with a CSV file picker is the most friction-free option. The trade-off is reimplementing the app in JavaScript, but the core features (search, filters, map) are all achievable.
