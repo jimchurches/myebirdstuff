@@ -263,9 +263,7 @@ def _safe_count(x):
         return 1
 
 def _base_species_for_count(row):
-    """Normalize to countable species for life-list style totals.
-    Excludes spuhs, slashes, hybrids, domestic types per eBird conventions.
-    Rolls up subspecies to species."""
+    """Normalize to countable species (used for filter_species / single-row lookups)."""
     sci = (row.get("Scientific Name") or "").strip()
     common = (row.get("Common Name") or "").strip()
     if not sci:
@@ -283,10 +281,23 @@ def _base_species_for_count(row):
         return None  # species-level slash (not countable)
     return f"{parts[0]} {parts[1]}".lower()
 
+def _countable_species_vectorized(df):
+    """Vectorized species count: exclude spuhs, slashes, hybrids, domestic; roll up subspecies."""
+    sci = df["Scientific Name"].fillna("").astype(str).str.strip()
+    common = df["Common Name"].fillna("").astype(str).str.strip()
+    spuh = sci.str.contains(r" sp\.", case=False, na=False) | sci.str.lower().str.endswith(" sp")
+    hybrid = sci.str.contains(" x ", na=False) | common.str.lower().str.contains(r"\(hybrid\)", na=False)
+    domestic = common.str.contains("Domestic", na=False) | common.str.contains(r"\(Domestic type\)", na=False)
+    parts = sci.str.split(expand=True)
+    slash = parts[1].str.contains("/", na=False) if 1 in parts.columns else pd.Series(False, index=df.index)
+    too_short = parts[0].isna() | parts[1].isna() if 1 in parts.columns else parts[0].isna()
+    exclude = spuh | hybrid | domestic | slash | too_short
+    base = parts[0].str.lower() + " " + parts[1].str.lower()
+    return base.where(~exclude)
+
 total_checklists = df["Submission ID"].nunique()
 total_individuals = int(df["Count"].apply(_safe_count).sum())
-_countable_bases = df.apply(_base_species_for_count, axis=1)
-total_species = int(_countable_bases.dropna().nunique())
+total_species = int(_countable_species_vectorized(df).dropna().nunique())
 
 # Build common → scientific name map
 name_map = (
@@ -411,14 +422,24 @@ full_df = add_datetime_column(full_df)
 # Ensure filtered df has datetime too (for consistency and potential future use)
 df = add_datetime_column(df)
 
-# Build lifer location dictionary: scientific name → first seen location
-true_lifer_locations = (
+# Build lifer location dictionary: base species (genus + species) → first seen location.
+# Uses base species so subspecies (e.g. Tyto javanica [javanica Group]) roll up to the
+# same lifer as the nominate (Tyto javanica) — the chronologically first record wins.
+def _base_species_for_lifer(sci_name):
+    if pd.isna(sci_name) or not str(sci_name).strip():
+        return None
+    parts = str(sci_name).strip().split()
+    if len(parts) < 2:
+        return None
+    return f"{parts[0]} {parts[1]}".lower()
+
+_full = (
     full_df.sort_values("datetime")
     .dropna(subset=["Scientific Name", "Location ID"])
-    .groupby("Scientific Name")
-    .first()["Location ID"]
-    .to_dict()
+    .assign(_base=lambda x: x["Scientific Name"].apply(_base_species_for_lifer))
 )
+_full = _full[_full["_base"].notna()]
+true_lifer_locations = _full.groupby("_base").first()["Location ID"].to_dict()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -765,7 +786,8 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
         lifer_location = None
         if MARK_LIFER:
-            true_lifer_loc = true_lifer_locations.get(selected_species)
+            base = _base_species_for_lifer(selected_species)
+            true_lifer_loc = true_lifer_locations.get(base) if base else None
             if true_lifer_loc in seen_location_ids:
                 lifer_location = true_lifer_loc
 
