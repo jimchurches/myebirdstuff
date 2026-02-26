@@ -51,6 +51,13 @@ This is the most “just works” option for friends who don’t want to install
 - **Pros:** Fewer “little stupid things” that break.
 - **Cons:** Still requires Python and pip; doesn’t remove the install step.
 
+### Option 4: Installer Script (Python Does Everything After Step 1)
+
+- **What:** (1) Document for installing Python on Windows and macOS (already exists). (2) A Python script that installs everything else: pip packages, prompts for DATA_FOLDER, creates config_secret.py, sets up launcher scripts (`.command` on macOS, `.bat` on Windows) to run Jupyter or Voila.
+- **Feasibility:** Very realistic. Once Python is installed, a single cross-platform script can: run `pip install` via subprocess; create config files with pathlib; write launcher scripts that `cd` to the project and run `jupyter lab` or `voila`. No notebook re-engineering needed.
+- **What the script can’t do:** Install Python itself, or fix antivirus blocking pip. On macOS, avoid system Python; script should assume user has installed Python (python.org or pyenv).
+- **When to do it:** If you get more requests from friends to help them install this, it’s worth the time to build and test the installer on Windows.
+
 ---
 
 ## Summary
