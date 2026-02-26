@@ -262,8 +262,31 @@ def _safe_count(x):
     except (ValueError, TypeError):
         return 1
 
+def _base_species_for_count(row):
+    """Normalize to countable species for life-list style totals.
+    Excludes spuhs, slashes, hybrids, domestic types per eBird conventions.
+    Rolls up subspecies to species."""
+    sci = (row.get("Scientific Name") or "").strip()
+    common = (row.get("Common Name") or "").strip()
+    if not sci:
+        return None
+    if " sp." in sci or sci.lower().endswith(" sp"):
+        return None  # spuh
+    if " x " in sci or "(hybrid)" in common.lower():
+        return None  # hybrid
+    if "Domestic" in common or "(Domestic type)" in common:
+        return None
+    parts = sci.split()
+    if len(parts) < 2:
+        return None
+    if "/" in parts[1]:
+        return None  # species-level slash (not countable)
+    return f"{parts[0]} {parts[1]}".lower()
+
 total_checklists = df["Submission ID"].nunique()
 total_individuals = int(df["Count"].apply(_safe_count).sum())
+_countable_bases = df.apply(_base_species_for_count, axis=1)
+total_species = int(_countable_bases.dropna().nunique())
 
 # Build common → scientific name map
 name_map = (
@@ -684,6 +707,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                     font-family:sans-serif;font-size:13px;line-height:1.5;">
             <b>All species</b><br>
             {total_checklists} checklist{total_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
+            {total_species} species &nbsp;|&nbsp;
             {total_individuals} individual{total_individuals != 1 and 's' or ''}
         </div>
         """
@@ -726,13 +750,15 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         # Stats for banner (Count can be "X" for present; treat as 1)
         n_checklists = filtered["Submission ID"].nunique()
         n_individuals = int(filtered["Count"].apply(_safe_count).sum())
+        high_count = int(filtered["Count"].apply(_safe_count).max())
         banner_html = f"""
         <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
                     padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
                     font-family:sans-serif;font-size:13px;line-height:1.5;">
             <b>{selected_common_name or selected_species}</b><br>
             {n_checklists} checklist{n_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
-            {n_individuals} individual{n_individuals != 1 and 's' or ''}
+            {n_individuals} individual{n_individuals != 1 and 's' or ''} &nbsp;|&nbsp;
+            high count {high_count}
         </div>
         """
         species_map.get_root().html.add_child(Element(banner_html))
