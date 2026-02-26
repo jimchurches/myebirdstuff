@@ -624,22 +624,39 @@ def create_map(map_center):
 def draw_map_with_species_overlay(selected_species):
     global species_map
 
-    map_center = [location_data['Latitude'].mean(), location_data['Longitude'].mean()]
+    map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
     species_map = create_map(map_center)
+
+    # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
+    records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
+
+    # Helper: format a single sighting with checklist link and optional media link
+    def format_sighting_row(r):
+        date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
+        time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
+        cid = r.get("Submission ID", "")
+        checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
+        media_html = ""
+        ml = r.get("ML Catalog Numbers")
+        if pd.notna(ml) and str(ml).strip():
+            first_ml = str(ml).strip().split()[0]
+            media_html = f' <a href="https://macaulaylibrary.org/asset/{first_ml}" target="_blank" title="View media">📷</a>'
+        return f'<br><a href="{checklist_url}" target="_blank">{date_str} {time_str} — {r["Common Name"]} ({r["Count"]})</a>{media_html}'
 
     if not selected_species:
         # Case 1: No species selected – draw all as green
         for _, row in location_data.iterrows():
-            base_records = df[df['Location ID'] == row['Location ID']]
+            base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
+            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"])
             visit_info = "<br>".join(
-                f"{d.strftime('%Y-%m-%d')} {str(t) if pd.notna(t) else 'unknown'}"
-                for d, t in sorted(
-                    {(d, str(t) if pd.notna(t) else 'unknown') for d, t in zip(base_records["Date"], base_records["Time"])}
-                    if not base_records.empty else []
-                )
-            )
+                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
+                for _, r in visit_records.iterrows()
+            ) if not visit_records.empty else ""
 
-            popup = folium.Popup(f"<b>{row['Location']}</b><br><b>Visited:</b><br>{visit_info}", max_width=800)
+            loc_id = row["Location ID"]
+            loc_url = f"https://ebird.org/lifelist/{loc_id}"
+            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
+            popup = folium.Popup(f"<b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}", max_width=800)
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
@@ -653,7 +670,8 @@ def draw_map_with_species_overlay(selected_species):
     else:
         # Case 2: Filtered by species
         filtered = filter_species(df, selected_species)
-        seen_location_ids = set(filtered['Location ID'])
+        seen_location_ids = set(filtered["Location ID"])
+        filtered_by_loc = {lid: grp for lid, grp in filtered.groupby("Location ID")}
 
         if filtered.empty:
             with output:
@@ -682,21 +700,19 @@ def draw_map_with_species_overlay(selected_species):
             if not row["has_species_match"] and hide_non_matching_checkbox.value:
                 continue
 
-            base_records = df[df["Location ID"] == loc_id]
+            base_records = records_by_loc.get(loc_id, pd.DataFrame())
+            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"])
             visit_info = "<br>".join(
-                f"{d} {str(t) if pd.notna(t) else 'unknown'}"
-                for d, t in sorted(
-                    {(d, str(t) if pd.notna(t) else 'unknown') for d, t in zip(base_records["Date"], base_records["Time"])}
-                )
-            )
+                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
+                for _, r in visit_records.iterrows()
+            ) if not visit_records.empty else ""
 
-            base_popup = f"<b>{row['Location']}</b><br><b>Visited:</b><br>{visit_info}"
+            loc_url = f"https://ebird.org/lifelist/{loc_id}"
+            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
+            base_popup = f"<b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}"
             if row["has_species_match"]:
-                sub = filtered[filtered["Location ID"] == loc_id]
-                obs_details = "".join(
-                    f"<br>{r['Date'].strftime('%Y-%m-%d') if pd.notna(r['Date']) else 'unknown'} {r['Time']} — {r['Common Name']} ({r['Count']})"
-                    for _, r in sub.iterrows()
-                )
+                sub = filtered_by_loc.get(loc_id, pd.DataFrame())
+                obs_details = "".join(format_sighting_row(r) for _, r in sub.iterrows())
                 popup_content = folium.Popup(base_popup + "<br><b>Seen:</b>" + obs_details, max_width=800)
             else:
                 popup_content = folium.Popup(base_popup, max_width=800)
