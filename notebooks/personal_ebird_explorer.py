@@ -136,9 +136,11 @@ FILTER_END_DATE = "2025-12-31"
 # --------------------------------------------
 import os
 import sys
+
 import pandas as pd
 import folium
-import tempfile  
+from branca.element import Element
+import tempfile
 import threading
 import importlib.util
 import ipywidgets as widgets
@@ -249,6 +251,19 @@ if FILTER_BY_DATE:
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 selected_species_name = ""
+selected_species_common_name = ""
+
+# Pre-calculate totals for "all species" banner (Count can be "X" for present; treat as 1)
+def _safe_count(x):
+    if pd.isna(x):
+        return 0
+    try:
+        return int(x)
+    except (ValueError, TypeError):
+        return 1
+
+total_checklists = df["Submission ID"].nunique()
+total_individuals = int(df["Count"].apply(_safe_count).sum())
 
 # Build common → scientific name map
 name_map = (
@@ -412,22 +427,20 @@ true_lifer_locations = (
 
 # ✅ Called when a dropdown species is selected
 def on_species_selected(change):
-    global selected_species_name
+    global selected_species_name, selected_species_common_name
     output.clear_output()
 
     selected = change.get("new")
     search_text = search_box.value.strip()
 
-    #print(f"🧩 Dropdown changed: '{selected}'")
-    #print(f"🔡 Search box text: '{search_text}'")
-
     # Show full map if search fully cleared
     if selected is None and search_text == "":
         selected_species_name = ""
+        selected_species_common_name = ""
         hide_non_matching_checkbox.value = False
         with output:
             print("🧹 Search truly cleared — showing all locations")
-        draw_map_with_species_overlay("")
+        draw_map_with_species_overlay("", "")
         return
 
     # Don't trigger if no species selected
@@ -437,20 +450,21 @@ def on_species_selected(change):
 
     # Lookup scientific name
     selected_species_name = name_map.get(selected, "").strip()
+    selected_species_common_name = selected or ""
     print(f"✅ Selected scientific name: {selected_species_name}")
 
     with output:
         print(f"🔎 Selected species: {selected} → Scientific: {selected_species_name}")
-    draw_map_with_species_overlay(selected_species_name)
+    draw_map_with_species_overlay(selected_species_name, selected_species_common_name)
 
 
 # ✅ Called when the "hide non-matching" checkbox is toggled
 def on_toggle_change(change):
-    global selected_species_name
+    global selected_species_name, selected_species_common_name
     with output:
         print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_name}")
     if selected_species_name:
-        draw_map_with_species_overlay(selected_species_name)
+        draw_map_with_species_overlay(selected_species_name, selected_species_common_name)
 
 
 # ✅ Called when search box is cleared (after short debounce)
@@ -465,14 +479,17 @@ def on_search_box_cleared(change):
             debounce_timer.cancel()
 
         def handle_clear():
+            global selected_species_name, selected_species_common_name
             if search_box.value.strip() == "":
                 dropdown.options = []
                 dropdown.value = None
                 hide_non_matching_checkbox.value = False
+                selected_species_name = ""
+                selected_species_common_name = ""
                 with output:
                     output.clear_output()
                     print("🧹 Search cleared — showing all locations")
-                draw_map_with_species_overlay("")
+                draw_map_with_species_overlay("", "")
 
         debounce_timer = threading.Timer(debounce_delay, handle_clear)
         debounce_timer.start()
@@ -637,7 +654,7 @@ def create_map(map_center):
 # --------------------------------------------
 # ✅ Draw map with species overlay (refactored for lifer-on-top and single loop)
 # --------------------------------------------
-def draw_map_with_species_overlay(selected_species):
+def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     global species_map
 
     map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
@@ -660,7 +677,18 @@ def draw_map_with_species_overlay(selected_species):
         return f'<br><a href="{checklist_url}" target="_blank">{date_str} {time_str} — {r["Common Name"]} ({r["Count"]})</a>{media_html}'
 
     if not selected_species:
-        # Case 1: No species selected – draw all as green
+        # Case 1: No species selected – draw all as green, show totals banner
+        banner_html = f"""
+        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
+                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
+                    font-family:sans-serif;font-size:13px;line-height:1.5;">
+            <b>All species</b><br>
+            {total_checklists} checklist{total_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
+            {total_individuals} individual{total_individuals != 1 and 's' or ''}
+        </div>
+        """
+        species_map.get_root().html.add_child(Element(banner_html))
+
         for _, row in location_data.iterrows():
             base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
             visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"])
@@ -694,6 +722,20 @@ def draw_map_with_species_overlay(selected_species):
                 output.clear_output()
                 print(f"⚠️ No sightings of '{selected_species}' in current data — check date range or filters.")
             return
+
+        # Stats for banner (Count can be "X" for present; treat as 1)
+        n_checklists = filtered["Submission ID"].nunique()
+        n_individuals = int(filtered["Count"].apply(_safe_count).sum())
+        banner_html = f"""
+        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
+                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
+                    font-family:sans-serif;font-size:13px;line-height:1.5;">
+            <b>{selected_common_name or selected_species}</b><br>
+            {n_checklists} checklist{n_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
+            {n_individuals} individual{n_individuals != 1 and 's' or ''}
+        </div>
+        """
+        species_map.get_root().html.add_child(Element(banner_html))
 
         lifer_location = None
         if MARK_LIFER:
@@ -798,7 +840,7 @@ def draw_map_with_species_overlay(selected_species):
 display(VBox([search_box, dropdown, hide_non_matching_checkbox, output]))
 
 # ✅ Draw initial map (no filters applied)
-draw_map_with_species_overlay("")
+draw_map_with_species_overlay("", "")
 
 # ✅ Force minimum height for map display
 import os
