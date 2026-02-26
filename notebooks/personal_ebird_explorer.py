@@ -110,6 +110,8 @@ MAP_STYLE = "default"
 MARK_LIFER = True
 
 # Optional date range filtering (set to False to disable)
+# Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
+# If locations/species are missing, set FILTER_BY_DATE = False or extend the range.
 FILTER_BY_DATE = False
 FILTER_START_DATE = "2025-01-01"
 FILTER_END_DATE = "2025-12-31"
@@ -329,7 +331,21 @@ def filter_species(df, base_species):
     if "/" in base_species:
         return df[df["Scientific Name"].str.lower() == base_species]
     filtered_df = df[df["Scientific Name"].fillna("").str.lower().str.startswith(base_species)]
-    return filtered_df[~filtered_df["Scientific Name"].str.contains("/", regex=False)]
+
+    # Exclude only species-level slash groups (e.g. Anas gracilis/castanea), not subspecies with
+    # slash (e.g. Tyto tenebricosa tenebricosa/arfaki). A slash at the boundary after our prefix
+    # indicates a species-level split; a slash later (in subspecies) we include.
+    def is_species_level_slash(sci_name):
+        sn = (sci_name or "").lower()
+        if "/" not in sn:
+            return False
+        rest = sn[len(base_species) :].lstrip()
+        return rest.startswith("/")
+
+    mask = filtered_df["Scientific Name"].fillna("").apply(
+        lambda s: not is_species_level_slash(s)
+    )
+    return filtered_df[mask]
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
