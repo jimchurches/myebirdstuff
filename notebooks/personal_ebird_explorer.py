@@ -701,7 +701,19 @@ def create_map(map_center):
 def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     global species_map
 
-    map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
+    if selected_species:
+        filtered = filter_species(df, selected_species)
+        if filtered.empty:
+            with output:
+                output.clear_output()
+                print(f"⚠️ No sightings of '{selected_species}' in current data — check date range or filters.")
+            return
+        seen_location_ids = set(filtered["Location ID"])
+        species_locations = location_data[location_data["Location ID"].isin(seen_location_ids)]
+        map_center = [species_locations["Latitude"].mean(), species_locations["Longitude"].mean()]
+    else:
+        map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
+
     species_map = create_map(map_center)
 
     # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
@@ -757,16 +769,8 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             ).add_to(species_map)
 
     else:
-        # Case 2: Filtered by species
-        filtered = filter_species(df, selected_species)
-        seen_location_ids = set(filtered["Location ID"])
+        # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
         filtered_by_loc = {lid: grp for lid, grp in filtered.groupby("Location ID")}
-
-        if filtered.empty:
-            with output:
-                output.clear_output()
-                print(f"⚠️ No sightings of '{selected_species}' in current data — check date range or filters.")
-            return
 
         # Stats for banner (Count can be "X" for present; treat as 1)
         n_checklists = filtered["Submission ID"].nunique()
