@@ -136,6 +136,7 @@ FILTER_END_DATE = "2025-12-31"
 # --------------------------------------------
 import os
 import sys
+from datetime import datetime
 
 import pandas as pd
 import folium
@@ -145,7 +146,6 @@ import threading
 import importlib.util
 import ipywidgets as widgets
 
-from datetime import datetime
 from ipywidgets import Checkbox, VBox
 from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT
@@ -711,6 +711,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     def format_sighting_row(r):
         date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
         time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
+        text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
         cid = r.get("Submission ID", "")
         checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
         media_html = ""
@@ -718,7 +719,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         if pd.notna(ml) and str(ml).strip():
             first_ml = str(ml).strip().split()[0]
             media_html = f' <a href="https://macaulaylibrary.org/asset/{first_ml}" target="_blank" title="View media">📷</a>'
-        return f'<br><a href="{checklist_url}" target="_blank">{date_str} {time_str} — {r["Common Name"]} ({r["Count"]})</a>{media_html}'
+        return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
 
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
@@ -741,7 +742,6 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
                 for _, r in visit_records.iterrows()
             ) if not visit_records.empty else ""
-
             loc_id = row["Location ID"]
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
@@ -812,7 +812,6 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
                 for _, r in visit_records.iterrows()
             ) if not visit_records.empty else ""
-
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
             base_popup = f"<b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}"
@@ -850,18 +849,17 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         if EXPORT_HTML:
             species_map.save(map_output_path)
 
-        if "VOILA_APP" not in os.environ:
-            display(HTML("""
-            <script>
-            setTimeout(() => {
-              const iframe = document.querySelector('.output_map iframe');
-              if (iframe) {
-                iframe.style.minHeight = '600px';
-                iframe.parentElement.style.minHeight = '600px';
-              }
-            }, 100);
-            </script>
-            """))
+        display(HTML("""
+        <script>
+        setTimeout(() => {
+          const iframe = document.querySelector('.output_map iframe');
+          if (iframe) {
+            iframe.style.minHeight = '600px';
+            iframe.parentElement.style.minHeight = '600px';
+          }
+        }, 100);
+        </script>
+        """))
 
 
 
@@ -889,23 +887,6 @@ display(VBox([search_box, dropdown, hide_non_matching_checkbox, output]))
 
 # ✅ Draw initial map (no filters applied)
 draw_map_with_species_overlay("", "")
-
-# ✅ Force minimum height for map display
-import os
-
-with map_output:
-    if "VOILA_APP" not in os.environ:
-        display(HTML("""
-        <script>
-        setTimeout(() => {
-          const iframe = document.querySelector('.output_map iframe');
-          if (iframe) {
-            iframe.style.minHeight = '600px';
-            iframe.parentElement.style.minHeight = '600px';
-          }
-        }, 100);
-        </script>
-        """))
 
 
 

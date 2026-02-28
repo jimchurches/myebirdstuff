@@ -4,3 +4,4 @@
 config_secret.py
 *.ipynb_checkpoints
 __pycache__/
+voila_debug.log
