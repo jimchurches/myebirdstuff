@@ -102,6 +102,16 @@ Keep this terminal open and use it for the steps below. To leave the environment
 
 With your virtual environment activated (or using your system Python if you skipped the venv), install everything in one go.
 
+**Option A — from requirements file (recommended):**
+
+```bat
+pip install -r requirements-explorer.txt
+```
+
+(Use `pip3` on macOS if needed. Run from the repo root.)
+
+**Option B — install packages directly:**
+
 **Windows:**
 
 ```bat
@@ -127,6 +137,8 @@ What these are for:
 | `folium`    | Draw the interactive map. |
 | `ipywidgets`| Search box and other controls in the notebook. |
 | `whoosh`    | Fast species name search (autocomplete). |
+
+**Note:** `branca` (used by folium for map elements) is installed automatically as a dependency of `folium`. `IPython` comes with `jupyter`.
 
 ---
 
@@ -224,7 +236,7 @@ The `voila.json` in the notebooks folder hides the documentation cells so only t
 |------|------------|
 | 1 | Install Python 3.8+ (Windows: Store or python.org; macOS: python.org or Homebrew). |
 | 2 | (Optional) Create and activate a virtual environment. |
-| 3 | `pip install jupyter jupyterlab voila pandas folium ipywidgets whoosh` |
+| 3 | `pip install -r requirements-explorer.txt` (or install packages individually; see step 3). |
 | 4 | Copy `scripts/config_template.py` → `scripts/config_secret.py`, set `DATA_FOLDER`, put `MyEBirdData.csv` there. |
 | 5 | From **notebooks** folder: `jupyter notebook` or `jupyter lab`, open `personal_ebird_explorer.ipynb`, Run All Cells. |
 | 6 | (Optional) From **notebooks** folder: `voila personal_ebird_explorer.ipynb --config=voila.json` |

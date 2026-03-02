@@ -18,20 +18,22 @@
 #
 # This notebook lets you explore your personal eBird records in an interactive, visual way.
 #
-# Once you’ve downloaded your full eBird data export, this tool maps every location you’ve submitted a checklist from — whether it’s a hotspot or a personal location. You can search for a species, filter by date, highlight lifers, and explore your birding history on a map.
+# Once you’ve downloaded your full eBird data export, this tool maps every location you’ve submitted a checklist from — whether it’s a hotspot or a personal location. You can search for a species, filter by date, highlight lifers and last-seen locations, and explore your birding history on a map.
 #
 # ### ✅ What This Notebook Does 
 #
 # - Loads your eBird data export (CSV format)
 # - Draws a map of all checklist locations (green by default)
 # - Highlights locations where a selected species was seen (red)
-# - Optionally marks your lifer location for that species (blue)
+# - Marks your lifer (first-ever) and last-seen location for that species with distinct pin colours
+# - Shows stats banners: all-species totals when viewing all, or species-specific (checklists, individuals, high count) when filtering
 # - Lets you hide non-matching locations
 # - Offers type-ahead search that mimics eBird’s own species search behaviour
 # - Supports date-range filtering
-# - Adds detailed popups showing:
-#   - All visits to each location 
-#   - Sightings of the selected species (if relevant)
+# - Adds detailed popups with links:
+#   - Location names link to your eBird life list for that place
+#   - Visit dates/times link to each checklist
+#   - Media icon (📷) links to Macaulay Library when available
 #
 # > 📍 You’ll find the interactive **search box and map display towards the end of the notebook**. Once everything’s loaded, scroll down to use it.
 #
@@ -80,9 +82,9 @@
 #   - `True` — the map is saved to HTML each time it updates  
 #   - `False` — no HTML export
 # - `MAP_STYLE`: choose from `"default"`, `"satellite"`, `"google"`, or `"carto"`.
-# - `MARK_LIFER`:  
-#   - `True` — highlights your first sighting of each species with a blue marker  
-#   - `False` — all sightings use red markers
+# - `MARK_LIFER`: `True` — highlights your first-ever sighting (lifer) with a distinct pin
+# - `MARK_LAST_SEEN`: `True` — highlights your most recent sighting with a distinct pin (skipped if same as lifer)
+# - `LIFER_COLOR`, `LIFER_FILL`, `LAST_SEEN_COLOR`, `LAST_SEEN_FILL`, etc. — pin colours (see User Variables cell)
 # - `FILTER_BY_DATE`:  
 #   - `True` — only show locations and sightings within the specified date range  
 #   - `False` — include all data
@@ -90,6 +92,18 @@
 #   These only apply if `FILTER_BY_DATE` is `True`.
 #
 # > NOTE: Paths (not file names) are stored in the config files in the scritps folder of the code repo.  You can easily move paths here if you wish.
+#
+# #### Pin colour reference (named colours for Folium)
+#
+# Use these names in `LIFER_COLOR`, `LIFER_FILL`, etc. (HTML/CSS named colours):
+#
+# - **Basic:** black, white, gray, silver
+# - **Reds / pinks:** red, crimson, darkred, firebrick, salmon, coral, tomato, hotpink, pink
+# - **Oranges / yellows:** orange, darkorange, gold, goldenrod, yellow, lightyellow
+# - **Greens:** green, darkgreen, lightgreen, lime, olive, seagreen
+# - **Blues:** blue, navy, darkblue, dodgerblue, skyblue, steelblue, cornflowerblue
+# - **Purples:** purple, indigo, darkviolet, blueviolet, mediumpurple, orchid, violet
+# - **Browns / neutrals:** brown, saddlebrown, chocolate, tan, wheat, beige, khaki
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
@@ -106,8 +120,17 @@ EXPORT_HTML = True  # Save HTML file each time map is updated
 # Map style options: "default", "satellite", "google", "carto"
 MAP_STYLE = "default"
 
-# Toggle lifer marker (first sighting in dataset gets blue marker)
+# Toggle lifer marker (first sighting in dataset)
 MARK_LIFER = True
+
+# Toggle last-seen marker (most recent sighting; ignored if same location as lifer)
+MARK_LAST_SEEN = True
+
+# Pin colours (edge, fill) — lifer, last seen, species match, default
+LIFER_COLOR, LIFER_FILL = "purple", "yellow"
+LAST_SEEN_COLOR, LAST_SEEN_FILL = "purple", "lightgreen"
+SPECIES_COLOR, SPECIES_FILL = "purple", "red"
+DEFAULT_COLOR, DEFAULT_FILL = "green", "lightgreen"
 
 # Optional date range filtering (set to False to disable)
 # Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
@@ -169,10 +192,10 @@ display(HTML("""
 #
 # This utility function ensures consistency in handling date and time columns:
 # - Parses `Date` to proper datetime objects
-# - Fills missing `Time` values with `"00:00"`
+# - Fills missing `Time` values with `"12:00 AM"` (so they parse when mixed with AM/PM times)
 # - Combines both into a new `datetime` column
 #
-# Use this function on both the full and filtered datasets when you need a datetime for sorting or filtering lifers.
+# Used for sorting lifer and last-seen locations, and for chronological ordering in popups.
 #
 
 # %%
@@ -182,10 +205,10 @@ display(HTML("""
 def add_datetime_column(df):
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df["Time"] = df["Time"].fillna("00:00")
-    df["datetime"] = pd.to_datetime(
-        df["Date"].astype(str) + " " + df["Time"],
-        errors="coerce"
-    )
+    # Normalize "00:00" to "12:00 AM" so it parses when mixed with AM/PM times (e.g. "08:30 AM")
+    time_str = df["Time"].astype(str).replace("00:00", "12:00 AM")
+    date_str = df["Date"].apply(lambda x: x.strftime("%Y-%m-%d") if pd.notna(x) else "")
+    df["datetime"] = pd.to_datetime(date_str + " " + time_str, errors="coerce")
     return df
 
 
@@ -203,7 +226,7 @@ def add_datetime_column(df):
 #
 # 📝 **Important:**  
 # - The date filter only affects the main working dataset (`df`)  
-# - Lifers are still calculated from the **full dataset**, unaffected by date filtering  
+# - Lifers and last-seen are calculated from the **full dataset**, unaffected by date filtering  
 # - Popups and location visits reflect the filtered `df` — not full visit history
 #
 #
@@ -398,16 +421,16 @@ def filter_species(df, base_species):
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🐣 Build True Lifer Table
+# ### 🐣 Build True Lifer and Last-Seen Tables
 #
-# Creates a lookup dictionary of true lifer locations for each species by:
+# Creates lookup dictionaries for lifer (first-ever) and last-seen (most recent) locations per species:
 #
 # - Reloading the full dataset to avoid effects of any active filters
 # - Parsing and combining dates and times into full datetime objects
 # - Sorting the full data chronologically
-# - Finding the first-ever sighting (lifer) location per species based on datetime
+# - Finding the first-ever sighting (lifer) and most recent sighting (last-seen) per species
 #
-# Used to correctly mark lifers regardless of current date filters.
+# Used to correctly mark lifer and last-seen pins regardless of current date filters.
 #
 
 # %%
@@ -435,11 +458,12 @@ def _base_species_for_lifer(sci_name):
 
 _full = (
     full_df.sort_values("datetime")
-    .dropna(subset=["Scientific Name", "Location ID"])
+    .dropna(subset=["Scientific Name", "Location ID", "datetime"])
     .assign(_base=lambda x: x["Scientific Name"].apply(_base_species_for_lifer))
 )
 _full = _full[_full["_base"].notna()]
 true_lifer_locations = _full.groupby("_base").first()["Location ID"].to_dict()
+true_last_seen_locations = _full.groupby("_base").last()["Location ID"].to_dict()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -679,19 +703,20 @@ def create_map(map_center):
 #
 # - **No species selected**:  
 #   - Places **green** markers at all locations in the dataset  
-#   - Popups show full visit history (dates and times)
+#   - Shows **all-species banner** (checklists, species count, individuals)
+#   - Popups show visit history with links to each checklist and to the location's eBird life list page
 #
 # - **Species selected**:  
-#   - Filters dataset using `filter_species()`
+#   - Filters dataset using `filter_species()`, centres map on species locations
 #   - Adds **red** markers at locations where species was seen  
-#   - Optionally adds a **blue** marker for the lifer location (first-ever sighting of that species)
-#   - Green markers are still shown for locations with no sightings unless the checkbox hides them
+#   - Optionally adds distinct pins for **lifer** (first-ever) and **last-seen** (most recent) — colours configurable
+#   - Shows **species-specific banner** (checklists, individuals, high count)
+#   - Green markers for locations with no sightings unless the checkbox hides them
+#   - Popups include checklist links, Macaulay Library media links (📷) when available, and location links
 #
 # Extra features:
-# - Automatically centres the map using the average coordinates
-# - Dynamically updates the map in the notebook output
+# - Map centres on species locations when filtering; on all locations when viewing "All species"
 # - Saves map as HTML if `EXPORT_HTML = True`
-# - Ensures large, readable popups using HTML formatting
 #
 
 # %%
@@ -761,9 +786,9 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
-                color="green",
+                color=DEFAULT_COLOR,
                 fill=True,
-                fill_color="lightgreen",
+                fill_color=DEFAULT_FILL,
                 fill_opacity=0.6,
                 popup=popup
             ).add_to(species_map)
@@ -789,19 +814,28 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         species_map.get_root().html.add_child(Element(banner_html))
 
         lifer_location = None
+        last_seen_location = None
         if MARK_LIFER:
             base = _base_species_for_lifer(selected_species)
             true_lifer_loc = true_lifer_locations.get(base) if base else None
             if true_lifer_loc in seen_location_ids:
                 lifer_location = true_lifer_loc
+        if MARK_LAST_SEEN:
+            base = _base_species_for_lifer(selected_species)
+            true_last_loc = true_last_seen_locations.get(base) if base else None
+            if true_last_loc in seen_location_ids and true_last_loc != lifer_location:
+                last_seen_location = true_last_loc
 
         # Prepare classification flags
         location_data_local = location_data.copy()
         location_data_local["has_species_match"] = location_data_local["Location ID"].isin(seen_location_ids)
         location_data_local["is_lifer"] = location_data_local["Location ID"] == lifer_location
+        location_data_local["is_last_seen"] = location_data_local["Location ID"] == last_seen_location
 
-        # Sort so lifer is drawn last
-        location_data_local = location_data_local.sort_values(by=["has_species_match", "is_lifer"])
+        # Sort so lifer drawn last (on top), then last seen, then species, then non-matching
+        location_data_local = location_data_local.sort_values(
+            by=["has_species_match", "is_lifer", "is_last_seen"], ascending=[True, True, True]
+        )
 
         # Single loop for marker drawing
         for _, row in location_data_local.iterrows():
@@ -827,11 +861,13 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 popup_content = folium.Popup(base_popup, max_width=800)
 
             if row["is_lifer"]:
-                color, fill, radius, fill_opacity = "purple", "yellow", 5, 0.9
+                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.9
+            elif row["is_last_seen"]:
+                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.9
             elif row["has_species_match"]:
-                color, fill, radius, fill_opacity = "purple", "red", 4, 0.8
+                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.8
             else:
-                color, fill, radius, fill_opacity = "green", "lightgreen", 4, 0.6
+                color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.6
 
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
