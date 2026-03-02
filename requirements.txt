@@ -1,0 +1,8 @@
+# Dependencies for personal_ebird_explorer notebook (Binder + pip install -r)
+jupyter
+jupyterlab
+voila
+pandas
+folium
+ipywidgets
+whoosh
