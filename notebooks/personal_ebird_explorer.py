@@ -236,25 +236,31 @@ def add_datetime_column(df):
 # --------------------------------------------
 # ✅ Configuration & Data Loading
 # --------------------------------------------
-# Load DATA_FOLDER from config_secret.py (if it exists) or fallback to config_template.py
-def load_config_variable(var_name: str, fallback_module="config_template"):
-    config_module_path = os.path.abspath("../scripts/config_secret.py")
-    if os.path.exists(config_module_path):
-        spec = importlib.util.spec_from_file_location("config_secret", config_module_path)
-        config = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(config)
-    else:
-        config = importlib.import_module(fallback_module)
-
-    return getattr(config, var_name)
-
-# Get the data folder from config
-DATA_FOLDER = load_config_variable("DATA_FOLDER")
-
-# Build full file paths
-file_path = os.path.join(DATA_FOLDER, EBIRD_DATA_FILE_NAME)
-map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
-os.makedirs(DATA_FOLDER, exist_ok=True)
+# Try config_secret first; if not found (e.g. Binder), use upload path (current directory)
+config_secret_path = os.path.abspath(os.path.join(os.getcwd(), "..", "scripts", "config_secret.py"))
+if os.path.exists(config_secret_path):
+    # Local install: use config_secret
+    spec = importlib.util.spec_from_file_location("config_secret", config_secret_path)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+    DATA_FOLDER = getattr(config, "DATA_FOLDER")
+    file_path = os.path.join(DATA_FOLDER, EBIRD_DATA_FILE_NAME)
+    map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
+    os.makedirs(DATA_FOLDER, exist_ok=True)
+else:
+    # Binder / no config: expect file uploaded via Jupyter (File → Upload or drag-and-drop)
+    DATA_FOLDER = os.getcwd()
+    file_path = os.path.join(DATA_FOLDER, EBIRD_DATA_FILE_NAME)
+    map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(
+            f"Data file not found: {file_path}\n\n"
+            "If you're on Binder (or don't have config_secret.py), upload your eBird CSV:\n"
+            "  1. Use the file browser on the left (or File → Open)\n"
+            "  2. Click Upload and select your MyEBirdData.csv\n"
+            "  3. Re-run this cell\n\n"
+            f"Expected filename: {EBIRD_DATA_FILE_NAME}"
+        )
 
 # Load data
 df = pd.read_csv(file_path)
