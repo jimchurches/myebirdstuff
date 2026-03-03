@@ -90,6 +90,8 @@
 #   - `False` — include all data
 # - `FILTER_START_DATE`, `FILTER_END_DATE`: format as `YYYY-MM-DD`  
 #   These only apply if `FILTER_BY_DATE` is `True`.
+# - `POPUP_SORT_ORDER`: `"ascending"` (oldest first) or `"descending"` (newest first) for visit/species lists in popups.
+# - `POPUP_SCROLL_HINT`: when popup content overflows, show `"chevron"` (▲▼), `"shading"` (fade gradients), or `"both"` to compare.
 #
 # > NOTE: Paths (not file names) are stored in the config files in the scritps folder of the code repo.  You can easily move paths here if you wish.
 #
@@ -131,6 +133,12 @@ LIFER_COLOR, LIFER_FILL = "purple", "yellow"
 LAST_SEEN_COLOR, LAST_SEEN_FILL = "purple", "lightgreen"
 SPECIES_COLOR, SPECIES_FILL = "purple", "red"
 DEFAULT_COLOR, DEFAULT_FILL = "green", "lightgreen"
+
+# Popup sort order: "ascending" (oldest first) or "descending" (newest first)
+POPUP_SORT_ORDER = "ascending"
+
+# Popup scroll hint when content overflows: "chevron" (▲▼), "shading" (fade gradients), or "both"
+POPUP_SCROLL_HINT = "shading"
 
 # Optional date range filtering (set to False to disable)
 # Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
@@ -778,9 +786,10 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         """
         species_map.get_root().html.add_child(Element(banner_html))
 
+        popup_asc = POPUP_SORT_ORDER == "ascending"
         for _, row in location_data.iterrows():
             base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"])
+            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
             visit_info = "<br>".join(
                 f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
                 for _, r in visit_records.iterrows()
@@ -788,7 +797,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             loc_id = row["Location ID"]
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            popup_html = f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div>'
+            popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
             popup = folium.Popup(popup_html, max_width=800)
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
@@ -802,6 +811,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
     else:
         # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
+        popup_asc = POPUP_SORT_ORDER == "ascending"
         filtered_by_loc = {lid: grp for lid, grp in filtered.groupby("Location ID")}
 
         # Stats for banner (Count can be "X" for present; treat as 1)
@@ -852,7 +862,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 continue
 
             base_records = records_by_loc.get(loc_id, pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"])
+            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
             visit_info = "<br>".join(
                 f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
                 for _, r in visit_records.iterrows()
@@ -860,11 +870,11 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
             if row["has_species_match"]:
-                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"])
+                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
                 obs_details = "".join(format_sighting_row(r) for _, r in sub.iterrows())
-                popup_html = f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div>'
+                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div></div>'
             else:
-                popup_html = f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div>'
+                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
             popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:
@@ -886,29 +896,93 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 popup=popup_content
             ).add_to(species_map)
 
-    # Scroll popup to bottom (latest data) when opened; runs in map iframe
-    scroll_popup_script = """
+    # Scroll popup, scroll-aware chevrons/shading; runs in map iframe
+    scroll_hint = repr(POPUP_SCROLL_HINT)
+    scroll_to_bottom = "true" if POPUP_SORT_ORDER == "ascending" else "false"
+    scroll_popup_script = f"""
 <script>
-(function() {
-  function scrollPopupToBottom() {
-    var scrollable = document.querySelector('.leaflet-popup-content div[style*="overflow-y"]');
-    if (scrollable && scrollable.scrollHeight > scrollable.clientHeight) {
-      scrollable.scrollTop = scrollable.scrollHeight;
-    }
-  }
-  var observer = new MutationObserver(function(mutations) {
-    for (var i = 0; i < mutations.length; i++) {
-      for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+(function() {{
+  var HINT = {scroll_hint};
+  var SCROLL_TO_BOTTOM = {scroll_to_bottom};
+
+  function updateHints(scrollable, wrapper) {{
+    var st = scrollable.scrollTop;
+    var maxScroll = scrollable.scrollHeight - scrollable.clientHeight;
+    var hasMoreAbove = st > 0;
+    var hasMoreBelow = st < maxScroll;
+
+    if (HINT === 'chevron' || HINT === 'both') {{
+      var upEl = wrapper.querySelector('.popup-scroll-up');
+      var downEl = wrapper.querySelector('.popup-scroll-down');
+      if (upEl) upEl.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
+      if (downEl) downEl.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
+    }}
+    if (HINT === 'shading' || HINT === 'both') {{
+      var topShade = wrapper.querySelector('.popup-scroll-shade-top');
+      var botShade = wrapper.querySelector('.popup-scroll-shade-bot');
+      if (topShade) topShade.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
+      if (botShade) botShade.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
+    }}
+  }}
+
+  function setupPopup(scrollable, wrapper) {{
+    var hasOverflow = scrollable.scrollHeight > scrollable.clientHeight;
+    if (!hasOverflow) return;
+
+    scrollable.scrollTop = SCROLL_TO_BOTTOM ? scrollable.scrollHeight : 0;
+
+    var scrollTop = scrollable.offsetTop;
+    if (HINT === 'chevron' || HINT === 'both') {{
+      var up = document.createElement('div');
+      up.className = 'popup-scroll-up';
+      up.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
+      up.textContent = '\\u25B2';
+      var down = document.createElement('div');
+      down.className = 'popup-scroll-down';
+      down.style.cssText = 'position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
+      down.textContent = '\\u25BC';
+      wrapper.appendChild(up);
+      wrapper.appendChild(down);
+    }}
+    if (HINT === 'shading' || HINT === 'both') {{
+      var topShade = document.createElement('div');
+      topShade.className = 'popup-scroll-shade-top';
+      topShade.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
+      var botShade = document.createElement('div');
+      botShade.className = 'popup-scroll-shade-bot';
+      botShade.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
+      wrapper.appendChild(topShade);
+      wrapper.appendChild(botShade);
+    }}
+
+    updateHints(scrollable, wrapper);
+    scrollable.addEventListener('scroll', function() {{ updateHints(scrollable, wrapper); }});
+  }}
+
+  function onPopupOpen() {{
+    setTimeout(function() {{
+      var scrollable = document.querySelector('.leaflet-popup-content div[style*="overflow-y"]');
+      if (!scrollable) return;
+      var wrapper = scrollable.parentElement;
+      if (wrapper.dataset.popupSetup) return;
+      wrapper.dataset.popupSetup = '1';
+      setupPopup(scrollable, wrapper);
+    }}, 100);
+  }}
+
+  var observer = new MutationObserver(function(mutations) {{
+    for (var i = 0; i < mutations.length; i++) {{
+      for (var j = 0; j < mutations[i].addedNodes.length; j++) {{
         var node = mutations[i].addedNodes[j];
-        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {
-          setTimeout(scrollPopupToBottom, 100);
+        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {{
+          onPopupOpen();
           return;
-        }
-      }
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-})();
+        }}
+      }}
+    }}
+  }});
+  observer.observe(document.body, {{ childList: true, subtree: true }});
+}})();
 </script>
 """
     species_map.get_root().html.add_child(Element(scroll_popup_script))
