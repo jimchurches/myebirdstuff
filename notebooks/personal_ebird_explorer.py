@@ -788,7 +788,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             loc_id = row["Location ID"]
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            popup_html = f'<div style="max-height:350px;overflow-y:auto;"><b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}</div>'
+            popup_html = f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div>'
             popup = folium.Popup(popup_html, max_width=800)
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
@@ -862,9 +862,9 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             if row["has_species_match"]:
                 sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"])
                 obs_details = "".join(format_sighting_row(r) for _, r in sub.iterrows())
-                popup_html = f'<div style="max-height:350px;overflow-y:auto;"><b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div>'
+                popup_html = f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div>'
             else:
-                popup_html = f'<div style="max-height:350px;overflow-y:auto;"><b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}</div>'
+                popup_html = f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div>'
             popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:
@@ -901,7 +901,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
       for (var j = 0; j < mutations[i].addedNodes.length; j++) {
         var node = mutations[i].addedNodes[j];
         if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {
-          setTimeout(scrollPopupToBottom, 50);
+          setTimeout(scrollPopupToBottom, 100);
           return;
         }
       }
@@ -978,3 +978,5 @@ draw_map_with_species_overlay("", "")
 # --------------------------------------------
 display(map_output)
 
+
+# %%
