@@ -788,7 +788,8 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             loc_id = row["Location ID"]
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            popup = folium.Popup(f"<b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}", max_width=800)
+            popup_html = f'<div style="max-height:350px;overflow-y:auto;"><b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}</div>'
+            popup = folium.Popup(popup_html, max_width=800)
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
@@ -858,13 +859,13 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             ) if not visit_records.empty else ""
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            base_popup = f"<b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}"
             if row["has_species_match"]:
-                sub = filtered_by_loc.get(loc_id, pd.DataFrame())
+                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"])
                 obs_details = "".join(format_sighting_row(r) for _, r in sub.iterrows())
-                popup_content = folium.Popup(base_popup + "<br><b>Seen:</b>" + obs_details, max_width=800)
+                popup_html = f'<div style="max-height:350px;overflow-y:auto;"><b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div>'
             else:
-                popup_content = folium.Popup(base_popup, max_width=800)
+                popup_html = f'<div style="max-height:350px;overflow-y:auto;"><b>{loc_link}</b><br><b>Visited:</b><br>{visit_info}</div>'
+            popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:
                 color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.9
@@ -884,6 +885,33 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 fill_opacity=fill_opacity,
                 popup=popup_content
             ).add_to(species_map)
+
+    # Scroll popup to bottom (latest data) when opened; runs in map iframe
+    scroll_popup_script = """
+<script>
+(function() {
+  function scrollPopupToBottom() {
+    var scrollable = document.querySelector('.leaflet-popup-content div[style*="overflow-y"]');
+    if (scrollable && scrollable.scrollHeight > scrollable.clientHeight) {
+      scrollable.scrollTop = scrollable.scrollHeight;
+    }
+  }
+  var observer = new MutationObserver(function(mutations) {
+    for (var i = 0; i < mutations.length; i++) {
+      for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+        var node = mutations[i].addedNodes[j];
+        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {
+          setTimeout(scrollPopupToBottom, 50);
+          return;
+        }
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+"""
+    species_map.get_root().html.add_child(Element(scroll_popup_script))
 
     with map_output:
         map_output.clear_output()
