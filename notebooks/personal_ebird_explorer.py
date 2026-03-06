@@ -818,14 +818,47 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         n_checklists = filtered["Submission ID"].nunique()
         n_individuals = int(filtered["Count"].apply(_safe_count).sum())
         high_count = int(filtered["Count"].apply(_safe_count).max())
+
+        # Banner date format: dd MMM yyyy (e.g. 22 Jan 2025)
+        def _banner_date(d):
+            return d.strftime("%d-%b-%Y") if pd.notna(d) else "?"
+
+        # First seen / last seen (dates only, same as lifer and last-seen pins)
+        first_seen_date = ""
+        last_seen_date = ""
+        high_count_date = ""
+        base = _base_species_for_lifer(selected_species)
+        if base:
+            subset = _full[_full["_base"] == base]
+            if not subset.empty:
+                first_rec = subset.iloc[0]
+                last_rec = subset.iloc[-1]
+                first_seen_date = _banner_date(first_rec["Date"])
+                last_seen_date = _banner_date(last_rec["Date"])
+
+        # Date when high count was achieved
+        high_count_rows = filtered[filtered["Count"].apply(_safe_count) == high_count]
+        if not high_count_rows.empty:
+            high_count_date = _banner_date(high_count_rows.iloc[0]["Date"])
+
+        sep = " &nbsp;|&nbsp; "
+        line2 = f"{n_checklists} checklist{n_checklists != 1 and 's' or ''}{sep}{n_individuals} individual{n_individuals != 1 and 's' or ''}"
+        line3_parts = []
+        if first_seen_date:
+            line3_parts.append(f"First seen: {first_seen_date}")
+        if last_seen_date:
+            line3_parts.append(f"Last seen: {last_seen_date}")
+        line3 = sep.join(line3_parts)
+        line4 = f"High count: {high_count_date} ({high_count})"
+
         banner_html = f"""
         <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
                     padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
                     font-family:sans-serif;font-size:13px;line-height:1.5;">
             <b>{selected_common_name or selected_species}</b><br>
-            {n_checklists} checklist{n_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
-            {n_individuals} individual{n_individuals != 1 and 's' or ''} &nbsp;|&nbsp;
-            high count {high_count}
+            {line2}<br>
+            {line3}<br>
+            {line4}
         </div>
         """
         species_map.get_root().html.add_child(Element(banner_html))
