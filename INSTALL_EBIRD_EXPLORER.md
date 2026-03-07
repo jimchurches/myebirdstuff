@@ -117,13 +117,13 @@ pip install -r requirements-explorer.txt
 **Windows:**
 
 ```bat
-pip install jupyter jupyterlab voila pandas folium ipywidgets whoosh
+pip install jupyter jupyterlab voila pandas folium ipywidgets whoosh scikit-learn
 ```
 
 **macOS:**
 
 ```bash
-pip3 install jupyter jupyterlab voila pandas folium ipywidgets whoosh
+pip3 install jupyter jupyterlab voila pandas folium ipywidgets whoosh scikit-learn
 ```
 
 (If you’re in a venv, you can use `pip` on macOS too.)
@@ -139,6 +139,7 @@ What these are for:
 | `folium`    | Draw the interactive map. |
 | `ipywidgets`| Search box and other controls in the notebook. |
 | `whoosh`    | Fast species name search (autocomplete). |
+| `scikit-learn` | BallTree for close-location detection (within 10 m). |
 
 **Note:** `branca` (used by folium for map elements) is installed automatically as a dependency of `folium`. `IPython` comes with `jupyter`.
 

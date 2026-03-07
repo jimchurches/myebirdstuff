@@ -6,3 +6,4 @@ pandas
 folium
 ipywidgets
 whoosh
+scikit-learn

@@ -92,6 +92,9 @@
 #   These only apply if `FILTER_BY_DATE` is `True`.
 # - `POPUP_SORT_ORDER`: `"ascending"` (oldest first) or `"descending"` (newest first) for visit/species lists in popups.
 # - `POPUP_SCROLL_HINT`: when popup content overflows, show `"chevron"` (▲▼), `"shading"` (fade gradients), or `"both"` to compare.
+# - `CLOSE_LOCATION_METERS`: distance (m) below which locations are considered "close" (duplicates/near-duplicates).
+# - `CLOSE_LOCATION_COLOR`, `CLOSE_LOCATION_FILL`: pin colour for near-duplicates (within 10 m).
+# - `EXACT_DUPLICATE_COLOR`, `EXACT_DUPLICATE_FILL`: pin colour for exact duplicates (same coords, different Location IDs).
 #
 # > NOTE: Paths (not file names) are stored in the config files in the scritps folder of the code repo.  You can easily move paths here if you wish.
 #
@@ -139,6 +142,11 @@ POPUP_SORT_ORDER = "ascending"
 
 # Popup scroll hint when content overflows: "chevron" (▲▼), "shading" (fade gradients), or "both"
 POPUP_SCROLL_HINT = "shading"
+
+# Highlight locations within this distance (meters) of another; checkbox toggles display
+CLOSE_LOCATION_METERS = 10
+CLOSE_LOCATION_COLOR, CLOSE_LOCATION_FILL = "red", "red"  # Near-duplicates (within 10 m)
+EXACT_DUPLICATE_COLOR, EXACT_DUPLICATE_FILL = "deeppink", "pink"  # Exact same coords (different Location IDs)
 
 # Optional date range filtering (set to False to disable)
 # Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
@@ -273,6 +281,7 @@ else:
 # Load data
 df = pd.read_csv(file_path)
 df = add_datetime_column(df)
+df_full = df.copy()  # Keep full dataset for close-location detection (unaffected by date filter)
 
 # Apply date filter if enabled
 if FILTER_BY_DATE:
@@ -284,8 +293,14 @@ if FILTER_BY_DATE:
     except Exception as e:
         raise ValueError(f"Invalid date filter settings: {e}")
 
+# Exclude locations with no associated checklist (e.g. orphaned from cleanup, shared-list quirks)
+location_ids_with_checklists = set(df_full.dropna(subset=["Submission ID"])["Location ID"].unique())
+df = df[df["Location ID"].isin(location_ids_with_checklists)]
+df_full = df_full[df_full["Location ID"].isin(location_ids_with_checklists)]
+
 # Extract location and species info
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
+full_location_data = df_full[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 selected_species_name = ""
 selected_species_common_name = ""
@@ -399,6 +414,15 @@ hide_non_matching_checkbox = Checkbox(
     description='Show only selected species',
     indent=False
 )
+highlight_close_checkbox = Checkbox(
+    value=False,
+    description="Highlight duplicate/near duplicate locations",
+    indent=False
+)
+highlight_close_hint = widgets.HTML(
+    value=f'<span style="font-size:11px;color:#666;">⚠️ Experimental — <span style="color:{EXACT_DUPLICATE_COLOR}">●</span> exact same coords; <span style="color:{CLOSE_LOCATION_COLOR}">●</span> within {CLOSE_LOCATION_METERS} m. Use to find locations to merge.</span>'
+)
+highlight_close_box = VBox([highlight_close_checkbox, highlight_close_hint])
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -433,6 +457,59 @@ def filter_species(df, base_species):
     )
     return filtered_df[mask]
 
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
+# ### 📍 Close Location Detection
+#
+# Finds locations within a configurable distance (e.g. 10 m) of another — useful for spotting
+# duplicates or near-duplicates. When the checkbox is enabled, these are highlighted.
+#
+
+# %%
+# --------------------------------------------
+# ✅ Close-location lookup (BallTree + haversine, metres)
+# --------------------------------------------
+def _find_close_location_ids(loc_df, threshold_m):
+    """Return (exact_duplicate_ids, near_duplicate_ids).
+    - exact_duplicate_ids: different Location IDs at the exact same coordinates
+    - near_duplicate_ids: within threshold_m of another location, but not exact duplicates
+    Uses sklearn BallTree with haversine metric — distances in metres, no projection issues."""
+    one_per_loc = loc_df[["Location ID", "Latitude", "Longitude"]].drop_duplicates(subset=["Location ID"], keep="first")
+    one_per_loc = one_per_loc.copy()
+    one_per_loc["Latitude"] = pd.to_numeric(one_per_loc["Latitude"], errors="coerce")
+    one_per_loc["Longitude"] = pd.to_numeric(one_per_loc["Longitude"], errors="coerce")
+    one_per_loc = one_per_loc.dropna(subset=["Latitude", "Longitude"])
+
+    if len(one_per_loc) < 2:
+        return set(), set()
+
+    import numpy as np
+    from sklearn.neighbors import BallTree
+
+    # Exact duplicates: same (Lat, Lon), different Location IDs
+    coord_cols = ["Latitude", "Longitude"]
+    dup_coords = one_per_loc[coord_cols].round(6).duplicated(keep=False)
+    exact_duplicate_ids = set(one_per_loc.loc[dup_coords, "Location ID"].tolist())
+
+    # Near duplicates: BallTree haversine, within threshold_m
+    coords = np.radians(one_per_loc[["Latitude", "Longitude"]].values)
+    ids = one_per_loc["Location ID"].tolist()
+    earth_radius = 6_371_000  # metres
+    radius_rad = threshold_m / earth_radius
+
+    tree = BallTree(coords, metric="haversine")
+    indices, distances = tree.query_radius(coords, r=radius_rad, return_distance=True)
+
+    near_duplicate_ids = set()
+    for i, (neighbors, dists) in enumerate(zip(indices, distances)):
+        for k, j in enumerate(neighbors):
+            if i != j:  # exclude self
+                d_m = dists[k] * earth_radius
+                # Exclude exact duplicates (distance ~0) from near set; they get pink
+                if d_m > 0.01:  # more than 1 cm apart
+                    near_duplicate_ids.add(ids[i])
+                    near_duplicate_ids.add(ids[j])
+    return exact_duplicate_ids, near_duplicate_ids
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🐣 Build True Lifer and Last-Seen Tables
@@ -540,13 +617,19 @@ def on_species_selected(change):
     draw_map_with_species_overlay(selected_species_name, selected_species_common_name)
 
 
-# ✅ Called when the "hide non-matching" checkbox is toggled
+# ✅ Called when the "hide non-matching" checkbox is toggled (species filter only)
 def on_toggle_change(change):
     global selected_species_name, selected_species_common_name
     with output:
         print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_name}")
     if selected_species_name:
         draw_map_with_species_overlay(selected_species_name, selected_species_common_name)
+
+
+# ✅ Called when the "highlight close locations" checkbox is toggled (redraw only, no output)
+def on_highlight_close_change(change):
+    global selected_species_name, selected_species_common_name
+    draw_map_with_species_overlay(selected_species_name or "", selected_species_common_name or "")
 
 
 # ✅ Called when search box is cleared (after short debounce)
@@ -671,6 +754,7 @@ search_box.observe(update_suggestions, names="value")
 search_box.observe(on_search_box_cleared, names="value")
 dropdown.observe(on_species_selected, names="value")
 hide_non_matching_checkbox.observe(on_toggle_change, names="value")
+highlight_close_checkbox.observe(on_highlight_close_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -772,6 +856,13 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             media_html = f' <a href="https://macaulaylibrary.org/asset/{first_ml}" target="_blank" title="View media">📷</a>'
         return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
 
+    # Close locations (when checkbox enabled) — use FULL dataset so detection is consistent
+    # regardless of date filter; only flag locations that are also on the map (in location_data)
+    exact_duplicate_ids = set()
+    near_duplicate_ids = set()
+    if highlight_close_checkbox.value:
+        exact_duplicate_ids, near_duplicate_ids = _find_close_location_ids(full_location_data, CLOSE_LOCATION_METERS)
+
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
         banner_html = f"""
@@ -799,12 +890,18 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
             popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
             popup = folium.Popup(popup_html, max_width=800)
+            if loc_id in exact_duplicate_ids:
+                color, fill = EXACT_DUPLICATE_COLOR, EXACT_DUPLICATE_FILL
+            elif loc_id in near_duplicate_ids:
+                color, fill = CLOSE_LOCATION_COLOR, CLOSE_LOCATION_FILL
+            else:
+                color, fill = DEFAULT_COLOR, DEFAULT_FILL
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
-                color=DEFAULT_COLOR,
+                color=color,
                 fill=True,
-                fill_color=DEFAULT_FILL,
+                fill_color=fill,
                 fill_opacity=0.6,
                 popup=popup
             ).add_to(species_map)
@@ -881,6 +978,8 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         location_data_local["has_species_match"] = location_data_local["Location ID"].isin(seen_location_ids)
         location_data_local["is_lifer"] = location_data_local["Location ID"] == lifer_location
         location_data_local["is_last_seen"] = location_data_local["Location ID"] == last_seen_location
+        location_data_local["is_exact_dup"] = location_data_local["Location ID"].isin(exact_duplicate_ids)
+        location_data_local["is_near_dup"] = location_data_local["Location ID"].isin(near_duplicate_ids)
 
         # Sort so lifer drawn last (on top), then last seen, then species, then non-matching
         location_data_local = location_data_local.sort_values(
@@ -890,6 +989,8 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         # Single loop for marker drawing
         for _, row in location_data_local.iterrows():
             loc_id = row["Location ID"]
+            is_exact_dup = loc_id in exact_duplicate_ids
+            is_near_dup = loc_id in near_duplicate_ids
 
             if not row["has_species_match"] and hide_non_matching_checkbox.value:
                 continue
@@ -910,7 +1011,11 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
             popup_content = folium.Popup(popup_html, max_width=800)
 
-            if row["is_lifer"]:
+            if highlight_close_checkbox.value and row["is_exact_dup"]:
+                color, fill, radius, fill_opacity = EXACT_DUPLICATE_COLOR, EXACT_DUPLICATE_FILL, 4, 0.8
+            elif highlight_close_checkbox.value and row["is_near_dup"]:
+                color, fill, radius, fill_opacity = CLOSE_LOCATION_COLOR, CLOSE_LOCATION_FILL, 4, 0.8
+            elif row["is_lifer"]:
                 color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.9
             elif row["is_last_seen"]:
                 color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.9
@@ -1064,7 +1169,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 # --------------------------------------------
 
 # ✅ Display the UI
-display(VBox([search_box, dropdown, hide_non_matching_checkbox, output]))
+display(VBox([search_box, dropdown, hide_non_matching_checkbox, highlight_close_box, output]))
 
 # ✅ Draw initial map (no filters applied)
 draw_map_with_species_overlay("", "")
