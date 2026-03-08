@@ -148,13 +148,13 @@
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var raw = \"\" + ${rawEntry}; raw = raw.replace(/[\\\"“”‘’]/g, '').trim(); var parts = raw.split('|'); return JSON.stringify(parts);",
+      "Target": "var raw = (storedVars['rawEntry'] || ''); raw = raw.replace(/[\\\"“”‘’]/g, '').trim(); var parts = raw.split('|'); return JSON.stringify(parts);",
       "Value": "entryParts",
-      "Description": "Split raw clipboard entry into parts and store as JSON string"
+      "Description": "Split raw clipboard entry into parts (use storedVars to avoid apostrophe breaking JS)"
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var parts = JSON.parse(${entryParts}); if (parts.length < 3) return 'false'; var dt = parts[0].trim(); var gps = parts[1].replace('GPS:', '').trim(); var coords = gps.split(','); var lat = parseFloat(coords[0]); var lon = parseFloat(coords[1]); if (dt.indexOf('Date/time:') === -1 || dt.indexOf(' at ') === -1) return 'false'; if (parts[2].indexOf('Record(s):') === -1) return 'false'; if (coords.length !== 2 || isNaN(lat) || isNaN(lon)) return 'false'; if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return 'false'; return 'true';",
+      "Target": "var parts = JSON.parse(storedVars['entryParts'] || '[]'); if (parts.length < 3) return 'false'; var dt = parts[0].trim(); var gps = parts[1].replace('GPS:', '').trim(); var coords = gps.split(','); var lat = parseFloat(coords[0]); var lon = parseFloat(coords[1]); if (dt.indexOf('Date/time:') === -1 || dt.indexOf(' at ') === -1) return 'false'; if (parts[2].indexOf('Record(s):') === -1) return 'false'; if (coords.length !== 2 || isNaN(lat) || isNaN(lon)) return 'false'; if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return 'false'; return 'true';",
       "Value": "clipboardValid",
       "Description": "Validate clipboard format using cleaned and parsed parts"
     },
@@ -196,9 +196,9 @@
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var raw = '${rawEntry}'; var dt = raw.split('|')[0]; return dt.replace('Date/time:', '').replace(/['\"“”]/g, '').trim();",
+      "Target": "var raw = (storedVars['rawEntry'] || ''); var dt = raw.split('|')[0]; return dt.replace('Date/time:', '').replace(/['\"“”]/g, '').trim();",
       "Value": "datetimeRaw",
-      "Description": "Clean datetime (no quotes, no smart characters)"
+      "Description": "Clean datetime (use storedVars to avoid apostrophe breaking JS)"
     },
     {
       "Command": "echo",
@@ -220,9 +220,9 @@
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var parts = ${rawEntry}.split('|'); return parts[1].replace('GPS:', '').trim();",
+      "Target": "var raw = (storedVars['rawEntry'] || ''); var parts = raw.split('|'); return parts[1] ? parts[1].replace('GPS:', '').trim() : '';",
       "Value": "gpsRaw",
-      "Description": "Extract GPS"
+      "Description": "Extract GPS (use storedVars to avoid apostrophe breaking JS)"
     },
     {
       "Command": "executeScript_Sandbox",
@@ -262,9 +262,9 @@
     },
     {
       "Command": "executeScript_Sandbox",
-      "Target": "var parts = ${rawEntry}.split('|'); return parts.slice(2).join('|').replace('Record(s):', '').trim();",
+      "Target": "var raw = (storedVars['rawEntry'] || ''); var parts = raw.split('|'); return parts.slice(2).join('|').replace('Record(s):', '').trim();",
       "Value": "commentText",
-      "Description": "Extract dictation comment"
+      "Description": "Extract dictation comment (use storedVars to avoid apostrophe breaking JS)"
     },
     {
       "Command": "executeScript_Sandbox",
