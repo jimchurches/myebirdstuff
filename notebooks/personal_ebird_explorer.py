@@ -30,7 +30,6 @@
 # - Lets you hide non-matching locations
 # - Offers type-ahead search that mimics eBird’s own species search behaviour
 # - Supports date-range filtering
-# - Highlights duplicate/near-duplicate locations (exact same coords or within 10 m) when enabled
 # - Adds detailed popups with links:
 #   - Location names link to your eBird life list for that place
 #   - Visit dates/times link to each checklist
@@ -93,9 +92,7 @@
 #   These only apply if `FILTER_BY_DATE` is `True`.
 # - `POPUP_SORT_ORDER`: `"ascending"` (oldest first) or `"descending"` (newest first) for visit/species lists in popups.
 # - `POPUP_SCROLL_HINT`: when popup content overflows, show `"chevron"` (▲▼), `"shading"` (fade gradients), or `"both"` to compare.
-# - `CLOSE_LOCATION_METERS`: distance (m) below which locations are considered "close" (duplicates/near-duplicates).
-# - `CLOSE_LOCATION_COLOR`, `CLOSE_LOCATION_FILL`: pin colour for near-duplicates (within CLOSE_LOCATION_METERS).
-# - `EXACT_DUPLICATE_COLOR`, `EXACT_DUPLICATE_FILL`: pin colour for exact duplicates (same coords, different Location IDs).
+# - `CLOSE_LOCATION_METERS`: distance (m) below which locations are considered "close" in the Map maintenance tab.
 #
 # > NOTE: Paths (not file names) are stored in the config files in the scripts folder of the code repo.  You can easily move paths here if you wish.
 #
@@ -144,10 +141,8 @@ POPUP_SORT_ORDER = "ascending"
 # Popup scroll hint when content overflows: "chevron" (▲▼), "shading" (fade gradients), or "both"
 POPUP_SCROLL_HINT = "shading"
 
-# Highlight locations within this distance (meters) of another; checkbox toggles display
-CLOSE_LOCATION_METERS = 10
-CLOSE_LOCATION_COLOR, CLOSE_LOCATION_FILL = "red", "red"  # Near-duplicates (within 10 m)
-EXACT_DUPLICATE_COLOR, EXACT_DUPLICATE_FILL = "deeppink", "pink"  # Exact same coords (different Location IDs)
+# Map maintenance tab: locations within this distance (meters) are considered "close"
+CLOSE_LOCATION_METERS = 30
 
 # Optional date range filtering (set to False to disable)
 # Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
@@ -285,7 +280,7 @@ else:
 # Load data
 df = pd.read_csv(file_path)
 df = add_datetime_column(df)
-df_full = df.copy()  # Keep full dataset for close-location detection (unaffected by date filter)
+df_full = df.copy()  # Keep full dataset for Map maintenance tab (unaffected by date filter)
 
 # Apply date filter if enabled
 if FILTER_BY_DATE:
@@ -299,8 +294,12 @@ if FILTER_BY_DATE:
 
 # Exclude locations with no associated checklist (e.g. orphaned from cleanup, shared-list quirks)
 location_ids_with_checklists = set(df_full.dropna(subset=["Submission ID"])["Location ID"].unique())
+all_locations_from_csv = df_full[["Location ID", "Location", "Latitude", "Longitude"]].drop_duplicates(subset=["Location ID"])
 df = df[df["Location ID"].isin(location_ids_with_checklists)]
 df_full = df_full[df_full["Location ID"].isin(location_ids_with_checklists)]
+
+# Locations without checklists (excluded from map and other tabs)
+locations_without_checklists = all_locations_from_csv[~all_locations_from_csv["Location ID"].isin(location_ids_with_checklists)]
 
 # Extract location and species info
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
@@ -420,15 +419,6 @@ hide_non_matching_checkbox = Checkbox(
     description='Show only selected species',
     indent=False
 )
-highlight_close_checkbox = Checkbox(
-    value=False,
-    description="Highlight duplicate/near duplicate locations",
-    indent=False
-)
-highlight_close_hint = widgets.HTML(
-    value=f'<span style="font-size:11px;color:#666;">⚠️ Experimental — <span style="color:{EXACT_DUPLICATE_COLOR}">●</span> exact same coords; <span style="color:{CLOSE_LOCATION_COLOR}">●</span> within {CLOSE_LOCATION_METERS} m. Use to find locations to merge.</span>'
-)
-highlight_close_box = VBox([highlight_close_checkbox, highlight_close_hint])
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -465,60 +455,73 @@ def filter_species(df, base_species):
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 📍 Close Location Detection
+# ### 📍 Map Maintenance Data (duplicates, close locations)
 #
-# Finds duplicate and near-duplicate locations:
-# - **Exact duplicates**: different Location IDs at the same coordinates (e.g. from shared lists)
-# - **Near-duplicates**: within a configurable distance (default 10 m) of another location
-#
-# When the checkbox is enabled, these are highlighted (colours configurable in User Variables).
+# Used by the Map maintenance tab to find exact duplicates and near-duplicate locations.
 #
 
 # %%
-# --------------------------------------------
-# ✅ Close-location lookup (BallTree + haversine, metres)
-# --------------------------------------------
-def _find_close_location_ids(loc_df, threshold_m):
-    """Return (exact_duplicate_ids, near_duplicate_ids).
-    - exact_duplicate_ids: different Location IDs at the exact same coordinates
-    - near_duplicate_ids: within threshold_m of another location, but not exact duplicates
-    Uses sklearn BallTree with haversine metric — distances in metres, no projection issues."""
-    one_per_loc = loc_df[["Location ID", "Latitude", "Longitude"]].drop_duplicates(subset=["Location ID"], keep="first")
+def _get_map_maintenance_data(loc_df, threshold_m):
+    """Return (exact_dup_rows, near_pairs) for Map maintenance tab.
+    - exact_dup_rows: list of (location_name, location_id, count) for duplicates table
+    - near_pairs: list of [(loc_id1, loc_name1), (loc_id2, loc_name2)] for close-location pairs
+    """
+    if "Location" not in loc_df.columns:
+        return [], []
+    one_per_loc = loc_df[["Location ID", "Location", "Latitude", "Longitude"]].drop_duplicates(subset=["Location ID"], keep="first")
     one_per_loc = one_per_loc.copy()
     one_per_loc["Latitude"] = pd.to_numeric(one_per_loc["Latitude"], errors="coerce")
     one_per_loc["Longitude"] = pd.to_numeric(one_per_loc["Longitude"], errors="coerce")
     one_per_loc = one_per_loc.dropna(subset=["Latitude", "Longitude"])
 
     if len(one_per_loc) < 2:
-        return set(), set()
+        return [], []
 
     import numpy as np
     from sklearn.neighbors import BallTree
 
-    # Exact duplicates: same (Lat, Lon), different Location IDs
+    id_to_name = dict(zip(one_per_loc["Location ID"], one_per_loc["Location"]))
+    id_to_coords = dict(zip(one_per_loc["Location ID"], zip(one_per_loc["Latitude"], one_per_loc["Longitude"])))
+
+    # Exact duplicates: group by coords. If same name appears multiple times, list once; if different names, list each.
     coord_cols = ["Latitude", "Longitude"]
     dup_coords = one_per_loc[coord_cols].round(6).duplicated(keep=False)
-    exact_duplicate_ids = set(one_per_loc.loc[dup_coords, "Location ID"].tolist())
+    dup_df = one_per_loc.loc[dup_coords]
+    exact_dup_rows = []
+    if not dup_df.empty:
+        grouped = dup_df.groupby(dup_df[coord_cols].round(6).apply(tuple, axis=1))
+        for _, grp in grouped:
+            count = len(grp)
+            # Dedupe by name: same name -> one row; different names -> separate rows
+            by_name = grp.drop_duplicates(subset=["Location"], keep="first")
+            for _, r in by_name.iterrows():
+                lat, lon = r["Latitude"], r["Longitude"]
+                exact_dup_rows.append((r["Location"], r["Location ID"], count, lat, lon))
 
-    # Near duplicates: BallTree haversine, within threshold_m
+    # Near duplicates: collect pairs (treat as pairs even if cluster has >2)
     coords = np.radians(one_per_loc[["Latitude", "Longitude"]].values)
     ids = one_per_loc["Location ID"].tolist()
-    earth_radius = 6_371_000  # metres
+    earth_radius = 6_371_000
     radius_rad = threshold_m / earth_radius
-
     tree = BallTree(coords, metric="haversine")
     indices, distances = tree.query_radius(coords, r=radius_rad, return_distance=True)
 
-    near_duplicate_ids = set()
+    seen_pairs = set()
+    near_pairs = []
     for i, (neighbors, dists) in enumerate(zip(indices, distances)):
         for k, j in enumerate(neighbors):
-            if i != j:  # exclude self
-                d_m = dists[k] * earth_radius
-                # Exclude exact duplicates (distance ~0) from near set; they get pink
-                if d_m > 0.01:  # more than 1 cm apart
-                    near_duplicate_ids.add(ids[i])
-                    near_duplicate_ids.add(ids[j])
-    return exact_duplicate_ids, near_duplicate_ids
+            if i != j and dists[k] * earth_radius > 0.01:
+                pair = tuple(sorted([ids[i], ids[j]]))
+                if pair not in seen_pairs:
+                    seen_pairs.add(pair)
+                    coords_i = id_to_coords.get(ids[i], (None, None))
+                    coords_j = id_to_coords.get(ids[j], (None, None))
+                    near_pairs.append([
+                        (ids[i], id_to_name.get(ids[i], ids[i]), coords_i[0], coords_i[1]),
+                        (ids[j], id_to_name.get(ids[j], ids[j]), coords_j[0], coords_j[1]),
+                    ])
+    return exact_dup_rows, near_pairs
+
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🐣 Build True Lifer and Last-Seen Tables
@@ -635,12 +638,6 @@ def on_toggle_change(change):
         draw_map_with_species_overlay(selected_species_name, selected_species_common_name)
 
 
-# ✅ Called when the "highlight close locations" checkbox is toggled (redraw only, no output)
-def on_highlight_close_change(change):
-    global selected_species_name, selected_species_common_name
-    draw_map_with_species_overlay(selected_species_name or "", selected_species_common_name or "")
-
-
 # ✅ Called when search box is cleared (after short debounce)
 def on_search_box_cleared(change):
     global debounce_timer
@@ -724,7 +721,6 @@ def update_suggestions(change):
 # - `search_box`: updates suggestions and clears search
 # - `dropdown`: triggers map redraw on selection
 # - `hide_non_matching_checkbox`: toggles visibility of non-matching markers
-# - `highlight_close_checkbox`: toggles duplicate/near-duplicate pin highlighting
 #
 # 📌 Enables real-time interaction between widgets and map updates.
 #
@@ -737,7 +733,6 @@ search_box.observe(update_suggestions, names="value")
 search_box.observe(on_search_box_cleared, names="value")
 dropdown.observe(on_species_selected, names="value")
 hide_non_matching_checkbox.observe(on_toggle_change, names="value")
-highlight_close_checkbox.observe(on_highlight_close_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -839,13 +834,6 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             media_html = f' <a href="https://macaulaylibrary.org/asset/{first_ml}" target="_blank" title="View media">📷</a>'
         return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
 
-    # Close locations (when checkbox enabled) — use FULL dataset so detection is consistent
-    # regardless of date filter; only flag locations that are also on the map (in location_data)
-    exact_duplicate_ids = set()
-    near_duplicate_ids = set()
-    if highlight_close_checkbox.value:
-        exact_duplicate_ids, near_duplicate_ids = _find_close_location_ids(full_location_data, CLOSE_LOCATION_METERS)
-
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
         banner_html = f"""
@@ -873,12 +861,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
             popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
             popup = folium.Popup(popup_html, max_width=800)
-            if loc_id in exact_duplicate_ids:
-                color, fill = EXACT_DUPLICATE_COLOR, EXACT_DUPLICATE_FILL
-            elif loc_id in near_duplicate_ids:
-                color, fill = CLOSE_LOCATION_COLOR, CLOSE_LOCATION_FILL
-            else:
-                color, fill = DEFAULT_COLOR, DEFAULT_FILL
+            color, fill = DEFAULT_COLOR, DEFAULT_FILL
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
@@ -961,8 +944,6 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         location_data_local["has_species_match"] = location_data_local["Location ID"].isin(seen_location_ids)
         location_data_local["is_lifer"] = location_data_local["Location ID"] == lifer_location
         location_data_local["is_last_seen"] = location_data_local["Location ID"] == last_seen_location
-        location_data_local["is_exact_dup"] = location_data_local["Location ID"].isin(exact_duplicate_ids)
-        location_data_local["is_near_dup"] = location_data_local["Location ID"].isin(near_duplicate_ids)
 
         # Sort so lifer drawn last (on top), then last seen, then species, then non-matching
         location_data_local = location_data_local.sort_values(
@@ -972,8 +953,6 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         # Single loop for marker drawing
         for _, row in location_data_local.iterrows():
             loc_id = row["Location ID"]
-            is_exact_dup = loc_id in exact_duplicate_ids
-            is_near_dup = loc_id in near_duplicate_ids
 
             if not row["has_species_match"] and hide_non_matching_checkbox.value:
                 continue
@@ -994,11 +973,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
             popup_content = folium.Popup(popup_html, max_width=800)
 
-            if highlight_close_checkbox.value and row["is_exact_dup"]:
-                color, fill, radius, fill_opacity = EXACT_DUPLICATE_COLOR, EXACT_DUPLICATE_FILL, 4, 0.8
-            elif highlight_close_checkbox.value and row["is_near_dup"]:
-                color, fill, radius, fill_opacity = CLOSE_LOCATION_COLOR, CLOSE_LOCATION_FILL, 4, 0.8
-            elif row["is_lifer"]:
+            if row["is_lifer"]:
                 color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.9
             elif row["is_last_seen"]:
                 color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.9
@@ -1525,18 +1500,122 @@ top10_accordion = Accordion(
 for i, (title, _) in enumerate(checklist_data["top10_sections"]):
     top10_accordion.set_title(i, title)
 
-# Tabs: Map, Checklist Statistics, Top 10
-main_tabs = widgets.Tab(children=[map_output, checklist_stats_panel, top10_accordion])
+
+# Map maintenance tab: duplicate, close-location, and orphaned data
+# Link format for maintenance: edit page (merge/delete), not lifelist
+_MAINT_LOC_URL = "https://ebird.org/mylocations/edit/"
+
+
+def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
+    """Build HTML for Map maintenance tab: orphaned, exact duplicates, close-location pairs."""
+    exact_rows, near_pairs = _get_map_maintenance_data(loc_df, threshold_m)
+    css = """
+    .maint-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; margin-bottom:16px; }
+    .maint-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
+    .maint-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
+    .maint-tbl td:last-child { text-align:right; font-weight:bold; }
+    .maint-tbl td:nth-child(2) { white-space:nowrap; }
+    .maint-tbl.maint-single-col td { text-align:left; font-weight:normal; }
+    .maint-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
+    .maint-tbl tbody tr:nth-child(even) { background:#fff; }
+    .maint-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
+    .maint-pair-tbl { border-collapse:collapse; width:100%; max-width:600px; font-size:13px; margin-bottom:12px; }
+    .maint-pair-tbl th { font-weight:bold; text-align:left; padding:6px 10px; border-bottom:1px solid #e8e8e8; }
+    .maint-pair-tbl td { padding:6px 10px; border-bottom:1px solid #e8e8e8; }
+    .maint-pair-tbl tbody tr.pair-first { background:#f8f8f8; }
+    .maint-pair-tbl tbody tr.pair-second { background:#fff; }
+    .maint-pair-tbl tbody tr.maint-spacer { background:transparent; }
+    .maint-pair-tbl td:nth-child(2) { white-space:nowrap; }
+    .maint-pair-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
+    """
+    # Table 0: Locations without checklists
+    orphaned_body = ""
+    if not orphaned_df.empty:
+        for _, r in orphaned_df.iterrows():
+            link = f'<a href="{_MAINT_LOC_URL}{r["Location ID"]}" target="_blank">{r["Location"]}</a>' if pd.notna(r.get("Location ID")) else str(r.get("Location", ""))
+            orphaned_body += f"<tr><td>{link}</td></tr>"
+        orphaned_table = f"""
+  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Locations without checklists</h4>
+  <p style="margin:4px 0 8px;color:#666;font-size:12px;">These locations have no attached checklists and are excluded from the map and other tabs.</p>
+  <table class="maint-tbl maint-single-col">
+    <thead><tr><th>Location</th></tr></thead>
+    <tbody>{orphaned_body}</tbody>
+  </table>"""
+    else:
+        orphaned_table = """
+  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Locations without checklists</h4>
+  <p style="margin:4px 0;color:#666;">None.</p>"""
+
+    # Table 1: Exact duplicates (Location | Lat/Long | Number of duplicates)
+    dup_body = ""
+    if exact_rows:
+        for loc_name, loc_id, count, lat, lon in exact_rows:
+            link = f'<a href="{_MAINT_LOC_URL}{loc_id}" target="_blank">{loc_name}</a>' if loc_id else loc_name
+            coords = f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"
+            dup_body += f"<tr><td>{link}</td><td>{coords}</td><td>{count}</td></tr>"
+        dup_table = f"""
+  <h4 style="margin-top:0;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Exact duplicates</h4>
+  <p style="margin:4px 0 8px;color:#666;font-size:12px;">Different Location IDs at the same coordinates. Same name listed once; different names listed separately.</p>
+  <table class="maint-tbl">
+    <thead><tr><th>Location</th><th>Latitude/Longitude</th><th>Number of duplicates</th></tr></thead>
+    <tbody>{dup_body}</tbody>
+  </table>"""
+    else:
+        dup_table = """
+  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Exact duplicates</h4>
+  <p style="margin:4px 0;color:#666;">None detected.</p>"""
+
+    # Table 2: Close locations (one heading, pairs separated by spacer rows)
+    near_section = ""
+    if near_pairs:
+        all_rows = ""
+        for i, pair in enumerate(near_pairs):
+            pair_rows = "".join(
+                (f'<tr class="pair-first"><td><a href="{_MAINT_LOC_URL}{lid}" target="_blank">{name}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>'
+                 if idx == 0 else
+                 f'<tr class="pair-second"><td><a href="{_MAINT_LOC_URL}{lid}" target="_blank">{name}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>')
+                for idx, (lid, name, lat, lon) in enumerate(pair)
+            )
+            all_rows += pair_rows
+            if i < len(near_pairs) - 1:
+                all_rows += '<tr class="maint-spacer"><td colspan="2" style="height:12px;border:none;background:transparent;"></td></tr>'
+        near_section = f"""
+  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Close locations</h4>
+  <p style="margin:4px 0 12px;color:#666;font-size:12px;">Locations within {threshold_m} m of each other (excluding exact duplicates).</p>
+  <table class="maint-pair-tbl">
+    <thead><tr><th>Location</th><th>Latitude/Longitude</th></tr></thead>
+    <tbody>{all_rows}</tbody>
+  </table>"""
+    else:
+        near_section = f"""
+  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Close locations</h4>
+  <p style="margin:4px 0;color:#666;">None detected within the current threshold ({threshold_m} m).</p>"""
+
+    return f"""
+<style>{css}</style>
+<div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
+{dup_table}
+{near_section}
+{orphaned_table}
+</div>"""
+
+
+map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS, locations_without_checklists)
+map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
+
+# Tabs: Map, Checklist Statistics, Top 25, Map maintenance
+main_tabs = widgets.Tab(children=[map_output, checklist_stats_panel, top10_accordion, map_maintenance_panel])
 main_tabs.set_title(0, "🗺️ Map")
 main_tabs.set_title(1, "📊 Checklist Statistics")
 main_tabs.set_title(2, "🏆 Top 25")
+main_tabs.set_title(3, "🔧 Map maintenance")
 main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit tab name; reserve space for map
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
 # ✅ Show dashboard (controls + map/tabs together)
 # --------------------------------------------
-dashboard = VBox([search_box, dropdown, hide_non_matching_checkbox, highlight_close_box, output, main_tabs])
+dashboard = VBox([search_box, dropdown, hide_non_matching_checkbox, output, main_tabs])
 dashboard.layout = widgets.Layout(min_height="750px")  # Ensure map + controls visible without expanding
 display(dashboard)
 draw_map_with_species_overlay("", "")
