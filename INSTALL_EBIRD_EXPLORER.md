@@ -107,17 +107,17 @@ With your virtual environment activated (or using your system Python if you skip
 **Option A — from requirements file (recommended):**
 
 ```bat
-pip install -r requirements-explorer.txt
+python -m pip install -r requirements-explorer.txt
 ```
 
-(Use `pip3` on macOS if needed. Run from the repo root.)
+(On Windows, `python -m pip` is more reliable than `pip` when you have multiple Python installs. On macOS, use `pip3` if needed. Run from the repo root.)
 
 **Option B — install packages directly:**
 
 **Windows:**
 
 ```bat
-pip install jupyter jupyterlab voila pandas folium ipywidgets whoosh scikit-learn
+python -m pip install jupyter jupyterlab voila pandas folium ipywidgets whoosh scikit-learn
 ```
 
 **macOS:**
@@ -244,7 +244,7 @@ The `voila.json` in the notebooks folder hides the documentation cells so only t
 |------|------------|
 | 1 | Install Python 3.8+ (Windows: Store or python.org; macOS: python.org or Homebrew). |
 | 2 | (Optional) Create and activate a virtual environment. |
-| 3 | `pip install -r requirements-explorer.txt` (or install packages individually; see step 3). |
+| 3 | `python -m pip install -r requirements-explorer.txt` (or install packages individually; see step 3). |
 | 4 | Set `DATA_FOLDER_HARDCODED` in the notebook, or copy `config_template.py` → `config_secret.py`, set `DATA_FOLDER`, put `MyEBirdData.csv` there. |
 | 5 | From **notebooks** folder: `jupyter notebook` or `jupyter lab`, open `personal_ebird_explorer.ipynb`, Run All Cells. |
 | 6 | (Optional) From **notebooks** folder: `voila personal_ebird_explorer.ipynb --config=voila.json` |
@@ -254,7 +254,7 @@ The `voila.json` in the notebooks folder hides the documentation cells so only t
 ## Troubleshooting
 
 - **“No module named …”**  
-  Install the missing package, e.g. `pip install pandas` (or `pip3 install pandas` on macOS). The list in step 3 should cover everything the notebook uses.
+  Install the missing package, e.g. `python -m pip install pandas` (or `pip3 install pandas` on macOS). The list in step 3 should cover everything the notebook uses. The notebook will show the exact command if a dependency is missing.
 
 - **Config or CSV not found**  
   Make sure you’re starting Jupyter/Voila from the **notebooks** folder so `../scripts/config_secret.py` points to the repo’s scripts folder.  

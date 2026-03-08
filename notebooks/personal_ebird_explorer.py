@@ -172,6 +172,24 @@ FILTER_END_DATE = "2025-12-31"
 
 # %%
 # --------------------------------------------
+# ✅ Check dependencies (fail fast with clear message if missing)
+# --------------------------------------------
+_REQUIRED = ["pandas", "folium", "ipywidgets", "whoosh", "scikit-learn"]
+_missing = []
+for _pkg in _REQUIRED:
+    try:
+        __import__(_pkg)
+    except ImportError:
+        _missing.append(_pkg)
+if _missing:
+    raise ImportError(
+        f"Missing package(s): {', '.join(_missing)}\n\n"
+        "Install with:  python -m pip install -r requirements-explorer.txt\n"
+        "Or:  python -m pip install " + " ".join(_missing)
+    )
+
+# %%
+# --------------------------------------------
 # ✅ Imports and Display CSS
 # --------------------------------------------
 import html

@@ -183,9 +183,15 @@ This setup is tailored to my quirks. I don’t expect anyone else to use it. But
 
 I use Google's Geocoding API for reverse geocoding (gps --> name).  Its free for low volumes of queries, and low volumes is thousands a month so for this purpose I'm never going to get close to the volume of queries where I could be charged.  An API key is required and is removed from my code here as that is private (like a password).  You'll find how to get one with a quick Google search.  You'll need to drop your key into the code; look at the Python script and you'll find where to do that easy enough.
 
+The Python script (`scripts/eBirdChecklistNameFromGPS.py`) is used by the UI.Vision macros. It does not run on Binder. Before using the macros, install its dependencies:
+
+    pip install -r requirements-gps-script.txt
+
+Or: `pip install requests pyperclip`
+
 ### Incidental Checklist Creation from Clipboard Data
 
-This macro works alongside the [Apple Shortcut described above](#bird-data-logging-with-apple-shortcut) to streamline eBird checklist creation from dictated observations.
+This macro works alongside the [Apple Shortcut described above](#bird-data-logging-with-apple-shortcut) to streamline eBird checklist creation from dictated observations. It calls `eBirdChecklistNameFromGPS.py` for location names — install that script's dependencies first (`pip install -r requirements-gps-script.txt`).
 
 I created this workflow after getting a $450 fine for touching my phone to log a Wedge-tailed Eagle while driving. The Shortcut allows hands-free voice logging, and this macro helps me later turn those logs into proper eBird records.
 
