@@ -142,7 +142,7 @@ POPUP_SORT_ORDER = "ascending"
 POPUP_SCROLL_HINT = "shading"
 
 # Map maintenance tab: locations within this distance (meters) are considered "close"
-CLOSE_LOCATION_METERS = 30
+CLOSE_LOCATION_METERS = 10
 
 # Optional date range filtering (set to False to disable)
 # Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
