@@ -62,7 +62,7 @@
 #
 # By default, the notebook expects your eBird data file to be named `MyEBirdData.csv`. This is controlled by a variable in the first code cell — you can change it if needed.
 #
-# Folder paths and output settings are pulled from a small config file used elsewhere in the codebase. You might need to **create or update that config file in the `scripts` folder**.  You could even just hack the code in the third code cell and hard code some paths.  Depends on what you are comfortable with.
+# Folder paths can be set in several ways: a hardcoded path in the User Variables cell, or a config file in the `scripts` folder. The notebook tries each location in order until it finds your data file; the notebook folder is tried last (e.g. for Binder uploads).
 #
 # Other than that, just run the notebook from top to bottom — it should work straight away.
 #
@@ -94,7 +94,7 @@
 # - `POPUP_SCROLL_HINT`: when popup content overflows, show `"chevron"` (▲▼), `"shading"` (fade gradients), or `"both"` to compare.
 # - `CLOSE_LOCATION_METERS`: distance (m) below which locations are considered "close" in the Map maintenance tab.
 #
-# > NOTE: Paths (not file names) are stored in the config files in the scripts folder of the code repo.  You can easily move paths here if you wish.
+# > NOTE: Paths can be set in three ways: (1) `DATA_FOLDER_HARDCODED` in this cell, (2) `scripts/config_secret.py`, or (3) `scripts/config_template.py`. The notebook tries each in order until the data file is found; the notebook folder is tried last (e.g. for Binder uploads).
 #
 # #### Pin colour reference (named colours for Folium)
 #
@@ -115,6 +115,11 @@
 
 # Name of your eBird export file (in the DATA_FOLDER below)
 EBIRD_DATA_FILE_NAME = "MyEBirdData.csv"
+
+# Optional hardcoded data folder (overrides config files). Leave empty ("") to use config or fallbacks.
+# macOS example: "/Users/yourname/Documents/eBird"
+# Windows example: r"C:\Users\yourname\Documents\eBird" or "C:/Users/yourname/Documents/eBird"
+DATA_FOLDER_HARDCODED = ""
 
 # Where your .csv file is located, and where the output map will be saved
 OUTPUT_HTML_FILE_NAME = "species_map.html"
@@ -231,8 +236,8 @@ def add_datetime_column(df):
 #
 # This cell handles the core setup and data load:
 #
-# - Dynamically loads config from `config_secret.py` if it exists, or falls back to `config_template.py`  
-# - Builds paths to your eBird data file and HTML map export  
+# - Resolves data file location by trying, in order: hardcoded path, config_secret, config_template, notebook folder  
+# - Cross-platform (macOS and Windows); falls through to next location if file not found  
 # - Loads the CSV and parses the `"Date"` column  
 # - Optionally filters the **main dataset (`df`)** by a specified date range  
 # - Excludes locations with no associated checklist (orphaned from cleanup, shared-list quirks)
@@ -251,31 +256,67 @@ def add_datetime_column(df):
 # --------------------------------------------
 # ✅ Configuration & Data Loading
 # --------------------------------------------
-# Try config_secret first; if not found (e.g. Binder), use upload path (current directory)
-config_secret_path = os.path.abspath(os.path.join(os.getcwd(), "..", "scripts", "config_secret.py"))
-if os.path.exists(config_secret_path):
-    # Local install: use config_secret
-    spec = importlib.util.spec_from_file_location("config_secret", config_secret_path)
-    config = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(config)
-    DATA_FOLDER = getattr(config, "DATA_FOLDER")
-    file_path = os.path.join(DATA_FOLDER, EBIRD_DATA_FILE_NAME)
-    map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
-    os.makedirs(DATA_FOLDER, exist_ok=True)
-else:
-    # Binder / no config: expect file uploaded via Jupyter (File → Upload or drag-and-drop)
-    DATA_FOLDER = os.getcwd()
-    file_path = os.path.join(DATA_FOLDER, EBIRD_DATA_FILE_NAME)
-    map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(
-            f"Data file not found: {file_path}\n\n"
-            "If you're on Binder (or don't have config_secret.py), upload your eBird CSV:\n"
-            "  1. Use the file browser on the left (or File → Open)\n"
-            "  2. Click Upload and select your MyEBirdData.csv\n"
-            "  3. Re-run this cell\n\n"
-            f"Expected filename: {EBIRD_DATA_FILE_NAME}"
-        )
+# Resolve data file location: try each candidate in order until file is found.
+# Fallback order: (1) hardcoded path, (2) config_secret, (3) config_template, (4) notebook folder.
+# Cross-platform: works on macOS and Windows.
+
+def _load_config_module(path):
+    """Load a config module from path; return DATA_FOLDER or None."""
+    if not os.path.exists(path):
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location("config", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return getattr(mod, "DATA_FOLDER", None)
+    except Exception:
+        return None
+
+# Notebook directory: where this .py file lives (or cwd when running as .ipynb)
+try:
+    _notebook_dir = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    _notebook_dir = os.getcwd()
+
+# Scripts folder (relative to notebook)
+_scripts_dir = os.path.abspath(os.path.join(_notebook_dir, "..", "scripts"))
+_config_secret_path = os.path.join(_scripts_dir, "config_secret.py")
+_config_template_path = os.path.join(_scripts_dir, "config_template.py")
+
+# Build candidate folders in fallback order
+_candidate_folders = []
+if DATA_FOLDER_HARDCODED and str(DATA_FOLDER_HARDCODED).strip():
+    _candidate_folders.append(os.path.normpath(str(DATA_FOLDER_HARDCODED).strip()))
+for _config_path in (_config_secret_path, _config_template_path):
+    _folder = _load_config_module(_config_path)
+    if _folder and str(_folder).strip():
+        _candidate_folders.append(os.path.normpath(str(_folder).strip()))
+_candidate_folders.append(_notebook_dir)
+
+# Try each candidate until we find the data file
+file_path = None
+DATA_FOLDER = None
+for _folder in _candidate_folders:
+    _candidate_path = os.path.join(_folder, EBIRD_DATA_FILE_NAME)
+    if os.path.exists(_candidate_path):
+        file_path = _candidate_path
+        DATA_FOLDER = _folder
+        break
+
+if file_path is None:
+    _tried = ", ".join(_candidate_folders)
+    raise FileNotFoundError(
+        f"Data file not found: {EBIRD_DATA_FILE_NAME}\n\n"
+        f"Tried locations:\n  " + "\n  ".join(_candidate_folders) + "\n\n"
+        "Options:\n"
+        "  1. Set DATA_FOLDER_HARDCODED in User Variables (e.g. macOS: \"/Users/you/Documents/eBird\"; Windows: r\"C:\\Users\\you\\Documents\\eBird\")\n"
+        "  2. Create scripts/config_secret.py with DATA_FOLDER = \"your/path\"\n"
+        "  3. On Binder: upload your .csv to the notebook folder (File → Upload)\n\n"
+        f"Expected filename: {EBIRD_DATA_FILE_NAME}"
+    )
+
+map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
+os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # Load data
 df = pd.read_csv(file_path)
