@@ -139,7 +139,7 @@ What these are for:
 | `folium`    | Draw the interactive map. |
 | `ipywidgets`| Search box and other controls in the notebook. |
 | `whoosh`    | Fast species name search (autocomplete). |
-| `scikit-learn` | BallTree for close-location detection (within 10 m). |
+| `scikit-learn` | BallTree for Map maintenance tab (duplicate/close location detection). |
 
 **Note:** `branca` (used by folium for map elements) is installed automatically as a dependency of `folium`. `IPython` comes with `jupyter`.
 
