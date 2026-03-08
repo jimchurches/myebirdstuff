@@ -24,12 +24,13 @@
 #
 # - Loads your eBird data export (CSV format)
 # - Draws a map of all checklist locations (green by default)
-# - Highlights locations where a selected species was seen (red)
+# - Highlights locations where a selected species was seen (currently purple)
 # - Marks your lifer (first-ever) and last-seen location for that species with distinct pin colours
 # - Shows stats banners: all-species totals when viewing all, or species-specific (checklists, individuals, high count) when filtering
 # - Lets you hide non-matching locations
 # - Offers type-ahead search that mimics eBird’s own species search behaviour
 # - Supports date-range filtering
+# - Highlights duplicate/near-duplicate locations (exact same coords or within 10 m) when enabled
 # - Adds detailed popups with links:
 #   - Location names link to your eBird life list for that place
 #   - Visit dates/times link to each checklist
@@ -52,7 +53,7 @@
 #
 # If you haven’t set up Python or Jupyter before, don’t worry — just ask ChatGPT, Microsoft Copilot, or your favourite chat bot to walk you through it.  Hey, you could even use a Google search.  
 #
-# You'll probably need to install some Python modules also.  These modules will include:  `ipywidgets`, `pandas`, `whoosh` and `folium`.
+# You'll probably need to install some Python modules also.  These modules will include:  `ipywidgets`, `pandas`, `whoosh`, `folium`, and `scikit-learn`.
 #
 # Once up and running, the menu items **Run All Cells** and **Restart Kernel and Clear Outputs of All Cells** are your friends.
 #
@@ -93,10 +94,10 @@
 # - `POPUP_SORT_ORDER`: `"ascending"` (oldest first) or `"descending"` (newest first) for visit/species lists in popups.
 # - `POPUP_SCROLL_HINT`: when popup content overflows, show `"chevron"` (▲▼), `"shading"` (fade gradients), or `"both"` to compare.
 # - `CLOSE_LOCATION_METERS`: distance (m) below which locations are considered "close" (duplicates/near-duplicates).
-# - `CLOSE_LOCATION_COLOR`, `CLOSE_LOCATION_FILL`: pin colour for near-duplicates (within 10 m).
+# - `CLOSE_LOCATION_COLOR`, `CLOSE_LOCATION_FILL`: pin colour for near-duplicates (within CLOSE_LOCATION_METERS).
 # - `EXACT_DUPLICATE_COLOR`, `EXACT_DUPLICATE_FILL`: pin colour for exact duplicates (same coords, different Location IDs).
 #
-# > NOTE: Paths (not file names) are stored in the config files in the scritps folder of the code repo.  You can easily move paths here if you wish.
+# > NOTE: Paths (not file names) are stored in the config files in the scripts folder of the code repo.  You can easily move paths here if you wish.
 #
 # #### Pin colour reference (named colours for Folium)
 #
@@ -173,6 +174,7 @@ FILTER_END_DATE = "2025-12-31"
 # --------------------------------------------
 # ✅ Imports and Display CSS
 # --------------------------------------------
+import html
 import os
 import sys
 from datetime import datetime
@@ -185,7 +187,7 @@ import threading
 import importlib.util
 import ipywidgets as widgets
 
-from ipywidgets import Checkbox, VBox
+from ipywidgets import Accordion, Checkbox, VBox
 from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT
 from whoosh.analysis import StemmingAnalyzer
@@ -197,7 +199,8 @@ display(HTML("""
 <style>
 .output_map iframe {
     width: 100% !important;
-    height: 100%;
+    height: 600px;
+    min-height: 600px;
 }
 </style>
 """))
@@ -237,6 +240,7 @@ def add_datetime_column(df):
 # - Builds paths to your eBird data file and HTML map export  
 # - Loads the CSV and parses the `"Date"` column  
 # - Optionally filters the **main dataset (`df`)** by a specified date range  
+# - Excludes locations with no associated checklist (orphaned from cleanup, shared-list quirks)
 # - Extracts a unique set of locations and species from the filtered data  
 # - Builds a lookup map from common names → scientific names
 #
@@ -407,6 +411,8 @@ output = widgets.Output()
 # --------------------------------------------
 # ✅ Autocomplete UI Widgets
 # --------------------------------------------
+debounce_delay = 0.3  # seconds to wait after search box cleared before resetting
+debounce_timer = None
 search_box = widgets.Text(placeholder="Type species name...", description="Search:")
 dropdown = widgets.Select(options=[], value=None, description="Matches:", rows=10)
 hide_non_matching_checkbox = Checkbox(
@@ -461,8 +467,11 @@ def filter_species(df, base_species):
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 📍 Close Location Detection
 #
-# Finds locations within a configurable distance (e.g. 10 m) of another — useful for spotting
-# duplicates or near-duplicates. When the checkbox is enabled, these are highlighted.
+# Finds duplicate and near-duplicate locations:
+# - **Exact duplicates**: different Location IDs at the same coordinates (e.g. from shared lists)
+# - **Near-duplicates**: within a configurable distance (default 10 m) of another location
+#
+# When the checkbox is enabled, these are highlighted (colours configurable in User Variables).
 #
 
 # %%
@@ -517,6 +526,7 @@ def _find_close_location_ids(loc_df, threshold_m):
 # Creates lookup dictionaries for lifer (first-ever) and last-seen (most recent) locations per species:
 #
 # - Reloading the full dataset to avoid effects of any active filters
+# - Excluding locations with no checklist (consistent with main data)
 # - Parsing and combining dates and times into full datetime objects
 # - Sorting the full data chronologically
 # - Finding the first-ever sighting (lifer) and most recent sighting (last-seen) per species
@@ -529,12 +539,11 @@ def _find_close_location_ids(loc_df, threshold_m):
 # ✅ Build True Lifer Table (from full dataset)
 # --------------------------------------------
 
-# Reload full dataset to avoid filtering effects
+# Reload full dataset to avoid filtering effects (date filter, lifer calc)
 full_df = pd.read_csv(file_path)
 full_df = add_datetime_column(full_df)
-
-# Ensure filtered df has datetime too (for consistency and potential future use)
-df = add_datetime_column(df)
+# Exclude locations with no checklist (consistent with main data)
+full_df = full_df[full_df["Location ID"].isin(location_ids_with_checklists)]
 
 # Build lifer location dictionary: base species (genus + species) → first seen location.
 # Uses base species so subspecies (e.g. Tyto javanica [javanica Group]) roll up to the
@@ -662,33 +671,6 @@ def on_search_box_cleared(change):
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🔍 Build Whoosh Index for Autocomplete
-#
-# This block sets up a temporary Whoosh search index for fuzzy species name matching:
-#
-# - Defines a simple schema with stemming for partial match support
-# - Creates a new in-memory index each time the notebook runs
-# - Adds each species name as a searchable document
-# - Commits the index for later use by the autocomplete logic
-#
-# 🧠 This allows real-time fuzzy search suggestions as you type in the search box.
-#
-
-# %%
-# --------------------------------------------
-# # ✅ Build Whoosh Index for Autocomplete
-# --------------------------------------------
-# Some fuzzy logic magic here
-schema = Schema(common_name=TEXT(stored=True, analyzer=StemmingAnalyzer()))
-index_dir = tempfile.mkdtemp()
-ix = create_in(index_dir, schema)
-writer = ix.writer()
-for name in species_list:
-    writer.add_document(common_name=name)
-writer.commit()
-
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🔡 Autocomplete Search Logic
 #
 # This function handles fuzzy autocomplete updates when the user types in the search box:
@@ -742,6 +724,7 @@ def update_suggestions(change):
 # - `search_box`: updates suggestions and clears search
 # - `dropdown`: triggers map redraw on selection
 # - `hide_non_matching_checkbox`: toggles visibility of non-matching markers
+# - `highlight_close_checkbox`: toggles duplicate/near-duplicate pin highlighting
 #
 # 📌 Enables real-time interaction between widgets and map updates.
 #
@@ -1127,68 +1110,436 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
     with map_output:
         map_output.clear_output()
-        display(HTML("<div class='output_map'>"))
-        display(species_map)
-        display(HTML("</div>"))
+        map_html = species_map._repr_html_()
+        display(HTML(f'<div class="output_map">{map_html}</div>'))
 
-        # Save map to HTML if enabled
-        if EXPORT_HTML:
-            species_map.save(map_output_path)
-
-        display(HTML("""
-        <script>
-        setTimeout(() => {
-          const iframe = document.querySelector('.output_map iframe');
-          if (iframe) {
-            iframe.style.minHeight = '600px';
-            iframe.parentElement.style.minHeight = '600px';
-          }
-        }, 100);
-        </script>
-        """))
+    if EXPORT_HTML:
+        species_map.save(map_output_path)
 
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧭 Display UI and Draw Initial Map
+# ### 🧭 Display UI
 #
-# - Displays the species search UI using `VBox`:
-#   - Text search box
-#   - Dropdown for suggestions
-#   - Checkbox to hide non-matching markers
-#   - Output log panel
-#
-# - Renders the initial map with **no species filter** (all locations shown in green)
-#
-# - Injects a small script to ensure the map has a consistent display height inside the notebook
+# Placeholder — the full dashboard (controls + map/tabs) is displayed in the next section
+# so controls and map stay together with no gap.
 #
 
 # %%
 # --------------------------------------------
-# ✅ Display UI and Draw Initial Map
+# ✅ Display UI (controls + map/tabs combined below)
 # --------------------------------------------
-
-# ✅ Display the UI
-display(VBox([search_box, dropdown, hide_non_matching_checkbox, highlight_close_box, output]))
-
-# ✅ Draw initial map (no filters applied)
-draw_map_with_species_overlay("", "")
+# Controls and map/tabs are displayed together in the next cell to avoid a gap.
 
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Show Map Output Area
+# ### 🗺️ Dashboard: Controls + Map + Stats
 #
-# Displays the interactive map and message log area (`map_output`) below the UI.
+# Controls and map/tabs are in one `VBox` so they stay together with no gap.
+# Map is the primary tab. Checklist Statistics shows real data from your export.
 #
-# All maps and status messages are rendered into this output widget.
-#
+
+# %%
+# --------------------------------------------
+# ✅ Checklist Statistics (computed from data)
+# --------------------------------------------
+def _compute_checklist_stats(df):
+    """Compute checklist statistics from df; returns HTML string."""
+    import html
+    import numpy as np
+
+    if df.empty:
+        return "<p>No data.</p>"
+
+    # Checklist-level data (one row per checklist)
+    cl = df.drop_duplicates(subset=["Submission ID"]).copy()
+    cl["Date"] = pd.to_datetime(cl["Date"], errors="coerce")
+    dur_col = "Duration (Min)" if "Duration (Min)" in df.columns else None
+    dist_col = "Distance Traveled (km)" if "Distance Traveled (km)" in df.columns else None
+
+    # Overview
+    n_checklists = cl["Submission ID"].nunique()
+    n_species = int(_countable_species_vectorized(df).dropna().nunique())
+    n_individuals = int(df["Count"].apply(_safe_count).sum())
+
+    # Completed checklists (All Obs Reported)
+    n_completed = "—"
+    if "All Obs Reported" in df.columns:
+        completed = cl.dropna(subset=["All Obs Reported"])
+        if not completed.empty:
+            reported = completed["All Obs Reported"].astype(str).str.upper().isin(["1", "TRUE", "YES", "Y"])
+            n_completed = f"{(reported).sum():,}"
+
+    # Protocol counts — all types with zero, roll unknown into Other
+    PROTOCOL_ORDER = ["Traveling", "Stationary", "Incidental", "Pelagic Protocol", "Historical", "Other"]
+    PROTOCOL_MAP = {
+        "traveling": "Traveling", "travelling": "Traveling", "traveling count": "Traveling",
+        "ebird - traveling count": "Traveling",
+        "stationary": "Stationary", "stationary count": "Stationary",
+        "ebird - stationary count": "Stationary",
+        "incidental": "Incidental", "incidental observation": "Incidental",
+        "ebird - casual observation": "Incidental", "casual observation": "Incidental",
+        "pelagic": "Pelagic Protocol", "pelagic protocol": "Pelagic Protocol",
+        "historical": "Historical", "historical checklist": "Historical",
+    }
+    protocol_counts = {p: 0 for p in PROTOCOL_ORDER}
+    if "Protocol" in df.columns:
+        proto_df = cl.dropna(subset=["Protocol"])
+        for _, row in proto_df.iterrows():
+            p = str(row["Protocol"]).strip().lower()
+            if not p:
+                continue
+            disp = PROTOCOL_MAP.get(p, "Other")
+            protocol_counts[disp] = protocol_counts.get(disp, 0) + 1
+    protocol_rows = [(k, f"{v:,}") for k, v in protocol_counts.items()]
+    protocol_rows.append(("Completed checklists", n_completed))
+
+    # Time eBirded (excludes incidental, historical, other for total time)
+    total_minutes = 0.0
+    if dur_col:
+        timed = cl.dropna(subset=[dur_col]).copy()
+        if "Protocol" in timed.columns:
+            excl = timed["Protocol"].str.strip().str.lower().str.contains("incidental|historical", na=False, regex=True)
+            timed = timed[~excl]
+        total_minutes = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0).sum()
+    total_hours = total_minutes / 60
+    total_days_dec = total_minutes / (60 * 24)
+    total_months = total_minutes / (60 * 24 * 30.44)
+    total_years = total_minutes / (60 * 24 * 365.25)
+    dates = cl.dropna(subset=["Date"])["Date"]
+    unique_dates = dates.dt.normalize().unique()
+    n_days_with_checklist = len(unique_dates)
+
+    # Shared checklists and time with others
+    n_shared = 0
+    shared_minutes = 0.0
+    n_days_birding_with_others = 0
+    if "Number of Observers" in df.columns:
+        shared_cl = cl.dropna(subset=["Number of Observers"])
+        shared_mask = shared_cl["Number of Observers"].astype(float) > 1
+        n_shared = int(shared_mask.sum())
+        if n_shared > 0:
+            shared_ids = set(shared_cl.loc[shared_mask, "Submission ID"])
+            shared_subset = cl[cl["Submission ID"].isin(shared_ids)]
+            if "Date" in shared_subset.columns:
+                n_days_birding_with_others = shared_subset["Date"].dt.normalize().nunique()
+            if dur_col:
+                shared_dur = shared_subset.dropna(subset=[dur_col])
+                shared_minutes = pd.to_numeric(shared_dur[dur_col], errors="coerce").fillna(0).sum()
+    shared_hours = shared_minutes / 60
+
+    # Total distance
+    total_km = 0.0
+    if dist_col:
+        total_km = pd.to_numeric(cl[dist_col], errors="coerce").fillna(0).sum()
+    parkruns = total_km / 5
+    marathons = total_km / 42.195
+    equator_km = 40_075
+    times_equator = total_km / equator_km
+    godwit_km = 13_560
+    times_godwit = total_km / godwit_km
+
+    # Longest streak and start/end
+    streak = 0
+    streak_start_date = ""
+    streak_start_loc = ""
+    streak_start_sid = ""
+    streak_end_date = ""
+    streak_end_loc = ""
+    streak_end_sid = ""
+    if len(unique_dates) > 0:
+        arr = np.asarray(pd.to_datetime(unique_dates)).astype("datetime64[D]")
+        day_ints = np.unique(arr.view("int64"))
+        diffs = np.diff(day_ints)
+        gaps = np.where(diffs > 1)[0]
+        best_start, best_end = day_ints[0], day_ints[-1]
+        if len(gaps) == 0:
+            streak = len(day_ints)
+            if streak > 0:
+                streak_start_date = pd.Timestamp(day_ints[0], unit="D").strftime("%d %b %Y")
+                streak_end_date = pd.Timestamp(day_ints[-1], unit="D").strftime("%d %b %Y")
+        else:
+            indices = np.arange(len(diffs))
+            segments = np.split(indices, gaps + 1)
+            best_len, best_start, best_end = 0, None, None
+            for i, seg in enumerate(segments):
+                seg = list(seg)
+                if i == 0 and len(seg) > 0 and seg[-1] in gaps:
+                    seg = seg[:-1]
+                n = len(seg) + 1 if len(seg) > 0 else 1
+                if n > best_len:
+                    best_len = n
+                    start_idx = seg[0] if seg else 0
+                    end_idx = (seg[-1] + 1) if seg else 0
+                    best_start = day_ints[start_idx]
+                    best_end = day_ints[min(end_idx, len(day_ints) - 1)]
+            streak = best_len
+            if best_start is not None and best_end is not None:
+                streak_start_date = pd.Timestamp(best_start, unit="D").strftime("%d %b %Y")
+                streak_end_date = pd.Timestamp(best_end, unit="D").strftime("%d %b %Y")
+        # Look up locations for streak start/end
+        if streak > 0 and "Date" in cl.columns:
+            first_day = best_start if len(gaps) > 0 else day_ints[0]
+            last_day = best_end if len(gaps) > 0 else day_ints[-1]
+            first_d = pd.Timestamp(first_day, unit="D").normalize()
+            last_d = pd.Timestamp(last_day, unit="D").normalize()
+            cl["_d"] = pd.to_datetime(cl["Date"]).dt.normalize()
+            start_m = cl[cl["_d"] == first_d]
+            end_m = cl[cl["_d"] == last_d]
+            if not start_m.empty:
+                start_row = start_m.iloc[0]
+                streak_start_loc = start_row.get("Location", "")
+                streak_start_sid = str(start_row.get("Submission ID", ""))
+            if not end_m.empty:
+                end_row = end_m.iloc[-1]
+                streak_end_loc = end_row.get("Location", "")
+                streak_end_sid = str(end_row.get("Submission ID", ""))
+
+    def _top10(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt):
+        """Top 10 by value desc, date asc; ties show oldest. Location links to lifelist, date/time links to checklist."""
+        if df_sub.empty or value_col not in df_sub.columns:
+            return []
+        # Prefer datetime (has Date+Time) over Date (often midnight only)
+        use_col = "datetime" if "datetime" in df_sub.columns else date_col
+        cols = [use_col, loc_col, sid_col, value_col]
+        if loc_id_col and loc_id_col in df_sub.columns:
+            cols.append(loc_id_col)
+        d = df_sub[cols].dropna(subset=[value_col]).drop_duplicates()
+        d = d.sort_values(by=[value_col, use_col], ascending=[False, True]).head(25)
+        rows = []
+        for _, r in d.iterrows():
+            dt = r[use_col]
+            dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+            loc = r.get(loc_col, "")
+            sid = r.get(sid_col, "")
+            lid = r.get(loc_id_col, "")
+            val = fmt(r[value_col])
+            loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
+            dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
+            rows.append((loc_link, dt_link, val))
+        return rows
+
+    def _top10_visited(cl_sub):
+        """Top 25 most visited locations; ties by oldest first. Location links to lifelist; first/last link to checklists."""
+        if cl_sub.empty:
+            return []
+        dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
+        first_idx = cl_sub.groupby("Location ID")[dt_col].idxmin()
+        last_idx = cl_sub.groupby("Location ID")[dt_col].idxmax()
+        first_rows = cl_sub.loc[first_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
+            columns={dt_col: "First", "Submission ID": "First_SID"}
+        )
+        last_rows = cl_sub.loc[last_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
+            columns={dt_col: "Last", "Submission ID": "Last_SID"}
+        )
+        vc = cl_sub.groupby("Location ID").agg(Count=("Submission ID", "nunique")).reset_index()
+        vc = vc.merge(first_rows, on="Location ID").merge(last_rows[["Location ID", "Last", "Last_SID"]], on="Location ID")
+        vc = vc.sort_values(by=["Count", "First"], ascending=[False, True]).head(25)
+        rows = []
+        for _, r in vc.iterrows():
+            loc = r["Location"]
+            lid = r["Location ID"]
+            first_str = pd.Timestamp(r["First"]).strftime("%d %b %Y %H:%M") if pd.notna(r["First"]) else "—"
+            last_str = pd.Timestamp(r["Last"]).strftime("%d %b %Y %H:%M") if pd.notna(r["Last"]) else "—"
+            first_sid = r.get("First_SID")
+            last_sid = r.get("Last_SID")
+            first_link = f'<a href="https://ebird.org/checklist/{first_sid}" target="_blank">{first_str}</a>' if pd.notna(first_sid) and first_sid else first_str
+            last_link = f'<a href="https://ebird.org/checklist/{last_sid}" target="_blank">{last_str}</a>' if pd.notna(last_sid) and last_sid else last_str
+            loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
+            rows.append((loc_link, first_link, last_link, f"{int(r['Count']):,}"))
+        return rows
+
+    # Top 10 data
+    cl_with_dur = cl.dropna(subset=[dur_col]).copy() if dur_col else pd.DataFrame()
+    cl_with_dur["_dur"] = pd.to_numeric(cl_with_dur[dur_col], errors="coerce").fillna(0)
+    cl_with_dist = cl.dropna(subset=[dist_col]).copy() if dist_col else pd.DataFrame()
+    if dist_col:
+        cl_with_dist["_dist"] = pd.to_numeric(cl_with_dist[dist_col], errors="coerce").fillna(0)
+    species_per_cl = df.groupby("Submission ID", group_keys=False).apply(
+        lambda g: _countable_species_vectorized(g).dropna().nunique(),
+        include_groups=False,
+    ).reset_index(name="_nsp")
+    ind_per_cl = df.groupby("Submission ID", group_keys=False).apply(
+        lambda g: g["Count"].apply(_safe_count).sum(),
+        include_groups=False,
+    ).reset_index(name="_nind")
+    cl_species = cl.merge(species_per_cl, on="Submission ID", how="inner")
+    cl_individuals = cl.merge(ind_per_cl, on="Submission ID", how="inner")
+    top10_time = _top10(cl_with_dur, "_dur", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(round(x))} min") if dur_col and not cl_with_dur.empty else []
+    top10_dist = _top10(cl_with_dist, "_dist", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{x:,.2f} km") if dist_col and not cl_with_dist.empty else []
+    top10_species = _top10(cl_species, "_nsp", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}") if not cl_species.empty else []
+    top10_individuals = _top10(cl_individuals, "_nind", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}") if not cl_individuals.empty else []
+    top10_visited = _top10_visited(cl)
+
+    _table_css = """
+    .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
+    .stats-info-glyph { cursor:help; opacity:0.7; }
+    .stats-info-tooltip { position:absolute; bottom:100%; left:0; margin-bottom:6px; padding:10px 14px; background:#333; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(380px,90vw); min-width:200px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.2); opacity:0; visibility:hidden; transition:opacity 0.05s; pointer-events:none; z-index:9999; }
+    .stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
+    .stats-tbl { border-collapse:collapse; width:100%; max-width:500px; font-size:13px; }
+    .stats-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; background:#fff; }
+    .stats-tbl th:last-child { text-align:right; }
+    .stats-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
+    .stats-tbl td:last-child { text-align:right; font-weight:bold; }
+    .stats-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
+    .stats-tbl tbody tr:nth-child(even) { background:#fff; }
+    .stats-tbl-3 th:nth-child(2), .stats-tbl-3 td:nth-child(2) { text-align:center; }
+    .top10-tbl td:first-child { font-weight:normal; }
+    .stats-tbl a, .top10-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); text-underline-offset:2px; }
+    .stats-tbl a:hover, .top10-tbl a:hover { text-decoration-color:rgba(0,0,0,0.45); }
+    """
+
+    def _row(label, value):
+        return f"<tr><td>{label}</td><td>{value}</td></tr>"
+
+    def _info_icon(title):
+        """Return HTML for info icon with tooltip."""
+        import html as _html
+        esc = _html.escape(title, quote=True)
+        return f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{esc}</span></span>'
+
+    def _table(title, rows, first=False, info_title=None, show_header=False, header_left="", header_right=""):
+        """Build a stats table. If show_header is False, no thead row (for Overview, Time eBirded, etc.)."""
+        info = f" {_info_icon(info_title)}" if info_title else ""
+        body = "".join(_row(label, value) for label, value in rows)
+        mt = "0" if first else "16px"
+        thead = f"<thead><tr><th>{header_left}</th><th>{header_right}</th></tr></thead>" if show_header else ""
+        return f"""
+  <h4 style="margin-top:{mt};margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">{title}{info}</h4>
+  <table class="stats-tbl">
+    {thead}<tbody>{body}</tbody>
+  </table>"""
+
+    time_hint = "Incidental, historical and other untimed checklists don't count towards total time, but do count towards Days with a checklist."
+    godwit_hint = "4BBRW: Bar-tailed Godwit, Alaska→Tasmania, ~13,560 km nonstop (2022). 11 days without landing."
+    godwit_link = '<a href="https://www.audubon.org/news/these-mighty-shorebirds-keep-breaking-flight-records-and-you-can-follow-along" target="_blank">4BBRW</a>'
+
+    streak_start_link = f'<a href="https://ebird.org/checklist/{streak_start_sid}" target="_blank">{streak_start_loc}</a>' if streak_start_sid else streak_start_loc
+    streak_end_link = f'<a href="https://ebird.org/checklist/{streak_end_sid}" target="_blank">{streak_end_loc}</a>' if streak_end_sid else streak_end_loc
+
+    left_col = f"""
+  {_table("Overview", [
+    ("Total checklists", f"{n_checklists:,}"),
+    ("Total species", f"{n_species:,}"),
+    ("Total individuals", f"{n_individuals:,}"),
+  ], first=True)}
+
+  {_table("Checklist types", protocol_rows)}
+
+  {_table("Time eBirded", [
+    ("Total minutes", f"{total_minutes:,.2f}"),
+    ("Total hours", f"{total_hours:,.2f}"),
+    ("Total days", f"{total_days_dec:,.2f}"),
+    ("Months", f"{total_months:,.2f}"),
+    ("Total years", f"{total_years:,.2f}"),
+    ("Days with a checklist", f"{n_days_with_checklist:,}"),
+  ], info_title=time_hint)}
+
+  {_table("eBirding with Others", [
+    ("Shared checklists", f"{n_shared:,}"),
+    ("Minutes eBirding with others", f"{shared_minutes:,.0f}"),
+    ("Hours eBirding with others", f"{shared_hours:,.2f}"),
+    ("Days birding with others", f"{n_days_birding_with_others:,}"),
+  ])}
+"""
+
+    right_col = f"""
+  {_table("Total Distance", [
+    ("Kilometers traveled", f"{total_km:,.2f}"),
+    ("Parkruns (5 km)", f"{parkruns:,.2f}"),
+    ("Marathons (42.195 km)", f"{marathons:,.2f}"),
+    (f"Longest Flight ({godwit_link}){_info_icon(godwit_hint)}", f"{times_godwit:,.2f}"),
+    ("Times around the equator", f"{times_equator:,.2f}"),
+  ], first=True)}
+
+  {_table("Checklist Streak", [
+    ("Longest streak (consecutive days)", str(streak)),
+    ("Start date", streak_start_date),
+    ("Start location", streak_start_link),
+    ("End date", streak_end_date),
+    ("End location", streak_end_link),
+  ])}
+"""
+
+    def _top10_table(title, headers, rows, include_heading=True):
+        if not rows:
+            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
+            return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+        body = "".join(
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{r[2]}</td></tr>"
+            for r in rows
+        )
+        tbl = f"<table class='stats-tbl top10-tbl'><thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead><tbody>{body}</tbody></table>"
+        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{tbl}" if include_heading else tbl
+
+    def _top10_visited_table(rows, include_heading=True):
+        if not rows:
+            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
+            return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
+        body = "".join(
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td style='text-align:right;font-weight:bold;'>{r[3]}</td></tr>" for r in rows
+        )
+        tbl = f"<table class='stats-tbl top10-tbl'><thead><tr><th>Location</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
+        return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{tbl}" if include_heading else tbl
+
+    # Top 10 sections for accordion (content only, no heading - accordion provides title)
+    top10_sections = [
+        ("Longest (time)", _top10_table("Longest (time)", ["Location", "Visited date/time", "Time"], top10_time, include_heading=False)),
+        ("Longest (distance)", _top10_table("Longest (distance)", ["Location", "Visited date/time", "Distance"], top10_dist, include_heading=False)),
+        ("Most species", _top10_table("Most species", ["Location", "Visited date/time", "Species"], top10_species, include_heading=False)),
+        ("Most individuals", _top10_table("Most individuals", ["Location", "Visited date/time", "Count"], top10_individuals, include_heading=False)),
+        ("Most visited locations", _top10_visited_table(top10_visited, include_heading=False)),
+    ]
+
+    stats_html = f"""
+<style>{_table_css}</style>
+<div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:1200px;display:flex;flex-wrap:wrap;gap:24px;">
+  <div style="flex:1;min-width:280px;">{left_col}</div>
+  <div style="flex:1;min-width:280px;">{right_col}</div>
+</div>
+"""
+    return {"stats_html": stats_html, "top10_sections": top10_sections}
+
+
+# Compute stats from full dataset (respects date filter via df, but we use df_full for "all time" stats)
+checklist_data = _compute_checklist_stats(df_full)
+checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
+
+# Top 10 tab: accordion so lists are collapsible, each takes full width when expanded
+_top10_css = """
+.stats-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; }
+.stats-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
+.stats-tbl th:last-child { text-align:right; }
+.stats-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
+.stats-tbl td:nth-child(2), .stats-tbl td:nth-child(3) { white-space:nowrap; }
+.stats-tbl td:last-child { text-align:right; font-weight:bold; }
+.stats-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
+.stats-tbl tbody tr:nth-child(even) { background:#fff; }
+.stats-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
+"""
+top10_accordion = Accordion(
+    children=[widgets.HTML(value=f"<style>{_top10_css}</style>{html}") for _, html in checklist_data["top10_sections"]],
+    selected_index=None,  # All collapsed by default; expand to view
+)
+for i, (title, _) in enumerate(checklist_data["top10_sections"]):
+    top10_accordion.set_title(i, title)
+
+# Tabs: Map, Checklist Statistics, Top 10
+main_tabs = widgets.Tab(children=[map_output, checklist_stats_panel, top10_accordion])
+main_tabs.set_title(0, "🗺️ Map")
+main_tabs.set_title(1, "📊 Checklist Statistics")
+main_tabs.set_title(2, "🏆 Top 25")
+main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit tab name; reserve space for map
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
-# ✅ Show interactive output area (map + messages)
+# ✅ Show dashboard (controls + map/tabs together)
 # --------------------------------------------
-display(map_output)
+dashboard = VBox([search_box, dropdown, hide_non_matching_checkbox, highlight_close_box, output, main_tabs])
+dashboard.layout = widgets.Layout(min_height="750px")  # Ensure map + controls visible without expanding
+display(dashboard)
+draw_map_with_species_overlay("", "")
 
 
 # %%
