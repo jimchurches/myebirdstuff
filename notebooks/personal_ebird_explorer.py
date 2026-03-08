@@ -1450,9 +1450,9 @@ def _compute_checklist_stats(df):
     _table_css = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
     .stats-info-glyph { cursor:help; opacity:0.7; }
-    .stats-info-tooltip { position:absolute; bottom:100%; left:0; margin-bottom:6px; padding:10px 14px; background:#333; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(380px,90vw); min-width:200px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.2); opacity:0; visibility:hidden; transition:opacity 0.05s; pointer-events:none; z-index:9999; }
+    .stats-info-tooltip { position:absolute; top:100%; left:0; margin-top:6px; padding:10px 14px; background:#333; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(380px,90vw); min-width:200px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.2); opacity:0; visibility:hidden; transition:opacity 0.05s; pointer-events:none; z-index:9999; }
     .stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
-    .stats-tbl { border-collapse:collapse; width:100%; max-width:500px; font-size:13px; }
+    .stats-tbl { border-collapse:collapse; width:100%; max-width:100%; font-size:13px; }
     .stats-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; background:#fff; }
     .stats-tbl th:last-child { text-align:right; }
     .stats-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
@@ -1502,6 +1502,16 @@ def _compute_checklist_stats(df):
 
   {_table("Checklist types", protocol_rows)}
 
+  {_table("Total Distance", [
+    ("Kilometers traveled", f"{total_km:,.2f}"),
+    ("Parkruns (5 km)", f"{parkruns:,.2f}"),
+    ("Marathons (42.195 km)", f"{marathons:,.2f}"),
+    (f"Longest Flight ({godwit_link}){_info_icon(godwit_hint)}", f"{times_godwit:,.2f}"),
+    ("Times around the equator", f"{times_equator:,.2f}"),
+  ])}
+"""
+
+    right_col = f"""
   {_table("Time eBirded", [
     ("Total minutes", f"{total_minutes:,.2f}"),
     ("Total hours", f"{total_hours:,.2f}"),
@@ -1509,7 +1519,7 @@ def _compute_checklist_stats(df):
     ("Months", f"{total_months:,.2f}"),
     ("Total years", f"{total_years:,.2f}"),
     ("Days with a checklist", f"{n_days_with_checklist:,}"),
-  ], info_title=time_hint)}
+  ], first=True, info_title=time_hint)}
 
   {_table("eBirding with Others", [
     ("Shared checklists", f"{n_shared:,}"),
@@ -1517,16 +1527,6 @@ def _compute_checklist_stats(df):
     ("Hours eBirding with others", f"{shared_hours:,.2f}"),
     ("Days birding with others", f"{n_days_birding_with_others:,}"),
   ])}
-"""
-
-    right_col = f"""
-  {_table("Total Distance", [
-    ("Kilometers traveled", f"{total_km:,.2f}"),
-    ("Parkruns (5 km)", f"{parkruns:,.2f}"),
-    ("Marathons (42.195 km)", f"{marathons:,.2f}"),
-    (f"Longest Flight ({godwit_link}){_info_icon(godwit_hint)}", f"{times_godwit:,.2f}"),
-    ("Times around the equator", f"{times_equator:,.2f}"),
-  ], first=True)}
 
   {_table("Checklist Streak", [
     ("Longest streak (consecutive days)", str(streak)),
@@ -1571,9 +1571,9 @@ def _compute_checklist_stats(df):
 
     stats_html = f"""
 <style>{_table_css}</style>
-<div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:1200px;display:flex;flex-wrap:wrap;gap:24px;">
-  <div style="flex:1;min-width:280px;">{left_col}</div>
-  <div style="flex:1;min-width:280px;">{right_col}</div>
+<div class="stats-layout" style="font-family:sans-serif;font-size:13px;line-height:1.6;width:100%;max-width:1400px;display:flex;flex-wrap:wrap;gap:clamp(24px,4vw,48px);justify-content:flex-start;padding:0 clamp(16px,3vw,32px);box-sizing:border-box;">
+  <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{left_col}</div>
+  <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{right_col}</div>
 </div>
 """
     return {"stats_html": stats_html, "top10_sections": top10_sections}
