@@ -147,7 +147,11 @@ What these are for:
 
 ## 4. Configure the data folder and CSV
 
-The notebook needs to know where your eBird CSV file lives. It reads this from a small config file in the **scripts** folder.
+The notebook looks for your eBird CSV in this order until it finds the file: (1) hardcoded path in User Variables, (2) config_secret.py, (3) config_template.py, (4) notebook folder (e.g. Binder uploads).
+
+**Option A: Hardcoded path** — In the first code cell, set `DATA_FOLDER_HARDCODED = r"C:\Users\You\Documents\eBirdData"` (Windows) or `"/Users/you/Documents/eBirdData"` (macOS).
+
+**Option B: Config file**
 
 1. Open the **scripts** folder in the repo.  
 2. Copy `config_template.py` to `config_secret.py` (so your personal paths aren’t in the template).  
@@ -155,10 +159,11 @@ The notebook needs to know where your eBird CSV file lives. It reads this from a
 
 **Examples:**
 
-**Windows:**
+**Windows** (use raw string `r"..."` or forward slashes — no need to escape backslashes):
 
 ```python
-DATA_FOLDER = "C:\\Users\\YourName\\Documents\\eBirdData"
+DATA_FOLDER = r"C:\Users\YourName\Documents\eBirdData"
+# or: DATA_FOLDER = "C:/Users/YourName/Documents/eBirdData"
 ```
 
 **macOS:**
@@ -240,7 +245,7 @@ The `voila.json` in the notebooks folder hides the documentation cells so only t
 | 1 | Install Python 3.8+ (Windows: Store or python.org; macOS: python.org or Homebrew). |
 | 2 | (Optional) Create and activate a virtual environment. |
 | 3 | `pip install -r requirements-explorer.txt` (or install packages individually; see step 3). |
-| 4 | Copy `scripts/config_template.py` → `scripts/config_secret.py`, set `DATA_FOLDER`, put `MyEBirdData.csv` there. |
+| 4 | Set `DATA_FOLDER_HARDCODED` in the notebook, or copy `config_template.py` → `config_secret.py`, set `DATA_FOLDER`, put `MyEBirdData.csv` there. |
 | 5 | From **notebooks** folder: `jupyter notebook` or `jupyter lab`, open `personal_ebird_explorer.ipynb`, Run All Cells. |
 | 6 | (Optional) From **notebooks** folder: `voila personal_ebird_explorer.ipynb --config=voila.json` |
 
@@ -256,7 +261,7 @@ The `voila.json` in the notebooks folder hides the documentation cells so only t
   Check that `DATA_FOLDER` in `config_secret.py` uses the correct path and that `MyEBirdData.csv` (or your chosen filename) is in that folder.
 
 - **Windows path in config**  
-  Use double backslashes: `"C:\\Users\\You\\Documents\\eBirdData"`.
+  Use a raw string: `r"C:\Users\You\Documents\eBirdData"` or forward slashes: `"C:/Users/You/Documents/eBirdData"`.
 
 - **macOS: `python` vs `python3`**  
   Use `python3` and `pip3` if that’s what your install provides; inside a venv, `python` and `pip` are usually enough.
