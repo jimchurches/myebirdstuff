@@ -1591,12 +1591,22 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
   <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Close locations</h4>
   <p style="margin:4px 0;color:#666;">None detected within the current threshold ({threshold_m} m).</p>"""
 
+    explanation = """
+  <div style="margin-top:24px;max-width:600px;display:flex;gap:8px;box-sizing:border-box;">
+    <span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#5a7ab8;color:white;font-size:10px;font-weight:600;font-family:sans-serif;line-height:1;">?</span>
+    <div style="flex:1;min-width:0;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+      This data is provided to help you keep your eBird locations in good order. It may not be that useful if you use a lot of hotspots and don't create many new locations. However, for those who create locations and build a large catalogue of them, this data can help you clean up duplicates or locations that are very close to each other.<br><br>
+      On the eBird website there are options to merge locations. Duplicates can be tricky to merge directly, so often the easiest approach is to move a checklist to the other duplicate location, then delete the now-empty one. See eBird for more details.
+    </div>
+  </div>"""
+
     return f"""
 <style>{css}</style>
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
 {dup_table}
 {near_section}
 {orphaned_table}
+{explanation}
 </div>"""
 
 
