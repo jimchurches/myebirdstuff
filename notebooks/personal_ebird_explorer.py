@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.2
+#       jupytext_version: 1.19.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -174,18 +174,30 @@ FILTER_END_DATE = "2025-12-31"
 # --------------------------------------------
 # ✅ Check dependencies (fail fast with clear message if missing)
 # --------------------------------------------
-_REQUIRED = ["pandas", "folium", "ipywidgets", "whoosh", "scikit-learn"]
+# (import_name, pip_package_name) — scikit-learn installs as "scikit-learn" but imports as "sklearn"
+_REQUIRED = [
+    ("pandas", "pandas"),
+    ("folium", "folium"),
+    ("ipywidgets", "ipywidgets"),
+    ("whoosh", "whoosh"),
+    ("sklearn", "scikit-learn"),
+]
 _missing = []
-for _pkg in _REQUIRED:
+for _import_name, _pip_name in _REQUIRED:
     try:
-        __import__(_pkg)
+        __import__(_import_name)
     except ImportError:
-        _missing.append(_pkg)
+        _missing.append(_pip_name)
 if _missing:
+    import sys
+    _kernel_py = sys.executable
     raise ImportError(
         f"Missing package(s): {', '.join(_missing)}\n\n"
-        "Install with:  python -m pip install -r requirements-explorer.txt\n"
-        "Or:  python -m pip install " + " ".join(_missing)
+        f"This kernel is using: {_kernel_py}\n"
+        f"Expected (pyenv):      $HOME/.pyenv/versions/3.12.3/bin/python\n\n"
+        "If they differ, Jupyter was started with a different Python. Restart Jupyter using your "
+        "jlabedge script (after killing any existing Jupyter processes).\n\n"
+        "Or install here:  %pip install " + " ".join(_missing)
     )
 
 # %%
@@ -455,7 +467,7 @@ writer.commit()
 # ✅ Initialise global map objects
 # --------------------------------------------
 species_map = None
-map_output = widgets.Output()
+map_output = widgets.Output(layout=widgets.Layout(min_height="500px", width="100%"))
 output = widgets.Output()
 
 
@@ -1354,6 +1366,33 @@ def _compute_checklist_stats(df):
             rows.append((loc_link, dt_link, val))
         return rows
 
+    def _top10_by_location(df_obs, cl_sub, mode, fmt):
+        """Top 25 locations by total species or individuals (across all checklists). mode: 'species' or 'individuals'."""
+        if df_obs.empty or cl_sub.empty:
+            return []
+        if mode == "species":
+            agg = df_obs.groupby("Location ID", group_keys=False).apply(
+                lambda g: _countable_species_vectorized(g).dropna().nunique(),
+                include_groups=False,
+            ).reset_index(name="_val")
+        else:
+            agg = df_obs.groupby("Location ID", group_keys=False).apply(
+                lambda g: g["Count"].apply(_safe_count).sum(),
+                include_groups=False,
+            ).reset_index(name="_val")
+        loc_info = cl_sub.groupby("Location ID").agg(
+            Location=("Location", "first"),
+            Checklists=("Submission ID", "nunique"),
+        ).reset_index()
+        merged = agg.merge(loc_info, on="Location ID", how="inner")
+        merged = merged.sort_values(by=["_val", "Location"], ascending=[False, True]).head(25)
+        rows = []
+        for _, r in merged.iterrows():
+            lid = r["Location ID"]
+            loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
+            rows.append((loc_link, f"{int(r['Checklists']):,}", fmt(r["_val"])))
+        return rows
+
     def _top10_visited(cl_sub):
         """Top 25 most visited locations; ties by oldest first. Location links to lifelist; first/last link to checklists."""
         if cl_sub.empty:
@@ -1404,6 +1443,8 @@ def _compute_checklist_stats(df):
     top10_dist = _top10(cl_with_dist, "_dist", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{x:,.2f} km") if dist_col and not cl_with_dist.empty else []
     top10_species = _top10(cl_species, "_nsp", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}") if not cl_species.empty else []
     top10_individuals = _top10(cl_individuals, "_nind", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}") if not cl_individuals.empty else []
+    top10_species_loc = _top10_by_location(df, cl, "species", lambda x: f"{int(x):,}")
+    top10_individuals_loc = _top10_by_location(df, cl, "individuals", lambda x: f"{int(x):,}")
     top10_visited = _top10_visited(cl)
 
     _table_css = """
@@ -1521,8 +1562,10 @@ def _compute_checklist_stats(df):
     top10_sections = [
         ("Longest (time)", _top10_table("Longest (time)", ["Location", "Visited date/time", "Time"], top10_time, include_heading=False)),
         ("Longest (distance)", _top10_table("Longest (distance)", ["Location", "Visited date/time", "Distance"], top10_dist, include_heading=False)),
-        ("Most species", _top10_table("Most species", ["Location", "Visited date/time", "Species"], top10_species, include_heading=False)),
-        ("Most individuals", _top10_table("Most individuals", ["Location", "Visited date/time", "Count"], top10_individuals, include_heading=False)),
+        ("Most species (checklist)", _top10_table("Most species (checklist)", ["Location", "Visited date/time", "Species"], top10_species, include_heading=False)),
+        ("Most individuals (checklist)", _top10_table("Most individuals (checklist)", ["Location", "Visited date/time", "Count"], top10_individuals, include_heading=False)),
+        ("Most species (location)", _top10_table("Most species (location)", ["Location", "Checklists", "Species"], top10_species_loc, include_heading=False)),
+        ("Most individuals (location)", _top10_table("Most individuals (location)", ["Location", "Checklists", "Count"], top10_individuals_loc, include_heading=False)),
         ("Most visited locations", _top10_visited_table(top10_visited, include_heading=False)),
     ]
 
@@ -1554,7 +1597,7 @@ _top10_css = """
 """
 top10_accordion = Accordion(
     children=[widgets.HTML(value=f"<style>{_top10_css}</style>{html}") for _, html in checklist_data["top10_sections"]],
-    selected_index=None,  # All collapsed by default; expand to view
+    selected_index=0,  # Expand first section by default so content is visible
 )
 for i, (title, _) in enumerate(checklist_data["top10_sections"]):
     top10_accordion.set_title(i, title)
@@ -1678,6 +1721,7 @@ main_tabs.set_title(0, "🗺️ Map")
 main_tabs.set_title(1, "📊 Checklist Statistics")
 main_tabs.set_title(2, "🏆 Top 25")
 main_tabs.set_title(3, "🔧 Map maintenance")
+main_tabs.selected_index = 0  # Ensure map tab is visible on load
 main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit tab name; reserve space for map
 
 # %% editable=true slideshow={"slide_type": ""}
