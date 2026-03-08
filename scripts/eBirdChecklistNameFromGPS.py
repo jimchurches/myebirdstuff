@@ -6,6 +6,12 @@ eBirdChecklistNameFromGPS.py
 Resolves GPS coordinates into an eBird-friendly location name. Output is
 printed to the console and copied to the clipboard (for UI.Vision macros).
 
+Used by UI.Vision macros (e.g. incidental checklist creation, location rename).
+Does not run on Binder — run locally with Python.
+
+Requirements (install before use):
+    pip install requests pyperclip
+
 Output format:
     Location Name ( lat, lng )
 
@@ -95,8 +101,11 @@ import json
 import re
 import sys
 from datetime import date
+
+# External packages: pip install requests pyperclip
 import requests
 import pyperclip
+
 from typing import Tuple, List, Optional
 
 
