@@ -1381,8 +1381,8 @@ def _rankings_by_checklists(df_obs, limit):
     return rows
 
 
-def _rankings_seen_once(df_obs, limit):
-    """Species in exactly 1 checklist. Returns (species, location_link, date_time_link, count)."""
+def _rankings_seen_once(df_obs, limit=None):
+    """Species in exactly 1 checklist. Returns (species, location_link, date_time_link, count). No limit by default."""
     if df_obs.empty:
         return []
     df_s = df_obs.copy()
@@ -1399,7 +1399,9 @@ def _rankings_seen_once(df_obs, limit):
         Submission_ID=("Submission ID", "first"),
         _dt=(dt_col, "first"),
     ).reset_index()
-    seen_once = by_base[by_base["n_checklists"] == 1].sort_values("common_name").head(limit)
+    seen_once = by_base[by_base["n_checklists"] == 1].sort_values("common_name")
+    if limit is not None:
+        seen_once = seen_once.head(limit)
     rows = []
     for _, r in seen_once.iterrows():
         name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
@@ -1474,7 +1476,7 @@ def _compute_rankings(df, cl, limit, dur_col, dist_col):
         "visited": _rankings_by_visits(cl, limit),
         "species_individuals": _rankings_by_individuals(df, limit),
         "species_checklists": _rankings_by_checklists(df, limit),
-        "seen_once": _rankings_seen_once(df, limit),
+        "seen_once": _rankings_seen_once(df, limit=None),  # No limit; show all species seen only once
     }
 
 
@@ -1699,8 +1701,9 @@ def _compute_checklist_stats(df):
         scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
         return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
-    def _rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-        """4-column table: Species | Location | Visited date/time | Count."""
+    def _rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16, note_text=None):
+        """4-column table: Species | Location | Visited date/time | Count. Optional note above table."""
+        import html as _html
         if not rows:
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
@@ -1709,7 +1712,13 @@ def _compute_checklist_stats(df):
         )
         tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>Species</th><th>Location</th><th>Visited date/time</th><th>Count</th></tr></thead><tbody>{body}</tbody></table>"
         scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-        return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+        note_html = ""
+        if note_text:
+            esc = _html.escape(note_text, quote=True)
+            note_html = f"""<p class="rankings-note" style="margin:0 0 6px;font-size:11px;color:#888;line-height:1.4;">
+  <span class="stats-info-glyph" style="margin-right:4px;">&#9432;</span>{esc}
+</p>"""
+        return f"{note_html}{scroll_wrapper}"
 
     # Rankings sections for accordion (content only, no heading - accordion provides title)
     scroll_hint = POPUP_SCROLL_HINT
@@ -1724,7 +1733,7 @@ def _compute_checklist_stats(df):
         ("Location: Most visited", _rankings_visited_table(rankings["visited"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Species: Most individuals", _rankings_table("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Species: Most checklists", _rankings_table("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Seen only once", _rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Seen only once", _rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, note_text=f"All species, not limited to {TOP_N_TABLE_LIMIT}.")),
     ]
 
     stats_html = f"""
@@ -1743,6 +1752,10 @@ checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 
 # Rankings tab: accordion so lists are collapsible, each takes full width when expanded
 _rankings_css = """
+.stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
+.stats-info-glyph { cursor:help; opacity:0.7; }
+.stats-info-tooltip { position:absolute; top:100%; left:0; margin-top:6px; padding:10px 14px; background:#333; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(380px,90vw); min-width:200px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.2); opacity:0; visibility:hidden; transition:opacity 0.05s; pointer-events:none; z-index:9999; }
+.stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
 .stats-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; }
 .stats-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
 .stats-tbl th:last-child { text-align:right; }
