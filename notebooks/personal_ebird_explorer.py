@@ -162,6 +162,7 @@ FILTER_BY_DATE = False
 FILTER_START_DATE = "2025-01-01"
 FILTER_END_DATE = "2025-12-31"
 
+
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 📦 Imports and Setup
 #
@@ -223,7 +224,7 @@ import threading
 import importlib.util
 import ipywidgets as widgets
 
-from ipywidgets import Accordion, Checkbox, VBox
+from ipywidgets import Accordion, Box, Checkbox, VBox
 from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT
 from whoosh.analysis import StemmingAnalyzer
@@ -489,7 +490,9 @@ writer.commit()
 # ✅ Initialise global map objects
 # --------------------------------------------
 species_map = None
-map_output = widgets.Output(layout=widgets.Layout(min_height="500px", width="100%"))
+map_output = widgets.Output(
+    layout=widgets.Layout(min_height="500px", width="100%", flex="1 1 auto")
+)
 output = widgets.Output()
 
 
@@ -506,7 +509,7 @@ output = widgets.Output()
 debounce_delay = 0.3  # seconds to wait after search box cleared before resetting
 debounce_timer = None
 search_box = widgets.Text(placeholder="Type species name...", description="Search:")
-dropdown = widgets.Select(options=[], value=None, description="Matches:", rows=10)
+dropdown = widgets.Select(options=[], value=None, description="Matches:", rows=5)
 hide_non_matching_checkbox = Checkbox(
     value=False,
     description='Show only selected species',
@@ -810,7 +813,6 @@ def update_suggestions(change):
         ranked = sorted(results, key=score, reverse=True)
         #print(f"🎯 Search matches found: {[r['common_name'] for r in ranked[:10]]}")
         dropdown.options = [r["common_name"] for r in ranked[:10]]
-
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -1943,8 +1945,16 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
 map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS, locations_without_checklists)
 map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
+# Map tab: controls above map (fully visible; overlay positioning fails in notebook/Voila)
+map_controls = VBox([search_box, dropdown, hide_non_matching_checkbox])
+
+map_tab_container = VBox(
+    [map_controls, map_output],
+    layout=widgets.Layout(min_height="600px", width="100%"),
+)
+
 # Tabs: Map, Checklist Statistics, Rankings (Top N), Map maintenance
-main_tabs = widgets.Tab(children=[map_output, checklist_stats_panel, rankings_accordion, map_maintenance_panel])
+main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, rankings_accordion, map_maintenance_panel])
 main_tabs.set_title(0, "🗺️ Map")
 main_tabs.set_title(1, "📊 Checklist Statistics")
 main_tabs.set_title(2, f"🏆 Top {TOP_N_TABLE_LIMIT}")
@@ -1954,9 +1964,9 @@ main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit 
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
-# ✅ Show dashboard (controls + map/tabs together)
+# ✅ Show dashboard (controls overlaid on map, output + tabs)
 # --------------------------------------------
-dashboard = VBox([search_box, dropdown, hide_non_matching_checkbox, output, main_tabs])
+dashboard = VBox([output, main_tabs])
 dashboard.layout = widgets.Layout(min_height="750px")  # Ensure map + controls visible without expanding
 display(dashboard)
 draw_map_with_species_overlay("", "")
