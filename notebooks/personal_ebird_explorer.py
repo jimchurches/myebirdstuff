@@ -239,15 +239,26 @@ display(HTML("""
     height: 600px;
     min-height: 600px;
 }
-/* Matches dropdown: no scrollbars; type to narrow, don't scroll */
-.widget-select,
-.widget-select select {
-    overflow: hidden !important;
-    overflow-x: hidden !important;
-    overflow-y: hidden !important;
+/* Species matches dropdown: drops neatly below input, matches app styling */
+.species-matches-dropdown,
+.species-matches-dropdown select,
+.map-controls-panel .widget-select,
+.map-controls-panel .widget-select select {
+    font-size: 13px !important;
+    font-weight: normal !important;
+    color: #444 !important;
+    background: #fafafa !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
 }
-.widget-select select {
-    max-width: 100% !important;
+.species-matches-dropdown select,
+.map-controls-panel .widget-select select {
+    padding: 4px 8px !important;
+    overflow: hidden !important;
+}
+.species-matches-dropdown {
+    margin-top: 2px !important;  /* small gap below search input */
 }
 /* Control area: light silver/grey with subtle polish (like the map stats box) */
 .map-controls-panel,
@@ -546,17 +557,30 @@ output = widgets.Output()
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🔍 Autocomplete UI Widgets
 #
-# Defines the text input, dropdown list, and checkbox used for species search and filtering.
+# Text input + matches dropdown that appears below when typing. Width based on longest species name.
 #
 
 # %%
 # --------------------------------------------
 # ✅ Autocomplete UI Widgets
 # --------------------------------------------
-debounce_delay = 0.3  # seconds to wait after search box cleared before resetting
+debounce_delay = 0.3  # seconds to wait after cleared before resetting
 debounce_timer = None
-search_box = widgets.Text(placeholder="Type species name...", description="Search:")
-dropdown = widgets.Select(options=[], value=None, description="Matches:", rows=10)
+
+# Input width: longest species name + 20%, capped (avoids full-width stretch when empty)
+_max_name_len = max(len(s) for s in species_list) if species_list else 25
+_species_input_width = f"{min(int(_max_name_len * 1.2) + 4, 52)}ch"
+
+search_box = widgets.Text(placeholder="Type species name...", description="Species:")
+search_box.layout = widgets.Layout(width=_species_input_width, min_width="12ch")
+
+matches_dropdown = widgets.Select(options=[], value=None, description="", rows=6)
+matches_dropdown.layout = widgets.Layout(
+    width=_species_input_width,
+    min_width="12ch",
+    display="none",  # hidden until we have suggestions
+)
+
 hide_non_matching_checkbox = Checkbox(
     value=False,
     description='Show only selected species',
@@ -722,23 +746,9 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🎛️ UI Event Handlers
 #
-# Handles user interaction with species search and filter controls:
-#
-# - `on_species_selected`: 
-#   - Updates the selected species when a dropdown item is clicked
-#   - Looks up the scientific name from the common name
-#   - Draws the species map
-#   - Clears the map if the search box and dropdown are both empty
-#
-# - `on_toggle_change`: 
-#   - Redraws the map when the "hide non-matching" checkbox is toggled
-#   - Only has an effect if a species is currently selected
-#
-# - `on_search_box_cleared`: 
-#   - Waits briefly after clearing the search box (debounce)
-#   - If still empty, resets the dropdown, checkbox, and full map view
-#
-# These handlers drive the main species filtering logic and keep the map UI reactive.
+# - `update_suggestions`: Whoosh search as user types; show/hide matches dropdown
+# - `on_species_selected`: map redraw when user picks from dropdown
+# - `on_search_box_cleared`: debounced reset when search cleared
 #
 
 # %%
@@ -746,46 +756,80 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # ✅ UI Event Handlers
 # --------------------------------------------
 
-# Flag: True while update_suggestions is changing dropdown.options (avoids spurious redraws)
+# Flag: True while we're updating matches_dropdown.options (avoids spurious redraws)
 _updating_suggestions = False
+# Flag: skip next update_suggestions (when we set search_box.value from a selection)
+_skip_next_suggestion_update = False
 
 
-# ✅ Called when a dropdown species is selected (manual selection only; not when options refresh)
+def _show_matches_dropdown(show):
+    """Show or hide the matches dropdown based on whether we have options."""
+    matches_dropdown.layout.display = "flex" if show else "none"
+
+
+# ✅ Update suggestions from Whoosh; show dropdown when we have matches
+def update_suggestions(change):
+    global _updating_suggestions, _skip_next_suggestion_update
+    if _skip_next_suggestion_update:
+        _skip_next_suggestion_update = False
+        return
+    _updating_suggestions = True
+    try:
+        query = (change.get("new") or "").strip().lower()
+        if len(query) < 3:
+            matches_dropdown.options = []
+            matches_dropdown.value = None
+            _show_matches_dropdown(False)
+            return
+        with ix.searcher() as searcher:
+            qp = QueryParser("common_name", ix.schema, group=OrGroup)
+            tokens = query.split()
+            try:
+                q = qp.parse(" ".join(f"{t}*" for t in tokens))
+            except Exception:
+                matches_dropdown.options = []
+                _show_matches_dropdown(False)
+                return
+            results = searcher.search(q, limit=None)
+
+            def score(r):
+                name = r["common_name"].lower()
+                base = 100 - r.rank
+                if name.startswith(tokens[0]):
+                    base += 50
+                return base
+
+            ranked = sorted(results, key=score, reverse=True)
+            opts = [r["common_name"] for r in ranked[:6]]  # match rows=6, no scrollbar
+            matches_dropdown.options = opts
+            matches_dropdown.value = None
+            _show_matches_dropdown(len(opts) > 0)
+    finally:
+        _updating_suggestions = False
+
+
+# ✅ Called when user selects a species from the dropdown
 def on_species_selected(change):
     global selected_species_scientific, selected_species_common
     if _updating_suggestions:
-        return  # Options were refreshed as user typed; only manual selection should redraw
+        return
     output.clear_output()
-
     selected = change.get("new")
-    search_text = search_box.value.strip()
-
-    # Show full map if search fully cleared
-    if selected is None and search_text == "":
-        selected_species_scientific = ""
-        selected_species_common = ""
-        hide_non_matching_checkbox.value = False
-        with output:
-            print("🧹 Search truly cleared — showing all locations")
-        draw_map_with_species_overlay("", "")
-        return
-
-    # Don't trigger if no species selected
     if selected is None:
-        print("🚫 No selection — skipping map draw")
         return
-
-    # Lookup scientific name
     selected_species_scientific = name_map.get(selected, "").strip()
-    selected_species_common = selected or ""
-    print(f"✅ Selected scientific name: {selected_species_scientific}")
-
+    selected_species_common = selected
     with output:
         print(f"🔎 Selected species: {selected} → Scientific: {selected_species_scientific}")
     draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
+    # Sync search box to selected value; hide dropdown (skip update_suggestions)
+    _skip_next_suggestion_update = True
+    search_box.value = selected
+    matches_dropdown.options = []
+    _show_matches_dropdown(False)
 
 
-# ✅ Called when the "hide non-matching" checkbox is toggled (species filter only)
+# ✅ Called when the "hide non-matching" checkbox is toggled
 def on_toggle_change(change):
     global selected_species_scientific, selected_species_common
     with output:
@@ -794,13 +838,11 @@ def on_toggle_change(change):
         draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
 
 
-# ✅ Called when search box is cleared (after short debounce)
+# ✅ Debounced reset when search box is cleared
 def on_search_box_cleared(change):
     global debounce_timer
-
-    old_val = change.get("old", "").strip()
-    new_val = change.get("new", "").strip()
-
+    old_val = (change.get("old") or "").strip()
+    new_val = (change.get("new") or "").strip()
     if old_val and not new_val:
         if debounce_timer:
             debounce_timer.cancel()
@@ -808,8 +850,9 @@ def on_search_box_cleared(change):
         def handle_clear():
             global selected_species_scientific, selected_species_common
             if search_box.value.strip() == "":
-                dropdown.options = []
-                dropdown.value = None
+                matches_dropdown.options = []
+                matches_dropdown.value = None
+                _show_matches_dropdown(False)
                 hide_non_matching_checkbox.value = False
                 selected_species_scientific = ""
                 selected_species_common = ""
@@ -824,65 +867,7 @@ def on_search_box_cleared(change):
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🔡 Autocomplete Search Logic
-#
-# This function handles fuzzy autocomplete updates when the user types in the search box:
-#
-# - Ignores input shorter than 3 characters
-# - Uses Whoosh to run a partial (wildcard) search across species names
-# - Parses and scores matches, giving a bonus to names that start with the first typed token
-# - Updates the dropdown with the top 10 most relevant matches
-#
-# 📌 Keeps suggestions focused and relevant as the user types, even with typos or partial input.
-#
-
-# %%
-# --------------------------------------------
-# ✅ Autocomplete Search Logic 
-# --------------------------------------------
-def update_suggestions(change):
-    global _updating_suggestions
-    _updating_suggestions = True
-    try:
-        print(f"✍️ Search changed: '{change['new']}'")
-        query = change["new"].strip().lower()
-        if len(query) < 3:
-            dropdown.options = []
-            return
-        with ix.searcher() as searcher:
-            qp = QueryParser("common_name", ix.schema, group=OrGroup)
-            tokens = query.split()
-            try:
-                q = qp.parse(" ".join(f"{t}*" for t in tokens))
-            except Exception:
-                dropdown.options = []
-                return
-            results = searcher.search(q, limit=None)
-
-            def score(r):
-                name = r["common_name"].lower()
-                base = 100 - r.rank
-                if name.startswith(tokens[0]):
-                    base += 50
-                return base
-
-            ranked = sorted(results, key=score, reverse=True)
-            #print(f"🎯 Search matches found: {[r['common_name'] for r in ranked[:10]]}")
-            dropdown.options = [r["common_name"] for r in ranked[:10]]
-    finally:
-        _updating_suggestions = False
-
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🧷 Register Widget Observers
-#
-# Connects UI elements to their respective callback functions:
-#
-# - `search_box`: updates suggestions and clears search
-# - `dropdown`: triggers map redraw on selection
-# - `hide_non_matching_checkbox`: toggles visibility of non-matching markers
-#
-# 📌 Enables real-time interaction between widgets and map updates.
 #
 
 # %%
@@ -891,7 +876,7 @@ def update_suggestions(change):
 # --------------------------------------------
 search_box.observe(update_suggestions, names="value")
 search_box.observe(on_search_box_cleared, names="value")
-dropdown.observe(on_species_selected, names="value")
+matches_dropdown.observe(on_species_selected, names="value")
 hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
@@ -2004,8 +1989,8 @@ map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_L
 map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
 # Map tab: controls above map (fully visible; overlay positioning fails in notebook/Voila)
-map_controls = VBox([search_box, dropdown, hide_non_matching_checkbox])
-map_controls.layout = widgets.Layout(width="100%", min_width="0")  # align with map, allow flex shrink
+map_controls = VBox([search_box, matches_dropdown, hide_non_matching_checkbox])
+map_controls.layout = widgets.Layout(width="100%", min_width="0")
 
 map_tab_container = VBox(
     [map_controls, map_output],
@@ -2029,8 +2014,9 @@ main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit 
 dashboard = VBox([output, main_tabs])
 dashboard.layout = widgets.Layout(min_height="750px")  # Ensure map + controls visible without expanding
 display(dashboard)
-map_controls.add_class("map-controls-panel")  # after display so DOM exists
+map_controls.add_class("map-controls-panel")
 map_tab_container.add_class("map-tab-container")
+matches_dropdown.add_class("species-matches-dropdown")  # after display for CSS
 draw_map_with_species_overlay("", "")
 
 
