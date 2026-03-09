@@ -382,8 +382,8 @@ locations_without_checklists = all_locations_from_csv[~all_locations_from_csv["L
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 full_location_data = df_full[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
-selected_species_name = ""
-selected_species_common_name = ""
+selected_species_scientific = ""
+selected_species_common = ""
 
 # Pre-calculate totals for "all species" banner (Count can be "X" for present; treat as 1)
 def _safe_count(x):
@@ -393,6 +393,22 @@ def _safe_count(x):
         return int(x)
     except (ValueError, TypeError):
         return 1
+
+
+def _format_sighting_row(r):
+    """Format a single sighting row for popup HTML: date, time, species, count, checklist link, optional media link."""
+    date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
+    time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
+    text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
+    cid = r.get("Submission ID", "")
+    checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
+    media_html = ""
+    ml = r.get("ML Catalog Numbers")
+    if pd.notna(ml) and str(ml).strip():
+        first_ml = str(ml).strip().split()[0]
+        media_html = f' <a href="https://macaulaylibrary.org/asset/{first_ml}" target="_blank" title="View media">📷</a>'
+    return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
+
 
 def _base_species_for_count(row):
     """Normalize to countable species (used for filter_species / single-row lookups)."""
@@ -616,7 +632,7 @@ def _get_map_maintenance_data(loc_df, threshold_m):
 
 # %%
 # --------------------------------------------
-# ✅ Build True Lifer Table (from full dataset)
+# ✅ Build True Lifer and Last-Seen Tables (from full dataset)
 # --------------------------------------------
 
 # Reload full dataset to avoid filtering effects (date filter, lifer calc)
@@ -636,14 +652,14 @@ def _base_species_for_lifer(sci_name):
         return None
     return f"{parts[0]} {parts[1]}".lower()
 
-_full = (
+_lifer_lookup_df = (
     full_df.sort_values("datetime")
     .dropna(subset=["Scientific Name", "Location ID", "datetime"])
     .assign(_base=lambda x: x["Scientific Name"].apply(_base_species_for_lifer))
 )
-_full = _full[_full["_base"].notna()]
-true_lifer_locations = _full.groupby("_base").first()["Location ID"].to_dict()
-true_last_seen_locations = _full.groupby("_base").last()["Location ID"].to_dict()
+_lifer_lookup_df = _lifer_lookup_df[_lifer_lookup_df["_base"].notna()]
+true_lifer_locations = _lifer_lookup_df.groupby("_base").first()["Location ID"].to_dict()
+true_last_seen_locations = _lifer_lookup_df.groupby("_base").last()["Location ID"].to_dict()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -675,7 +691,7 @@ true_last_seen_locations = _full.groupby("_base").last()["Location ID"].to_dict(
 
 # ✅ Called when a dropdown species is selected
 def on_species_selected(change):
-    global selected_species_name, selected_species_common_name
+    global selected_species_scientific, selected_species_common
     output.clear_output()
 
     selected = change.get("new")
@@ -683,8 +699,8 @@ def on_species_selected(change):
 
     # Show full map if search fully cleared
     if selected is None and search_text == "":
-        selected_species_name = ""
-        selected_species_common_name = ""
+        selected_species_scientific = ""
+        selected_species_common = ""
         hide_non_matching_checkbox.value = False
         with output:
             print("🧹 Search truly cleared — showing all locations")
@@ -697,22 +713,22 @@ def on_species_selected(change):
         return
 
     # Lookup scientific name
-    selected_species_name = name_map.get(selected, "").strip()
-    selected_species_common_name = selected or ""
-    print(f"✅ Selected scientific name: {selected_species_name}")
+    selected_species_scientific = name_map.get(selected, "").strip()
+    selected_species_common = selected or ""
+    print(f"✅ Selected scientific name: {selected_species_scientific}")
 
     with output:
-        print(f"🔎 Selected species: {selected} → Scientific: {selected_species_name}")
-    draw_map_with_species_overlay(selected_species_name, selected_species_common_name)
+        print(f"🔎 Selected species: {selected} → Scientific: {selected_species_scientific}")
+    draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
 
 
 # ✅ Called when the "hide non-matching" checkbox is toggled (species filter only)
 def on_toggle_change(change):
-    global selected_species_name, selected_species_common_name
+    global selected_species_scientific, selected_species_common
     with output:
-        print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_name}")
-    if selected_species_name:
-        draw_map_with_species_overlay(selected_species_name, selected_species_common_name)
+        print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_scientific}")
+    if selected_species_scientific:
+        draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
 
 
 # ✅ Called when search box is cleared (after short debounce)
@@ -727,13 +743,13 @@ def on_search_box_cleared(change):
             debounce_timer.cancel()
 
         def handle_clear():
-            global selected_species_name, selected_species_common_name
+            global selected_species_scientific, selected_species_common
             if search_box.value.strip() == "":
                 dropdown.options = []
                 dropdown.value = None
                 hide_non_matching_checkbox.value = False
-                selected_species_name = ""
-                selected_species_common_name = ""
+                selected_species_scientific = ""
+                selected_species_common = ""
                 with output:
                     output.clear_output()
                     print("🧹 Search cleared — showing all locations")
@@ -829,254 +845,15 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 # --------------------------------------------
 # ✅ Create base map with selected tile style
 # --------------------------------------------
-def create_map(map_center):
-    if MAP_STYLE == "default":
-        return folium.Map(location=map_center, zoom_start=6)
-    elif MAP_STYLE == "satellite":
-        return folium.Map(location=map_center, zoom_start=6, tiles="Esri WorldImagery", attr="Esri")
-    elif MAP_STYLE == "google":
-        return folium.Map(
-            location=map_center,
-            zoom_start=6,
-            tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-            attr="Google"
-        )
-    elif MAP_STYLE == "carto":
-        return folium.Map(location=map_center, zoom_start=6, tiles="CartoDB Positron", attr="CartoDB")
-    else:
-        return folium.Map(location=map_center, zoom_start=6)
-
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Draw Map with Species Overlay
-#
-# Creates and displays the interactive map with observation markers.
-#
-# Handles two main cases:
-#
-# - **No species selected**:  
-#   - Places **green** markers at all locations in the dataset  
-#   - Shows **all-species banner** (checklists, species count, individuals)
-#   - Popups show visit history with links to each checklist and to the location's eBird life list page
-#
-# - **Species selected**:  
-#   - Filters dataset using `filter_species()`, centres map on species locations
-#   - Adds **red** markers at locations where species was seen  
-#   - Optionally adds distinct pins for **lifer** (first-ever) and **last-seen** (most recent) — colours configurable
-#   - Shows **species-specific banner** (checklists, individuals, high count)
-#   - Green markers for locations with no sightings unless the checkbox hides them
-#   - Popups include checklist links, Macaulay Library media links (📷) when available, and location links
-#
-# Extra features:
-# - Map centres on species locations when filtering; on all locations when viewing "All species"
-# - Saves map as HTML if `EXPORT_HTML = True`
-#
-
-# %%
-# --------------------------------------------
-# ✅ Draw map with species overlay (refactored for lifer-on-top and single loop)
-# --------------------------------------------
-def draw_map_with_species_overlay(selected_species, selected_common_name=""):
-    global species_map
-
-    if selected_species:
-        filtered = filter_species(df, selected_species)
-        if filtered.empty:
-            with output:
-                output.clear_output()
-                print(f"⚠️ No sightings of '{selected_species}' in current data — check date range or filters.")
-            return
-        seen_location_ids = set(filtered["Location ID"])
-        species_locations = location_data[location_data["Location ID"].isin(seen_location_ids)]
-        map_center = [species_locations["Latitude"].mean(), species_locations["Longitude"].mean()]
-    else:
-        map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
-
-    species_map = create_map(map_center)
-
-    # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
-    records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
-
-    # Helper: format a single sighting with checklist link and optional media link
-    def format_sighting_row(r):
-        date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
-        time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
-        text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
-        cid = r.get("Submission ID", "")
-        checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
-        media_html = ""
-        ml = r.get("ML Catalog Numbers")
-        if pd.notna(ml) and str(ml).strip():
-            first_ml = str(ml).strip().split()[0]
-            media_html = f' <a href="https://macaulaylibrary.org/asset/{first_ml}" target="_blank" title="View media">📷</a>'
-        return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
-
-    if not selected_species:
-        # Case 1: No species selected – draw all as green, show totals banner
-        banner_html = f"""
-        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:13px;line-height:1.5;">
-            <b>All species</b><br>
-            {total_checklists} checklist{total_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
-            {total_species} species &nbsp;|&nbsp;
-            {total_individuals} individual{total_individuals != 1 and 's' or ''}
-        </div>
-        """
-        species_map.get_root().html.add_child(Element(banner_html))
-
-        popup_asc = POPUP_SORT_ORDER == "ascending"
-        for _, row in location_data.iterrows():
-            base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-            visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
-                for _, r in visit_records.iterrows()
-            ) if not visit_records.empty else ""
-            loc_id = row["Location ID"]
-            loc_url = f"https://ebird.org/lifelist/{loc_id}"
-            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
-            popup = folium.Popup(popup_html, max_width=800)
-            color, fill = DEFAULT_COLOR, DEFAULT_FILL
-            folium.CircleMarker(
-                location=[row['Latitude'], row['Longitude']],
-                radius=4,
-                color=color,
-                fill=True,
-                fill_color=fill,
-                fill_opacity=0.6,
-                popup=popup
-            ).add_to(species_map)
-
-    else:
-        # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
-        popup_asc = POPUP_SORT_ORDER == "ascending"
-        filtered_by_loc = {lid: grp for lid, grp in filtered.groupby("Location ID")}
-
-        # Stats for banner (Count can be "X" for present; treat as 1)
-        n_checklists = filtered["Submission ID"].nunique()
-        n_individuals = int(filtered["Count"].apply(_safe_count).sum())
-        high_count = int(filtered["Count"].apply(_safe_count).max())
-
-        # Banner date format: dd MMM yyyy (e.g. 22 Jan 2025)
-        def _banner_date(d):
-            return d.strftime("%d-%b-%Y") if pd.notna(d) else "?"
-
-        # First seen / last seen (dates only, same as lifer and last-seen pins)
-        first_seen_date = ""
-        last_seen_date = ""
-        high_count_date = ""
-        base = _base_species_for_lifer(selected_species)
-        if base:
-            subset = _full[_full["_base"] == base]
-            if not subset.empty:
-                first_rec = subset.iloc[0]
-                last_rec = subset.iloc[-1]
-                first_seen_date = _banner_date(first_rec["Date"])
-                last_seen_date = _banner_date(last_rec["Date"])
-
-        # Date when high count was achieved
-        high_count_rows = filtered[filtered["Count"].apply(_safe_count) == high_count]
-        if not high_count_rows.empty:
-            high_count_date = _banner_date(high_count_rows.iloc[0]["Date"])
-
-        sep = " &nbsp;|&nbsp; "
-        line2 = f"{n_checklists} checklist{n_checklists != 1 and 's' or ''}{sep}{n_individuals} individual{n_individuals != 1 and 's' or ''}"
-        line3_parts = []
-        if first_seen_date:
-            line3_parts.append(f"First seen: {first_seen_date}")
-        if last_seen_date:
-            line3_parts.append(f"Last seen: {last_seen_date}")
-        line3 = sep.join(line3_parts)
-        line4 = f"High count: {high_count_date} ({high_count})"
-
-        banner_html = f"""
-        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:13px;line-height:1.5;">
-            <b>{selected_common_name or selected_species}</b><br>
-            {line2}<br>
-            {line3}<br>
-            {line4}
-        </div>
-        """
-        species_map.get_root().html.add_child(Element(banner_html))
-
-        lifer_location = None
-        last_seen_location = None
-        if MARK_LIFER:
-            base = _base_species_for_lifer(selected_species)
-            true_lifer_loc = true_lifer_locations.get(base) if base else None
-            if true_lifer_loc in seen_location_ids:
-                lifer_location = true_lifer_loc
-        if MARK_LAST_SEEN:
-            base = _base_species_for_lifer(selected_species)
-            true_last_loc = true_last_seen_locations.get(base) if base else None
-            if true_last_loc in seen_location_ids and true_last_loc != lifer_location:
-                last_seen_location = true_last_loc
-
-        # Prepare classification flags
-        location_data_local = location_data.copy()
-        location_data_local["has_species_match"] = location_data_local["Location ID"].isin(seen_location_ids)
-        location_data_local["is_lifer"] = location_data_local["Location ID"] == lifer_location
-        location_data_local["is_last_seen"] = location_data_local["Location ID"] == last_seen_location
-
-        # Sort so lifer drawn last (on top), then last seen, then species, then non-matching
-        location_data_local = location_data_local.sort_values(
-            by=["has_species_match", "is_lifer", "is_last_seen"], ascending=[True, True, True]
-        )
-
-        # Single loop for marker drawing
-        for _, row in location_data_local.iterrows():
-            loc_id = row["Location ID"]
-
-            if not row["has_species_match"] and hide_non_matching_checkbox.value:
-                continue
-
-            base_records = records_by_loc.get(loc_id, pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-            visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
-                for _, r in visit_records.iterrows()
-            ) if not visit_records.empty else ""
-            loc_url = f"https://ebird.org/lifelist/{loc_id}"
-            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            if row["has_species_match"]:
-                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-                obs_details = "".join(format_sighting_row(r) for _, r in sub.iterrows())
-                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div></div>'
-            else:
-                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
-            popup_content = folium.Popup(popup_html, max_width=800)
-
-            if row["is_lifer"]:
-                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.9
-            elif row["is_last_seen"]:
-                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.9
-            elif row["has_species_match"]:
-                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.8
-            else:
-                color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.6
-
-            folium.CircleMarker(
-                location=[row['Latitude'], row['Longitude']],
-                radius=radius,
-                color=color,
-                fill=True,
-                fill_color=fill,
-                fill_opacity=fill_opacity,
-                popup=popup_content
-            ).add_to(species_map)
-
-    # Scroll popup, scroll-aware chevrons/shading; runs in map iframe
-    scroll_hint = repr(POPUP_SCROLL_HINT)
-    scroll_to_bottom = "true" if POPUP_SORT_ORDER == "ascending" else "false"
-    scroll_popup_script = f"""
+def _popup_scroll_script(scroll_hint, scroll_to_bottom):
+    """Return HTML script for popup scroll hints (chevrons/shading). Runs in map iframe."""
+    hint_js = repr(scroll_hint)
+    to_bottom_js = "true" if scroll_to_bottom else "false"
+    return f"""
 <script>
 (function() {{
-  var HINT = {scroll_hint};
-  var SCROLL_TO_BOTTOM = {scroll_to_bottom};
+  var HINT = {hint_js};
+  var SCROLL_TO_BOTTOM = {to_bottom_js};
 
   function updateHints(scrollable, wrapper) {{
     var st = scrollable.scrollTop;
@@ -1158,6 +935,236 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 }})();
 </script>
 """
+
+
+def create_map(map_center):
+    if MAP_STYLE == "default":
+        return folium.Map(location=map_center, zoom_start=6)
+    elif MAP_STYLE == "satellite":
+        return folium.Map(location=map_center, zoom_start=6, tiles="Esri WorldImagery", attr="Esri")
+    elif MAP_STYLE == "google":
+        return folium.Map(
+            location=map_center,
+            zoom_start=6,
+            tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+            attr="Google"
+        )
+    elif MAP_STYLE == "carto":
+        return folium.Map(location=map_center, zoom_start=6, tiles="CartoDB Positron", attr="CartoDB")
+    else:
+        return folium.Map(location=map_center, zoom_start=6)
+
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
+# ### 🗺️ Draw Map with Species Overlay
+#
+# Creates and displays the interactive map with observation markers.
+#
+# Handles two main cases:
+#
+# - **No species selected**:  
+#   - Places **green** markers at all locations in the dataset  
+#   - Shows **all-species banner** (checklists, species count, individuals)
+#   - Popups show visit history with links to each checklist and to the location's eBird life list page
+#
+# - **Species selected**:  
+#   - Filters dataset using `filter_species()`, centres map on species locations
+#   - Adds **red** markers at locations where species was seen  
+#   - Optionally adds distinct pins for **lifer** (first-ever) and **last-seen** (most recent) — colours configurable
+#   - Shows **species-specific banner** (checklists, individuals, high count)
+#   - Green markers for locations with no sightings unless the checkbox hides them
+#   - Popups include checklist links, Macaulay Library media links (📷) when available, and location links
+#
+# Extra features:
+# - Map centres on species locations when filtering; on all locations when viewing "All species"
+# - Saves map as HTML if `EXPORT_HTML = True`
+#
+
+# %%
+# --------------------------------------------
+# ✅ Draw map with species overlay (refactored for lifer-on-top and single loop)
+# --------------------------------------------
+def draw_map_with_species_overlay(selected_species, selected_common_name=""):
+    global species_map
+
+    if selected_species:
+        filtered = filter_species(df, selected_species)
+        if filtered.empty:
+            with output:
+                output.clear_output()
+                print(f"⚠️ No sightings of '{selected_species}' in current data — check date range or filters.")
+            return
+        seen_location_ids = set(filtered["Location ID"])
+        species_locations = location_data[location_data["Location ID"].isin(seen_location_ids)]
+        map_center = [species_locations["Latitude"].mean(), species_locations["Longitude"].mean()]
+    else:
+        map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
+
+    species_map = create_map(map_center)
+
+    # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
+    records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
+
+    if not selected_species:
+        # Case 1: No species selected – draw all as green, show totals banner
+        banner_html = f"""
+        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
+                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
+                    font-family:sans-serif;font-size:13px;line-height:1.5;">
+            <b>All species</b><br>
+            {total_checklists} checklist{total_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
+            {total_species} species &nbsp;|&nbsp;
+            {total_individuals} individual{total_individuals != 1 and 's' or ''}
+        </div>
+        """
+        species_map.get_root().html.add_child(Element(banner_html))
+
+        popup_asc = POPUP_SORT_ORDER == "ascending"
+        for _, row in location_data.iterrows():
+            base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
+            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
+            visit_info = "<br>".join(
+                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
+                for _, r in visit_records.iterrows()
+            ) if not visit_records.empty else ""
+            loc_id = row["Location ID"]
+            loc_url = f"https://ebird.org/lifelist/{loc_id}"
+            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
+            popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
+            popup = folium.Popup(popup_html, max_width=800)
+            color, fill = DEFAULT_COLOR, DEFAULT_FILL
+            folium.CircleMarker(
+                location=[row['Latitude'], row['Longitude']],
+                radius=4,
+                color=color,
+                fill=True,
+                fill_color=fill,
+                fill_opacity=0.6,
+                popup=popup
+            ).add_to(species_map)
+
+    else:
+        # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
+        popup_asc = POPUP_SORT_ORDER == "ascending"
+        filtered_by_loc = {lid: grp for lid, grp in filtered.groupby("Location ID")}
+
+        # Stats for banner (Count can be "X" for present; treat as 1)
+        n_checklists = filtered["Submission ID"].nunique()
+        n_individuals = int(filtered["Count"].apply(_safe_count).sum())
+        high_count = int(filtered["Count"].apply(_safe_count).max())
+
+        # Banner date format: dd MMM yyyy (e.g. 22 Jan 2025)
+        def _banner_date(d):
+            return d.strftime("%d-%b-%Y") if pd.notna(d) else "?"
+
+        # First seen / last seen (dates only, same as lifer and last-seen pins)
+        first_seen_date = ""
+        last_seen_date = ""
+        high_count_date = ""
+        base = _base_species_for_lifer(selected_species)
+        if base:
+            subset = _lifer_lookup_df[_lifer_lookup_df["_base"] == base]
+            if not subset.empty:
+                first_rec = subset.iloc[0]
+                last_rec = subset.iloc[-1]
+                first_seen_date = _banner_date(first_rec["Date"])
+                last_seen_date = _banner_date(last_rec["Date"])
+
+        # Date when high count was achieved
+        high_count_rows = filtered[filtered["Count"].apply(_safe_count) == high_count]
+        if not high_count_rows.empty:
+            high_count_date = _banner_date(high_count_rows.iloc[0]["Date"])
+
+        sep = " &nbsp;|&nbsp; "
+        line2 = f"{n_checklists} checklist{n_checklists != 1 and 's' or ''}{sep}{n_individuals} individual{n_individuals != 1 and 's' or ''}"
+        line3_parts = []
+        if first_seen_date:
+            line3_parts.append(f"First seen: {first_seen_date}")
+        if last_seen_date:
+            line3_parts.append(f"Last seen: {last_seen_date}")
+        line3 = sep.join(line3_parts)
+        line4 = f"High count: {high_count_date} ({high_count})"
+
+        banner_html = f"""
+        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
+                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
+                    font-family:sans-serif;font-size:13px;line-height:1.5;">
+            <b>{selected_common_name or selected_species}</b><br>
+            {line2}<br>
+            {line3}<br>
+            {line4}
+        </div>
+        """
+        species_map.get_root().html.add_child(Element(banner_html))
+
+        lifer_location = None
+        last_seen_location = None
+        if MARK_LIFER:
+            base = _base_species_for_lifer(selected_species)
+            true_lifer_loc = true_lifer_locations.get(base) if base else None
+            if true_lifer_loc in seen_location_ids:
+                lifer_location = true_lifer_loc
+        if MARK_LAST_SEEN:
+            base = _base_species_for_lifer(selected_species)
+            true_last_loc = true_last_seen_locations.get(base) if base else None
+            if true_last_loc in seen_location_ids and true_last_loc != lifer_location:
+                last_seen_location = true_last_loc
+
+        # Prepare classification flags
+        location_data_local = location_data.copy()
+        location_data_local["has_species_match"] = location_data_local["Location ID"].isin(seen_location_ids)
+        location_data_local["is_lifer"] = location_data_local["Location ID"] == lifer_location
+        location_data_local["is_last_seen"] = location_data_local["Location ID"] == last_seen_location
+
+        # Sort so lifer drawn last (on top), then last seen, then species, then non-matching
+        location_data_local = location_data_local.sort_values(
+            by=["has_species_match", "is_lifer", "is_last_seen"], ascending=[True, True, True]
+        )
+
+        # Single loop for marker drawing
+        for _, row in location_data_local.iterrows():
+            loc_id = row["Location ID"]
+
+            if not row["has_species_match"] and hide_non_matching_checkbox.value:
+                continue
+
+            base_records = records_by_loc.get(loc_id, pd.DataFrame())
+            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
+            visit_info = "<br>".join(
+                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
+                for _, r in visit_records.iterrows()
+            ) if not visit_records.empty else ""
+            loc_url = f"https://ebird.org/lifelist/{loc_id}"
+            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
+            if row["has_species_match"]:
+                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
+                obs_details = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
+                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div></div>'
+            else:
+                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
+            popup_content = folium.Popup(popup_html, max_width=800)
+
+            if row["is_lifer"]:
+                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.9
+            elif row["is_last_seen"]:
+                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.9
+            elif row["has_species_match"]:
+                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.8
+            else:
+                color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.6
+
+            folium.CircleMarker(
+                location=[row['Latitude'], row['Longitude']],
+                radius=radius,
+                color=color,
+                fill=True,
+                fill_color=fill,
+                fill_opacity=fill_opacity,
+                popup=popup_content
+            ).add_to(species_map)
+
+    # Scroll popup: chevrons/shading hints; runs in map iframe
+    scroll_popup_script = _popup_scroll_script(POPUP_SCROLL_HINT, POPUP_SORT_ORDER == "ascending")
     species_map.get_root().html.add_child(Element(scroll_popup_script))
 
     with map_output:
@@ -1194,12 +1201,309 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
 # %%
 # --------------------------------------------
+# ✅ Helper: Longest consecutive-day streak
+# --------------------------------------------
+def _longest_streak(unique_dates, cl):
+    """Find longest streak of consecutive days with a checklist. Returns (streak, start_date, start_loc, start_sid, end_date, end_loc, end_sid)."""
+    import numpy as np
+
+    streak = 0
+    streak_start_date = ""
+    streak_start_loc = ""
+    streak_start_sid = ""
+    streak_end_date = ""
+    streak_end_loc = ""
+    streak_end_sid = ""
+    if len(unique_dates) == 0:
+        return streak, streak_start_date, streak_start_loc, streak_start_sid, streak_end_date, streak_end_loc, streak_end_sid
+
+    arr = np.asarray(pd.to_datetime(unique_dates)).astype("datetime64[D]")
+    day_ints = np.unique(arr.view("int64"))
+    diffs = np.diff(day_ints)
+    gaps = np.where(diffs > 1)[0]
+    best_start, best_end = day_ints[0], day_ints[-1]
+
+    if len(gaps) == 0:
+        streak = len(day_ints)
+        if streak > 0:
+            streak_start_date = pd.Timestamp(day_ints[0], unit="D").strftime("%d %b %Y")
+            streak_end_date = pd.Timestamp(day_ints[-1], unit="D").strftime("%d %b %Y")
+    else:
+        indices = np.arange(len(diffs))
+        segments = np.split(indices, gaps + 1)
+        best_len = 0
+        for i, seg in enumerate(segments):
+            seg = list(seg)
+            if i == 0 and len(seg) > 0 and seg[-1] in gaps:
+                seg = seg[:-1]
+            n = len(seg) + 1 if len(seg) > 0 else 1
+            if n > best_len:
+                best_len = n
+                start_idx = seg[0] if seg else 0
+                end_idx = (seg[-1] + 1) if seg else 0
+                best_start = day_ints[start_idx]
+                best_end = day_ints[min(end_idx, len(day_ints) - 1)]
+        streak = best_len
+        if best_start is not None and best_end is not None:
+            streak_start_date = pd.Timestamp(best_start, unit="D").strftime("%d %b %Y")
+            streak_end_date = pd.Timestamp(best_end, unit="D").strftime("%d %b %Y")
+
+    # Look up locations for streak start/end
+    if streak > 0 and "Date" in cl.columns:
+        first_day = best_start if len(gaps) > 0 else day_ints[0]
+        last_day = best_end if len(gaps) > 0 else day_ints[-1]
+        first_d = pd.Timestamp(first_day, unit="D").normalize()
+        last_d = pd.Timestamp(last_day, unit="D").normalize()
+        cl_copy = cl.copy()
+        cl_copy["_d"] = pd.to_datetime(cl_copy["Date"]).dt.normalize()
+        start_m = cl_copy[cl_copy["_d"] == first_d]
+        end_m = cl_copy[cl_copy["_d"] == last_d]
+        if not start_m.empty:
+            start_row = start_m.iloc[0]
+            streak_start_loc = start_row.get("Location", "")
+            streak_start_sid = str(start_row.get("Submission ID", ""))
+        if not end_m.empty:
+            end_row = end_m.iloc[-1]
+            streak_end_loc = end_row.get("Location", "")
+            streak_end_sid = str(end_row.get("Submission ID", ""))
+
+    return streak, streak_start_date, streak_start_loc, streak_start_sid, streak_end_date, streak_end_loc, streak_end_sid
+
+
+def _rankings_scroll_wrapper(table_html, scroll_hint, visible_rows):
+    """Wrap table HTML in scrollable div with chevron/shading hints. Reused by rankings tables."""
+    max_h = visible_rows * 38  # ~38px per row
+    scroll_hint_js = repr(scroll_hint)
+    return f"""
+<div class="rankings-scroll-wrapper" style="position:relative;">
+  <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
+    {table_html}
+  </div>
+</div>
+<script>
+(function() {{
+  var w = document.currentScript.previousElementSibling;
+  var s = w.querySelector('.rankings-scroll-inner');
+  var h = {scroll_hint_js};
+  if (!s || s.scrollHeight <= s.clientHeight) return;
+  s.scrollTop = 0;
+  if (h === 'chevron' || h === 'both') {{
+    var up = document.createElement('div'); up.className='rankings-scroll-up'; up.style.cssText='position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; up.textContent='\\u25B2';
+    var dn = document.createElement('div'); dn.className='rankings-scroll-down'; dn.style.cssText='position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; dn.textContent='\\u25BC';
+    w.appendChild(up); w.appendChild(dn);
+  }}
+  if (h === 'shading' || h === 'both') {{
+    var ts = document.createElement('div'); ts.className='rankings-scroll-shade-top'; ts.style.cssText='position:absolute;top:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
+    var bs = document.createElement('div'); bs.className='rankings-scroll-shade-bot'; bs.style.cssText='position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
+    w.appendChild(ts); w.appendChild(bs);
+  }}
+  function update() {{
+    var st = s.scrollTop, mx = s.scrollHeight - s.clientHeight;
+    if (h === 'chevron' || h === 'both') {{ w.querySelector('.rankings-scroll-up').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-down').style.visibility = st < mx ? 'visible' : 'hidden'; }}
+    if (h === 'shading' || h === 'both') {{ w.querySelector('.rankings-scroll-shade-top').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-shade-bot').style.visibility = st < mx ? 'visible' : 'hidden'; }}
+  }}
+  s.addEventListener('scroll', update); update();
+}})();
+</script>"""
+
+
+def _rankings_by_value(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt, limit):
+    """Top N by value desc, date asc; ties show oldest. Location links to lifelist, date/time links to checklist."""
+    if df_sub.empty or value_col not in df_sub.columns:
+        return []
+    use_col = "datetime" if "datetime" in df_sub.columns else date_col
+    cols = [use_col, loc_col, sid_col, value_col]
+    if loc_id_col and loc_id_col in df_sub.columns:
+        cols.append(loc_id_col)
+    d = df_sub[cols].dropna(subset=[value_col]).drop_duplicates()
+    d = d.sort_values(by=[value_col, use_col], ascending=[False, True]).head(limit)
+    rows = []
+    for _, r in d.iterrows():
+        dt = r[use_col]
+        dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+        loc = r.get(loc_col, "")
+        sid = r.get(sid_col, "")
+        lid = r.get(loc_id_col, "")
+        val = fmt(r[value_col])
+        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
+        dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
+        rows.append((loc_link, dt_link, val))
+    return rows
+
+
+def _rankings_by_location(df_obs, cl_sub, mode, fmt, limit):
+    """Top N locations by total species or individuals. mode: 'species' or 'individuals'. Ties by first visit date."""
+    if df_obs.empty or cl_sub.empty:
+        return []
+    if mode == "species":
+        agg = df_obs.groupby("Location ID", group_keys=False).apply(
+            lambda g: _countable_species_vectorized(g).dropna().nunique(),
+            include_groups=False,
+        ).reset_index(name="_val")
+    else:
+        agg = df_obs.groupby("Location ID", group_keys=False).apply(
+            lambda g: g["Count"].apply(_safe_count).sum(),
+            include_groups=False,
+        ).reset_index(name="_val")
+    dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
+    loc_info = cl_sub.groupby("Location ID").agg(
+        Location=("Location", "first"),
+        Checklists=("Submission ID", "nunique"),
+    ).reset_index()
+    first_dates = cl_sub.groupby("Location ID")[dt_col].min().reset_index().rename(columns={dt_col: "_first"})
+    merged = agg.merge(loc_info, on="Location ID", how="inner").merge(first_dates, on="Location ID", how="left")
+    merged = merged.sort_values(by=["_val", "_first", "Location"], ascending=[False, True, True]).head(limit)
+    rows = []
+    for _, r in merged.iterrows():
+        lid = r["Location ID"]
+        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
+        rows.append((loc_link, f"{int(r['Checklists']):,}", fmt(r["_val"])))
+    return rows
+
+
+def _rankings_by_individuals(df_obs, limit):
+    """Top N species by total individuals. Subspecies rolled into main species (like map)."""
+    if df_obs.empty:
+        return []
+    df_s = df_obs.copy()
+    df_s["_base"] = _countable_species_vectorized(df_s)
+    df_s = df_s.dropna(subset=["_base"])
+    df_s["_count"] = df_s["Count"].apply(_safe_count)
+    by_base = df_s.groupby("_base").agg(
+        total=("_count", "sum"),
+        common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+    ).reset_index()
+    by_base = by_base.sort_values(by=["total", "_base"], ascending=[False, True]).head(limit)
+    rows = []
+    for _, r in by_base.iterrows():
+        name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
+        rows.append((str(name), "—", f"{int(r['total']):,}"))
+    return rows
+
+
+def _rankings_by_checklists(df_obs, limit):
+    """Top N species by number of checklists. Subspecies rolled into main species (like map)."""
+    if df_obs.empty:
+        return []
+    df_s = df_obs.copy()
+    df_s["_base"] = _countable_species_vectorized(df_s)
+    df_s = df_s.dropna(subset=["_base"])
+    by_base = df_s.groupby("_base").agg(
+        n_checklists=("Submission ID", "nunique"),
+        common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+    ).reset_index()
+    by_base = by_base.sort_values(by=["n_checklists", "_base"], ascending=[False, True]).head(limit)
+    rows = []
+    for _, r in by_base.iterrows():
+        name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
+        rows.append((str(name), "—", f"{int(r['n_checklists']):,}"))
+    return rows
+
+
+def _rankings_seen_once(df_obs, limit):
+    """Species in exactly 1 checklist. Returns (species, location_link, date_time_link, count)."""
+    if df_obs.empty:
+        return []
+    df_s = df_obs.copy()
+    df_s["_base"] = _countable_species_vectorized(df_s)
+    df_s = df_s.dropna(subset=["_base"])
+    df_s["_count"] = df_s["Count"].apply(_safe_count)
+    dt_col = "datetime" if "datetime" in df_s.columns else "Date"
+    by_base = df_s.groupby("_base").agg(
+        n_checklists=("Submission ID", "nunique"),
+        checklist_count=("_count", "sum"),
+        common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+        Location=("Location", "first"),
+        Location_ID=("Location ID", "first"),
+        Submission_ID=("Submission ID", "first"),
+        _dt=(dt_col, "first"),
+    ).reset_index()
+    seen_once = by_base[by_base["n_checklists"] == 1].sort_values("common_name").head(limit)
+    rows = []
+    for _, r in seen_once.iterrows():
+        name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
+        lid = r.get("Location_ID")
+        loc = r.get("Location", "")
+        sid = r.get("Submission_ID")
+        dt = r.get("_dt")
+        dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
+        dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
+        rows.append((str(name), loc_link, dt_link, f"{int(r['checklist_count']):,}"))
+    return rows
+
+
+def _rankings_by_visits(cl_sub, limit):
+    """Top N most visited locations; ties by oldest first. Location→lifelist; first/last→checklists."""
+    if cl_sub.empty:
+        return []
+    dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
+    first_idx = cl_sub.groupby("Location ID")[dt_col].idxmin()
+    last_idx = cl_sub.groupby("Location ID")[dt_col].idxmax()
+    first_rows = cl_sub.loc[first_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
+        columns={dt_col: "First", "Submission ID": "First_SID"}
+    )
+    last_rows = cl_sub.loc[last_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
+        columns={dt_col: "Last", "Submission ID": "Last_SID"}
+    )
+    vc = cl_sub.groupby("Location ID").agg(Count=("Submission ID", "nunique")).reset_index()
+    vc = vc.merge(first_rows, on="Location ID").merge(last_rows[["Location ID", "Last", "Last_SID"]], on="Location ID")
+    vc = vc.sort_values(by=["Count", "First"], ascending=[False, True]).head(limit)
+    rows = []
+    for _, r in vc.iterrows():
+        loc = r["Location"]
+        lid = r["Location ID"]
+        first_str = pd.Timestamp(r["First"]).strftime("%d %b %Y %H:%M") if pd.notna(r["First"]) else "—"
+        last_str = pd.Timestamp(r["Last"]).strftime("%d %b %Y %H:%M") if pd.notna(r["Last"]) else "—"
+        first_sid = r.get("First_SID")
+        last_sid = r.get("Last_SID")
+        first_link = f'<a href="https://ebird.org/checklist/{first_sid}" target="_blank">{first_str}</a>' if pd.notna(first_sid) and first_sid else first_str
+        last_link = f'<a href="https://ebird.org/checklist/{last_sid}" target="_blank">{last_str}</a>' if pd.notna(last_sid) and last_sid else last_str
+        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
+        rows.append((loc_link, first_link, last_link, f"{int(r['Count']):,}"))
+    return rows
+
+
+def _compute_rankings(df, cl, limit, dur_col, dist_col):
+    """Compute all Top N rankings data. Returns dict of section key → list of row tuples."""
+    cl_with_dur = cl.dropna(subset=[dur_col]).copy() if dur_col else pd.DataFrame()
+    if dur_col and not cl_with_dur.empty:
+        cl_with_dur["_dur"] = pd.to_numeric(cl_with_dur[dur_col], errors="coerce").fillna(0)
+    cl_with_dist = cl.dropna(subset=[dist_col]).copy() if dist_col else pd.DataFrame()
+    if dist_col and not cl_with_dist.empty:
+        cl_with_dist["_dist"] = pd.to_numeric(cl_with_dist[dist_col], errors="coerce").fillna(0)
+    species_per_cl = df.groupby("Submission ID", group_keys=False).apply(
+        lambda g: _countable_species_vectorized(g).dropna().nunique(),
+        include_groups=False,
+    ).reset_index(name="_nsp")
+    ind_per_cl = df.groupby("Submission ID", group_keys=False).apply(
+        lambda g: g["Count"].apply(_safe_count).sum(),
+        include_groups=False,
+    ).reset_index(name="_nind")
+    cl_species = cl.merge(species_per_cl, on="Submission ID", how="inner")
+    cl_individuals = cl.merge(ind_per_cl, on="Submission ID", how="inner")
+
+    return {
+        "time": _rankings_by_value(cl_with_dur, "_dur", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(round(x))} min", limit) if dur_col and not cl_with_dur.empty else [],
+        "dist": _rankings_by_value(cl_with_dist, "_dist", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{x:,.2f} km", limit) if dist_col and not cl_with_dist.empty else [],
+        "species": _rankings_by_value(cl_species, "_nsp", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}", limit) if not cl_species.empty else [],
+        "individuals": _rankings_by_value(cl_individuals, "_nind", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}", limit) if not cl_individuals.empty else [],
+        "species_loc": _rankings_by_location(df, cl, "species", lambda x: f"{int(x):,}", limit),
+        "individuals_loc": _rankings_by_location(df, cl, "individuals", lambda x: f"{int(x):,}", limit),
+        "visited": _rankings_by_visits(cl, limit),
+        "species_individuals": _rankings_by_individuals(df, limit),
+        "species_checklists": _rankings_by_checklists(df, limit),
+        "seen_once": _rankings_seen_once(df, limit),
+    }
+
+
+# %%
+# --------------------------------------------
 # ✅ Checklist Statistics (computed from data)
 # --------------------------------------------
 def _compute_checklist_stats(df):
-    """Compute checklist statistics from df; returns HTML string."""
+    """Compute checklist statistics from df; returns dict with stats_html and rankings_sections."""
     import html
-    import numpy as np
 
     if df.empty:
         return "<p>No data.</p>"
@@ -1293,240 +1597,10 @@ def _compute_checklist_stats(df):
     times_godwit = total_km / godwit_km
 
     # Longest streak and start/end
-    streak = 0
-    streak_start_date = ""
-    streak_start_loc = ""
-    streak_start_sid = ""
-    streak_end_date = ""
-    streak_end_loc = ""
-    streak_end_sid = ""
-    if len(unique_dates) > 0:
-        arr = np.asarray(pd.to_datetime(unique_dates)).astype("datetime64[D]")
-        day_ints = np.unique(arr.view("int64"))
-        diffs = np.diff(day_ints)
-        gaps = np.where(diffs > 1)[0]
-        best_start, best_end = day_ints[0], day_ints[-1]
-        if len(gaps) == 0:
-            streak = len(day_ints)
-            if streak > 0:
-                streak_start_date = pd.Timestamp(day_ints[0], unit="D").strftime("%d %b %Y")
-                streak_end_date = pd.Timestamp(day_ints[-1], unit="D").strftime("%d %b %Y")
-        else:
-            indices = np.arange(len(diffs))
-            segments = np.split(indices, gaps + 1)
-            best_len, best_start, best_end = 0, None, None
-            for i, seg in enumerate(segments):
-                seg = list(seg)
-                if i == 0 and len(seg) > 0 and seg[-1] in gaps:
-                    seg = seg[:-1]
-                n = len(seg) + 1 if len(seg) > 0 else 1
-                if n > best_len:
-                    best_len = n
-                    start_idx = seg[0] if seg else 0
-                    end_idx = (seg[-1] + 1) if seg else 0
-                    best_start = day_ints[start_idx]
-                    best_end = day_ints[min(end_idx, len(day_ints) - 1)]
-            streak = best_len
-            if best_start is not None and best_end is not None:
-                streak_start_date = pd.Timestamp(best_start, unit="D").strftime("%d %b %Y")
-                streak_end_date = pd.Timestamp(best_end, unit="D").strftime("%d %b %Y")
-        # Look up locations for streak start/end
-        if streak > 0 and "Date" in cl.columns:
-            first_day = best_start if len(gaps) > 0 else day_ints[0]
-            last_day = best_end if len(gaps) > 0 else day_ints[-1]
-            first_d = pd.Timestamp(first_day, unit="D").normalize()
-            last_d = pd.Timestamp(last_day, unit="D").normalize()
-            cl["_d"] = pd.to_datetime(cl["Date"]).dt.normalize()
-            start_m = cl[cl["_d"] == first_d]
-            end_m = cl[cl["_d"] == last_d]
-            if not start_m.empty:
-                start_row = start_m.iloc[0]
-                streak_start_loc = start_row.get("Location", "")
-                streak_start_sid = str(start_row.get("Submission ID", ""))
-            if not end_m.empty:
-                end_row = end_m.iloc[-1]
-                streak_end_loc = end_row.get("Location", "")
-                streak_end_sid = str(end_row.get("Submission ID", ""))
+    streak, streak_start_date, streak_start_loc, streak_start_sid, streak_end_date, streak_end_loc, streak_end_sid = _longest_streak(unique_dates, cl)
 
-    def _rankings_by_value(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt, limit):
-        """Top N by value desc, date asc; ties show oldest. Location links to lifelist, date/time links to checklist."""
-        if df_sub.empty or value_col not in df_sub.columns:
-            return []
-        # Prefer datetime (has Date+Time) over Date (often midnight only)
-        use_col = "datetime" if "datetime" in df_sub.columns else date_col
-        cols = [use_col, loc_col, sid_col, value_col]
-        if loc_id_col and loc_id_col in df_sub.columns:
-            cols.append(loc_id_col)
-        d = df_sub[cols].dropna(subset=[value_col]).drop_duplicates()
-        d = d.sort_values(by=[value_col, use_col], ascending=[False, True]).head(limit)
-        rows = []
-        for _, r in d.iterrows():
-            dt = r[use_col]
-            dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
-            loc = r.get(loc_col, "")
-            sid = r.get(sid_col, "")
-            lid = r.get(loc_id_col, "")
-            val = fmt(r[value_col])
-            loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
-            dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
-            rows.append((loc_link, dt_link, val))
-        return rows
-
-    def _rankings_by_location(df_obs, cl_sub, mode, fmt, limit):
-        """Top N locations by total species or individuals (across all checklists). mode: 'species' or 'individuals'. Ties by first visit date."""
-        if df_obs.empty or cl_sub.empty:
-            return []
-        if mode == "species":
-            agg = df_obs.groupby("Location ID", group_keys=False).apply(
-                lambda g: _countable_species_vectorized(g).dropna().nunique(),
-                include_groups=False,
-            ).reset_index(name="_val")
-        else:
-            agg = df_obs.groupby("Location ID", group_keys=False).apply(
-                lambda g: g["Count"].apply(_safe_count).sum(),
-                include_groups=False,
-            ).reset_index(name="_val")
-        dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
-        loc_info = cl_sub.groupby("Location ID").agg(
-            Location=("Location", "first"),
-            Checklists=("Submission ID", "nunique"),
-        ).reset_index()
-        first_dates = cl_sub.groupby("Location ID")[dt_col].min().reset_index().rename(columns={dt_col: "_first"})
-        merged = agg.merge(loc_info, on="Location ID", how="inner").merge(first_dates, on="Location ID", how="left")
-        merged = merged.sort_values(by=["_val", "_first", "Location"], ascending=[False, True, True]).head(limit)
-        rows = []
-        for _, r in merged.iterrows():
-            lid = r["Location ID"]
-            loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
-            rows.append((loc_link, f"{int(r['Checklists']):,}", fmt(r["_val"])))
-        return rows
-
-    def _rankings_by_individuals(df_obs, limit):
-        """Top N species by total individuals across all checklists. Subspecies rolled into main species (like map)."""
-        if df_obs.empty:
-            return []
-        df_s = df_obs.copy()
-        df_s["_base"] = _countable_species_vectorized(df_s)
-        df_s = df_s.dropna(subset=["_base"])
-        df_s["_count"] = df_s["Count"].apply(_safe_count)
-        by_base = df_s.groupby("_base").agg(
-            total=("_count", "sum"),
-            common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
-        ).reset_index()
-        by_base = by_base.sort_values(by=["total", "_base"], ascending=[False, True]).head(limit)
-        rows = []
-        for _, r in by_base.iterrows():
-            name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
-            rows.append((str(name), "—", f"{int(r['total']):,}"))
-        return rows
-
-    def _rankings_by_checklists(df_obs, limit):
-        """Top N species by number of checklists they appear in. Subspecies rolled into main species (like map)."""
-        if df_obs.empty:
-            return []
-        df_s = df_obs.copy()
-        df_s["_base"] = _countable_species_vectorized(df_s)
-        df_s = df_s.dropna(subset=["_base"])
-        by_base = df_s.groupby("_base").agg(
-            n_checklists=("Submission ID", "nunique"),
-            common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
-        ).reset_index()
-        by_base = by_base.sort_values(by=["n_checklists", "_base"], ascending=[False, True]).head(limit)
-        rows = []
-        for _, r in by_base.iterrows():
-            name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
-            rows.append((str(name), "—", f"{int(r['n_checklists']):,}"))
-        return rows
-
-    def _rankings_seen_once(df_obs, limit):
-        """Species that appear in exactly 1 checklist. Returns (species, location_link, date_time_link, count)."""
-        if df_obs.empty:
-            return []
-        df_s = df_obs.copy()
-        df_s["_base"] = _countable_species_vectorized(df_s)
-        df_s = df_s.dropna(subset=["_base"])
-        df_s["_count"] = df_s["Count"].apply(_safe_count)
-        dt_col = "datetime" if "datetime" in df_s.columns else "Date"
-        by_base = df_s.groupby("_base").agg(
-            n_checklists=("Submission ID", "nunique"),
-            checklist_count=("_count", "sum"),
-            common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
-            Location=("Location", "first"),
-            Location_ID=("Location ID", "first"),
-            Submission_ID=("Submission ID", "first"),
-            _dt=(dt_col, "first"),
-        ).reset_index()
-        seen_once = by_base[by_base["n_checklists"] == 1].sort_values("common_name").head(limit)
-        rows = []
-        for _, r in seen_once.iterrows():
-            name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
-            lid = r.get("Location_ID")
-            loc = r.get("Location", "")
-            sid = r.get("Submission_ID")
-            dt = r.get("_dt")
-            dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
-            loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
-            dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
-            rows.append((str(name), loc_link, dt_link, f"{int(r['checklist_count']):,}"))
-        return rows
-
-    def _rankings_by_visits(cl_sub, limit):
-        """Top N most visited locations; ties by oldest first. Location links to lifelist; first/last link to checklists."""
-        if cl_sub.empty:
-            return []
-        dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
-        first_idx = cl_sub.groupby("Location ID")[dt_col].idxmin()
-        last_idx = cl_sub.groupby("Location ID")[dt_col].idxmax()
-        first_rows = cl_sub.loc[first_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
-            columns={dt_col: "First", "Submission ID": "First_SID"}
-        )
-        last_rows = cl_sub.loc[last_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
-            columns={dt_col: "Last", "Submission ID": "Last_SID"}
-        )
-        vc = cl_sub.groupby("Location ID").agg(Count=("Submission ID", "nunique")).reset_index()
-        vc = vc.merge(first_rows, on="Location ID").merge(last_rows[["Location ID", "Last", "Last_SID"]], on="Location ID")
-        vc = vc.sort_values(by=["Count", "First"], ascending=[False, True]).head(limit)
-        rows = []
-        for _, r in vc.iterrows():
-            loc = r["Location"]
-            lid = r["Location ID"]
-            first_str = pd.Timestamp(r["First"]).strftime("%d %b %Y %H:%M") if pd.notna(r["First"]) else "—"
-            last_str = pd.Timestamp(r["Last"]).strftime("%d %b %Y %H:%M") if pd.notna(r["Last"]) else "—"
-            first_sid = r.get("First_SID")
-            last_sid = r.get("Last_SID")
-            first_link = f'<a href="https://ebird.org/checklist/{first_sid}" target="_blank">{first_str}</a>' if pd.notna(first_sid) and first_sid else first_str
-            last_link = f'<a href="https://ebird.org/checklist/{last_sid}" target="_blank">{last_str}</a>' if pd.notna(last_sid) and last_sid else last_str
-            loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
-            rows.append((loc_link, first_link, last_link, f"{int(r['Count']):,}"))
-        return rows
-
-    # Top 10 data
-    cl_with_dur = cl.dropna(subset=[dur_col]).copy() if dur_col else pd.DataFrame()
-    cl_with_dur["_dur"] = pd.to_numeric(cl_with_dur[dur_col], errors="coerce").fillna(0)
-    cl_with_dist = cl.dropna(subset=[dist_col]).copy() if dist_col else pd.DataFrame()
-    if dist_col:
-        cl_with_dist["_dist"] = pd.to_numeric(cl_with_dist[dist_col], errors="coerce").fillna(0)
-    species_per_cl = df.groupby("Submission ID", group_keys=False).apply(
-        lambda g: _countable_species_vectorized(g).dropna().nunique(),
-        include_groups=False,
-    ).reset_index(name="_nsp")
-    ind_per_cl = df.groupby("Submission ID", group_keys=False).apply(
-        lambda g: g["Count"].apply(_safe_count).sum(),
-        include_groups=False,
-    ).reset_index(name="_nind")
-    cl_species = cl.merge(species_per_cl, on="Submission ID", how="inner")
-    cl_individuals = cl.merge(ind_per_cl, on="Submission ID", how="inner")
-    limit = TOP_N_TABLE_LIMIT
-    rankings_time = _rankings_by_value(cl_with_dur, "_dur", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(round(x))} min", limit) if dur_col and not cl_with_dur.empty else []
-    rankings_dist = _rankings_by_value(cl_with_dist, "_dist", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{x:,.2f} km", limit) if dist_col and not cl_with_dist.empty else []
-    rankings_species = _rankings_by_value(cl_species, "_nsp", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}", limit) if not cl_species.empty else []
-    rankings_individuals = _rankings_by_value(cl_individuals, "_nind", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}", limit) if not cl_individuals.empty else []
-    rankings_species_loc = _rankings_by_location(df, cl, "species", lambda x: f"{int(x):,}", limit)
-    rankings_individuals_loc = _rankings_by_location(df, cl, "individuals", lambda x: f"{int(x):,}", limit)
-    rankings_visited = _rankings_by_visits(cl, limit)
-    rankings_species_individuals = _rankings_by_individuals(df, limit)
-    rankings_species_checklists = _rankings_by_checklists(df, limit)
-    rankings_seen_once = _rankings_seen_once(df, limit)
+    # Top N rankings data (limit from TOP_N_TABLE_LIMIT)
+    rankings = _compute_rankings(df, cl, TOP_N_TABLE_LIMIT, dur_col, dist_col)
 
     _table_css = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
@@ -1619,7 +1693,7 @@ def _compute_checklist_stats(df):
 """
 
     def _rankings_table(title, headers, rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-        """Build a rankings table with scrollable body. Uses POPUP_SCROLL_HINT for chevrons/shading."""
+        """Build a rankings table with scrollable body. Uses shared scroll-wrapper for chevrons/shading."""
         if not rows:
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
@@ -1628,43 +1702,12 @@ def _compute_checklist_stats(df):
             for r in rows
         )
         tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead><tbody>{body}</tbody></table>"
-        max_h = visible_rows * 38  # ~38px per row
-        scroll_hint_js = repr(scroll_hint)
-        scroll_wrapper = f"""
-<div class="rankings-scroll-wrapper" style="position:relative;">
-  <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
-    {tbl}
-  </div>
-</div>
-<script>
-(function() {{
-  var w = document.currentScript.previousElementSibling;
-  var s = w.querySelector('.rankings-scroll-inner');
-  var h = {scroll_hint_js};
-  if (!s || s.scrollHeight <= s.clientHeight) return;
-  s.scrollTop = 0;
-  if (h === 'chevron' || h === 'both') {{
-    var up = document.createElement('div'); up.className='rankings-scroll-up'; up.style.cssText='position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; up.textContent='\\u25B2';
-    var dn = document.createElement('div'); dn.className='rankings-scroll-down'; dn.style.cssText='position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; dn.textContent='\\u25BC';
-    w.appendChild(up); w.appendChild(dn);
-  }}
-  if (h === 'shading' || h === 'both') {{
-    var ts = document.createElement('div'); ts.className='rankings-scroll-shade-top'; ts.style.cssText='position:absolute;top:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
-    var bs = document.createElement('div'); bs.className='rankings-scroll-shade-bot'; bs.style.cssText='position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
-    w.appendChild(ts); w.appendChild(bs);
-  }}
-  function update() {{
-    var st = s.scrollTop, mx = s.scrollHeight - s.clientHeight;
-    if (h === 'chevron' || h === 'both') {{ w.querySelector('.rankings-scroll-up').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-down').style.visibility = st < mx ? 'visible' : 'hidden'; }}
-    if (h === 'shading' || h === 'both') {{ w.querySelector('.rankings-scroll-shade-top').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-shade-bot').style.visibility = st < mx ? 'visible' : 'hidden'; }}
-  }}
-  s.addEventListener('scroll', update); update();
-}})();
-</script>"""
+        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
         content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
         return content
 
     def _rankings_visited_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
+        """4-column table: Location | First visit | Last visit | Visits."""
         if not rows:
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
@@ -1672,39 +1715,7 @@ def _compute_checklist_stats(df):
             f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td style='text-align:right;font-weight:bold;'>{r[3]}</td></tr>" for r in rows
         )
         tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>Location</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
-        max_h = visible_rows * 38
-        scroll_hint_js = repr(scroll_hint)
-        scroll_wrapper = f"""
-<div class="rankings-scroll-wrapper" style="position:relative;">
-  <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
-    {tbl}
-  </div>
-</div>
-<script>
-(function() {{
-  var w = document.currentScript.previousElementSibling;
-  var s = w.querySelector('.rankings-scroll-inner');
-  var h = {scroll_hint_js};
-  if (!s || s.scrollHeight <= s.clientHeight) return;
-  s.scrollTop = 0;
-  if (h === 'chevron' || h === 'both') {{
-    var up = document.createElement('div'); up.className='rankings-scroll-up'; up.style.cssText='position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; up.textContent='\\u25B2';
-    var dn = document.createElement('div'); dn.className='rankings-scroll-down'; dn.style.cssText='position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; dn.textContent='\\u25BC';
-    w.appendChild(up); w.appendChild(dn);
-  }}
-  if (h === 'shading' || h === 'both') {{
-    var ts = document.createElement('div'); ts.className='rankings-scroll-shade-top'; ts.style.cssText='position:absolute;top:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
-    var bs = document.createElement('div'); bs.className='rankings-scroll-shade-bot'; bs.style.cssText='position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
-    w.appendChild(ts); w.appendChild(bs);
-  }}
-  function update() {{
-    var st = s.scrollTop, mx = s.scrollHeight - s.clientHeight;
-    if (h === 'chevron' || h === 'both') {{ w.querySelector('.rankings-scroll-up').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-down').style.visibility = st < mx ? 'visible' : 'hidden'; }}
-    if (h === 'shading' || h === 'both') {{ w.querySelector('.rankings-scroll-shade-top').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-shade-bot').style.visibility = st < mx ? 'visible' : 'hidden'; }}
-  }}
-  s.addEventListener('scroll', update); update();
-}})();
-</script>"""
+        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
         return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
     def _rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
@@ -1716,55 +1727,23 @@ def _compute_checklist_stats(df):
             f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td style='text-align:right;font-weight:bold;'>{r[3]}</td></tr>" for r in rows
         )
         tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>Species</th><th>Location</th><th>Visited date/time</th><th>Count</th></tr></thead><tbody>{body}</tbody></table>"
-        max_h = visible_rows * 38
-        scroll_hint_js = repr(scroll_hint)
-        scroll_wrapper = f"""
-<div class="rankings-scroll-wrapper" style="position:relative;">
-  <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
-    {tbl}
-  </div>
-</div>
-<script>
-(function() {{
-  var w = document.currentScript.previousElementSibling;
-  var s = w.querySelector('.rankings-scroll-inner');
-  var h = {scroll_hint_js};
-  if (!s || s.scrollHeight <= s.clientHeight) return;
-  s.scrollTop = 0;
-  if (h === 'chevron' || h === 'both') {{
-    var up = document.createElement('div'); up.className='rankings-scroll-up'; up.style.cssText='position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; up.textContent='\\u25B2';
-    var dn = document.createElement('div'); dn.className='rankings-scroll-down'; dn.style.cssText='position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; dn.textContent='\\u25BC';
-    w.appendChild(up); w.appendChild(dn);
-  }}
-  if (h === 'shading' || h === 'both') {{
-    var ts = document.createElement('div'); ts.className='rankings-scroll-shade-top'; ts.style.cssText='position:absolute;top:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
-    var bs = document.createElement('div'); bs.className='rankings-scroll-shade-bot'; bs.style.cssText='position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
-    w.appendChild(ts); w.appendChild(bs);
-  }}
-  function update() {{
-    var st = s.scrollTop, mx = s.scrollHeight - s.clientHeight;
-    if (h === 'chevron' || h === 'both') {{ w.querySelector('.rankings-scroll-up').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-down').style.visibility = st < mx ? 'visible' : 'hidden'; }}
-    if (h === 'shading' || h === 'both') {{ w.querySelector('.rankings-scroll-shade-top').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-shade-bot').style.visibility = st < mx ? 'visible' : 'hidden'; }}
-  }}
-  s.addEventListener('scroll', update); update();
-}})();
-</script>"""
+        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
         return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
     # Rankings sections for accordion (content only, no heading - accordion provides title)
     scroll_hint = POPUP_SCROLL_HINT
     visible_rows = RANKINGS_TABLE_VISIBLE_ROWS
     rankings_sections = [
-        ("Checklist: Longest by time", _rankings_table("Checklist: Longest by time", ["Location", "Visited date/time", "Time"], rankings_time, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Longest by distance", _rankings_table("Checklist: Longest by distance", ["Location", "Visited date/time", "Distance"], rankings_dist, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Most species", _rankings_table("Checklist: Most species", ["Location", "Visited date/time", "Species"], rankings_species, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Most individuals", _rankings_table("Checklist: Most individuals", ["Location", "Visited date/time", "Count"], rankings_individuals, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most species", _rankings_table("Location: Most species", ["Location", "Checklists", "Species"], rankings_species_loc, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most individuals", _rankings_table("Location: Most individuals", ["Location", "Checklists", "Count"], rankings_individuals_loc, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most visited", _rankings_visited_table(rankings_visited, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Most individuals", _rankings_table("Species: Most individuals", ["Species", "", "Individuals"], rankings_species_individuals, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Most checklists", _rankings_table("Species: Most checklists", ["Species", "", "Checklists"], rankings_species_checklists, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Seen only once", _rankings_seen_once_table(rankings_seen_once, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Longest by time", _rankings_table("Checklist: Longest by time", ["Location", "Visited date/time", "Time"], rankings["time"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Longest by distance", _rankings_table("Checklist: Longest by distance", ["Location", "Visited date/time", "Distance"], rankings["dist"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Most species", _rankings_table("Checklist: Most species", ["Location", "Visited date/time", "Species"], rankings["species"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Most individuals", _rankings_table("Checklist: Most individuals", ["Location", "Visited date/time", "Count"], rankings["individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most species", _rankings_table("Location: Most species", ["Location", "Checklists", "Species"], rankings["species_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most individuals", _rankings_table("Location: Most individuals", ["Location", "Checklists", "Count"], rankings["individuals_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most visited", _rankings_visited_table(rankings["visited"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Most individuals", _rankings_table("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Most checklists", _rankings_table("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Seen only once", _rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
 
     stats_html = f"""
@@ -1777,7 +1756,7 @@ def _compute_checklist_stats(df):
     return {"stats_html": stats_html, "rankings_sections": rankings_sections}
 
 
-# Compute stats from full dataset (respects date filter via df, but we use df_full for "all time" stats)
+# Stats use df_full for all-time totals (unfiltered by date). Map uses df, which may be date-filtered.
 checklist_data = _compute_checklist_stats(df_full)
 checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 
