@@ -249,6 +249,43 @@ display(HTML("""
 .widget-select select {
     max-width: 100% !important;
 }
+/* Control area: light silver/grey with subtle polish (like the map stats box) */
+.map-controls-panel,
+.widget-vbox:has(input[placeholder="Type species name..."]) {
+    background: linear-gradient(180deg, #f5f5f5 0%, #ebebeb 100%) !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+    padding: 12px 16px !important;
+    margin-bottom: 4px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+/* Control + map alignment: same width, no overhang */
+.output_map {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+/* Remove padding from Output widget content area so map matches control width */
+.widget-output:has(.output_map),
+.jp-OutputArea:has(.output_map),
+.jp-OutputArea-output:has(.output_map),
+*:has(> .output_map) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+/* Map tab container: no extra padding, clip overflow for alignment */
+.map-tab-container,
+.widget-tab-contents > .widget-vbox:first-child {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow-x: hidden !important;
+}
 </style>
 """))
 
@@ -501,7 +538,7 @@ writer.commit()
 # --------------------------------------------
 species_map = None
 map_output = widgets.Output(
-    layout=widgets.Layout(min_height="500px", width="100%", flex="1 1 auto")
+    layout=widgets.Layout(min_height="500px", width="100%", min_width="0", flex="1 1 auto")
 )
 output = widgets.Output()
 
@@ -1225,13 +1262,13 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:
-                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.7
+                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 4, 0.9
             elif row["is_last_seen"]:
-                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.7
+                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 4, 0.9
             elif row["has_species_match"]:
-                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.6
+                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.9
             else:
-                color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.6
+                color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.9
 
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
@@ -1968,11 +2005,13 @@ map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
 # Map tab: controls above map (fully visible; overlay positioning fails in notebook/Voila)
 map_controls = VBox([search_box, dropdown, hide_non_matching_checkbox])
+map_controls.layout = widgets.Layout(width="100%", min_width="0")  # align with map, allow flex shrink
 
 map_tab_container = VBox(
     [map_controls, map_output],
     layout=widgets.Layout(min_height="600px", width="100%"),
 )
+map_tab_container.add_class("map-tab-container")
 
 # Tabs: Map, Checklist Statistics, Rankings (Top N), Map maintenance
 main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, rankings_accordion, map_maintenance_panel])
@@ -1990,6 +2029,8 @@ main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit 
 dashboard = VBox([output, main_tabs])
 dashboard.layout = widgets.Layout(min_height="750px")  # Ensure map + controls visible without expanding
 display(dashboard)
+map_controls.add_class("map-controls-panel")  # after display so DOM exists
+map_tab_container.add_class("map-tab-container")
 draw_map_with_species_overlay("", "")
 
 
