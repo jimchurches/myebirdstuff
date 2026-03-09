@@ -92,6 +92,8 @@
 #   These only apply if `FILTER_BY_DATE` is `True`.
 # - `POPUP_SORT_ORDER`: `"ascending"` (oldest first) or `"descending"` (newest first) for visit/species lists in popups.
 # - `POPUP_SCROLL_HINT`: when popup content overflows, show `"chevron"` (▲▼), `"shading"` (fade gradients), or `"both"` to compare.
+# - `TOP_N_TABLE_LIMIT`: max rows per rankings table (e.g. 200); tables are scrollable.
+# - `RANKINGS_TABLE_VISIBLE_ROWS`: rows visible before scrolling (e.g. 16).
 # - `CLOSE_LOCATION_METERS`: distance (m) below which locations are considered "close" in the Map maintenance tab.
 #
 # > NOTE: Paths can be set in three ways: (1) `DATA_FOLDER_HARDCODED` in this cell, (2) `scripts/config_secret.py`, or (3) `scripts/config_template.py`. The notebook tries each in order until the data file is found; the notebook folder is tried last (e.g. for Binder uploads).
@@ -145,6 +147,10 @@ POPUP_SORT_ORDER = "ascending"
 
 # Popup scroll hint when content overflows: "chevron" (▲▼), "shading" (fade gradients), or "both"
 POPUP_SCROLL_HINT = "shading"
+
+# Rankings tab: max rows per table (e.g. Top 200); tables show 16 rows visible, scroll for rest
+TOP_N_TABLE_LIMIT = 200
+RANKINGS_TABLE_VISIBLE_ROWS = 16
 
 # Map maintenance tab: locations within this distance (meters) are considered "close"
 CLOSE_LOCATION_METERS = 10
@@ -1342,8 +1348,8 @@ def _compute_checklist_stats(df):
                 streak_end_loc = end_row.get("Location", "")
                 streak_end_sid = str(end_row.get("Submission ID", ""))
 
-    def _top10(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt):
-        """Top 10 by value desc, date asc; ties show oldest. Location links to lifelist, date/time links to checklist."""
+    def _rankings_by_value(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt, limit):
+        """Top N by value desc, date asc; ties show oldest. Location links to lifelist, date/time links to checklist."""
         if df_sub.empty or value_col not in df_sub.columns:
             return []
         # Prefer datetime (has Date+Time) over Date (often midnight only)
@@ -1352,7 +1358,7 @@ def _compute_checklist_stats(df):
         if loc_id_col and loc_id_col in df_sub.columns:
             cols.append(loc_id_col)
         d = df_sub[cols].dropna(subset=[value_col]).drop_duplicates()
-        d = d.sort_values(by=[value_col, use_col], ascending=[False, True]).head(25)
+        d = d.sort_values(by=[value_col, use_col], ascending=[False, True]).head(limit)
         rows = []
         for _, r in d.iterrows():
             dt = r[use_col]
@@ -1366,8 +1372,8 @@ def _compute_checklist_stats(df):
             rows.append((loc_link, dt_link, val))
         return rows
 
-    def _top10_by_location(df_obs, cl_sub, mode, fmt):
-        """Top 25 locations by total species or individuals (across all checklists). mode: 'species' or 'individuals'."""
+    def _rankings_by_location(df_obs, cl_sub, mode, fmt, limit):
+        """Top N locations by total species or individuals (across all checklists). mode: 'species' or 'individuals'. Ties by first visit date."""
         if df_obs.empty or cl_sub.empty:
             return []
         if mode == "species":
@@ -1380,12 +1386,14 @@ def _compute_checklist_stats(df):
                 lambda g: g["Count"].apply(_safe_count).sum(),
                 include_groups=False,
             ).reset_index(name="_val")
+        dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
         loc_info = cl_sub.groupby("Location ID").agg(
             Location=("Location", "first"),
             Checklists=("Submission ID", "nunique"),
         ).reset_index()
-        merged = agg.merge(loc_info, on="Location ID", how="inner")
-        merged = merged.sort_values(by=["_val", "Location"], ascending=[False, True]).head(25)
+        first_dates = cl_sub.groupby("Location ID")[dt_col].min().reset_index().rename(columns={dt_col: "_first"})
+        merged = agg.merge(loc_info, on="Location ID", how="inner").merge(first_dates, on="Location ID", how="left")
+        merged = merged.sort_values(by=["_val", "_first", "Location"], ascending=[False, True, True]).head(limit)
         rows = []
         for _, r in merged.iterrows():
             lid = r["Location ID"]
@@ -1393,8 +1401,8 @@ def _compute_checklist_stats(df):
             rows.append((loc_link, f"{int(r['Checklists']):,}", fmt(r["_val"])))
         return rows
 
-    def _top10_visited(cl_sub):
-        """Top 25 most visited locations; ties by oldest first. Location links to lifelist; first/last link to checklists."""
+    def _rankings_by_visits(cl_sub, limit):
+        """Top N most visited locations; ties by oldest first. Location links to lifelist; first/last link to checklists."""
         if cl_sub.empty:
             return []
         dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
@@ -1408,7 +1416,7 @@ def _compute_checklist_stats(df):
         )
         vc = cl_sub.groupby("Location ID").agg(Count=("Submission ID", "nunique")).reset_index()
         vc = vc.merge(first_rows, on="Location ID").merge(last_rows[["Location ID", "Last", "Last_SID"]], on="Location ID")
-        vc = vc.sort_values(by=["Count", "First"], ascending=[False, True]).head(25)
+        vc = vc.sort_values(by=["Count", "First"], ascending=[False, True]).head(limit)
         rows = []
         for _, r in vc.iterrows():
             loc = r["Location"]
@@ -1439,13 +1447,14 @@ def _compute_checklist_stats(df):
     ).reset_index(name="_nind")
     cl_species = cl.merge(species_per_cl, on="Submission ID", how="inner")
     cl_individuals = cl.merge(ind_per_cl, on="Submission ID", how="inner")
-    top10_time = _top10(cl_with_dur, "_dur", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(round(x))} min") if dur_col and not cl_with_dur.empty else []
-    top10_dist = _top10(cl_with_dist, "_dist", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{x:,.2f} km") if dist_col and not cl_with_dist.empty else []
-    top10_species = _top10(cl_species, "_nsp", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}") if not cl_species.empty else []
-    top10_individuals = _top10(cl_individuals, "_nind", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}") if not cl_individuals.empty else []
-    top10_species_loc = _top10_by_location(df, cl, "species", lambda x: f"{int(x):,}")
-    top10_individuals_loc = _top10_by_location(df, cl, "individuals", lambda x: f"{int(x):,}")
-    top10_visited = _top10_visited(cl)
+    limit = TOP_N_TABLE_LIMIT
+    rankings_time = _rankings_by_value(cl_with_dur, "_dur", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(round(x))} min", limit) if dur_col and not cl_with_dur.empty else []
+    rankings_dist = _rankings_by_value(cl_with_dist, "_dist", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{x:,.2f} km", limit) if dist_col and not cl_with_dist.empty else []
+    rankings_species = _rankings_by_value(cl_species, "_nsp", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}", limit) if not cl_species.empty else []
+    rankings_individuals = _rankings_by_value(cl_individuals, "_nind", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}", limit) if not cl_individuals.empty else []
+    rankings_species_loc = _rankings_by_location(df, cl, "species", lambda x: f"{int(x):,}", limit)
+    rankings_individuals_loc = _rankings_by_location(df, cl, "individuals", lambda x: f"{int(x):,}", limit)
+    rankings_visited = _rankings_by_visits(cl, limit)
 
     _table_css = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
@@ -1460,9 +1469,9 @@ def _compute_checklist_stats(df):
     .stats-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
     .stats-tbl tbody tr:nth-child(even) { background:#fff; }
     .stats-tbl-3 th:nth-child(2), .stats-tbl-3 td:nth-child(2) { text-align:center; }
-    .top10-tbl td:first-child { font-weight:normal; }
-    .stats-tbl a, .top10-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); text-underline-offset:2px; }
-    .stats-tbl a:hover, .top10-tbl a:hover { text-decoration-color:rgba(0,0,0,0.45); }
+    .rankings-tbl td:first-child { font-weight:normal; }
+    .stats-tbl a, .rankings-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); text-underline-offset:2px; }
+    .stats-tbl a:hover, .rankings-tbl a:hover { text-decoration-color:rgba(0,0,0,0.45); }
     """
 
     def _row(label, value):
@@ -1537,7 +1546,8 @@ def _compute_checklist_stats(df):
   ])}
 """
 
-    def _top10_table(title, headers, rows, include_heading=True):
+    def _rankings_table(title, headers, rows, include_heading=True, scroll_hint="shading", visible_rows=16):
+        """Build a rankings table with scrollable body. Uses POPUP_SCROLL_HINT for chevrons/shading."""
         if not rows:
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
@@ -1545,28 +1555,97 @@ def _compute_checklist_stats(df):
             f"<tr><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{r[2]}</td></tr>"
             for r in rows
         )
-        tbl = f"<table class='stats-tbl top10-tbl'><thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead><tbody>{body}</tbody></table>"
-        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{tbl}" if include_heading else tbl
+        tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead><tbody>{body}</tbody></table>"
+        max_h = visible_rows * 38  # ~38px per row
+        scroll_hint_js = repr(scroll_hint)
+        scroll_wrapper = f"""
+<div class="rankings-scroll-wrapper" style="position:relative;">
+  <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
+    {tbl}
+  </div>
+</div>
+<script>
+(function() {{
+  var w = document.currentScript.previousElementSibling;
+  var s = w.querySelector('.rankings-scroll-inner');
+  var h = {scroll_hint_js};
+  if (!s || s.scrollHeight <= s.clientHeight) return;
+  s.scrollTop = 0;
+  if (h === 'chevron' || h === 'both') {{
+    var up = document.createElement('div'); up.className='rankings-scroll-up'; up.style.cssText='position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; up.textContent='\\u25B2';
+    var dn = document.createElement('div'); dn.className='rankings-scroll-down'; dn.style.cssText='position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; dn.textContent='\\u25BC';
+    w.appendChild(up); w.appendChild(dn);
+  }}
+  if (h === 'shading' || h === 'both') {{
+    var ts = document.createElement('div'); ts.className='rankings-scroll-shade-top'; ts.style.cssText='position:absolute;top:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
+    var bs = document.createElement('div'); bs.className='rankings-scroll-shade-bot'; bs.style.cssText='position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
+    w.appendChild(ts); w.appendChild(bs);
+  }}
+  function update() {{
+    var st = s.scrollTop, mx = s.scrollHeight - s.clientHeight;
+    if (h === 'chevron' || h === 'both') {{ w.querySelector('.rankings-scroll-up').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-down').style.visibility = st < mx ? 'visible' : 'hidden'; }}
+    if (h === 'shading' || h === 'both') {{ w.querySelector('.rankings-scroll-shade-top').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-shade-bot').style.visibility = st < mx ? 'visible' : 'hidden'; }}
+  }}
+  s.addEventListener('scroll', update); update();
+}})();
+</script>"""
+        content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+        return content
 
-    def _top10_visited_table(rows, include_heading=True):
+    def _rankings_visited_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
         if not rows:
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
         body = "".join(
             f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td style='text-align:right;font-weight:bold;'>{r[3]}</td></tr>" for r in rows
         )
-        tbl = f"<table class='stats-tbl top10-tbl'><thead><tr><th>Location</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
-        return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{tbl}" if include_heading else tbl
+        tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>Location</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
+        max_h = visible_rows * 38
+        scroll_hint_js = repr(scroll_hint)
+        scroll_wrapper = f"""
+<div class="rankings-scroll-wrapper" style="position:relative;">
+  <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
+    {tbl}
+  </div>
+</div>
+<script>
+(function() {{
+  var w = document.currentScript.previousElementSibling;
+  var s = w.querySelector('.rankings-scroll-inner');
+  var h = {scroll_hint_js};
+  if (!s || s.scrollHeight <= s.clientHeight) return;
+  s.scrollTop = 0;
+  if (h === 'chevron' || h === 'both') {{
+    var up = document.createElement('div'); up.className='rankings-scroll-up'; up.style.cssText='position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; up.textContent='\\u25B2';
+    var dn = document.createElement('div'); dn.className='rankings-scroll-down'; dn.style.cssText='position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; dn.textContent='\\u25BC';
+    w.appendChild(up); w.appendChild(dn);
+  }}
+  if (h === 'shading' || h === 'both') {{
+    var ts = document.createElement('div'); ts.className='rankings-scroll-shade-top'; ts.style.cssText='position:absolute;top:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
+    var bs = document.createElement('div'); bs.className='rankings-scroll-shade-bot'; bs.style.cssText='position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
+    w.appendChild(ts); w.appendChild(bs);
+  }}
+  function update() {{
+    var st = s.scrollTop, mx = s.scrollHeight - s.clientHeight;
+    if (h === 'chevron' || h === 'both') {{ w.querySelector('.rankings-scroll-up').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-down').style.visibility = st < mx ? 'visible' : 'hidden'; }}
+    if (h === 'shading' || h === 'both') {{ w.querySelector('.rankings-scroll-shade-top').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-shade-bot').style.visibility = st < mx ? 'visible' : 'hidden'; }}
+  }}
+  s.addEventListener('scroll', update); update();
+}})();
+</script>"""
+        return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
-    # Top 10 sections for accordion (content only, no heading - accordion provides title)
-    top10_sections = [
-        ("Longest (time)", _top10_table("Longest (time)", ["Location", "Visited date/time", "Time"], top10_time, include_heading=False)),
-        ("Longest (distance)", _top10_table("Longest (distance)", ["Location", "Visited date/time", "Distance"], top10_dist, include_heading=False)),
-        ("Most species (checklist)", _top10_table("Most species (checklist)", ["Location", "Visited date/time", "Species"], top10_species, include_heading=False)),
-        ("Most individuals (checklist)", _top10_table("Most individuals (checklist)", ["Location", "Visited date/time", "Count"], top10_individuals, include_heading=False)),
-        ("Most species (location)", _top10_table("Most species (location)", ["Location", "Checklists", "Species"], top10_species_loc, include_heading=False)),
-        ("Most individuals (location)", _top10_table("Most individuals (location)", ["Location", "Checklists", "Count"], top10_individuals_loc, include_heading=False)),
-        ("Most visited locations", _top10_visited_table(top10_visited, include_heading=False)),
+    # Rankings sections for accordion (content only, no heading - accordion provides title)
+    scroll_hint = POPUP_SCROLL_HINT
+    visible_rows = RANKINGS_TABLE_VISIBLE_ROWS
+    rankings_sections = [
+        ("Checklist: Longest by time", _rankings_table("Checklist: Longest by time", ["Location", "Visited date/time", "Time"], rankings_time, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Longest by distance", _rankings_table("Checklist: Longest by distance", ["Location", "Visited date/time", "Distance"], rankings_dist, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Most species", _rankings_table("Checklist: Most species", ["Location", "Visited date/time", "Species"], rankings_species, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Most individuals", _rankings_table("Checklist: Most individuals", ["Location", "Visited date/time", "Count"], rankings_individuals, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most species", _rankings_table("Location: Most species", ["Location", "Checklists", "Species"], rankings_species_loc, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most individuals", _rankings_table("Location: Most individuals", ["Location", "Checklists", "Count"], rankings_individuals_loc, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most visited", _rankings_visited_table(rankings_visited, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
 
     stats_html = f"""
@@ -1576,15 +1655,15 @@ def _compute_checklist_stats(df):
   <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{right_col}</div>
 </div>
 """
-    return {"stats_html": stats_html, "top10_sections": top10_sections}
+    return {"stats_html": stats_html, "rankings_sections": rankings_sections}
 
 
 # Compute stats from full dataset (respects date filter via df, but we use df_full for "all time" stats)
 checklist_data = _compute_checklist_stats(df_full)
 checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 
-# Top 10 tab: accordion so lists are collapsible, each takes full width when expanded
-_top10_css = """
+# Rankings tab: accordion so lists are collapsible, each takes full width when expanded
+_rankings_css = """
 .stats-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; }
 .stats-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
 .stats-tbl th:last-child { text-align:right; }
@@ -1595,12 +1674,12 @@ _top10_css = """
 .stats-tbl tbody tr:nth-child(even) { background:#fff; }
 .stats-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
 """
-top10_accordion = Accordion(
-    children=[widgets.HTML(value=f"<style>{_top10_css}</style>{html}") for _, html in checklist_data["top10_sections"]],
-    selected_index=0,  # Expand first section by default so content is visible
+rankings_accordion = Accordion(
+    children=[widgets.HTML(value=f"<style>{_rankings_css}</style>{html}") for _, html in checklist_data["rankings_sections"]],
+    selected_index=None,  # All collapsed by default; expand to view
 )
-for i, (title, _) in enumerate(checklist_data["top10_sections"]):
-    top10_accordion.set_title(i, title)
+for i, (title, _) in enumerate(checklist_data["rankings_sections"]):
+    rankings_accordion.set_title(i, title)
 
 
 # Map maintenance tab: duplicate, close-location, and orphaned data
@@ -1715,11 +1794,11 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
 map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS, locations_without_checklists)
 map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
-# Tabs: Map, Checklist Statistics, Top 25, Map maintenance
-main_tabs = widgets.Tab(children=[map_output, checklist_stats_panel, top10_accordion, map_maintenance_panel])
+# Tabs: Map, Checklist Statistics, Rankings (Top N), Map maintenance
+main_tabs = widgets.Tab(children=[map_output, checklist_stats_panel, rankings_accordion, map_maintenance_panel])
 main_tabs.set_title(0, "🗺️ Map")
 main_tabs.set_title(1, "📊 Checklist Statistics")
-main_tabs.set_title(2, "🏆 Top 25")
+main_tabs.set_title(2, f"🏆 Top {TOP_N_TABLE_LIMIT}")
 main_tabs.set_title(3, "🔧 Map maintenance")
 main_tabs.selected_index = 0  # Ensure map tab is visible on load
 main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit tab name; reserve space for map
