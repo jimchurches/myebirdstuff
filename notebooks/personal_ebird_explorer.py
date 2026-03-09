@@ -655,11 +655,18 @@ def _base_species_for_lifer(sci_name):
 _lifer_lookup_df = (
     full_df.sort_values("datetime")
     .dropna(subset=["Scientific Name", "Location ID", "datetime"])
-    .assign(_base=lambda x: x["Scientific Name"].apply(_base_species_for_lifer))
+    .assign(
+        _base=lambda x: x["Scientific Name"].apply(_base_species_for_lifer),
+        _taxon=lambda x: x["Scientific Name"].str.strip().str.lower(),
+    )
 )
 _lifer_lookup_df = _lifer_lookup_df[_lifer_lookup_df["_base"].notna()]
+# Base species (genus + species): for parent selection, first/last across all subspecies
 true_lifer_locations = _lifer_lookup_df.groupby("_base").first()["Location ID"].to_dict()
 true_last_seen_locations = _lifer_lookup_df.groupby("_base").last()["Location ID"].to_dict()
+# Taxon (full scientific name): for subspecies selection, first/last of that taxon only
+true_lifer_locations_taxon = _lifer_lookup_df.groupby("_taxon").first()["Location ID"].to_dict()
+true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Location ID"].to_dict()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -1005,6 +1012,13 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
     records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
 
+    def _pin_legend_item(color, fill, label):
+        """Small circle + label for legend. Thicker border so perimeter color is visible at small size."""
+        return f"""<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid {color};background:{fill};"></span>
+            {label}
+        </span>"""
+
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
         banner_html = f"""
@@ -1018,6 +1032,14 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         </div>
         """
         species_map.get_root().html.add_child(Element(banner_html))
+        legend_html = f"""
+        <div style="position:fixed;bottom:10px;left:10px;z-index:1000;background:rgba(255,255,255,0.95);
+                    padding:6px 10px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
+                    font-family:sans-serif;font-size:11px;line-height:1.5;display:flex;flex-wrap:wrap;gap:8px 12px;">
+            {_pin_legend_item(DEFAULT_COLOR, DEFAULT_FILL, "All locations")}
+        </div>
+        """
+        species_map.get_root().html.add_child(Element(legend_html))
 
         popup_asc = POPUP_SORT_ORDER == "ascending"
         for _, row in location_data.iterrows():
@@ -1061,14 +1083,19 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         first_seen_date = ""
         last_seen_date = ""
         high_count_date = ""
-        base = _base_species_for_lifer(selected_species)
-        if base:
-            subset = _lifer_lookup_df[_lifer_lookup_df["_base"] == base]
-            if not subset.empty:
-                first_rec = subset.iloc[0]
-                last_rec = subset.iloc[-1]
-                first_seen_date = _banner_date(first_rec["Date"])
-                last_seen_date = _banner_date(last_rec["Date"])
+        sci_parts_banner = (selected_species or "").strip().split()
+        is_subspecies_banner = len(sci_parts_banner) >= 3
+        taxon_key_banner = selected_species.strip().lower() if selected_species else None
+        if is_subspecies_banner and taxon_key_banner:
+            subset = _lifer_lookup_df[_lifer_lookup_df["_taxon"] == taxon_key_banner]
+        else:
+            base = _base_species_for_lifer(selected_species)
+            subset = _lifer_lookup_df[_lifer_lookup_df["_base"] == base] if base else pd.DataFrame()
+        if not subset.empty:
+            first_rec = subset.iloc[0]
+            last_rec = subset.iloc[-1]
+            first_seen_date = _banner_date(first_rec["Date"])
+            last_seen_date = _banner_date(last_rec["Date"])
 
         # Date when high count was achieved
         high_count_rows = filtered[filtered["Count"].apply(_safe_count) == high_count]
@@ -1097,16 +1124,46 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         """
         species_map.get_root().html.add_child(Element(banner_html))
 
+        # Pin legend: bottom left, small font. Omit "Other" when hiding non-matching.
+        legend_parts = []
+        if MARK_LIFER:
+            legend_parts.append(_pin_legend_item(LIFER_COLOR, LIFER_FILL, "Lifer"))
+        if MARK_LAST_SEEN:
+            legend_parts.append(_pin_legend_item(LAST_SEEN_COLOR, LAST_SEEN_FILL, "Last seen"))
+        legend_parts.append(_pin_legend_item(SPECIES_COLOR, SPECIES_FILL, "Species"))
+        if not hide_non_matching_checkbox.value:
+            legend_parts.append(_pin_legend_item(DEFAULT_COLOR, DEFAULT_FILL, "Other"))
+        legend_html = f"""
+        <div style="position:fixed;bottom:10px;left:10px;z-index:1000;background:rgba(255,255,255,0.95);
+                    padding:6px 10px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
+                    font-family:sans-serif;font-size:11px;line-height:1.5;display:flex;flex-wrap:wrap;gap:8px 12px;">
+            {"".join(legend_parts)}
+        </div>
+        """
+        species_map.get_root().html.add_child(Element(legend_html))
+
+        # Lifer/last seen: use taxon-level for subspecies (3+ parts), base for parent
         lifer_location = None
         last_seen_location = None
+        sci_parts = (selected_species or "").strip().split()
+        is_subspecies = len(sci_parts) >= 3
+        taxon_key = selected_species.strip().lower() if selected_species else None
         if MARK_LIFER:
-            base = _base_species_for_lifer(selected_species)
-            true_lifer_loc = true_lifer_locations.get(base) if base else None
+            true_lifer_loc = None
+            if is_subspecies and taxon_key:
+                true_lifer_loc = true_lifer_locations_taxon.get(taxon_key)
+            if true_lifer_loc is None and sci_parts:
+                base = _base_species_for_lifer(selected_species)
+                true_lifer_loc = true_lifer_locations.get(base) if base else None
             if true_lifer_loc in seen_location_ids:
                 lifer_location = true_lifer_loc
         if MARK_LAST_SEEN:
-            base = _base_species_for_lifer(selected_species)
-            true_last_loc = true_last_seen_locations.get(base) if base else None
+            true_last_loc = None
+            if is_subspecies and taxon_key:
+                true_last_loc = true_last_seen_locations_taxon.get(taxon_key)
+            if true_last_loc is None and sci_parts:
+                base = _base_species_for_lifer(selected_species)
+                true_last_loc = true_last_seen_locations.get(base) if base else None
             if true_last_loc in seen_location_ids and true_last_loc != lifer_location:
                 last_seen_location = true_last_loc
 
@@ -1145,11 +1202,11 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:
-                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.9
+                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.7
             elif row["is_last_seen"]:
-                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.9
+                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.7
             elif row["has_species_match"]:
-                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.8
+                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.6
             else:
                 color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.6
 
