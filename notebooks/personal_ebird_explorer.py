@@ -239,6 +239,16 @@ display(HTML("""
     height: 600px;
     min-height: 600px;
 }
+/* Matches dropdown: no scrollbars; type to narrow, don't scroll */
+.widget-select,
+.widget-select select {
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+}
+.widget-select select {
+    max-width: 100% !important;
+}
 </style>
 """))
 
@@ -509,7 +519,7 @@ output = widgets.Output()
 debounce_delay = 0.3  # seconds to wait after search box cleared before resetting
 debounce_timer = None
 search_box = widgets.Text(placeholder="Type species name...", description="Search:")
-dropdown = widgets.Select(options=[], value=None, description="Matches:", rows=5)
+dropdown = widgets.Select(options=[], value=None, description="Matches:", rows=10)
 hide_non_matching_checkbox = Checkbox(
     value=False,
     description='Show only selected species',
@@ -699,9 +709,15 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # ✅ UI Event Handlers
 # --------------------------------------------
 
-# ✅ Called when a dropdown species is selected
+# Flag: True while update_suggestions is changing dropdown.options (avoids spurious redraws)
+_updating_suggestions = False
+
+
+# ✅ Called when a dropdown species is selected (manual selection only; not when options refresh)
 def on_species_selected(change):
     global selected_species_scientific, selected_species_common
+    if _updating_suggestions:
+        return  # Options were refreshed as user typed; only manual selection should redraw
     output.clear_output()
 
     selected = change.get("new")
@@ -788,31 +804,36 @@ def on_search_box_cleared(change):
 # ✅ Autocomplete Search Logic 
 # --------------------------------------------
 def update_suggestions(change):
-    print(f"✍️ Search changed: '{change['new']}'")
-    query = change["new"].strip().lower()
-    if len(query) < 3:
-        dropdown.options = []
-        return
-    with ix.searcher() as searcher:
-        qp = QueryParser("common_name", ix.schema, group=OrGroup)
-        tokens = query.split()
-        try:
-            q = qp.parse(" ".join(f"{t}*" for t in tokens))
-        except Exception:
+    global _updating_suggestions
+    _updating_suggestions = True
+    try:
+        print(f"✍️ Search changed: '{change['new']}'")
+        query = change["new"].strip().lower()
+        if len(query) < 3:
             dropdown.options = []
             return
-        results = searcher.search(q, limit=None)
+        with ix.searcher() as searcher:
+            qp = QueryParser("common_name", ix.schema, group=OrGroup)
+            tokens = query.split()
+            try:
+                q = qp.parse(" ".join(f"{t}*" for t in tokens))
+            except Exception:
+                dropdown.options = []
+                return
+            results = searcher.search(q, limit=None)
 
-        def score(r):
-            name = r["common_name"].lower()
-            base = 100 - r.rank
-            if name.startswith(tokens[0]):
-                base += 50
-            return base
+            def score(r):
+                name = r["common_name"].lower()
+                base = 100 - r.rank
+                if name.startswith(tokens[0]):
+                    base += 50
+                return base
 
-        ranked = sorted(results, key=score, reverse=True)
-        #print(f"🎯 Search matches found: {[r['common_name'] for r in ranked[:10]]}")
-        dropdown.options = [r["common_name"] for r in ranked[:10]]
+            ranked = sorted(results, key=score, reverse=True)
+            #print(f"🎯 Search matches found: {[r['common_name'] for r in ranked[:10]]}")
+            dropdown.options = [r["common_name"] for r in ranked[:10]]
+    finally:
+        _updating_suggestions = False
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -1964,7 +1985,7 @@ main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit 
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
-# ✅ Show dashboard (controls overlaid on map, output + tabs)
+# ✅ Show dashboard (controls above map, output + tabs)
 # --------------------------------------------
 dashboard = VBox([output, main_tabs])
 dashboard.layout = widgets.Layout(min_height="750px")  # Ensure map + controls visible without expanding
