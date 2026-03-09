@@ -1271,40 +1271,21 @@ def _longest_streak(unique_dates, cl):
 
 
 def _rankings_scroll_wrapper(table_html, scroll_hint, visible_rows):
-    """Wrap table HTML in scrollable div with chevron/shading hints. Reused by rankings tables."""
+    """Wrap table HTML in scrollable div with shading hints. Uses pure CSS (ipywidgets HTML does not run scripts)."""
     max_h = visible_rows * 38  # ~38px per row
-    scroll_hint_js = repr(scroll_hint)
+    # Match popup gradient: fade to white/light. ipywidgets strips scripts, so we use static CSS overlays.
+    shade_css = "position:absolute;left:0;right:0;height:24px;pointer-events:none;z-index:5;"
+    top_shade = f'<div class="rankings-scroll-shade-top" style="{shade_css}top:0;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);"></div>'
+    bot_shade = f'<div class="rankings-scroll-shade-bot" style="{shade_css}bottom:0;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);"></div>'
+    show_shade = scroll_hint in ("shading", "both")
+    shades = (top_shade + bot_shade) if show_shade else ""
     return f"""
 <div class="rankings-scroll-wrapper" style="position:relative;">
   <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
     {table_html}
   </div>
-</div>
-<script>
-(function() {{
-  var w = document.currentScript.previousElementSibling;
-  var s = w.querySelector('.rankings-scroll-inner');
-  var h = {scroll_hint_js};
-  if (!s || s.scrollHeight <= s.clientHeight) return;
-  s.scrollTop = 0;
-  if (h === 'chevron' || h === 'both') {{
-    var up = document.createElement('div'); up.className='rankings-scroll-up'; up.style.cssText='position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; up.textContent='\\u25B2';
-    var dn = document.createElement('div'); dn.className='rankings-scroll-down'; dn.style.cssText='position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; dn.textContent='\\u25BC';
-    w.appendChild(up); w.appendChild(dn);
-  }}
-  if (h === 'shading' || h === 'both') {{
-    var ts = document.createElement('div'); ts.className='rankings-scroll-shade-top'; ts.style.cssText='position:absolute;top:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
-    var bs = document.createElement('div'); bs.className='rankings-scroll-shade-bot'; bs.style.cssText='position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
-    w.appendChild(ts); w.appendChild(bs);
-  }}
-  function update() {{
-    var st = s.scrollTop, mx = s.scrollHeight - s.clientHeight;
-    if (h === 'chevron' || h === 'both') {{ w.querySelector('.rankings-scroll-up').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-down').style.visibility = st < mx ? 'visible' : 'hidden'; }}
-    if (h === 'shading' || h === 'both') {{ w.querySelector('.rankings-scroll-shade-top').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-shade-bot').style.visibility = st < mx ? 'visible' : 'hidden'; }}
-  }}
-  s.addEventListener('scroll', update); update();
-}})();
-</script>"""
+  {shades}
+</div>"""
 
 
 def _rankings_by_value(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt, limit):
