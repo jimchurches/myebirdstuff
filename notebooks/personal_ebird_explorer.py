@@ -1401,6 +1401,75 @@ def _compute_checklist_stats(df):
             rows.append((loc_link, f"{int(r['Checklists']):,}", fmt(r["_val"])))
         return rows
 
+    def _rankings_by_individuals(df_obs, limit):
+        """Top N species by total individuals across all checklists. Subspecies rolled into main species (like map)."""
+        if df_obs.empty:
+            return []
+        df_s = df_obs.copy()
+        df_s["_base"] = _countable_species_vectorized(df_s)
+        df_s = df_s.dropna(subset=["_base"])
+        df_s["_count"] = df_s["Count"].apply(_safe_count)
+        by_base = df_s.groupby("_base").agg(
+            total=("_count", "sum"),
+            common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+        ).reset_index()
+        by_base = by_base.sort_values(by=["total", "_base"], ascending=[False, True]).head(limit)
+        rows = []
+        for _, r in by_base.iterrows():
+            name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
+            rows.append((str(name), "—", f"{int(r['total']):,}"))
+        return rows
+
+    def _rankings_by_checklists(df_obs, limit):
+        """Top N species by number of checklists they appear in. Subspecies rolled into main species (like map)."""
+        if df_obs.empty:
+            return []
+        df_s = df_obs.copy()
+        df_s["_base"] = _countable_species_vectorized(df_s)
+        df_s = df_s.dropna(subset=["_base"])
+        by_base = df_s.groupby("_base").agg(
+            n_checklists=("Submission ID", "nunique"),
+            common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+        ).reset_index()
+        by_base = by_base.sort_values(by=["n_checklists", "_base"], ascending=[False, True]).head(limit)
+        rows = []
+        for _, r in by_base.iterrows():
+            name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
+            rows.append((str(name), "—", f"{int(r['n_checklists']):,}"))
+        return rows
+
+    def _rankings_seen_once(df_obs, limit):
+        """Species that appear in exactly 1 checklist. Returns (species, location_link, date_time_link, count)."""
+        if df_obs.empty:
+            return []
+        df_s = df_obs.copy()
+        df_s["_base"] = _countable_species_vectorized(df_s)
+        df_s = df_s.dropna(subset=["_base"])
+        df_s["_count"] = df_s["Count"].apply(_safe_count)
+        dt_col = "datetime" if "datetime" in df_s.columns else "Date"
+        by_base = df_s.groupby("_base").agg(
+            n_checklists=("Submission ID", "nunique"),
+            checklist_count=("_count", "sum"),
+            common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+            Location=("Location", "first"),
+            Location_ID=("Location ID", "first"),
+            Submission_ID=("Submission ID", "first"),
+            _dt=(dt_col, "first"),
+        ).reset_index()
+        seen_once = by_base[by_base["n_checklists"] == 1].sort_values("common_name").head(limit)
+        rows = []
+        for _, r in seen_once.iterrows():
+            name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
+            lid = r.get("Location_ID")
+            loc = r.get("Location", "")
+            sid = r.get("Submission_ID")
+            dt = r.get("_dt")
+            dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+            loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
+            dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
+            rows.append((str(name), loc_link, dt_link, f"{int(r['checklist_count']):,}"))
+        return rows
+
     def _rankings_by_visits(cl_sub, limit):
         """Top N most visited locations; ties by oldest first. Location links to lifelist; first/last link to checklists."""
         if cl_sub.empty:
@@ -1455,6 +1524,9 @@ def _compute_checklist_stats(df):
     rankings_species_loc = _rankings_by_location(df, cl, "species", lambda x: f"{int(x):,}", limit)
     rankings_individuals_loc = _rankings_by_location(df, cl, "individuals", lambda x: f"{int(x):,}", limit)
     rankings_visited = _rankings_by_visits(cl, limit)
+    rankings_species_individuals = _rankings_by_individuals(df, limit)
+    rankings_species_checklists = _rankings_by_checklists(df, limit)
+    rankings_seen_once = _rankings_seen_once(df, limit)
 
     _table_css = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
@@ -1635,6 +1707,50 @@ def _compute_checklist_stats(df):
 </script>"""
         return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
+    def _rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
+        """4-column table: Species | Location | Visited date/time | Count."""
+        if not rows:
+            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
+            return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
+        body = "".join(
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td style='text-align:right;font-weight:bold;'>{r[3]}</td></tr>" for r in rows
+        )
+        tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>Species</th><th>Location</th><th>Visited date/time</th><th>Count</th></tr></thead><tbody>{body}</tbody></table>"
+        max_h = visible_rows * 38
+        scroll_hint_js = repr(scroll_hint)
+        scroll_wrapper = f"""
+<div class="rankings-scroll-wrapper" style="position:relative;">
+  <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
+    {tbl}
+  </div>
+</div>
+<script>
+(function() {{
+  var w = document.currentScript.previousElementSibling;
+  var s = w.querySelector('.rankings-scroll-inner');
+  var h = {scroll_hint_js};
+  if (!s || s.scrollHeight <= s.clientHeight) return;
+  s.scrollTop = 0;
+  if (h === 'chevron' || h === 'both') {{
+    var up = document.createElement('div'); up.className='rankings-scroll-up'; up.style.cssText='position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; up.textContent='\\u25B2';
+    var dn = document.createElement('div'); dn.className='rankings-scroll-down'; dn.style.cssText='position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;'; dn.textContent='\\u25BC';
+    w.appendChild(up); w.appendChild(dn);
+  }}
+  if (h === 'shading' || h === 'both') {{
+    var ts = document.createElement('div'); ts.className='rankings-scroll-shade-top'; ts.style.cssText='position:absolute;top:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
+    var bs = document.createElement('div'); bs.className='rankings-scroll-shade-bot'; bs.style.cssText='position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
+    w.appendChild(ts); w.appendChild(bs);
+  }}
+  function update() {{
+    var st = s.scrollTop, mx = s.scrollHeight - s.clientHeight;
+    if (h === 'chevron' || h === 'both') {{ w.querySelector('.rankings-scroll-up').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-down').style.visibility = st < mx ? 'visible' : 'hidden'; }}
+    if (h === 'shading' || h === 'both') {{ w.querySelector('.rankings-scroll-shade-top').style.visibility = st > 0 ? 'visible' : 'hidden'; w.querySelector('.rankings-scroll-shade-bot').style.visibility = st < mx ? 'visible' : 'hidden'; }}
+  }}
+  s.addEventListener('scroll', update); update();
+}})();
+</script>"""
+        return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+
     # Rankings sections for accordion (content only, no heading - accordion provides title)
     scroll_hint = POPUP_SCROLL_HINT
     visible_rows = RANKINGS_TABLE_VISIBLE_ROWS
@@ -1646,6 +1762,9 @@ def _compute_checklist_stats(df):
         ("Location: Most species", _rankings_table("Location: Most species", ["Location", "Checklists", "Species"], rankings_species_loc, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Location: Most individuals", _rankings_table("Location: Most individuals", ["Location", "Checklists", "Count"], rankings_individuals_loc, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Location: Most visited", _rankings_visited_table(rankings_visited, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Most individuals", _rankings_table("Species: Most individuals", ["Species", "", "Individuals"], rankings_species_individuals, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Most checklists", _rankings_table("Species: Most checklists", ["Species", "", "Checklists"], rankings_species_checklists, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Seen only once", _rankings_seen_once_table(rankings_seen_once, include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
 
     stats_html = f"""
