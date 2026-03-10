@@ -564,7 +564,8 @@ output = widgets.Output()
 # --------------------------------------------
 # ✅ Autocomplete UI Widgets
 # --------------------------------------------
-debounce_delay = 0.3  # seconds to wait after cleared before resetting
+# Stale debounce timer (we no longer start one; clear is handled in update_suggestions).
+# on_search_box_cleared only cancels this if set from an earlier run, to avoid double-clear.
 debounce_timer = None
 
 # Input width: longest species name + 20%, capped (avoids full-width stretch when empty)
@@ -750,9 +751,13 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🎛️ UI Event Handlers
 #
-# - `update_suggestions`: Whoosh search as user types; show/hide matches dropdown
-# - `on_species_selected`: map redraw when user picks from dropdown
-# - `on_search_box_cleared`: debounced reset when search cleared
+# - `update_suggestions`: Whoosh search as user types; show/hide matches dropdown; when search
+#   is empty, calls _clear_to_all_species (single code path for reset in widget context).
+# - `on_species_selected`: map redraw when user picks from dropdown; reset when dropdown and
+#   search are both empty.
+# - `on_search_box_cleared`: cancels any existing debounce timer only (reset is in update_suggestions).
+# - `on_toggle_change`: redraw when "Show only selected species" is toggled (skipped when we
+#   set the checkbox programmatically via _suppress_toggle_redraw).
 #
 
 # %%
@@ -760,12 +765,10 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # ✅ UI Event Handlers
 # --------------------------------------------
 
-# Flag: True while we're updating matches_dropdown.options (avoids spurious redraws)
-_updating_suggestions = False
-# Flag: skip next update_suggestions (when we set search_box.value from a selection)
-_skip_next_suggestion_update = False
-# Flag: suppress redraws while we programmatically toggle checkbox
-_suppress_toggle_redraw = False
+# State flags: avoid re-entry and duplicate redraws when handlers trigger each other.
+_updating_suggestions = False   # True while updating matches_dropdown.options
+_skip_next_suggestion_update = False  # Skip next update_suggestions (e.g. after setting search_box from selection)
+_suppress_toggle_redraw = False  # True while setting checkbox in _clear_to_all_species (no on_toggle_change redraw)
 
 
 def _show_matches_dropdown(show):
@@ -773,8 +776,8 @@ def _show_matches_dropdown(show):
     matches_dropdown.layout.display = "flex" if show else "none"
 
 
-# ✅ Update suggestions from Whoosh; show dropdown when we have matches
 def update_suggestions(change):
+    """Whoosh search as user types; show/hide matches dropdown. When search is empty, reset (clear) in this context."""
     global _updating_suggestions, _skip_next_suggestion_update
     if _skip_next_suggestion_update:
         _skip_next_suggestion_update = False
@@ -818,8 +821,8 @@ def update_suggestions(change):
         _updating_suggestions = False
 
 
-# ✅ Called when user selects a species from the dropdown (or when dropdown is cleared)
 def on_species_selected(change):
+    """Handle dropdown selection: set species and redraw map; if dropdown and search both empty, reset to all species."""
     global selected_species_scientific, selected_species_common
     selected = change.get("new")
     search_text = search_box.value.strip()
@@ -845,8 +848,8 @@ def on_species_selected(change):
     _show_matches_dropdown(False)
 
 
-# ✅ Called when the "hide non-matching" checkbox is toggled — always redraw (checkbox event drives map update)
 def on_toggle_change(change):
+    """Redraw map when user toggles 'Show only selected species' (no-op when _suppress_toggle_redraw)."""
     global selected_species_scientific, selected_species_common
     if _suppress_toggle_redraw:
         return
@@ -855,8 +858,8 @@ def on_toggle_change(change):
     draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
 
 
-# ✅ Single clear-to-all-species (same code path as widget events — runs on main thread)
 def _clear_to_all_species():
+    """Reset to all-species view: clear search, dropdown, selection, checkbox; redraw map once (runs in widget context)."""
     global selected_species_scientific, selected_species_common, _suppress_toggle_redraw
     search_box.value = ""
     matches_dropdown.options = []
@@ -874,12 +877,12 @@ def _clear_to_all_species():
 
 
 def on_search_box_cleared(change):
+    """When search box goes from non-empty to empty: cancel any existing debounce timer only. Reset is done in update_suggestions."""
     global debounce_timer
     old_val = (change.get("old") or "").strip()
     new_val = (change.get("new") or "").strip()
     if old_val and not new_val:
-        # Box just became empty; clear is handled by update_suggestions (same observer context).
-        # Only cancel any existing debounce so we don't double-clear.
+        # Cancel any existing timer so we don't double-clear (reset is handled in update_suggestions).
         if debounce_timer is not None:
             if hasattr(debounce_timer, "cancel"):
                 debounce_timer.cancel()
@@ -889,6 +892,8 @@ def on_search_box_cleared(change):
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🧷 Register Widget Observers
+#
+# Wire search box, matches dropdown, and checkbox to the handlers above.
 #
 
 # %%
@@ -2009,7 +2014,9 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
 map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS, locations_without_checklists)
 map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
-# Map tab: controls above map (search + checkbox on one row; matches dropdown same width as search bar)
+# --------------------------------------------
+# Build map tab: search row (search box + spacer + checkbox) and matches dropdown above map output.
+# --------------------------------------------
 _spacer = Box(layout=widgets.Layout(width="0.75em", min_width="0.75em"))
 search_row = HBox([search_box, _spacer, hide_non_matching_checkbox], layout=widgets.Layout(align_items="center"))
 map_controls = VBox([search_row, matches_dropdown])
@@ -2021,7 +2028,9 @@ map_tab_container = VBox(
 )
 map_tab_container.add_class("map-tab-container")
 
-# Tabs: Map, Checklist Statistics, Rankings (Top N), Map maintenance
+# --------------------------------------------
+# Build main tabs (Map, Checklist Statistics, Rankings, Map maintenance) and dashboard.
+# --------------------------------------------
 main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, rankings_accordion, map_maintenance_panel])
 main_tabs.set_title(0, "🗺️ Map")
 main_tabs.set_title(1, "📊 Checklist Statistics")
