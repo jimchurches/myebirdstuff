@@ -224,7 +224,7 @@ import threading
 import importlib.util
 import ipywidgets as widgets
 
-from ipywidgets import Accordion, Box, Checkbox, VBox
+from ipywidgets import Accordion, Box, Checkbox, HBox, VBox
 from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT
 from whoosh.analysis import StemmingAnalyzer
@@ -569,15 +569,19 @@ debounce_timer = None
 
 # Input width: longest species name + 20%, capped (avoids full-width stretch when empty)
 _max_name_len = max(len(s) for s in species_list) if species_list else 25
-_species_input_width = f"{min(int(_max_name_len * 1.2) + 4, 52)}ch"
+_species_input_ch = min(int(_max_name_len * 1.2) + 4, 52)
+_species_input_width = f"{_species_input_ch}ch"
+_species_label_width = "70px"  # align matches dropdown under input (not the label)
 
 search_box = widgets.Text(placeholder="Type species name...", description="Species:")
 search_box.layout = widgets.Layout(width=_species_input_width, min_width="12ch")
+search_box.style.description_width = _species_label_width
 
 matches_dropdown = widgets.Select(options=[], value=None, description="", rows=6)
 matches_dropdown.layout = widgets.Layout(
     width=_species_input_width,
     min_width="12ch",
+    margin=f"0 0 0 {_species_label_width}",
     display="none",  # hidden until we have suggestions
 )
 
@@ -760,6 +764,8 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 _updating_suggestions = False
 # Flag: skip next update_suggestions (when we set search_box.value from a selection)
 _skip_next_suggestion_update = False
+# Flag: suppress redraws while we programmatically toggle checkbox
+_suppress_toggle_redraw = False
 
 
 def _show_matches_dropdown(show):
@@ -842,6 +848,8 @@ def on_species_selected(change):
 # ✅ Called when the "hide non-matching" checkbox is toggled — always redraw (checkbox event drives map update)
 def on_toggle_change(change):
     global selected_species_scientific, selected_species_common
+    if _suppress_toggle_redraw:
+        return
     with output:
         print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_scientific}")
     draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
@@ -849,14 +857,16 @@ def on_toggle_change(change):
 
 # ✅ Single clear-to-all-species (same code path as widget events — runs on main thread)
 def _clear_to_all_species():
-    global selected_species_scientific, selected_species_common
+    global selected_species_scientific, selected_species_common, _suppress_toggle_redraw
     search_box.value = ""
     matches_dropdown.options = []
     matches_dropdown.value = None
     _show_matches_dropdown(False)
     selected_species_scientific = ""
     selected_species_common = ""
+    _suppress_toggle_redraw = True
     hide_non_matching_checkbox.value = False
+    _suppress_toggle_redraw = False
     with output:
         output.clear_output()
         print("🧹 Search cleared — showing all locations")
@@ -1999,8 +2009,10 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
 map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS, locations_without_checklists)
 map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
-# Map tab: controls above map (fully visible; overlay positioning fails in notebook/Voila)
-map_controls = VBox([search_box, matches_dropdown, hide_non_matching_checkbox])
+# Map tab: controls above map (search + checkbox on one row; matches dropdown same width as search bar)
+_spacer = Box(layout=widgets.Layout(width="0.75em", min_width="0.75em"))
+search_row = HBox([search_box, _spacer, hide_non_matching_checkbox], layout=widgets.Layout(align_items="center"))
+map_controls = VBox([search_row, matches_dropdown])
 map_controls.layout = widgets.Layout(width="100%", min_width="0")
 
 map_tab_container = VBox(
