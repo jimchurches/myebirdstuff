@@ -776,9 +776,13 @@ def update_suggestions(change):
     _updating_suggestions = True
     try:
         query = (change.get("new") or "").strip().lower()
+        if query == "":
+            # Search box empty: reset here so we run in widget context (works for select-all+delete too)
+            _skip_next_suggestion_update = True
+            _clear_to_all_species()
+            return
         if len(query) < 3:
             matches_dropdown.options = []
-            matches_dropdown.value = None
             _show_matches_dropdown(False)
             return
         with ix.searcher() as searcher:
@@ -808,13 +812,19 @@ def update_suggestions(change):
         _updating_suggestions = False
 
 
-# ✅ Called when user selects a species from the dropdown
+# ✅ Called when user selects a species from the dropdown (or when dropdown is cleared)
 def on_species_selected(change):
     global selected_species_scientific, selected_species_common
+    selected = change.get("new")
+    search_text = search_box.value.strip()
+
+    # When both dropdown and search are empty: reset immediately (same thread as widget events, like main)
+    if selected is None and search_text == "":
+        _clear_to_all_species()
+        return
     if _updating_suggestions:
         return
     output.clear_output()
-    selected = change.get("new")
     if selected is None:
         return
     selected_species_scientific = name_map.get(selected, "").strip()
@@ -829,40 +839,41 @@ def on_species_selected(change):
     _show_matches_dropdown(False)
 
 
-# ✅ Called when the "hide non-matching" checkbox is toggled
+# ✅ Called when the "hide non-matching" checkbox is toggled — always redraw (checkbox event drives map update)
 def on_toggle_change(change):
     global selected_species_scientific, selected_species_common
     with output:
         print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_scientific}")
-    if selected_species_scientific:
-        draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
+    draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
 
 
-# ✅ Debounced reset when search box is cleared
+# ✅ Single clear-to-all-species (same code path as widget events — runs on main thread)
+def _clear_to_all_species():
+    global selected_species_scientific, selected_species_common
+    search_box.value = ""
+    matches_dropdown.options = []
+    matches_dropdown.value = None
+    _show_matches_dropdown(False)
+    selected_species_scientific = ""
+    selected_species_common = ""
+    hide_non_matching_checkbox.value = False
+    with output:
+        output.clear_output()
+        print("🧹 Search cleared — showing all locations")
+    draw_map_with_species_overlay("", "")
+
+
 def on_search_box_cleared(change):
     global debounce_timer
     old_val = (change.get("old") or "").strip()
     new_val = (change.get("new") or "").strip()
     if old_val and not new_val:
-        if debounce_timer:
-            debounce_timer.cancel()
-
-        def handle_clear():
-            global selected_species_scientific, selected_species_common
-            if search_box.value.strip() == "":
-                matches_dropdown.options = []
-                matches_dropdown.value = None
-                _show_matches_dropdown(False)
-                hide_non_matching_checkbox.value = False
-                selected_species_scientific = ""
-                selected_species_common = ""
-                with output:
-                    output.clear_output()
-                    print("🧹 Search cleared — showing all locations")
-                draw_map_with_species_overlay("", "")
-
-        debounce_timer = threading.Timer(debounce_delay, handle_clear)
-        debounce_timer.start()
+        # Box just became empty; clear is handled by update_suggestions (same observer context).
+        # Only cancel any existing debounce so we don't double-clear.
+        if debounce_timer is not None:
+            if hasattr(debounce_timer, "cancel"):
+                debounce_timer.cancel()
+            debounce_timer = None
 
 
 
