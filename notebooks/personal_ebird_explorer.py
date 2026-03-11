@@ -162,6 +162,7 @@ FILTER_BY_DATE = False
 FILTER_START_DATE = "2025-01-01"
 FILTER_END_DATE = "2025-12-31"
 
+
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 📦 Imports and Setup
 #
@@ -223,7 +224,7 @@ import threading
 import importlib.util
 import ipywidgets as widgets
 
-from ipywidgets import Accordion, Checkbox, VBox
+from ipywidgets import Accordion, Box, Checkbox, HBox, VBox
 from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT
 from whoosh.analysis import StemmingAnalyzer
@@ -237,6 +238,64 @@ display(HTML("""
     width: 100% !important;
     height: 600px;
     min-height: 600px;
+}
+/* Species matches dropdown: drops neatly below input, matches app styling */
+.species-matches-dropdown,
+.species-matches-dropdown select,
+.map-controls-panel .widget-select,
+.map-controls-panel .widget-select select {
+    font-size: 13px !important;
+    font-weight: normal !important;
+    color: #444 !important;
+    background: #fafafa !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+.species-matches-dropdown select,
+.map-controls-panel .widget-select select {
+    padding: 4px 8px !important;
+    overflow: hidden !important;
+}
+.species-matches-dropdown {
+    margin-top: 2px !important;  /* small gap below search input */
+}
+/* Control area: light silver/grey with subtle polish (like the map stats box) */
+.map-controls-panel,
+.widget-vbox:has(input[placeholder="Type species name..."]) {
+    background: linear-gradient(180deg, #f5f5f5 0%, #ebebeb 100%) !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+    padding: 12px 16px !important;
+    margin-bottom: 4px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+/* Control + map alignment: same width, no overhang */
+.output_map {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+/* Remove padding from Output widget content area so map matches control width */
+.widget-output:has(.output_map),
+.jp-OutputArea:has(.output_map),
+.jp-OutputArea-output:has(.output_map),
+*:has(> .output_map) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+/* Map tab container: no extra padding, clip overflow for alignment */
+.map-tab-container,
+.widget-tab-contents > .widget-vbox:first-child {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow-x: hidden !important;
 }
 </style>
 """))
@@ -260,8 +319,8 @@ display(HTML("""
 def add_datetime_column(df):
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df["Time"] = df["Time"].fillna("00:00")
-    # Normalize "00:00" to "12:00 AM" so it parses when mixed with AM/PM times (e.g. "08:30 AM")
-    time_str = df["Time"].astype(str).replace("00:00", "12:00 AM")
+    # Missing, empty, or "00:00" → 11:59 PM so they sort last (we prefer checklists with real times for streak start/end)
+    time_str = df["Time"].astype(str).str.strip().replace("00:00", "11:59 PM").replace("", "11:59 PM")
     date_str = df["Date"].apply(lambda x: x.strftime("%Y-%m-%d") if pd.notna(x) else "")
     df["datetime"] = pd.to_datetime(date_str + " " + time_str, errors="coerce")
     return df
@@ -276,7 +335,7 @@ def add_datetime_column(df):
 # - Cross-platform (macOS and Windows); falls through to next location if file not found  
 # - Loads the CSV and parses the `"Date"` column  
 # - Optionally filters the **main dataset (`df`)** by a specified date range  
-# - Excludes locations with no associated checklist (orphaned from cleanup, shared-list quirks)
+# - Excludes locations with no associated checklist in the export (if any)
 # - Extracts a unique set of locations and species from the filtered data  
 # - Builds a lookup map from common names → scientific names
 #
@@ -369,14 +428,10 @@ if FILTER_BY_DATE:
     except Exception as e:
         raise ValueError(f"Invalid date filter settings: {e}")
 
-# Exclude locations with no associated checklist (e.g. orphaned from cleanup, shared-list quirks)
+# Exclude locations with no associated checklist in the export (e.g. orphaned from cleanup, shared-list quirks)
 location_ids_with_checklists = set(df_full.dropna(subset=["Submission ID"])["Location ID"].unique())
-all_locations_from_csv = df_full[["Location ID", "Location", "Latitude", "Longitude"]].drop_duplicates(subset=["Location ID"])
 df = df[df["Location ID"].isin(location_ids_with_checklists)]
 df_full = df_full[df_full["Location ID"].isin(location_ids_with_checklists)]
-
-# Locations without checklists (excluded from map and other tabs)
-locations_without_checklists = all_locations_from_csv[~all_locations_from_csv["Location ID"].isin(location_ids_with_checklists)]
 
 # Extract location and species info
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
@@ -395,10 +450,23 @@ def _safe_count(x):
         return 1
 
 
+def _format_visit_time(r):
+    """Format date and time for display; uses datetime when available so no-time shows as 23:59 (consistent with sorting)."""
+    if "datetime" in r.index and pd.notna(r.get("datetime")):
+        return r["datetime"].strftime("%Y-%m-%d %H:%M")
+    d = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"
+    t = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
+    return f"{d} {t}"
+
+
 def _format_sighting_row(r):
     """Format a single sighting row for popup HTML: date, time, species, count, checklist link, optional media link."""
-    date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
-    time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
+    if "datetime" in r.index and pd.notna(r.get("datetime")):
+        date_str = r["datetime"].strftime("%Y-%m-%d")
+        time_str = r["datetime"].strftime("%H:%M")
+    else:
+        date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
+        time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
     text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
     cid = r.get("Submission ID", "")
     checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
@@ -489,24 +557,44 @@ writer.commit()
 # ✅ Initialise global map objects
 # --------------------------------------------
 species_map = None
-map_output = widgets.Output(layout=widgets.Layout(min_height="500px", width="100%"))
+map_output = widgets.Output(
+    layout=widgets.Layout(min_height="500px", width="100%", min_width="0", flex="1 1 auto")
+)
 output = widgets.Output()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🔍 Autocomplete UI Widgets
 #
-# Defines the text input, dropdown list, and checkbox used for species search and filtering.
+# Text input + matches dropdown that appears below when typing. Width based on longest species name.
 #
 
 # %%
 # --------------------------------------------
 # ✅ Autocomplete UI Widgets
 # --------------------------------------------
-debounce_delay = 0.3  # seconds to wait after search box cleared before resetting
+# Stale debounce timer (we no longer start one; clear is handled in update_suggestions).
+# on_search_box_cleared only cancels this if set from an earlier run, to avoid double-clear.
 debounce_timer = None
-search_box = widgets.Text(placeholder="Type species name...", description="Search:")
-dropdown = widgets.Select(options=[], value=None, description="Matches:", rows=10)
+
+# Input width: longest species name + 20%, capped (avoids full-width stretch when empty)
+_max_name_len = max(len(s) for s in species_list) if species_list else 25
+_species_input_ch = min(int(_max_name_len * 1.2) + 4, 52)
+_species_input_width = f"{_species_input_ch}ch"
+_species_label_width = "70px"  # align matches dropdown under input (not the label)
+
+search_box = widgets.Text(placeholder="Type species name...", description="Species:")
+search_box.layout = widgets.Layout(width=_species_input_width, min_width="12ch")
+search_box.style.description_width = _species_label_width
+
+matches_dropdown = widgets.Select(options=[], value=None, description="", rows=6)
+matches_dropdown.layout = widgets.Layout(
+    width=_species_input_width,
+    min_width="12ch",
+    margin=f"0 0 0 {_species_label_width}",
+    display="none",  # hidden until we have suggestions
+)
+
 hide_non_matching_checkbox = Checkbox(
     value=False,
     description='Show only selected species',
@@ -672,23 +760,13 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🎛️ UI Event Handlers
 #
-# Handles user interaction with species search and filter controls:
-#
-# - `on_species_selected`: 
-#   - Updates the selected species when a dropdown item is clicked
-#   - Looks up the scientific name from the common name
-#   - Draws the species map
-#   - Clears the map if the search box and dropdown are both empty
-#
-# - `on_toggle_change`: 
-#   - Redraws the map when the "hide non-matching" checkbox is toggled
-#   - Only has an effect if a species is currently selected
-#
-# - `on_search_box_cleared`: 
-#   - Waits briefly after clearing the search box (debounce)
-#   - If still empty, resets the dropdown, checkbox, and full map view
-#
-# These handlers drive the main species filtering logic and keep the map UI reactive.
+# - `update_suggestions`: Whoosh search as user types; show/hide matches dropdown; when search
+#   is empty, calls _clear_to_all_species (single code path for reset in widget context).
+# - `on_species_selected`: map redraw when user picks from dropdown; reset when dropdown and
+#   search are both empty.
+# - `on_search_box_cleared`: cancels any existing debounce timer only (reset is in update_suggestions).
+# - `on_toggle_change`: redraw when "Show only selected species" is toggled (skipped when we
+#   set the checkbox programmatically via _suppress_toggle_redraw).
 #
 
 # %%
@@ -696,133 +774,135 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # ✅ UI Event Handlers
 # --------------------------------------------
 
-# ✅ Called when a dropdown species is selected
-def on_species_selected(change):
-    global selected_species_scientific, selected_species_common
-    output.clear_output()
+# State flags: avoid re-entry and duplicate redraws when handlers trigger each other.
+_updating_suggestions = False   # True while updating matches_dropdown.options
+_skip_next_suggestion_update = False  # Skip next update_suggestions (e.g. after setting search_box from selection)
+_suppress_toggle_redraw = False  # True while setting checkbox in _clear_to_all_species (no on_toggle_change redraw)
 
+
+def _show_matches_dropdown(show):
+    """Show or hide the matches dropdown based on whether we have options."""
+    matches_dropdown.layout.display = "flex" if show else "none"
+
+
+def update_suggestions(change):
+    """Whoosh search as user types; show/hide matches dropdown. When search is empty, reset (clear) in this context."""
+    global _updating_suggestions, _skip_next_suggestion_update
+    if _skip_next_suggestion_update:
+        _skip_next_suggestion_update = False
+        return
+    _updating_suggestions = True
+    try:
+        query = (change.get("new") or "").strip().lower()
+        if query == "":
+            # Search box empty: reset here so we run in widget context (works for select-all+delete too)
+            _skip_next_suggestion_update = True
+            _clear_to_all_species()
+            return
+        if len(query) < 3:
+            matches_dropdown.options = []
+            _show_matches_dropdown(False)
+            return
+        with ix.searcher() as searcher:
+            qp = QueryParser("common_name", ix.schema, group=OrGroup)
+            tokens = query.split()
+            try:
+                q = qp.parse(" ".join(f"{t}*" for t in tokens))
+            except Exception:
+                matches_dropdown.options = []
+                _show_matches_dropdown(False)
+                return
+            results = searcher.search(q, limit=None)
+
+            def score(r):
+                name = r["common_name"].lower()
+                base = 100 - r.rank
+                if name.startswith(tokens[0]):
+                    base += 50
+                return base
+
+            ranked = sorted(results, key=score, reverse=True)
+            opts = [r["common_name"] for r in ranked[:6]]  # match rows=6, no scrollbar
+            matches_dropdown.options = opts
+            matches_dropdown.value = None
+            _show_matches_dropdown(len(opts) > 0)
+    finally:
+        _updating_suggestions = False
+
+
+def on_species_selected(change):
+    """Handle dropdown selection: set species and redraw map; if dropdown and search both empty, reset to all species."""
+    global selected_species_scientific, selected_species_common
     selected = change.get("new")
     search_text = search_box.value.strip()
 
-    # Show full map if search fully cleared
+    # When both dropdown and search are empty: reset immediately (same thread as widget events, like main)
     if selected is None and search_text == "":
-        selected_species_scientific = ""
-        selected_species_common = ""
-        hide_non_matching_checkbox.value = False
-        with output:
-            print("🧹 Search truly cleared — showing all locations")
-        draw_map_with_species_overlay("", "")
+        _clear_to_all_species()
         return
-
-    # Don't trigger if no species selected
+    if _updating_suggestions:
+        return
+    output.clear_output()
     if selected is None:
-        print("🚫 No selection — skipping map draw")
         return
-
-    # Lookup scientific name
     selected_species_scientific = name_map.get(selected, "").strip()
-    selected_species_common = selected or ""
-    print(f"✅ Selected scientific name: {selected_species_scientific}")
-
+    selected_species_common = selected
     with output:
         print(f"🔎 Selected species: {selected} → Scientific: {selected_species_scientific}")
     draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
+    # Sync search box to selected value; hide dropdown (skip update_suggestions)
+    _skip_next_suggestion_update = True
+    search_box.value = selected
+    matches_dropdown.options = []
+    _show_matches_dropdown(False)
 
 
-# ✅ Called when the "hide non-matching" checkbox is toggled (species filter only)
 def on_toggle_change(change):
+    """Redraw map when user toggles 'Show only selected species' (no-op when _suppress_toggle_redraw)."""
     global selected_species_scientific, selected_species_common
+    if _suppress_toggle_redraw:
+        return
     with output:
         print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_scientific}")
-    if selected_species_scientific:
-        draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
+    draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
 
 
-# ✅ Called when search box is cleared (after short debounce)
+def _clear_to_all_species():
+    """Reset to all-species view: clear search, dropdown, selection, checkbox; redraw map once (runs in widget context)."""
+    global selected_species_scientific, selected_species_common, _suppress_toggle_redraw
+    search_box.value = ""
+    matches_dropdown.options = []
+    matches_dropdown.value = None
+    _show_matches_dropdown(False)
+    selected_species_scientific = ""
+    selected_species_common = ""
+    _suppress_toggle_redraw = True
+    hide_non_matching_checkbox.value = False
+    _suppress_toggle_redraw = False
+    with output:
+        output.clear_output()
+        print("🧹 Search cleared — showing all locations")
+    draw_map_with_species_overlay("", "")
+
+
 def on_search_box_cleared(change):
+    """When search box goes from non-empty to empty: cancel any existing debounce timer only. Reset is done in update_suggestions."""
     global debounce_timer
-
-    old_val = change.get("old", "").strip()
-    new_val = change.get("new", "").strip()
-
+    old_val = (change.get("old") or "").strip()
+    new_val = (change.get("new") or "").strip()
     if old_val and not new_val:
-        if debounce_timer:
-            debounce_timer.cancel()
-
-        def handle_clear():
-            global selected_species_scientific, selected_species_common
-            if search_box.value.strip() == "":
-                dropdown.options = []
-                dropdown.value = None
-                hide_non_matching_checkbox.value = False
-                selected_species_scientific = ""
-                selected_species_common = ""
-                with output:
-                    output.clear_output()
-                    print("🧹 Search cleared — showing all locations")
-                draw_map_with_species_overlay("", "")
-
-        debounce_timer = threading.Timer(debounce_delay, handle_clear)
-        debounce_timer.start()
-
-
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🔡 Autocomplete Search Logic
-#
-# This function handles fuzzy autocomplete updates when the user types in the search box:
-#
-# - Ignores input shorter than 3 characters
-# - Uses Whoosh to run a partial (wildcard) search across species names
-# - Parses and scores matches, giving a bonus to names that start with the first typed token
-# - Updates the dropdown with the top 10 most relevant matches
-#
-# 📌 Keeps suggestions focused and relevant as the user types, even with typos or partial input.
-#
-
-# %%
-# --------------------------------------------
-# ✅ Autocomplete Search Logic 
-# --------------------------------------------
-def update_suggestions(change):
-    print(f"✍️ Search changed: '{change['new']}'")
-    query = change["new"].strip().lower()
-    if len(query) < 3:
-        dropdown.options = []
-        return
-    with ix.searcher() as searcher:
-        qp = QueryParser("common_name", ix.schema, group=OrGroup)
-        tokens = query.split()
-        try:
-            q = qp.parse(" ".join(f"{t}*" for t in tokens))
-        except Exception:
-            dropdown.options = []
-            return
-        results = searcher.search(q, limit=None)
-
-        def score(r):
-            name = r["common_name"].lower()
-            base = 100 - r.rank
-            if name.startswith(tokens[0]):
-                base += 50
-            return base
-
-        ranked = sorted(results, key=score, reverse=True)
-        #print(f"🎯 Search matches found: {[r['common_name'] for r in ranked[:10]]}")
-        dropdown.options = [r["common_name"] for r in ranked[:10]]
+        # Cancel any existing timer so we don't double-clear (reset is handled in update_suggestions).
+        if debounce_timer is not None:
+            if hasattr(debounce_timer, "cancel"):
+                debounce_timer.cancel()
+            debounce_timer = None
 
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🧷 Register Widget Observers
 #
-# Connects UI elements to their respective callback functions:
-#
-# - `search_box`: updates suggestions and clears search
-# - `dropdown`: triggers map redraw on selection
-# - `hide_non_matching_checkbox`: toggles visibility of non-matching markers
-#
-# 📌 Enables real-time interaction between widgets and map updates.
+# Wire search box, matches dropdown, and checkbox to the handlers above.
 #
 
 # %%
@@ -831,7 +911,7 @@ def update_suggestions(change):
 # --------------------------------------------
 search_box.observe(update_suggestions, names="value")
 search_box.observe(on_search_box_cleared, names="value")
-dropdown.observe(on_species_selected, names="value")
+matches_dropdown.observe(on_species_selected, names="value")
 hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
@@ -1046,7 +1126,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
             visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
             visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
+                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{_format_visit_time(r)}</a>'
                 for _, r in visit_records.iterrows()
             ) if not visit_records.empty else ""
             loc_id = row["Location ID"]
@@ -1188,7 +1268,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             base_records = records_by_loc.get(loc_id, pd.DataFrame())
             visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
             visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
+                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{_format_visit_time(r)}</a>'
                 for _, r in visit_records.iterrows()
             ) if not visit_records.empty else ""
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
@@ -1202,13 +1282,13 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:
-                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 5, 0.7
+                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 4, 0.9
             elif row["is_last_seen"]:
-                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 5, 0.7
+                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 4, 0.9
             elif row["has_species_match"]:
-                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.6
+                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.9
             else:
-                color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.6
+                color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.9
 
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
@@ -1305,7 +1385,7 @@ def _longest_streak(unique_dates, cl):
             streak_start_date = pd.Timestamp(best_start, unit="D").strftime("%d %b %Y")
             streak_end_date = pd.Timestamp(best_end, unit="D").strftime("%d %b %Y")
 
-    # Look up locations for streak start/end
+    # Look up locations for streak start/end (use chronologically first checklist on start day, last on end day)
     if streak > 0 and "Date" in cl.columns:
         first_day = best_start if len(gaps) > 0 else day_ints[0]
         last_day = best_end if len(gaps) > 0 else day_ints[-1]
@@ -1315,12 +1395,15 @@ def _longest_streak(unique_dates, cl):
         cl_copy["_d"] = pd.to_datetime(cl_copy["Date"]).dt.normalize()
         start_m = cl_copy[cl_copy["_d"] == first_d]
         end_m = cl_copy[cl_copy["_d"] == last_d]
+        sort_col = "datetime" if "datetime" in cl_copy.columns else None
         if not start_m.empty:
-            start_row = start_m.iloc[0]
+            start_sorted = start_m.sort_values(sort_col) if sort_col and start_m[sort_col].notna().any() else start_m
+            start_row = start_sorted.iloc[0]
             streak_start_loc = start_row.get("Location", "")
             streak_start_sid = str(start_row.get("Submission ID", ""))
         if not end_m.empty:
-            end_row = end_m.iloc[-1]
+            end_sorted = end_m.sort_values(sort_col) if sort_col and end_m[sort_col].notna().any() else end_m
+            end_row = end_sorted.iloc[-1]
             streak_end_loc = end_row.get("Location", "")
             streak_end_sid = str(end_row.get("Submission ID", ""))
 
@@ -1831,13 +1914,13 @@ for i, (title, _) in enumerate(checklist_data["rankings_sections"]):
     rankings_accordion.set_title(i, title)
 
 
-# Map maintenance tab: duplicate, close-location, and orphaned data
+# Map maintenance tab: exact duplicates and close-location pairs
 # Link format for maintenance: edit page (merge/delete), not lifelist
 _MAINT_LOC_URL = "https://ebird.org/mylocations/edit/"
 
 
-def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
-    """Build HTML for Map maintenance tab: orphaned, exact duplicates, close-location pairs."""
+def _compute_map_maintenance_html(loc_df, threshold_m):
+    """Build HTML for Map maintenance tab: exact duplicates and close-location pairs."""
     exact_rows, near_pairs = _get_map_maintenance_data(loc_df, threshold_m)
     css = """
     .maint-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; margin-bottom:16px; }
@@ -1858,24 +1941,6 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
     .maint-pair-tbl td:nth-child(2) { white-space:nowrap; }
     .maint-pair-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
     """
-    # Table 0: Locations without checklists
-    orphaned_body = ""
-    if not orphaned_df.empty:
-        for _, r in orphaned_df.iterrows():
-            link = f'<a href="{_MAINT_LOC_URL}{r["Location ID"]}" target="_blank">{r["Location"]}</a>' if pd.notna(r.get("Location ID")) else str(r.get("Location", ""))
-            orphaned_body += f"<tr><td>{link}</td></tr>"
-        orphaned_table = f"""
-  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Locations without checklists</h4>
-  <p style="margin:4px 0 8px;color:#666;font-size:12px;">These locations have no attached checklists and are excluded from the map and other tabs.</p>
-  <table class="maint-tbl maint-single-col">
-    <thead><tr><th>Location</th></tr></thead>
-    <tbody>{orphaned_body}</tbody>
-  </table>"""
-    else:
-        orphaned_table = """
-  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Locations without checklists</h4>
-  <p style="margin:4px 0;color:#666;">None.</p>"""
-
     # Table 1: Exact duplicates (Location | Lat/Long | Number of duplicates)
     dup_body = ""
     if exact_rows:
@@ -1935,16 +2000,31 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
 {dup_table}
 {near_section}
-{orphaned_table}
 {explanation}
 </div>"""
 
 
-map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS, locations_without_checklists)
+map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
 map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
-# Tabs: Map, Checklist Statistics, Rankings (Top N), Map maintenance
-main_tabs = widgets.Tab(children=[map_output, checklist_stats_panel, rankings_accordion, map_maintenance_panel])
+# --------------------------------------------
+# Build map tab: search row (search box + spacer + checkbox) and matches dropdown above map output.
+# --------------------------------------------
+_spacer = Box(layout=widgets.Layout(width="0.75em", min_width="0.75em"))
+search_row = HBox([search_box, _spacer, hide_non_matching_checkbox], layout=widgets.Layout(align_items="center"))
+map_controls = VBox([search_row, matches_dropdown])
+map_controls.layout = widgets.Layout(width="100%", min_width="0")
+
+map_tab_container = VBox(
+    [map_controls, map_output],
+    layout=widgets.Layout(min_height="600px", width="100%"),
+)
+map_tab_container.add_class("map-tab-container")
+
+# --------------------------------------------
+# Build main tabs (Map, Checklist Statistics, Rankings, Map maintenance) and dashboard.
+# --------------------------------------------
+main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, rankings_accordion, map_maintenance_panel])
 main_tabs.set_title(0, "🗺️ Map")
 main_tabs.set_title(1, "📊 Checklist Statistics")
 main_tabs.set_title(2, f"🏆 Top {TOP_N_TABLE_LIMIT}")
@@ -1954,11 +2034,14 @@ main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit 
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
-# ✅ Show dashboard (controls + map/tabs together)
+# ✅ Show dashboard (controls above map, output + tabs)
 # --------------------------------------------
-dashboard = VBox([search_box, dropdown, hide_non_matching_checkbox, output, main_tabs])
+dashboard = VBox([output, main_tabs])
 dashboard.layout = widgets.Layout(min_height="750px")  # Ensure map + controls visible without expanding
 display(dashboard)
+map_controls.add_class("map-controls-panel")
+map_tab_container.add_class("map-tab-container")
+matches_dropdown.add_class("species-matches-dropdown")  # after display for CSS
 draw_map_with_species_overlay("", "")
 
 
