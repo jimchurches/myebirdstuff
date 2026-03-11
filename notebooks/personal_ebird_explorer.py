@@ -319,8 +319,8 @@ display(HTML("""
 def add_datetime_column(df):
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df["Time"] = df["Time"].fillna("00:00")
-    # Normalize "00:00" to "12:00 AM" so it parses when mixed with AM/PM times (e.g. "08:30 AM")
-    time_str = df["Time"].astype(str).replace("00:00", "12:00 AM")
+    # Missing, empty, or "00:00" → 11:59 PM so they sort last (we prefer checklists with real times for streak start/end)
+    time_str = df["Time"].astype(str).str.strip().replace("00:00", "11:59 PM").replace("", "11:59 PM")
     date_str = df["Date"].apply(lambda x: x.strftime("%Y-%m-%d") if pd.notna(x) else "")
     df["datetime"] = pd.to_datetime(date_str + " " + time_str, errors="coerce")
     return df
@@ -335,7 +335,7 @@ def add_datetime_column(df):
 # - Cross-platform (macOS and Windows); falls through to next location if file not found  
 # - Loads the CSV and parses the `"Date"` column  
 # - Optionally filters the **main dataset (`df`)** by a specified date range  
-# - Excludes locations with no associated checklist (orphaned from cleanup, shared-list quirks)
+# - Excludes locations with no associated checklist in the export (if any)
 # - Extracts a unique set of locations and species from the filtered data  
 # - Builds a lookup map from common names → scientific names
 #
@@ -428,14 +428,10 @@ if FILTER_BY_DATE:
     except Exception as e:
         raise ValueError(f"Invalid date filter settings: {e}")
 
-# Exclude locations with no associated checklist (e.g. orphaned from cleanup, shared-list quirks)
+# Exclude locations with no associated checklist in the export (e.g. orphaned from cleanup, shared-list quirks)
 location_ids_with_checklists = set(df_full.dropna(subset=["Submission ID"])["Location ID"].unique())
-all_locations_from_csv = df_full[["Location ID", "Location", "Latitude", "Longitude"]].drop_duplicates(subset=["Location ID"])
 df = df[df["Location ID"].isin(location_ids_with_checklists)]
 df_full = df_full[df_full["Location ID"].isin(location_ids_with_checklists)]
-
-# Locations without checklists (excluded from map and other tabs)
-locations_without_checklists = all_locations_from_csv[~all_locations_from_csv["Location ID"].isin(location_ids_with_checklists)]
 
 # Extract location and species info
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
@@ -454,10 +450,23 @@ def _safe_count(x):
         return 1
 
 
+def _format_visit_time(r):
+    """Format date and time for display; uses datetime when available so no-time shows as 23:59 (consistent with sorting)."""
+    if "datetime" in r.index and pd.notna(r.get("datetime")):
+        return r["datetime"].strftime("%Y-%m-%d %H:%M")
+    d = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"
+    t = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
+    return f"{d} {t}"
+
+
 def _format_sighting_row(r):
     """Format a single sighting row for popup HTML: date, time, species, count, checklist link, optional media link."""
-    date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
-    time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
+    if "datetime" in r.index and pd.notna(r.get("datetime")):
+        date_str = r["datetime"].strftime("%Y-%m-%d")
+        time_str = r["datetime"].strftime("%H:%M")
+    else:
+        date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
+        time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
     text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
     cid = r.get("Submission ID", "")
     checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
@@ -1117,7 +1126,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
             visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
             visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
+                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{_format_visit_time(r)}</a>'
                 for _, r in visit_records.iterrows()
             ) if not visit_records.empty else ""
             loc_id = row["Location ID"]
@@ -1259,7 +1268,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             base_records = records_by_loc.get(loc_id, pd.DataFrame())
             visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
             visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"} {str(r["Time"]) if pd.notna(r["Time"]) else "unknown"}</a>'
+                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{_format_visit_time(r)}</a>'
                 for _, r in visit_records.iterrows()
             ) if not visit_records.empty else ""
             loc_url = f"https://ebird.org/lifelist/{loc_id}"
@@ -1376,7 +1385,7 @@ def _longest_streak(unique_dates, cl):
             streak_start_date = pd.Timestamp(best_start, unit="D").strftime("%d %b %Y")
             streak_end_date = pd.Timestamp(best_end, unit="D").strftime("%d %b %Y")
 
-    # Look up locations for streak start/end
+    # Look up locations for streak start/end (use chronologically first checklist on start day, last on end day)
     if streak > 0 and "Date" in cl.columns:
         first_day = best_start if len(gaps) > 0 else day_ints[0]
         last_day = best_end if len(gaps) > 0 else day_ints[-1]
@@ -1386,12 +1395,15 @@ def _longest_streak(unique_dates, cl):
         cl_copy["_d"] = pd.to_datetime(cl_copy["Date"]).dt.normalize()
         start_m = cl_copy[cl_copy["_d"] == first_d]
         end_m = cl_copy[cl_copy["_d"] == last_d]
+        sort_col = "datetime" if "datetime" in cl_copy.columns else None
         if not start_m.empty:
-            start_row = start_m.iloc[0]
+            start_sorted = start_m.sort_values(sort_col) if sort_col and start_m[sort_col].notna().any() else start_m
+            start_row = start_sorted.iloc[0]
             streak_start_loc = start_row.get("Location", "")
             streak_start_sid = str(start_row.get("Submission ID", ""))
         if not end_m.empty:
-            end_row = end_m.iloc[-1]
+            end_sorted = end_m.sort_values(sort_col) if sort_col and end_m[sort_col].notna().any() else end_m
+            end_row = end_sorted.iloc[-1]
             streak_end_loc = end_row.get("Location", "")
             streak_end_sid = str(end_row.get("Submission ID", ""))
 
@@ -1902,13 +1914,13 @@ for i, (title, _) in enumerate(checklist_data["rankings_sections"]):
     rankings_accordion.set_title(i, title)
 
 
-# Map maintenance tab: duplicate, close-location, and orphaned data
+# Map maintenance tab: exact duplicates and close-location pairs
 # Link format for maintenance: edit page (merge/delete), not lifelist
 _MAINT_LOC_URL = "https://ebird.org/mylocations/edit/"
 
 
-def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
-    """Build HTML for Map maintenance tab: orphaned, exact duplicates, close-location pairs."""
+def _compute_map_maintenance_html(loc_df, threshold_m):
+    """Build HTML for Map maintenance tab: exact duplicates and close-location pairs."""
     exact_rows, near_pairs = _get_map_maintenance_data(loc_df, threshold_m)
     css = """
     .maint-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; margin-bottom:16px; }
@@ -1929,24 +1941,6 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
     .maint-pair-tbl td:nth-child(2) { white-space:nowrap; }
     .maint-pair-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
     """
-    # Table 0: Locations without checklists
-    orphaned_body = ""
-    if not orphaned_df.empty:
-        for _, r in orphaned_df.iterrows():
-            link = f'<a href="{_MAINT_LOC_URL}{r["Location ID"]}" target="_blank">{r["Location"]}</a>' if pd.notna(r.get("Location ID")) else str(r.get("Location", ""))
-            orphaned_body += f"<tr><td>{link}</td></tr>"
-        orphaned_table = f"""
-  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Locations without checklists</h4>
-  <p style="margin:4px 0 8px;color:#666;font-size:12px;">These locations have no attached checklists and are excluded from the map and other tabs.</p>
-  <table class="maint-tbl maint-single-col">
-    <thead><tr><th>Location</th></tr></thead>
-    <tbody>{orphaned_body}</tbody>
-  </table>"""
-    else:
-        orphaned_table = """
-  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Locations without checklists</h4>
-  <p style="margin:4px 0;color:#666;">None.</p>"""
-
     # Table 1: Exact duplicates (Location | Lat/Long | Number of duplicates)
     dup_body = ""
     if exact_rows:
@@ -2006,12 +2000,11 @@ def _compute_map_maintenance_html(loc_df, threshold_m, orphaned_df):
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
 {dup_table}
 {near_section}
-{orphaned_table}
 {explanation}
 </div>"""
 
 
-map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS, locations_without_checklists)
+map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
 map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
 # --------------------------------------------
