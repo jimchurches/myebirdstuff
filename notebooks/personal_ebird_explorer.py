@@ -297,6 +297,20 @@ display(HTML("""
     padding-right: 0 !important;
     overflow-x: hidden !important;
 }
+/* Let the dashboard output cell expand so map and tabs are visible without scrolling */
+.ebird-dashboard {
+    min-height: 85vh !important;
+}
+.jp-OutputArea-output:has(.ebird-dashboard),
+.jp-OutputArea:has(.ebird-dashboard) {
+    min-height: 85vh !important;
+    max-height: none !important;
+}
+/* Classic Jupyter */
+.output_area:has(.ebird-dashboard) {
+    min-height: 85vh !important;
+    max-height: none !important;
+}
 </style>
 """))
 
@@ -1452,6 +1466,38 @@ def _rankings_by_value(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col
     return rows
 
 
+def _region_column(df, prefer_country=True):
+    """Return the first column name present in df for region (country/state). Prefer full country name if prefer_country."""
+    cols_lower = {c.strip().lower(): c for c in df.columns}
+    candidates_country = ("country", "country name", "country code", "countrycode")
+    candidates_region = ("state/province", "state", "state_province", "province", "county")
+    if prefer_country:
+        for key in candidates_country:
+            if key in cols_lower:
+                return cols_lower[key]
+    for key in candidates_region:
+        if key in cols_lower:
+            return cols_lower[key]
+    if not prefer_country:
+        for key in candidates_country:
+            if key in cols_lower:
+                return cols_lower[key]
+    return None
+
+
+def _format_region_parts(value):
+    """Split combined State/Province (e.g. 'AU-NSW') into country and state. Returns (country, state) for display; either may be None."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return (None, None)
+    s = str(value).strip()
+    if not s:
+        return (None, None)
+    if "-" in s:
+        parts = s.split("-", 1)
+        return (parts[0].strip() or None, parts[1].strip() or None)
+    return (None, s)
+
+
 def _rankings_by_location(df_obs, cl_sub, mode, fmt, limit):
     """Top N locations by total species or individuals. mode: 'species' or 'individuals'. Ties by first visit date."""
     if df_obs.empty or cl_sub.empty:
@@ -1471,6 +1517,12 @@ def _rankings_by_location(df_obs, cl_sub, mode, fmt, limit):
         Location=("Location", "first"),
         Checklists=("Submission ID", "nunique"),
     ).reset_index()
+    region_col = _region_column(cl_sub, prefer_country=True)
+    if region_col:
+        loc_info = loc_info.merge(
+            cl_sub.groupby("Location ID")[region_col].first().reset_index(),
+            on="Location ID", how="left",
+        )
     first_dates = cl_sub.groupby("Location ID")[dt_col].min().reset_index().rename(columns={dt_col: "_first"})
     merged = agg.merge(loc_info, on="Location ID", how="inner").merge(first_dates, on="Location ID", how="left")
     merged = merged.sort_values(by=["_val", "_first", "Location"], ascending=[False, True, True]).head(limit)
@@ -1478,7 +1530,13 @@ def _rankings_by_location(df_obs, cl_sub, mode, fmt, limit):
     for _, r in merged.iterrows():
         lid = r["Location ID"]
         loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
-        rows.append((loc_link, f"{int(r['Checklists']):,}", fmt(r["_val"])))
+        state_str = ""
+        country_str = ""
+        if region_col and region_col in merged.columns:
+            country, state = _format_region_parts(r.get(region_col))
+            state_str = state if state else ""
+            country_str = country if country else ""
+        rows.append((loc_link, state_str, country_str, f"{int(r['Checklists']):,}", fmt(r["_val"])))
     return rows
 
 
@@ -1494,7 +1552,9 @@ def _rankings_by_individuals(df_obs, limit):
         total=("_count", "sum"),
         common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
     ).reset_index()
-    by_base = by_base.sort_values(by=["total", "_base"], ascending=[False, True]).head(limit)
+    by_base = by_base.sort_values(by=["total", "_base"], ascending=[False, True])
+    if limit is not None:
+        by_base = by_base.head(limit)
     rows = []
     for _, r in by_base.iterrows():
         name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
@@ -1513,7 +1573,9 @@ def _rankings_by_checklists(df_obs, limit):
         n_checklists=("Submission ID", "nunique"),
         common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
     ).reset_index()
-    by_base = by_base.sort_values(by=["n_checklists", "_base"], ascending=[False, True]).head(limit)
+    by_base = by_base.sort_values(by=["n_checklists", "_base"], ascending=[False, True])
+    if limit is not None:
+        by_base = by_base.head(limit)
     rows = []
     for _, r in by_base.iterrows():
         name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
@@ -1522,7 +1584,7 @@ def _rankings_by_checklists(df_obs, limit):
 
 
 def _rankings_seen_once(df_obs, limit=None):
-    """Species in exactly 1 checklist. Returns (species, location_link, date_time_link, count). No limit by default."""
+    """Species in exactly 1 checklist. Returns (species, location_link, state, country, date_time_link, count). No limit by default."""
     if df_obs.empty:
         return []
     df_s = df_obs.copy()
@@ -1539,6 +1601,16 @@ def _rankings_seen_once(df_obs, limit=None):
         Submission_ID=("Submission ID", "first"),
         _dt=(dt_col, "first"),
     ).reset_index()
+    # Attach region (state/country) per base if we have a suitable column
+    region_col = _region_column(df_s, prefer_country=True)
+    if region_col:
+        region_by_base = (
+            df_s.groupby("_base")[region_col]
+            .first()
+            .reset_index()
+            .rename(columns={region_col: "_region"})
+        )
+        by_base = by_base.merge(region_by_base, on="_base", how="left")
     seen_once = by_base[by_base["n_checklists"] == 1].sort_values("common_name")
     if limit is not None:
         seen_once = seen_once.head(limit)
@@ -1552,7 +1624,14 @@ def _rankings_seen_once(df_obs, limit=None):
         dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
         loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
         dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
-        rows.append((str(name), loc_link, dt_link, f"{int(r['checklist_count']):,}"))
+        state_str = ""
+        country_str = ""
+        if "_region" in r.index:
+            country, state = _format_region_parts(r.get("_region"))
+            state_str = state if state else ""
+            country_str = country if country else ""
+        # Order: Species | Location | State | Country | Visited date/time | Count
+        rows.append((str(name), loc_link, state_str, country_str, dt_link, f"{int(r['checklist_count']):,}"))
     return rows
 
 
@@ -1571,19 +1650,30 @@ def _rankings_by_visits(cl_sub, limit):
     )
     vc = cl_sub.groupby("Location ID").agg(Count=("Submission ID", "nunique")).reset_index()
     vc = vc.merge(first_rows, on="Location ID").merge(last_rows[["Location ID", "Last", "Last_SID"]], on="Location ID")
+    region_col = _region_column(cl_sub, prefer_country=True)
+    if region_col:
+        vc = vc.merge(
+            cl_sub.groupby("Location ID")[region_col].first().reset_index(),
+            on="Location ID", how="left",
+        )
     vc = vc.sort_values(by=["Count", "First"], ascending=[False, True]).head(limit)
     rows = []
     for _, r in vc.iterrows():
-        loc = r["Location"]
         lid = r["Location ID"]
+        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
+        state_str = ""
+        country_str = ""
+        if region_col and region_col in vc.columns:
+            country, state = _format_region_parts(r.get(region_col))
+            state_str = state if state else ""
+            country_str = country if country else ""
         first_str = pd.Timestamp(r["First"]).strftime("%d %b %Y %H:%M") if pd.notna(r["First"]) else "—"
         last_str = pd.Timestamp(r["Last"]).strftime("%d %b %Y %H:%M") if pd.notna(r["Last"]) else "—"
         first_sid = r.get("First_SID")
         last_sid = r.get("Last_SID")
         first_link = f'<a href="https://ebird.org/checklist/{first_sid}" target="_blank">{first_str}</a>' if pd.notna(first_sid) and first_sid else first_str
         last_link = f'<a href="https://ebird.org/checklist/{last_sid}" target="_blank">{last_str}</a>' if pd.notna(last_sid) and last_sid else last_str
-        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
-        rows.append((loc_link, first_link, last_link, f"{int(r['Count']):,}"))
+        rows.append((loc_link, state_str, country_str, first_link, last_link, f"{int(r['Count']):,}"))
     return rows
 
 
@@ -1614,8 +1704,8 @@ def _compute_rankings(df, cl, limit, dur_col, dist_col):
         "species_loc": _rankings_by_location(df, cl, "species", lambda x: f"{int(x):,}", limit),
         "individuals_loc": _rankings_by_location(df, cl, "individuals", lambda x: f"{int(x):,}", limit),
         "visited": _rankings_by_visits(cl, limit),
-        "species_individuals": _rankings_by_individuals(df, limit),
-        "species_checklists": _rankings_by_checklists(df, limit),
+        "species_individuals": _rankings_by_individuals(df, limit=None),  # Full list for Interesting Lists
+        "species_checklists": _rankings_by_checklists(df, limit=None),   # Full list for Interesting Lists
         "seen_once": _rankings_seen_once(df, limit=None),  # No limit; show all species seen only once
     }
 
@@ -1625,7 +1715,7 @@ def _compute_rankings(df, cl, limit, dur_col, dist_col):
 # ✅ Checklist Statistics (computed from data)
 # --------------------------------------------
 def _compute_checklist_stats(df):
-    """Compute checklist statistics from df; returns dict with stats_html and rankings_sections."""
+    """Compute checklist statistics from df; returns dict with stats_html, rankings_sections_top_n, rankings_sections_other."""
     import html
 
     if df.empty:
@@ -1829,51 +1919,81 @@ def _compute_checklist_stats(df):
         content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
         return content
 
+    def _rankings_table_location_5col(title, headers_5, rows, include_heading=True, scroll_hint="shading", visible_rows=16):
+        """5-column table: Location, State, Country, then two more (e.g. Checklists, Species). Last column right-aligned."""
+        if not rows:
+            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
+            return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+        body = "".join(
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td style='text-align:right;font-weight:bold;'>{r[4]}</td></tr>"
+            for r in rows
+        )
+        tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>{headers_5[0]}</th><th>{headers_5[1]}</th><th>{headers_5[2]}</th><th>{headers_5[3]}</th><th>{headers_5[4]}</th></tr></thead><tbody>{body}</tbody></table>"
+        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
+        content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+        return content
+
+    def _rankings_table_with_rank(title, headers_3col, rows_3col, include_heading=True, scroll_hint="shading", visible_rows=16):
+        """Build a 4-column rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3)."""
+        if not rows_3col:
+            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
+            return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+        body = "".join(
+            f"<tr><td>{i}</td><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{r[2]}</td></tr>"
+            for i, r in enumerate(rows_3col, start=1)
+        )
+        tbl = f"<table class='stats-tbl rankings-tbl rank-tbl'><thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th><th>{headers_3col[2]}</th></tr></thead><tbody>{body}</tbody></table>"
+        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
+        content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+        return content
+
     def _rankings_visited_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-        """4-column table: Location | First visit | Last visit | Visits."""
+        """6-column table: Location | State | Country | First visit | Last visit | Visits."""
         if not rows:
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td style='text-align:right;font-weight:bold;'>{r[3]}</td></tr>" for r in rows
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>" for r in rows
         )
-        tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>Location</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
+        tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>Location</th><th>State</th><th>Country</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
         scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
         return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
-    def _rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16, note_text=None):
-        """4-column table: Species | Location | Visited date/time | Count. Optional note above table."""
-        import html as _html
+    def _rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
+        """6-column table: Species | Location | State | Country | Visited date/time | Count."""
         if not rows:
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td style='text-align:right;font-weight:bold;'>{r[3]}</td></tr>" for r in rows
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
+            for r in rows
         )
-        tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>Species</th><th>Location</th><th>Visited date/time</th><th>Count</th></tr></thead><tbody>{body}</tbody></table>"
+        tbl = (
+            "<table class='stats-tbl rankings-tbl seen-once-tbl'>"
+            "<thead><tr>"
+            "<th>Species</th><th>Location</th><th>State</th><th>Country</th><th>Visited date/time</th><th>Count</th>"
+            "</tr></thead><tbody>"
+            f"{body}</tbody></table>"
+        )
         scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-        note_html = ""
-        if note_text:
-            esc = _html.escape(note_text, quote=True)
-            note_html = f"""<p class="rankings-note" style="margin:0 0 6px;font-size:11px;color:#888;line-height:1.4;">
-  <span class="stats-info-glyph" style="margin-right:4px;">&#9432;</span>{esc}
-</p>"""
-        return f"{note_html}{scroll_wrapper}"
+        return scroll_wrapper
 
-    # Rankings sections for accordion (content only, no heading - accordion provides title)
+    # Rankings sections: Top N (limit 200) vs other (full/unlimited lists)
     scroll_hint = POPUP_SCROLL_HINT
     visible_rows = RANKINGS_TABLE_VISIBLE_ROWS
-    rankings_sections = [
+    rankings_sections_top_n = [
         ("Checklist: Longest by time", _rankings_table("Checklist: Longest by time", ["Location", "Visited date/time", "Time"], rankings["time"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Checklist: Longest by distance", _rankings_table("Checklist: Longest by distance", ["Location", "Visited date/time", "Distance"], rankings["dist"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Checklist: Most species", _rankings_table("Checklist: Most species", ["Location", "Visited date/time", "Species"], rankings["species"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Checklist: Most individuals", _rankings_table("Checklist: Most individuals", ["Location", "Visited date/time", "Count"], rankings["individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most species", _rankings_table("Location: Most species", ["Location", "Checklists", "Species"], rankings["species_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most individuals", _rankings_table("Location: Most individuals", ["Location", "Checklists", "Count"], rankings["individuals_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most species", _rankings_table_location_5col("Location: Most species", ["Location", "State", "Country", "Checklists", "Species"], rankings["species_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most individuals", _rankings_table_location_5col("Location: Most individuals", ["Location", "State", "Country", "Checklists", "Count"], rankings["individuals_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Location: Most visited", _rankings_visited_table(rankings["visited"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Most individuals", _rankings_table("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Most checklists", _rankings_table("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Seen only once", _rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, note_text=f"All species, not limited to {TOP_N_TABLE_LIMIT}.")),
+    ]
+    rankings_sections_other = [
+        ("Species: Most individuals", _rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Most checklists", _rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Seen only once", _rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
 
     stats_html = f"""
@@ -1883,14 +2003,14 @@ def _compute_checklist_stats(df):
   <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{right_col}</div>
 </div>
 """
-    return {"stats_html": stats_html, "rankings_sections": rankings_sections}
+    return {"stats_html": stats_html, "rankings_sections_top_n": rankings_sections_top_n, "rankings_sections_other": rankings_sections_other}
 
 
 # Stats use df_full for all-time totals (unfiltered by date). Map uses df, which may be date-filtered.
 checklist_data = _compute_checklist_stats(df_full)
 checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 
-# Rankings tab: accordion so lists are collapsible, each takes full width when expanded
+# Rankings tab: two groups (Top N + Other) with headings, each group an accordion
 _rankings_css = """
 .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
 .stats-info-glyph { cursor:help; opacity:0.7; }
@@ -1905,13 +2025,34 @@ _rankings_css = """
 .stats-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
 .stats-tbl tbody tr:nth-child(even) { background:#fff; }
 .stats-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
+.stats-tbl.rank-tbl th:first-child,
+.stats-tbl.rank-tbl td:first-child { width: 6ch; max-width: 6ch; text-align: left; }
+.stats-tbl.seen-once-tbl { width: 100%; }
+.stats-tbl.seen-once-tbl th:nth-child(2), .stats-tbl.seen-once-tbl td:nth-child(2) { max-width: 420px; }
+.stats-tbl.seen-once-tbl th:nth-child(3), .stats-tbl.seen-once-tbl td:nth-child(3),
+.stats-tbl.seen-once-tbl th:nth-child(4), .stats-tbl.seen-once-tbl td:nth-child(4) { width: 1%; white-space: nowrap; }
 """
-rankings_accordion = Accordion(
-    children=[widgets.HTML(value=f"<style>{_rankings_css}</style>{html}") for _, html in checklist_data["rankings_sections"]],
-    selected_index=None,  # All collapsed by default; expand to view
+_rankings_heading_style = "font-family:sans-serif;font-size:15px;font-weight:bold;margin:0 0 6px;padding:0;"
+def _wrap_rankings_child(content):
+    """Wrap rankings section HTML in styled widget for accordion."""
+    return widgets.HTML(value=f"<style>{_rankings_css}</style>{content}")
+
+
+rankings_accordion_top_n = Accordion(
+    children=[_wrap_rankings_child(html) for _, html in checklist_data["rankings_sections_top_n"]],
+    selected_index=None,
 )
-for i, (title, _) in enumerate(checklist_data["rankings_sections"]):
-    rankings_accordion.set_title(i, title)
+for i, (title, _) in enumerate(checklist_data["rankings_sections_top_n"]):
+    rankings_accordion_top_n.set_title(i, title)
+rankings_accordion_other = Accordion(
+    children=[_wrap_rankings_child(html) for _, html in checklist_data["rankings_sections_other"]],
+    selected_index=None,
+)
+for i, (title, _) in enumerate(checklist_data["rankings_sections_other"]):
+    rankings_accordion_other.set_title(i, title)
+rankings_tab_heading_top = widgets.HTML(value=f"<h3 style='{_rankings_heading_style}'>Top {TOP_N_TABLE_LIMIT}</h3>")
+rankings_tab_heading_other = widgets.HTML(value=f"<h3 style='{_rankings_heading_style}'>Interesting Lists</h3>")
+rankings_panel = VBox([rankings_tab_heading_top, rankings_accordion_top_n, rankings_tab_heading_other, rankings_accordion_other])
 
 
 # Map maintenance tab: exact duplicates and close-location pairs
@@ -2024,20 +2165,21 @@ map_tab_container.add_class("map-tab-container")
 # --------------------------------------------
 # Build main tabs (Map, Checklist Statistics, Rankings, Map maintenance) and dashboard.
 # --------------------------------------------
-main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, rankings_accordion, map_maintenance_panel])
+main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, rankings_panel, map_maintenance_panel])
 main_tabs.set_title(0, "🗺️ Map")
 main_tabs.set_title(1, "📊 Checklist Statistics")
-main_tabs.set_title(2, f"🏆 Top {TOP_N_TABLE_LIMIT}")
+main_tabs.set_title(2, "🏆 Rankings & lists")
 main_tabs.set_title(3, "🔧 Map maintenance")
 main_tabs.selected_index = 0  # Ensure map tab is visible on load
-main_tabs.layout = widgets.Layout(min_width="420px", min_height="650px")  # Fit tab name; reserve space for map
+main_tabs.layout = widgets.Layout(min_width="900px", min_height="650px")  # Wide enough for full tab labels (e.g. Checklist Statistics)
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
 # ✅ Show dashboard (controls above map, output + tabs)
 # --------------------------------------------
 dashboard = VBox([output, main_tabs])
-dashboard.layout = widgets.Layout(min_height="750px")  # Ensure map + controls visible without expanding
+dashboard.layout = widgets.Layout(min_height="900px")  # Request enough height; CSS .ebird-dashboard enforces 85vh for full viewport
+dashboard.add_class("ebird-dashboard")
 display(dashboard)
 map_controls.add_class("map-controls-panel")
 map_tab_container.add_class("map-tab-container")

@@ -44,3 +44,23 @@ For full installation instructions (Python, Jupyter, Voila, and dependencies on 
 **[INSTALL_EBIRD_EXPLORER.md](../INSTALL_EBIRD_EXPLORER.md)**
 
 Local install gives you faster performance and lets you run the notebook as a Voila dashboard.
+
+---
+
+## If you see "File Load Error" (notebook and .py out of sync)
+
+This project uses [Jupytext](https://jupytext.readthedocs.io/) so `personal_ebird_explorer.ipynb` and `personal_ebird_explorer.py` stay in sync. If the dialog says the notebook is newer than the .py (or the other way around), you can fix it without losing work:
+
+1. **Update the older file from the newer one** (recommended). From the repo root:
+   ```bash
+   jupytext --sync notebooks/personal_ebird_explorer.ipynb
+   ```
+   This makes the paired file match the one that was modified last. Then save and reopen as needed.
+
+2. **Or** open the `.py` in an editor, make it match the notebook (or vice versa), save, and the error will go away on next open.
+
+3. **Optional:** To make Jupytext less strict about small timing differences, add a `jupytext.toml` in the repo root with:
+   ```toml
+   outdated_text_notebook_margin = 5
+   ```
+   (default is 1 second). That only relaxes the check; it doesn’t fix real content drift, so prefer (1) when the dialog appears.
