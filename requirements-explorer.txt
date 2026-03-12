@@ -9,3 +9,6 @@ folium
 ipywidgets
 whoosh
 scikit-learn
+
+# Testing
+pytest

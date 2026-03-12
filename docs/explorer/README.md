@@ -41,7 +41,7 @@ Binder runs the notebook in the cloud. Nothing to install — just upload your d
 
 For full installation instructions (Python, Jupyter, Voila, and dependencies on Windows and macOS), see:
 
-**[INSTALL_EBIRD_EXPLORER.md](../INSTALL_EBIRD_EXPLORER.md)**
+**[Installation guide](install.md)**
 
 Local install gives you faster performance and lets you run the notebook as a Voila dashboard.
 

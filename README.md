@@ -3,9 +3,13 @@ eBird Automation
 
 Various tools and utilities I've written to help me with eBird.
 
+> **Note:** Active development and refactor work is currently happening on the `refactor/modularise-core` branch.  
+> The `main` branch tracks the current stable explorer, macros, and shortcut setup.
+
 ## Table of Contents
 - [myebirdstuff](#myebirdstuff)
   - [Table of Contents](#table-of-contents)
+  - [Projects in this repo](#projects-in-this-repo)
   - [Bird Data Logging with Apple Shortcut](#bird-data-logging-with-apple-shortcut)
     - [What It Does](#what-it-does)
     - [Output Format](#output-format)
@@ -24,6 +28,30 @@ Various tools and utilities I've written to help me with eBird.
       - [Flow Control Options](#flow-control-options)
       - [Important Notes](#important-notes)
   - [eBird Data Visualisation Tool](#eBird_Data_Visualisation_Tool)
+
+
+## Projects in this repo
+
+This repo currently has three related pieces that work together:
+
+- **Bird Data Logging with Apple Shortcut**  
+  Hands-free dictation of sightings while driving or on the move, logging to Apple Notes.  
+  Documentation: see [Bird Data Logging with Apple Shortcut](#bird-data-logging-with-apple-shortcut) in this README.  
+
+- **eBird Data Visualisation Tool (personal eBird explorer)**  
+  A Jupyter notebook that loads your eBird export and provides an interactive map, statistics, yearly summary, rankings, and maintenance views.  
+  Documentation:  
+  - Overview & Binder quick-start: [`docs/explorer/README.md`](docs/explorer/README.md)  
+  - Installation guide: [`docs/explorer/install.md`](docs/explorer/install.md)  
+  - Future ideas and notes: [`docs/explorer/future-ideas.md`](docs/explorer/future-ideas.md)  
+  - Regression checklist: [`docs/explorer/regression-checklist.md`](docs/explorer/regression-checklist.md)  
+
+- **eBird Macros (UI.Vision) + location naming script**  
+  UI.Vision macros that help create incidental checklists and clean up / rename personal locations, backed by the Python helper script `scripts/eBirdChecklistNameFromGPS.py`.  
+  Documentation: see [eBird Macros](#ebird-macros) and [Location naming](#location-naming) in this README.  
+  Future, more detailed docs will live under:  
+  - `docs/ui-vision/` (UI.Vision macros)  
+  - `docs/shortcut/` (shortcut/macros integration and workflow)  
 
 
 ## Bird Data Logging with Apple Shortcut
@@ -270,5 +298,5 @@ This repository includes a Jupyter notebook called `personal_ebird_explorer.ipyn
 You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
 
 > 📘 For full details and instructions, open the notebook: `notebooks/personal_ebird_explorer.ipynb`  
-> 📗 For **installation instructions** (Python, Jupyter, Voila, and dependencies on Windows and macOS), see **[INSTALL_EBIRD_EXPLORER.md](INSTALL_EBIRD_EXPLORER.md)**.
+> 📗 For **installation instructions** (Python, Jupyter, Voila, and dependencies on Windows and macOS), see **[docs/explorer/install.md](docs/explorer/install.md)**.
 
