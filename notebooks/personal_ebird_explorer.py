@@ -1756,6 +1756,239 @@ def _compute_rankings(df, cl, limit, dur_col, dist_col):
 
 # %%
 # --------------------------------------------
+# ✅ Yearly Summary Statistics (years across top, stats down side)
+# --------------------------------------------
+def _yearly_summary_stats(df, cl, dur_col, dist_col):
+    """Compute per-year stats. Returns (years_sorted, rows, incomplete_by_year). incomplete_by_year is dict year -> list of (sid, date_str, location) for incomplete (non-incidental) checklists."""
+    import html as _html
+    cl = cl.dropna(subset=["Date"])
+    if cl.empty:
+        return [], [], {}
+    cl["_year"] = pd.to_datetime(cl["Date"]).dt.year
+    years_sorted = sorted(cl["_year"].dropna().astype(int).unique())
+    if not years_sorted:
+        return [], [], {}
+    df_with_yr = df.copy()
+    df_with_yr["Date"] = pd.to_datetime(df_with_yr["Date"], errors="coerce")
+    df_with_yr["_year"] = df_with_yr["Date"].dt.year
+
+    has_protocol = "Protocol" in df.columns
+    has_all_obs = "All Obs Reported" in df.columns
+    proto_lower = cl["Protocol"].astype(str).str.strip().str.lower() if has_protocol else None
+    traveling_mask = proto_lower.str.contains("traveling|travelling", na=False) if has_protocol else pd.Series(False, index=cl.index)
+    stationary_mask = proto_lower.str.contains("stationary", na=False) if has_protocol else pd.Series(False, index=cl.index)
+    # Incidental: eBird export uses "eBird - Casual Observation"; match incidental or casual observation
+    incidental_mask = proto_lower.str.contains("incidental|casual observation", na=False, regex=True) if has_protocol else pd.Series(False, index=cl.index)
+    # All Obs Reported: typically 0/1 (or 0.0/1.0); 1 = complete. Also accept TRUE/YES/Y.
+    completed_mask = pd.Series(True, index=cl.index)
+    if has_all_obs:
+        a = cl["All Obs Reported"]
+        completed_mask = a.notna() & (
+            (pd.to_numeric(a, errors="coerce") == 1) |
+            (a.astype(str).str.strip().str.upper().isin(["TRUE", "YES", "Y"]))
+        )
+    traveling_complete = traveling_mask & completed_mask if has_protocol else traveling_mask
+    stationary_complete = stationary_mask & completed_mask if has_protocol else stationary_mask
+    # Incomplete = not completed and not incidental (don't count incidental in incomplete)
+    incomplete_not_incidental = ~completed_mask & ~incidental_mask if has_all_obs and has_protocol else pd.Series(False, index=cl.index)
+    incomplete_hint = _html.escape("Incomplete checklists not counted.", quote=True)
+    info_icon = f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{incomplete_hint}</span></span>' if has_all_obs else ""
+
+    sp_series = _countable_species_vectorized(df_with_yr)
+    df_with_yr["_base"] = sp_series
+    df_with_yr["_count"] = df_with_yr["Count"].apply(_safe_count)
+
+    rows = []
+
+    # 1. Total species
+    by_yr_sp = df_with_yr.dropna(subset=["_base"]).groupby("_year")["_base"].nunique()
+    vals = [int(by_yr_sp.get(y, 0)) for y in years_sorted]
+    rows.append(("Total species", [f"{v:,}" for v in vals]))
+
+    # 2. Total individuals
+    by_yr_ind = df_with_yr.groupby("_year")["_count"].sum()
+    vals = [int(by_yr_ind.get(y, 0)) for y in years_sorted]
+    rows.append(("Total individuals", [f"{v:,}" for v in vals]))
+
+    # 3. Lifers
+    first_seen = df_with_yr.dropna(subset=["_base"]).groupby("_base")["Date"].min()
+    first_seen_year = first_seen.dt.year
+    lifers_per_year = first_seen_year.value_counts()
+    vals = [int(lifers_per_year.get(y, 0)) for y in years_sorted]
+    rows.append(("Lifers", [f"{v:,}" for v in vals]))
+
+    # 4. Traveling checklists (complete only; info icon when we filter)
+    if has_protocol:
+        trav_count = cl[traveling_complete].groupby("_year").size()
+        vals = [int(trav_count.get(y, 0)) for y in years_sorted]
+        rows.append((f"Traveling checklists{info_icon}", [f"{v:,}" for v in vals]))
+    else:
+        rows.append(("Traveling checklists", ["—"] * len(years_sorted)))
+
+    # 5. Stationary checklists (complete only; info icon when we filter)
+    if has_protocol:
+        stat_count = cl[stationary_complete].groupby("_year").size()
+        vals = [int(stat_count.get(y, 0)) for y in years_sorted]
+        rows.append((f"Stationary checklists{info_icon}", [f"{v:,}" for v in vals]))
+    else:
+        rows.append(("Stationary checklists", ["—"] * len(years_sorted)))
+
+    # 6. Incidental checklists
+    if has_protocol:
+        inc_count = cl[incidental_mask].groupby("_year").size()
+        vals = [int(inc_count.get(y, 0)) for y in years_sorted]
+        rows.append(("Incidental checklists", [f"{v:,}" for v in vals]))
+    else:
+        rows.append(("Incidental checklists", ["—"] * len(years_sorted)))
+
+    # 7. Total checklists
+    by_yr_cl = cl.groupby("_year").size()
+    vals = [int(by_yr_cl.get(y, 0)) for y in years_sorted]
+    rows.append(("Total checklists", [f"{v:,}" for v in vals]))
+
+    # 8. Completed checklists
+    if has_all_obs:
+        completed = cl[completed_mask]
+        by_yr = completed.groupby("_year").size()
+        vals = [int(by_yr.get(y, 0)) for y in years_sorted]
+        rows.append(("Completed checklists", [f"{v:,}" for v in vals]))
+    else:
+        rows.append(("Completed checklists", ["—"] * len(years_sorted)))
+
+    # 9. Incomplete checklists (not incidental)
+    if has_all_obs and has_protocol:
+        inc_count = cl[incomplete_not_incidental].groupby("_year").size()
+        vals = [int(inc_count.get(y, 0)) for y in years_sorted]
+        rows.append(("Incomplete checklists", [f"{v:,}" for v in vals]))
+    else:
+        rows.append(("Incomplete checklists", ["—"] * len(years_sorted)))
+
+    # 10. Days with checklist
+    by_yr_dates = cl.groupby("_year")["Date"].apply(lambda s: s.dt.normalize().nunique())
+    vals = [int(by_yr_dates.get(y, 0)) for y in years_sorted]
+    rows.append(("Days with checklist", [f"{v:,}" for v in vals]))
+
+    # 11. Cumulative days eBird on
+    all_dates = cl["Date"].dt.normalize()
+    cum = [int(all_dates[all_dates.dt.year <= y].nunique()) for y in years_sorted]
+    rows.append(("Cumulative days eBird on", [f"{v:,}" for v in cum]))
+
+    # 12. Total birding hours
+    if dur_col:
+        timed = cl.dropna(subset=[dur_col]).copy()
+        timed["_dur"] = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0)
+        timed["_year"] = pd.to_datetime(timed["Date"]).dt.year
+        if has_protocol:
+            excl = timed["Protocol"].astype(str).str.strip().str.lower().str.contains("incidental|historical|casual observation", na=False, regex=True)
+            timed = timed[~excl]
+        by_yr_min = timed.groupby("_year")["_dur"].sum()
+        vals = [by_yr_min.get(y, 0) / 60 for y in years_sorted]
+        rows.append(("Total birding hours", [f"{v:.1f}" if v else "—" for v in vals]))
+    else:
+        rows.append(("Total birding hours", ["—"] * len(years_sorted)))
+
+    # 13. Unique locations
+    by_yr_loc = cl.groupby("_year")["Location ID"].nunique()
+    vals = [int(by_yr_loc.get(y, 0)) for y in years_sorted]
+    rows.append(("Unique locations", [f"{v:,}" for v in vals]))
+
+    # 14. Total distance (km)
+    if dist_col:
+        cl["_dist"] = pd.to_numeric(cl[dist_col], errors="coerce").fillna(0)
+        by_yr_km = cl.groupby("_year")["_dist"].sum()
+        vals = [by_yr_km.get(y, 0) for y in years_sorted]
+        rows.append(("Total distance (km)", [f"{v:,.1f}" if v else "—" for v in vals]))
+    else:
+        rows.append(("Total distance (km)", ["—"] * len(years_sorted)))
+
+    # 15–18. Traveling checklist: Total distance, Average distance, Total hours, Average minutes
+    if dist_col and has_protocol:
+        trav = cl[traveling_complete].copy()
+        trav["_year"] = pd.to_datetime(trav["Date"]).dt.year
+        trav["_dist"] = pd.to_numeric(trav[dist_col], errors="coerce").fillna(0)
+        by_yr = trav.groupby("_year")["_dist"].sum()
+        n_trav = trav.groupby("_year").size()
+        vals_km = [by_yr.get(y, 0) for y in years_sorted]
+        vals_n = [int(n_trav.get(y, 0)) for y in years_sorted]
+        rows.append((f"Traveling checklist: Total distance (km){info_icon}", [f"{v:,.1f}" if v else "—" for v in vals_km]))
+        avg_dist = ["—" if n == 0 else f"{(vals_km[i] / n):.1f}" for i, n in enumerate(vals_n)]
+        rows.append((f"Traveling checklist: Average distance (km){info_icon}", avg_dist))
+    else:
+        rows.append(("Traveling checklist: Total distance (km)", ["—"] * len(years_sorted)))
+        rows.append(("Traveling checklist: Average distance (km)", ["—"] * len(years_sorted)))
+
+    if dur_col and has_protocol:
+        trav = cl[traveling_complete].dropna(subset=[dur_col]).copy()
+        trav["_year"] = pd.to_datetime(trav["Date"]).dt.year
+        trav["_min"] = pd.to_numeric(trav[dur_col], errors="coerce").fillna(0)
+        by_yr_min = trav.groupby("_year")["_min"].sum()
+        n_trav = trav.groupby("_year").size()
+        vals_min = [by_yr_min.get(y, 0) for y in years_sorted]
+        vals_n = [int(n_trav.get(y, 0)) for y in years_sorted]
+        rows.append((f"Traveling checklist: Total hours{info_icon}", [f"{v / 60:.1f}" if v else "—" for v in vals_min]))
+        avg_min = ["—" if n == 0 else f"{vals_min[i] / n:.1f}" for i, n in enumerate(vals_n)]
+        rows.append((f"Traveling checklist: Average minutes{info_icon}", avg_min))
+    else:
+        rows.append(("Traveling checklist: Total hours", ["—"] * len(years_sorted)))
+        rows.append(("Traveling checklist: Average minutes", ["—"] * len(years_sorted)))
+
+    # 19–22. Stationary checklist: Average species, Average individuals, Total hours, Average minutes
+    if has_protocol and dur_col:
+        stat_cl = cl[stationary_complete]
+        stat_sids = set(stat_cl["Submission ID"])
+        stat_obs = df_with_yr[df_with_yr["Submission ID"].isin(stat_sids)].copy()
+        stat_obs["_year"] = pd.to_datetime(stat_obs["Date"]).dt.year
+        sp_means, ind_means = [], []
+        for y in years_sorted:
+            o = stat_obs[stat_obs["_year"] == y]
+            if o.empty:
+                sp_means.append("—")
+                ind_means.append("—")
+            else:
+                sp_per_cl = o.dropna(subset=["_base"]).groupby("Submission ID")["_base"].nunique()
+                ind_per_cl = o.groupby("Submission ID")["_count"].sum()
+                sp_means.append(f"{sp_per_cl.mean():.1f}" if len(sp_per_cl) else "—")
+                ind_means.append(f"{ind_per_cl.mean():.1f}" if len(ind_per_cl) else "—")
+        rows.append((f"Stationary checklist: Average species{info_icon}", sp_means))
+        rows.append((f"Stationary checklist: Average individuals{info_icon}", ind_means))
+        stat_cl = stat_cl.dropna(subset=[dur_col]).copy()
+        stat_cl["_year"] = pd.to_datetime(stat_cl["Date"]).dt.year
+        stat_cl["_min"] = pd.to_numeric(stat_cl[dur_col], errors="coerce").fillna(0)
+        by_yr_min = stat_cl.groupby("_year")["_min"].sum()
+        n_stat = stat_cl.groupby("_year").size()
+        vals_min = [by_yr_min.get(y, 0) for y in years_sorted]
+        vals_n = [int(n_stat.get(y, 0)) for y in years_sorted]
+        rows.append((f"Stationary checklist: Total hours{info_icon}", [f"{v / 60:.1f}" if v else "—" for v in vals_min]))
+        avg_min = ["—" if n == 0 else f"{vals_min[i] / n:.1f}" for i, n in enumerate(vals_n)]
+        rows.append((f"Stationary checklist: Average minutes{info_icon}", avg_min))
+    else:
+        rows.append(("Stationary checklist: Average species", ["—"] * len(years_sorted)))
+        rows.append(("Stationary checklist: Average individuals", ["—"] * len(years_sorted)))
+        rows.append(("Stationary checklist: Total hours", ["—"] * len(years_sorted)))
+        rows.append(("Stationary checklist: Average minutes", ["—"] * len(years_sorted)))
+
+    # Incomplete checklists (not incidental) by year: list of (Submission ID, date_str, Location) for links
+    incomplete_by_year = {}
+    if has_all_obs and has_protocol:
+        use_dt_col = "datetime" if "datetime" in cl.columns else "Date"
+        cols = ["_year", "Submission ID", use_dt_col, "Location"]
+        inc_sub = cl[incomplete_not_incidental][cols].drop_duplicates()
+        for y in years_sorted:
+            sub = inc_sub[inc_sub["_year"] == y].sort_values(use_dt_col)
+            list_y = []
+            for _, r in sub.iterrows():
+                sid = r.get("Submission ID")
+                dt = r.get(use_dt_col)
+                loc = r.get("Location") or ""
+                date_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+                list_y.append((sid, date_str, str(loc)))
+            if list_y:
+                incomplete_by_year[int(y)] = list_y
+
+    return years_sorted, rows, incomplete_by_year
+
+
+# --------------------------------------------
 # ✅ Checklist Statistics (computed from data)
 # --------------------------------------------
 def _compute_checklist_stats(df):
@@ -1776,13 +2009,15 @@ def _compute_checklist_stats(df):
     n_species = int(_countable_species_vectorized(df).dropna().nunique())
     n_individuals = int(df["Count"].apply(_safe_count).sum())
 
-    # Completed checklists (All Obs Reported)
+    # Completed checklists (All Obs Reported: 1/1.0 = complete, 0 = incomplete; also TRUE/YES/Y)
     n_completed = "—"
     if "All Obs Reported" in df.columns:
-        completed = cl.dropna(subset=["All Obs Reported"])
-        if not completed.empty:
-            reported = completed["All Obs Reported"].astype(str).str.upper().isin(["1", "TRUE", "YES", "Y"])
-            n_completed = f"{(reported).sum():,}"
+        a = cl["All Obs Reported"]
+        reported = a.notna() & (
+            (pd.to_numeric(a, errors="coerce") == 1) |
+            (a.astype(str).str.strip().str.upper().isin(["TRUE", "YES", "Y"]))
+        )
+        n_completed = f"{reported.sum():,}"
 
     # Protocol counts — all types with zero, roll unknown into Other
     PROTOCOL_ORDER = ["Traveling", "Stationary", "Incidental", "Pelagic Protocol", "Historical", "Other"]
@@ -1813,7 +2048,7 @@ def _compute_checklist_stats(df):
     if dur_col:
         timed = cl.dropna(subset=[dur_col]).copy()
         if "Protocol" in timed.columns:
-            excl = timed["Protocol"].str.strip().str.lower().str.contains("incidental|historical", na=False, regex=True)
+            excl = timed["Protocol"].str.strip().str.lower().str.contains("incidental|historical|casual observation", na=False, regex=True)
             timed = timed[~excl]
         total_minutes = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0).sum()
     total_hours = total_minutes / 60
@@ -1858,6 +2093,31 @@ def _compute_checklist_stats(df):
 
     # Top N rankings data (limit from TOP_N_TABLE_LIMIT)
     rankings = _compute_rankings(df, cl, TOP_N_TABLE_LIMIT, dur_col, dist_col)
+
+    # Yearly summary: years across top, stats down side (only years with data)
+    years_list, yearly_rows, incomplete_by_year = _yearly_summary_stats(df, cl, dur_col, dist_col)
+    yearly_table_html = ""
+    if years_list and yearly_rows:
+        # Skip rows that are all "—"
+        def _any_value(vals):
+            return any(v != "—" for v in vals)
+        visible_rows = [(label, vals) for label, vals in yearly_rows if _any_value(vals)]
+        if visible_rows:
+            year_headers = "".join(f"<th style='text-align:right;'>{y}</th>" for y in years_list)
+            body_rows = "".join(
+                f"<tr><td>{label}</td>" + "".join(f"<td style='text-align:right;'>{v}</td>" for v in vals) + "</tr>"
+                for label, vals in visible_rows
+            )
+            yearly_table_html = f"""
+  <div style="width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px) 24px;box-sizing:border-box;">
+  <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Yearly Summary Statistics</h4>
+  <div style="overflow-x:auto;">
+  <table class="stats-tbl" style="min-width:400px;">
+    <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
+    <tbody>{body_rows}</tbody>
+  </table>
+  </div>"""
+            yearly_table_html += "  </div>"
 
     _table_css = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
@@ -2048,7 +2308,8 @@ def _compute_checklist_stats(df):
   <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{right_col}</div>
 </div>
 """
-    return {"stats_html": stats_html, "rankings_sections_top_n": rankings_sections_top_n, "rankings_sections_other": rankings_sections_other}
+    yearly_summary_html = f"<style>{_table_css}</style>{yearly_table_html}" if yearly_table_html else "<p style='font-family:sans-serif;color:#666;padding:16px;'>No yearly data.</p>"
+    return {"stats_html": stats_html, "yearly_summary_html": yearly_summary_html, "rankings_sections_top_n": rankings_sections_top_n, "rankings_sections_other": rankings_sections_other, "incomplete_by_year": incomplete_by_year}
 
 
 # Stats use df_full for all-time totals (unfiltered by date). Map uses df, which may be date-filtered.
@@ -2177,25 +2438,85 @@ def _compute_map_maintenance_html(loc_df, threshold_m):
   <p style="margin:4px 0;color:#666;">None detected within the current threshold ({threshold_m} m).</p>"""
 
     explanation = """
-  <div style="margin-top:24px;max-width:600px;display:flex;gap:8px;box-sizing:border-box;">
+  <div style="margin-top:0;margin-bottom:20px;max-width:600px;display:flex;gap:8px;box-sizing:border-box;">
     <span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#5a7ab8;color:white;font-size:10px;font-weight:600;font-family:sans-serif;line-height:1;">?</span>
     <div style="flex:1;min-width:0;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
-      This data is provided to help you keep your eBird locations in good order. It may not be that useful if you use a lot of hotspots and don't create many new locations. However, for those who create locations and build a large catalogue of them, this data can help you clean up duplicates or locations that are very close to each other.<br><br>
-      On the eBird website there are options to merge locations. Duplicates can be tricky to merge directly, so often the easiest approach is to move a checklist to the other duplicate location, then delete the now-empty one. See eBird for more details.
+      These tables highlight duplicate locations and locations that are very close to each other (within the configured distance) to help you keep your personal eBird locations organised. This is most useful if you regularly create new locations and build a large catalogue of them; if you mainly use hotspots it may be less relevant. Locations can be merged on the eBird website, though directly merging duplicates can sometimes be awkward. Often the simplest approach is to move checklists to the preferred location and then delete the now-empty duplicate. See eBird for details.
     </div>
   </div>"""
+
+    location_heading = """
+  <h4 style="margin-top:0;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Location Maintenance</h4>"""
 
     return f"""
 <style>{css}</style>
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
+{location_heading}
+{explanation}
 {dup_table}
 {near_section}
-{explanation}
 </div>"""
 
 
 map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
-map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
+
+
+def _compute_incomplete_checklists_html(incomplete_by_year):
+    """Build HTML for Maintenance tab: explanation + accordion (details/summary) of incomplete checklists by year in tables."""
+    import html as _html
+    if not incomplete_by_year:
+        return ""
+    css = """
+    .maint-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; margin-bottom:16px; }
+    .maint-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
+    .maint-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
+    .maint-tbl td:nth-child(2) { white-space:nowrap; }
+    .maint-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
+    .maint-tbl tbody tr:nth-child(even) { background:#fff; }
+    .maint-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
+    details { margin-bottom:8px; }
+    summary { cursor:pointer; font-weight:bold; padding:6px 0; }
+    """
+    explanation = """
+  <div style="margin-top:24px;max-width:600px;display:flex;gap:8px;box-sizing:border-box;">
+    <span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#5a7ab8;color:white;font-size:10px;font-weight:600;font-family:sans-serif;line-height:1;">?</span>
+    <div style="flex:1;min-width:0;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+      Incomplete travelling and stationary checklists often occur when submitting a checklist in the eBird mobile app. The default setting is incomplete, and if you move quickly through the submission prompts you may accidentally answer "No" to the question asking whether the list is complete.<br><br>
+      Incomplete checklists can certainly be intentional and acceptable (for example, when other species were present but not recorded). These checklists tables below are provided so you can review your data for checklists that may have been marked incomplete by mistake. Incidental checklists are not included.<br><br>
+      Reference: <a href="https://support.ebird.org/en/support/solutions/articles/48000950859-guide-to-ebird-protocols" target="_blank">Guide to eBird Protocols</a>
+    </div>
+  </div>"""
+    sections = []
+    for y in sorted(incomplete_by_year.keys(), reverse=True):
+        items = incomplete_by_year[y]
+        rows = []
+        for sid, date_str, loc in items:
+            loc_esc = _html.escape(loc, quote=True)
+            date_esc = _html.escape(date_str, quote=True)
+            url = f"https://ebird.org/checklist/{sid}" if sid else "#"
+            rows.append(f"<tr><td>{date_esc}</td><td><a href=\"{url}\" target=\"_blank\">{loc_esc}</a></td></tr>")
+        table_body = "".join(rows)
+        table = f"<table class=\"maint-tbl\"><thead><tr><th>Date</th><th>Location</th></tr></thead><tbody>{table_body}</tbody></table>"
+        sections.append(f"<details><summary>{y} ({len(items)})</summary>{table}</details>")
+    return f"""
+<style>{css}</style>
+<div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
+  <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Incomplete checklists (Traveling or Stationary)</h4>
+{explanation}
+  <div style="margin-top:16px;">
+{"".join(sections)}
+  </div>
+</div>"""
+
+
+incomplete_checklists_html = _compute_incomplete_checklists_html(checklist_data.get("incomplete_by_year", {}))
+if incomplete_checklists_html:
+    map_maintenance_panel = VBox([
+        widgets.HTML(value=map_maintenance_html),
+        widgets.HTML(value=incomplete_checklists_html),
+    ])
+else:
+    map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
 # --------------------------------------------
 # Build map tab: search row (search box + spacer + checkbox) and matches dropdown above map output.
@@ -2214,11 +2535,13 @@ map_tab_container.add_class("map-tab-container")
 # --------------------------------------------
 # Build main tabs (Map, Checklist Statistics, Rankings, Map maintenance) and dashboard.
 # --------------------------------------------
-main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, rankings_panel, map_maintenance_panel])
+yearly_summary_panel = widgets.HTML(value=checklist_data["yearly_summary_html"])
+main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, yearly_summary_panel, rankings_panel, map_maintenance_panel])
 main_tabs.set_title(0, "🗺️ Map")
 main_tabs.set_title(1, "📊 Checklist Statistics")
-main_tabs.set_title(2, "🏆 Rankings & lists")
-main_tabs.set_title(3, "🔧 Map maintenance")
+main_tabs.set_title(2, "📅 Yearly Summary")
+main_tabs.set_title(3, "🏆 Rankings & lists")
+main_tabs.set_title(4, "🔧 Maintenance")
 main_tabs.selected_index = 0  # Ensure map tab is visible on load
 main_tabs.layout = widgets.Layout(min_width="900px", min_height="650px")  # Wide enough for full tab labels (e.g. Checklist Statistics)
 
