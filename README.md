@@ -3,6 +3,9 @@ eBird Automation
 
 Various tools and utilities I've written to help me with eBird.
 
+> **Note:** Active development and refactor work is currently happening on the `refactor/modularise-core` branch.  
+> The `main` branch tracks the current stable explorer, macros, and shortcut setup.
+
 ## Table of Contents
 - [myebirdstuff](#myebirdstuff)
   - [Table of Contents](#table-of-contents)
