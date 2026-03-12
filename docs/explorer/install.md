@@ -4,7 +4,7 @@ This guide walks you through setting up Python, Jupyter, Voila, and the **person
 
 The explorer is a Jupyter notebook (`personal_ebird_explorer.ipynb`) that loads your eBird CSV export, lets you search for species, filter by date, and view everything on a map. You can run it in Jupyter (Notebook or JupyterLab) or as a clean dashboard using Voila.
 
-> **No installation?** You can run the notebook on [Binder](https://mybinder.org) — just upload your CSV and go. See **[notebooks/README.md](notebooks/README.md)** for the Binder quick-start.
+> **No installation?** You can run the notebook on [Binder](https://mybinder.org) — just upload your CSV and go. See the **[Explorer README](README.md)** for the Binder quick-start.
 
 ---
 
