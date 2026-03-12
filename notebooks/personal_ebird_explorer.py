@@ -1892,7 +1892,28 @@ def _yearly_summary_stats(df, cl, dur_col, dist_col):
     vals = [int(by_yr_loc.get(y, 0)) for y in years_sorted]
     rows.append(("Unique locations", [f"{v:,}" for v in vals]))
 
-    # 14. Total distance (km)
+    # 14. Shared checklists (Number of Observers > 1); 15. Days birding with others (unique dates among those)
+    if "Number of Observers" in cl.columns:
+        shared_cl = cl.dropna(subset=["Number of Observers"]).copy()
+        shared_cl["_nobs"] = pd.to_numeric(shared_cl["Number of Observers"], errors="coerce").fillna(0)
+        shared_mask = shared_cl["_nobs"] > 1
+        shared_sub = shared_cl[shared_mask]
+        if not shared_sub.empty:
+            by_yr_shared = shared_sub.groupby("_year").size()
+            vals_shared = [int(by_yr_shared.get(y, 0)) for y in years_sorted]
+            rows.append(("Shared checklists", [f"{v:,}" for v in vals_shared]))
+            shared_sub["_date"] = pd.to_datetime(shared_sub["Date"]).dt.normalize()
+            by_yr_days = shared_sub.groupby("_year")["_date"].nunique()
+            vals_days = [int(by_yr_days.get(y, 0)) for y in years_sorted]
+            rows.append(("Days birding with others", [f"{v:,}" for v in vals_days]))
+        else:
+            rows.append(("Shared checklists", ["—"] * len(years_sorted)))
+            rows.append(("Days birding with others", ["—"] * len(years_sorted)))
+    else:
+        rows.append(("Shared checklists", ["—"] * len(years_sorted)))
+        rows.append(("Days birding with others", ["—"] * len(years_sorted)))
+
+    # 16. Total distance (km)
     if dist_col:
         cl["_dist"] = pd.to_numeric(cl[dist_col], errors="coerce").fillna(0)
         by_yr_km = cl.groupby("_year")["_dist"].sum()
