@@ -587,10 +587,6 @@ output = widgets.Output()
 # --------------------------------------------
 # ✅ Autocomplete UI Widgets
 # --------------------------------------------
-# Stale debounce timer (we no longer start one; clear is handled in update_suggestions).
-# on_search_box_cleared only cancels this if set from an earlier run, to avoid double-clear.
-debounce_timer = None
-
 # Input width: longest species name + 20%, capped (avoids full-width stretch when empty)
 _max_name_len = max(len(s) for s in species_list) if species_list else 25
 _species_input_ch = min(int(_max_name_len * 1.2) + 4, 52)
@@ -899,20 +895,6 @@ def _clear_to_all_species():
     draw_map_with_species_overlay("", "")
 
 
-def on_search_box_cleared(change):
-    """When search box goes from non-empty to empty: cancel any existing debounce timer only. Reset is done in update_suggestions."""
-    global debounce_timer
-    old_val = (change.get("old") or "").strip()
-    new_val = (change.get("new") or "").strip()
-    if old_val and not new_val:
-        # Cancel any existing timer so we don't double-clear (reset is handled in update_suggestions).
-        if debounce_timer is not None:
-            if hasattr(debounce_timer, "cancel"):
-                debounce_timer.cancel()
-            debounce_timer = None
-
-
-
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🧷 Register Widget Observers
 #
@@ -924,7 +906,6 @@ def on_search_box_cleared(change):
 # ✅ Register observers
 # --------------------------------------------
 search_box.observe(update_suggestions, names="value")
-search_box.observe(on_search_box_cleared, names="value")
 matches_dropdown.observe(on_species_selected, names="value")
 hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
