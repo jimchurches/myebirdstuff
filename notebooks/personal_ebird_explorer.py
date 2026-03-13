@@ -482,38 +482,12 @@ def _format_sighting_row(r):
     return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
 
 
-def _base_species_for_count(row):
-    """Normalize to countable species (used for filter_species / single-row lookups)."""
-    sci = (row.get("Scientific Name") or "").strip()
-    common = (row.get("Common Name") or "").strip()
-    if not sci:
-        return None
-    if " sp." in sci or sci.lower().endswith(" sp"):
-        return None  # spuh
-    if " x " in sci or "(hybrid)" in common.lower():
-        return None  # hybrid
-    if "Domestic" in common or "(Domestic type)" in common:
-        return None
-    parts = sci.split()
-    if len(parts) < 2:
-        return None
-    if "/" in parts[1]:
-        return None  # species-level slash (not countable)
-    return f"{parts[0]} {parts[1]}".lower()
-
-def _countable_species_vectorized(df):
-    """Vectorized species count: exclude spuhs, slashes, hybrids, domestic; roll up subspecies."""
-    sci = df["Scientific Name"].fillna("").astype(str).str.strip()
-    common = df["Common Name"].fillna("").astype(str).str.strip()
-    spuh = sci.str.contains(r" sp\.", case=False, na=False) | sci.str.lower().str.endswith(" sp")
-    hybrid = sci.str.contains(" x ", na=False) | common.str.lower().str.contains(r"\(hybrid\)", na=False)
-    domestic = common.str.contains("Domestic", na=False) | common.str.contains(r"\(Domestic type\)", na=False)
-    parts = sci.str.split(expand=True)
-    slash = parts[1].str.contains("/", na=False) if 1 in parts.columns else pd.Series(False, index=df.index)
-    too_short = parts[0].isna() | parts[1].isna() if 1 in parts.columns else parts[0].isna()
-    exclude = spuh | hybrid | domestic | slash | too_short
-    base = parts[0].str.lower() + " " + parts[1].str.lower()
-    return base.where(~exclude)
+from personal_ebird_explorer.species_logic import (
+    _base_species_for_count,
+    countable_species_vectorized as _countable_species_vectorized,
+    filter_species,
+    base_species_for_lifer as _base_species_for_lifer,
+)
 
 total_checklists = df["Submission ID"].nunique()
 total_individuals = int(df["Count"].apply(_safe_count).sum())
@@ -603,36 +577,10 @@ hide_non_matching_checkbox = Checkbox(
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧪 Species Filter (handles slashes and subspecies)
+# ### 🧪 Species Filter
 #
-# Filters the dataset for a given base species name, excluding subspecies and slash group variants unless explicitly searched.
+# `filter_species` is imported from `personal_ebird_explorer.species_logic` (see species-logic import cell above).
 #
-
-# %%
-# --------------------------------------------
-# ✅ Species Filter (for subspecies / slashes)
-# --------------------------------------------
-
-def filter_species(df, base_species):
-    base_species = base_species.lower().strip()
-    if "/" in base_species:
-        return df[df["Scientific Name"].str.lower() == base_species]
-    filtered_df = df[df["Scientific Name"].fillna("").str.lower().str.startswith(base_species)]
-
-    # Exclude only species-level slash groups (e.g. Anas gracilis/castanea), not subspecies with
-    # slash (e.g. Tyto tenebricosa tenebricosa/arfaki). A slash at the boundary after our prefix
-    # indicates a species-level split; a slash later (in subspecies) we include.
-    def is_species_level_slash(sci_name):
-        sn = (sci_name or "").lower()
-        if "/" not in sn:
-            return False
-        rest = sn[len(base_species) :].lstrip()
-        return rest.startswith("/")
-
-    mask = filtered_df["Scientific Name"].fillna("").apply(
-        lambda s: not is_species_level_slash(s)
-    )
-    return filtered_df[mask]
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -731,13 +679,7 @@ full_df = full_df[full_df["Location ID"].isin(location_ids_with_checklists)]
 # Build lifer location dictionary: base species (genus + species) → first seen location.
 # Uses base species so subspecies (e.g. Tyto javanica [javanica Group]) roll up to the
 # same lifer as the nominate (Tyto javanica) — the chronologically first record wins.
-def _base_species_for_lifer(sci_name):
-    if pd.isna(sci_name) or not str(sci_name).strip():
-        return None
-    parts = str(sci_name).strip().split()
-    if len(parts) < 2:
-        return None
-    return f"{parts[0]} {parts[1]}".lower()
+# _base_species_for_lifer imported from species_logic (see species-logic import cell above).
 
 _lifer_lookup_df = (
     full_df.sort_values("datetime")
