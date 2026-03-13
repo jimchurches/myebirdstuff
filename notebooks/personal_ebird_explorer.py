@@ -320,20 +320,16 @@ display(HTML("""
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧰 Date/Time helper
+# ### 🧰 Package path setup
 #
-# The datetime column is built in `personal_ebird_explorer.data_loader` (see that module for details). It is re-exported here so existing code and tests can still import it from this notebook.
+# Ensure repo root is on `sys.path` so `personal_ebird_explorer` resolves to the
+# package directory (not the notebook file when the kernel CWD is `notebooks/`).
 #
 
 # %%
-# --------------------------------------------
-# ✅ Import datetime helper from data_loader (re-exported for tests)
-# --------------------------------------------
-# Ensure repo root is on path so the package is found (not the notebook file when cwd is notebooks/)
 _repo_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
-from personal_ebird_explorer.data_loader import add_datetime_column
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
