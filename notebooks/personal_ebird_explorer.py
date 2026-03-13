@@ -166,15 +166,18 @@ FILTER_END_DATE = "2025-12-31"
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 📦 Imports and Setup
 #
-# This cell loads all the required Python libraries:
+# This cell loads all the required Python libraries and applies custom CSS:
 #
 # - **pandas**, **folium** – for data handling and map rendering  
 # - **ipywidgets** – for interactive dropdowns, checkboxes, and layout  
 # - **Whoosh** – for fast fuzzy text search on species names  
 # - **IPython.display** – to control how HTML and maps are shown in the notebook  
-# - **tempfile**, **threading**, **os**, **sys**, **datetime** – used for behind-the-scenes file and thread management
+# - **tempfile**, **threading**, **os**, **sys**, **datetime** – behind-the-scenes file and thread management
 #
-# It also applies some custom CSS to make the output map stretch to full width.
+# Later cells also import from the **personal_ebird_explorer** package:
+# - `data_loader` – CSV loading, column validation, datetime column  
+# - `path_resolution` – finding the data file across candidate directories  
+# - `species_logic` – species filtering, countable-species normalisation, base-species extraction
 #
 
 # %%
@@ -577,13 +580,6 @@ hide_non_matching_checkbox = Checkbox(
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧪 Species Filter
-#
-# `filter_species` is imported from `personal_ebird_explorer.species_logic` (see species-logic import cell above).
-#
-
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 📍 Map Maintenance Data (duplicates, close locations)
 #
 # Used by the Map maintenance tab to find exact duplicates and near-duplicate locations.
@@ -657,11 +653,10 @@ def _get_map_maintenance_data(loc_df, threshold_m):
 #
 # Creates lookup dictionaries for lifer (first-ever) and last-seen (most recent) locations per species:
 #
-# - Reloading the full dataset to avoid effects of any active filters
+# - Reloading the full dataset via `load_dataset()` (avoids effects of any active filters)
 # - Excluding locations with no checklist (consistent with main data)
-# - Parsing and combining dates and times into full datetime objects
 # - Sorting the full data chronologically
-# - Finding the first-ever sighting (lifer) and most recent sighting (last-seen) per species
+# - Finding the first-ever sighting (lifer) and most recent sighting (last-seen) per species using `base_species_for_lifer()` from `species_logic`
 #
 # Used to correctly mark lifer and last-seen pins regardless of current date filters.
 #
