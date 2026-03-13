@@ -316,38 +316,30 @@ display(HTML("""
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧰 Date/Time Helper Function
+# ### 🧰 Date/Time helper
 #
-# This utility function ensures consistency in handling date and time columns:
-# - Parses `Date` to proper datetime objects
-# - Fills missing `Time` values with `"12:00 AM"` (so they parse when mixed with AM/PM times)
-# - Combines both into a new `datetime` column
-#
-# Used for sorting lifer and last-seen locations, and for chronological ordering in popups.
+# The datetime column is built in `personal_ebird_explorer.data_loader` (see that module for details). It is re-exported here so existing code and tests can still import it from this notebook.
 #
 
 # %%
 # --------------------------------------------
-# ✅ Helper: Add datetime column from Date + Time
+# ✅ Import datetime helper from data_loader (re-exported for tests)
 # --------------------------------------------
-def add_datetime_column(df):
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df["Time"] = df["Time"].fillna("00:00")
-    # Missing, empty, or "00:00" → 11:59 PM so they sort last (we prefer checklists with real times for streak start/end)
-    time_str = df["Time"].astype(str).str.strip().replace("00:00", "11:59 PM").replace("", "11:59 PM")
-    date_str = df["Date"].apply(lambda x: x.strftime("%Y-%m-%d") if pd.notna(x) else "")
-    df["datetime"] = pd.to_datetime(date_str + " " + time_str, errors="coerce")
-    return df
+# Ensure repo root is on path so the package is found (not the notebook file when cwd is notebooks/)
+_repo_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+from personal_ebird_explorer.data_loader import add_datetime_column
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### ⚙️ Load Config and eBird Data
 #
-# This cell handles the core setup and data load:
+# This cell does two things: **(1)** resolve where the data file lives (config); **(2)** load it and prepare the working dataset (load + filters + extraction). Only the raw load and datetime setup live in `personal_ebird_explorer.data_loader`; path resolution and post-load steps stay here because they depend on notebook config and UI state.
 #
 # - Resolves data file location by trying, in order: hardcoded path, config_secret, config_template, notebook folder  
 # - Cross-platform (macOS and Windows); falls through to next location if file not found  
-# - Loads the CSV and parses the `"Date"` column  
+# - Loads the dataset via `load_dataset()` (CSV, required-column check, canonical datetime column)  
 # - Optionally filters the **main dataset (`df`)** by a specified date range  
 # - Excludes locations with no associated checklist in the export (if any)
 # - Extracts a unique set of locations and species from the filtered data  
@@ -386,6 +378,11 @@ try:
     _notebook_dir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     _notebook_dir = os.getcwd()
+
+# Ensure repo root is on path so personal_ebird_explorer package can be imported
+_repo_root = os.path.abspath(os.path.join(_notebook_dir, ".."))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 # Scripts folder (relative to notebook)
 _scripts_dir = os.path.abspath(os.path.join(_notebook_dir, "..", "scripts"))
@@ -428,8 +425,8 @@ map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # Load data
-df = pd.read_csv(file_path)
-df = add_datetime_column(df)
+from personal_ebird_explorer.data_loader import load_dataset
+df = load_dataset(file_path)
 df_full = df.copy()  # Keep full dataset for Map maintenance tab (unaffected by date filter)
 
 # Apply date filter if enabled
@@ -734,8 +731,7 @@ def _get_map_maintenance_data(loc_df, threshold_m):
 # --------------------------------------------
 
 # Reload full dataset to avoid filtering effects (date filter, lifer calc)
-full_df = pd.read_csv(file_path)
-full_df = add_datetime_column(full_df)
+full_df = load_dataset(file_path)
 # Exclude locations with no checklist (consistent with main data)
 full_df = full_df[full_df["Location ID"].isin(location_ids_with_checklists)]
 
@@ -1883,6 +1879,7 @@ def _yearly_summary_stats(df, cl, dur_col, dist_col):
             by_yr_shared = shared_sub.groupby("_year").size()
             vals_shared = [int(by_yr_shared.get(y, 0)) for y in years_sorted]
             rows.append(("Shared checklists", [f"{v:,}" for v in vals_shared]))
+            shared_sub = shared_sub.copy()
             shared_sub["_date"] = pd.to_datetime(shared_sub["Date"]).dt.normalize()
             by_yr_days = shared_sub.groupby("_year")["_date"].nunique()
             vals_days = [int(by_yr_days.get(y, 0)) for y in years_sorted]
