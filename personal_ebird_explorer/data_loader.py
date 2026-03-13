@@ -2,7 +2,8 @@
 Dataset loading and preprocessing for Personal eBird Explorer.
 
 Single entry point: load_dataset(path_or_file)
-- Loads CSV, validates required columns (structure expected by the explorer), creates canonical datetime column, returns DataFrame.
+- Loads CSV (expected encoding: UTF-8), validates required columns and that the
+  dataset is non-empty, creates canonical datetime column, returns DataFrame.
 """
 
 import pandas as pd
@@ -43,13 +44,16 @@ def load_dataset(path_or_file):
     """
     Load the eBird dataset from CSV and return a DataFrame ready for use.
 
-    - Loads CSV from path_or_file (path string or file-like).
+    - Loads CSV from path_or_file (path string or file-like). Expected encoding: UTF-8.
     - Validates that all required columns (see REQUIRED_COLUMNS) exist; raises ValueError with a clear message if any are missing.
+    - Raises ValueError if the dataset has no data rows (empty file or headers-only).
     - Creates the canonical datetime column (Date + Time → datetime).
     - Returns the DataFrame; does not change column names, sorting, or downstream behaviour.
     """
-    df = pd.read_csv(path_or_file)
+    df = pd.read_csv(path_or_file, encoding="utf-8")
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(f"Dataset missing required columns: {missing}")
+    if df.empty:
+        raise ValueError("Dataset is empty (no data rows).")
     return add_datetime_column(df)
