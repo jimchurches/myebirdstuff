@@ -1,15 +1,8 @@
+"""Tests for species filtering logic (personal_ebird_explorer.species_logic.filter_species)."""
+
 import pandas as pd
-import pytest
 
-try:
-    from notebooks.personal_ebird_explorer import filter_species
-except (FileNotFoundError, ImportError):
-    filter_species = None
-
-pytestmark = pytest.mark.skipif(
-    filter_species is None,
-    reason="Notebook import requires local eBird data file",
-)
+from personal_ebird_explorer.species_logic import filter_species
 
 
 def test_filter_species_prefix_and_subspecies_but_not_species_level_slash():
@@ -76,3 +69,15 @@ def test_filter_species_handles_missing_scientific_name():
     assert len(out) == 1
     assert out.iloc[0]["Scientific Name"] == "Anas gracilis"
 
+
+def test_filter_species_case_insensitive():
+    df = pd.DataFrame(
+        {
+            "Scientific Name": ["Anas Gracilis", "anas gracilis"],
+            "Common Name": ["Grey Teal", "Grey Teal"],
+        }
+    )
+
+    out = filter_species(df, "Anas Gracilis")
+
+    assert len(out) == 2
