@@ -1,6 +1,15 @@
 import pandas as pd
+import pytest
 
-from notebooks.personal_ebird_explorer import _compute_checklist_stats
+try:
+    from notebooks.personal_ebird_explorer import _compute_checklist_stats
+except (FileNotFoundError, ImportError):
+    _compute_checklist_stats = None
+
+pytestmark = pytest.mark.skipif(
+    _compute_checklist_stats is None,
+    reason="Notebook import requires local eBird data file",
+)
 
 
 def make_minimal_df():

@@ -1,6 +1,15 @@
 import pandas as pd
+import pytest
 
-from notebooks.personal_ebird_explorer import filter_species
+try:
+    from notebooks.personal_ebird_explorer import filter_species
+except (FileNotFoundError, ImportError):
+    filter_species = None
+
+pytestmark = pytest.mark.skipif(
+    filter_species is None,
+    reason="Notebook import requires local eBird data file",
+)
 
 
 def test_filter_species_prefix_and_subspecies_but_not_species_level_slash():

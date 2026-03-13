@@ -1,6 +1,6 @@
 import pandas as pd
 
-from notebooks.personal_ebird_explorer import add_datetime_column
+from personal_ebird_explorer.data_loader import add_datetime_column
 
 
 def test_add_datetime_column_basic():
