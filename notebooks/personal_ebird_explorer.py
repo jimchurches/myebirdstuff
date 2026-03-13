@@ -399,15 +399,9 @@ for _config_path in (_config_secret_path, _config_template_path):
         _candidate_folders.append(os.path.normpath(str(_folder).strip()))
 _candidate_folders.append(_notebook_dir)
 
-# Try each candidate until we find the data file
-file_path = None
-DATA_FOLDER = None
-for _folder in _candidate_folders:
-    _candidate_path = os.path.join(_folder, EBIRD_DATA_FILE_NAME)
-    if os.path.exists(_candidate_path):
-        file_path = _candidate_path
-        DATA_FOLDER = _folder
-        break
+# Find data file in first candidate that has it
+from personal_ebird_explorer.path_resolution import find_data_file
+file_path, DATA_FOLDER = find_data_file(EBIRD_DATA_FILE_NAME, _candidate_folders)
 
 if file_path is None:
     _tried = ", ".join(_candidate_folders)

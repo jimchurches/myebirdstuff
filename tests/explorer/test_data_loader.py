@@ -50,6 +50,13 @@ def test_load_dataset_empty_csv_raises():
         load_dataset(StringIO(csv))
 
 
+def test_load_dataset_headers_only_no_data_rows_raises():
+    """load_dataset on CSV with valid headers but no data rows raises clear error."""
+    csv = "Date,Time,Location ID,Location,Latitude,Longitude,Common Name,Scientific Name,Submission ID,Count"
+    with pytest.raises(ValueError, match="Dataset is empty"):
+        load_dataset(StringIO(csv))
+
+
 def test_load_dataset_preserves_extra_columns():
     """load_dataset does not drop columns beyond the required set."""
     csv = """Date,Time,Location ID,Location,Latitude,Longitude,Common Name,Scientific Name,Submission ID,Count,ML Catalog Numbers
