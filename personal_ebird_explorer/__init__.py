@@ -7,6 +7,12 @@ from personal_ebird_explorer.species_logic import (
     countable_species_vectorized,
     base_species_for_lifer,
 )
+from personal_ebird_explorer.stats import (
+    safe_count,
+    longest_streak,
+    compute_rankings,
+    yearly_summary_stats,
+)
 
 __all__ = [
     "load_dataset",
@@ -15,4 +21,8 @@ __all__ = [
     "filter_species",
     "countable_species_vectorized",
     "base_species_for_lifer",
+    "safe_count",
+    "longest_streak",
+    "compute_rankings",
+    "yearly_summary_stats",
 ]
