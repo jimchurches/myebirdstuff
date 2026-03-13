@@ -13,6 +13,7 @@ from personal_ebird_explorer.stats import (
     compute_rankings,
     yearly_summary_stats,
 )
+from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
 
 __all__ = [
     "load_dataset",
@@ -25,4 +26,5 @@ __all__ = [
     "longest_streak",
     "compute_rankings",
     "yearly_summary_stats",
+    "get_map_maintenance_data",
 ]

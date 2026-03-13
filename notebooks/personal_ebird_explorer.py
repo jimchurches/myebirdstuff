@@ -178,7 +178,8 @@ FILTER_END_DATE = "2025-12-31"
 # - `data_loader` – CSV loading, column validation, datetime column  
 # - `path_resolution` – finding the data file across candidate directories  
 # - `species_logic` – species filtering, countable-species normalisation, base-species extraction  
-# - `stats` – rankings, yearly summary, streak calculation, and other pure statistics
+# - `stats` – rankings, yearly summary, streak calculation, and other pure statistics  
+# - `duplicate_checks` – exact and near-duplicate location detection
 #
 
 # %%
@@ -578,70 +579,14 @@ hide_non_matching_checkbox = Checkbox(
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 📍 Map Maintenance Data (duplicates, close locations)
 #
-# Used by the Map maintenance tab to find exact duplicates and near-duplicate locations.
+# Duplicate and near-duplicate detection is in `personal_ebird_explorer.duplicate_checks`.
+# The notebook calls `get_map_maintenance_data()` and renders the results as HTML below.
 #
 
 # %%
-def _get_map_maintenance_data(loc_df, threshold_m):
-    """Return (exact_dup_rows, near_pairs) for Map maintenance tab.
-    - exact_dup_rows: list of (location_name, location_id, count) for duplicates table
-    - near_pairs: list of [(loc_id1, loc_name1), (loc_id2, loc_name2)] for close-location pairs
-    """
-    if "Location" not in loc_df.columns:
-        return [], []
-    one_per_loc = loc_df[["Location ID", "Location", "Latitude", "Longitude"]].drop_duplicates(subset=["Location ID"], keep="first")
-    one_per_loc = one_per_loc.copy()
-    one_per_loc["Latitude"] = pd.to_numeric(one_per_loc["Latitude"], errors="coerce")
-    one_per_loc["Longitude"] = pd.to_numeric(one_per_loc["Longitude"], errors="coerce")
-    one_per_loc = one_per_loc.dropna(subset=["Latitude", "Longitude"])
-
-    if len(one_per_loc) < 2:
-        return [], []
-
-    import numpy as np
-    from sklearn.neighbors import BallTree
-
-    id_to_name = dict(zip(one_per_loc["Location ID"], one_per_loc["Location"]))
-    id_to_coords = dict(zip(one_per_loc["Location ID"], zip(one_per_loc["Latitude"], one_per_loc["Longitude"])))
-
-    # Exact duplicates: group by coords. If same name appears multiple times, list once; if different names, list each.
-    coord_cols = ["Latitude", "Longitude"]
-    dup_coords = one_per_loc[coord_cols].round(6).duplicated(keep=False)
-    dup_df = one_per_loc.loc[dup_coords]
-    exact_dup_rows = []
-    if not dup_df.empty:
-        grouped = dup_df.groupby(dup_df[coord_cols].round(6).apply(tuple, axis=1))
-        for _, grp in grouped:
-            count = len(grp)
-            # Dedupe by name: same name -> one row; different names -> separate rows
-            by_name = grp.drop_duplicates(subset=["Location"], keep="first")
-            for _, r in by_name.iterrows():
-                lat, lon = r["Latitude"], r["Longitude"]
-                exact_dup_rows.append((r["Location"], r["Location ID"], count, lat, lon))
-
-    # Near duplicates: collect pairs (treat as pairs even if cluster has >2)
-    coords = np.radians(one_per_loc[["Latitude", "Longitude"]].values)
-    ids = one_per_loc["Location ID"].tolist()
-    earth_radius = 6_371_000
-    radius_rad = threshold_m / earth_radius
-    tree = BallTree(coords, metric="haversine")
-    indices, distances = tree.query_radius(coords, r=radius_rad, return_distance=True)
-
-    seen_pairs = set()
-    near_pairs = []
-    for i, (neighbors, dists) in enumerate(zip(indices, distances)):
-        for k, j in enumerate(neighbors):
-            if i != j and dists[k] * earth_radius > 0.01:
-                pair = tuple(sorted([ids[i], ids[j]]))
-                if pair not in seen_pairs:
-                    seen_pairs.add(pair)
-                    coords_i = id_to_coords.get(ids[i], (None, None))
-                    coords_j = id_to_coords.get(ids[j], (None, None))
-                    near_pairs.append([
-                        (ids[i], id_to_name.get(ids[i], ids[i]), coords_i[0], coords_i[1]),
-                        (ids[j], id_to_name.get(ids[j], ids[j]), coords_j[0], coords_j[1]),
-                    ])
-    return exact_dup_rows, near_pairs
+from personal_ebird_explorer.duplicate_checks import (
+    get_map_maintenance_data as _get_map_maintenance_data,
+)
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
