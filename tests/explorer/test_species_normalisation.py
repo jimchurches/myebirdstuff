@@ -1,6 +1,15 @@
 import pandas as pd
+import pytest
 
-from notebooks.personal_ebird_explorer import _countable_species_vectorized
+try:
+    from notebooks.personal_ebird_explorer import _countable_species_vectorized
+except (FileNotFoundError, ImportError):
+    _countable_species_vectorized = None
+
+pytestmark = pytest.mark.skipif(
+    _countable_species_vectorized is None,
+    reason="Notebook import requires local eBird data file",
+)
 
 
 def test_countable_species_vectorized_filters_spuh_hybrid_domestic_and_slash():

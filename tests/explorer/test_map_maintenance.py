@@ -1,6 +1,15 @@
 import pandas as pd
+import pytest
 
-from notebooks.personal_ebird_explorer import _get_map_maintenance_data
+try:
+    from notebooks.personal_ebird_explorer import _get_map_maintenance_data
+except (FileNotFoundError, ImportError):
+    _get_map_maintenance_data = None
+
+pytestmark = pytest.mark.skipif(
+    _get_map_maintenance_data is None,
+    reason="Notebook import requires local eBird data file",
+)
 
 
 def test_get_map_maintenance_data_detects_exact_and_close_locations():
