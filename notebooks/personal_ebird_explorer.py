@@ -404,7 +404,6 @@ from personal_ebird_explorer.path_resolution import find_data_file
 file_path, DATA_FOLDER = find_data_file(EBIRD_DATA_FILE_NAME, _candidate_folders)
 
 if file_path is None:
-    _tried = ", ".join(_candidate_folders)
     raise FileNotFoundError(
         f"Data file not found: {EBIRD_DATA_FILE_NAME}\n\n"
         f"Tried locations:\n  " + "\n  ".join(_candidate_folders) + "\n\n"
