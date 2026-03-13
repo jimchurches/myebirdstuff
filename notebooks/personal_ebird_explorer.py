@@ -448,6 +448,7 @@ species_list = sorted(df["Common Name"].dropna().unique().tolist())
 selected_species_scientific = ""
 selected_species_common = ""
 
+# Pre-calculate totals for "all species" banner (Count can be "X" for present; treat as 1)
 from personal_ebird_explorer.stats import (
     safe_count as _safe_count,
     longest_streak as _longest_streak,
@@ -1253,7 +1254,9 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 # ### 🗺️ Dashboard: Controls + Map + Stats
 #
 # Controls and map/tabs are in one `VBox` so they stay together with no gap.
-# Map is the primary tab. Checklist Statistics shows real data from your export.
+# Map is the primary tab. Checklist Statistics, Rankings, and Yearly Summary
+# are computed by pure functions imported from `personal_ebird_explorer.stats`;
+# HTML rendering and widget layout remain here.
 #
 
 # %%
