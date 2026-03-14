@@ -17,6 +17,8 @@ from personal_ebird_explorer.map_renderer import (
     build_legend_html,
     build_visit_info_html,
     build_location_popup_html,
+    resolve_lifer_last_seen,
+    classify_locations,
 )
 
 
@@ -357,3 +359,181 @@ def test_build_location_popup_html_structure():
     html = build_location_popup_html("Loc", "L1", "visits")
     assert html.startswith('<div class="popup-scroll-wrapper"')
     assert html.endswith("</div></div>")
+
+
+# ---------------------------------------------------------------------------
+# resolve_lifer_last_seen
+# ---------------------------------------------------------------------------
+
+def _dummy_base(sci_name):
+    """Minimal base-species extractor for tests."""
+    parts = (sci_name or "").strip().split()
+    return f"{parts[0]} {parts[1]}".lower() if len(parts) >= 2 else None
+
+
+def test_resolve_lifer_last_seen_base_species():
+    seen = {"L1", "L2", "L3"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L3"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+    )
+    assert lifer == "L1"
+    assert last == "L3"
+
+
+def test_resolve_lifer_last_seen_subspecies_taxon():
+    seen = {"L1", "L2"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis rogersi",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L2"},
+        lifer_lookup_taxon={"anas gracilis rogersi": "L2"},
+        last_seen_lookup_taxon={"anas gracilis rogersi": "L1"},
+        base_species_fn=_dummy_base,
+    )
+    # Taxon-level should win for subspecies
+    assert lifer == "L2"
+    assert last == "L1"
+
+
+def test_resolve_lifer_last_seen_taxon_fallback_to_base():
+    seen = {"L1", "L2"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis rogersi",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L2"},
+        lifer_lookup_taxon={},  # no taxon entry
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+    )
+    assert lifer == "L1"
+    assert last == "L2"
+
+
+def test_resolve_lifer_last_seen_not_in_seen():
+    seen = {"L1"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L99"},  # not in seen
+        last_seen_lookup={"anas gracilis": "L1"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+    )
+    assert lifer is None
+    assert last == "L1"
+
+
+def test_resolve_lifer_last_seen_same_location():
+    """last_seen should be None when it matches lifer."""
+    seen = {"L1"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L1"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+    )
+    assert lifer == "L1"
+    assert last is None
+
+
+def test_resolve_lifer_last_seen_disabled():
+    seen = {"L1"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L1"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+        mark_lifer=False,
+        mark_last_seen=False,
+    )
+    assert lifer is None
+    assert last is None
+
+
+def test_resolve_lifer_last_seen_empty_species():
+    lifer, last = resolve_lifer_last_seen(
+        "",
+        set(),
+        lifer_lookup={},
+        last_seen_lookup={},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+    )
+    assert lifer is None
+    assert last is None
+
+
+# ---------------------------------------------------------------------------
+# classify_locations
+# ---------------------------------------------------------------------------
+
+def test_classify_locations_basic():
+    loc_df = pd.DataFrame({
+        "Location ID": ["L1", "L2", "L3"],
+        "Location": ["Park", "Beach", "Lake"],
+        "Latitude": [-33.0, -34.0, -35.0],
+        "Longitude": [151.0, 150.0, 149.0],
+    })
+    result = classify_locations(loc_df, seen_location_ids={"L1", "L3"}, lifer_location="L1", last_seen_location="L3")
+    assert {"has_species_match", "is_lifer", "is_last_seen"}.issubset(result.columns)
+    l1 = result[result["Location ID"] == "L1"].iloc[0]
+    assert l1["has_species_match"] == True
+    assert l1["is_lifer"] == True
+    assert l1["is_last_seen"] == False
+    l2 = result[result["Location ID"] == "L2"].iloc[0]
+    assert l2["has_species_match"] == False
+    l3 = result[result["Location ID"] == "L3"].iloc[0]
+    assert l3["has_species_match"] == True
+    assert l3["is_last_seen"] == True
+
+
+def test_classify_locations_sort_order():
+    """Lifer should be last row (drawn on top)."""
+    loc_df = pd.DataFrame({
+        "Location ID": ["L1", "L2", "L3"],
+        "Location": ["A", "B", "C"],
+        "Latitude": [0, 0, 0],
+        "Longitude": [0, 0, 0],
+    })
+    result = classify_locations(loc_df, {"L1", "L3"}, lifer_location="L3", last_seen_location="L1")
+    assert result.iloc[-1]["Location ID"] == "L3"  # lifer last
+
+
+def test_classify_locations_no_special():
+    loc_df = pd.DataFrame({
+        "Location ID": ["L1", "L2"],
+        "Location": ["A", "B"],
+        "Latitude": [0, 0],
+        "Longitude": [0, 0],
+    })
+    result = classify_locations(loc_df, {"L1"}, lifer_location=None, last_seen_location=None)
+    assert not result["is_lifer"].any()
+    assert not result["is_last_seen"].any()
+
+
+def test_classify_locations_does_not_mutate_input():
+    loc_df = pd.DataFrame({
+        "Location ID": ["L1"],
+        "Location": ["A"],
+        "Latitude": [0],
+        "Longitude": [0],
+    })
+    original_cols = list(loc_df.columns)
+    classify_locations(loc_df, {"L1"}, "L1", None)
+    assert list(loc_df.columns) == original_cols

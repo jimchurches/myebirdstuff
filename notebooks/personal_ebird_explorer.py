@@ -467,6 +467,8 @@ from personal_ebird_explorer.map_renderer import (
     build_legend_html as _build_legend_html,
     build_visit_info_html as _build_visit_info_html,
     build_location_popup_html as _build_location_popup_html,
+    resolve_lifer_last_seen as _resolve_lifer_last_seen,
+    classify_locations as _classify_locations,
 )
 
 from personal_ebird_explorer.species_logic import (
@@ -904,40 +906,19 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             _build_legend_html(legend_items)
         ))
 
-        # Lifer/last seen: use taxon-level for subspecies (3+ parts), base for parent
-        lifer_location = None
-        last_seen_location = None
-        sci_parts = (selected_species or "").strip().split()
-        is_subspecies = len(sci_parts) >= 3
-        taxon_key = selected_species.strip().lower() if selected_species else None
-        if MARK_LIFER:
-            true_lifer_loc = None
-            if is_subspecies and taxon_key:
-                true_lifer_loc = true_lifer_locations_taxon.get(taxon_key)
-            if true_lifer_loc is None and sci_parts:
-                base = _base_species_for_lifer(selected_species)
-                true_lifer_loc = true_lifer_locations.get(base) if base else None
-            if true_lifer_loc in seen_location_ids:
-                lifer_location = true_lifer_loc
-        if MARK_LAST_SEEN:
-            true_last_loc = None
-            if is_subspecies and taxon_key:
-                true_last_loc = true_last_seen_locations_taxon.get(taxon_key)
-            if true_last_loc is None and sci_parts:
-                base = _base_species_for_lifer(selected_species)
-                true_last_loc = true_last_seen_locations.get(base) if base else None
-            if true_last_loc in seen_location_ids and true_last_loc != lifer_location:
-                last_seen_location = true_last_loc
-
-        # Prepare classification flags
-        location_data_local = location_data.copy()
-        location_data_local["has_species_match"] = location_data_local["Location ID"].isin(seen_location_ids)
-        location_data_local["is_lifer"] = location_data_local["Location ID"] == lifer_location
-        location_data_local["is_last_seen"] = location_data_local["Location ID"] == last_seen_location
-
-        # Sort so lifer drawn last (on top), then last seen, then species, then non-matching
-        location_data_local = location_data_local.sort_values(
-            by=["has_species_match", "is_lifer", "is_last_seen"], ascending=[True, True, True]
+        lifer_location, last_seen_location = _resolve_lifer_last_seen(
+            selected_species,
+            seen_location_ids,
+            lifer_lookup=true_lifer_locations,
+            last_seen_lookup=true_last_seen_locations,
+            lifer_lookup_taxon=true_lifer_locations_taxon,
+            last_seen_lookup_taxon=true_last_seen_locations_taxon,
+            base_species_fn=_base_species_for_lifer,
+            mark_lifer=MARK_LIFER,
+            mark_last_seen=MARK_LAST_SEEN,
+        )
+        location_data_local = _classify_locations(
+            location_data, seen_location_ids, lifer_location, last_seen_location,
         )
 
         # Single loop for marker drawing
