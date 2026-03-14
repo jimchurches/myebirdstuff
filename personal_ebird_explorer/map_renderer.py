@@ -55,6 +55,57 @@ def format_sighting_row(r):
 
 
 # ---------------------------------------------------------------------------
+# Banner and legend HTML builders
+# ---------------------------------------------------------------------------
+
+_BANNER_STYLE = (
+    "position:fixed;top:10px;right:10px;z-index:1000;"
+    "background:rgba(255,255,255,0.95);padding:10px 14px;"
+    "border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);"
+    "font-family:sans-serif;font-size:13px;line-height:1.5;"
+)
+
+_LEGEND_STYLE = (
+    "position:fixed;bottom:10px;left:10px;z-index:1000;"
+    "background:rgba(255,255,255,0.95);padding:6px 10px;"
+    "border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);"
+    "font-family:sans-serif;font-size:11px;line-height:1.5;"
+    "display:flex;flex-wrap:wrap;gap:8px 12px;"
+)
+
+
+def pin_legend_item(color, fill, label):
+    """Small coloured circle + label for the map legend."""
+    return (
+        f'<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">'
+        f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;'
+        f'border:2px solid {color};background:{fill};"></span>'
+        f'{label}</span>'
+    )
+
+
+def build_all_species_banner_html(total_checklists, total_species, total_individuals):
+    """Return the HTML overlay banner for the all-species map view."""
+    return (
+        f'<div style="{_BANNER_STYLE}">'
+        f'<b>All species</b><br>'
+        f'{total_checklists} checklist{"s" if total_checklists != 1 else ""}'
+        f' &nbsp;|&nbsp; {total_species} species'
+        f' &nbsp;|&nbsp; {total_individuals} individual{"s" if total_individuals != 1 else ""}'
+        f'</div>'
+    )
+
+
+def build_legend_html(items):
+    """Return the HTML overlay legend from a list of ``(color, fill, label)`` tuples.
+
+    Each tuple is rendered via ``pin_legend_item``.
+    """
+    parts = "".join(pin_legend_item(c, f, l) for c, f, l in items)
+    return f'<div style="{_LEGEND_STYLE}">{parts}</div>'
+
+
+# ---------------------------------------------------------------------------
 # Popup scroll behaviour (injected JS)
 # ---------------------------------------------------------------------------
 
