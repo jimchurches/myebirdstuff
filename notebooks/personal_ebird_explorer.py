@@ -443,6 +443,8 @@ df_full = df_full[df_full["Location ID"].isin(location_ids_with_checklists)]
 # Extract location and species info
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 full_location_data = df_full[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
+# Stable for session: group df by Location ID for O(1) lookup in map redraws (refs #37)
+records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 
 from personal_ebird_explorer.ui_state import ExplorerState
@@ -820,9 +822,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
     state.species_map = _create_map(map_center, MAP_STYLE)
 
-    # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
-    records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
-
+    # records_by_loc is built once at data prep (refs #37); reused on every redraw
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
         state.species_map.get_root().html.add_child(Element(
