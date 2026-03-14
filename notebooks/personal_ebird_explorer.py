@@ -835,7 +835,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         popup_asc = POPUP_SORT_ORDER == "ascending"
         for _, row in location_data.iterrows():
             base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
+            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
             visit_info = _build_visit_info_html(visit_records, _format_visit_time)
             popup_html = _build_location_popup_html(row["Location"], row["Location ID"], visit_info)
             folium.CircleMarker(
@@ -933,11 +933,11 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 continue
 
             base_records = records_by_loc.get(loc_id, pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
+            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
             visit_info = _build_visit_info_html(visit_records, _format_visit_time)
             sightings_html = ""
             if row["has_species_match"]:
-                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
+                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values("datetime", ascending=popup_asc)
                 sightings_html = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
             popup_html = _build_location_popup_html(row["Location"], loc_id, visit_info, sightings_html)
             popup_content = folium.Popup(popup_html, max_width=800)
@@ -1033,7 +1033,6 @@ def _compute_checklist_stats(df):
 
     # Checklist-level data (one row per checklist)
     cl = df.drop_duplicates(subset=["Submission ID"]).copy()
-    cl["Date"] = pd.to_datetime(cl["Date"], errors="coerce")
     dur_col = "Duration (Min)" if "Duration (Min)" in df.columns else None
     dist_col = "Distance Traveled (km)" if "Distance Traveled (km)" in df.columns else None
 
