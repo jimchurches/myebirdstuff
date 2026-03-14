@@ -221,6 +221,7 @@ if _missing:
 import html
 import os
 import sys
+from collections import OrderedDict
 from datetime import datetime
 
 import pandas as pd
@@ -445,8 +446,10 @@ location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_du
 full_location_data = df_full[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 # Stable for session: group df by Location ID for O(1) lookup in map redraws (refs #37)
 records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
-# Per-species groupby cache for species-filtered redraws; cleared when data-prep is re-run (refs #37)
-_filtered_by_loc_cache = {}
+# Per-species groupby cache for species-filtered redraws; LRU eviction when over cap; cleared when data-prep re-run (refs #37)
+# Cap is arbitrary and experimental (based on author usage); adjust based on feedback and experience.
+_FILTERED_BY_LOC_CACHE_MAX = 60
+_filtered_by_loc_cache = OrderedDict()
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 
 from personal_ebird_explorer.ui_state import ExplorerState
@@ -855,7 +858,11 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
         popup_asc = POPUP_SORT_ORDER == "ascending"
         if selected_species not in _filtered_by_loc_cache:
+            if len(_filtered_by_loc_cache) >= _FILTERED_BY_LOC_CACHE_MAX:
+                _filtered_by_loc_cache.popitem(last=False)
             _filtered_by_loc_cache[selected_species] = {lid: grp for lid, grp in filtered.groupby("Location ID")}
+        else:
+            _filtered_by_loc_cache.move_to_end(selected_species)
         filtered_by_loc = _filtered_by_loc_cache[selected_species]
 
         # Stats for banner (Count can be "X" for present; treat as 1)
