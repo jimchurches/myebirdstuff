@@ -96,6 +96,48 @@ def build_all_species_banner_html(total_checklists, total_species, total_individ
     )
 
 
+def build_species_banner_html(
+    display_name,
+    n_checklists,
+    n_individuals,
+    high_count,
+    first_seen_date="",
+    last_seen_date="",
+    high_count_date="",
+):
+    """Return the HTML overlay banner for a species-filtered map view.
+
+    Args:
+        display_name: Species name shown as the banner title (common or scientific).
+        n_checklists: Number of checklists containing this species.
+        n_individuals: Total individuals counted.
+        high_count: Maximum single-checklist count.
+        first_seen_date: Formatted date string for first sighting (empty to omit).
+        last_seen_date: Formatted date string for most recent sighting (empty to omit).
+        high_count_date: Formatted date string when high count was recorded (empty to omit).
+    """
+    sep = " &nbsp;|&nbsp; "
+    line2 = (
+        f'{n_checklists} checklist{"s" if n_checklists != 1 else ""}'
+        f'{sep}{n_individuals} individual{"s" if n_individuals != 1 else ""}'
+    )
+    line3_parts = []
+    if first_seen_date:
+        line3_parts.append(f"First seen: {first_seen_date}")
+    if last_seen_date:
+        line3_parts.append(f"Last seen: {last_seen_date}")
+    line3 = sep.join(line3_parts)
+    line4 = f"High count: {high_count_date} ({high_count})"
+    return (
+        f'<div style="{_BANNER_STYLE}">'
+        f'<b>{display_name}</b><br>'
+        f'{line2}<br>'
+        f'{line3}<br>'
+        f'{line4}'
+        f'</div>'
+    )
+
+
 def build_legend_html(items):
     """Return the HTML overlay legend from a list of ``(color, fill, label)`` tuples.
 

@@ -13,6 +13,7 @@ from personal_ebird_explorer.map_renderer import (
     popup_scroll_script,
     pin_legend_item,
     build_all_species_banner_html,
+    build_species_banner_html,
     build_legend_html,
 )
 
@@ -231,5 +232,59 @@ def test_build_legend_html_multiple_items():
 
 def test_build_legend_html_empty_list():
     html = build_legend_html([])
+    assert html.startswith("<div")
+    assert html.endswith("</div>")
+
+
+# ---------------------------------------------------------------------------
+# build_species_banner_html
+# ---------------------------------------------------------------------------
+
+def test_build_species_banner_html_full():
+    html = build_species_banner_html(
+        display_name="Grey Teal",
+        n_checklists=15,
+        n_individuals=42,
+        high_count=8,
+        first_seen_date="10-Jan-2024",
+        last_seen_date="20-Feb-2026",
+        high_count_date="05-Mar-2025",
+    )
+    assert "Grey Teal" in html
+    assert "15 checklists" in html
+    assert "42 individuals" in html
+    assert "First seen: 10-Jan-2024" in html
+    assert "Last seen: 20-Feb-2026" in html
+    assert "High count: 05-Mar-2025 (8)" in html
+
+
+def test_build_species_banner_html_no_dates():
+    html = build_species_banner_html(
+        display_name="Superb Fairywren",
+        n_checklists=3,
+        n_individuals=7,
+        high_count=4,
+    )
+    assert "Superb Fairywren" in html
+    assert "3 checklists" in html
+    assert "First seen:" not in html
+    assert "Last seen:" not in html
+    assert "High count:" in html
+
+
+def test_build_species_banner_html_singular():
+    html = build_species_banner_html(
+        display_name="Common Ostrich",
+        n_checklists=1,
+        n_individuals=1,
+        high_count=1,
+        first_seen_date="01-Jan-2026",
+    )
+    assert "1 checklist " in html or "1 checklist&" in html
+    assert "1 individual<" in html or "1 individual&" in html
+
+
+def test_build_species_banner_html_is_div():
+    html = build_species_banner_html("Test", 1, 1, 1)
     assert html.startswith("<div")
     assert html.endswith("</div>")
