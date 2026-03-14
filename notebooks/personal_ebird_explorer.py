@@ -483,7 +483,6 @@ def _format_sighting_row(r):
 
 
 from personal_ebird_explorer.species_logic import (
-    _base_species_for_count,
     countable_species_vectorized as _countable_species_vectorized,
     filter_species,
     base_species_for_lifer as _base_species_for_lifer,

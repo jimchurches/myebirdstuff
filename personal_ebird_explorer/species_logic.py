@@ -9,35 +9,77 @@ no widget or notebook state dependencies).
 import pandas as pd
 
 
-def _base_species_for_count(row):
-    """Normalize a single row to its countable base species (genus + species, lowercased).
+# ---------------------------------------------------------------------------
+# Shared building blocks
+# ---------------------------------------------------------------------------
 
-    Returns None for non-countable entries: spuhs, hybrids, domestic types,
-    species-level slashes, or rows missing a two-part scientific name.
+def base_species_name(sci_name):
+    """Extract base species (genus + species, lowercased) from a scientific name.
+
+    Returns None for missing/empty names or names with fewer than two parts.
+    Does not apply any countability filter — use ``is_countable`` for that.
     """
-    sci = (row.get("Scientific Name") or "").strip()
-    common = (row.get("Common Name") or "").strip()
-    if not sci:
+    if pd.isna(sci_name) or not str(sci_name).strip():
         return None
-    if " sp." in sci or sci.lower().endswith(" sp"):
-        return None  # spuh
-    if " x " in sci or "(hybrid)" in common.lower():
-        return None  # hybrid
-    if "Domestic" in common or "(Domestic type)" in common:
-        return None
-    parts = sci.split()
+    parts = str(sci_name).strip().split()
     if len(parts) < 2:
         return None
-    if "/" in parts[1]:
-        return None  # species-level slash (not countable)
     return f"{parts[0]} {parts[1]}".lower()
+
+
+def is_countable(sci_name, common_name):
+    """Return True if a species entry is countable (not a spuh, hybrid, domestic, or slash).
+
+    Mirrors the exclusion rules used by ``countable_species_vectorized``:
+    - spuh: scientific name contains " sp." or ends with " sp"
+    - hybrid: scientific name contains " x " or common name contains "(hybrid)"
+    - domestic: common name contains "Domestic" or "(Domestic type)"
+    - species-level slash: second word of scientific name contains "/"
+    - too short: scientific name has fewer than two words
+
+    Args:
+        sci_name: Scientific name string (may be None/NaN/empty).
+        common_name: Common name string (may be None/NaN/empty).
+
+    Returns:
+        True if the entry should be counted as a species, False otherwise.
+    """
+    sci = (str(sci_name) if not pd.isna(sci_name) else "").strip()
+    common = (str(common_name) if not pd.isna(common_name) else "").strip()
+    if not sci:
+        return False
+    if " sp." in sci or sci.lower().endswith(" sp"):
+        return False
+    if " x " in sci or "(hybrid)" in common.lower():
+        return False
+    if "Domestic" in common or "(Domestic type)" in common:
+        return False
+    parts = sci.split()
+    if len(parts) < 2:
+        return False
+    if "/" in parts[1]:
+        return False
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Higher-level functions
+# ---------------------------------------------------------------------------
+
+def base_species_for_lifer(sci_name):
+    """Extract base species (genus + species, lowercased) from a scientific name.
+
+    Convenience wrapper around ``base_species_name`` — identical behaviour.
+    Kept for API stability; callers may use either name.
+    """
+    return base_species_name(sci_name)
 
 
 def countable_species_vectorized(df):
     """Vectorized species count: exclude spuhs, slashes, hybrids, domestic; roll up subspecies.
 
     Returns a Series of base species names (genus + species, lowercased) with NaN
-    for non-countable rows.
+    for non-countable rows.  Exclusion rules match ``is_countable``.
     """
     sci = df["Scientific Name"].fillna("").astype(str).str.strip()
     common = df["Common Name"].fillna("").astype(str).str.strip()
@@ -82,18 +124,3 @@ def filter_species(df, base_species):
         lambda s: not is_species_level_slash(s)
     )
     return filtered_df[mask]
-
-
-def base_species_for_lifer(sci_name):
-    """Extract base species (genus + species, lowercased) from a scientific name.
-
-    Returns None for missing/empty names or names with fewer than two parts.
-    Does not filter non-countable entries (spuhs, hybrids, etc.) — use
-    countable_species_vectorized for that.
-    """
-    if pd.isna(sci_name) or not str(sci_name).strip():
-        return None
-    parts = str(sci_name).strip().split()
-    if len(parts) < 2:
-        return None
-    return f"{parts[0]} {parts[1]}".lower()
