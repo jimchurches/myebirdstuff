@@ -16,6 +16,7 @@ from personal_ebird_explorer.stats import (
     yearly_summary_stats,
 )
 from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
+from personal_ebird_explorer.ui_state import ExplorerState
 
 __all__ = [
     "load_dataset",
@@ -31,4 +32,5 @@ __all__ = [
     "compute_rankings",
     "yearly_summary_stats",
     "get_map_maintenance_data",
+    "ExplorerState",
 ]
