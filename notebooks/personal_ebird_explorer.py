@@ -801,6 +801,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 # Extra features:
 # - Map centres on species locations when filtering; on all locations when viewing "All species"
 # - Saves map as HTML if `EXPORT_HTML = True`
+# - Redraws reuse cached location groupbys (records_by_loc, per-species filtered_by_loc) for responsiveness (refs #37).
 #
 
 # %%
