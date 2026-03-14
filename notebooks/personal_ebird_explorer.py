@@ -181,7 +181,7 @@ FILTER_END_DATE = "2025-12-31"
 # - `stats` – rankings, yearly summary, streak calculation, and other pure statistics  
 # - `duplicate_checks` – exact and near-duplicate location detection  
 # - `ui_state` – lightweight structured app state (ExplorerState dataclass)
-# - `map_renderer` – map factory, popup formatters, scroll-hint script
+# - `map_renderer` – map factory, popup/banner/legend HTML builders, data-prep helpers
 #
 
 # %%
@@ -762,12 +762,16 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 # - `create_map` – folium Map factory (supports `MAP_STYLE` values: default, satellite, google, carto)
 # - `popup_scroll_script` – JS injection for popup scroll hints
 # - `format_visit_time` / `format_sighting_row` – popup content formatters
+# - `build_visit_info_html` / `build_location_popup_html` – popup HTML assembly
+# - `build_all_species_banner_html` / `build_species_banner_html` – map overlay banners
+# - `build_legend_html` / `pin_legend_item` – map overlay legend
+# - `resolve_lifer_last_seen` – lifer and last-seen location resolution
+# - `classify_locations` – location tagging and draw-order sorting
 #
 
 # %%
-# Map helpers (create_map, popup_scroll_script, format_visit_time,
-# format_sighting_row) are imported from personal_ebird_explorer.map_renderer
-# at the top of this cell group.
+# Map helpers are imported from personal_ebird_explorer.map_renderer
+# in the cell group above (see imports after stats).
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -797,7 +801,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 # %%
 # --------------------------------------------
-# ✅ Draw map with species overlay (refactored for lifer-on-top and single loop)
+# ✅ Draw map with species overlay
 # --------------------------------------------
 def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 

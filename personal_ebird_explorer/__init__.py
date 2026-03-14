@@ -22,6 +22,14 @@ from personal_ebird_explorer.map_renderer import (
     format_visit_time,
     format_sighting_row,
     popup_scroll_script,
+    pin_legend_item,
+    build_all_species_banner_html,
+    build_species_banner_html,
+    build_legend_html,
+    build_visit_info_html,
+    build_location_popup_html,
+    resolve_lifer_last_seen,
+    classify_locations,
 )
 
 __all__ = [
@@ -43,4 +51,12 @@ __all__ = [
     "format_visit_time",
     "format_sighting_row",
     "popup_scroll_script",
+    "pin_legend_item",
+    "build_all_species_banner_html",
+    "build_species_banner_html",
+    "build_legend_html",
+    "build_visit_info_html",
+    "build_location_popup_html",
+    "resolve_lifer_last_seen",
+    "classify_locations",
 ]
