@@ -450,6 +450,8 @@ records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
 # Cap is arbitrary and experimental (based on author usage); adjust based on feedback and experience.
 _FILTERED_BY_LOC_CACHE_MAX = 60
 _filtered_by_loc_cache = OrderedDict()
+# Popup HTML cache: key (location_id, selected_species or ""); cleared when data-prep re-run (refs #37)
+_popup_html_cache = {}
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 
 from personal_ebird_explorer.ui_state import ExplorerState
@@ -804,7 +806,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 # Extra features:
 # - Map centres on species locations when filtering; on all locations when viewing "All species"
 # - Saves map as HTML if `EXPORT_HTML = True`
-# - Redraws reuse cached location groupbys (records_by_loc, per-species filtered_by_loc) for responsiveness (refs #37).
+# - Redraws reuse cached location groupbys and popup HTML (refs #37) for responsiveness.
 #
 
 # %%
@@ -840,10 +842,13 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
         popup_asc = POPUP_SORT_ORDER == "ascending"
         for _, row in location_data.iterrows():
-            base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
-            visit_info = _build_visit_info_html(visit_records, _format_visit_time)
-            popup_html = _build_location_popup_html(row["Location"], row["Location ID"], visit_info)
+            popup_key = (row["Location ID"], "")
+            if popup_key not in _popup_html_cache:
+                base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
+                visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
+                visit_info = _build_visit_info_html(visit_records, _format_visit_time)
+                _popup_html_cache[popup_key] = _build_location_popup_html(row["Location"], row["Location ID"], visit_info)
+            popup_html = _popup_html_cache[popup_key]
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
@@ -944,14 +949,17 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             if not row["has_species_match"] and hide_non_matching_checkbox.value:
                 continue
 
-            base_records = records_by_loc.get(loc_id, pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
-            visit_info = _build_visit_info_html(visit_records, _format_visit_time)
-            sightings_html = ""
-            if row["has_species_match"]:
-                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values("datetime", ascending=popup_asc)
-                sightings_html = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
-            popup_html = _build_location_popup_html(row["Location"], loc_id, visit_info, sightings_html)
+            popup_key = (loc_id, selected_species)
+            if popup_key not in _popup_html_cache:
+                base_records = records_by_loc.get(loc_id, pd.DataFrame())
+                visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
+                visit_info = _build_visit_info_html(visit_records, _format_visit_time)
+                sightings_html = ""
+                if row["has_species_match"]:
+                    sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values("datetime", ascending=popup_asc)
+                    sightings_html = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
+                _popup_html_cache[popup_key] = _build_location_popup_html(row["Location"], loc_id, visit_info, sightings_html)
+            popup_html = _popup_html_cache[popup_key]
             popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:
