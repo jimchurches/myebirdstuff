@@ -15,6 +15,8 @@ from personal_ebird_explorer.map_renderer import (
     build_all_species_banner_html,
     build_species_banner_html,
     build_legend_html,
+    build_visit_info_html,
+    build_location_popup_html,
 )
 
 
@@ -288,3 +290,70 @@ def test_build_species_banner_html_is_div():
     html = build_species_banner_html("Test", 1, 1, 1)
     assert html.startswith("<div")
     assert html.endswith("</div>")
+
+
+# ---------------------------------------------------------------------------
+# build_visit_info_html
+# ---------------------------------------------------------------------------
+
+def test_build_visit_info_html_basic():
+    df = pd.DataFrame({
+        "Submission ID": ["S100", "S200"],
+        "Date": [pd.Timestamp("2025-01-15"), pd.Timestamp("2025-01-16")],
+        "Time": ["08:00", "09:00"],
+    })
+    html = build_visit_info_html(df, format_visit_time)
+    assert "S100" in html
+    assert "S200" in html
+    assert "ebird.org/checklist/S100" in html
+    assert "<br>" in html
+
+
+def test_build_visit_info_html_empty():
+    df = pd.DataFrame({"Submission ID": [], "Date": [], "Time": []})
+    assert build_visit_info_html(df, format_visit_time) == ""
+
+
+def test_build_visit_info_html_single_record():
+    df = pd.DataFrame({
+        "Submission ID": ["S999"],
+        "Date": [pd.Timestamp("2025-06-01")],
+        "Time": ["12:00"],
+    })
+    html = build_visit_info_html(df, format_visit_time)
+    assert "S999" in html
+    assert "<br>" not in html.replace("</a>", "")  # no separator between items
+
+
+# ---------------------------------------------------------------------------
+# build_location_popup_html
+# ---------------------------------------------------------------------------
+
+def test_build_location_popup_html_visits_only():
+    html = build_location_popup_html("My Park", "L12345", "<a>visit1</a>")
+    assert "My Park" in html
+    assert "ebird.org/lifelist/L12345" in html
+    assert "Visited:" in html
+    assert "Seen:" not in html
+    assert "popup-scroll-wrapper" in html
+
+
+def test_build_location_popup_html_with_sightings():
+    html = build_location_popup_html(
+        "My Park", "L12345", "<a>visit1</a>", "<br>sighting1"
+    )
+    assert "Visited:" in html
+    assert "Seen:" in html
+    assert "sighting1" in html
+
+
+def test_build_location_popup_html_empty_visit_info():
+    html = build_location_popup_html("Empty Spot", "L00000", "")
+    assert "Empty Spot" in html
+    assert "Visited:" in html
+
+
+def test_build_location_popup_html_structure():
+    html = build_location_popup_html("Loc", "L1", "visits")
+    assert html.startswith('<div class="popup-scroll-wrapper"')
+    assert html.endswith("</div></div>")

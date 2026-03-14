@@ -465,6 +465,8 @@ from personal_ebird_explorer.map_renderer import (
     build_all_species_banner_html as _build_all_species_banner_html,
     build_species_banner_html as _build_species_banner_html,
     build_legend_html as _build_legend_html,
+    build_visit_info_html as _build_visit_info_html,
+    build_location_popup_html as _build_location_popup_html,
 )
 
 from personal_ebird_explorer.species_logic import (
@@ -828,24 +830,16 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         for _, row in location_data.iterrows():
             base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
             visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-            visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{_format_visit_time(r)}</a>'
-                for _, r in visit_records.iterrows()
-            ) if not visit_records.empty else ""
-            loc_id = row["Location ID"]
-            loc_url = f"https://ebird.org/lifelist/{loc_id}"
-            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
-            popup = folium.Popup(popup_html, max_width=800)
-            color, fill = DEFAULT_COLOR, DEFAULT_FILL
+            visit_info = _build_visit_info_html(visit_records, _format_visit_time)
+            popup_html = _build_location_popup_html(row["Location"], row["Location ID"], visit_info)
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
-                color=color,
+                color=DEFAULT_COLOR,
                 fill=True,
-                fill_color=fill,
+                fill_color=DEFAULT_FILL,
                 fill_opacity=0.6,
-                popup=popup
+                popup=folium.Popup(popup_html, max_width=800),
             ).add_to(state.species_map)
 
     else:
@@ -955,18 +949,12 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
             base_records = records_by_loc.get(loc_id, pd.DataFrame())
             visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-            visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{_format_visit_time(r)}</a>'
-                for _, r in visit_records.iterrows()
-            ) if not visit_records.empty else ""
-            loc_url = f"https://ebird.org/lifelist/{loc_id}"
-            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
+            visit_info = _build_visit_info_html(visit_records, _format_visit_time)
+            sightings_html = ""
             if row["has_species_match"]:
                 sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-                obs_details = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
-                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div></div>'
-            else:
-                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
+                sightings_html = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
+            popup_html = _build_location_popup_html(row["Location"], loc_id, visit_info, sightings_html)
             popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:

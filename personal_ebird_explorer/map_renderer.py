@@ -55,6 +55,56 @@ def format_sighting_row(r):
 
 
 # ---------------------------------------------------------------------------
+# Popup HTML builders
+# ---------------------------------------------------------------------------
+
+def build_visit_info_html(visit_records, format_time_fn):
+    """Build the visit-list HTML fragment for a location popup.
+
+    Args:
+        visit_records: DataFrame of deduplicated visit rows, already sorted.
+        format_time_fn: Callable that formats a single row's date/time
+            (e.g. ``format_visit_time``).
+
+    Returns:
+        HTML string of checklist links separated by ``<br>``, or ``""``
+        if *visit_records* is empty.
+    """
+    if visit_records.empty:
+        return ""
+    return "<br>".join(
+        f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">'
+        f"{format_time_fn(r)}</a>"
+        for _, r in visit_records.iterrows()
+    )
+
+
+def build_location_popup_html(loc_name, loc_id, visit_info_html, sightings_html=""):
+    """Build the full popup HTML for a single map marker.
+
+    Args:
+        loc_name: Display name of the location.
+        loc_id: eBird Location ID (used for the lifelist link).
+        visit_info_html: Pre-built visit list HTML (from ``build_visit_info_html``).
+        sightings_html: Optional species-sighting rows to append after
+            the visit list (from ``format_sighting_row``).
+
+    Returns:
+        Complete popup HTML string with scroll wrapper.
+    """
+    loc_url = f"https://ebird.org/lifelist/{loc_id}"
+    loc_link = f'<a href="{loc_url}" target="_blank">{loc_name}</a>'
+    seen_section = f"<br><b>Seen:</b>{sightings_html}" if sightings_html else ""
+    return (
+        f'<div class="popup-scroll-wrapper" style="position:relative;">'
+        f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div>'
+        f'<div style="max-height:300px;overflow-y:auto;">'
+        f'<b>Visited:</b><br>{visit_info_html}{seen_section}'
+        f'</div></div>'
+    )
+
+
+# ---------------------------------------------------------------------------
 # Banner and legend HTML builders
 # ---------------------------------------------------------------------------
 
