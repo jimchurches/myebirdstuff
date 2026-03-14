@@ -463,6 +463,7 @@ from personal_ebird_explorer.map_renderer import (
     popup_scroll_script as _popup_scroll_script,
     create_map as _create_map,
     build_all_species_banner_html as _build_all_species_banner_html,
+    build_species_banner_html as _build_species_banner_html,
     build_legend_html as _build_legend_html,
 )
 
@@ -884,27 +885,17 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         if not high_count_rows.empty:
             high_count_date = _banner_date(high_count_rows.iloc[0]["Date"])
 
-        sep = " &nbsp;|&nbsp; "
-        line2 = f"{n_checklists} checklist{n_checklists != 1 and 's' or ''}{sep}{n_individuals} individual{n_individuals != 1 and 's' or ''}"
-        line3_parts = []
-        if first_seen_date:
-            line3_parts.append(f"First seen: {first_seen_date}")
-        if last_seen_date:
-            line3_parts.append(f"Last seen: {last_seen_date}")
-        line3 = sep.join(line3_parts)
-        line4 = f"High count: {high_count_date} ({high_count})"
-
-        banner_html = f"""
-        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:13px;line-height:1.5;">
-            <b>{selected_common_name or selected_species}</b><br>
-            {line2}<br>
-            {line3}<br>
-            {line4}
-        </div>
-        """
-        state.species_map.get_root().html.add_child(Element(banner_html))
+        state.species_map.get_root().html.add_child(Element(
+            _build_species_banner_html(
+                display_name=selected_common_name or selected_species,
+                n_checklists=n_checklists,
+                n_individuals=n_individuals,
+                high_count=high_count,
+                first_seen_date=first_seen_date,
+                last_seen_date=last_seen_date,
+                high_count_date=high_count_date,
+            )
+        ))
 
         # Pin legend: bottom left, small font. Omit "Other" when hiding non-matching.
         legend_items = []
