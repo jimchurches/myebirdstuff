@@ -462,6 +462,8 @@ from personal_ebird_explorer.map_renderer import (
     format_sighting_row as _format_sighting_row,
     popup_scroll_script as _popup_scroll_script,
     create_map as _create_map,
+    build_all_species_banner_html as _build_all_species_banner_html,
+    build_legend_html as _build_legend_html,
 )
 
 from personal_ebird_explorer.species_logic import (
@@ -812,34 +814,14 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
     records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
 
-    def _pin_legend_item(color, fill, label):
-        """Small circle + label for legend. Thicker border so perimeter color is visible at small size."""
-        return f"""<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid {color};background:{fill};"></span>
-            {label}
-        </span>"""
-
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
-        banner_html = f"""
-        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:13px;line-height:1.5;">
-            <b>All species</b><br>
-            {total_checklists} checklist{total_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
-            {total_species} species &nbsp;|&nbsp;
-            {total_individuals} individual{total_individuals != 1 and 's' or ''}
-        </div>
-        """
-        state.species_map.get_root().html.add_child(Element(banner_html))
-        legend_html = f"""
-        <div style="position:fixed;bottom:10px;left:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:6px 10px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:11px;line-height:1.5;display:flex;flex-wrap:wrap;gap:8px 12px;">
-            {_pin_legend_item(DEFAULT_COLOR, DEFAULT_FILL, "All locations")}
-        </div>
-        """
-        state.species_map.get_root().html.add_child(Element(legend_html))
+        state.species_map.get_root().html.add_child(Element(
+            _build_all_species_banner_html(total_checklists, total_species, total_individuals)
+        ))
+        state.species_map.get_root().html.add_child(Element(
+            _build_legend_html([(DEFAULT_COLOR, DEFAULT_FILL, "All locations")])
+        ))
 
         popup_asc = POPUP_SORT_ORDER == "ascending"
         for _, row in location_data.iterrows():
@@ -925,22 +907,17 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         state.species_map.get_root().html.add_child(Element(banner_html))
 
         # Pin legend: bottom left, small font. Omit "Other" when hiding non-matching.
-        legend_parts = []
+        legend_items = []
         if MARK_LIFER:
-            legend_parts.append(_pin_legend_item(LIFER_COLOR, LIFER_FILL, "Lifer"))
+            legend_items.append((LIFER_COLOR, LIFER_FILL, "Lifer"))
         if MARK_LAST_SEEN:
-            legend_parts.append(_pin_legend_item(LAST_SEEN_COLOR, LAST_SEEN_FILL, "Last seen"))
-        legend_parts.append(_pin_legend_item(SPECIES_COLOR, SPECIES_FILL, "Species"))
+            legend_items.append((LAST_SEEN_COLOR, LAST_SEEN_FILL, "Last seen"))
+        legend_items.append((SPECIES_COLOR, SPECIES_FILL, "Species"))
         if not hide_non_matching_checkbox.value:
-            legend_parts.append(_pin_legend_item(DEFAULT_COLOR, DEFAULT_FILL, "Other"))
-        legend_html = f"""
-        <div style="position:fixed;bottom:10px;left:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:6px 10px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:11px;line-height:1.5;display:flex;flex-wrap:wrap;gap:8px 12px;">
-            {"".join(legend_parts)}
-        </div>
-        """
-        state.species_map.get_root().html.add_child(Element(legend_html))
+            legend_items.append((DEFAULT_COLOR, DEFAULT_FILL, "Other"))
+        state.species_map.get_root().html.add_child(Element(
+            _build_legend_html(legend_items)
+        ))
 
         # Lifer/last seen: use taxon-level for subspecies (3+ parts), base for parent
         lifer_location = None

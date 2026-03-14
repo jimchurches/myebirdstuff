@@ -11,6 +11,9 @@ from personal_ebird_explorer.map_renderer import (
     format_visit_time,
     format_sighting_row,
     popup_scroll_script,
+    pin_legend_item,
+    build_all_species_banner_html,
+    build_legend_html,
 )
 
 
@@ -161,3 +164,72 @@ def test_create_map_carto():
 def test_create_map_unknown_style_falls_back():
     m = create_map([0.0, 0.0], "unknown_style")
     assert isinstance(m, folium.Map)
+
+
+# ---------------------------------------------------------------------------
+# pin_legend_item
+# ---------------------------------------------------------------------------
+
+def test_pin_legend_item_contains_color_and_label():
+    html = pin_legend_item("red", "#ff0000", "Lifer")
+    assert "red" in html
+    assert "#ff0000" in html
+    assert "Lifer" in html
+
+
+def test_pin_legend_item_is_single_span():
+    html = pin_legend_item("green", "#00ff00", "All locations")
+    assert html.startswith("<span")
+    assert html.endswith("</span>")
+
+
+# ---------------------------------------------------------------------------
+# build_all_species_banner_html
+# ---------------------------------------------------------------------------
+
+def test_build_all_species_banner_html_content():
+    html = build_all_species_banner_html(42, 100, 5000)
+    assert "All species" in html
+    assert "42 checklists" in html
+    assert "100 species" in html
+    assert "5000 individuals" in html
+
+
+def test_build_all_species_banner_html_singular():
+    html = build_all_species_banner_html(1, 1, 1)
+    assert "1 checklist " in html or "1 checklist&" in html
+    assert "1 individual<" in html or "1 individual&" in html
+
+
+def test_build_all_species_banner_html_is_div():
+    html = build_all_species_banner_html(10, 20, 30)
+    assert html.startswith("<div")
+    assert html.endswith("</div>")
+
+
+# ---------------------------------------------------------------------------
+# build_legend_html
+# ---------------------------------------------------------------------------
+
+def test_build_legend_html_single_item():
+    html = build_legend_html([("green", "#0f0", "All locations")])
+    assert "All locations" in html
+    assert html.startswith("<div")
+
+
+def test_build_legend_html_multiple_items():
+    items = [
+        ("blue", "#00f", "Lifer"),
+        ("red", "#f00", "Species"),
+        ("green", "#0f0", "Other"),
+    ]
+    html = build_legend_html(items)
+    assert "Lifer" in html
+    assert "Species" in html
+    assert "Other" in html
+
+
+def test_build_legend_html_empty_list():
+    html = build_legend_html([])
+    assert html.startswith("<div")
+    assert html.endswith("</div>")
