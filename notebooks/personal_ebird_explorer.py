@@ -445,6 +445,8 @@ location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_du
 full_location_data = df_full[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 # Stable for session: group df by Location ID for O(1) lookup in map redraws (refs #37)
 records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
+# Per-species groupby cache for species-filtered redraws; cleared when data-prep is re-run (refs #37)
+_filtered_by_loc_cache = {}
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
 
 from personal_ebird_explorer.ui_state import ExplorerState
@@ -851,7 +853,9 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     else:
         # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
         popup_asc = POPUP_SORT_ORDER == "ascending"
-        filtered_by_loc = {lid: grp for lid, grp in filtered.groupby("Location ID")}
+        if selected_species not in _filtered_by_loc_cache:
+            _filtered_by_loc_cache[selected_species] = {lid: grp for lid, grp in filtered.groupby("Location ID")}
+        filtered_by_loc = _filtered_by_loc_cache[selected_species]
 
         # Stats for banner (Count can be "X" for present; treat as 1)
         n_checklists = filtered["Submission ID"].nunique()
