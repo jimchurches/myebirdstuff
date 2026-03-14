@@ -179,7 +179,8 @@ FILTER_END_DATE = "2025-12-31"
 # - `path_resolution` – finding the data file across candidate directories  
 # - `species_logic` – species filtering, countable-species normalisation, base-species extraction  
 # - `stats` – rankings, yearly summary, streak calculation, and other pure statistics  
-# - `duplicate_checks` – exact and near-duplicate location detection
+# - `duplicate_checks` – exact and near-duplicate location detection  
+# - `ui_state` – lightweight structured app state (ExplorerState dataclass)
 #
 
 # %%
@@ -442,8 +443,9 @@ df_full = df_full[df_full["Location ID"].isin(location_ids_with_checklists)]
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 full_location_data = df_full[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
-selected_species_scientific = ""
-selected_species_common = ""
+
+from personal_ebird_explorer.ui_state import ExplorerState
+state = ExplorerState()
 
 # Pre-calculate totals for "all species" banner (Count can be "X" for present; treat as 1)
 from personal_ebird_explorer.stats import (
@@ -524,16 +526,16 @@ writer.commit()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Initialise Global Map Objects
+# ### 🗺️ Map Output Widgets
 #
-# Sets up the global map and output widgets used for rendering and interaction.
+# Output widgets for map rendering and interaction. The map itself (`species_map`)
+# lives in the `state` object (ExplorerState); these are the Jupyter display containers.
 #
 
 # %%
 # --------------------------------------------
-# ✅ Initialise global map objects
+# ✅ Initialise map output widgets
 # --------------------------------------------
-species_map = None
 map_output = widgets.Output(
     layout=widgets.Layout(min_height="500px", width="100%", min_width="0", flex="1 1 auto")
 )
@@ -642,7 +644,7 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 #   search are both empty.
 # - `on_search_box_cleared`: cancels any existing debounce timer only (reset is in update_suggestions).
 # - `on_toggle_change`: redraw when "Show only selected species" is toggled (skipped when we
-#   set the checkbox programmatically via _suppress_toggle_redraw).
+#   set the checkbox programmatically via state.suppress_toggle_redraw).
 #
 
 # %%
@@ -650,10 +652,7 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # ✅ UI Event Handlers
 # --------------------------------------------
 
-# State flags: avoid re-entry and duplicate redraws when handlers trigger each other.
-_updating_suggestions = False   # True while updating matches_dropdown.options
-_skip_next_suggestion_update = False  # Skip next update_suggestions (e.g. after setting search_box from selection)
-_suppress_toggle_redraw = False  # True while setting checkbox in _clear_to_all_species (no on_toggle_change redraw)
+# Re-entry guards and selection state live in `state` (ExplorerState instance, created above).
 
 
 def _show_matches_dropdown(show):
@@ -663,16 +662,14 @@ def _show_matches_dropdown(show):
 
 def update_suggestions(change):
     """Whoosh search as user types; show/hide matches dropdown. When search is empty, reset (clear) in this context."""
-    global _updating_suggestions, _skip_next_suggestion_update
-    if _skip_next_suggestion_update:
-        _skip_next_suggestion_update = False
+    if state.skip_next_suggestion_update:
+        state.skip_next_suggestion_update = False
         return
-    _updating_suggestions = True
+    state.updating_suggestions = True
     try:
         query = (change.get("new") or "").strip().lower()
         if query == "":
-            # Search box empty: reset here so we run in widget context (works for select-all+delete too)
-            _skip_next_suggestion_update = True
+            state.skip_next_suggestion_update = True
             _clear_to_all_species()
             return
         if len(query) < 3:
@@ -703,58 +700,52 @@ def update_suggestions(change):
             matches_dropdown.value = None
             _show_matches_dropdown(len(opts) > 0)
     finally:
-        _updating_suggestions = False
+        state.updating_suggestions = False
 
 
 def on_species_selected(change):
     """Handle dropdown selection: set species and redraw map; if dropdown and search both empty, reset to all species."""
-    global selected_species_scientific, selected_species_common
     selected = change.get("new")
     search_text = search_box.value.strip()
 
-    # When both dropdown and search are empty: reset immediately (same thread as widget events, like main)
     if selected is None and search_text == "":
         _clear_to_all_species()
         return
-    if _updating_suggestions:
+    if state.updating_suggestions:
         return
     output.clear_output()
     if selected is None:
         return
-    selected_species_scientific = name_map.get(selected, "").strip()
-    selected_species_common = selected
+    state.selected_species_scientific = name_map.get(selected, "").strip()
+    state.selected_species_common = selected
     with output:
-        print(f"🔎 Selected species: {selected} → Scientific: {selected_species_scientific}")
-    draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
-    # Sync search box to selected value; hide dropdown (skip update_suggestions)
-    _skip_next_suggestion_update = True
+        print(f"🔎 Selected species: {selected} → Scientific: {state.selected_species_scientific}")
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+    state.skip_next_suggestion_update = True
     search_box.value = selected
     matches_dropdown.options = []
     _show_matches_dropdown(False)
 
 
 def on_toggle_change(change):
-    """Redraw map when user toggles 'Show only selected species' (no-op when _suppress_toggle_redraw)."""
-    global selected_species_scientific, selected_species_common
-    if _suppress_toggle_redraw:
+    """Redraw map when user toggles 'Show only selected species' (no-op when suppress_toggle_redraw)."""
+    if state.suppress_toggle_redraw:
         return
     with output:
-        print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_scientific}")
-    draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
+        print(f"🧪 Toggle changed: {change['new']} — Current species: {state.selected_species_scientific}")
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
 
 
 def _clear_to_all_species():
     """Reset to all-species view: clear search, dropdown, selection, checkbox; redraw map once (runs in widget context)."""
-    global selected_species_scientific, selected_species_common, _suppress_toggle_redraw
     search_box.value = ""
     matches_dropdown.options = []
     matches_dropdown.value = None
     _show_matches_dropdown(False)
-    selected_species_scientific = ""
-    selected_species_common = ""
-    _suppress_toggle_redraw = True
+    state.clear_selection()
+    state.suppress_toggle_redraw = True
     hide_non_matching_checkbox.value = False
-    _suppress_toggle_redraw = False
+    state.suppress_toggle_redraw = False
     with output:
         output.clear_output()
         print("🧹 Search cleared — showing all locations")
@@ -933,7 +924,6 @@ def create_map(map_center):
 # ✅ Draw map with species overlay (refactored for lifer-on-top and single loop)
 # --------------------------------------------
 def draw_map_with_species_overlay(selected_species, selected_common_name=""):
-    global species_map
 
     if selected_species:
         filtered = filter_species(df, selected_species)
@@ -948,7 +938,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     else:
         map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
 
-    species_map = create_map(map_center)
+    state.species_map = create_map(map_center)
 
     # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
     records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
@@ -972,7 +962,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             {total_individuals} individual{total_individuals != 1 and 's' or ''}
         </div>
         """
-        species_map.get_root().html.add_child(Element(banner_html))
+        state.species_map.get_root().html.add_child(Element(banner_html))
         legend_html = f"""
         <div style="position:fixed;bottom:10px;left:10px;z-index:1000;background:rgba(255,255,255,0.95);
                     padding:6px 10px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
@@ -980,7 +970,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             {_pin_legend_item(DEFAULT_COLOR, DEFAULT_FILL, "All locations")}
         </div>
         """
-        species_map.get_root().html.add_child(Element(legend_html))
+        state.species_map.get_root().html.add_child(Element(legend_html))
 
         popup_asc = POPUP_SORT_ORDER == "ascending"
         for _, row in location_data.iterrows():
@@ -1004,7 +994,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 fill_color=fill,
                 fill_opacity=0.6,
                 popup=popup
-            ).add_to(species_map)
+            ).add_to(state.species_map)
 
     else:
         # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
@@ -1063,7 +1053,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             {line4}
         </div>
         """
-        species_map.get_root().html.add_child(Element(banner_html))
+        state.species_map.get_root().html.add_child(Element(banner_html))
 
         # Pin legend: bottom left, small font. Omit "Other" when hiding non-matching.
         legend_parts = []
@@ -1081,7 +1071,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             {"".join(legend_parts)}
         </div>
         """
-        species_map.get_root().html.add_child(Element(legend_html))
+        state.species_map.get_root().html.add_child(Element(legend_html))
 
         # Lifer/last seen: use taxon-level for subspecies (3+ parts), base for parent
         lifer_location = None
@@ -1159,19 +1149,18 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 fill_color=fill,
                 fill_opacity=fill_opacity,
                 popup=popup_content
-            ).add_to(species_map)
+            ).add_to(state.species_map)
 
-    # Scroll popup: chevrons/shading hints; runs in map iframe
     scroll_popup_script = _popup_scroll_script(POPUP_SCROLL_HINT, POPUP_SORT_ORDER == "ascending")
-    species_map.get_root().html.add_child(Element(scroll_popup_script))
+    state.species_map.get_root().html.add_child(Element(scroll_popup_script))
 
     with map_output:
         map_output.clear_output()
-        map_html = species_map._repr_html_()
+        map_html = state.species_map._repr_html_()
         display(HTML(f'<div class="output_map">{map_html}</div>'))
 
     if EXPORT_HTML:
-        species_map.save(map_output_path)
+        state.species_map.save(map_output_path)
 
 
 
