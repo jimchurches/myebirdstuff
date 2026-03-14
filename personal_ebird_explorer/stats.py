@@ -369,8 +369,8 @@ def rankings_by_visits(cl_sub, limit):
     if cl_sub.empty:
         return []
     dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
-    first_idx = cl_sub.groupby("Location ID")[dt_col].idxmin()
-    last_idx = cl_sub.groupby("Location ID")[dt_col].idxmax()
+    first_idx = cl_sub.groupby("Location ID")[dt_col].idxmin().dropna()
+    last_idx = cl_sub.groupby("Location ID")[dt_col].idxmax().dropna()
     first_rows = cl_sub.loc[first_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
         columns={dt_col: "First", "Submission ID": "First_SID"}
     )
