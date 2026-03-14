@@ -17,6 +17,12 @@ from personal_ebird_explorer.stats import (
 )
 from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
 from personal_ebird_explorer.ui_state import ExplorerState
+from personal_ebird_explorer.map_renderer import (
+    create_map,
+    format_visit_time,
+    format_sighting_row,
+    popup_scroll_script,
+)
 
 __all__ = [
     "load_dataset",
@@ -33,4 +39,8 @@ __all__ = [
     "yearly_summary_stats",
     "get_map_maintenance_data",
     "ExplorerState",
+    "create_map",
+    "format_visit_time",
+    "format_sighting_row",
+    "popup_scroll_script",
 ]

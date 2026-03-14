@@ -181,6 +181,7 @@ FILTER_END_DATE = "2025-12-31"
 # - `stats` – rankings, yearly summary, streak calculation, and other pure statistics  
 # - `duplicate_checks` – exact and near-duplicate location detection  
 # - `ui_state` – lightweight structured app state (ExplorerState dataclass)
+# - `map_renderer` – map factory, popup formatters, scroll-hint script
 #
 
 # %%
@@ -456,33 +457,12 @@ from personal_ebird_explorer.stats import (
 )
 
 
-def _format_visit_time(r):
-    """Format date and time for display; uses datetime when available so no-time shows as 23:59 (consistent with sorting)."""
-    if "datetime" in r.index and pd.notna(r.get("datetime")):
-        return r["datetime"].strftime("%Y-%m-%d %H:%M")
-    d = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"
-    t = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
-    return f"{d} {t}"
-
-
-def _format_sighting_row(r):
-    """Format a single sighting row for popup HTML: date, time, species, count, checklist link, optional media link."""
-    if "datetime" in r.index and pd.notna(r.get("datetime")):
-        date_str = r["datetime"].strftime("%Y-%m-%d")
-        time_str = r["datetime"].strftime("%H:%M")
-    else:
-        date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
-        time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
-    text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
-    cid = r.get("Submission ID", "")
-    checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
-    media_html = ""
-    ml = r.get("ML Catalog Numbers")
-    if pd.notna(ml) and str(ml).strip():
-        first_ml = str(ml).strip().split()[0]
-        media_html = f' <a href="https://macaulaylibrary.org/asset/{first_ml}" target="_blank" title="View media">📷</a>'
-    return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
-
+from personal_ebird_explorer.map_renderer import (
+    format_visit_time as _format_visit_time,
+    format_sighting_row as _format_sighting_row,
+    popup_scroll_script as _popup_scroll_script,
+    create_map as _create_map,
+)
 
 from personal_ebird_explorer.species_logic import (
     countable_species_vectorized as _countable_species_vectorized,
@@ -768,130 +748,19 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Create Base Map with Tile Style
+# ### 🗺️ Map Rendering Helpers
 #
-# Initialises the Folium map using the selected `MAP_STYLE`:
+# Pure helper functions for map rendering live in `personal_ebird_explorer.map_renderer`:
 #
-# - `"default"`: Standard OpenStreetMap tiles
-# - `"satellite"`: Esri WorldImagery (aerial view)
-# - `"google"`: Google satellite tiles (unofficial)
-# - `"carto"`: CartoDB Positron (clean, minimalist look)
-#
-# Used as the foundation for all map rendering.
+# - `create_map` – folium Map factory (supports `MAP_STYLE` values: default, satellite, google, carto)
+# - `popup_scroll_script` – JS injection for popup scroll hints
+# - `format_visit_time` / `format_sighting_row` – popup content formatters
 #
 
 # %%
-# --------------------------------------------
-# ✅ Create base map with selected tile style
-# --------------------------------------------
-def _popup_scroll_script(scroll_hint, scroll_to_bottom):
-    """Return HTML script for popup scroll hints (chevrons/shading). Runs in map iframe."""
-    hint_js = repr(scroll_hint)
-    to_bottom_js = "true" if scroll_to_bottom else "false"
-    return f"""
-<script>
-(function() {{
-  var HINT = {hint_js};
-  var SCROLL_TO_BOTTOM = {to_bottom_js};
-
-  function updateHints(scrollable, wrapper) {{
-    var st = scrollable.scrollTop;
-    var maxScroll = scrollable.scrollHeight - scrollable.clientHeight;
-    var hasMoreAbove = st > 0;
-    var hasMoreBelow = st < maxScroll;
-
-    if (HINT === 'chevron' || HINT === 'both') {{
-      var upEl = wrapper.querySelector('.popup-scroll-up');
-      var downEl = wrapper.querySelector('.popup-scroll-down');
-      if (upEl) upEl.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
-      if (downEl) downEl.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
-    }}
-    if (HINT === 'shading' || HINT === 'both') {{
-      var topShade = wrapper.querySelector('.popup-scroll-shade-top');
-      var botShade = wrapper.querySelector('.popup-scroll-shade-bot');
-      if (topShade) topShade.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
-      if (botShade) botShade.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
-    }}
-  }}
-
-  function setupPopup(scrollable, wrapper) {{
-    var hasOverflow = scrollable.scrollHeight > scrollable.clientHeight;
-    if (!hasOverflow) return;
-
-    scrollable.scrollTop = SCROLL_TO_BOTTOM ? scrollable.scrollHeight : 0;
-
-    var scrollTop = scrollable.offsetTop;
-    if (HINT === 'chevron' || HINT === 'both') {{
-      var up = document.createElement('div');
-      up.className = 'popup-scroll-up';
-      up.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
-      up.textContent = '\\u25B2';
-      var down = document.createElement('div');
-      down.className = 'popup-scroll-down';
-      down.style.cssText = 'position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
-      down.textContent = '\\u25BC';
-      wrapper.appendChild(up);
-      wrapper.appendChild(down);
-    }}
-    if (HINT === 'shading' || HINT === 'both') {{
-      var topShade = document.createElement('div');
-      topShade.className = 'popup-scroll-shade-top';
-      topShade.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
-      var botShade = document.createElement('div');
-      botShade.className = 'popup-scroll-shade-bot';
-      botShade.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
-      wrapper.appendChild(topShade);
-      wrapper.appendChild(botShade);
-    }}
-
-    updateHints(scrollable, wrapper);
-    scrollable.addEventListener('scroll', function() {{ updateHints(scrollable, wrapper); }});
-  }}
-
-  function onPopupOpen() {{
-    setTimeout(function() {{
-      var scrollable = document.querySelector('.leaflet-popup-content div[style*="overflow-y"]');
-      if (!scrollable) return;
-      var wrapper = scrollable.parentElement;
-      if (wrapper.dataset.popupSetup) return;
-      wrapper.dataset.popupSetup = '1';
-      setupPopup(scrollable, wrapper);
-    }}, 100);
-  }}
-
-  var observer = new MutationObserver(function(mutations) {{
-    for (var i = 0; i < mutations.length; i++) {{
-      for (var j = 0; j < mutations[i].addedNodes.length; j++) {{
-        var node = mutations[i].addedNodes[j];
-        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {{
-          onPopupOpen();
-          return;
-        }}
-      }}
-    }}
-  }});
-  observer.observe(document.body, {{ childList: true, subtree: true }});
-}})();
-</script>
-"""
-
-
-def create_map(map_center):
-    if MAP_STYLE == "default":
-        return folium.Map(location=map_center, zoom_start=6)
-    elif MAP_STYLE == "satellite":
-        return folium.Map(location=map_center, zoom_start=6, tiles="Esri WorldImagery", attr="Esri")
-    elif MAP_STYLE == "google":
-        return folium.Map(
-            location=map_center,
-            zoom_start=6,
-            tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-            attr="Google"
-        )
-    elif MAP_STYLE == "carto":
-        return folium.Map(location=map_center, zoom_start=6, tiles="CartoDB Positron", attr="CartoDB")
-    else:
-        return folium.Map(location=map_center, zoom_start=6)
+# Map helpers (create_map, popup_scroll_script, format_visit_time,
+# format_sighting_row) are imported from personal_ebird_explorer.map_renderer
+# at the top of this cell group.
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -938,7 +807,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     else:
         map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
 
-    state.species_map = create_map(map_center)
+    state.species_map = _create_map(map_center, MAP_STYLE)
 
     # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
     records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
