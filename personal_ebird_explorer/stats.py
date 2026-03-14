@@ -128,7 +128,7 @@ def longest_streak(unique_dates, cl):
         first_d = pd.Timestamp(first_day, unit="D").normalize()
         last_d = pd.Timestamp(last_day, unit="D").normalize()
         cl_copy = cl.copy()
-        cl_copy["_d"] = pd.to_datetime(cl_copy["Date"]).dt.normalize()
+        cl_copy["_d"] = cl_copy["Date"].dt.normalize()
         start_m = cl_copy[cl_copy["_d"] == first_d]
         end_m = cl_copy[cl_copy["_d"] == last_d]
         sort_col = "datetime" if "datetime" in cl_copy.columns else None
@@ -467,12 +467,11 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     cl = cl.dropna(subset=["Date"])
     if cl.empty:
         return [], [], {}
-    cl["_year"] = pd.to_datetime(cl["Date"]).dt.year
+    cl["_year"] = cl["Date"].dt.year
     years_sorted = sorted(cl["_year"].dropna().astype(int).unique())
     if not years_sorted:
         return [], [], {}
     df_with_yr = df.copy()
-    df_with_yr["Date"] = pd.to_datetime(df_with_yr["Date"], errors="coerce")
     df_with_yr["_year"] = df_with_yr["Date"].dt.year
 
     has_protocol = "Protocol" in df.columns
@@ -577,7 +576,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     if dur_col:
         timed = cl.dropna(subset=[dur_col]).copy()
         timed["_dur"] = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0)
-        timed["_year"] = pd.to_datetime(timed["Date"]).dt.year
+        timed["_year"] = timed["Date"].dt.year
         if has_protocol:
             excl = timed["Protocol"].astype(str).str.strip().str.lower().str.contains("incidental|historical|casual observation", na=False, regex=True)
             timed = timed[~excl]
@@ -603,7 +602,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
             vals_shared = [int(by_yr_shared.get(y, 0)) for y in years_sorted]
             rows.append(("Shared checklists", [f"{v:,}" for v in vals_shared]))
             shared_sub = shared_sub.copy()
-            shared_sub["_date"] = pd.to_datetime(shared_sub["Date"]).dt.normalize()
+            shared_sub["_date"] = shared_sub["Date"].dt.normalize()
             by_yr_days = shared_sub.groupby("_year")["_date"].nunique()
             vals_days = [int(by_yr_days.get(y, 0)) for y in years_sorted]
             rows.append(("Days birding with others", [f"{v:,}" for v in vals_days]))
@@ -626,7 +625,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     # 17–18. Traveling checklist: Total distance, Average distance
     if dist_col and has_protocol:
         trav = cl[traveling_complete].copy()
-        trav["_year"] = pd.to_datetime(trav["Date"]).dt.year
+        trav["_year"] = trav["Date"].dt.year
         trav["_dist"] = pd.to_numeric(trav[dist_col], errors="coerce").fillna(0)
         by_yr = trav.groupby("_year")["_dist"].sum()
         n_trav = trav.groupby("_year").size()
@@ -642,7 +641,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     # 19–20. Traveling checklist: Total hours, Average minutes
     if dur_col and has_protocol:
         trav = cl[traveling_complete].dropna(subset=[dur_col]).copy()
-        trav["_year"] = pd.to_datetime(trav["Date"]).dt.year
+        trav["_year"] = trav["Date"].dt.year
         trav["_min"] = pd.to_numeric(trav[dur_col], errors="coerce").fillna(0)
         by_yr_min = trav.groupby("_year")["_min"].sum()
         n_trav = trav.groupby("_year").size()
@@ -660,7 +659,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
         stat_cl = cl[stationary_complete]
         stat_sids = set(stat_cl["Submission ID"])
         stat_obs = df_with_yr[df_with_yr["Submission ID"].isin(stat_sids)].copy()
-        stat_obs["_year"] = pd.to_datetime(stat_obs["Date"]).dt.year
+        stat_obs["_year"] = stat_obs["Date"].dt.year
         sp_means, ind_means = [], []
         for y in years_sorted:
             o = stat_obs[stat_obs["_year"] == y]
@@ -675,7 +674,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
         rows.append((f"Stationary checklist: Average species{info_icon}", sp_means))
         rows.append((f"Stationary checklist: Average individuals{info_icon}", ind_means))
         stat_cl = stat_cl.dropna(subset=[dur_col]).copy()
-        stat_cl["_year"] = pd.to_datetime(stat_cl["Date"]).dt.year
+        stat_cl["_year"] = stat_cl["Date"].dt.year
         stat_cl["_min"] = pd.to_numeric(stat_cl[dur_col], errors="coerce").fillna(0)
         by_yr_min = stat_cl.groupby("_year")["_min"].sum()
         n_stat = stat_cl.groupby("_year").size()
