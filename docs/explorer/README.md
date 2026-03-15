@@ -77,7 +77,7 @@ Local install gives you faster performance. You can run the notebook in Jupyter 
 ## Project structure (high level)
 
 - **notebooks/personal_ebird_explorer.ipynb** — UI and orchestration; paired with `.py` via Jupytext.
-- **personal_ebird_explorer/** — Core logic: data loading, path resolution, species logic, stats, duplicate checks, map rendering, UI state.
+- **personal_ebird_explorer/** — Core logic: data loading, path resolution, species logic, stats, duplicate checks, map rendering, UI state, region display (country/state names in tables).
 - **docs/explorer/** — User and install docs (this file, install.md, future-ideas.md, etc.).
 - **docs/development.md** — Developer guide (architecture, modules, testing, refactor and AI guardrails).
 - **docs/AI_CONTEXT.md** — Context and **AI Coding Rules** for AI assistants; read before suggesting architectural changes.
