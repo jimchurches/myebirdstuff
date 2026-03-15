@@ -80,7 +80,7 @@ Local install gives you faster performance. You can run the notebook in Jupyter 
 - **personal_ebird_explorer/** — Core logic: data loading, path resolution, species logic, stats, duplicate checks, map rendering, UI state.
 - **docs/explorer/** — User and install docs (this file, install.md, future-ideas.md, etc.).
 - **docs/development.md** — Developer guide (architecture, modules, testing, refactor and AI guardrails).
-- **docs/AI_CONTEXT.md** — Context for AI coding assistants; read before suggesting architectural changes.
+- **docs/AI_CONTEXT.md** — Context and **AI Coding Rules** for AI assistants; read before suggesting architectural changes.
 
 For full architecture and module roles, see [docs/development.md](../development.md).
 
