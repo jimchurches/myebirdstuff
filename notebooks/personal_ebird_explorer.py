@@ -77,10 +77,7 @@
 # Set these variables to control how the map behaves.
 #
 # - `EBIRD_DATA_FILE_NAME`: the name of your eBird export file (must be in the same folder).
-# - `OUTPUT_HTML_FILE_NAME`: name of the saved HTML map file (overwritten each update).
-# - `EXPORT_HTML`:  
-#   - `True` — the map is saved to HTML each time it updates  
-#   - `False` — no HTML export
+# - `OUTPUT_HTML_FILE_NAME`: name of the saved HTML map file when you use "Export Map HTML".
 # - `MAP_STYLE`: choose from `"default"`, `"satellite"`, `"google"`, or `"carto"`.
 # - `MARK_LIFER`: `True` — highlights your first-ever sighting (lifer) with a distinct pin
 # - `MARK_LAST_SEEN`: `True` — highlights your most recent sighting with a distinct pin (skipped if same as lifer)
@@ -125,7 +122,6 @@ DATA_FOLDER_HARDCODED = ""
 
 # Where your .csv file is located, and where the output map will be saved
 OUTPUT_HTML_FILE_NAME = "species_map.html"
-EXPORT_HTML = True  # Save HTML file each time map is updated
 
 # Map style options: "default", "satellite", "google", "carto"
 MAP_STYLE = "default"
@@ -158,9 +154,10 @@ CLOSE_LOCATION_METERS = 10
 # Optional date range filtering (set to False to disable)
 # Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
 # If locations/species are missing, set FILTER_BY_DATE = False or extend the range.
+# After changing these, re-run from the "Data prep" / load cell so the map uses the new filter.
 FILTER_BY_DATE = False
-FILTER_START_DATE = "2025-01-01"
-FILTER_END_DATE = "2025-12-31"
+FILTER_START_DATE = "2026-01-01"
+FILTER_END_DATE = "2026-12-31"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -490,6 +487,18 @@ total_checklists = df["Submission ID"].nunique()
 total_individuals = int(df["Count"].apply(_safe_count).sum())
 total_species = int(_countable_species_vectorized(df).dropna().nunique())
 
+# When date filter is on, keep full-data structures so Reset View can show unfiltered map (refs #47)
+records_by_loc_full = {}
+total_checklists_full = total_checklists
+total_species_full = total_species
+total_individuals_full = total_individuals
+_date_filter_off_for_view = False
+if FILTER_BY_DATE:
+    records_by_loc_full = {lid: grp for lid, grp in df_full.groupby("Location ID")}
+    total_checklists_full = df_full["Submission ID"].nunique()
+    total_species_full = int(_countable_species_vectorized(df_full).dropna().nunique())
+    total_individuals_full = int(df_full["Count"].apply(_safe_count).sum())
+
 # Build common → scientific name map
 name_map = (
     df[['Common Name', 'Scientific Name']]
@@ -732,8 +741,17 @@ def on_toggle_change(change):
     draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
 
 
+def _date_filter_status_text():
+    """Return short status for date filter (refs #47)."""
+    if not FILTER_BY_DATE:
+        return "Date filter: Off"
+    if _date_filter_off_for_view:
+        return "Date filter: Off (showing full data)"
+    return f"Date filter: {FILTER_START_DATE} to {FILTER_END_DATE}"
+
+
 def _clear_to_all_species():
-    """Reset to all-species view: clear search, dropdown, selection, checkbox; redraw map once (runs in widget context)."""
+    """Reset view: clear species, uncheck 'show only selected', redraw. Does not change date filter (refs #47)."""
     search_box.value = ""
     matches_dropdown.options = []
     matches_dropdown.value = None
@@ -744,8 +762,21 @@ def _clear_to_all_species():
     state.suppress_toggle_redraw = False
     with output:
         output.clear_output()
-        print("🧹 Search cleared — showing all locations")
+        print("🧹 Reset view — showing all locations")
     draw_map_with_species_overlay("", "")
+
+
+def _export_map_html():
+    """Save current map HTML to file on demand (refs #47)."""
+    if state.species_map is None:
+        with output:
+            output.clear_output()
+            print("⚠️ No map to export. Open the Map tab and wait for the map to draw.")
+        return
+    state.species_map.save(map_output_path)
+    with output:
+        output.clear_output()
+        print(f"✅ Map exported to {map_output_path}")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -805,8 +836,9 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 #
 # Extra features:
 # - Map centres on species locations when filtering; on all locations when viewing "All species"
-# - Saves map as HTML if `EXPORT_HTML = True`
+# - Export map via "Export Map HTML" button (no automatic save on redraw; refs #47)
 # - Redraws reuse cached location groupbys and popup HTML (refs #37) for responsiveness.
+# - Dense-map: many pins use fixed-radius markers; clustering not used to preserve "where I've been" overview (refs #47).
 #
 
 # %%
@@ -814,6 +846,16 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 # ✅ Draw map with species overlay
 # --------------------------------------------
 def draw_map_with_species_overlay(selected_species, selected_common_name=""):
+    # When date filter was on at load and user clicked Reset View, show full data (refs #47)
+    effective_use_full = bool(FILTER_BY_DATE and _date_filter_off_for_view)
+    if effective_use_full:
+        effective_location_data = full_location_data
+        effective_records_by_loc = records_by_loc_full
+        effective_totals = (total_checklists_full, total_species_full, total_individuals_full)
+    else:
+        effective_location_data = location_data
+        effective_records_by_loc = records_by_loc
+        effective_totals = (total_checklists, total_species, total_individuals)
 
     if selected_species:
         filtered = filter_species(df, selected_species)
@@ -826,25 +868,26 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         species_locations = location_data[location_data["Location ID"].isin(seen_location_ids)]
         map_center = [species_locations["Latitude"].mean(), species_locations["Longitude"].mean()]
     else:
-        map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
+        map_center = [effective_location_data["Latitude"].mean(), effective_location_data["Longitude"].mean()]
 
     state.species_map = _create_map(map_center, MAP_STYLE)
 
     # records_by_loc is built once at data prep (refs #37); reused on every redraw
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
+        tc, ts, ti = effective_totals
         state.species_map.get_root().html.add_child(Element(
-            _build_all_species_banner_html(total_checklists, total_species, total_individuals)
+            _build_all_species_banner_html(tc, ts, ti, _date_filter_status_text())
         ))
         state.species_map.get_root().html.add_child(Element(
             _build_legend_html([(DEFAULT_COLOR, DEFAULT_FILL, "All locations")])
         ))
 
         popup_asc = POPUP_SORT_ORDER == "ascending"
-        for _, row in location_data.iterrows():
-            popup_key = (row["Location ID"], "")
+        for _, row in effective_location_data.iterrows():
+            popup_key = (row["Location ID"], "", effective_use_full)
             if popup_key not in _popup_html_cache:
-                base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
+                base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
                 visit_info = _build_visit_info_html(visit_records, _format_visit_time)
                 _popup_html_cache[popup_key] = _build_location_popup_html(row["Location"], row["Location ID"], visit_info)
@@ -911,6 +954,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 first_seen_date=first_seen_date,
                 last_seen_date=last_seen_date,
                 high_count_date=high_count_date,
+                date_filter_status=_date_filter_status_text(),
             )
         ))
 
@@ -989,8 +1033,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         map_html = state.species_map._repr_html_()
         display(HTML(f'<div class="output_map">{map_html}</div>'))
 
-    if EXPORT_HTML:
-        state.species_map.save(map_output_path)
+    # Export is explicit via "Export Map HTML" button (refs #47); no automatic save on redraw
 
 
 
@@ -1571,10 +1614,17 @@ else:
     map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
 # --------------------------------------------
-# Build map tab: search row (search box + spacer + checkbox) and matches dropdown above map output.
+# Build map tab: single control row (search, checkbox, reset, export) + matches dropdown. Date filter shown in banner only (refs #47).
 # --------------------------------------------
 _spacer = Box(layout=widgets.Layout(width="0.75em", min_width="0.75em"))
-search_row = HBox([search_box, _spacer, hide_non_matching_checkbox], layout=widgets.Layout(align_items="center"))
+reset_view_btn = widgets.Button(description="Reset View", layout=widgets.Layout(width="100px"))
+reset_view_btn.on_click(lambda _: _clear_to_all_species())
+export_map_btn = widgets.Button(description="Export Map HTML", layout=widgets.Layout(width="140px"))
+export_map_btn.on_click(lambda _: _export_map_html())
+search_row = HBox(
+    [search_box, _spacer, hide_non_matching_checkbox, _spacer, reset_view_btn, export_map_btn],
+    layout=widgets.Layout(align_items="center"),
+)
 map_controls = VBox([search_row, matches_dropdown])
 map_controls.layout = widgets.Layout(width="100%", min_width="0")
 

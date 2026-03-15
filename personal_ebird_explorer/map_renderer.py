@@ -123,7 +123,6 @@ _LEGEND_STYLE = (
     "display:flex;flex-wrap:wrap;gap:8px 12px;"
 )
 
-
 def pin_legend_item(color, fill, label):
     """Small coloured circle + label for the map legend."""
     return (
@@ -134,14 +133,26 @@ def pin_legend_item(color, fill, label):
     )
 
 
-def build_all_species_banner_html(total_checklists, total_species, total_individuals):
-    """Return the HTML overlay banner for the all-species map view."""
+def build_all_species_banner_html(
+    total_checklists, total_species, total_individuals, date_filter_status=None
+):
+    """Return the HTML overlay banner for the all-species map view.
+
+    If date_filter_status is provided (e.g. "Date filter: Off" or "Date filter: 2026-01-01 to 2026-12-31"),
+    it is shown as a second line in the banner, smaller and lighter so it is less prominent.
+    """
+    date_line = (
+        f'<br><span style="font-size: 0.85em; color: #999;">{date_filter_status}</span>'
+        if date_filter_status
+        else ""
+    )
     return (
         f'<div style="{_BANNER_STYLE}">'
         f'<b>All species</b><br>'
         f'{total_checklists} checklist{"s" if total_checklists != 1 else ""}'
         f' &nbsp;|&nbsp; {total_species} species'
         f' &nbsp;|&nbsp; {total_individuals} individual{"s" if total_individuals != 1 else ""}'
+        f'{date_line}'
         f'</div>'
     )
 
@@ -154,6 +165,7 @@ def build_species_banner_html(
     first_seen_date="",
     last_seen_date="",
     high_count_date="",
+    date_filter_status=None,
 ):
     """Return the HTML overlay banner for a species-filtered map view.
 
@@ -165,6 +177,7 @@ def build_species_banner_html(
         first_seen_date: Formatted date string for first sighting (empty to omit).
         last_seen_date: Formatted date string for most recent sighting (empty to omit).
         high_count_date: Formatted date string when high count was recorded (empty to omit).
+        date_filter_status: Optional string (e.g. "Date filter: Off" or range) shown on last line, smaller and lighter.
     """
     sep = " &nbsp;|&nbsp; "
     line2 = (
@@ -178,12 +191,18 @@ def build_species_banner_html(
         line3_parts.append(f"Last seen: {last_seen_date}")
     line3 = sep.join(line3_parts)
     line4 = f"High count: {high_count_date} ({high_count})"
+    date_line = (
+        f'<br><span style="font-size: 0.85em; color: #999;">{date_filter_status}</span>'
+        if date_filter_status
+        else ""
+    )
     return (
         f'<div style="{_BANNER_STYLE}">'
         f'<b>{display_name}</b><br>'
         f'{line2}<br>'
         f'{line3}<br>'
         f'{line4}'
+        f'{date_line}'
         f'</div>'
     )
 
