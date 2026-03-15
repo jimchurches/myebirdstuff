@@ -16,6 +16,21 @@ from personal_ebird_explorer.stats import (
     yearly_summary_stats,
 )
 from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
+from personal_ebird_explorer.ui_state import ExplorerState
+from personal_ebird_explorer.map_renderer import (
+    create_map,
+    format_visit_time,
+    format_sighting_row,
+    popup_scroll_script,
+    pin_legend_item,
+    build_all_species_banner_html,
+    build_species_banner_html,
+    build_legend_html,
+    build_visit_info_html,
+    build_location_popup_html,
+    resolve_lifer_last_seen,
+    classify_locations,
+)
 
 __all__ = [
     "load_dataset",
@@ -31,4 +46,17 @@ __all__ = [
     "compute_rankings",
     "yearly_summary_stats",
     "get_map_maintenance_data",
+    "ExplorerState",
+    "create_map",
+    "format_visit_time",
+    "format_sighting_row",
+    "popup_scroll_script",
+    "pin_legend_item",
+    "build_all_species_banner_html",
+    "build_species_banner_html",
+    "build_legend_html",
+    "build_visit_info_html",
+    "build_location_popup_html",
+    "resolve_lifer_last_seen",
+    "classify_locations",
 ]
