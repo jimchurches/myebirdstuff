@@ -49,6 +49,9 @@ def add_datetime_column(df):
     df["datetime"] = pd.to_datetime(
         date_str + " " + time_str, format="mixed", errors="coerce",
     )
+    # Missing date must yield NaT (pandas 3+ can parse time-only as year 1 otherwise)
+    missing_date = date_str == ""
+    df.loc[missing_date, "datetime"] = pd.NaT
     return df
 
 
