@@ -182,6 +182,7 @@ Tests exist for:
 - species filtering and normalisation
 - path resolution
 - stats and rankings
+- region display (country/state names in rankings tables)
 
 New logic should ideally be placed in modules where tests can be written.  
 Avoid writing complex logic directly in notebook cells.
