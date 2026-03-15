@@ -14,61 +14,26 @@
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ## 🗺️ Explore Your eBird Data on a Map
+# ## 🗺️ Personal eBird Explorer
 #
-# This notebook lets you explore your personal eBird records in an interactive, visual way.
+# Put your eBird data on a map and explore where you've been birding. No coding required — just run the notebook and use the search box and map below.
 #
-# Once you’ve downloaded your full eBird data export, this tool maps every location you’ve submitted a checklist from — whether it’s a hotspot or a personal location. You can search for a species, filter by date, highlight lifers and last-seen locations, and explore your birding history on a map.
+# **What you can do**
 #
-# ### ✅ What This Notebook Does 
+# - **See all your checklist locations** — Every place you've submitted a checklist from appears as a pin on the map (green when viewing everything).
+# - **Search for a bird** — Type a species name in the search box; the map highlights where you've seen it (red pins). Your first-ever sighting (lifer) and most recent sighting can be marked with different pin colours.
+# - **Focus on one species** — Optionally hide other locations so only that bird's pins show.
+# - **Click a pin** — See your visits to that location, with links to each checklist on eBird and to the location's life list. If you have photos in Macaulay Library, a 📷 link appears there too.
+# - **See the numbers** — The box above the map shows how many checklists, species, or individuals you're looking at (all data or for the bird you chose). Optional date filtering is available in the settings below.
+# - **Other tabs** — Besides the map, you get **Checklist Statistics** (overview, protocols, time birding), **Yearly Summary** (activity by year), **Rankings** (top species, locations, months), and **Maintenance** (duplicate or nearby locations). Switch tabs above the map to explore.
 #
-# - Loads your eBird data export (CSV format)
-# - Draws a map of all checklist locations (green by default)
-# - Highlights locations where a selected species was seen (currently purple)
-# - Marks your lifer (first-ever) and last-seen location for that species with distinct pin colours
-# - Shows stats banners: all-species totals when viewing all, or species-specific (checklists, individuals, high count) when filtering
-# - Lets you hide non-matching locations
-# - Offers type-ahead search that mimics eBird’s own species search behaviour
-# - Supports date-range filtering
-# - Adds detailed popups with links:
-#   - Location names link to your eBird life list for that place
-#   - Visit dates/times link to each checklist
-#   - Media icon (📷) links to Macaulay Library when available
+# **What to do now**
 #
-# > 📍 You’ll find the interactive **search box and map display towards the end of the notebook**. Once everything’s loaded, scroll down to use it.
+# 1. Make sure your eBird export file (e.g. `MyEBirdData.csv`) is in the right folder — see **User Variables** in the next section, or the [Explorer README](docs/explorer/README.md) for where to put it.
+# 2. From the menu, choose **Run → Run All Cells**. Give it a moment to load (on Binder the first map can take over a minute).
+# 3. Scroll down to the **search box and map**. Use the search box to find a bird and the map updates automatically.
 #
-# ---
-#
-# ### 🚀 Getting Started
-#
-# To run this notebook, you’ll need:
-#
-# - Python
-# - Jupyter Notebook or JupyterLab
-#
-# It works on macOS, Windows, or Linux.
-#
-# Jupyter notebooks are interactive coding environments used for working with data — this one is designed specifically to help you explore your birding records.
-#
-# If you haven’t set up Python or Jupyter before, don’t worry — just ask ChatGPT, Microsoft Copilot, or your favourite chat bot to walk you through it.  Hey, you could even use a Google search.  
-#
-# You'll probably need to install some Python modules also.  These modules will include:  `ipywidgets`, `pandas`, `whoosh`, `folium`, and `scikit-learn`.
-#
-# Once up and running, the menu items **Run All Cells** and **Restart Kernel and Clear Outputs of All Cells** are your friends.
-#
-# ---
-#
-# ### ⚙️ One Small Setup Note
-#
-# By default, the notebook expects your eBird data file to be named `MyEBirdData.csv`. This is controlled by a variable in the first code cell — you can change it if needed.
-#
-# Folder paths can be set in several ways: a hardcoded path in the User Variables cell, or a config file in the `scripts` folder. The notebook tries each location in order until it finds your data file; the notebook folder is tried last (e.g. for Binder uploads).
-#
-# Other than that, just run the notebook from top to bottom — it should work straight away.
-#
-# ### 🎩✨ Voila
-#
-# Yes, this should work with voila.  Tested for about five minutes after figuring out how to hide all the doco.  Voila let's you see this notebook as a dashboard with just the input UI elements and the map.  The code and the docoumentation is hidden.  Launch viola from the notebooks folder and configuration in `voila.json` will hide the markdown documentation cells so just the search box and map will display.  You don't need to do this, this notebook works nicely here in Jupyter Labs also if you don't mind the clutter.
+# Need install or run instructions? See [docs/explorer/README.md](docs/explorer/README.md) and [docs/explorer/install.md](docs/explorer/install.md).
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]

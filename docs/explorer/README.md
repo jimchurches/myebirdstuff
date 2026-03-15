@@ -51,7 +51,7 @@ Binder runs the notebook in the cloud. Nothing to install — just upload your d
 
 ### Binder notes
 
-- **Speed:** The free Binder host is slower than a fast local machine; map redraws may take a few seconds.
+- **Speed:** The free Binder host is slower than a fast local machine; map redraws may take a few seconds. The **initial map load** can take over a minute — wait for it to finish before interacting.
 - **Session timeout:** The environment is not persistent and times out when idle. Relaunch when needed.
 - **Occasional failures:** If the notebook fails, try **Run → Run All Cells** again. If the environment fails to build, try again later.
 
@@ -63,7 +63,7 @@ For full installation instructions (Python, Jupyter, Voila, and dependencies on 
 
 **[Installation guide](install.md)**
 
-Local install gives you faster performance and lets you run the notebook as a Voila dashboard.
+Local install gives you faster performance. You can run the notebook in Jupyter or as a Voila dashboard. **Note:** There is currently a known issue with Voila not working (root cause unknown); use Jupyter if you run into problems.
 
 ---
 

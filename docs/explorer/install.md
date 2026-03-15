@@ -218,6 +218,8 @@ A browser window will open. Click **personal_ebird_explorer.ipynb**. Use **Run â
 
 Voila runs the same notebook as a clean dashboard: only the controls and map, no code or long instructions.
 
+> **Known issue:** Voila is currently not working for this notebook (root cause unknown). If you run into problems, use Jupyter or JupyterLab instead.
+
 From the **notebooks** folder:
 
 **Windows:**
