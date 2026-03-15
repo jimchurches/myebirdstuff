@@ -5,6 +5,74 @@ This document provides high-level context for AI coding assistants working in th
 
 ---
 
+## AI Coding Rules
+
+This repository is frequently developed using AI coding assistants (Cursor, Copilot, ChatGPT).  
+The following rules help keep the codebase stable and understandable.
+
+### Prefer small changes
+
+Prefer incremental improvements over large rewrites.
+
+Avoid introducing major architectural changes unless explicitly requested.
+
+### Keep logic out of the notebook
+
+The Jupyter notebook acts as a **UI layer**.
+
+Core logic should live in Python modules inside the project package.
+
+Avoid placing complex logic directly in notebook cells.
+
+### Respect the data model
+
+The application assumes:
+
+- a CSV dataset is loaded once
+- the dataset is static during runtime
+
+Caching strategies rely on this assumption.
+
+Do not introduce logic that mutates the main dataframe during execution.
+
+### Avoid unnecessary dependencies
+
+Do not introduce new frameworks or heavy dependencies without clear benefit.
+
+In particular avoid:
+
+- web frameworks
+- database layers
+- complex UI frameworks
+
+The project is intentionally lightweight.
+
+### Prefer readability over cleverness
+
+Code should be understandable to a human reader returning to the project months later.
+
+Avoid overly abstract patterns or unnecessary optimisation.
+
+### Do not break caching assumptions
+
+Performance improvements rely on simple in-memory caches.
+
+Changes to:
+
+- location grouping
+- species filtering
+- popup generation
+
+should preserve cache correctness.
+
+### When unsure
+
+If a change might affect architecture, caching, or data flow:
+
+ask or describe the proposed change before implementing it.
+
+---
+
 ## Project purpose
 
 Personal eBird Explorer visualises a user's personal eBird data on an interactive map.

@@ -1,6 +1,6 @@
 # Development guide: Personal eBird Explorer
 
-Guidance for developers and contributors. For AI-assisted coding, see [AI_CONTEXT.md](AI_CONTEXT.md). (refs #48)
+Guidance for developers and contributors. For AI-assisted coding, see [AI_CONTEXT.md](AI_CONTEXT.md) and follow the **AI Coding Rules** there. (refs #48)
 
 ---
 
