@@ -14,101 +14,30 @@
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ## 🗺️ Explore Your eBird Data on a Map
+# ## 🗺️ Personal eBird Explorer
 #
-# This notebook lets you explore your personal eBird records in an interactive, visual way.
+# Put your eBird data on a map and explore where you've been birding. No coding required — just run the notebook and use the search box and map below.
 #
-# Once you’ve downloaded your full eBird data export, this tool maps every location you’ve submitted a checklist from — whether it’s a hotspot or a personal location. You can search for a species, filter by date, highlight lifers and last-seen locations, and explore your birding history on a map.
+# **What you can do**
 #
-# ### ✅ What This Notebook Does 
+# - **See all your checklist locations** — Every place you've submitted a checklist from appears as a pin on the map (green when viewing everything).
+# - **Search for a bird** — Type a species name in the search box; the map highlights where you've seen it (red pins). Your first-ever sighting (lifer) and most recent sighting can be marked with different pin colours.
+# - **Focus on one species** — Optionally hide other locations so only that bird's pins show.
+# - **Click a pin** — See your visits to that location, with links to each checklist on eBird and to the location's life list. If you have photos in Macaulay Library, a 📷 link appears there too.
+# - **See the numbers** — The box above the map shows how many checklists, species, or individuals you're looking at (all data or for the bird you chose). Optional date filtering is available in the settings below.
+# - **Other tabs** — Besides the map, you get **Checklist Statistics** (overview, protocols, time birding), **Yearly Summary** (activity by year), **Rankings** (top species, locations, months), and **Maintenance** (duplicate or nearby locations). Switch tabs above the map to explore.
 #
-# - Loads your eBird data export (CSV format)
-# - Draws a map of all checklist locations (green by default)
-# - Highlights locations where a selected species was seen (currently purple)
-# - Marks your lifer (first-ever) and last-seen location for that species with distinct pin colours
-# - Shows stats banners: all-species totals when viewing all, or species-specific (checklists, individuals, high count) when filtering
-# - Lets you hide non-matching locations
-# - Offers type-ahead search that mimics eBird’s own species search behaviour
-# - Supports date-range filtering
-# - Adds detailed popups with links:
-#   - Location names link to your eBird life list for that place
-#   - Visit dates/times link to each checklist
-#   - Media icon (📷) links to Macaulay Library when available
+# **What to do now**
 #
-# > 📍 You’ll find the interactive **search box and map display towards the end of the notebook**. Once everything’s loaded, scroll down to use it.
+# 1. Make sure your eBird export file (e.g. `MyEBirdData.csv`) is in the right folder — see **User Variables** in the next section, or the [Explorer README](docs/explorer/README.md) for where to put it.
+# 2. From the menu, choose **Run → Run All Cells**. Give it a moment to load (on Binder the first map can take over a minute).
+# 3. Scroll down to the **search box and map**. Use the search box to find a bird and the map updates automatically.
 #
-# ---
-#
-# ### 🚀 Getting Started
-#
-# To run this notebook, you’ll need:
-#
-# - Python
-# - Jupyter Notebook or JupyterLab
-#
-# It works on macOS, Windows, or Linux.
-#
-# Jupyter notebooks are interactive coding environments used for working with data — this one is designed specifically to help you explore your birding records.
-#
-# If you haven’t set up Python or Jupyter before, don’t worry — just ask ChatGPT, Microsoft Copilot, or your favourite chat bot to walk you through it.  Hey, you could even use a Google search.  
-#
-# You'll probably need to install some Python modules also.  These modules will include:  `ipywidgets`, `pandas`, `whoosh`, `folium`, and `scikit-learn`.
-#
-# Once up and running, the menu items **Run All Cells** and **Restart Kernel and Clear Outputs of All Cells** are your friends.
-#
-# ---
-#
-# ### ⚙️ One Small Setup Note
-#
-# By default, the notebook expects your eBird data file to be named `MyEBirdData.csv`. This is controlled by a variable in the first code cell — you can change it if needed.
-#
-# Folder paths can be set in several ways: a hardcoded path in the User Variables cell, or a config file in the `scripts` folder. The notebook tries each location in order until it finds your data file; the notebook folder is tried last (e.g. for Binder uploads).
-#
-# Other than that, just run the notebook from top to bottom — it should work straight away.
-#
-# ### 🎩✨ Voila
-#
-# Yes, this should work with voila.  Tested for about five minutes after figuring out how to hide all the doco.  Voila let's you see this notebook as a dashboard with just the input UI elements and the map.  The code and the docoumentation is hidden.  Launch viola from the notebooks folder and configuration in `voila.json` will hide the markdown documentation cells so just the search box and map will display.  You don't need to do this, this notebook works nicely here in Jupyter Labs also if you don't mind the clutter.
+# Need install or run instructions? See [docs/explorer/README.md](docs/explorer/README.md) and [docs/explorer/install.md](docs/explorer/install.md).
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🛠️ User Configuration
-#
-# Set these variables to control how the map behaves.
-#
-# - `EBIRD_DATA_FILE_NAME`: the name of your eBird export file (must be in the same folder).
-# - `OUTPUT_HTML_FILE_NAME`: name of the saved HTML map file (overwritten each update).
-# - `EXPORT_HTML`:  
-#   - `True` — the map is saved to HTML each time it updates  
-#   - `False` — no HTML export
-# - `MAP_STYLE`: choose from `"default"`, `"satellite"`, `"google"`, or `"carto"`.
-# - `MARK_LIFER`: `True` — highlights your first-ever sighting (lifer) with a distinct pin
-# - `MARK_LAST_SEEN`: `True` — highlights your most recent sighting with a distinct pin (skipped if same as lifer)
-# - `LIFER_COLOR`, `LIFER_FILL`, `LAST_SEEN_COLOR`, `LAST_SEEN_FILL`, etc. — pin colours (see User Variables cell)
-# - `FILTER_BY_DATE`:  
-#   - `True` — only show locations and sightings within the specified date range  
-#   - `False` — include all data
-# - `FILTER_START_DATE`, `FILTER_END_DATE`: format as `YYYY-MM-DD`  
-#   These only apply if `FILTER_BY_DATE` is `True`.
-# - `POPUP_SORT_ORDER`: `"ascending"` (oldest first) or `"descending"` (newest first) for visit/species lists in popups.
-# - `POPUP_SCROLL_HINT`: when popup content overflows, show `"chevron"` (▲▼), `"shading"` (fade gradients), or `"both"` to compare.
-# - `TOP_N_TABLE_LIMIT`: max rows per rankings table (e.g. 200); tables are scrollable.
-# - `RANKINGS_TABLE_VISIBLE_ROWS`: rows visible before scrolling (e.g. 16).
-# - `CLOSE_LOCATION_METERS`: distance (m) below which locations are considered "close" in the Map maintenance tab.
-#
-# > NOTE: Paths can be set in three ways: (1) `DATA_FOLDER_HARDCODED` in this cell, (2) `scripts/config_secret.py`, or (3) `scripts/config_template.py`. The notebook tries each in order until the data file is found; the notebook folder is tried last (e.g. for Binder uploads).
-#
-# #### Pin colour reference (named colours for Folium)
-#
-# Use these names in `LIFER_COLOR`, `LIFER_FILL`, etc. (HTML/CSS named colours):
-#
-# - **Basic:** black, white, gray, silver
-# - **Reds / pinks:** red, crimson, darkred, firebrick, salmon, coral, tomato, hotpink, pink
-# - **Oranges / yellows:** orange, darkorange, gold, goldenrod, yellow, lightyellow
-# - **Greens:** green, darkgreen, lightgreen, lime, olive, seagreen
-# - **Blues:** blue, navy, darkblue, dodgerblue, skyblue, steelblue, cornflowerblue
-# - **Purples:** purple, indigo, darkviolet, blueviolet, mediumpurple, orchid, violet
-# - **Browns / neutrals:** brown, saddlebrown, chocolate, tan, wheat, beige, khaki
+# ### 🛠️ User Variables — data file, map style, pin colours, date filter, etc. Paths: `DATA_FOLDER_HARDCODED`, or `scripts/config_secret.py`, or `scripts/config_template.py`; notebook folder last. Full options: [docs/explorer/README.md](docs/explorer/README.md).
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
@@ -125,7 +54,6 @@ DATA_FOLDER_HARDCODED = ""
 
 # Where your .csv file is located, and where the output map will be saved
 OUTPUT_HTML_FILE_NAME = "species_map.html"
-EXPORT_HTML = True  # Save HTML file each time map is updated
 
 # Map style options: "default", "satellite", "google", "carto"
 MAP_STYLE = "default"
@@ -158,30 +86,14 @@ CLOSE_LOCATION_METERS = 10
 # Optional date range filtering (set to False to disable)
 # Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
 # If locations/species are missing, set FILTER_BY_DATE = False or extend the range.
+# After changing these, re-run from the "Data prep" / load cell so the map uses the new filter.
 FILTER_BY_DATE = False
-FILTER_START_DATE = "2025-01-01"
-FILTER_END_DATE = "2025-12-31"
+FILTER_START_DATE = "2026-01-01"
+FILTER_END_DATE = "2026-12-31"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 📦 Imports and Setup
-#
-# This cell loads all the required Python libraries and applies custom CSS:
-#
-# - **pandas**, **folium** – for data handling and map rendering  
-# - **ipywidgets** – for interactive dropdowns, checkboxes, and layout  
-# - **Whoosh** – for fast fuzzy text search on species names  
-# - **IPython.display** – to control how HTML and maps are shown in the notebook  
-# - **tempfile**, **threading**, **os**, **sys**, **datetime** – behind-the-scenes file and thread management
-#
-# Later cells also import from the **personal_ebird_explorer** package:
-# - `data_loader` – CSV loading, column validation, datetime column  
-# - `path_resolution` – finding the data file across candidate directories  
-# - `species_logic` – species filtering, countable-species normalisation, base-species extraction  
-# - `stats` – rankings, yearly summary, streak calculation, and other pure statistics  
-# - `duplicate_checks` – exact and near-duplicate location detection  
-# - `ui_state` – lightweight structured app state (ExplorerState dataclass)
-# - `map_renderer` – map factory, popup/banner/legend HTML builders, data-prep helpers
+# ### 📦 Imports and setup (dependencies, CSS, package imports in later cells).
 #
 
 # %%
@@ -324,10 +236,7 @@ display(HTML("""
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧰 Package path setup
-#
-# Ensure repo root is on `sys.path` so `personal_ebird_explorer` resolves to the
-# package directory (not the notebook file when the kernel CWD is `notebooks/`).
+# ### 🧰 Package path (repo root on sys.path for `personal_ebird_explorer`).
 #
 
 # %%
@@ -337,17 +246,7 @@ if _repo_root not in sys.path:
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### ⚙️ Load Config and eBird Data
-#
-# This cell does two things: **(1)** resolve where the data file lives (config); **(2)** load it and prepare the working dataset (load + filters + extraction). Only the raw load and datetime setup live in `personal_ebird_explorer.data_loader`; path resolution and post-load steps stay here because they depend on notebook config and UI state.
-#
-# - Resolves data file location by trying, in order: hardcoded path, config_secret, config_template, notebook folder  
-# - Cross-platform (macOS and Windows); falls through to next location if file not found  
-# - Loads the dataset via `load_dataset()` (CSV, required-column check, canonical datetime column)  
-# - Optionally filters the **main dataset (`df`)** by a specified date range  
-# - Excludes locations with no associated checklist in the export (if any)
-# - Extracts a unique set of locations and species from the filtered data  
-# - Builds a lookup map from common names → scientific names
+# ### ⚙️ Load config and eBird data (path resolution → load_dataset → optional date filter → locations, records_by_loc, totals).
 #
 # 📝 **Important:**  
 # - The date filter only affects the main working dataset (`df`)  
@@ -490,6 +389,18 @@ total_checklists = df["Submission ID"].nunique()
 total_individuals = int(df["Count"].apply(_safe_count).sum())
 total_species = int(_countable_species_vectorized(df).dropna().nunique())
 
+# When date filter is on, keep full-data structures so Reset View can show unfiltered map (refs #47)
+records_by_loc_full = {}
+total_checklists_full = total_checklists
+total_species_full = total_species
+total_individuals_full = total_individuals
+_date_filter_off_for_view = False
+if FILTER_BY_DATE:
+    records_by_loc_full = {lid: grp for lid, grp in df_full.groupby("Location ID")}
+    total_checklists_full = df_full["Submission ID"].nunique()
+    total_species_full = int(_countable_species_vectorized(df_full).dropna().nunique())
+    total_individuals_full = int(df_full["Count"].apply(_safe_count).sum())
+
 # Build common → scientific name map
 name_map = (
     df[['Common Name', 'Scientific Name']]
@@ -502,9 +413,7 @@ name_map = (
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🔍 Build Whoosh Index for Species Autocomplete
-#
-# Creates an in-memory search index of species names for fast, fuzzy autocomplete.
+# ### 🔍 Whoosh index for species autocomplete.
 #
 
 # %%
@@ -522,10 +431,7 @@ writer.commit()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Map Output Widgets
-#
-# Output widgets for map rendering and interaction. The map itself (`species_map`)
-# lives in the `state` object (ExplorerState); these are the Jupyter display containers.
+# ### 🗺️ Map output widgets (map lives in state; these are display containers).
 #
 
 # %%
@@ -539,9 +445,7 @@ output = widgets.Output()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🔍 Autocomplete UI Widgets
-#
-# Text input + matches dropdown that appears below when typing. Width based on longest species name.
+# ### 🔍 Autocomplete UI (search box + matches dropdown).
 #
 
 # %%
@@ -574,10 +478,7 @@ hide_non_matching_checkbox = Checkbox(
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 📍 Map Maintenance Data (duplicates, close locations)
-#
-# Duplicate and near-duplicate detection is in `personal_ebird_explorer.duplicate_checks`.
-# The notebook calls `get_map_maintenance_data()` and renders the results as HTML below.
+# ### 📍 Map maintenance data (duplicates / close locations via duplicate_checks).
 #
 
 # %%
@@ -587,16 +488,7 @@ from personal_ebird_explorer.duplicate_checks import (
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🐣 Build True Lifer and Last-Seen Tables
-#
-# Creates lookup dictionaries for lifer (first-ever) and last-seen (most recent) locations per species:
-#
-# - Reloading the full dataset via `load_dataset()` (avoids effects of any active filters)
-# - Excluding locations with no checklist (consistent with main data)
-# - Sorting the full data chronologically
-# - Finding the first-ever sighting (lifer) and most recent sighting (last-seen) per species using `base_species_for_lifer()` from `species_logic`
-#
-# Used to correctly mark lifer and last-seen pins regardless of current date filters.
+# ### 🐣 Lifer and last-seen lookups (from full dataset; used for pin highlighting).
 #
 
 # %%
@@ -632,15 +524,7 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🎛️ UI Event Handlers
-#
-# - `update_suggestions`: Whoosh search as user types; show/hide matches dropdown; when search
-#   is empty, calls _clear_to_all_species (single code path for reset in widget context).
-# - `on_species_selected`: map redraw when user picks from dropdown; reset when dropdown and
-#   search are both empty.
-# - `on_search_box_cleared`: cancels any existing debounce timer only (reset is in update_suggestions).
-# - `on_toggle_change`: redraw when "Show only selected species" is toggled (skipped when we
-#   set the checkbox programmatically via state.suppress_toggle_redraw).
+# ### 🎛️ UI event handlers (search, dropdown, reset, toggle).
 #
 
 # %%
@@ -732,8 +616,17 @@ def on_toggle_change(change):
     draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
 
 
+def _date_filter_status_text():
+    """Return short status for date filter (refs #47)."""
+    if not FILTER_BY_DATE:
+        return "Date filter: Off"
+    if _date_filter_off_for_view:
+        return "Date filter: Off (showing full data)"
+    return f"Date filter: {FILTER_START_DATE} to {FILTER_END_DATE}"
+
+
 def _clear_to_all_species():
-    """Reset to all-species view: clear search, dropdown, selection, checkbox; redraw map once (runs in widget context)."""
+    """Reset view: clear species, uncheck 'show only selected', redraw. Does not change date filter (refs #47)."""
     search_box.value = ""
     matches_dropdown.options = []
     matches_dropdown.value = None
@@ -744,14 +637,25 @@ def _clear_to_all_species():
     state.suppress_toggle_redraw = False
     with output:
         output.clear_output()
-        print("🧹 Search cleared — showing all locations")
+        print("🧹 Reset view — showing all locations")
     draw_map_with_species_overlay("", "")
 
 
+def _export_map_html():
+    """Save current map HTML to file on demand (refs #47)."""
+    if state.species_map is None:
+        with output:
+            output.clear_output()
+            print("⚠️ No map to export. Open the Map tab and wait for the map to draw.")
+        return
+    state.species_map.save(map_output_path)
+    with output:
+        output.clear_output()
+        print(f"✅ Map exported to {map_output_path}")
+
+
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧷 Register Widget Observers
-#
-# Wire search box, matches dropdown, and checkbox to the handlers above.
+# ### 🧷 Register widget observers.
 #
 
 # %%
@@ -764,18 +668,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Map Rendering Helpers
-#
-# Pure helper functions for map rendering live in `personal_ebird_explorer.map_renderer`:
-#
-# - `create_map` – folium Map factory (supports `MAP_STYLE` values: default, satellite, google, carto)
-# - `popup_scroll_script` – JS injection for popup scroll hints
-# - `format_visit_time` / `format_sighting_row` – popup content formatters
-# - `build_visit_info_html` / `build_location_popup_html` – popup HTML assembly
-# - `build_all_species_banner_html` / `build_species_banner_html` – map overlay banners
-# - `build_legend_html` / `pin_legend_item` – map overlay legend
-# - `resolve_lifer_last_seen` – lifer and last-seen location resolution
-# - `classify_locations` – location tagging and draw-order sorting
+# ### 🗺️ Map helpers (imported from personal_ebird_explorer.map_renderer).
 #
 
 # %%
@@ -784,29 +677,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Draw Map with Species Overlay
-#
-# Creates and displays the interactive map with observation markers.
-#
-# Handles two main cases:
-#
-# - **No species selected**:  
-#   - Places **green** markers at all locations in the dataset  
-#   - Shows **all-species banner** (checklists, species count, individuals)
-#   - Popups show visit history with links to each checklist and to the location's eBird life list page
-#
-# - **Species selected**:  
-#   - Filters dataset using `filter_species()`, centres map on species locations
-#   - Adds **red** markers at locations where species was seen  
-#   - Optionally adds distinct pins for **lifer** (first-ever) and **last-seen** (most recent) — colours configurable
-#   - Shows **species-specific banner** (checklists, individuals, high count)
-#   - Green markers for locations with no sightings unless the checkbox hides them
-#   - Popups include checklist links, Macaulay Library media links (📷) when available, and location links
-#
-# Extra features:
-# - Map centres on species locations when filtering; on all locations when viewing "All species"
-# - Saves map as HTML if `EXPORT_HTML = True`
-# - Redraws reuse cached location groupbys and popup HTML (refs #37) for responsiveness.
+# ### 🗺️ Draw map (all-species or species-filtered; banners, popups, export on demand).
 #
 
 # %%
@@ -814,6 +685,16 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 # ✅ Draw map with species overlay
 # --------------------------------------------
 def draw_map_with_species_overlay(selected_species, selected_common_name=""):
+    # When date filter was on at load and user clicked Reset View, show full data (refs #47)
+    effective_use_full = bool(FILTER_BY_DATE and _date_filter_off_for_view)
+    if effective_use_full:
+        effective_location_data = full_location_data
+        effective_records_by_loc = records_by_loc_full
+        effective_totals = (total_checklists_full, total_species_full, total_individuals_full)
+    else:
+        effective_location_data = location_data
+        effective_records_by_loc = records_by_loc
+        effective_totals = (total_checklists, total_species, total_individuals)
 
     if selected_species:
         filtered = filter_species(df, selected_species)
@@ -826,25 +707,26 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         species_locations = location_data[location_data["Location ID"].isin(seen_location_ids)]
         map_center = [species_locations["Latitude"].mean(), species_locations["Longitude"].mean()]
     else:
-        map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
+        map_center = [effective_location_data["Latitude"].mean(), effective_location_data["Longitude"].mean()]
 
     state.species_map = _create_map(map_center, MAP_STYLE)
 
     # records_by_loc is built once at data prep (refs #37); reused on every redraw
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
+        tc, ts, ti = effective_totals
         state.species_map.get_root().html.add_child(Element(
-            _build_all_species_banner_html(total_checklists, total_species, total_individuals)
+            _build_all_species_banner_html(tc, ts, ti, _date_filter_status_text())
         ))
         state.species_map.get_root().html.add_child(Element(
             _build_legend_html([(DEFAULT_COLOR, DEFAULT_FILL, "All locations")])
         ))
 
         popup_asc = POPUP_SORT_ORDER == "ascending"
-        for _, row in location_data.iterrows():
-            popup_key = (row["Location ID"], "")
+        for _, row in effective_location_data.iterrows():
+            popup_key = (row["Location ID"], "", effective_use_full)
             if popup_key not in _popup_html_cache:
-                base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
+                base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
                 visit_info = _build_visit_info_html(visit_records, _format_visit_time)
                 _popup_html_cache[popup_key] = _build_location_popup_html(row["Location"], row["Location ID"], visit_info)
@@ -911,6 +793,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 first_seen_date=first_seen_date,
                 last_seen_date=last_seen_date,
                 high_count_date=high_count_date,
+                date_filter_status=_date_filter_status_text(),
             )
         ))
 
@@ -989,16 +872,12 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         map_html = state.species_map._repr_html_()
         display(HTML(f'<div class="output_map">{map_html}</div>'))
 
-    if EXPORT_HTML:
-        state.species_map.save(map_output_path)
+    # Export is explicit via "Export Map HTML" button (refs #47); no automatic save on redraw
 
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧭 Display UI
-#
-# Placeholder — the full dashboard (controls + map/tabs) is displayed in the next section
-# so controls and map stay together with no gap.
+# ### 🧭 Display UI (dashboard in next cell).
 #
 
 # %%
@@ -1010,12 +889,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Dashboard: Controls + Map + Stats
-#
-# Controls and map/tabs are in one `VBox` so they stay together with no gap.
-# Map is the primary tab. Checklist Statistics, Rankings, and Yearly Summary
-# are computed by pure functions imported from `personal_ebird_explorer.stats`;
-# HTML rendering and widget layout remain here.
+# ### 🗺️ Dashboard (controls + map + stats tabs).
 #
 
 # %%
@@ -1571,10 +1445,17 @@ else:
     map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
 
 # --------------------------------------------
-# Build map tab: search row (search box + spacer + checkbox) and matches dropdown above map output.
+# Build map tab: single control row (search, checkbox, reset, export) + matches dropdown. Date filter shown in banner only (refs #47).
 # --------------------------------------------
 _spacer = Box(layout=widgets.Layout(width="0.75em", min_width="0.75em"))
-search_row = HBox([search_box, _spacer, hide_non_matching_checkbox], layout=widgets.Layout(align_items="center"))
+reset_view_btn = widgets.Button(description="Reset View", layout=widgets.Layout(width="100px"))
+reset_view_btn.on_click(lambda _: _clear_to_all_species())
+export_map_btn = widgets.Button(description="Export Map HTML", layout=widgets.Layout(width="140px"))
+export_map_btn.on_click(lambda _: _export_map_html())
+search_row = HBox(
+    [search_box, _spacer, hide_non_matching_checkbox, _spacer, reset_view_btn, export_map_btn],
+    layout=widgets.Layout(align_items="center"),
+)
 map_controls = VBox([search_row, matches_dropdown])
 map_controls.layout = widgets.Layout(width="100%", min_width="0")
 

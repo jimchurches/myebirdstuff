@@ -2,7 +2,27 @@
 
 A Jupyter notebook that lets you explore your eBird data on an interactive map. Search for species, filter by date, view lifers and last-seen locations, and explore checklist details.
 
+## What it does
+
+- **Map** — All checklist locations (green pins); optional species filter (red pins, lifer/last-seen highlights).
+- **Search** — Type-ahead species search; “show only selected species” to hide other locations.
+- **Tabs** — Map, Checklist Statistics, Yearly Summary, Rankings, Map maintenance (duplicates / close locations).
+- **Export** — “Export Map HTML” saves the current map view.
+- **Date filter** — Optional date range (set in the notebook’s User Variables; re-run from Data prep to apply).
+
 **You need:** Your eBird data export (CSV). Download from [eBird.org](https://ebird.org) → My eBird → Manage My Data → Download My Data. The notebook expects `MyEBirdData.csv` by default.
+
+## Screenshot
+
+<!-- Placeholder: add a screenshot of the map tab (e.g. map with search and pins) when available. -->
+
+*Screenshot placeholder — add an image of the map tab when available.*
+
+---
+
+## Running locally
+
+You can run the notebook **on Binder** (no install) or **locally** (Jupyter or Voila). See below.
 
 ---
 
@@ -27,11 +47,11 @@ Binder runs the notebook in the cloud. Nothing to install — just upload your d
 2. **Drag and drop** your `MyEBirdData.csv` into that folder (or use Upload).
 3. From the menu: **Run → Run All Cells**
 4. Scroll down to the map. Use the filter box above it to search for species and redraw the map.
-5. The map is also saved as an HTML file in the same folder — right‑click it and **Download** if you want to keep or share a view.
+5. Use **Export Map HTML** above the map to save the current view as an HTML file; then right‑click it and **Download** if you want to keep or share a view.
 
 ### Binder notes
 
-- **Speed:** The free Binder host is slower than a fast local machine; map redraws may take a few seconds.
+- **Speed:** The free Binder host is slower than a fast local machine; map redraws may take a few seconds. The **initial map load** can take over a minute — wait for it to finish before interacting.
 - **Session timeout:** The environment is not persistent and times out when idle. Relaunch when needed.
 - **Occasional failures:** If the notebook fails, try **Run → Run All Cells** again. If the environment fails to build, try again later.
 
@@ -43,7 +63,39 @@ For full installation instructions (Python, Jupyter, Voila, and dependencies on 
 
 **[Installation guide](install.md)**
 
-Local install gives you faster performance and lets you run the notebook as a Voila dashboard.
+Local install gives you faster performance. You can run the notebook in Jupyter or as a Voila dashboard. **Note:** There is currently a known issue with Voila not working (root cause unknown); use Jupyter if you run into problems.
+
+---
+
+## Current project status
+
+- **Stable:** Map, species search, stats tabs, export, reset, date filter (config in notebook). Active development is on the `refactor/modularise-core` branch; `main` tracks the current stable explorer.
+- **Documentation:** This README, [install.md](install.md), [development.md](../development.md), and [AI_CONTEXT.md](../AI_CONTEXT.md) for contributors and AI-assisted work.
+
+---
+
+## Project structure (high level)
+
+- **notebooks/personal_ebird_explorer.ipynb** — UI and orchestration; paired with `.py` via Jupytext.
+- **personal_ebird_explorer/** — Core logic: data loading, path resolution, species logic, stats, duplicate checks, map rendering, UI state.
+- **docs/explorer/** — User and install docs (this file, install.md, future-ideas.md, etc.).
+- **docs/development.md** — Developer guide (architecture, modules, testing, refactor and AI guardrails).
+- **docs/AI_CONTEXT.md** — Context and **AI Coding Rules** for AI assistants; read before suggesting architectural changes.
+
+For full architecture and module roles, see [docs/development.md](../development.md).
+
+---
+
+## Roadmap (high level)
+
+Possible future directions (not committed):
+
+- Easier onboarding for non-technical users (e.g. simpler install, Voila-first).
+- Richer date-filter and options UI (e.g. options panel).
+- Better export or standalone deployment (e.g. Voila, or self-contained HTML).
+- Improved species/analysis tools.
+
+See [future-ideas.md](future-ideas.md) for more exploratory notes.
 
 ---
 
