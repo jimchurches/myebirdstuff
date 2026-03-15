@@ -2,7 +2,27 @@
 
 A Jupyter notebook that lets you explore your eBird data on an interactive map. Search for species, filter by date, view lifers and last-seen locations, and explore checklist details.
 
+## What it does
+
+- **Map** — All checklist locations (green pins); optional species filter (red pins, lifer/last-seen highlights).
+- **Search** — Type-ahead species search; “show only selected species” to hide other locations.
+- **Tabs** — Map, Checklist Statistics, Yearly Summary, Rankings, Map maintenance (duplicates / close locations).
+- **Export** — “Export Map HTML” saves the current map view.
+- **Date filter** — Optional date range (set in the notebook’s User Variables; re-run from Data prep to apply).
+
 **You need:** Your eBird data export (CSV). Download from [eBird.org](https://ebird.org) → My eBird → Manage My Data → Download My Data. The notebook expects `MyEBirdData.csv` by default.
+
+## Screenshot
+
+<!-- Placeholder: add a screenshot of the map tab (e.g. map with search and pins) when available. -->
+
+*Screenshot placeholder — add an image of the map tab when available.*
+
+---
+
+## Running locally
+
+You can run the notebook **on Binder** (no install) or **locally** (Jupyter or Voila). See below.
 
 ---
 
@@ -44,6 +64,38 @@ For full installation instructions (Python, Jupyter, Voila, and dependencies on 
 **[Installation guide](install.md)**
 
 Local install gives you faster performance and lets you run the notebook as a Voila dashboard.
+
+---
+
+## Current project status
+
+- **Stable:** Map, species search, stats tabs, export, reset, date filter (config in notebook). Active development is on the `refactor/modularise-core` branch; `main` tracks the current stable explorer.
+- **Documentation:** This README, [install.md](install.md), [development.md](../development.md), and [AI_CONTEXT.md](../AI_CONTEXT.md) for contributors and AI-assisted work.
+
+---
+
+## Project structure (high level)
+
+- **notebooks/personal_ebird_explorer.ipynb** — UI and orchestration; paired with `.py` via Jupytext.
+- **personal_ebird_explorer/** — Core logic: data loading, path resolution, species logic, stats, duplicate checks, map rendering, UI state.
+- **docs/explorer/** — User and install docs (this file, install.md, future-ideas.md, etc.).
+- **docs/development.md** — Developer guide (architecture, modules, testing, refactor and AI guardrails).
+- **docs/AI_CONTEXT.md** — Context for AI coding assistants; read before suggesting architectural changes.
+
+For full architecture and module roles, see [docs/development.md](../development.md).
+
+---
+
+## Roadmap (high level)
+
+Possible future directions (not committed):
+
+- Easier onboarding for non-technical users (e.g. simpler install, Voila-first).
+- Richer date-filter and options UI (e.g. options panel).
+- Better export or standalone deployment (e.g. Voila, or self-contained HTML).
+- Improved species/analysis tools.
+
+See [future-ideas.md](future-ideas.md) for more exploratory notes.
 
 ---
 
