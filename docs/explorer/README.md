@@ -27,7 +27,7 @@ Binder runs the notebook in the cloud. Nothing to install — just upload your d
 2. **Drag and drop** your `MyEBirdData.csv` into that folder (or use Upload).
 3. From the menu: **Run → Run All Cells**
 4. Scroll down to the map. Use the filter box above it to search for species and redraw the map.
-5. The map is also saved as an HTML file in the same folder — right‑click it and **Download** if you want to keep or share a view.
+5. Use **Export Map HTML** above the map to save the current view as an HTML file; then right‑click it and **Download** if you want to keep or share a view.
 
 ### Binder notes
 
