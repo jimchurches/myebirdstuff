@@ -30,7 +30,8 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **duplicate_checks** | Exact and near-duplicate location detection for the Map maintenance tab. |
 | **ui_state** | Lightweight app state (e.g. `ExplorerState` dataclass: selection, suppress flags). |
 | **map_renderer** | Folium map creation, popup/banner/legend HTML builders, lifer/last-seen resolution, location classification. No widget or notebook references. |
-| **region_display** | Convert ISO country and subdivision (state/province) codes to human-readable names at display time. Used by the notebook when building rankings table HTML. |
+| **region_display** | Convert ISO country and subdivision (state/province) codes to human-readable names at display time. Used by rankings_display. |
+| **rankings_display** | HTML builders for rankings tables (scroll wrapper, location 5-col, visited, seen-once, rank tables). Used by the notebook when rendering Checklist Statistics rankings. |
 
 The notebook owns: widget creation, observers, Whoosh index creation, data-prep groupbys and caches, and the single `draw_map_with_species_overlay()` that orchestrates the map.
 
@@ -49,7 +50,7 @@ The notebook owns: widget creation, observers, Whoosh index creation, data-prep 
 
 - **Location:** Tests live under `tests/`, with `tests/explorer/` for explorer-specific tests and `tests/conftest.py` for shared fixtures.
 - **Runner:** `pytest tests/ -v` (also used in CI).
-- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, region_display. No notebook execution in the test suite.
+- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, region_display, rankings_display. No notebook execution in the test suite.
 - **Adding tests:** Prefer testing logic in modules. For new behaviour, add tests in the appropriate `tests/explorer/test_*.py` file.
 - **Integration fixture:** Tests in `tests/explorer/test_integration_fixture.py` use `tests/fixtures/ebird_integration_fixture.csv`; expected values are documented in `tests/fixtures/ebird_integration_fixture_notes.md`. If you change the fixture, update the notes and the test constants in the test file together.
 
