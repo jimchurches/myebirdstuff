@@ -4,6 +4,36 @@ Notes for when you come back to this—perhaps on a cold Canberra winter weekend
 
 ---
 
+## Decision
+
+Remain on the current Python + notebook-based front end for now.
+
+## Rationale
+
+The modular refactor has made the codebase much easier to evolve, and there are still many higher-value feature improvements to deliver before a front-end migration would pay off.
+
+The current UI is functional but not yet as modern or accessible as a future packaged application could be. However, installation, usability, and polish can still be improved incrementally without committing to a rewrite.
+
+The map remains the centre of the product and the recent refactor means the core logic is now portable if a future front-end migration becomes worthwhile.
+
+## Near-term direction
+
+- Continue feature development on the current platform.
+- Improve usability and install/run experience.
+- Avoid hosting costs and major front-end rework for now.
+
+## Reassess when
+
+Revisit the front-end/platform decision if installation friction, user growth, or notebook UI limitations become a clear blocker.
+
+---
+
+## Background and options (for when you revisit)
+
+The sections below capture earlier thinking and options that may be useful when revisiting the decision.
+
+---
+
 ## Is Python / Jupyter / Voila Still a Good Choice?
 
 **Yes.** For personal data exploration and a quick dashboard, the current stack (Jupyter + Voila + pandas + Folium + ipywidgets) is still a solid choice. Alternatives exist but aren’t clearly better:
