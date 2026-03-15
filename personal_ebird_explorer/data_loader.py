@@ -26,17 +26,32 @@ REQUIRED_COLUMNS = [
 
 def add_datetime_column(df):
     """
-    Parse Date and Time into a canonical datetime column.
-    - Parses Date to datetime; fills missing Time with "00:00".
-    - Missing/empty or "00:00" time → 11:59 PM so those rows sort last.
-    - Adds column "datetime".
+    Parse Date and Time into a canonical ``datetime`` column.
+
+    - Parses ``Date`` to ``datetime64``.
+    - Fills missing ``Time`` with ``"00:00"`` (preserves the raw column for
+      display).
+    - For the canonical ``datetime`` column, missing / empty / ``"00:00"``
+      times are mapped to ``"23:59"`` so those rows sort to the **end** of
+      their day.  eBird exports ``"00:00"`` when no observation time was
+      recorded; real midnight checklists do not occur.
+    - Adds column ``"datetime"`` (``datetime64[ns]``).
     """
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df["Time"] = df["Time"].fillna("00:00")
-    # Missing, empty, or "00:00" → 11:59 PM so they sort last (we prefer checklists with real times for streak start/end)
-    time_str = df["Time"].astype(str).str.strip().replace("00:00", "11:59 PM").replace("", "11:59 PM")
-    date_str = df["Date"].apply(lambda x: x.strftime("%Y-%m-%d") if pd.notna(x) else "")
-    df["datetime"] = pd.to_datetime(date_str + " " + time_str, errors="coerce")
+    # Build a 24-hour time string for the canonical column.
+    # "00:00" means "no time recorded" in eBird exports → treat as 23:59.
+    time_str = df["Time"].astype(str).str.strip().replace("00:00", "23:59").replace("", "23:59")
+    date_str = df["Date"].dt.strftime("%Y-%m-%d").fillna("")
+    # format="mixed" lets pandas parse each entry independently — critical
+    # because eBird exports use 12h AM/PM ("09:37 PM") while the 23:59
+    # replacement is 24h; a single inferred format would silently NaT one style.
+    df["datetime"] = pd.to_datetime(
+        date_str + " " + time_str, format="mixed", errors="coerce",
+    )
+    # Missing date must yield NaT (pandas 3+ can parse time-only as year 1 otherwise)
+    missing_date = date_str == ""
+    df.loc[missing_date, "datetime"] = pd.NaT
     return df
 
 

@@ -179,7 +179,9 @@ FILTER_END_DATE = "2025-12-31"
 # - `path_resolution` – finding the data file across candidate directories  
 # - `species_logic` – species filtering, countable-species normalisation, base-species extraction  
 # - `stats` – rankings, yearly summary, streak calculation, and other pure statistics  
-# - `duplicate_checks` – exact and near-duplicate location detection
+# - `duplicate_checks` – exact and near-duplicate location detection  
+# - `ui_state` – lightweight structured app state (ExplorerState dataclass)
+# - `map_renderer` – map factory, popup/banner/legend HTML builders, data-prep helpers
 #
 
 # %%
@@ -219,6 +221,7 @@ if _missing:
 import html
 import os
 import sys
+from collections import OrderedDict
 from datetime import datetime
 
 import pandas as pd
@@ -441,9 +444,18 @@ df_full = df_full[df_full["Location ID"].isin(location_ids_with_checklists)]
 # Extract location and species info
 location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
 full_location_data = df_full[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
+# Stable for session: group df by Location ID for O(1) lookup in map redraws (refs #37)
+records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
+# Per-species groupby cache for species-filtered redraws; LRU eviction when over cap; cleared when data-prep re-run (refs #37)
+# Cap is arbitrary and experimental (based on author usage); adjust based on feedback and experience.
+_FILTERED_BY_LOC_CACHE_MAX = 60
+_filtered_by_loc_cache = OrderedDict()
+# Popup HTML cache: key (location_id, selected_species or ""); cleared when data-prep re-run (refs #37)
+_popup_html_cache = {}
 species_list = sorted(df["Common Name"].dropna().unique().tolist())
-selected_species_scientific = ""
-selected_species_common = ""
+
+from personal_ebird_explorer.ui_state import ExplorerState
+state = ExplorerState()
 
 # Pre-calculate totals for "all species" banner (Count can be "X" for present; treat as 1)
 from personal_ebird_explorer.stats import (
@@ -454,33 +466,19 @@ from personal_ebird_explorer.stats import (
 )
 
 
-def _format_visit_time(r):
-    """Format date and time for display; uses datetime when available so no-time shows as 23:59 (consistent with sorting)."""
-    if "datetime" in r.index and pd.notna(r.get("datetime")):
-        return r["datetime"].strftime("%Y-%m-%d %H:%M")
-    d = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "?"
-    t = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
-    return f"{d} {t}"
-
-
-def _format_sighting_row(r):
-    """Format a single sighting row for popup HTML: date, time, species, count, checklist link, optional media link."""
-    if "datetime" in r.index and pd.notna(r.get("datetime")):
-        date_str = r["datetime"].strftime("%Y-%m-%d")
-        time_str = r["datetime"].strftime("%H:%M")
-    else:
-        date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
-        time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
-    text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
-    cid = r.get("Submission ID", "")
-    checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
-    media_html = ""
-    ml = r.get("ML Catalog Numbers")
-    if pd.notna(ml) and str(ml).strip():
-        first_ml = str(ml).strip().split()[0]
-        media_html = f' <a href="https://macaulaylibrary.org/asset/{first_ml}" target="_blank" title="View media">📷</a>'
-    return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
-
+from personal_ebird_explorer.map_renderer import (
+    format_visit_time as _format_visit_time,
+    format_sighting_row as _format_sighting_row,
+    popup_scroll_script as _popup_scroll_script,
+    create_map as _create_map,
+    build_all_species_banner_html as _build_all_species_banner_html,
+    build_species_banner_html as _build_species_banner_html,
+    build_legend_html as _build_legend_html,
+    build_visit_info_html as _build_visit_info_html,
+    build_location_popup_html as _build_location_popup_html,
+    resolve_lifer_last_seen as _resolve_lifer_last_seen,
+    classify_locations as _classify_locations,
+)
 
 from personal_ebird_explorer.species_logic import (
     countable_species_vectorized as _countable_species_vectorized,
@@ -524,16 +522,16 @@ writer.commit()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Initialise Global Map Objects
+# ### 🗺️ Map Output Widgets
 #
-# Sets up the global map and output widgets used for rendering and interaction.
+# Output widgets for map rendering and interaction. The map itself (`species_map`)
+# lives in the `state` object (ExplorerState); these are the Jupyter display containers.
 #
 
 # %%
 # --------------------------------------------
-# ✅ Initialise global map objects
+# ✅ Initialise map output widgets
 # --------------------------------------------
-species_map = None
 map_output = widgets.Output(
     layout=widgets.Layout(min_height="500px", width="100%", min_width="0", flex="1 1 auto")
 )
@@ -642,7 +640,7 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 #   search are both empty.
 # - `on_search_box_cleared`: cancels any existing debounce timer only (reset is in update_suggestions).
 # - `on_toggle_change`: redraw when "Show only selected species" is toggled (skipped when we
-#   set the checkbox programmatically via _suppress_toggle_redraw).
+#   set the checkbox programmatically via state.suppress_toggle_redraw).
 #
 
 # %%
@@ -650,10 +648,7 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 # ✅ UI Event Handlers
 # --------------------------------------------
 
-# State flags: avoid re-entry and duplicate redraws when handlers trigger each other.
-_updating_suggestions = False   # True while updating matches_dropdown.options
-_skip_next_suggestion_update = False  # Skip next update_suggestions (e.g. after setting search_box from selection)
-_suppress_toggle_redraw = False  # True while setting checkbox in _clear_to_all_species (no on_toggle_change redraw)
+# Re-entry guards and selection state live in `state` (ExplorerState instance, created above).
 
 
 def _show_matches_dropdown(show):
@@ -663,16 +658,14 @@ def _show_matches_dropdown(show):
 
 def update_suggestions(change):
     """Whoosh search as user types; show/hide matches dropdown. When search is empty, reset (clear) in this context."""
-    global _updating_suggestions, _skip_next_suggestion_update
-    if _skip_next_suggestion_update:
-        _skip_next_suggestion_update = False
+    if state.skip_next_suggestion_update:
+        state.skip_next_suggestion_update = False
         return
-    _updating_suggestions = True
+    state.updating_suggestions = True
     try:
         query = (change.get("new") or "").strip().lower()
         if query == "":
-            # Search box empty: reset here so we run in widget context (works for select-all+delete too)
-            _skip_next_suggestion_update = True
+            state.skip_next_suggestion_update = True
             _clear_to_all_species()
             return
         if len(query) < 3:
@@ -703,58 +696,52 @@ def update_suggestions(change):
             matches_dropdown.value = None
             _show_matches_dropdown(len(opts) > 0)
     finally:
-        _updating_suggestions = False
+        state.updating_suggestions = False
 
 
 def on_species_selected(change):
     """Handle dropdown selection: set species and redraw map; if dropdown and search both empty, reset to all species."""
-    global selected_species_scientific, selected_species_common
     selected = change.get("new")
     search_text = search_box.value.strip()
 
-    # When both dropdown and search are empty: reset immediately (same thread as widget events, like main)
     if selected is None and search_text == "":
         _clear_to_all_species()
         return
-    if _updating_suggestions:
+    if state.updating_suggestions:
         return
     output.clear_output()
     if selected is None:
         return
-    selected_species_scientific = name_map.get(selected, "").strip()
-    selected_species_common = selected
+    state.selected_species_scientific = name_map.get(selected, "").strip()
+    state.selected_species_common = selected
     with output:
-        print(f"🔎 Selected species: {selected} → Scientific: {selected_species_scientific}")
-    draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
-    # Sync search box to selected value; hide dropdown (skip update_suggestions)
-    _skip_next_suggestion_update = True
+        print(f"🔎 Selected species: {selected} → Scientific: {state.selected_species_scientific}")
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+    state.skip_next_suggestion_update = True
     search_box.value = selected
     matches_dropdown.options = []
     _show_matches_dropdown(False)
 
 
 def on_toggle_change(change):
-    """Redraw map when user toggles 'Show only selected species' (no-op when _suppress_toggle_redraw)."""
-    global selected_species_scientific, selected_species_common
-    if _suppress_toggle_redraw:
+    """Redraw map when user toggles 'Show only selected species' (no-op when suppress_toggle_redraw)."""
+    if state.suppress_toggle_redraw:
         return
     with output:
-        print(f"🧪 Toggle changed: {change['new']} — Current species: {selected_species_scientific}")
-    draw_map_with_species_overlay(selected_species_scientific, selected_species_common)
+        print(f"🧪 Toggle changed: {change['new']} — Current species: {state.selected_species_scientific}")
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
 
 
 def _clear_to_all_species():
     """Reset to all-species view: clear search, dropdown, selection, checkbox; redraw map once (runs in widget context)."""
-    global selected_species_scientific, selected_species_common, _suppress_toggle_redraw
     search_box.value = ""
     matches_dropdown.options = []
     matches_dropdown.value = None
     _show_matches_dropdown(False)
-    selected_species_scientific = ""
-    selected_species_common = ""
-    _suppress_toggle_redraw = True
+    state.clear_selection()
+    state.suppress_toggle_redraw = True
     hide_non_matching_checkbox.value = False
-    _suppress_toggle_redraw = False
+    state.suppress_toggle_redraw = False
     with output:
         output.clear_output()
         print("🧹 Search cleared — showing all locations")
@@ -777,130 +764,23 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Create Base Map with Tile Style
+# ### 🗺️ Map Rendering Helpers
 #
-# Initialises the Folium map using the selected `MAP_STYLE`:
+# Pure helper functions for map rendering live in `personal_ebird_explorer.map_renderer`:
 #
-# - `"default"`: Standard OpenStreetMap tiles
-# - `"satellite"`: Esri WorldImagery (aerial view)
-# - `"google"`: Google satellite tiles (unofficial)
-# - `"carto"`: CartoDB Positron (clean, minimalist look)
-#
-# Used as the foundation for all map rendering.
+# - `create_map` – folium Map factory (supports `MAP_STYLE` values: default, satellite, google, carto)
+# - `popup_scroll_script` – JS injection for popup scroll hints
+# - `format_visit_time` / `format_sighting_row` – popup content formatters
+# - `build_visit_info_html` / `build_location_popup_html` – popup HTML assembly
+# - `build_all_species_banner_html` / `build_species_banner_html` – map overlay banners
+# - `build_legend_html` / `pin_legend_item` – map overlay legend
+# - `resolve_lifer_last_seen` – lifer and last-seen location resolution
+# - `classify_locations` – location tagging and draw-order sorting
 #
 
 # %%
-# --------------------------------------------
-# ✅ Create base map with selected tile style
-# --------------------------------------------
-def _popup_scroll_script(scroll_hint, scroll_to_bottom):
-    """Return HTML script for popup scroll hints (chevrons/shading). Runs in map iframe."""
-    hint_js = repr(scroll_hint)
-    to_bottom_js = "true" if scroll_to_bottom else "false"
-    return f"""
-<script>
-(function() {{
-  var HINT = {hint_js};
-  var SCROLL_TO_BOTTOM = {to_bottom_js};
-
-  function updateHints(scrollable, wrapper) {{
-    var st = scrollable.scrollTop;
-    var maxScroll = scrollable.scrollHeight - scrollable.clientHeight;
-    var hasMoreAbove = st > 0;
-    var hasMoreBelow = st < maxScroll;
-
-    if (HINT === 'chevron' || HINT === 'both') {{
-      var upEl = wrapper.querySelector('.popup-scroll-up');
-      var downEl = wrapper.querySelector('.popup-scroll-down');
-      if (upEl) upEl.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
-      if (downEl) downEl.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
-    }}
-    if (HINT === 'shading' || HINT === 'both') {{
-      var topShade = wrapper.querySelector('.popup-scroll-shade-top');
-      var botShade = wrapper.querySelector('.popup-scroll-shade-bot');
-      if (topShade) topShade.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
-      if (botShade) botShade.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
-    }}
-  }}
-
-  function setupPopup(scrollable, wrapper) {{
-    var hasOverflow = scrollable.scrollHeight > scrollable.clientHeight;
-    if (!hasOverflow) return;
-
-    scrollable.scrollTop = SCROLL_TO_BOTTOM ? scrollable.scrollHeight : 0;
-
-    var scrollTop = scrollable.offsetTop;
-    if (HINT === 'chevron' || HINT === 'both') {{
-      var up = document.createElement('div');
-      up.className = 'popup-scroll-up';
-      up.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
-      up.textContent = '\\u25B2';
-      var down = document.createElement('div');
-      down.className = 'popup-scroll-down';
-      down.style.cssText = 'position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
-      down.textContent = '\\u25BC';
-      wrapper.appendChild(up);
-      wrapper.appendChild(down);
-    }}
-    if (HINT === 'shading' || HINT === 'both') {{
-      var topShade = document.createElement('div');
-      topShade.className = 'popup-scroll-shade-top';
-      topShade.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
-      var botShade = document.createElement('div');
-      botShade.className = 'popup-scroll-shade-bot';
-      botShade.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
-      wrapper.appendChild(topShade);
-      wrapper.appendChild(botShade);
-    }}
-
-    updateHints(scrollable, wrapper);
-    scrollable.addEventListener('scroll', function() {{ updateHints(scrollable, wrapper); }});
-  }}
-
-  function onPopupOpen() {{
-    setTimeout(function() {{
-      var scrollable = document.querySelector('.leaflet-popup-content div[style*="overflow-y"]');
-      if (!scrollable) return;
-      var wrapper = scrollable.parentElement;
-      if (wrapper.dataset.popupSetup) return;
-      wrapper.dataset.popupSetup = '1';
-      setupPopup(scrollable, wrapper);
-    }}, 100);
-  }}
-
-  var observer = new MutationObserver(function(mutations) {{
-    for (var i = 0; i < mutations.length; i++) {{
-      for (var j = 0; j < mutations[i].addedNodes.length; j++) {{
-        var node = mutations[i].addedNodes[j];
-        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {{
-          onPopupOpen();
-          return;
-        }}
-      }}
-    }}
-  }});
-  observer.observe(document.body, {{ childList: true, subtree: true }});
-}})();
-</script>
-"""
-
-
-def create_map(map_center):
-    if MAP_STYLE == "default":
-        return folium.Map(location=map_center, zoom_start=6)
-    elif MAP_STYLE == "satellite":
-        return folium.Map(location=map_center, zoom_start=6, tiles="Esri WorldImagery", attr="Esri")
-    elif MAP_STYLE == "google":
-        return folium.Map(
-            location=map_center,
-            zoom_start=6,
-            tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-            attr="Google"
-        )
-    elif MAP_STYLE == "carto":
-        return folium.Map(location=map_center, zoom_start=6, tiles="CartoDB Positron", attr="CartoDB")
-    else:
-        return folium.Map(location=map_center, zoom_start=6)
+# Map helpers are imported from personal_ebird_explorer.map_renderer
+# in the cell group above (see imports after stats).
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -926,14 +806,14 @@ def create_map(map_center):
 # Extra features:
 # - Map centres on species locations when filtering; on all locations when viewing "All species"
 # - Saves map as HTML if `EXPORT_HTML = True`
+# - Redraws reuse cached location groupbys and popup HTML (refs #37) for responsiveness.
 #
 
 # %%
 # --------------------------------------------
-# ✅ Draw map with species overlay (refactored for lifer-on-top and single loop)
+# ✅ Draw map with species overlay
 # --------------------------------------------
 def draw_map_with_species_overlay(selected_species, selected_common_name=""):
-    global species_map
 
     if selected_species:
         filtered = filter_species(df, selected_species)
@@ -948,68 +828,47 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     else:
         map_center = [location_data["Latitude"].mean(), location_data["Longitude"].mean()]
 
-    species_map = create_map(map_center)
+    state.species_map = _create_map(map_center, MAP_STYLE)
 
-    # Pre-group by Location ID to avoid repeated full DataFrame scans (O(1) lookup vs O(n) per location)
-    records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
-
-    def _pin_legend_item(color, fill, label):
-        """Small circle + label for legend. Thicker border so perimeter color is visible at small size."""
-        return f"""<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid {color};background:{fill};"></span>
-            {label}
-        </span>"""
-
+    # records_by_loc is built once at data prep (refs #37); reused on every redraw
     if not selected_species:
         # Case 1: No species selected – draw all as green, show totals banner
-        banner_html = f"""
-        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:13px;line-height:1.5;">
-            <b>All species</b><br>
-            {total_checklists} checklist{total_checklists != 1 and 's' or ''} &nbsp;|&nbsp;
-            {total_species} species &nbsp;|&nbsp;
-            {total_individuals} individual{total_individuals != 1 and 's' or ''}
-        </div>
-        """
-        species_map.get_root().html.add_child(Element(banner_html))
-        legend_html = f"""
-        <div style="position:fixed;bottom:10px;left:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:6px 10px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:11px;line-height:1.5;display:flex;flex-wrap:wrap;gap:8px 12px;">
-            {_pin_legend_item(DEFAULT_COLOR, DEFAULT_FILL, "All locations")}
-        </div>
-        """
-        species_map.get_root().html.add_child(Element(legend_html))
+        state.species_map.get_root().html.add_child(Element(
+            _build_all_species_banner_html(total_checklists, total_species, total_individuals)
+        ))
+        state.species_map.get_root().html.add_child(Element(
+            _build_legend_html([(DEFAULT_COLOR, DEFAULT_FILL, "All locations")])
+        ))
 
         popup_asc = POPUP_SORT_ORDER == "ascending"
         for _, row in location_data.iterrows():
-            base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-            visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{_format_visit_time(r)}</a>'
-                for _, r in visit_records.iterrows()
-            ) if not visit_records.empty else ""
-            loc_id = row["Location ID"]
-            loc_url = f"https://ebird.org/lifelist/{loc_id}"
-            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
-            popup = folium.Popup(popup_html, max_width=800)
-            color, fill = DEFAULT_COLOR, DEFAULT_FILL
+            popup_key = (row["Location ID"], "")
+            if popup_key not in _popup_html_cache:
+                base_records = records_by_loc.get(row["Location ID"], pd.DataFrame())
+                visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
+                visit_info = _build_visit_info_html(visit_records, _format_visit_time)
+                _popup_html_cache[popup_key] = _build_location_popup_html(row["Location"], row["Location ID"], visit_info)
+            popup_html = _popup_html_cache[popup_key]
             folium.CircleMarker(
                 location=[row['Latitude'], row['Longitude']],
                 radius=4,
-                color=color,
+                color=DEFAULT_COLOR,
                 fill=True,
-                fill_color=fill,
+                fill_color=DEFAULT_FILL,
                 fill_opacity=0.6,
-                popup=popup
-            ).add_to(species_map)
+                popup=folium.Popup(popup_html, max_width=800),
+            ).add_to(state.species_map)
 
     else:
         # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
         popup_asc = POPUP_SORT_ORDER == "ascending"
-        filtered_by_loc = {lid: grp for lid, grp in filtered.groupby("Location ID")}
+        if selected_species not in _filtered_by_loc_cache:
+            if len(_filtered_by_loc_cache) >= _FILTERED_BY_LOC_CACHE_MAX:
+                _filtered_by_loc_cache.popitem(last=False)
+            _filtered_by_loc_cache[selected_species] = {lid: grp for lid, grp in filtered.groupby("Location ID")}
+        else:
+            _filtered_by_loc_cache.move_to_end(selected_species)
+        filtered_by_loc = _filtered_by_loc_cache[selected_species]
 
         # Stats for banner (Count can be "X" for present; treat as 1)
         n_checklists = filtered["Submission ID"].nunique()
@@ -1043,80 +902,44 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         if not high_count_rows.empty:
             high_count_date = _banner_date(high_count_rows.iloc[0]["Date"])
 
-        sep = " &nbsp;|&nbsp; "
-        line2 = f"{n_checklists} checklist{n_checklists != 1 and 's' or ''}{sep}{n_individuals} individual{n_individuals != 1 and 's' or ''}"
-        line3_parts = []
-        if first_seen_date:
-            line3_parts.append(f"First seen: {first_seen_date}")
-        if last_seen_date:
-            line3_parts.append(f"Last seen: {last_seen_date}")
-        line3 = sep.join(line3_parts)
-        line4 = f"High count: {high_count_date} ({high_count})"
-
-        banner_html = f"""
-        <div style="position:fixed;top:10px;right:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:10px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:13px;line-height:1.5;">
-            <b>{selected_common_name or selected_species}</b><br>
-            {line2}<br>
-            {line3}<br>
-            {line4}
-        </div>
-        """
-        species_map.get_root().html.add_child(Element(banner_html))
+        state.species_map.get_root().html.add_child(Element(
+            _build_species_banner_html(
+                display_name=selected_common_name or selected_species,
+                n_checklists=n_checklists,
+                n_individuals=n_individuals,
+                high_count=high_count,
+                first_seen_date=first_seen_date,
+                last_seen_date=last_seen_date,
+                high_count_date=high_count_date,
+            )
+        ))
 
         # Pin legend: bottom left, small font. Omit "Other" when hiding non-matching.
-        legend_parts = []
+        legend_items = []
         if MARK_LIFER:
-            legend_parts.append(_pin_legend_item(LIFER_COLOR, LIFER_FILL, "Lifer"))
+            legend_items.append((LIFER_COLOR, LIFER_FILL, "Lifer"))
         if MARK_LAST_SEEN:
-            legend_parts.append(_pin_legend_item(LAST_SEEN_COLOR, LAST_SEEN_FILL, "Last seen"))
-        legend_parts.append(_pin_legend_item(SPECIES_COLOR, SPECIES_FILL, "Species"))
+            legend_items.append((LAST_SEEN_COLOR, LAST_SEEN_FILL, "Last seen"))
+        legend_items.append((SPECIES_COLOR, SPECIES_FILL, "Species"))
         if not hide_non_matching_checkbox.value:
-            legend_parts.append(_pin_legend_item(DEFAULT_COLOR, DEFAULT_FILL, "Other"))
-        legend_html = f"""
-        <div style="position:fixed;bottom:10px;left:10px;z-index:1000;background:rgba(255,255,255,0.95);
-                    padding:6px 10px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);
-                    font-family:sans-serif;font-size:11px;line-height:1.5;display:flex;flex-wrap:wrap;gap:8px 12px;">
-            {"".join(legend_parts)}
-        </div>
-        """
-        species_map.get_root().html.add_child(Element(legend_html))
+            legend_items.append((DEFAULT_COLOR, DEFAULT_FILL, "Other"))
+        state.species_map.get_root().html.add_child(Element(
+            _build_legend_html(legend_items)
+        ))
 
-        # Lifer/last seen: use taxon-level for subspecies (3+ parts), base for parent
-        lifer_location = None
-        last_seen_location = None
-        sci_parts = (selected_species or "").strip().split()
-        is_subspecies = len(sci_parts) >= 3
-        taxon_key = selected_species.strip().lower() if selected_species else None
-        if MARK_LIFER:
-            true_lifer_loc = None
-            if is_subspecies and taxon_key:
-                true_lifer_loc = true_lifer_locations_taxon.get(taxon_key)
-            if true_lifer_loc is None and sci_parts:
-                base = _base_species_for_lifer(selected_species)
-                true_lifer_loc = true_lifer_locations.get(base) if base else None
-            if true_lifer_loc in seen_location_ids:
-                lifer_location = true_lifer_loc
-        if MARK_LAST_SEEN:
-            true_last_loc = None
-            if is_subspecies and taxon_key:
-                true_last_loc = true_last_seen_locations_taxon.get(taxon_key)
-            if true_last_loc is None and sci_parts:
-                base = _base_species_for_lifer(selected_species)
-                true_last_loc = true_last_seen_locations.get(base) if base else None
-            if true_last_loc in seen_location_ids and true_last_loc != lifer_location:
-                last_seen_location = true_last_loc
-
-        # Prepare classification flags
-        location_data_local = location_data.copy()
-        location_data_local["has_species_match"] = location_data_local["Location ID"].isin(seen_location_ids)
-        location_data_local["is_lifer"] = location_data_local["Location ID"] == lifer_location
-        location_data_local["is_last_seen"] = location_data_local["Location ID"] == last_seen_location
-
-        # Sort so lifer drawn last (on top), then last seen, then species, then non-matching
-        location_data_local = location_data_local.sort_values(
-            by=["has_species_match", "is_lifer", "is_last_seen"], ascending=[True, True, True]
+        lifer_location, last_seen_location = _resolve_lifer_last_seen(
+            selected_species,
+            seen_location_ids,
+            lifer_lookup=true_lifer_locations,
+            last_seen_lookup=true_last_seen_locations,
+            lifer_lookup_taxon=true_lifer_locations_taxon,
+            last_seen_lookup_taxon=true_last_seen_locations_taxon,
+            base_species_fn=_base_species_for_lifer,
+            mark_lifer=MARK_LIFER,
+            mark_last_seen=MARK_LAST_SEEN,
+        )
+        location_data_local = _classify_locations(
+            location_data, seen_location_ids, lifer_location, last_seen_location,
         )
 
         # Single loop for marker drawing
@@ -1126,20 +949,17 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             if not row["has_species_match"] and hide_non_matching_checkbox.value:
                 continue
 
-            base_records = records_by_loc.get(loc_id, pd.DataFrame())
-            visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-            visit_info = "<br>".join(
-                f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">{_format_visit_time(r)}</a>'
-                for _, r in visit_records.iterrows()
-            ) if not visit_records.empty else ""
-            loc_url = f"https://ebird.org/lifelist/{loc_id}"
-            loc_link = f'<a href="{loc_url}" target="_blank">{row["Location"]}</a>'
-            if row["has_species_match"]:
-                sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(["Date", "Time"], ascending=[popup_asc, popup_asc])
-                obs_details = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
-                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}<br><b>Seen:</b>{obs_details}</div></div>'
-            else:
-                popup_html = f'<div class="popup-scroll-wrapper" style="position:relative;"><div style="margin-bottom:6px;"><b>{loc_link}</b></div><div style="max-height:300px;overflow-y:auto;"><b>Visited:</b><br>{visit_info}</div></div>'
+            popup_key = (loc_id, selected_species)
+            if popup_key not in _popup_html_cache:
+                base_records = records_by_loc.get(loc_id, pd.DataFrame())
+                visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
+                visit_info = _build_visit_info_html(visit_records, _format_visit_time)
+                sightings_html = ""
+                if row["has_species_match"]:
+                    sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values("datetime", ascending=popup_asc)
+                    sightings_html = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
+                _popup_html_cache[popup_key] = _build_location_popup_html(row["Location"], loc_id, visit_info, sightings_html)
+            popup_html = _popup_html_cache[popup_key]
             popup_content = folium.Popup(popup_html, max_width=800)
 
             if row["is_lifer"]:
@@ -1159,19 +979,18 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 fill_color=fill,
                 fill_opacity=fill_opacity,
                 popup=popup_content
-            ).add_to(species_map)
+            ).add_to(state.species_map)
 
-    # Scroll popup: chevrons/shading hints; runs in map iframe
     scroll_popup_script = _popup_scroll_script(POPUP_SCROLL_HINT, POPUP_SORT_ORDER == "ascending")
-    species_map.get_root().html.add_child(Element(scroll_popup_script))
+    state.species_map.get_root().html.add_child(Element(scroll_popup_script))
 
     with map_output:
         map_output.clear_output()
-        map_html = species_map._repr_html_()
+        map_html = state.species_map._repr_html_()
         display(HTML(f'<div class="output_map">{map_html}</div>'))
 
     if EXPORT_HTML:
-        species_map.save(map_output_path)
+        state.species_map.save(map_output_path)
 
 
 
@@ -1234,7 +1053,6 @@ def _compute_checklist_stats(df):
 
     # Checklist-level data (one row per checklist)
     cl = df.drop_duplicates(subset=["Submission ID"]).copy()
-    cl["Date"] = pd.to_datetime(cl["Date"], errors="coerce")
     dur_col = "Duration (Min)" if "Duration (Min)" in df.columns else None
     dist_col = "Distance Traveled (km)" if "Distance Traveled (km)" in df.columns else None
 
