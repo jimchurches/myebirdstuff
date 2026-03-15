@@ -797,19 +797,6 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
             )
         ))
 
-        # Pin legend: bottom left, small font. Omit "Other" when hiding non-matching.
-        legend_items = []
-        if MARK_LIFER:
-            legend_items.append((LIFER_COLOR, LIFER_FILL, "Lifer"))
-        if MARK_LAST_SEEN:
-            legend_items.append((LAST_SEEN_COLOR, LAST_SEEN_FILL, "Last seen"))
-        legend_items.append((SPECIES_COLOR, SPECIES_FILL, "Species"))
-        if not hide_non_matching_checkbox.value:
-            legend_items.append((DEFAULT_COLOR, DEFAULT_FILL, "Other"))
-        state.species_map.get_root().html.add_child(Element(
-            _build_legend_html(legend_items)
-        ))
-
         lifer_location, last_seen_location = _resolve_lifer_last_seen(
             selected_species,
             seen_location_ids,
@@ -824,6 +811,25 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         location_data_local = _classify_locations(
             location_data, seen_location_ids, lifer_location, last_seen_location,
         )
+
+        # Pin legend: only show pin types that are actually drawn (refs #40)
+        pin_types_present = set()
+        for _, row in location_data_local.iterrows():
+            if not row["has_species_match"] and hide_non_matching_checkbox.value:
+                continue
+            if row["is_lifer"]:
+                pin_types_present.add("Lifer")
+            elif row["is_last_seen"]:
+                pin_types_present.add("Last seen")
+            elif row["has_species_match"]:
+                pin_types_present.add("Species")
+            else:
+                pin_types_present.add("Other")
+        legend_order = [("Lifer", LIFER_COLOR, LIFER_FILL), ("Last seen", LAST_SEEN_COLOR, LAST_SEEN_FILL), ("Species", SPECIES_COLOR, SPECIES_FILL), ("Other", DEFAULT_COLOR, DEFAULT_FILL)]
+        legend_items = [(c, f, label) for label, c, f in legend_order if label in pin_types_present]
+        state.species_map.get_root().html.add_child(Element(
+            _build_legend_html(legend_items)
+        ))
 
         # Single loop for marker drawing
         for _, row in location_data_local.iterrows():
