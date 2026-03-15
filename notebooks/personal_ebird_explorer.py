@@ -928,6 +928,20 @@ def _compute_checklist_stats(df):
     """Compute checklist statistics from df; returns dict with stats_html, rankings_sections_top_n, rankings_sections_other."""
     import html
 
+    try:
+        import pycountry
+    except ImportError:
+        pycountry = None
+
+    def _country_for_display(code):
+        """Convert ISO alpha-2 country code to common name at display time (refs #43)."""
+        if code is None or (isinstance(code, float) and pd.isna(code)) or str(code).strip() == "":
+            return ""
+        if pycountry is None:
+            return str(code).strip()
+        c = pycountry.countries.get(alpha_2=str(code).strip().upper())
+        return c.name if c else str(code).strip()
+
     if df.empty:
         return "<p>No data.</p>"
 
@@ -1161,7 +1175,7 @@ def _compute_checklist_stats(df):
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td style='text-align:right;font-weight:bold;'>{r[4]}</td></tr>"
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{_country_for_display(r[2])}</td><td>{r[3]}</td><td style='text-align:right;font-weight:bold;'>{r[4]}</td></tr>"
             for r in rows
         )
         tbl = f"<table class='stats-tbl rankings-tbl location-cols-tbl'><thead><tr><th>{headers_5[0]}</th><th>{headers_5[1]}</th><th>{headers_5[2]}</th><th>{headers_5[3]}</th><th>{headers_5[4]}</th></tr></thead><tbody>{body}</tbody></table>"
@@ -1189,7 +1203,7 @@ def _compute_checklist_stats(df):
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>" for r in rows
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{_country_for_display(r[2])}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>" for r in rows
         )
         tbl = f"<table class='stats-tbl rankings-tbl location-cols-tbl'><thead><tr><th>Location</th><th>State</th><th>Country</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
         scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
@@ -1201,7 +1215,7 @@ def _compute_checklist_stats(df):
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{_country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
             for r in rows
         )
         tbl = (
