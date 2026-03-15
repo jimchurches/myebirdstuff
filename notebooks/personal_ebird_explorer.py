@@ -72,40 +72,7 @@
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🛠️ User Configuration
-#
-# Set these variables to control how the map behaves.
-#
-# - `EBIRD_DATA_FILE_NAME`: the name of your eBird export file (must be in the same folder).
-# - `OUTPUT_HTML_FILE_NAME`: name of the saved HTML map file when you use "Export Map HTML".
-# - `MAP_STYLE`: choose from `"default"`, `"satellite"`, `"google"`, or `"carto"`.
-# - `MARK_LIFER`: `True` — highlights your first-ever sighting (lifer) with a distinct pin
-# - `MARK_LAST_SEEN`: `True` — highlights your most recent sighting with a distinct pin (skipped if same as lifer)
-# - `LIFER_COLOR`, `LIFER_FILL`, `LAST_SEEN_COLOR`, `LAST_SEEN_FILL`, etc. — pin colours (see User Variables cell)
-# - `FILTER_BY_DATE`:  
-#   - `True` — only show locations and sightings within the specified date range  
-#   - `False` — include all data
-# - `FILTER_START_DATE`, `FILTER_END_DATE`: format as `YYYY-MM-DD`  
-#   These only apply if `FILTER_BY_DATE` is `True`.
-# - `POPUP_SORT_ORDER`: `"ascending"` (oldest first) or `"descending"` (newest first) for visit/species lists in popups.
-# - `POPUP_SCROLL_HINT`: when popup content overflows, show `"chevron"` (▲▼), `"shading"` (fade gradients), or `"both"` to compare.
-# - `TOP_N_TABLE_LIMIT`: max rows per rankings table (e.g. 200); tables are scrollable.
-# - `RANKINGS_TABLE_VISIBLE_ROWS`: rows visible before scrolling (e.g. 16).
-# - `CLOSE_LOCATION_METERS`: distance (m) below which locations are considered "close" in the Map maintenance tab.
-#
-# > NOTE: Paths can be set in three ways: (1) `DATA_FOLDER_HARDCODED` in this cell, (2) `scripts/config_secret.py`, or (3) `scripts/config_template.py`. The notebook tries each in order until the data file is found; the notebook folder is tried last (e.g. for Binder uploads).
-#
-# #### Pin colour reference (named colours for Folium)
-#
-# Use these names in `LIFER_COLOR`, `LIFER_FILL`, etc. (HTML/CSS named colours):
-#
-# - **Basic:** black, white, gray, silver
-# - **Reds / pinks:** red, crimson, darkred, firebrick, salmon, coral, tomato, hotpink, pink
-# - **Oranges / yellows:** orange, darkorange, gold, goldenrod, yellow, lightyellow
-# - **Greens:** green, darkgreen, lightgreen, lime, olive, seagreen
-# - **Blues:** blue, navy, darkblue, dodgerblue, skyblue, steelblue, cornflowerblue
-# - **Purples:** purple, indigo, darkviolet, blueviolet, mediumpurple, orchid, violet
-# - **Browns / neutrals:** brown, saddlebrown, chocolate, tan, wheat, beige, khaki
+# ### 🛠️ User Variables — data file, map style, pin colours, date filter, etc. Paths: `DATA_FOLDER_HARDCODED`, or `scripts/config_secret.py`, or `scripts/config_template.py`; notebook folder last. Full options: [docs/explorer/README.md](docs/explorer/README.md).
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
@@ -161,24 +128,7 @@ FILTER_END_DATE = "2026-12-31"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 📦 Imports and Setup
-#
-# This cell loads all the required Python libraries and applies custom CSS:
-#
-# - **pandas**, **folium** – for data handling and map rendering  
-# - **ipywidgets** – for interactive dropdowns, checkboxes, and layout  
-# - **Whoosh** – for fast fuzzy text search on species names  
-# - **IPython.display** – to control how HTML and maps are shown in the notebook  
-# - **tempfile**, **threading**, **os**, **sys**, **datetime** – behind-the-scenes file and thread management
-#
-# Later cells also import from the **personal_ebird_explorer** package:
-# - `data_loader` – CSV loading, column validation, datetime column  
-# - `path_resolution` – finding the data file across candidate directories  
-# - `species_logic` – species filtering, countable-species normalisation, base-species extraction  
-# - `stats` – rankings, yearly summary, streak calculation, and other pure statistics  
-# - `duplicate_checks` – exact and near-duplicate location detection  
-# - `ui_state` – lightweight structured app state (ExplorerState dataclass)
-# - `map_renderer` – map factory, popup/banner/legend HTML builders, data-prep helpers
+# ### 📦 Imports and setup (dependencies, CSS, package imports in later cells).
 #
 
 # %%
@@ -321,10 +271,7 @@ display(HTML("""
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧰 Package path setup
-#
-# Ensure repo root is on `sys.path` so `personal_ebird_explorer` resolves to the
-# package directory (not the notebook file when the kernel CWD is `notebooks/`).
+# ### 🧰 Package path (repo root on sys.path for `personal_ebird_explorer`).
 #
 
 # %%
@@ -334,17 +281,7 @@ if _repo_root not in sys.path:
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### ⚙️ Load Config and eBird Data
-#
-# This cell does two things: **(1)** resolve where the data file lives (config); **(2)** load it and prepare the working dataset (load + filters + extraction). Only the raw load and datetime setup live in `personal_ebird_explorer.data_loader`; path resolution and post-load steps stay here because they depend on notebook config and UI state.
-#
-# - Resolves data file location by trying, in order: hardcoded path, config_secret, config_template, notebook folder  
-# - Cross-platform (macOS and Windows); falls through to next location if file not found  
-# - Loads the dataset via `load_dataset()` (CSV, required-column check, canonical datetime column)  
-# - Optionally filters the **main dataset (`df`)** by a specified date range  
-# - Excludes locations with no associated checklist in the export (if any)
-# - Extracts a unique set of locations and species from the filtered data  
-# - Builds a lookup map from common names → scientific names
+# ### ⚙️ Load config and eBird data (path resolution → load_dataset → optional date filter → locations, records_by_loc, totals).
 #
 # 📝 **Important:**  
 # - The date filter only affects the main working dataset (`df`)  
@@ -511,9 +448,7 @@ name_map = (
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🔍 Build Whoosh Index for Species Autocomplete
-#
-# Creates an in-memory search index of species names for fast, fuzzy autocomplete.
+# ### 🔍 Whoosh index for species autocomplete.
 #
 
 # %%
@@ -531,10 +466,7 @@ writer.commit()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Map Output Widgets
-#
-# Output widgets for map rendering and interaction. The map itself (`species_map`)
-# lives in the `state` object (ExplorerState); these are the Jupyter display containers.
+# ### 🗺️ Map output widgets (map lives in state; these are display containers).
 #
 
 # %%
@@ -548,9 +480,7 @@ output = widgets.Output()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🔍 Autocomplete UI Widgets
-#
-# Text input + matches dropdown that appears below when typing. Width based on longest species name.
+# ### 🔍 Autocomplete UI (search box + matches dropdown).
 #
 
 # %%
@@ -583,10 +513,7 @@ hide_non_matching_checkbox = Checkbox(
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 📍 Map Maintenance Data (duplicates, close locations)
-#
-# Duplicate and near-duplicate detection is in `personal_ebird_explorer.duplicate_checks`.
-# The notebook calls `get_map_maintenance_data()` and renders the results as HTML below.
+# ### 📍 Map maintenance data (duplicates / close locations via duplicate_checks).
 #
 
 # %%
@@ -596,16 +523,7 @@ from personal_ebird_explorer.duplicate_checks import (
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🐣 Build True Lifer and Last-Seen Tables
-#
-# Creates lookup dictionaries for lifer (first-ever) and last-seen (most recent) locations per species:
-#
-# - Reloading the full dataset via `load_dataset()` (avoids effects of any active filters)
-# - Excluding locations with no checklist (consistent with main data)
-# - Sorting the full data chronologically
-# - Finding the first-ever sighting (lifer) and most recent sighting (last-seen) per species using `base_species_for_lifer()` from `species_logic`
-#
-# Used to correctly mark lifer and last-seen pins regardless of current date filters.
+# ### 🐣 Lifer and last-seen lookups (from full dataset; used for pin highlighting).
 #
 
 # %%
@@ -641,15 +559,7 @@ true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Loca
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🎛️ UI Event Handlers
-#
-# - `update_suggestions`: Whoosh search as user types; show/hide matches dropdown; when search
-#   is empty, calls _clear_to_all_species (single code path for reset in widget context).
-# - `on_species_selected`: map redraw when user picks from dropdown; reset when dropdown and
-#   search are both empty.
-# - `on_search_box_cleared`: cancels any existing debounce timer only (reset is in update_suggestions).
-# - `on_toggle_change`: redraw when "Show only selected species" is toggled (skipped when we
-#   set the checkbox programmatically via state.suppress_toggle_redraw).
+# ### 🎛️ UI event handlers (search, dropdown, reset, toggle).
 #
 
 # %%
@@ -780,9 +690,7 @@ def _export_map_html():
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧷 Register Widget Observers
-#
-# Wire search box, matches dropdown, and checkbox to the handlers above.
+# ### 🧷 Register widget observers.
 #
 
 # %%
@@ -795,18 +703,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Map Rendering Helpers
-#
-# Pure helper functions for map rendering live in `personal_ebird_explorer.map_renderer`:
-#
-# - `create_map` – folium Map factory (supports `MAP_STYLE` values: default, satellite, google, carto)
-# - `popup_scroll_script` – JS injection for popup scroll hints
-# - `format_visit_time` / `format_sighting_row` – popup content formatters
-# - `build_visit_info_html` / `build_location_popup_html` – popup HTML assembly
-# - `build_all_species_banner_html` / `build_species_banner_html` – map overlay banners
-# - `build_legend_html` / `pin_legend_item` – map overlay legend
-# - `resolve_lifer_last_seen` – lifer and last-seen location resolution
-# - `classify_locations` – location tagging and draw-order sorting
+# ### 🗺️ Map helpers (imported from personal_ebird_explorer.map_renderer).
 #
 
 # %%
@@ -815,30 +712,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Draw Map with Species Overlay
-#
-# Creates and displays the interactive map with observation markers.
-#
-# Handles two main cases:
-#
-# - **No species selected**:  
-#   - Places **green** markers at all locations in the dataset  
-#   - Shows **all-species banner** (checklists, species count, individuals)
-#   - Popups show visit history with links to each checklist and to the location's eBird life list page
-#
-# - **Species selected**:  
-#   - Filters dataset using `filter_species()`, centres map on species locations
-#   - Adds **red** markers at locations where species was seen  
-#   - Optionally adds distinct pins for **lifer** (first-ever) and **last-seen** (most recent) — colours configurable
-#   - Shows **species-specific banner** (checklists, individuals, high count)
-#   - Green markers for locations with no sightings unless the checkbox hides them
-#   - Popups include checklist links, Macaulay Library media links (📷) when available, and location links
-#
-# Extra features:
-# - Map centres on species locations when filtering; on all locations when viewing "All species"
-# - Export map via "Export Map HTML" button (no automatic save on redraw; refs #47)
-# - Redraws reuse cached location groupbys and popup HTML (refs #37) for responsiveness.
-# - Dense-map: many pins use fixed-radius markers; clustering not used to preserve "where I've been" overview (refs #47).
+# ### 🗺️ Draw map (all-species or species-filtered; banners, popups, export on demand).
 #
 
 # %%
@@ -1038,10 +912,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🧭 Display UI
-#
-# Placeholder — the full dashboard (controls + map/tabs) is displayed in the next section
-# so controls and map stay together with no gap.
+# ### 🧭 Display UI (dashboard in next cell).
 #
 
 # %%
@@ -1053,12 +924,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Dashboard: Controls + Map + Stats
-#
-# Controls and map/tabs are in one `VBox` so they stay together with no gap.
-# Map is the primary tab. Checklist Statistics, Rankings, and Yearly Summary
-# are computed by pure functions imported from `personal_ebird_explorer.stats`;
-# HTML rendering and widget layout remain here.
+# ### 🗺️ Dashboard (controls + map + stats tabs).
 #
 
 # %%

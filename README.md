@@ -41,9 +41,11 @@ This repo currently has three related pieces that work together:
 - **eBird Data Visualisation Tool (personal eBird explorer)**  
   A Jupyter notebook that loads your eBird export and provides an interactive map, statistics, yearly summary, rankings, and maintenance views.  
   Documentation:  
-  - Overview & Binder quick-start: [`docs/explorer/README.md`](docs/explorer/README.md)  
+  - Overview & quick-start: [`docs/explorer/README.md`](docs/explorer/README.md)  
   - Installation guide: [`docs/explorer/install.md`](docs/explorer/install.md)  
-  - Future ideas and notes: [`docs/explorer/future-ideas.md`](docs/explorer/future-ideas.md)  
+  - Developer guide: [`docs/development.md`](docs/development.md)  
+  - For AI-assisted development: [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md)  
+  - Future ideas: [`docs/explorer/future-ideas.md`](docs/explorer/future-ideas.md)  
   - Regression checklist: [`docs/explorer/regression-checklist.md`](docs/explorer/regression-checklist.md)  
 
 - **eBird Macros (UI.Vision) + location naming script**  
@@ -293,10 +295,9 @@ Just don’t forget: the macro interacts with the live eBird system. Respect the
 
 ## eBird Data Visualisation Tool
 
-This repository includes a Jupyter notebook called `personal_ebird_explorer.ipynb` that lets you explore your personal eBird data with an interactive map.
+This repository includes a Jupyter notebook called `personal_ebird_explorer.ipynb` that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
 
-You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
-
-> 📘 For full details and instructions, open the notebook: `notebooks/personal_ebird_explorer.ipynb`  
-> 📗 For **installation instructions** (Python, Jupyter, Voila, and dependencies on Windows and macOS), see **[docs/explorer/install.md](docs/explorer/install.md)**.
+> 📘 **User guide and run options:** [docs/explorer/README.md](docs/explorer/README.md)  
+> 📗 **Installation** (Python, Jupyter, Voila): [docs/explorer/install.md](docs/explorer/install.md)  
+> 📙 **Developers:** [docs/development.md](docs/development.md) · **AI-assisted work:** [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)
 
