@@ -385,7 +385,12 @@ from personal_ebird_explorer.species_logic import (
     base_species_for_lifer as _base_species_for_lifer,
 )
 
-from personal_ebird_explorer.region_display import country_for_display, state_for_display
+from personal_ebird_explorer.rankings_display import (
+    rankings_table_location_5col,
+    rankings_table_with_rank,
+    rankings_visited_table,
+    rankings_seen_once_table,
+)
 
 total_checklists = df["Submission ID"].nunique()
 total_individuals = int(df["Count"].apply(_safe_count).sum())
@@ -902,29 +907,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
 # %%
 # --------------------------------------------
-# ✅ Stats helpers (pure calculation imported from personal_ebird_explorer.stats;
-#    HTML rendering helpers remain here)
-# --------------------------------------------
-def _rankings_scroll_wrapper(table_html, scroll_hint, visible_rows):
-    """Wrap table HTML in scrollable div with shading hints. Uses pure CSS (ipywidgets HTML does not run scripts)."""
-    max_h = visible_rows * 38  # ~38px per row
-    # Match popup gradient: fade to white/light. ipywidgets strips scripts, so we use static CSS overlays.
-    shade_css = "position:absolute;left:0;right:0;height:24px;pointer-events:none;z-index:5;"
-    top_shade = f'<div class="rankings-scroll-shade-top" style="{shade_css}top:0;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);"></div>'
-    bot_shade = f'<div class="rankings-scroll-shade-bot" style="{shade_css}bottom:0;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);"></div>'
-    show_shade = scroll_hint in ("shading", "both")
-    shades = (top_shade + bot_shade) if show_shade else ""
-    return f"""
-<div class="rankings-scroll-wrapper" style="position:relative;">
-  <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
-    {table_html}
-  </div>
-  {shades}
-</div>"""
-
-
-# --------------------------------------------
-# ✅ Checklist Statistics (computed from data)
+# ✅ Checklist Statistics (computed from data; table HTML from rankings_display)
 # --------------------------------------------
 def _compute_checklist_stats(df):
     """Compute checklist statistics from df; returns dict with stats_html, rankings_sections_top_n, rankings_sections_other."""
@@ -1143,96 +1126,23 @@ def _compute_checklist_stats(df):
   ])}
 """
 
-    def _rankings_table(title, headers, rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-        """Build a rankings table with scrollable body. Uses shared scroll-wrapper for chevrons/shading."""
-        if not rows:
-            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-            return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
-        body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{r[2]}</td></tr>"
-            for r in rows
-        )
-        tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead><tbody>{body}</tbody></table>"
-        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-        content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
-        return content
-
-    def _rankings_table_location_5col(title, headers_5, rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-        """5-column table: Location, State, Country, then two more (e.g. Checklists, Species). Last column right-aligned."""
-        if not rows:
-            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-            return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
-        body = "".join(
-            f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td><td>{r[3]}</td><td style='text-align:right;font-weight:bold;'>{r[4]}</td></tr>"
-            for r in rows
-        )
-        tbl = f"<table class='stats-tbl rankings-tbl location-cols-tbl'><thead><tr><th>{headers_5[0]}</th><th>{headers_5[1]}</th><th>{headers_5[2]}</th><th>{headers_5[3]}</th><th>{headers_5[4]}</th></tr></thead><tbody>{body}</tbody></table>"
-        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-        content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
-        return content
-
-    def _rankings_table_with_rank(title, headers_3col, rows_3col, include_heading=True, scroll_hint="shading", visible_rows=16):
-        """Build a 4-column rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3)."""
-        if not rows_3col:
-            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-            return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
-        body = "".join(
-            f"<tr><td>{i}</td><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{r[2]}</td></tr>"
-            for i, r in enumerate(rows_3col, start=1)
-        )
-        tbl = f"<table class='stats-tbl rankings-tbl rank-tbl'><thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th><th>{headers_3col[2]}</th></tr></thead><tbody>{body}</tbody></table>"
-        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-        content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
-        return content
-
-    def _rankings_visited_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-        """6-column table: Location | State | Country | First visit | Last visit | Visits."""
-        if not rows:
-            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-            return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
-        body = "".join(
-            f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>" for r in rows
-        )
-        tbl = f"<table class='stats-tbl rankings-tbl location-cols-tbl'><thead><tr><th>Location</th><th>State</th><th>Country</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
-        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-        return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
-
-    def _rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-        """6-column table: Species | Location | State | Country | Visited date/time | Count."""
-        if not rows:
-            no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-            return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
-        body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
-            for r in rows
-        )
-        tbl = (
-            "<table class='stats-tbl rankings-tbl seen-once-tbl'>"
-            "<thead><tr>"
-            "<th>Species</th><th>Location</th><th>State</th><th>Country</th><th>Visited date/time</th><th>Count</th>"
-            "</tr></thead><tbody>"
-            f"{body}</tbody></table>"
-        )
-        scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-        return scroll_wrapper
-
     # Rankings sections: Top N (limit 200) vs other (full/unlimited lists)
     scroll_hint = POPUP_SCROLL_HINT
     visible_rows = RANKINGS_TABLE_VISIBLE_ROWS
     rankings_sections_top_n = [
-        ("Checklist: Longest by time", _rankings_table_location_5col("Checklist: Longest by time", ["Location", "State", "Country", "Visited date/time", "Time"], rankings["time"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Longest by distance", _rankings_table_location_5col("Checklist: Longest by distance", ["Location", "State", "Country", "Visited date/time", "Distance"], rankings["dist"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Most species", _rankings_table_location_5col("Checklist: Most species", ["Location", "State", "Country", "Visited date/time", "Species"], rankings["species"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Most individuals", _rankings_table_location_5col("Checklist: Most individuals", ["Location", "State", "Country", "Visited date/time", "Count"], rankings["individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most species", _rankings_table_location_5col("Location: Most species", ["Location", "State", "Country", "Checklists", "Species"], rankings["species_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most individuals", _rankings_table_location_5col("Location: Most individuals", ["Location", "State", "Country", "Checklists", "Count"], rankings["individuals_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most visited", _rankings_visited_table(rankings["visited"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Longest by time", rankings_table_location_5col("Checklist: Longest by time", ["Location", "State", "Country", "Visited date/time", "Time"], rankings["time"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Longest by distance", rankings_table_location_5col("Checklist: Longest by distance", ["Location", "State", "Country", "Visited date/time", "Distance"], rankings["dist"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Most species", rankings_table_location_5col("Checklist: Most species", ["Location", "State", "Country", "Visited date/time", "Species"], rankings["species"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Checklist: Most individuals", rankings_table_location_5col("Checklist: Most individuals", ["Location", "State", "Country", "Visited date/time", "Count"], rankings["individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most species", rankings_table_location_5col("Location: Most species", ["Location", "State", "Country", "Checklists", "Species"], rankings["species_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most individuals", rankings_table_location_5col("Location: Most individuals", ["Location", "State", "Country", "Checklists", "Count"], rankings["individuals_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Location: Most visited", rankings_visited_table(rankings["visited"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
     rankings_sections_other = [
-        ("Species: Most individuals", _rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Most checklists", _rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Subspecies occurrence", _rankings_table_with_rank("Species: Subspecies occurrence", ["Subspecies", "", "Individuals"], rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Seen only once", _rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Most individuals", rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Most checklists", rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Subspecies occurrence", rankings_table_with_rank("Species: Subspecies occurrence", ["Subspecies", "", "Individuals"], rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Seen only once", rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
 
     stats_html = f"""
