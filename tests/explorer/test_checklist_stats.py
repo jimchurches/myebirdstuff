@@ -110,3 +110,105 @@ def test_compute_checklist_stats_repeated_species_and_multi_year():
     )
 
 
+def test_compute_checklist_stats_country_displayed_as_name():
+    """Country codes are shown as country names in rankings tables (refs #43)."""
+    pytest.importorskip("pycountry")
+
+    data = {
+        **{k: v for k, v in make_minimal_df().to_dict("list").items()},
+        "State/Province": ["AU-NSW"],
+    }
+    df = pd.DataFrame(data)
+
+    stats = _compute_checklist_stats(df)
+
+    rankings_html = " ".join(
+        html for _, html in stats["rankings_sections_top_n"] + stats["rankings_sections_other"]
+    )
+    assert "Australia" in rankings_html, "ISO code AU should be displayed as Australia"
+
+
+def test_compute_checklist_stats_unknown_country_code_shown_as_code():
+    """Unknown/invalid country codes are shown as-is (display fallback, refs #43)."""
+    pytest.importorskip("pycountry")
+
+    data = {
+        "Submission ID": ["S1", "S2"],
+        "Date": [pd.Timestamp("2025-01-01"), pd.Timestamp("2025-01-02")],
+        "Time": ["06:15", "07:00"],
+        "Count": [1, 1],
+        "Location ID": ["L1", "L2"],
+        "Location": ["Loc AU", "Loc XX"],
+        "Scientific Name": ["Anas gracilis", "Anas platyrhynchos"],
+        "Common Name": ["Grey Teal", "Mallard"],
+        "Latitude": [-35.0, -36.0],
+        "Longitude": [149.0, 150.0],
+        "Protocol": ["Traveling", "Traveling"],
+        "Duration (Min)": [30, 30],
+        "Distance Traveled (km)": [1.0, 1.0],
+        "All Obs Reported": [1, 1],
+        "Number of Observers": [1, 1],
+        "State/Province": ["AU-NSW", "XX-YY"],
+    }
+    df = pd.DataFrame(data)
+
+    stats = _compute_checklist_stats(df)
+
+    rankings_html = " ".join(
+        html for _, html in stats["rankings_sections_top_n"] + stats["rankings_sections_other"]
+    )
+    assert "Australia" in rankings_html
+    assert "XX" in rankings_html, "Unknown code XX should be shown as-is"
+
+
+def test_compute_checklist_stats_state_displayed_as_name():
+    """State/subdivision codes are shown as names in rankings tables (refs #43)."""
+    pytest.importorskip("pycountry")
+
+    data = {
+        **{k: v for k, v in make_minimal_df().to_dict("list").items()},
+        "State/Province": ["AU-NSW"],
+    }
+    df = pd.DataFrame(data)
+
+    stats = _compute_checklist_stats(df)
+
+    rankings_html = " ".join(
+        html for _, html in stats["rankings_sections_top_n"] + stats["rankings_sections_other"]
+    )
+    assert "New South Wales" in rankings_html, "AU-NSW should be displayed as New South Wales"
+
+
+def test_compute_checklist_stats_unknown_state_code_shown_as_code():
+    """Unknown subdivision codes are shown as-is (display fallback, refs #43)."""
+    pytest.importorskip("pycountry")
+
+    data = {
+        "Submission ID": ["S1", "S2"],
+        "Date": [pd.Timestamp("2025-01-01"), pd.Timestamp("2025-01-02")],
+        "Time": ["06:15", "07:00"],
+        "Count": [1, 1],
+        "Location ID": ["L1", "L2"],
+        "Location": ["Loc NSW", "Loc X9"],
+        "Scientific Name": ["Anas gracilis", "Anas platyrhynchos"],
+        "Common Name": ["Grey Teal", "Mallard"],
+        "Latitude": [-35.0, -36.0],
+        "Longitude": [149.0, 150.0],
+        "Protocol": ["Traveling", "Traveling"],
+        "Duration (Min)": [30, 30],
+        "Distance Traveled (km)": [1.0, 1.0],
+        "All Obs Reported": [1, 1],
+        "Number of Observers": [1, 1],
+        "State/Province": ["AU-NSW", "AU-X9"],
+    }
+    df = pd.DataFrame(data)
+
+    stats = _compute_checklist_stats(df)
+
+    rankings_html = " ".join(
+        html for _, html in stats["rankings_sections_top_n"] + stats["rankings_sections_other"]
+    )
+    assert "New South Wales" in rankings_html
+    assert "X9" in rankings_html, "Unknown state code X9 should be shown as-is"
+
+

@@ -385,6 +385,8 @@ from personal_ebird_explorer.species_logic import (
     base_species_for_lifer as _base_species_for_lifer,
 )
 
+from personal_ebird_explorer.region_display import country_for_display, state_for_display
+
 total_checklists = df["Submission ID"].nunique()
 total_individuals = int(df["Count"].apply(_safe_count).sum())
 total_species = int(_countable_species_vectorized(df).dropna().nunique())
@@ -1161,7 +1163,7 @@ def _compute_checklist_stats(df):
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td style='text-align:right;font-weight:bold;'>{r[4]}</td></tr>"
+            f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td><td>{r[3]}</td><td style='text-align:right;font-weight:bold;'>{r[4]}</td></tr>"
             for r in rows
         )
         tbl = f"<table class='stats-tbl rankings-tbl location-cols-tbl'><thead><tr><th>{headers_5[0]}</th><th>{headers_5[1]}</th><th>{headers_5[2]}</th><th>{headers_5[3]}</th><th>{headers_5[4]}</th></tr></thead><tbody>{body}</tbody></table>"
@@ -1189,7 +1191,7 @@ def _compute_checklist_stats(df):
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>" for r in rows
+            f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>" for r in rows
         )
         tbl = f"<table class='stats-tbl rankings-tbl location-cols-tbl'><thead><tr><th>Location</th><th>State</th><th>Country</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
         scroll_wrapper = _rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
@@ -1201,7 +1203,7 @@ def _compute_checklist_stats(df):
             no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
             return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
+            f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
             for r in rows
         )
         tbl = (
