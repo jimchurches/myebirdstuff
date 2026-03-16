@@ -6,7 +6,7 @@ A Jupyter notebook that lets you explore your eBird data on an interactive map. 
 
 - **Map** — All checklist locations (green pins); optional species filter (red pins, lifer/last-seen highlights).
 - **Search** — Type-ahead species search; “show only selected species” to hide other locations.
-- **Tabs** — Map, Checklist Statistics, Yearly Summary, Rankings, Map maintenance (duplicates / close locations).
+- **Tabs** — Map, Checklist Statistics, Yearly Summary, Rankings, Maintenance (duplicates / close locations, incomplete checklists, sex notation in comments).
 - **Export** — “Export Map HTML” saves the current map view.
 - **Date filter** — Optional date range (set in the notebook’s User Variables; re-run from Data prep to apply).
 

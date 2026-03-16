@@ -708,3 +708,45 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
                 incomplete_by_year[int(y)] = list_y
 
     return years_sorted, rows, incomplete_by_year
+
+
+# ---------------------------------------------------------------------------
+# Sex notation in checklist comments (maintenance report)
+# ---------------------------------------------------------------------------
+
+def get_sex_notation_by_year(df):
+    """Find rows where Observation Details matches sex/age shorthand (M, F, J, ?).
+
+    Returns dict year -> list of (sid, date_str, location, species, protocol, notation).
+    Used by the Maintenance tab to list checklists that may need Age/Sex table updates.
+    """
+    import re
+    if "Observation Details" not in df.columns or df.empty:
+        return {}
+    col = df["Observation Details"].astype(str).str.strip()
+    pattern = re.compile(r"^[MFJ?]+$")
+    mask = col.ne("") & col.ne("nan") & col.apply(lambda s: bool(pattern.match(s)))
+    use_dt = "datetime" if "datetime" in df.columns else "Date"
+    cols = ["Date", "Submission ID", "Location", "Common Name", "Protocol", "Observation Details"]
+    if use_dt in df.columns:
+        cols = [use_dt] + cols
+    sub = df.loc[mask, cols].copy()
+    if sub.empty:
+        return {}
+    sub["_year"] = sub["Date"].dt.year
+    by_year = {}
+    for y in sub["_year"].dropna().astype(int).unique():
+        rows = sub[sub["_year"] == y].sort_values(use_dt)
+        list_y = []
+        for _, r in rows.iterrows():
+            sid = r.get("Submission ID")
+            dt = r.get(use_dt)
+            date_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+            loc = str(r.get("Location") or "")
+            species = str(r.get("Common Name") or "")
+            protocol = str(r.get("Protocol") or "")
+            notation = str(r.get("Observation Details") or "").strip()
+            list_y.append((sid, date_str, loc, species, protocol, notation))
+        if list_y:
+            by_year[int(y)] = list_y
+    return by_year

@@ -362,6 +362,7 @@ from personal_ebird_explorer.stats import (
     longest_streak as _longest_streak,
     compute_rankings as _compute_rankings,
     yearly_summary_stats as _yearly_summary_stats,
+    get_sex_notation_by_year as _get_sex_notation_by_year,
 )
 
 
@@ -1282,11 +1283,8 @@ def _compute_map_maintenance_html(loc_df, threshold_m):
   <p style="margin:4px 0;color:#666;">None detected within the current threshold ({threshold_m} m).</p>"""
 
     explanation = """
-  <div style="margin-top:0;margin-bottom:20px;max-width:600px;display:flex;gap:8px;box-sizing:border-box;">
-    <span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#5a7ab8;color:white;font-size:10px;font-weight:600;font-family:sans-serif;line-height:1;">?</span>
-    <div style="flex:1;min-width:0;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
-      These tables highlight duplicate locations and locations that are very close to each other (within the configured distance) to help you keep your personal eBird locations organised. This is most useful if you regularly create new locations and build a large catalogue of them; if you mainly use hotspots it may be less relevant. Locations can be merged on the eBird website, though directly merging duplicates can sometimes be awkward. Often the simplest approach is to move checklists to the preferred location and then delete the now-empty duplicate. See eBird for details.
-    </div>
+  <div style="margin-top:0;margin-bottom:20px;max-width:600px;box-sizing:border-box;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+    These tables highlight duplicate locations and locations that are very close to each other (within the configured distance) to help you keep your personal eBird locations organised. This is most useful if you regularly create new locations and build a large catalogue of them; if you mainly use hotspots it may be less relevant. Locations can be merged on the eBird website, though directly merging duplicates can sometimes be awkward. Often the simplest approach is to move checklists to the preferred location and then delete the now-empty duplicate. See eBird for details.
   </div>"""
 
     location_heading = """
@@ -1303,6 +1301,53 @@ def _compute_map_maintenance_html(loc_df, threshold_m):
 
 
 map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
+
+
+def _compute_sex_notation_html(sex_notation_by_year):
+    """Build HTML for Maintenance tab: sex-notation strings in checklist comments, grouped by year."""
+    import html as _html
+    if not sex_notation_by_year:
+        return ""
+    css = """
+    .maint-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; margin-bottom:16px; }
+    .maint-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
+    .maint-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
+    .maint-tbl td:nth-child(2) { white-space:nowrap; }
+    .maint-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
+    .maint-tbl tbody tr:nth-child(even) { background:#fff; }
+    .maint-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
+    details { margin-bottom:8px; }
+    summary { cursor:pointer; font-weight:bold; padding:6px 0; }
+    """
+    explanation = """
+  <div style="margin-top:24px;max-width:600px;box-sizing:border-box;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+    Some checklists contain shorthand sex or age notation (for example <code>MF</code>, <code>MFFF</code>, or <code>MMF??F</code>) entered in the field notes. These should ideally be converted into the structured Age/Sex table on the eBird website. The following lists identify checklists where this shorthand was detected.
+  </div>"""
+    sections = []
+    for y in sorted(sex_notation_by_year.keys(), reverse=True):
+        items = sex_notation_by_year[y]
+        rows = []
+        for sid, date_str, loc, species, protocol, notation in items:
+            loc_esc = _html.escape(loc, quote=True)
+            date_esc = _html.escape(date_str, quote=True)
+            species_esc = _html.escape(species, quote=True)
+            protocol_esc = _html.escape(protocol, quote=True)
+            notation_esc = _html.escape(notation, quote=True)
+            url = f"https://ebird.org/checklist/{sid}" if sid else "#"
+            loc_link = f"<a href=\"{url}\" target=\"_blank\">{loc_esc}</a>" if url != "#" else loc_esc
+            rows.append(f"<tr><td>{date_esc}</td><td>{protocol_esc}</td><td>{species_esc}</td><td>{notation_esc}</td><td>{loc_link}</td></tr>")
+        table_body = "".join(rows)
+        table = f"<table class=\"maint-tbl\"><thead><tr><th>Date</th><th>Protocol</th><th>Species</th><th>Sex Notation</th><th>Location</th></tr></thead><tbody>{table_body}</tbody></table>"
+        sections.append(f"<details><summary>{y} ({len(items)})</summary>{table}</details>")
+    return f"""
+<style>{css}</style>
+<div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
+  <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Sex notation in checklist comments</h4>
+{explanation}
+  <div style="margin-top:16px;">
+{"".join(sections)}
+  </div>
+</div>"""
 
 
 def _compute_incomplete_checklists_html(incomplete_by_year):
@@ -1322,13 +1367,10 @@ def _compute_incomplete_checklists_html(incomplete_by_year):
     summary { cursor:pointer; font-weight:bold; padding:6px 0; }
     """
     explanation = """
-  <div style="margin-top:24px;max-width:600px;display:flex;gap:8px;box-sizing:border-box;">
-    <span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#5a7ab8;color:white;font-size:10px;font-weight:600;font-family:sans-serif;line-height:1;">?</span>
-    <div style="flex:1;min-width:0;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
-      Incomplete travelling and stationary checklists often occur when submitting a checklist in the eBird mobile app. The default setting is incomplete, and if you move quickly through the submission prompts you may accidentally answer "No" to the question asking whether the list is complete.<br><br>
-      Incomplete checklists can certainly be intentional and acceptable (for example, when other species were present but not recorded). These checklists tables below are provided so you can review your data for checklists that may have been marked incomplete by mistake. Incidental checklists are not included.<br><br>
-      Reference: <a href="https://support.ebird.org/en/support/solutions/articles/48000950859-guide-to-ebird-protocols" target="_blank">Guide to eBird Protocols</a>
-    </div>
+  <div style="margin-top:24px;max-width:600px;box-sizing:border-box;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+    Incomplete travelling and stationary checklists often occur when submitting a checklist in the eBird mobile app. The default setting is incomplete, and if you move quickly through the submission prompts you may accidentally answer "No" to the question asking whether the list is complete.<br><br>
+    Incomplete checklists can certainly be intentional and acceptable (for example, when other species were present but not recorded). These checklists tables below are provided so you can review your data for checklists that may have been marked incomplete by mistake. Incidental checklists are not included.<br><br>
+    Reference: <a href="https://support.ebird.org/en/support/solutions/articles/48000950859-guide-to-ebird-protocols" target="_blank">Guide to eBird Protocols</a>
   </div>"""
     sections = []
     for y in sorted(incomplete_by_year.keys(), reverse=True):
@@ -1354,13 +1396,14 @@ def _compute_incomplete_checklists_html(incomplete_by_year):
 
 
 incomplete_checklists_html = _compute_incomplete_checklists_html(checklist_data.get("incomplete_by_year", {}))
+sex_notation_by_year = _get_sex_notation_by_year(df_full)
+sex_notation_html = _compute_sex_notation_html(sex_notation_by_year)
+_maintenance_panel_parts = [widgets.HTML(value=map_maintenance_html)]
 if incomplete_checklists_html:
-    map_maintenance_panel = VBox([
-        widgets.HTML(value=map_maintenance_html),
-        widgets.HTML(value=incomplete_checklists_html),
-    ])
-else:
-    map_maintenance_panel = widgets.HTML(value=map_maintenance_html)
+    _maintenance_panel_parts.append(widgets.HTML(value=incomplete_checklists_html))
+if sex_notation_html:
+    _maintenance_panel_parts.append(widgets.HTML(value=sex_notation_html))
+map_maintenance_panel = VBox(_maintenance_panel_parts)
 
 # --------------------------------------------
 # Build map tab: single control row (search, checkbox, reset, export) + matches dropdown. Date filter shown in banner only (refs #47).

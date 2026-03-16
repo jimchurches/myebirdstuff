@@ -47,3 +47,6 @@ Run before merging refactor branches to `main`.
   - Years/accordion render correctly
   - Dates and times look correct
   - eBird checklist links open
+- **Sex notation in checklist comments** (if Observation Details column present and has matching strings)
+  - Section appears; table columns: Date, Protocol, Species, Sex Notation, Location (link to checklist)
+  - Location links open the checklist on eBird
