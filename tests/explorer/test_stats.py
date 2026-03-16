@@ -319,3 +319,44 @@ class TestYearlySummaryStats:
         years, rows, incomplete = yearly_summary_stats(df, cl, None, None)
         assert 2025 in incomplete
         assert len(incomplete[2025]) == 1
+
+    def test_get_sex_notation_by_year_empty_no_column(self):
+        df = pd.DataFrame({"Date": [pd.Timestamp("2024-01-01")], "Submission ID": ["S1"]})
+        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        result = get_sex_notation_by_year(df)
+        assert result == {}
+
+    def test_get_sex_notation_by_year_matches_standalone_strings(self):
+        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        df = pd.DataFrame({
+            "Date": [pd.Timestamp("2024-06-01"), pd.Timestamp("2024-06-02"), pd.Timestamp("2023-01-15")],
+            "Submission ID": ["S1", "S2", "S3"],
+            "Location": ["Loc A", "Loc B", "Loc C"],
+            "Common Name": ["Grey Teal", "Pacific Black Duck", "Cockatoo"],
+            "Protocol": ["Traveling", "Stationary", "Incidental"],
+            "Observation Details": ["MF", "MFFF", "MFFJ?"],
+        })
+        df["datetime"] = df["Date"]
+        result = get_sex_notation_by_year(df)
+        assert 2024 in result
+        assert 2023 in result
+        assert len(result[2024]) == 2
+        assert len(result[2023]) == 1
+        sid, date_str, loc, species, protocol, notation = result[2024][0]
+        assert notation == "MF"
+        assert species == "Grey Teal"
+        assert sid == "S1"
+        assert result[2023][0][5] == "MFFJ?"
+
+    def test_get_sex_notation_by_year_ignores_non_matching(self):
+        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        df = pd.DataFrame({
+            "Date": [pd.Timestamp("2024-06-01")],
+            "Submission ID": ["S1"],
+            "Location": ["Loc A"],
+            "Common Name": ["Grey Teal"],
+            "Protocol": ["Traveling"],
+            "Observation Details": ["2 males, 1 female"],
+        })
+        result = get_sex_notation_by_year(df)
+        assert result == {}
