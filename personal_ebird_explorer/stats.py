@@ -274,38 +274,161 @@ def rankings_by_checklists(df_obs, limit):
     return rows
 
 
-def rankings_subspecies(df_obs, limit=None):
-    """Subspecies only: full list of subspecies with total individuals.
+def rankings_subspecies_hierarchical(df_obs, limit=None):
+    """Hierarchical subspecies occurrence data grouped by parent species.
 
-    Returns list of (common_name, dash, individuals_fmt).
+    Returns a list of dicts, one per parent species, in the form:
+
+    {
+        "species_common": str,
+        "species_scientific": str,
+        "total_individuals": int,
+        "species_only_individuals": int,
+        "subspecies_total_individuals": int,
+        "subspecies_fraction": float or None,  # 0–1
+        "subspecies": [
+            {
+                "subspecies_common": str,          # label only, e.g. "Black-backed"
+                "subspecies_common_full": str,     # e.g. "Australian Magpie (Black-backed)"
+                "subspecies_scientific": str,      # full trinomial
+                "individuals": int,
+            },
+            ...
+        ],
+    }
+
+    Only species that have at least one true subspecies record are included.
+    Species and subspecies are both sorted alphabetically by common name.
     """
     if df_obs.empty:
         return []
-    sci = df_obs["Scientific Name"].fillna("").astype(str).str.strip()
-    common = df_obs["Common Name"].fillna("").astype(str).str.strip()
+
+    df = df_obs.copy()
+    sci = df["Scientific Name"].fillna("").astype(str).str.strip()
+    common = df["Common Name"].fillna("").astype(str).str.strip()
+
+    # Exclude spuhs, hybrids, domestic types, and species-level slash taxa
     spuh = sci.str.contains(r" sp\.", case=False, na=False) | sci.str.lower().str.endswith(" sp")
     hybrid = sci.str.contains(" x ", na=False) | common.str.lower().str.contains(r"\(hybrid\)", na=False)
     domestic = common.str.contains("Domestic", na=False) | common.str.contains(r"\(Domestic type\)", na=False)
     parts = sci.str.split()
     is_subspecies = parts.apply(lambda p: len(p) >= 3 if isinstance(p, list) else False)
     species_level_slash = parts.apply(lambda p: len(p) > 1 and "/" in str(p[1]) if isinstance(p, list) else False)
-    keep = is_subspecies & ~spuh & ~hybrid & ~domestic & ~species_level_slash
-    sub_df = df_obs.loc[keep].copy()
-    if sub_df.empty:
+
+    keep_valid = ~spuh & ~hybrid & ~domestic & ~species_level_slash
+    if not keep_valid.any():
         return []
-    sub_df["_count"] = sub_df["Count"].apply(safe_count)
-    by_name = sub_df.groupby("Common Name", sort=False).agg(
-        individuals=("_count", "sum"),
-        checklists=("Submission ID", "nunique"),
-    ).reset_index()
-    by_name = by_name.sort_values(by=["individuals", "Common Name"], ascending=[False, True])
-    if limit is not None:
-        by_name = by_name.head(limit)
-    rows = []
-    for _, r in by_name.iterrows():
-        name = r["Common Name"] if pd.notna(r["Common Name"]) else ""
-        rows.append((str(name), "—", f"{int(r['individuals']):,}"))
-    return rows
+
+    df = df.loc[keep_valid].copy()
+    sci = df["Scientific Name"].fillna("").astype(str).str.strip()
+    common = df["Common Name"].fillna("").astype(str).str.strip()
+    parts = sci.str.split()
+    is_sub = parts.apply(lambda p: len(p) >= 3 if isinstance(p, list) else False)
+
+    # Species-level scientific name (first two parts) used for grouping
+    def _base_sci(p):
+        if isinstance(p, list) and len(p) >= 2:
+            return f"{p[0]} {p[1]}"
+        if isinstance(p, list) and len(p) == 1:
+            return p[0]
+        return ""
+
+    df["_base_sci"] = parts.apply(_base_sci)
+    df["_is_subspecies"] = is_sub
+    df["_count"] = df["Count"].apply(safe_count)
+
+    # Common-name normalisation: parent species common name = before " ("
+    def _species_common_from_common(name: str) -> str:
+        s = (name or "").strip()
+        if not s:
+            return ""
+        idx = s.find(" (")
+        return s[:idx] if idx != -1 else s
+
+    def _subspecies_label_from_common(name: str) -> str:
+        s = (name or "").strip()
+        if not s:
+            return ""
+        start = s.find(" (")
+        end = s.rfind(")")
+        if start != -1 and end != -1 and end > start + 2:
+            return s[start + 2 : end].strip()
+        return s
+
+    df["_species_common_base"] = common.apply(_species_common_from_common)
+    df["_sub_label"] = common.apply(_subspecies_label_from_common)
+
+    species_blocks = []
+
+    # Group by species (base scientific name)
+    for base_sci, g in df.groupby("_base_sci"):
+        # Subspecies rows for this species
+        g_sub = g[g["_is_subspecies"]]
+        if g_sub.empty:
+            # Skip species that never appear as true subspecies
+            continue
+
+        # Species-level rows (recorded without subspecies)
+        g_species_only = g[~g["_is_subspecies"]]
+        species_only_count = int(g_species_only["_count"].sum()) if not g_species_only.empty else 0
+
+        # Subspecies aggregation by full scientific name
+        subspecies_rows = []
+        for subsci, sg in g_sub.groupby("Scientific Name"):
+            total_ind = int(sg["_count"].sum())
+            # Pick a representative common name for this subspecies
+            common_vals = sg["Common Name"].dropna().astype(str)
+            common_full = common_vals.value_counts().index[0] if not common_vals.empty else ""
+            label = _subspecies_label_from_common(common_full) or common_full
+            subspecies_rows.append(
+                {
+                    "subspecies_common": str(label),
+                    "subspecies_common_full": str(common_full),
+                    "subspecies_scientific": str(subsci),
+                    "individuals": total_ind,
+                }
+            )
+
+        if not subspecies_rows:
+            continue
+
+        # Sort subspecies alphabetically by label
+        subspecies_rows.sort(key=lambda d: d["subspecies_common"].lower())
+
+        subspecies_total = sum(d["individuals"] for d in subspecies_rows)
+        total = species_only_count + subspecies_total
+        frac = (subspecies_total / total) if total > 0 else None
+
+        # Species common name: most frequent base common name across all rows in this group
+        base_common_vals = g["_species_common_base"].dropna().astype(str)
+        if not base_common_vals.empty:
+            species_common = base_common_vals.value_counts().index[0]
+        else:
+            # Fallback to any common name in the group
+            species_common = g["Common Name"].dropna().astype(str).value_counts().index[0]
+
+        species_blocks.append(
+            {
+                "species_common": str(species_common),
+                "species_scientific": str(base_sci),
+                "total_individuals": int(total),
+                "species_only_individuals": int(species_only_count),
+                "subspecies_total_individuals": int(subspecies_total),
+                "subspecies_fraction": float(frac) if frac is not None else None,
+                "subspecies": subspecies_rows,
+            }
+        )
+
+    if not species_blocks:
+        return []
+
+    # Sort species alphabetically by common name
+    species_blocks.sort(key=lambda d: d["species_common"].lower())
+
+    if limit is not None and limit > 0:
+        species_blocks = species_blocks[:limit]
+
+    return species_blocks
 
 
 def rankings_seen_once(df_obs, limit=None):
@@ -448,7 +571,7 @@ def compute_rankings(df, cl, limit, dur_col, dist_col):
         "species_individuals": rankings_by_individuals(df, limit=None),
         "species_checklists": rankings_by_checklists(df, limit=None),
         "seen_once": rankings_seen_once(df, limit=None),
-        "subspecies": rankings_subspecies(df, limit=None),
+        "subspecies": rankings_subspecies_hierarchical(df, limit=None),
     }
 
 

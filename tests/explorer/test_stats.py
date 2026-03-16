@@ -13,7 +13,7 @@ from personal_ebird_explorer.stats import (
     yearly_summary_stats,
     rankings_by_individuals,
     rankings_by_checklists,
-    rankings_subspecies,
+    rankings_subspecies_hierarchical,
     rankings_seen_once,
     rankings_by_visits,
     rankings_by_value,
@@ -192,17 +192,26 @@ class TestRankingsByChecklists:
 
 
 class TestRankingsSubspecies:
-    def test_only_subspecies_returned(self):
-        df = _obs_df([
-            {"Scientific Name": "Anas gracilis gracilis", "Common Name": "Grey Teal (gracilis)", "Count": 5},
-            {"Scientific Name": "Anas gracilis", "Common Name": "Grey Teal", "Count": 10},
-        ])
-        rows = rankings_subspecies(df)
-        assert len(rows) == 1
-        assert "gracilis" in rows[0][0]
+    def test_hierarchical_subspecies_only_when_present(self):
+        df = _obs_df(
+            [
+                {"Scientific Name": "Anas gracilis gracilis", "Common Name": "Grey Teal (gracilis)", "Count": 5},
+                {"Scientific Name": "Anas gracilis", "Common Name": "Grey Teal", "Count": 10},
+            ]
+        )
+        blocks = rankings_subspecies_hierarchical(df)
+        assert len(blocks) == 1
+        block = blocks[0]
+        assert block["species_common"] == "Grey Teal"
+        assert block["total_individuals"] == 15
+        assert block["species_only_individuals"] == 10
+        assert block["subspecies_total_individuals"] == 5
+        assert block["subspecies_fraction"] == 5 / 15
+        assert len(block["subspecies"]) == 1
+        assert "gracilis" in block["subspecies"][0]["subspecies_common"].lower()
 
-    def test_empty_df(self):
-        assert rankings_subspecies(pd.DataFrame()) == []
+    def test_hierarchical_empty_df(self):
+        assert rankings_subspecies_hierarchical(pd.DataFrame()) == []
 
 
 class TestRankingsSeenOnce:

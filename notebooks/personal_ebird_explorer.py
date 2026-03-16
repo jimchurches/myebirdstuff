@@ -525,6 +525,7 @@ from personal_ebird_explorer.rankings_display import (
     rankings_table_with_rank,
     rankings_visited_table,
     rankings_seen_once_table,
+    rankings_subspecies_hierarchical_table,
 )
 
 total_checklists = df["Submission ID"].nunique()
@@ -1274,7 +1275,7 @@ def _compute_checklist_stats(df):
     rankings_sections_other = [
         ("Species: Most individuals", rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Species: Most checklists", rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Subspecies occurrence", rankings_table_with_rank("Species: Subspecies occurrence", ["Subspecies", "", "Individuals"], rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Subspecies occurrence", rankings_subspecies_hierarchical_table("Species: Subspecies occurrence", rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
         ("Species: Seen only once", rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
 
