@@ -63,7 +63,7 @@ For full installation instructions (Python, Jupyter, Voila, and dependencies on 
 
 **[Installation guide](install.md)**
 
-Local install gives you faster performance. You can run the notebook in Jupyter or as a Voila dashboard. **Note:** There is currently a known issue with Voila not working (root cause unknown); use Jupyter if you run into problems.
+Local install gives you faster performance. You can run the notebook in Jupyter or as a Voila dashboard.
 
 ---
 
