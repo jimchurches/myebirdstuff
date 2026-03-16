@@ -166,11 +166,11 @@ display(HTML("""
 .map-controls-panel .widget-select select {
     font-size: 13px !important;
     font-weight: normal !important;
-    color: #444 !important;
-    background: #fafafa !important;
-    border: 1px solid #e0e0e0 !important;
-    border-radius: 4px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+    color: #374151 !important;
+    background: #fff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
 }
 .species-matches-dropdown select,
 .map-controls-panel .widget-select select {
@@ -180,13 +180,13 @@ display(HTML("""
 .species-matches-dropdown {
     margin-top: 2px !important;  /* small gap below search input */
 }
-/* Control area: light silver/grey with subtle polish (like the map stats box) */
+/* Control area: soft neutral card */
 .map-controls-panel,
 .widget-vbox:has(input[placeholder="Type species name..."]) {
-    background: linear-gradient(180deg, #f5f5f5 0%, #ebebeb 100%) !important;
-    border: 1px solid #e0e0e0 !important;
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
     border-radius: 8px !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
     padding: 12px 16px !important;
     margin-bottom: 4px !important;
     width: 100% !important;
@@ -230,6 +230,129 @@ display(HTML("""
 .output_area:has(.ebird-dashboard) {
     min-height: 85vh !important;
     max-height: none !important;
+}
+
+/* ---- Modern UI theme (no new libs): typography, tables, buttons, tabs ---- */
+.ebird-dashboard,
+.ebird-dashboard .widget-html-content,
+.ebird-dashboard .p-Widget {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    color: #1f2937 !important;
+}
+/* Buttons: rounded, subtle fill, hover */
+.ebird-dashboard .widget-button,
+.map-controls-panel .widget-button {
+    border-radius: 6px !important;
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    color: #374151 !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    transition: background 0.15s ease, border-color 0.15s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.ebird-dashboard .widget-button:hover,
+.map-controls-panel .widget-button:hover {
+    background: #f3f4f6 !important;
+    border-color: #d1d5db !important;
+}
+/* Tables: card-like, rounded, soft stripes */
+.stats-tbl,
+.maint-tbl,
+.maint-pair-tbl {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: none;
+    font-size: 13px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    overflow: visible;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.stats-tbl thead tr:first-child th:first-child,
+.maint-tbl thead tr:first-child th:first-child,
+.maint-pair-tbl thead tr:first-child th:first-child { border-radius: 8px 0 0 0; }
+.stats-tbl thead tr:first-child th:last-child,
+.maint-tbl thead tr:first-child th:last-child,
+.maint-pair-tbl thead tr:first-child th:last-child { border-radius: 0 8px 0 0; }
+.stats-tbl tbody tr:last-child td:first-child,
+.maint-tbl tbody tr:last-child td:first-child,
+.maint-pair-tbl tbody tr:last-child td:first-child { border-radius: 0 0 0 8px; }
+.stats-tbl tbody tr:last-child td:last-child,
+.maint-tbl tbody tr:last-child td:last-child,
+.maint-pair-tbl tbody tr:last-child td:last-child { border-radius: 0 0 8px 0; }
+.stats-tbl th,
+.maint-tbl th,
+.maint-pair-tbl th {
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+}
+.stats-tbl td,
+.maint-tbl td,
+.maint-pair-tbl td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.stats-tbl tbody tr:nth-child(odd),
+.maint-tbl tbody tr:nth-child(odd) { background: #fafbfc; }
+.stats-tbl tbody tr:nth-child(even),
+.maint-tbl tbody tr:nth-child(even) { background: #fff; }
+.maint-pair-tbl tbody tr.pair-first { background: #fafbfc; }
+.maint-pair-tbl tbody tr.pair-second { background: #fff; }
+.stats-tbl td:last-child,
+.maint-tbl td:last-child { font-weight: 600; }
+.stats-tbl th:last-child { text-align: right; }
+.stats-tbl td:last-child { text-align: right; }
+/* Links: subtle blue, underline on hover */
+.ebird-dashboard a {
+    color: #374151;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+.ebird-dashboard a:hover {
+    color: #111827;
+    text-decoration-color: rgba(0,0,0,0.4);
+}
+.stats-tbl a,
+.maint-tbl a,
+.maint-pair-tbl a {
+    color: #374151;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+.stats-tbl a:hover,
+.maint-tbl a:hover,
+.maint-pair-tbl a:hover {
+    color: #111827;
+    text-decoration-color: rgba(0,0,0,0.4);
+}
+/* Tab bar: cleaner labels */
+.p-TabBar .p-TabBar-tab,
+.jupyter-widgets .p-TabBar-tab {
+    border-radius: 6px 6px 0 0 !important;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #6b7280 !important;
+}
+.p-TabBar .p-TabBar-tab.p-mod-current,
+.jupyter-widgets .p-TabBar-tab.p-mod-current {
+    background: #f9fafb !important;
+    color: #111827 !important;
+}
+/* Section headings and body text in HTML widgets */
+.ebird-dashboard h4 {
+    color: #111827 !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 8px !important;
+    font-weight: 600 !important;
 }
 </style>
 """))
@@ -1028,7 +1151,7 @@ def _compute_checklist_stats(df):
             )
             yearly_table_html = f"""
   <div style="width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px) 24px;box-sizing:border-box;">
-  <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Yearly Summary Statistics</h4>
+  <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Yearly Summary Statistics</h4>
   <div style="overflow-x:auto;">
   <table class="stats-tbl" style="min-width:400px;">
     <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
@@ -1040,19 +1163,14 @@ def _compute_checklist_stats(df):
     _table_css = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
     .stats-info-glyph { cursor:help; opacity:0.7; }
-    .stats-info-tooltip { position:absolute; top:100%; left:0; margin-top:6px; padding:10px 14px; background:#333; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(380px,90vw); min-width:200px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.2); opacity:0; visibility:hidden; transition:opacity 0.05s; pointer-events:none; z-index:9999; }
+    .stats-info-tooltip { position:absolute; bottom:100%; top:auto; margin-bottom:6px; margin-top:0; padding:10px 14px; background:#374151; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(320px,85vw); min-width:180px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); opacity:0; visibility:hidden; transition:opacity 0.15s; pointer-events:none; z-index:9999; right:0; left:auto; }
     .stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
-    .stats-tbl { border-collapse:collapse; width:100%; max-width:100%; font-size:13px; }
-    .stats-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; background:#fff; }
-    .stats-tbl th:last-child { text-align:right; }
-    .stats-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
-    .stats-tbl td:last-child { text-align:right; font-weight:bold; }
-    .stats-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
-    .stats-tbl tbody tr:nth-child(even) { background:#fff; }
+    /* Left column: tooltip extends left into the page */
+    .stats-col:first-child .stats-info-tooltip { right:0; left:auto; }
+    /* Right column: tooltip extends right into the page */
+    .stats-col:last-child .stats-info-tooltip { left:0; right:auto; }
     .stats-tbl-3 th:nth-child(2), .stats-tbl-3 td:nth-child(2) { text-align:center; }
     .rankings-tbl td:first-child { font-weight:normal; }
-    .stats-tbl a, .rankings-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); text-underline-offset:2px; }
-    .stats-tbl a:hover, .rankings-tbl a:hover { text-decoration-color:rgba(0,0,0,0.45); }
     """
 
     def _row(label, value):
@@ -1071,7 +1189,7 @@ def _compute_checklist_stats(df):
         mt = "0" if first else "16px"
         thead = f"<thead><tr><th>{header_left}</th><th>{header_right}</th></tr></thead>" if show_header else ""
         return f"""
-  <h4 style="margin-top:{mt};margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">{title}{info}</h4>
+  <h4 style="margin-top:{mt};margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">{title}{info}</h4>
   <table class="stats-tbl">
     {thead}<tbody>{body}</tbody>
   </table>"""
@@ -1109,7 +1227,10 @@ def _compute_checklist_stats(df):
     ("Months", f"{total_months:,.2f}"),
     ("Total years", f"{total_years:,.2f}"),
     ("Days with a checklist", f"{n_days_with_checklist:,}"),
-  ], first=True, info_title=time_hint)}
+  ], first=True)}
+  <p style="margin:4px 0 0;color:#6b7280;font-size:12px;line-height:1.5;">
+    {time_hint}
+  </p>
 
   {_table("eBirding with Others", [
     ("Shared checklists", f"{n_shared:,}"),
@@ -1165,29 +1286,22 @@ checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 _rankings_css = """
 .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
 .stats-info-glyph { cursor:help; opacity:0.7; }
-.stats-info-tooltip { position:absolute; top:100%; left:0; margin-top:6px; padding:10px 14px; background:#333; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(380px,90vw); min-width:200px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.2); opacity:0; visibility:hidden; transition:opacity 0.05s; pointer-events:none; z-index:9999; }
+.stats-info-tooltip { position:absolute; bottom:100%; top:auto; margin-bottom:6px; margin-top:0; padding:10px 14px; background:#374151; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(320px,85vw); min-width:180px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); opacity:0; visibility:hidden; transition:opacity 0.15s; pointer-events:none; z-index:9999; }
 .stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
-.stats-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; }
-.stats-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
-.stats-tbl th:last-child { text-align:right; }
-.stats-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
+/* Default for rankings (no columns): tooltip extends left from icon */
+.stats-info-tooltip { right:0; left:auto; }
 .stats-tbl td:nth-child(2), .stats-tbl td:nth-child(3) { white-space:nowrap; }
-.stats-tbl td:last-child { text-align:right; font-weight:bold; }
-.stats-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
-.stats-tbl tbody tr:nth-child(even) { background:#fff; }
-.stats-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
 .stats-tbl.rank-tbl th:first-child,
 .stats-tbl.rank-tbl td:first-child { width: 6ch; max-width: 6ch; text-align: left; }
 .stats-tbl.seen-once-tbl { width: 100%; }
 .stats-tbl.seen-once-tbl th:nth-child(2), .stats-tbl.seen-once-tbl td:nth-child(2) { max-width: 420px; }
 .stats-tbl.seen-once-tbl th:nth-child(3), .stats-tbl.seen-once-tbl td:nth-child(3),
 .stats-tbl.seen-once-tbl th:nth-child(4), .stats-tbl.seen-once-tbl td:nth-child(4) { width: 1%; white-space: nowrap; }
-/* Location | State | Country when Location is 1st column (checklist 5col, location 5col, most visited) */
 .stats-tbl.location-cols-tbl th:nth-child(1), .stats-tbl.location-cols-tbl td:nth-child(1) { max-width: 420px; }
 .stats-tbl.location-cols-tbl th:nth-child(2), .stats-tbl.location-cols-tbl td:nth-child(2),
 .stats-tbl.location-cols-tbl th:nth-child(3), .stats-tbl.location-cols-tbl td:nth-child(3) { width: 1%; white-space: nowrap; }
 """
-_rankings_heading_style = "font-family:sans-serif;font-size:15px;font-weight:bold;margin:0 0 6px;padding:0;"
+_rankings_heading_style = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;margin:0 0 8px;padding:0;color:#111827;"
 def _wrap_rankings_child(content):
     """Wrap rankings section HTML in styled widget for accordion."""
     return widgets.HTML(value=f"<style>{_rankings_css}</style>{content}")
@@ -1219,45 +1333,32 @@ def _compute_map_maintenance_html(loc_df, threshold_m):
     """Build HTML for Map maintenance tab: exact duplicates and close-location pairs."""
     exact_rows, near_pairs = _get_map_maintenance_data(loc_df, threshold_m)
     css = """
-    .maint-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; margin-bottom:16px; }
-    .maint-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
-    .maint-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
-    .maint-tbl td:last-child { text-align:right; font-weight:bold; }
-    .maint-tbl td:nth-child(2) { white-space:nowrap; }
     .maint-tbl.maint-single-col td { text-align:left; font-weight:normal; }
-    .maint-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
-    .maint-tbl tbody tr:nth-child(even) { background:#fff; }
-    .maint-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
-    .maint-pair-tbl { border-collapse:collapse; width:100%; max-width:600px; font-size:13px; margin-bottom:12px; }
-    .maint-pair-tbl th { font-weight:bold; text-align:left; padding:6px 10px; border-bottom:1px solid #e8e8e8; }
-    .maint-pair-tbl td { padding:6px 10px; border-bottom:1px solid #e8e8e8; }
-    .maint-pair-tbl tbody tr.pair-first { background:#f8f8f8; }
-    .maint-pair-tbl tbody tr.pair-second { background:#fff; }
+    .maint-pair-tbl { max-width:600px; }
     .maint-pair-tbl tbody tr.maint-spacer { background:transparent; }
-    .maint-pair-tbl td:nth-child(2) { white-space:nowrap; }
-    .maint-pair-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
+    .maint-section { margin-bottom:12px; }
+    .maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
+    .maint-subsection { margin-top:12px; margin-bottom:8px; margin-left:8px; }
+    .maint-subsection > summary { font-weight:600; padding:4px 0; color:#374151; cursor:pointer; font-size:13px; }
     """
-    # Table 1: Exact duplicates (Location | Lat/Long | Number of duplicates)
+    # Table 1: Exact duplicates (inner accordion)
     dup_body = ""
     if exact_rows:
         for loc_name, loc_id, count, lat, lon in exact_rows:
             link = f'<a href="{_MAINT_LOC_URL}{loc_id}" target="_blank">{loc_name}</a>' if loc_id else loc_name
             coords = f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"
             dup_body += f"<tr><td>{link}</td><td>{coords}</td><td>{count}</td></tr>"
-        dup_table = f"""
-  <h4 style="margin-top:0;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Exact duplicates</h4>
-  <p style="margin:4px 0 8px;color:#666;font-size:12px;">Different Location IDs at the same coordinates. Same name listed once; different names listed separately.</p>
+        exact_dup_content = f"""
+  <p style="margin:4px 0 8px;color:#6b7280;font-size:13px;">Different Location IDs at the same coordinates. Same name listed once; different names listed separately.</p>
   <table class="maint-tbl">
     <thead><tr><th>Location</th><th>Latitude/Longitude</th><th>Number of duplicates</th></tr></thead>
     <tbody>{dup_body}</tbody>
   </table>"""
     else:
-        dup_table = """
-  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Exact duplicates</h4>
-  <p style="margin:4px 0;color:#666;">None detected.</p>"""
+        exact_dup_content = """
+  <p style="margin:4px 0;color:#6b7280;">None detected.</p>"""
 
-    # Table 2: Close locations (one heading, pairs separated by spacer rows)
-    near_section = ""
+    # Table 2: Close locations (inner accordion)
     if near_pairs:
         all_rows = ""
         for i, pair in enumerate(near_pairs):
@@ -1270,33 +1371,36 @@ def _compute_map_maintenance_html(loc_df, threshold_m):
             all_rows += pair_rows
             if i < len(near_pairs) - 1:
                 all_rows += '<tr class="maint-spacer"><td colspan="2" style="height:12px;border:none;background:transparent;"></td></tr>'
-        near_section = f"""
-  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Close locations</h4>
-  <p style="margin:4px 0 12px;color:#666;font-size:12px;">Locations within {threshold_m} m of each other (excluding exact duplicates).</p>
+        close_loc_content = f"""
+  <p style="margin:4px 0 12px;color:#6b7280;font-size:13px;">Locations within {threshold_m} m of each other (excluding exact duplicates).</p>
   <table class="maint-pair-tbl">
     <thead><tr><th>Location</th><th>Latitude/Longitude</th></tr></thead>
     <tbody>{all_rows}</tbody>
   </table>"""
     else:
-        near_section = f"""
-  <h4 style="margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Close locations</h4>
-  <p style="margin:4px 0;color:#666;">None detected within the current threshold ({threshold_m} m).</p>"""
+        close_loc_content = f"""
+  <p style="margin:4px 0;color:#6b7280;">None detected within the current threshold ({threshold_m} m).</p>"""
 
     explanation = """
-  <div style="margin-top:0;margin-bottom:20px;max-width:600px;box-sizing:border-box;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
     These tables highlight duplicate locations and locations that are very close to each other (within the configured distance) to help you keep your personal eBird locations organised. This is most useful if you regularly create new locations and build a large catalogue of them; if you mainly use hotspots it may be less relevant. Locations can be merged on the eBird website, though directly merging duplicates can sometimes be awkward. Often the simplest approach is to move checklists to the preferred location and then delete the now-empty duplicate. See eBird for details.
   </div>"""
-
-    location_heading = """
-  <h4 style="margin-top:0;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Location Maintenance</h4>"""
 
     return f"""
 <style>{css}</style>
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
-{location_heading}
+<details class="maint-section">
+  <summary>Location Maintenance</summary>
 {explanation}
-{dup_table}
-{near_section}
+  <details class="maint-subsection">
+    <summary>Exact duplicates</summary>
+{exact_dup_content}
+  </details>
+  <details class="maint-subsection">
+    <summary>Close locations</summary>
+{close_loc_content}
+  </details>
+</details>
 </div>"""
 
 
@@ -1309,18 +1413,13 @@ def _compute_sex_notation_html(sex_notation_by_year):
     if not sex_notation_by_year:
         return ""
     css = """
-    .maint-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; margin-bottom:16px; }
-    .maint-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
-    .maint-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
-    .maint-tbl td:nth-child(2) { white-space:nowrap; }
-    .maint-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
-    .maint-tbl tbody tr:nth-child(even) { background:#fff; }
-    .maint-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
     details { margin-bottom:8px; }
-    summary { cursor:pointer; font-weight:bold; padding:6px 0; }
+    summary { cursor:pointer; font-weight:600; padding:6px 0; color:#374151; }
+    .maint-section { margin-bottom:12px; }
+    .maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
     """
     explanation = """
-  <div style="margin-top:24px;max-width:600px;box-sizing:border-box;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
     Some checklists contain shorthand sex or age notation (for example <code>MF</code>, <code>MFFF</code>, or <code>MMF??F</code>) entered in the field notes. These should ideally be converted into the structured Age/Sex table on the eBird website. The following lists identify checklists where this shorthand was detected.
   </div>"""
     sections = []
@@ -1342,11 +1441,13 @@ def _compute_sex_notation_html(sex_notation_by_year):
     return f"""
 <style>{css}</style>
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
-  <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Sex notation in checklist comments</h4>
+<details class="maint-section">
+  <summary>Sex notation in checklist comments</summary>
 {explanation}
   <div style="margin-top:16px;">
 {"".join(sections)}
   </div>
+</details>
 </div>"""
 
 
@@ -1356,18 +1457,13 @@ def _compute_incomplete_checklists_html(incomplete_by_year):
     if not incomplete_by_year:
         return ""
     css = """
-    .maint-tbl { border-collapse:collapse; width:100%; max-width:none; font-size:13px; margin-bottom:16px; }
-    .maint-tbl th { font-weight:bold; text-align:left; padding:8px 12px; border-bottom:1px solid #ddd; }
-    .maint-tbl td { padding:8px 12px; border-bottom:1px solid #e8e8e8; }
-    .maint-tbl td:nth-child(2) { white-space:nowrap; }
-    .maint-tbl tbody tr:nth-child(odd) { background:#f8f8f8; }
-    .maint-tbl tbody tr:nth-child(even) { background:#fff; }
-    .maint-tbl a { text-decoration:underline dotted; text-decoration-color:rgba(0,0,0,0.22); }
     details { margin-bottom:8px; }
-    summary { cursor:pointer; font-weight:bold; padding:6px 0; }
+    summary { cursor:pointer; font-weight:600; padding:6px 0; color:#374151; }
+    .maint-section { margin-bottom:12px; }
+    .maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
     """
     explanation = """
-  <div style="margin-top:24px;max-width:600px;box-sizing:border-box;color:#555;font-size:12px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
     Incomplete travelling and stationary checklists often occur when submitting a checklist in the eBird mobile app. The default setting is incomplete, and if you move quickly through the submission prompts you may accidentally answer "No" to the question asking whether the list is complete.<br><br>
     Incomplete checklists can certainly be intentional and acceptable (for example, when other species were present but not recorded). These checklists tables below are provided so you can review your data for checklists that may have been marked incomplete by mistake. Incidental checklists are not included.<br><br>
     Reference: <a href="https://support.ebird.org/en/support/solutions/articles/48000950859-guide-to-ebird-protocols" target="_blank">Guide to eBird Protocols</a>
@@ -1387,11 +1483,13 @@ def _compute_incomplete_checklists_html(incomplete_by_year):
     return f"""
 <style>{css}</style>
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
-  <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #ddd;">Incomplete checklists (Traveling or Stationary)</h4>
+<details class="maint-section">
+  <summary>Incomplete checklists (Traveling or Stationary)</summary>
 {explanation}
   <div style="margin-top:16px;">
 {"".join(sections)}
   </div>
+</details>
 </div>"""
 
 
@@ -1431,11 +1529,11 @@ map_tab_container.add_class("map-tab-container")
 # --------------------------------------------
 yearly_summary_panel = widgets.HTML(value=checklist_data["yearly_summary_html"])
 main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, yearly_summary_panel, rankings_panel, map_maintenance_panel])
-main_tabs.set_title(0, "🗺️ Map")
-main_tabs.set_title(1, "📊 Checklist Statistics")
-main_tabs.set_title(2, "📅 Yearly Summary")
-main_tabs.set_title(3, "🏆 Rankings & lists")
-main_tabs.set_title(4, "🔧 Maintenance")
+main_tabs.set_title(0, "Map")
+main_tabs.set_title(1, "Checklist Statistics")
+main_tabs.set_title(2, "Yearly Summary")
+main_tabs.set_title(3, "Rankings & lists")
+main_tabs.set_title(4, "Maintenance")
 main_tabs.selected_index = 0  # Ensure map tab is visible on load
 main_tabs.layout = widgets.Layout(min_width="900px", min_height="650px")  # Wide enough for full tab labels (e.g. Checklist Statistics)
 
