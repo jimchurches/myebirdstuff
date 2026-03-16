@@ -146,7 +146,7 @@ The notebook should remain lightweight. Avoid placing heavy logic inside noteboo
 
 ## Performance approach
 
-Map redraw performance is improved using simple caching.
+Map redraw performance is improved using simple caching and double-buffered map output (draw into a hidden Output widget, then swap to show it so the visible map is never cleared).
 
 Avoid recomputing expensive operations such as:
 

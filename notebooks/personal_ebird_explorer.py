@@ -579,11 +579,13 @@ writer.commit()
 
 # %%
 # --------------------------------------------
-# ✅ Initialise map output widgets
+# ✅ Initialise map output widgets (double-buffer for smoother redraws, refs #45)
 # --------------------------------------------
-map_output = widgets.Output(
-    layout=widgets.Layout(min_height="500px", width="100%", min_width="0", flex="1 1 auto")
-)
+_map_output_layout = widgets.Layout(min_height="500px", width="100%", min_width="0", flex="1 1 auto")
+map_output_0 = widgets.Output(layout=_map_output_layout)
+map_output_1 = widgets.Output(layout=_map_output_layout)
+_map_outputs = [map_output_0, map_output_1]
+_map_front_index = 0  # which buffer is currently shown in the map tab
 output = widgets.Output()
 
 
@@ -829,6 +831,7 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 # ✅ Draw map with species overlay
 # --------------------------------------------
 def draw_map_with_species_overlay(selected_species, selected_common_name=""):
+    global _map_front_index
     # When date filter was on at load and user clicked Reset View, show full data (refs #47)
     effective_use_full = bool(FILTER_BY_DATE and _date_filter_off_for_view)
     if effective_use_full:
@@ -1017,11 +1020,15 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     scroll_popup_script = _popup_scroll_script(POPUP_SCROLL_HINT, POPUP_SORT_ORDER == "ascending")
     state.species_map.get_root().html.add_child(Element(scroll_popup_script))
 
-    # Generate map HTML before clearing output so the previous map stays visible until the new one is ready (refs #45)
+    # Double-buffer: draw into the hidden output, then swap so the visible map never clears (refs #45)
     map_html = state.species_map._repr_html_()
-    with map_output:
-        map_output.clear_output()
+    back_index = 1 - _map_front_index
+    map_output_back = _map_outputs[back_index]
+    with map_output_back:
+        map_output_back.clear_output()
         display(HTML(f'<div class="output_map">{map_html}</div>'))
+    map_tab_container.children = [map_controls, map_output_back]
+    _map_front_index = back_index
 
     # Export is explicit via "Export Map HTML" button (refs #47); no automatic save on redraw
 
@@ -1580,7 +1587,7 @@ map_controls = VBox([search_row, matches_dropdown])
 map_controls.layout = widgets.Layout(width="100%", min_width="0")
 
 map_tab_container = VBox(
-    [map_controls, map_output],
+    [map_controls, _map_outputs[_map_front_index]],
     layout=widgets.Layout(min_height="600px", width="100%"),
 )
 map_tab_container.add_class("map-tab-container")
