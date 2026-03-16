@@ -346,6 +346,17 @@ display(HTML("""
     background: #f9fafb !important;
     color: #111827 !important;
 }
+/* Rankings & other ipywidgets Accordions: match Maintenance card style */
+.jupyter-widgets .p-Accordion-tab {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    margin-bottom: 6px !important;
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+}
 /* Section headings and body text in HTML widgets */
 .ebird-dashboard h4 {
     color: #111827 !important;
@@ -1283,45 +1294,53 @@ checklist_data = _compute_checklist_stats(df_full)
 checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 
 # Rankings tab: two groups (Top N + Other) with headings, each group an accordion
-_rankings_css = """
-.stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
-.stats-info-glyph { cursor:help; opacity:0.7; }
-.stats-info-tooltip { position:absolute; bottom:100%; top:auto; margin-bottom:6px; margin-top:0; padding:10px 14px; background:#374151; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(320px,85vw); min-width:180px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); opacity:0; visibility:hidden; transition:opacity 0.15s; pointer-events:none; z-index:9999; }
-.stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
-/* Default for rankings (no columns): tooltip extends left from icon */
-.stats-info-tooltip { right:0; left:auto; }
-.stats-tbl td:nth-child(2), .stats-tbl td:nth-child(3) { white-space:nowrap; }
-.stats-tbl.rank-tbl th:first-child,
-.stats-tbl.rank-tbl td:first-child { width: 6ch; max-width: 6ch; text-align: left; }
-.stats-tbl.seen-once-tbl { width: 100%; }
-.stats-tbl.seen-once-tbl th:nth-child(2), .stats-tbl.seen-once-tbl td:nth-child(2) { max-width: 420px; }
-.stats-tbl.seen-once-tbl th:nth-child(3), .stats-tbl.seen-once-tbl td:nth-child(3),
-.stats-tbl.seen-once-tbl th:nth-child(4), .stats-tbl.seen-once-tbl td:nth-child(4) { width: 1%; white-space: nowrap; }
-.stats-tbl.location-cols-tbl th:nth-child(1), .stats-tbl.location-cols-tbl td:nth-child(1) { max-width: 420px; }
-.stats-tbl.location-cols-tbl th:nth-child(2), .stats-tbl.location-cols-tbl td:nth-child(2),
-.stats-tbl.location-cols-tbl th:nth-child(3), .stats-tbl.location-cols-tbl td:nth-child(3) { width: 1%; white-space: nowrap; }
-"""
 _rankings_heading_style = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;margin:0 0 8px;padding:0;color:#111827;"
-def _wrap_rankings_child(content):
-    """Wrap rankings section HTML in styled widget for accordion."""
-    return widgets.HTML(value=f"<style>{_rankings_css}</style>{content}")
+
+def _build_rankings_panel_html(sections_top_n, sections_other):
+    """Build HTML for Rankings & lists tab using <details> accordions (matching Maintenance style)."""
+    def _details_block(title, html_body):
+        return f"""
+<details class="maint-section">
+  <summary>{title}</summary>
+  <div style="margin-top:8px;">
+{html_body}
+  </div>
+</details>"""
+
+    top_html = "".join(_details_block(title, html) for title, html in sections_top_n)
+    other_html = "".join(_details_block(title, html) for title, html in sections_other)
+
+    return f"""
+<style>
+.maint-section {{
+  margin-bottom:8px;
+  border:1px solid #e5e7eb;
+  border-radius:6px;
+  background:#f9fafb;
+  padding:4px 10px;
+}}
+.maint-section > summary {{
+  font-weight:600;
+  padding:6px 0;
+  color:#374151;
+  cursor:pointer;
+}}
+</style>
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;line-height:1.6;width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px);box-sizing:border-box;">
+  <h3 style="{_rankings_heading_style}">Top {TOP_N_TABLE_LIMIT}</h3>
+  {top_html}
+  <h3 style="margin-top:24px;{_rankings_heading_style.split('margin:0 0 8px;')[0]}">Interesting Lists</h3>
+  {other_html}
+</div>
+"""
 
 
-rankings_accordion_top_n = Accordion(
-    children=[_wrap_rankings_child(html) for _, html in checklist_data["rankings_sections_top_n"]],
-    selected_index=None,
+rankings_panel = widgets.HTML(
+    value=_build_rankings_panel_html(
+        checklist_data["rankings_sections_top_n"],
+        checklist_data["rankings_sections_other"],
+    )
 )
-for i, (title, _) in enumerate(checklist_data["rankings_sections_top_n"]):
-    rankings_accordion_top_n.set_title(i, title)
-rankings_accordion_other = Accordion(
-    children=[_wrap_rankings_child(html) for _, html in checklist_data["rankings_sections_other"]],
-    selected_index=None,
-)
-for i, (title, _) in enumerate(checklist_data["rankings_sections_other"]):
-    rankings_accordion_other.set_title(i, title)
-rankings_tab_heading_top = widgets.HTML(value=f"<h3 style='{_rankings_heading_style}'>Top {TOP_N_TABLE_LIMIT}</h3>")
-rankings_tab_heading_other = widgets.HTML(value=f"<h3 style='{_rankings_heading_style}'>Interesting Lists</h3>")
-rankings_panel = VBox([rankings_tab_heading_top, rankings_accordion_top_n, rankings_tab_heading_other, rankings_accordion_other])
 
 
 # Map maintenance tab: exact duplicates and close-location pairs
@@ -1336,10 +1355,27 @@ def _compute_map_maintenance_html(loc_df, threshold_m):
     .maint-tbl.maint-single-col td { text-align:left; font-weight:normal; }
     .maint-pair-tbl { max-width:600px; }
     .maint-pair-tbl tbody tr.maint-spacer { background:transparent; }
-    .maint-section { margin-bottom:12px; }
-    .maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
-    .maint-subsection { margin-top:12px; margin-bottom:8px; margin-left:8px; }
-    .maint-subsection > summary { font-weight:600; padding:4px 0; color:#374151; cursor:pointer; font-size:13px; }
+    .maint-section {
+      margin-bottom:8px;
+      border:1px solid #e5e7eb;
+      border-radius:6px;
+      background:#f9fafb;
+      padding:4px 10px;
+    }
+    .maint-section > summary {
+      font-weight:600;
+      padding:6px 0;
+      color:#374151;
+      cursor:pointer;
+    }
+    .maint-subsection { margin-top:8px; margin-bottom:4px; margin-left:8px; }
+    .maint-subsection > summary {
+      font-weight:600;
+      padding:4px 0;
+      color:#374151;
+      cursor:pointer;
+      font-size:13px;
+    }
     """
     # Table 1: Exact duplicates (inner accordion)
     dup_body = ""
@@ -1415,8 +1451,19 @@ def _compute_sex_notation_html(sex_notation_by_year):
     css = """
     details { margin-bottom:8px; }
     summary { cursor:pointer; font-weight:600; padding:6px 0; color:#374151; }
-    .maint-section { margin-bottom:12px; }
-    .maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
+    .maint-section {
+      margin-bottom:8px;
+      border:1px solid #e5e7eb;
+      border-radius:6px;
+      background:#f9fafb;
+      padding:4px 10px;
+    }
+    .maint-section > summary {
+      font-weight:600;
+      padding:6px 0;
+      color:#374151;
+      cursor:pointer;
+    }
     """
     explanation = """
   <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
@@ -1459,8 +1506,19 @@ def _compute_incomplete_checklists_html(incomplete_by_year):
     css = """
     details { margin-bottom:8px; }
     summary { cursor:pointer; font-weight:600; padding:6px 0; color:#374151; }
-    .maint-section { margin-bottom:12px; }
-    .maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
+    .maint-section {
+      margin-bottom:8px;
+      border:1px solid #e5e7eb;
+      border-radius:6px;
+      background:#f9fafb;
+      padding:4px 10px;
+    }
+    .maint-section > summary {
+      font-weight:600;
+      padding:6px 0;
+      color:#374151;
+      cursor:pointer;
+    }
     """
     explanation = """
   <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
