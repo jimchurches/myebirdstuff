@@ -770,6 +770,7 @@ def _date_filter_status_text():
 
 def _clear_to_all_species():
     """Reset view: clear species, uncheck 'show only selected', redraw. Does not change date filter (refs #47)."""
+    state.skip_next_suggestion_update = True  # avoid update_suggestions re-entering when we clear search_box
     search_box.value = ""
     matches_dropdown.options = []
     matches_dropdown.value = None
@@ -1016,9 +1017,10 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
     scroll_popup_script = _popup_scroll_script(POPUP_SCROLL_HINT, POPUP_SORT_ORDER == "ascending")
     state.species_map.get_root().html.add_child(Element(scroll_popup_script))
 
+    # Generate map HTML before clearing output so the previous map stays visible until the new one is ready (refs #45)
+    map_html = state.species_map._repr_html_()
     with map_output:
         map_output.clear_output()
-        map_html = state.species_map._repr_html_()
         display(HTML(f'<div class="output_map">{map_html}</div>'))
 
     # Export is explicit via "Export Map HTML" button (refs #47); no automatic save on redraw
