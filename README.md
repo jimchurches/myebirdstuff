@@ -10,6 +10,7 @@ Various tools and utilities I've written to help me with eBird.
 - [myebirdstuff](#myebirdstuff)
   - [Table of Contents](#table-of-contents)
   - [Projects in this repo](#projects-in-this-repo)
+  - [eBird Data Visualisation Tool](#ebird-data-visualisation-tool)
   - [Bird Data Logging with Apple Shortcut](#bird-data-logging-with-apple-shortcut)
     - [What It Does](#what-it-does)
     - [Output Format](#output-format)
@@ -27,16 +28,11 @@ Various tools and utilities I've written to help me with eBird.
     - [Incidental Checklist Creation from Clipboard Data](#incidental-checklist-creation-from-clipboard-data)
       - [Flow Control Options](#flow-control-options)
       - [Important Notes](#important-notes)
-  - [eBird Data Visualisation Tool](#eBird_Data_Visualisation_Tool)
 
 
 ## Projects in this repo
 
 This repo currently has three related pieces that work together:
-
-- **Bird Data Logging with Apple Shortcut**  
-  Hands-free dictation of sightings while driving or on the move, logging to Apple Notes.  
-  Documentation: see [Bird Data Logging with Apple Shortcut](#bird-data-logging-with-apple-shortcut) in this README.  
 
 - **eBird Data Visualisation Tool (personal eBird explorer)**  
   A Jupyter notebook that loads your eBird export and provides an interactive map, statistics, yearly summary, rankings, and maintenance views.  
@@ -48,12 +44,25 @@ This repo currently has three related pieces that work together:
   - Future ideas: [`docs/explorer/future-ideas.md`](docs/explorer/future-ideas.md)  
   - Regression checklist: [`docs/explorer/regression-checklist.md`](docs/explorer/regression-checklist.md)  
 
+- **Bird Data Logging with Apple Shortcut**  
+  Hands-free dictation of sightings while driving or on the move, logging to Apple Notes.  
+  Documentation: see [Bird Data Logging with Apple Shortcut](#bird-data-logging-with-apple-shortcut) in this README.  
+
 - **eBird Macros (UI.Vision) + location naming script**  
   UI.Vision macros that help create incidental checklists and clean up / rename personal locations, backed by the Python helper script `scripts/eBirdChecklistNameFromGPS.py`.  
   Documentation: see [eBird Macros](#ebird-macros) and [Location naming](#location-naming) in this README.  
   Future, more detailed docs will live under:  
   - `docs/ui-vision/` (UI.Vision macros)  
   - `docs/shortcut/` (shortcut/macros integration and workflow)  
+
+
+## eBird Data Visualisation Tool
+
+This repository includes a Jupyter notebook called `personal_ebird_explorer.ipynb` that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
+
+> 📘 **User guide and run options:** [docs/explorer/README.md](docs/explorer/README.md)  
+> 📗 **Installation** (Python, Jupyter, Voila): [docs/explorer/install.md](docs/explorer/install.md)  
+> 📙 **Developers:** [docs/development.md](docs/development.md) · **AI-assisted work:** [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)
 
 
 ## Bird Data Logging with Apple Shortcut
@@ -91,22 +100,19 @@ Each entry in the Notes log looks like this:
 Date/time: 18 May 2025 at 06:15 | GPS: -35.3489, 149.0555 | Record(s): Pair of Gang-gangs in casuarinas
 ```
 
-You can change the output format by editing the `Text` block in the Shortcut. Some of the steps look complex but are just for formatting — the core workflow is
-simple and easy to follow.  It can be viewed, used and edited on both iOS and macOS.
+You can change the output format by editing the `Text` block in the Shortcut. Some of the steps look complex but are just for formatting — the core workflow is simple and easy to follow. It can be viewed, used and edited on both iOS and macOS.
 
 ---
 
 ### Why This Exists
 
-Logging birds while driving is dangerous and illegal. I created this Shortcut after being fined $450 for
-touching my phone to log a Wedge-tailed Eagle  with the eBird mobile app while driving.  Totally my
-fault, I shouldn't have been doing that and knew I shouldn't be.
+Logging birds while driving is dangerous and illegal. I created this Shortcut after being fined $450 for touching my phone to log a Wedge-tailed Eagle with the eBird mobile app while driving. Totally my fault — I shouldn't have been doing that and knew I shouldn't be.
 
-Now I can just speak
+Now I can just speak instead.
 
 I don't try to log every bird — just key sightings (raptors, rarities, or personal notables).
 
-Apple Car Play isn't required, but makes it easy, I don't need to remember to leave my phone where Siri can hear me.
+Apple CarPlay isn't required, but it makes it easy; I don't need to remember to leave my phone where Siri can hear me.
 
 ---
 
@@ -114,12 +120,11 @@ Apple Car Play isn't required, but makes it easy, I don't need to remember to le
 
 Later, you can manually transfer the log entry into a proper eBird checklist.  I envisioned this as a manual process and it probably will be if you use this little tool.
 
-However, having spent a career automating stuff, I couldn't help myself and have done some work in UI.Vision to help me import the data into eBird quickly.  You will find
-more details about that UI.Vision macro somewhere eles here.
+However, having spent a career automating stuff, I couldn't help myself and have done some work in UI.Vision to help me import the data into eBird quickly. You will find more details about that UI.Vision macro somewhere else in this README.
 
 If you're using this Shortcut in combination with my UI.Vision macro (`eBird Incidental Checklist Create`), the process becomes semi-automated:
 
-- Copy a individual log entry from Notes to the clipboard
+- Copy an individual log entry from Notes to the clipboard
 - Run the macro
 - It validates the data
 - Extracts date, time, GPS, and your dictation
@@ -128,8 +133,7 @@ If you're using this Shortcut in combination with my UI.Vision macro (`eBird Inc
 It does **not** attempt to log the actual birds. Speech-to-text is too variable for that. Instead, once the checklist is created, you can manually
 fill in the bird list from your voice notes.
 
-The macro is designed for my personal workflow, but you’re welcome to explore or adapt it for your own purposes.  For the most part is it should work
-for anyone.  My custom location naming might be a step to far for you and may not work for you.
+The macro is designed for my personal workflow, but you’re welcome to explore or adapt it for your own purposes.  For the most part it should work for anyone. My custom location naming might be a step too far for you and may not work for you.
 
 ---
 
@@ -151,7 +155,7 @@ I have written some UI.Vision macros to help me interact with eBird.  Details fo
 
 ### What is UI.Vision?
 
-UI.Vision is a Robotic Process Automaton (RPA) tool for browsers.  You can find details here:
+UI.Vision is a Robotic Process Automation (RPA) tool for browsers.  You can find details here:
 
 [UI.Vision](https://ui.vision)
 
@@ -207,11 +211,11 @@ I don’t try to do this in the field. Often someone else is creating the checkl
 
 So I solved it. I wrote a macro in UI.Vision that does it for me. I go to My eBird, open each new location manually, and run the macro. Done. It renames any personal location, or if it’s a shared one, it edits the checklist and creates a new personal location using my naming scheme. That doesn’t affect the original owner — once a checklist is shared, they become separate (photos are still shared, but not the location).
 
-This setup is tailored to my quirks. I don’t expect anyone else to use it. But maybe it’ll give someone a few clues about how to automate eBird tasks with UI.Vision if they’ve got their own itch to scratch.  There might also be clues in the helper script, written in Python, around working with goelocation data.
+This setup is tailored to my quirks. I don’t expect anyone else to use it. But maybe it’ll give someone a few clues about how to automate eBird tasks with UI.Vision if they’ve got their own itch to scratch.  There might also be clues in the helper script, written in Python, around working with geolocation data.
 
 #### Google Geocoding
 
-I use Google's Geocoding API for reverse geocoding (gps --> name).  Its free for low volumes of queries, and low volumes is thousands a month so for this purpose I'm never going to get close to the volume of queries where I could be charged.  An API key is required and is removed from my code here as that is private (like a password).  You'll find how to get one with a quick Google search.  You'll need to drop your key into the code; look at the Python script and you'll find where to do that easy enough.
+I use Google's Geocoding API for reverse geocoding (GPS → name). It's free for low volumes of queries — low volume means thousands a month, so for this purpose I'm never going to get close to the volume where I could be charged. An API key is required and is removed from my code here as that is private (like a password). You'll find how to get one with a quick Google search. You'll need to drop your key into the code; look at the Python script and you'll find where to do that easily enough.
 
 The Python script (`scripts/eBirdChecklistNameFromGPS.py`) is used by the UI.Vision macros. It does not run on Binder. Before using the macros, install its dependencies:
 
@@ -244,7 +248,7 @@ Once the checklist is created, you just update it manually with the correct bird
 
 The macro does **not** try to parse the bird list from the dictation — that’s too error-prone and outside the scope of what I need.
 
-You have two choices on when to enter the actual list of birds for the checkist:
+You have two choices on when to enter the actual list of birds for the checklist:
 
 * If `autoSubmit` is false (see below), the checklist creation process will stop on the final page, the bird list, and you can enter the bird(s) before manually
   submitting the checklist.
@@ -260,13 +264,13 @@ The macro uses three variables at the start to control its behaviour:
 - `testingMode`:  
   When `true`, the macro skips the final checklist submission to avoid uploading test data.  
   A location is still created, so warnings will remind you to clean up after testing.  The 
-  location gets creted as you step through the checklist creation Wizard so can't be avoided
+  location gets created as you step through the checklist creation Wizard so can't be avoided
   (only an issue when testing).
 
 - `autoSubmit`:  
   When `true`, the checklist is automatically submitted.  
   When `false`, the macro stops before submission, so you can review or edit the list manually.
-  The dictatoin text for your data will always be written to the checklist comment so you can
+  The dictation text for your data will always be written to the checklist comment so you can
   use it to update the bird list later.  `skipComment` is ignored.
 
 - `skipComment`:  
@@ -282,7 +286,7 @@ You can set these variables inside the macro before running it, depending on you
 
 - Hotspots are not supported — this is intended for sightings while driving or otherwise on the move  
 
-- The location name is formatted using a separate Python script (see [Location Naming](#location-naming))
+- The location name is formatted using a separate Python script (see [Location naming](#location-naming))
 
 This setup suits my personal workflow and naming preferences, but you're welcome to adapt it.
 
@@ -291,13 +295,3 @@ avoid my script. All the other steps should be fairly common to anyone creating 
 data created by the [Apple Shortcut described above](#bird-data-logging-with-apple-shortcut).
 
 Just don’t forget: the macro interacts with the live eBird system. Respect the data.
-
-
-## eBird Data Visualisation Tool
-
-This repository includes a Jupyter notebook called `personal_ebird_explorer.ipynb` that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
-
-> 📘 **User guide and run options:** [docs/explorer/README.md](docs/explorer/README.md)  
-> 📗 **Installation** (Python, Jupyter, Voila): [docs/explorer/install.md](docs/explorer/install.md)  
-> 📙 **Developers:** [docs/development.md](docs/development.md) · **AI-assisted work:** [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)
-
