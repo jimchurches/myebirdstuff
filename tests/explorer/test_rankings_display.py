@@ -9,6 +9,7 @@ from personal_ebird_explorer.rankings_display import (
     rankings_table_with_rank,
     rankings_visited_table,
     rankings_seen_once_table,
+    rankings_subspecies_hierarchical_table,
 )
 
 
@@ -146,3 +147,29 @@ def test_rankings_table_with_rank_link_urls_fn_one_lookup():
     assert 'href="https://ebird.org/species/grtea"' in out
     assert "lifelist?spp=grtea" in out
     assert ">5</a>" in out
+
+
+def test_rankings_subspecies_hierarchical_table_lifelist_link_on_total():
+    """When lifelist_url_fn is provided, Total individuals count is a lifelist link (refs #56)."""
+    blocks = [
+        {
+            "species_common": "Grey Teal",
+            "species_scientific": "Anas gracilis",
+            "total_individuals": 330,
+            "species_only_individuals": 100,
+            "subspecies_total_individuals": 230,
+            "subspecies_fraction": 0.03,
+            "subspecies": [],
+        }
+    ]
+    def lifelist_url_fn(name):
+        return "https://ebird.org/lifelist?spp=grtea" if name == "Grey Teal" else None
+    html = rankings_subspecies_hierarchical_table(
+        "Species: Subspecies occurrence",
+        blocks,
+        include_heading=False,
+        lifelist_url_fn=lifelist_url_fn,
+    )
+    assert "Total individuals:" in html
+    assert "lifelist?spp=grtea" in html
+    assert ">330</a>" in html

@@ -1383,7 +1383,7 @@ def _compute_checklist_stats(df, link_urls_fn=None):
     rankings_sections_other = [
         ("Species: Most individuals", rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn, add_lifelist_link=False)),
         ("Species: Most checklists", rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn, add_lifelist_link=True)),
-        ("Species: Subspecies occurrence", rankings_subspecies_hierarchical_table("Species: Subspecies occurrence", rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Subspecies occurrence", rankings_subspecies_hierarchical_table("Species: Subspecies occurrence", rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, lifelist_url_fn=(lambda name: link_urls_fn(name)[1] if link_urls_fn else None))),
         ("Species: Seen only once", rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn)),
     ]
 

@@ -158,7 +158,7 @@ def rankings_seen_once_table(
     return scroll_wrapper
 
 
-def rankings_subspecies_hierarchical_table(title, species_blocks, include_heading=True, scroll_hint="shading", visible_rows=16):
+def rankings_subspecies_hierarchical_table(title, species_blocks, include_heading=True, scroll_hint="shading", visible_rows=16, lifelist_url_fn=None):
     """Render hierarchical subspecies occurrence as accordion-style HTML.
 
     *species_blocks* is the structure returned by stats.rankings_subspecies_hierarchical.
@@ -175,11 +175,20 @@ def rankings_subspecies_hierarchical_table(title, species_blocks, include_headin
         species_only = block.get("species_only_individuals", 0)
         subspecies_total = block.get("subspecies_total_individuals", 0)
         frac = block.get("subspecies_fraction", None)
+        lifelist_url = lifelist_url_fn(species_common) if lifelist_url_fn else None
+        total_count = f"{total:,}"
+        if lifelist_url:
+            total_count_html = (
+                f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" "
+                f'target="_blank" rel="noopener">{total_count}</a>'
+            )
+        else:
+            total_count_html = total_count
         if frac is not None:
             pct = f"{frac * 100:.0f}% subspecies identified"
-            total_line = f"{total:,} ({pct})"
+            total_line = f"{total_count_html} ({pct})"
         else:
-            total_line = f"{total:,}"
+            total_line = total_count_html
 
         header_parts = [species_common]
         if species_sci:
