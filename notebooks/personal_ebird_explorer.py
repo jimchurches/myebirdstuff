@@ -83,6 +83,11 @@ RANKINGS_TABLE_VISIBLE_ROWS = 16
 # Map maintenance tab: locations within this distance (meters) are considered "close"
 CLOSE_LOCATION_METERS = 10
 
+# eBird taxonomy locale for species links: common names in the API match your export when set.
+# Examples: "en_AU" (Australian), "en_GB" (British). Leave "" for API default (en_US).
+# See eBird API 2.0 reference: https://documenter.getpostman.com/view/664302/S1ENwy59
+EBIRD_TAXONOMY_LOCALE = "en_AU"
+
 # Optional date range filtering (set to False to disable)
 # Note: Some eBird exports (e.g. checklists with no time, generalized locations) may use year 2026.
 # If locations/species are missing, set FILTER_BY_DATE = False or extend the range.
@@ -553,6 +558,11 @@ name_map = (
     .to_dict()
 )
 
+# eBird taxonomy for species links (refs #56): load once; on failure links are skipped
+from personal_ebird_explorer.taxonomy import load_taxonomy, get_species_url, get_species_and_lifelist_urls
+_taxonomy_loaded = load_taxonomy(locale=EBIRD_TAXONOMY_LOCALE if EBIRD_TAXONOMY_LOCALE else None)
+_species_url_fn = get_species_url if _taxonomy_loaded else (lambda _: None)
+_link_urls_fn = get_species_and_lifelist_urls if _taxonomy_loaded else (lambda _: (None, None))
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -941,6 +951,7 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
                 last_seen_date=last_seen_date,
                 high_count_date=high_count_date,
                 date_filter_status=_date_filter_status_text(),
+                species_url=_species_url_fn(selected_common_name or selected_species) if _species_url_fn else None,
             )
         ))
 
@@ -1054,8 +1065,11 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 # --------------------------------------------
 # ✅ Checklist Statistics (computed from data; table HTML from rankings_display)
 # --------------------------------------------
-def _compute_checklist_stats(df):
-    """Compute checklist statistics from df; returns dict with stats_html, rankings_sections_top_n, rankings_sections_other."""
+def _compute_checklist_stats(df, link_urls_fn=None):
+    """Compute checklist statistics from df; returns dict with stats_html, rankings_sections_top_n, rankings_sections_other.
+
+    Optional link_urls_fn(common_name) -> (species_url, lifelist_url) enables eBird links (refs #56); one lookup per row.
+    """
     import html
 
     if df.empty:
@@ -1367,10 +1381,10 @@ def _compute_checklist_stats(df):
         ("Location: Most visited", rankings_visited_table(rankings["visited"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
     rankings_sections_other = [
-        ("Species: Most individuals", rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Most checklists", rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Subspecies occurrence", rankings_subspecies_hierarchical_table("Species: Subspecies occurrence", rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Seen only once", rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
+        ("Species: Most individuals", rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn, add_lifelist_link=False)),
+        ("Species: Most checklists", rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn, add_lifelist_link=True)),
+        ("Species: Subspecies occurrence", rankings_subspecies_hierarchical_table("Species: Subspecies occurrence", rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, lifelist_url_fn=(lambda name: link_urls_fn(name)[1] if link_urls_fn else None), species_url_fn=(lambda name: link_urls_fn(name)[0] if link_urls_fn else None))),
+        ("Species: Seen only once", rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn)),
     ]
 
     stats_html = f"""
@@ -1385,7 +1399,7 @@ def _compute_checklist_stats(df):
 
 
 # Stats use df_full for all-time totals (unfiltered by date). Map uses df, which may be date-filtered.
-checklist_data = _compute_checklist_stats(df_full)
+checklist_data = _compute_checklist_stats(df_full, link_urls_fn=_link_urls_fn)
 checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 
 # Rankings tab: two groups (Top N + Other) with headings, each group an accordion
@@ -1538,8 +1552,11 @@ def _compute_map_maintenance_html(loc_df, threshold_m):
 map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
 
 
-def _compute_sex_notation_html(sex_notation_by_year):
-    """Build HTML for Maintenance tab: sex-notation strings in checklist comments, grouped by year."""
+def _compute_sex_notation_html(sex_notation_by_year, species_url_fn=None):
+    """Build HTML for Maintenance tab: sex-notation strings in checklist comments, grouped by year.
+
+    Optional species_url_fn(common_name) -> url enables eBird species links in Species column (refs #56).
+    """
     import html as _html
     if not sex_notation_by_year:
         return ""
@@ -1574,9 +1591,11 @@ def _compute_sex_notation_html(sex_notation_by_year):
             species_esc = _html.escape(species, quote=True)
             protocol_esc = _html.escape(protocol, quote=True)
             notation_esc = _html.escape(notation, quote=True)
+            species_url = species_url_fn(species) if species_url_fn else None
+            species_cell = f"<a href=\"{_html.escape(species_url, quote=True)}\" target=\"_blank\" rel=\"noopener\">{species_esc}</a>" if species_url else species_esc
             url = f"https://ebird.org/checklist/{sid}" if sid else "#"
             loc_link = f"<a href=\"{url}\" target=\"_blank\">{loc_esc}</a>" if url != "#" else loc_esc
-            rows.append(f"<tr><td>{date_esc}</td><td>{protocol_esc}</td><td>{species_esc}</td><td>{notation_esc}</td><td>{loc_link}</td></tr>")
+            rows.append(f"<tr><td>{date_esc}</td><td>{protocol_esc}</td><td>{species_cell}</td><td>{notation_esc}</td><td>{loc_link}</td></tr>")
         table_body = "".join(rows)
         table = f"<table class=\"maint-tbl\"><thead><tr><th>Date</th><th>Protocol</th><th>Species</th><th>Sex Notation</th><th>Location</th></tr></thead><tbody>{table_body}</tbody></table>"
         sections.append(f"<details><summary>{y} ({len(items)})</summary>{table}</details>")
@@ -1648,7 +1667,7 @@ def _compute_incomplete_checklists_html(incomplete_by_year):
 
 incomplete_checklists_html = _compute_incomplete_checklists_html(checklist_data.get("incomplete_by_year", {}))
 sex_notation_by_year = _get_sex_notation_by_year(df_full)
-sex_notation_html = _compute_sex_notation_html(sex_notation_by_year)
+sex_notation_html = _compute_sex_notation_html(sex_notation_by_year, species_url_fn=_species_url_fn)
 _maintenance_panel_parts = [widgets.HTML(value=map_maintenance_html)]
 if incomplete_checklists_html:
     _maintenance_panel_parts.append(widgets.HTML(value=incomplete_checklists_html))

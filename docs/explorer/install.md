@@ -174,6 +174,8 @@ DATA_FOLDER = "/Users/yourname/Documents/eBirdData"
 
 4. Put your eBird export CSV in that folder and name it **MyEBirdData.csv** (or change the `EBIRD_DATA_FILE_NAME` variable in the first code cell of the notebook to match your filename).
 
+**Species links and locale** — The notebook can add clickable eBird species links by fetching the eBird taxonomy once at startup (no API key). In the notebook’s **User Variables** cell, set **EBIRD_TAXONOMY_LOCALE** so common names match your export (e.g. `"en_AU"` for Australian English, `"en_GB"` for British; leave `""` for the API default). If the API is unavailable, the notebook runs without links.
+
 The `config_template.py` file also has an example `GOOGLE_API_KEY`; that’s only used by the separate location-naming script in this repo, not by the explorer notebook. You can ignore it for the explorer.
 
 ---

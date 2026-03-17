@@ -5,6 +5,8 @@ Scroll-wrapper and table builders used when rendering the Checklist Statistics
 rankings sections. Uses region_display for country/state names.
 """
 
+import html as _html_module
+
 from personal_ebird_explorer.region_display import country_for_display, state_for_display
 
 
@@ -55,15 +57,46 @@ def rankings_table_location_5col(title, headers_5, rows, include_heading=True, s
     return content
 
 
-def rankings_table_with_rank(title, headers_3col, rows_3col, include_heading=True, scroll_hint="shading", visible_rows=16):
-    """Build a 4-column rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3)."""
+def rankings_table_with_rank(
+    title,
+    headers_3col,
+    rows_3col,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    species_url_fn=None,
+    lifelist_url_fn=None,
+    link_urls_fn=None,
+    add_lifelist_link=False,
+):
+    """Build a 4-column rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3).
+
+    Optional link helpers (refs #56). Prefer link_urls_fn(common_name) -> (species_url, lifelist_url)
+    so one lookup per row; when provided, add_lifelist_link controls whether the last column gets the
+    lifelist link. Fallback: species_url_fn and lifelist_url_fn (two lookups per row when both used).
+    """
     if not rows_3col:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
-    body = "".join(
-        f"<tr><td>{i}</td><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{r[2]}</td></tr>"
-        for i, r in enumerate(rows_3col, start=1)
-    )
+    rows_html = []
+    for i, r in enumerate(rows_3col, start=1):
+        cell1_esc = _html_module.escape(str(r[0]), quote=True)
+        species_url = None
+        lifelist_url = None
+        if link_urls_fn:
+            species_url, lifelist_url = link_urls_fn(r[0])
+        else:
+            if species_url_fn:
+                species_url = species_url_fn(r[0])
+            if lifelist_url_fn:
+                lifelist_url = lifelist_url_fn(r[0])
+        cell1 = f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{cell1_esc}</a>' if species_url else cell1_esc
+        cell3 = str(r[2])
+        if lifelist_url and (add_lifelist_link or lifelist_url_fn):
+            count_esc = _html_module.escape(cell3, quote=True)
+            cell3 = f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" target=\"_blank\" rel=\"noopener\">{count_esc}</a>"
+        rows_html.append(f"<tr><td>{i}</td><td>{cell1}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{cell3}</td></tr>")
+    body = "".join(rows_html)
     tbl = f"<table class='stats-tbl rankings-tbl rank-tbl'><thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th><th>{headers_3col[2]}</th></tr></thead><tbody>{body}</tbody></table>"
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
     content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
@@ -84,15 +117,36 @@ def rankings_visited_table(rows, include_heading=True, scroll_hint="shading", vi
     return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
 
-def rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-    """6-column table: Species | Location | State | Country | Visited date/time | Count."""
+def rankings_seen_once_table(
+    rows,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    species_url_fn=None,
+    link_urls_fn=None,
+):
+    """6-column table: Species | Location | State | Country | Visited date/time | Count.
+
+    Optional link (refs #56): link_urls_fn(common_name) -> (species_url, lifelist_url) uses first
+    element (one lookup per row). Fallback: species_url_fn(common_name) -> url.
+    """
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
-    body = "".join(
-        f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
-        for r in rows
-    )
+    rows_html = []
+    for r in rows:
+        species_esc = _html_module.escape(str(r[0]), quote=True)
+        if link_urls_fn:
+            species_url = link_urls_fn(r[0])[0]
+        elif species_url_fn:
+            species_url = species_url_fn(r[0])
+        else:
+            species_url = None
+        species_cell = f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>' if species_url else species_esc
+        rows_html.append(
+            f"<tr><td>{species_cell}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
+        )
+    body = "".join(rows_html)
     tbl = (
         "<table class='stats-tbl rankings-tbl seen-once-tbl'>"
         "<thead><tr>"
@@ -104,7 +158,15 @@ def rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", 
     return scroll_wrapper
 
 
-def rankings_subspecies_hierarchical_table(title, species_blocks, include_heading=True, scroll_hint="shading", visible_rows=16):
+def rankings_subspecies_hierarchical_table(
+    title,
+    species_blocks,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    lifelist_url_fn=None,
+    species_url_fn=None,
+):
     """Render hierarchical subspecies occurrence as accordion-style HTML.
 
     *species_blocks* is the structure returned by stats.rankings_subspecies_hierarchical.
@@ -121,11 +183,29 @@ def rankings_subspecies_hierarchical_table(title, species_blocks, include_headin
         species_only = block.get("species_only_individuals", 0)
         subspecies_total = block.get("subspecies_total_individuals", 0)
         frac = block.get("subspecies_fraction", None)
+        lifelist_url = lifelist_url_fn(species_common) if lifelist_url_fn else None
+        species_url = species_url_fn(species_common) if species_url_fn else None
+        total_count = f"{total:,}"
+        if lifelist_url:
+            total_count_html = (
+                f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" "
+                f'target="_blank" rel="noopener">{total_count}</a>'
+            )
+        else:
+            total_count_html = total_count
+        link_suffix = ""
+        if species_url:
+            link_suffix = (
+                " "
+                f"<a href=\"{_html_module.escape(species_url, quote=True)}\" "
+                'target="_blank" rel="noopener" '
+                'style="color:inherit;text-decoration:none;">⧉</a>'
+            )
         if frac is not None:
             pct = f"{frac * 100:.0f}% subspecies identified"
-            total_line = f"{total:,} ({pct})"
+            total_line = f"{total_count_html} ({pct}){link_suffix}"
         else:
-            total_line = f"{total:,}"
+            total_line = f"{total_count_html}{link_suffix}"
 
         header_parts = [species_common]
         if species_sci:

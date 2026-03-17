@@ -9,6 +9,7 @@ from personal_ebird_explorer.rankings_display import (
     rankings_table_with_rank,
     rankings_visited_table,
     rankings_seen_once_table,
+    rankings_subspecies_hierarchical_table,
 )
 
 
@@ -87,3 +88,93 @@ def test_rankings_seen_once_table_empty_no_data():
     out = rankings_seen_once_table([], include_heading=True)
     assert "No data." in out
     assert "Seen only once" in out
+
+
+def test_rankings_table_with_rank_species_url_fn_injects_links():
+    """When species_url_fn is provided and returns a URL, species name is linked (refs #56)."""
+    def url_fn(name):
+        return "https://ebird.org/species/grtea" if name == "Grey Teal" else None
+    out = rankings_table_with_rank(
+        "Top",
+        ["Species", "", "Count"],
+        [("Grey Teal", "—", "10")],
+        species_url_fn=url_fn,
+    )
+    assert "Grey Teal" in out
+    assert 'href="https://ebird.org/species/grtea"' in out
+
+
+def test_rankings_table_with_rank_lifelist_url_fn_injects_link():
+    """When lifelist_url_fn is provided, the count number is the lifelist link (refs #56)."""
+    def lifelist_fn(name):
+        return "https://ebird.org/lifelist?spp=grtea" if name == "Grey Teal" else None
+    out = rankings_table_with_rank(
+        "Checklists",
+        ["Species", "", "Checklists"],
+        [("Grey Teal", "—", "5")],
+        lifelist_url_fn=lifelist_fn,
+    )
+    assert "lifelist?spp=grtea" in out
+    assert ">5</a>" in out  # count is the link text
+
+
+def test_rankings_seen_once_table_species_url_fn_injects_links():
+    """When species_url_fn is provided, Species column is linked (refs #56)."""
+    def url_fn(name):
+        return "https://ebird.org/species/grtea" if name == "Grey Teal" else None
+    out = rankings_seen_once_table(
+        [("Grey Teal", "Loc", "NSW", "AU", "2024-01-01", "1")],
+        include_heading=False,
+        species_url_fn=url_fn,
+    )
+    assert 'href="https://ebird.org/species/grtea"' in out
+    assert "Grey Teal" in out
+
+
+def test_rankings_table_with_rank_link_urls_fn_one_lookup():
+    """link_urls_fn(common_name) -> (species_url, lifelist_url) uses one lookup per row (refs #56)."""
+    def link_urls_fn(name):
+        if name == "Grey Teal":
+            return ("https://ebird.org/species/grtea", "https://ebird.org/lifelist?spp=grtea")
+        return (None, None)
+    out = rankings_table_with_rank(
+        "Checklists",
+        ["Species", "", "Checklists"],
+        [("Grey Teal", "—", "5")],
+        link_urls_fn=link_urls_fn,
+        add_lifelist_link=True,
+    )
+    assert 'href="https://ebird.org/species/grtea"' in out
+    assert "lifelist?spp=grtea" in out
+    assert ">5</a>" in out
+
+
+def test_rankings_subspecies_hierarchical_table_lifelist_link_on_total():
+    """When lifelist_url_fn/species_url_fn are provided, Total individuals line has lifelist link and species link glyph (refs #56)."""
+    blocks = [
+        {
+            "species_common": "Grey Teal",
+            "species_scientific": "Anas gracilis",
+            "total_individuals": 330,
+            "species_only_individuals": 100,
+            "subspecies_total_individuals": 230,
+            "subspecies_fraction": 0.03,
+            "subspecies": [],
+        }
+    ]
+    def lifelist_url_fn(name):
+        return "https://ebird.org/lifelist?spp=grtea" if name == "Grey Teal" else None
+    def species_url_fn(name):
+        return "https://ebird.org/species/grtea" if name == "Grey Teal" else None
+    html = rankings_subspecies_hierarchical_table(
+        "Species: Subspecies occurrence",
+        blocks,
+        include_heading=False,
+        lifelist_url_fn=lifelist_url_fn,
+        species_url_fn=species_url_fn,
+    )
+    assert "Total individuals:" in html
+    assert "lifelist?spp=grtea" in html
+    assert ">330</a>" in html
+    assert "href=\"https://ebird.org/species/grtea\"" in html
+    assert "⧉</a>" in html
