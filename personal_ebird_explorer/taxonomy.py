@@ -115,3 +115,11 @@ def get_species_lifelist_url(common_name: str) -> str | None:
     if not code:
         return None
     return f"https://ebird.org/lifelist?spp={code}"
+
+
+def get_species_and_lifelist_urls(common_name: str) -> tuple[str | None, str | None]:
+    """Return (species_url, lifelist_url) in one lookup. Use for tables that need both (e.g. Most checklists)."""
+    code = _code_for_common_name(common_name)
+    if not code:
+        return (None, None)
+    return (f"https://ebird.org/species/{code}", f"https://ebird.org/lifelist?spp={code}")

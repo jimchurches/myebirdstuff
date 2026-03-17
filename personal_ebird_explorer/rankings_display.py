@@ -66,11 +66,14 @@ def rankings_table_with_rank(
     visible_rows=16,
     species_url_fn=None,
     lifelist_url_fn=None,
+    link_urls_fn=None,
+    add_lifelist_link=False,
 ):
     """Build a 4-column rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3).
 
-    Optional species_url_fn(common_name) -> url and lifelist_url_fn(common_name) -> url (refs #56):
-    when provided, col1 (species) and the last column (e.g. checklist count) get links.
+    Optional link helpers (refs #56). Prefer link_urls_fn(common_name) -> (species_url, lifelist_url)
+    so one lookup per row; when provided, add_lifelist_link controls whether the last column gets the
+    lifelist link. Fallback: species_url_fn and lifelist_url_fn (two lookups per row when both used).
     """
     if not rows_3col:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
@@ -78,17 +81,20 @@ def rankings_table_with_rank(
     rows_html = []
     for i, r in enumerate(rows_3col, start=1):
         cell1_esc = _html_module.escape(str(r[0]), quote=True)
-        if species_url_fn:
-            url = species_url_fn(r[0])
-            cell1 = f'<a href="{_html_module.escape(url, quote=True)}" target="_blank" rel="noopener">{cell1_esc}</a>' if url else cell1_esc
+        species_url = None
+        lifelist_url = None
+        if link_urls_fn:
+            species_url, lifelist_url = link_urls_fn(r[0])
         else:
-            cell1 = cell1_esc
+            if species_url_fn:
+                species_url = species_url_fn(r[0])
+            if lifelist_url_fn:
+                lifelist_url = lifelist_url_fn(r[0])
+        cell1 = f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{cell1_esc}</a>' if species_url else cell1_esc
         cell3 = str(r[2])
-        if lifelist_url_fn:
-            lifelist_url = lifelist_url_fn(r[0])
-            if lifelist_url:
-                count_esc = _html_module.escape(cell3, quote=True)
-                cell3 = f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" target=\"_blank\" rel=\"noopener\">{count_esc}</a>"
+        if lifelist_url and (add_lifelist_link or lifelist_url_fn):
+            count_esc = _html_module.escape(cell3, quote=True)
+            cell3 = f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" target=\"_blank\" rel=\"noopener\">{count_esc}</a>"
         rows_html.append(f"<tr><td>{i}</td><td>{cell1}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{cell3}</td></tr>")
     body = "".join(rows_html)
     tbl = f"<table class='stats-tbl rankings-tbl rank-tbl'><thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th><th>{headers_3col[2]}</th></tr></thead><tbody>{body}</tbody></table>"
@@ -117,10 +123,12 @@ def rankings_seen_once_table(
     scroll_hint="shading",
     visible_rows=16,
     species_url_fn=None,
+    link_urls_fn=None,
 ):
     """6-column table: Species | Location | State | Country | Visited date/time | Count.
 
-    Optional species_url_fn(common_name) -> url (refs #56): when provided, Species column is linked.
+    Optional link (refs #56): link_urls_fn(common_name) -> (species_url, lifelist_url) uses first
+    element (one lookup per row). Fallback: species_url_fn(common_name) -> url.
     """
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
@@ -128,11 +136,13 @@ def rankings_seen_once_table(
     rows_html = []
     for r in rows:
         species_esc = _html_module.escape(str(r[0]), quote=True)
-        if species_url_fn:
-            url = species_url_fn(r[0])
-            species_cell = f'<a href="{_html_module.escape(url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>' if url else species_esc
+        if link_urls_fn:
+            species_url = link_urls_fn(r[0])[0]
+        elif species_url_fn:
+            species_url = species_url_fn(r[0])
         else:
-            species_cell = species_esc
+            species_url = None
+        species_cell = f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>' if species_url else species_esc
         rows_html.append(
             f"<tr><td>{species_cell}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
         )
