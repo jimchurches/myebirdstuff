@@ -150,7 +150,7 @@ def test_rankings_table_with_rank_link_urls_fn_one_lookup():
 
 
 def test_rankings_subspecies_hierarchical_table_lifelist_link_on_total():
-    """When lifelist_url_fn is provided, Total individuals count is a lifelist link (refs #56)."""
+    """When lifelist_url_fn/species_url_fn are provided, Total individuals line has lifelist link and species link glyph (refs #56)."""
     blocks = [
         {
             "species_common": "Grey Teal",
@@ -164,12 +164,17 @@ def test_rankings_subspecies_hierarchical_table_lifelist_link_on_total():
     ]
     def lifelist_url_fn(name):
         return "https://ebird.org/lifelist?spp=grtea" if name == "Grey Teal" else None
+    def species_url_fn(name):
+        return "https://ebird.org/species/grtea" if name == "Grey Teal" else None
     html = rankings_subspecies_hierarchical_table(
         "Species: Subspecies occurrence",
         blocks,
         include_heading=False,
         lifelist_url_fn=lifelist_url_fn,
+        species_url_fn=species_url_fn,
     )
     assert "Total individuals:" in html
     assert "lifelist?spp=grtea" in html
     assert ">330</a>" in html
+    assert "href=\"https://ebird.org/species/grtea\"" in html
+    assert "⧉</a>" in html

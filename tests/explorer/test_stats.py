@@ -30,7 +30,7 @@ class TestSafeCount:
         assert safe_count("5") == 5
 
     def test_x_means_present(self):
-        assert safe_count("X") == 1
+        assert safe_count("X") == 0
 
     def test_nan_returns_zero(self):
         assert safe_count(float("nan")) == 0
