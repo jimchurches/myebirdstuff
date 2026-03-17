@@ -6,6 +6,7 @@ Each function takes explicit inputs and returns a value — no notebook
 globals, widget references, or side effects.
 """
 
+import html as _html_module
 import folium
 import pandas as pd
 
@@ -166,6 +167,7 @@ def build_species_banner_html(
     last_seen_date="",
     high_count_date="",
     date_filter_status=None,
+    species_url=None,
 ):
     """Return the HTML overlay banner for a species-filtered map view.
 
@@ -178,8 +180,17 @@ def build_species_banner_html(
         last_seen_date: Formatted date string for most recent sighting (empty to omit).
         high_count_date: Formatted date string when high count was recorded (empty to omit).
         date_filter_status: Optional string (e.g. "Date filter: Off" or range) shown on last line, smaller and lighter.
+        species_url: Optional eBird species page URL; if set, display_name is rendered as a clickable link (refs #56).
     """
     sep = " &nbsp;|&nbsp; "
+    title_esc = _html_module.escape(str(display_name), quote=True)
+    # Match other tabs: same colour as text, dotted underline (no blue link)
+    _link_style = "color:inherit;text-decoration:underline dotted;text-underline-offset:2px;"
+    title_html = (
+        f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener" style="{_link_style}">{title_esc}</a>'
+        if species_url
+        else title_esc
+    )
     line2 = (
         f'{n_checklists} checklist{"s" if n_checklists != 1 else ""}'
         f'{sep}{n_individuals} individual{"s" if n_individuals != 1 else ""}'
@@ -198,7 +209,7 @@ def build_species_banner_html(
     )
     return (
         f'<div style="{_BANNER_STYLE}">'
-        f'<b>{display_name}</b><br>'
+        f'<b>{title_html}</b><br>'
         f'{line2}<br>'
         f'{line3}<br>'
         f'{line4}'
