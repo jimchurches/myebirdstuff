@@ -107,6 +107,18 @@ def test_exact_match_required_after_locale_load():
         taxonomy._common_to_code = None
 
 
+def test_get_species_and_lifelist_urls_single_lookup():
+    """get_species_and_lifelist_urls returns both URLs from one lookup."""
+    taxonomy._common_to_code = {"Grey Teal": "grtea"}
+    try:
+        species_url, lifelist_url = taxonomy.get_species_and_lifelist_urls("Grey Teal")
+        assert species_url == "https://ebird.org/species/grtea"
+        assert lifelist_url == "https://ebird.org/lifelist?spp=grtea"
+        assert taxonomy.get_species_and_lifelist_urls("Unknown") == (None, None)
+    finally:
+        taxonomy._common_to_code = None
+
+
 def test_subspecies_links_to_main_species():
     """Subspecies common name (trailing ' (X)') falls back to main species for URL."""
     taxonomy._common_to_code = {"Eastern Barn Owl": "easbar1"}

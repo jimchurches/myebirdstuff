@@ -128,3 +128,21 @@ def test_rankings_seen_once_table_species_url_fn_injects_links():
     )
     assert 'href="https://ebird.org/species/grtea"' in out
     assert "Grey Teal" in out
+
+
+def test_rankings_table_with_rank_link_urls_fn_one_lookup():
+    """link_urls_fn(common_name) -> (species_url, lifelist_url) uses one lookup per row (refs #56)."""
+    def link_urls_fn(name):
+        if name == "Grey Teal":
+            return ("https://ebird.org/species/grtea", "https://ebird.org/lifelist?spp=grtea")
+        return (None, None)
+    out = rankings_table_with_rank(
+        "Checklists",
+        ["Species", "", "Checklists"],
+        [("Grey Teal", "—", "5")],
+        link_urls_fn=link_urls_fn,
+        add_lifelist_link=True,
+    )
+    assert 'href="https://ebird.org/species/grtea"' in out
+    assert "lifelist?spp=grtea" in out
+    assert ">5</a>" in out

@@ -31,6 +31,7 @@ from personal_ebird_explorer.taxonomy import (
     load_taxonomy,
     get_species_url,
     get_species_lifelist_url,
+    get_species_and_lifelist_urls,
 )
 from personal_ebird_explorer.map_renderer import (
     create_map,
@@ -51,6 +52,7 @@ __all__ = [
     "load_taxonomy",
     "get_species_url",
     "get_species_lifelist_url",
+    "get_species_and_lifelist_urls",
     "load_dataset",
     "add_datetime_column",
     "find_data_file",

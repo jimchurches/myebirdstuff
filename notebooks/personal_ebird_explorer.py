@@ -559,10 +559,10 @@ name_map = (
 )
 
 # eBird taxonomy for species links (refs #56): load once; on failure links are skipped
-from personal_ebird_explorer.taxonomy import load_taxonomy, get_species_url, get_species_lifelist_url
+from personal_ebird_explorer.taxonomy import load_taxonomy, get_species_url, get_species_and_lifelist_urls
 _taxonomy_loaded = load_taxonomy(locale=EBIRD_TAXONOMY_LOCALE if EBIRD_TAXONOMY_LOCALE else None)
 _species_url_fn = get_species_url if _taxonomy_loaded else (lambda _: None)
-_lifelist_url_fn = get_species_lifelist_url if _taxonomy_loaded else (lambda _: None)
+_link_urls_fn = get_species_and_lifelist_urls if _taxonomy_loaded else (lambda _: (None, None))
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -1065,10 +1065,10 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 # --------------------------------------------
 # ✅ Checklist Statistics (computed from data; table HTML from rankings_display)
 # --------------------------------------------
-def _compute_checklist_stats(df, species_url_fn=None, lifelist_url_fn=None):
+def _compute_checklist_stats(df, link_urls_fn=None):
     """Compute checklist statistics from df; returns dict with stats_html, rankings_sections_top_n, rankings_sections_other.
 
-    Optional species_url_fn(common_name) and lifelist_url_fn(common_name) enable eBird species/lifelist links (refs #56).
+    Optional link_urls_fn(common_name) -> (species_url, lifelist_url) enables eBird links (refs #56); one lookup per row.
     """
     import html
 
@@ -1381,10 +1381,10 @@ def _compute_checklist_stats(df, species_url_fn=None, lifelist_url_fn=None):
         ("Location: Most visited", rankings_visited_table(rankings["visited"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
     ]
     rankings_sections_other = [
-        ("Species: Most individuals", rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, species_url_fn=species_url_fn)),
-        ("Species: Most checklists", rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, species_url_fn=species_url_fn, lifelist_url_fn=lifelist_url_fn)),
+        ("Species: Most individuals", rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn, add_lifelist_link=False)),
+        ("Species: Most checklists", rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn, add_lifelist_link=True)),
         ("Species: Subspecies occurrence", rankings_subspecies_hierarchical_table("Species: Subspecies occurrence", rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Species: Seen only once", rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, species_url_fn=species_url_fn)),
+        ("Species: Seen only once", rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn)),
     ]
 
     stats_html = f"""
@@ -1399,7 +1399,7 @@ def _compute_checklist_stats(df, species_url_fn=None, lifelist_url_fn=None):
 
 
 # Stats use df_full for all-time totals (unfiltered by date). Map uses df, which may be date-filtered.
-checklist_data = _compute_checklist_stats(df_full, species_url_fn=_species_url_fn, lifelist_url_fn=_lifelist_url_fn)
+checklist_data = _compute_checklist_stats(df_full, link_urls_fn=_link_urls_fn)
 checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 
 # Rankings tab: two groups (Top N + Other) with headings, each group an accordion
