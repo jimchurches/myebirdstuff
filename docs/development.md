@@ -32,6 +32,7 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **map_renderer** | Folium map creation, popup/banner/legend HTML builders, lifer/last-seen resolution, location classification. No widget or notebook references. |
 | **region_display** | Convert ISO country and subdivision (state/province) codes to human-readable names at display time. Used by rankings_display. |
 | **rankings_display** | HTML builders for rankings tables (scroll wrapper, location 5-col, visited, seen-once, rank tables). Used by the notebook when rendering Checklist Statistics rankings. |
+| **taxonomy** | eBird taxonomy lookup for species links (refs #56). Fetches taxonomy once from eBird API (no key); optional `locale` (e.g. `en_AU`) so common names match the user’s export. Provides `get_species_url(common_name)` and `get_species_lifelist_url(common_name)` for species only. Locale is set via notebook user variable **EBIRD_TAXONOMY_LOCALE**. On API failure, lookups return None and the notebook continues without links. |
 
 The notebook owns: widget creation, observers, Whoosh index creation, data-prep groupbys and caches, and the single `draw_map_with_species_overlay()` that orchestrates the map.
 
