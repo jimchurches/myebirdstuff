@@ -119,6 +119,8 @@ The application assumes:
 - a CSV file is loaded once
 - data does not change while the notebook is running
 
+**External API (taxonomy):** The app fetches the eBird taxonomy once at startup (no API key) to resolve species common names to eBird species/lifelist URLs. Locale is controlled by the notebook user variable **EBIRD_TAXONOMY_LOCALE** (e.g. `"en_AU"`, `"en_GB"`, or empty for default). On network or API failure, the notebook continues without species links; do not break the run or add retries in the first version.
+
 This allows caching of derived structures such as:
 
 - grouped location data
@@ -183,6 +185,7 @@ Tests exist for:
 - path resolution
 - stats and rankings
 - region display (country/state names in rankings tables)
+- taxonomy (species-link lookup, locale parameter, offline behaviour)
 
 New logic should ideally be placed in modules where tests can be written.  
 Avoid writing complex logic directly in notebook cells.

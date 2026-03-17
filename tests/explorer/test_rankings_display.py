@@ -87,3 +87,44 @@ def test_rankings_seen_once_table_empty_no_data():
     out = rankings_seen_once_table([], include_heading=True)
     assert "No data." in out
     assert "Seen only once" in out
+
+
+def test_rankings_table_with_rank_species_url_fn_injects_links():
+    """When species_url_fn is provided and returns a URL, species name is linked (refs #56)."""
+    def url_fn(name):
+        return "https://ebird.org/species/grtea" if name == "Grey Teal" else None
+    out = rankings_table_with_rank(
+        "Top",
+        ["Species", "", "Count"],
+        [("Grey Teal", "—", "10")],
+        species_url_fn=url_fn,
+    )
+    assert "Grey Teal" in out
+    assert 'href="https://ebird.org/species/grtea"' in out
+
+
+def test_rankings_table_with_rank_lifelist_url_fn_injects_link():
+    """When lifelist_url_fn is provided, the count number is the lifelist link (refs #56)."""
+    def lifelist_fn(name):
+        return "https://ebird.org/lifelist?spp=grtea" if name == "Grey Teal" else None
+    out = rankings_table_with_rank(
+        "Checklists",
+        ["Species", "", "Checklists"],
+        [("Grey Teal", "—", "5")],
+        lifelist_url_fn=lifelist_fn,
+    )
+    assert "lifelist?spp=grtea" in out
+    assert ">5</a>" in out  # count is the link text
+
+
+def test_rankings_seen_once_table_species_url_fn_injects_links():
+    """When species_url_fn is provided, Species column is linked (refs #56)."""
+    def url_fn(name):
+        return "https://ebird.org/species/grtea" if name == "Grey Teal" else None
+    out = rankings_seen_once_table(
+        [("Grey Teal", "Loc", "NSW", "AU", "2024-01-01", "1")],
+        include_heading=False,
+        species_url_fn=url_fn,
+    )
+    assert 'href="https://ebird.org/species/grtea"' in out
+    assert "Grey Teal" in out

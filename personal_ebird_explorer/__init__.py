@@ -27,6 +27,11 @@ from personal_ebird_explorer.rankings_display import (
     rankings_visited_table,
     rankings_seen_once_table,
 )
+from personal_ebird_explorer.taxonomy import (
+    load_taxonomy,
+    get_species_url,
+    get_species_lifelist_url,
+)
 from personal_ebird_explorer.map_renderer import (
     create_map,
     format_visit_time,
@@ -43,6 +48,9 @@ from personal_ebird_explorer.map_renderer import (
 )
 
 __all__ = [
+    "load_taxonomy",
+    "get_species_url",
+    "get_species_lifelist_url",
     "load_dataset",
     "add_datetime_column",
     "find_data_file",

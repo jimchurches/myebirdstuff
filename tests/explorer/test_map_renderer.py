@@ -294,6 +294,20 @@ def test_build_species_banner_html_is_div():
     assert html.endswith("</div>")
 
 
+def test_build_species_banner_html_with_species_url():
+    """When species_url is provided, display_name is wrapped in a link (refs #56)."""
+    html = build_species_banner_html(
+        "Grey Teal",
+        2,
+        5,
+        3,
+        species_url="https://ebird.org/species/grtea",
+    )
+    assert "Grey Teal" in html
+    assert 'href="https://ebird.org/species/grtea"' in html
+    assert "target=\"_blank\"" in html
+
+
 # ---------------------------------------------------------------------------
 # build_visit_info_html
 # ---------------------------------------------------------------------------

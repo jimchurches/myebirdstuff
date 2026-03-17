@@ -5,6 +5,8 @@ Scroll-wrapper and table builders used when rendering the Checklist Statistics
 rankings sections. Uses region_display for country/state names.
 """
 
+import html as _html_module
+
 from personal_ebird_explorer.region_display import country_for_display, state_for_display
 
 
@@ -55,15 +57,40 @@ def rankings_table_location_5col(title, headers_5, rows, include_heading=True, s
     return content
 
 
-def rankings_table_with_rank(title, headers_3col, rows_3col, include_heading=True, scroll_hint="shading", visible_rows=16):
-    """Build a 4-column rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3)."""
+def rankings_table_with_rank(
+    title,
+    headers_3col,
+    rows_3col,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    species_url_fn=None,
+    lifelist_url_fn=None,
+):
+    """Build a 4-column rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3).
+
+    Optional species_url_fn(common_name) -> url and lifelist_url_fn(common_name) -> url (refs #56):
+    when provided, col1 (species) and the last column (e.g. checklist count) get links.
+    """
     if not rows_3col:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
-    body = "".join(
-        f"<tr><td>{i}</td><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{r[2]}</td></tr>"
-        for i, r in enumerate(rows_3col, start=1)
-    )
+    rows_html = []
+    for i, r in enumerate(rows_3col, start=1):
+        cell1_esc = _html_module.escape(str(r[0]), quote=True)
+        if species_url_fn:
+            url = species_url_fn(r[0])
+            cell1 = f'<a href="{_html_module.escape(url, quote=True)}" target="_blank" rel="noopener">{cell1_esc}</a>' if url else cell1_esc
+        else:
+            cell1 = cell1_esc
+        cell3 = str(r[2])
+        if lifelist_url_fn:
+            lifelist_url = lifelist_url_fn(r[0])
+            if lifelist_url:
+                count_esc = _html_module.escape(cell3, quote=True)
+                cell3 = f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" target=\"_blank\" rel=\"noopener\">{count_esc}</a>"
+        rows_html.append(f"<tr><td>{i}</td><td>{cell1}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{cell3}</td></tr>")
+    body = "".join(rows_html)
     tbl = f"<table class='stats-tbl rankings-tbl rank-tbl'><thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th><th>{headers_3col[2]}</th></tr></thead><tbody>{body}</tbody></table>"
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
     content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
@@ -84,15 +111,32 @@ def rankings_visited_table(rows, include_heading=True, scroll_hint="shading", vi
     return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
 
-def rankings_seen_once_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-    """6-column table: Species | Location | State | Country | Visited date/time | Count."""
+def rankings_seen_once_table(
+    rows,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    species_url_fn=None,
+):
+    """6-column table: Species | Location | State | Country | Visited date/time | Count.
+
+    Optional species_url_fn(common_name) -> url (refs #56): when provided, Species column is linked.
+    """
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
-    body = "".join(
-        f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
-        for r in rows
-    )
+    rows_html = []
+    for r in rows:
+        species_esc = _html_module.escape(str(r[0]), quote=True)
+        if species_url_fn:
+            url = species_url_fn(r[0])
+            species_cell = f'<a href="{_html_module.escape(url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>' if url else species_esc
+        else:
+            species_cell = species_esc
+        rows_html.append(
+            f"<tr><td>{species_cell}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
+        )
+    body = "".join(rows_html)
     tbl = (
         "<table class='stats-tbl rankings-tbl seen-once-tbl'>"
         "<thead><tr>"
