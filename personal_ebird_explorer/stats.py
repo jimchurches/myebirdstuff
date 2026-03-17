@@ -21,13 +21,20 @@ from personal_ebird_explorer.species_logic import countable_species_vectorized
 # ---------------------------------------------------------------------------
 
 def safe_count(x):
-    """Parse an eBird count value to int. 'X' (present) → 1, NaN → 0."""
+    """Parse an eBird count value to int.
+
+    eBird exports use ``X`` to mean "present" (no quantity provided). For
+    individual totals, treat ``X`` as 0 so sums align with eBird species-page
+    individual counts.
+    """
     if pd.isna(x):
+        return 0
+    if isinstance(x, str) and x.strip().upper() == "X":
         return 0
     try:
         return int(x)
     except (ValueError, TypeError):
-        return 1
+        return 0
 
 
 # ---------------------------------------------------------------------------
