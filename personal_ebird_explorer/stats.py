@@ -777,6 +777,29 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
         rows.append(("Traveling checklist: Total hours", ["—"] * len(years_sorted)))
         rows.append(("Traveling checklist: Average minutes", ["—"] * len(years_sorted)))
 
+    # 20b–20c. Traveling checklist: Average species, Average individuals
+    if has_protocol:
+        trav_cl = cl[traveling_complete]
+        trav_sids = set(trav_cl["Submission ID"])
+        trav_obs = df_with_yr[df_with_yr["Submission ID"].isin(trav_sids)].copy()
+        trav_obs["_year"] = trav_obs["Date"].dt.year
+        sp_means, ind_means = [], []
+        for y in years_sorted:
+            o = trav_obs[trav_obs["_year"] == y]
+            if o.empty:
+                sp_means.append("—")
+                ind_means.append("—")
+            else:
+                sp_per_cl = o.dropna(subset=["_base"]).groupby("Submission ID")["_base"].nunique()
+                ind_per_cl = o.groupby("Submission ID")["_count"].sum()
+                sp_means.append(f"{sp_per_cl.mean():.1f}" if len(sp_per_cl) else "—")
+                ind_means.append(f"{ind_per_cl.mean():.1f}" if len(ind_per_cl) else "—")
+        rows.append((f"Traveling checklist: Average species{info_icon}", sp_means))
+        rows.append((f"Traveling checklist: Average individuals{info_icon}", ind_means))
+    else:
+        rows.append(("Traveling checklist: Average species", ["—"] * len(years_sorted)))
+        rows.append(("Traveling checklist: Average individuals", ["—"] * len(years_sorted)))
+
     # 21–24. Stationary checklist stats
     if has_protocol and dur_col:
         stat_cl = cl[stationary_complete]

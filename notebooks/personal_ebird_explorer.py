@@ -1156,30 +1156,115 @@ def _compute_checklist_stats(df):
     # Top N rankings data (limit from TOP_N_TABLE_LIMIT)
     rankings = _compute_rankings(df, cl, TOP_N_TABLE_LIMIT, dur_col, dist_col)
 
-    # Yearly summary: years across top, stats down side (only years with data)
+    # Yearly summary: static table (includes Traveling/Stationary count rows), then accordions with detail tables
     years_list, yearly_rows, incomplete_by_year = _yearly_summary_stats(df, cl, dur_col, dist_col)
     yearly_table_html = ""
     if years_list and yearly_rows:
-        # Skip rows that are all "—"
         def _any_value(vals):
             return any(v != "—" for v in vals)
-        visible_rows = [(label, vals) for label, vals in yearly_rows if _any_value(vals)]
-        if visible_rows:
-            year_headers = "".join(f"<th style='text-align:right;'>{y}</th>" for y in years_list)
+        # Only detail rows (label starts with "Traveling checklist:" or "Stationary checklist:") go to accordions; count rows stay in main table
+        static_rows = []
+        traveling_detail = []
+        stationary_detail = []
+        traveling_count_vals = None
+        stationary_count_vals = None
+        for label, vals in yearly_rows:
+            ls = label.strip()
+            if ls.startswith("Traveling checklist:"):
+                traveling_detail.append((label, vals))
+            elif ls.startswith("Stationary checklist:"):
+                stationary_detail.append((label, vals))
+            else:
+                static_rows.append((label, vals))
+                if ls.startswith("Traveling checklists") and "Traveling checklist: " not in ls:
+                    traveling_count_vals = vals
+                if ls.startswith("Stationary checklists") and "Stationary checklist: " not in ls:
+                    stationary_count_vals = vals
+        visible_static = [(label, vals) for label, vals in static_rows if _any_value(vals)]
+        year_headers = "".join(f"<th style='text-align:right;'>{y}</th>" for y in years_list)
+        yearly_css = """
+    .yearly-maint-section { margin-bottom:8px; border:1px solid #e5e7eb; border-radius:6px; background:#f9fafb; padding:4px 10px; }
+    .yearly-maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
+"""
+        _yearly_comment_style = "margin:4px 0 8px;color:#6b7280;font-size:12px;line-height:1.5;"
+        _traveling_comment = "Incomplete checklists not counted."
+        _stationary_comment = "Incomplete checklists not counted."
+        # Short display names for accordion tables (strip "Traveling checklist: " / "Stationary checklist: " and any (i) HTML)
+        _traveling_order = ["Total distance (km)", "Average distance (km)", "Total hours", "Average minutes", "Average species", "Average individuals"]
+        _stationary_order = ["Total hours", "Average minutes", "Average species", "Average individuals"]
+        def _short_name(full_label, prefix):
+            # Strip prefix and any trailing HTML (e.g. info icon)
+            name = full_label.strip()
+            if name.startswith(prefix):
+                name = name[len(prefix):].strip()
+            # Drop trailing info-icon span (starts with " <span")
+            if " <span" in name:
+                name = name.split(" <span")[0].strip()
+            return name or full_label
+        def _ordered_detail_rows(detail_rows, order_list, prefix):
+            by_suffix = {}
+            for label, vals in detail_rows:
+                short = _short_name(label, prefix)
+                by_suffix[short] = vals
+            return [(name, by_suffix.get(name, ["—"] * len(years_list))) for name in order_list if name in by_suffix]
+        parts = []
+        if visible_static:
             body_rows = "".join(
                 f"<tr><td>{label}</td>" + "".join(f"<td style='text-align:right;'>{v}</td>" for v in vals) + "</tr>"
-                for label, vals in visible_rows
+                for label, vals in visible_static
             )
-            yearly_table_html = f"""
-  <div style="width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px) 24px;box-sizing:border-box;">
+            parts.append(f"""
   <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Yearly Summary Statistics</h4>
   <div style="overflow-x:auto;">
   <table class="stats-tbl" style="min-width:400px;">
     <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
     <tbody>{body_rows}</tbody>
   </table>
+  </div>""")
+        elif traveling_detail or stationary_detail:
+            parts.append("\n  <h4 style=\"margin-top:24px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;\">Yearly Summary Statistics</h4>")
+        def _yearly_accordion_body(comment_text, total_checklists_vals, ordered_detail_rows):
+            rows_html = []
+            if total_checklists_vals is not None:
+                rows_html.append(f"<tr><td>Total checklists</td>" + "".join(f"<td style='text-align:right;'>{v}</td>" for v in total_checklists_vals) + "</tr>")
+            for name, vals in ordered_detail_rows:
+                rows_html.append(f"<tr><td>{name}</td>" + "".join(f"<td style='text-align:right;'>{v}</td>" for v in vals) + "</tr>")
+            if not rows_html:
+                return ""
+            body = "\n    ".join(rows_html)
+            return f"""  <p style="{_yearly_comment_style}">{comment_text}</p>
+  <div style="overflow-x:auto;">
+  <table class="stats-tbl" style="min-width:400px;">
+    <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
+    <tbody>
+    {body}
+    </tbody>
+  </table>
   </div>"""
-            yearly_table_html += "  </div>"
+        if traveling_detail or traveling_count_vals is not None:
+            ordered_trav = _ordered_detail_rows(traveling_detail, _traveling_order, "Traveling checklist:")
+            if ordered_trav or traveling_count_vals is not None:
+                body = _yearly_accordion_body(_traveling_comment, traveling_count_vals, ordered_trav)
+                if body:
+                    parts.append(f"""
+  <details class="yearly-maint-section">
+    <summary>Traveling checklists</summary>
+{body}  </details>""")
+        if stationary_detail or stationary_count_vals is not None:
+            ordered_stat = _ordered_detail_rows(stationary_detail, _stationary_order, "Stationary checklist:")
+            if ordered_stat or stationary_count_vals is not None:
+                body = _yearly_accordion_body(_stationary_comment, stationary_count_vals, ordered_stat)
+                if body:
+                    parts.append(f"""
+  <details class="yearly-maint-section">
+    <summary>Stationary checklists</summary>
+{body}  </details>""")
+        if parts:
+            yearly_table_html = f"""
+  <style>{yearly_css}</style>
+  <div style="width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px) 24px;box-sizing:border-box;">
+{"".join(parts)}
+  </div>"""
 
     _table_css = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
