@@ -139,7 +139,7 @@ import html
 import os
 import sys
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, date
 
 import pandas as pd
 import folium
@@ -370,6 +370,16 @@ display(HTML("""
     margin-bottom: 8px !important;
     font-weight: 600 !important;
 }
+/* Date controls in map toolbar: match species search box font */
+.map-controls-panel .widget-datepicker input,
+.map-controls-panel input[type="date"] {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 13px !important;
+}
+.map-controls-panel .widget-datepicker .widget-label {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 13px !important;
+}
 </style>
 """))
 
@@ -431,19 +441,31 @@ _scripts_dir = os.path.abspath(os.path.join(_notebook_dir, "..", "scripts"))
 _config_secret_path = os.path.join(_scripts_dir, "config_secret.py")
 _config_template_path = os.path.join(_scripts_dir, "config_template.py")
 
-# Build candidate folders in fallback order
+# Build candidate folders and path source labels (for Settings tab, refs #38)
 _candidate_folders = []
+_path_sources = []
 if DATA_FOLDER_HARDCODED and str(DATA_FOLDER_HARDCODED).strip():
     _candidate_folders.append(os.path.normpath(str(DATA_FOLDER_HARDCODED).strip()))
+    _path_sources.append("hardcoded")
 for _config_path in (_config_secret_path, _config_template_path):
     _folder = _load_config_module(_config_path)
     if _folder and str(_folder).strip():
         _candidate_folders.append(os.path.normpath(str(_folder).strip()))
+        _path_sources.append("config_secret" if _config_path == _config_secret_path else "config_template")
 _candidate_folders.append(_notebook_dir)
+_path_sources.append("notebook folder")
 
 # Find data file in first candidate that has it
 from personal_ebird_explorer.path_resolution import find_data_file
 file_path, DATA_FOLDER = find_data_file(EBIRD_DATA_FILE_NAME, _candidate_folders)
+_path_source = None
+if file_path and DATA_FOLDER:
+    for i, cand in enumerate(_candidate_folders):
+        if os.path.normpath(cand) == os.path.normpath(DATA_FOLDER):
+            _path_source = _path_sources[i]
+            break
+    if _path_source is None:
+        _path_source = "notebook folder"
 
 if file_path is None:
     raise FileNotFoundError(
@@ -581,6 +603,63 @@ writer = ix.writer()
 for name in species_list:
     writer.add_document(common_name=name)
 writer.commit()
+
+
+# %%
+# --------------------------------------------
+# ✅ Re-apply date filter and rebuild map data (dynamic date filter, refs #38)
+# --------------------------------------------
+def _apply_date_filter_and_build_map_data():
+    """Recompute df, records_by_loc, species_list, totals, and caches from df_full using current FILTER_* globals. Rebuilds Whoosh index. Call after changing date filter."""
+    global df, location_data, records_by_loc, species_list
+    global total_checklists, total_individuals, total_species
+    global name_map, records_by_loc_full, total_checklists_full, total_species_full, total_individuals_full
+    global _popup_html_cache, _filtered_by_loc_cache
+    start, end = None, None
+    if FILTER_BY_DATE:
+        try:
+            start = datetime.strptime(FILTER_START_DATE, "%Y-%m-%d")
+            end = datetime.strptime(FILTER_END_DATE, "%Y-%m-%d")
+            assert start <= end, "Start date must be before end date"
+        except Exception:
+            return  # leave state unchanged on invalid dates
+    df_new = df_full[df_full["Location ID"].isin(location_ids_with_checklists)].copy()
+    if FILTER_BY_DATE and start is not None and end is not None:
+        df_new = df_new[(df_new["Date"] >= start) & (df_new["Date"] <= end)]
+    # Update globals
+    df = df_new
+    location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
+    records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
+    species_list = sorted(df["Common Name"].dropna().unique().tolist())
+    total_checklists = df["Submission ID"].nunique()
+    total_individuals = int(df["Count"].apply(_safe_count).sum())
+    total_species = int(_countable_species_vectorized(df).dropna().nunique())
+    name_map = (
+        df[['Common Name', 'Scientific Name']]
+        .dropna()
+        .drop_duplicates()
+        .set_index('Common Name')['Scientific Name']
+        .to_dict()
+    )
+    if FILTER_BY_DATE:
+        records_by_loc_full = {lid: grp for lid, grp in df_full.groupby("Location ID")}
+        total_checklists_full = df_full["Submission ID"].nunique()
+        total_species_full = int(_countable_species_vectorized(df_full).dropna().nunique())
+        total_individuals_full = int(df_full["Count"].apply(_safe_count).sum())
+    else:
+        records_by_loc_full = {}
+        total_checklists_full = total_checklists
+        total_species_full = total_species
+        total_individuals_full = total_individuals
+    _popup_html_cache.clear()
+    _filtered_by_loc_cache.clear()
+    # Rebuild Whoosh index for autocomplete
+    from whoosh.query import Every
+    w = ix.writer()
+    w.delete_by_query(Every())
+    for name in species_list:
+        w.add_document(common_name=name)
+    w.commit()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -1676,18 +1755,79 @@ if sex_notation_html:
 map_maintenance_panel = VBox(_maintenance_panel_parts)
 
 # --------------------------------------------
-# Build map tab: single control row (search, checkbox, reset, export) + matches dropdown. Date filter shown in banner only (refs #47).
+# Build map tab: date filter + species/search/buttons on one row; matches dropdown below (refs #38, #47).
 # --------------------------------------------
+# Date inputs: use DatePicker if available (ipywidgets 8+), else wider Text so full YYYY-MM-DD is readable
+_use_date_picker = getattr(widgets, "DatePicker", None) is not None
+def _date_to_str(d):
+    if d is None:
+        return "2026-01-01"
+    if hasattr(d, "isoformat"):
+        return d.isoformat()
+    return str(d)
+def _str_to_date(s):
+    s = (s or "").strip() or "2026-01-01"
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except Exception:
+        return date(2026, 1, 1)
+if _use_date_picker:
+    _start_val = _str_to_date(FILTER_START_DATE)
+    _end_val = _str_to_date(FILTER_END_DATE)
+    filter_start_date_widget = widgets.DatePicker(value=_start_val, description="Start", layout=widgets.Layout(width="230px"))
+    filter_end_date_widget = widgets.DatePicker(value=_end_val, description="End", layout=widgets.Layout(width="230px"))
+else:
+    filter_start_date_widget = widgets.Text(value=FILTER_START_DATE, description="Start", placeholder="YYYY-MM-DD", layout=widgets.Layout(width="160px", min_width="14ch"))
+    filter_end_date_widget = widgets.Text(value=FILTER_END_DATE, description="End", placeholder="YYYY-MM-DD", layout=widgets.Layout(width="160px", min_width="14ch"))
+filter_by_date_checkbox = Checkbox(value=FILTER_BY_DATE, description="", layout=widgets.Layout(width="auto"))
+date_filter_label = widgets.Label(value="Date filter", layout=widgets.Layout(margin="0 4px 0 0"))
+date_filter_control = HBox([filter_by_date_checkbox, date_filter_label], layout=widgets.Layout(align_items="center"))
+
+def _on_date_filter_change(_=None):
+    """Apply date filter from widgets and redraw map (dynamic; does not reset on Reset View)."""
+    global FILTER_BY_DATE, FILTER_START_DATE, FILTER_END_DATE
+    FILTER_BY_DATE = filter_by_date_checkbox.value
+    if _use_date_picker:
+        FILTER_START_DATE = _date_to_str(filter_start_date_widget.value)
+        FILTER_END_DATE = _date_to_str(filter_end_date_widget.value)
+    else:
+        FILTER_START_DATE = (filter_start_date_widget.value or "").strip() or "2026-01-01"
+        FILTER_END_DATE = (filter_end_date_widget.value or "").strip() or "2026-12-31"
+        filter_start_date_widget.value = FILTER_START_DATE
+        filter_end_date_widget.value = FILTER_END_DATE
+    _apply_date_filter_and_build_map_data()
+    with output:
+        output.clear_output()
+        print("📅 Date filter updated — map redrawn.")
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+
+filter_by_date_checkbox.observe(_on_date_filter_change, names="value")
+filter_start_date_widget.observe(_on_date_filter_change, names="value")
+filter_end_date_widget.observe(_on_date_filter_change, names="value")
+
 _spacer = Box(layout=widgets.Layout(width="0.75em", min_width="0.75em"))
+_spacer_small = Box(layout=widgets.Layout(width="0.4em", min_width="0.4em"))  # tight gap between species and date to avoid wrap
 reset_view_btn = widgets.Button(description="Reset View", layout=widgets.Layout(width="100px"))
 reset_view_btn.on_click(lambda _: _clear_to_all_species())
 export_map_btn = widgets.Button(description="Export Map HTML", layout=widgets.Layout(width="140px"))
 export_map_btn.on_click(lambda _: _export_map_html())
-search_row = HBox(
-    [search_box, _spacer, hide_non_matching_checkbox, _spacer, reset_view_btn, export_map_btn],
-    layout=widgets.Layout(align_items="center"),
+# Single horizontal row: species | date filter | reset | export (small spacers between sections to save space)
+map_control_row = HBox(
+    [
+        search_box,
+        _spacer,
+        hide_non_matching_checkbox,
+        _spacer_small,
+        date_filter_control,
+        filter_start_date_widget,
+        filter_end_date_widget,
+        _spacer_small,
+        reset_view_btn,
+        export_map_btn,
+    ],
+    layout=widgets.Layout(align_items="center", flex_flow="wrap"),
 )
-map_controls = VBox([search_row, matches_dropdown])
+map_controls = VBox([map_control_row, matches_dropdown])
 map_controls.layout = widgets.Layout(width="100%", min_width="0")
 
 map_tab_container = VBox(
@@ -1697,15 +1837,141 @@ map_tab_container = VBox(
 map_tab_container.add_class("map-tab-container")
 
 # --------------------------------------------
-# Build main tabs (Map, Checklist Statistics, Rankings, Map maintenance) and dashboard.
+# Settings tab (refs #38): expose user variables; dynamic where possible, "Re-run from …" for rest.
+# --------------------------------------------
+_NAMED_COLOURS = [
+    "white", "black", "red", "lime", "blue", "yellow", "cyan", "magenta", "orange", "purple",
+    "pink", "lightgreen", "lightblue", "gray", "lightgray", "darkgray", "coral", "gold", "green",
+]
+_path_display = (DATA_FOLDER or "(not set)") if file_path else "(data not loaded)"
+_path_source_label = (_path_source or "—").replace("_", " ").title()
+settings_intro = widgets.HTML(value=(
+    "<p style='margin:0 0 12px 0;font-size:12px;color:#555;'>"
+    "Some changes require re-running from the <strong>Load config and data</strong> or <strong>Data prep</strong> cell; those are marked below."
+    "</p>"
+))
+# Data & path section
+settings_data_header = widgets.HTML(value="<span style='color:#888;font-size:11px;'>Re-run from Load to apply path/file/locale changes</span>")
+settings_path_html = widgets.HTML(value=f"<p style='margin:4px 0;font-size:12px;'>Path: <code style='word-break:break-all;'>{_path_display}</code><br>Source: {_path_source_label}<br>File: {EBIRD_DATA_FILE_NAME}</p>")
+settings_locale_text = widgets.Text(value=EBIRD_TAXONOMY_LOCALE or "", description="Taxonomy locale:", layout=widgets.Layout(width="280px"))
+def _on_settings_locale_change(change):
+    global EBIRD_TAXONOMY_LOCALE
+    EBIRD_TAXONOMY_LOCALE = (change.get("new") or "").strip()
+settings_locale_text.observe(_on_settings_locale_change, names="value")
+settings_data_section = VBox([settings_data_header, settings_path_html, settings_locale_text], layout=widgets.Layout(width="100%"))
+
+# Map display section
+settings_display_header = widgets.HTML(value="<span style='color:#0a0;font-size:11px;'>Changes apply immediately</span>")
+map_style_dropdown = widgets.Dropdown(options=["default", "satellite", "google", "carto"], value=MAP_STYLE, description="Map style:", layout=widgets.Layout(width="200px"))
+def _on_map_style_change(change):
+    global MAP_STYLE
+    v = change.get("new")
+    if v is not None:
+        MAP_STYLE = v
+        draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+map_style_dropdown.observe(_on_map_style_change, names="value")
+
+def _on_pin_color_change(_=None):
+    global LIFER_COLOR, LIFER_FILL, LAST_SEEN_COLOR, LAST_SEEN_FILL, SPECIES_COLOR, SPECIES_FILL, DEFAULT_COLOR, DEFAULT_FILL
+    LIFER_COLOR, LIFER_FILL = lifer_color_dd.value, lifer_fill_dd.value
+    LAST_SEEN_COLOR, LAST_SEEN_FILL = last_seen_color_dd.value, last_seen_fill_dd.value
+    SPECIES_COLOR, SPECIES_FILL = species_color_dd.value, species_fill_dd.value
+    DEFAULT_COLOR, DEFAULT_FILL = default_color_dd.value, default_fill_dd.value
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+lifer_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LIFER_COLOR, description="Lifer edge:", layout=widgets.Layout(width="160px"))
+lifer_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LIFER_FILL, description="Lifer fill:", layout=widgets.Layout(width="160px"))
+last_seen_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LAST_SEEN_COLOR, description="Last-seen edge:", layout=widgets.Layout(width="160px"))
+last_seen_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LAST_SEEN_FILL, description="Last-seen fill:", layout=widgets.Layout(width="160px"))
+species_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=SPECIES_COLOR, description="Species edge:", layout=widgets.Layout(width="160px"))
+species_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=SPECIES_FILL, description="Species fill:", layout=widgets.Layout(width="160px"))
+default_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=DEFAULT_COLOR, description="Default edge:", layout=widgets.Layout(width="160px"))
+default_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=DEFAULT_FILL, description="Default fill:", layout=widgets.Layout(width="160px"))
+for _dd in [lifer_color_dd, lifer_fill_dd, last_seen_color_dd, last_seen_fill_dd, species_color_dd, species_fill_dd, default_color_dd, default_fill_dd]:
+    _dd.observe(_on_pin_color_change, names="value")
+
+mark_lifer_cb = Checkbox(value=MARK_LIFER, description="Mark lifer (first sighting)", layout=widgets.Layout(width="200px"))
+mark_last_seen_cb = Checkbox(value=MARK_LAST_SEEN, description="Mark last-seen", layout=widgets.Layout(width="200px"))
+def _on_mark_lifer_change(change):
+    global MARK_LIFER
+    MARK_LIFER = change.get("new", MARK_LIFER)
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+def _on_mark_last_seen_change(change):
+    global MARK_LAST_SEEN
+    MARK_LAST_SEEN = change.get("new", MARK_LAST_SEEN)
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+mark_lifer_cb.observe(_on_mark_lifer_change, names="value")
+mark_last_seen_cb.observe(_on_mark_last_seen_change, names="value")
+
+popup_sort_dd = widgets.Dropdown(options=["ascending", "descending"], value=POPUP_SORT_ORDER, description="Popup sort:", layout=widgets.Layout(width="200px"))
+popup_scroll_dd = widgets.Dropdown(options=["chevron", "shading", "both"], value=POPUP_SCROLL_HINT, description="Popup scroll hint:", layout=widgets.Layout(width="200px"))
+def _on_popup_sort_change(change):
+    global POPUP_SORT_ORDER
+    v = change.get("new")
+    if v is not None:
+        POPUP_SORT_ORDER = v
+        draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+def _on_popup_scroll_change(change):
+    global POPUP_SCROLL_HINT
+    v = change.get("new")
+    if v is not None:
+        POPUP_SCROLL_HINT = v
+        draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+popup_sort_dd.observe(_on_popup_sort_change, names="value")
+popup_scroll_dd.observe(_on_popup_scroll_change, names="value")
+settings_display_section = VBox([
+    settings_display_header,
+    map_style_dropdown,
+    HBox([lifer_color_dd, lifer_fill_dd, last_seen_color_dd, last_seen_fill_dd]),
+    HBox([species_color_dd, species_fill_dd, default_color_dd, default_fill_dd]),
+    HBox([mark_lifer_cb, mark_last_seen_cb]),
+    HBox([popup_sort_dd, popup_scroll_dd]),
+], layout=widgets.Layout(width="100%"))
+
+# Tables & lists section
+settings_tables_header = widgets.HTML(value="<span style='color:#888;font-size:11px;'>Re-run from Data prep to apply</span>")
+rankings_visible_int = widgets.IntText(value=RANKINGS_TABLE_VISIBLE_ROWS, description="Rankings visible rows:", layout=widgets.Layout(width="220px"))
+top_n_int = widgets.IntText(value=TOP_N_TABLE_LIMIT, description="Top N table limit:", layout=widgets.Layout(width="220px"))
+close_meters_int = widgets.IntText(value=CLOSE_LOCATION_METERS, description="Close location (m):", layout=widgets.Layout(width="220px"))
+def _on_rankings_visible_change(change):
+    global RANKINGS_TABLE_VISIBLE_ROWS
+    v = change.get("new")
+    if v is not None and v > 0:
+        RANKINGS_TABLE_VISIBLE_ROWS = v
+def _on_top_n_change(change):
+    global TOP_N_TABLE_LIMIT
+    v = change.get("new")
+    if v is not None and v > 0:
+        TOP_N_TABLE_LIMIT = v
+def _on_close_meters_change(change):
+    global CLOSE_LOCATION_METERS
+    v = change.get("new")
+    if v is not None and v >= 0:
+        CLOSE_LOCATION_METERS = v
+rankings_visible_int.observe(_on_rankings_visible_change, names="value")
+top_n_int.observe(_on_top_n_change, names="value")
+close_meters_int.observe(_on_close_meters_change, names="value")
+settings_tables_section = VBox([settings_tables_header, rankings_visible_int, top_n_int, close_meters_int], layout=widgets.Layout(width="100%"))
+
+# Settings tab: three accordions to match Rankings/Maintenance tab behaviour and styling
+settings_accordion = Accordion(
+    children=[settings_data_section, settings_display_section, settings_tables_section],
+    titles=("Data & path", "Map display", "Tables & lists"),
+    layout=widgets.Layout(width="100%", min_width="400px"),
+)
+settings_accordion.add_class("ebird-settings-accordion")  # same .p-Accordion-tab CSS applies via .jupyter-widgets
+settings_panel = VBox([settings_intro, settings_accordion], layout=widgets.Layout(width="100%", min_width="400px"))
+
+# --------------------------------------------
+# Build main tabs (Map, Checklist Statistics, Yearly Summary, Rankings, Maintenance, Settings) and dashboard.
 # --------------------------------------------
 yearly_summary_panel = widgets.HTML(value=checklist_data["yearly_summary_html"])
-main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, yearly_summary_panel, rankings_panel, map_maintenance_panel])
+main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, yearly_summary_panel, rankings_panel, map_maintenance_panel, settings_panel])
 main_tabs.set_title(0, "Map")
 main_tabs.set_title(1, "Checklist Statistics")
 main_tabs.set_title(2, "Yearly Summary")
 main_tabs.set_title(3, "Rankings & lists")
 main_tabs.set_title(4, "Maintenance")
+main_tabs.set_title(5, "Settings")
 main_tabs.selected_index = 0  # Ensure map tab is visible on load
 main_tabs.layout = widgets.Layout(min_width="900px", min_height="650px")  # Wide enough for full tab labels (e.g. Checklist Statistics)
 

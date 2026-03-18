@@ -1,6 +1,18 @@
-# Options / Settings UI — Design Discussion
+# Settings UI — Design Discussion
 
-Design ideas for exposing user-configurable options in the Personal eBird Explorer notebook via an options tab or similar UI, while respecting current architecture and constraints.
+Design for exposing user-configurable options in the Personal eBird Explorer notebook via a **Settings** tab (issue [#38](https://github.com/jimchurches/myebirdstuff/issues/38)), while respecting current architecture and constraints.
+
+---
+
+## 0. Design decisions and preferences (from discussion)
+
+- **Naming:** Use **Settings** (not Options) — more current and familiar.
+- **Persistence:** Not in scope for the first version. Assume it’s on the roadmap; phase 2 could add optional JSON in the config file (only when the user already uses that config for path). Updating running code from within the app is not a goal; “set variable then re-run” remains the model for non-dynamic settings.
+- **Date filter:** Map-centric only. It does not drive other tabs (e.g. tables); future roadmap may change that. Resetting the map must **not** reset the date filter. Changing the date filter should update the map. This control can live in **map controls** (recommended) so it stays next to the map and doesn’t imply it affects other panels.
+- **Dynamic where possible:** Date filter and map style should take effect without a notebook restart when feasible (e.g. re-apply filter and redraw map for date; redraw map for style).
+- **Pin colours:** Simple only — named colours (e.g. `"lightgreen"`, `"pink"`). No hex/RGB or custom colour picker.
+- **Path:** Shown in Settings. Handle different sources: config file, hardcoded, or not configured (CSV in notebook folder). How to edit (code vs UI) to be discussed; display is the first step.
+- **Restart required:** Make it obvious which settings require a re-run (e.g. “Re-run from Load” or “Re-run from Data prep”).
 
 ---
 
@@ -35,23 +47,23 @@ So a **hybrid** is natural: bootstrap and data-prep options stay “set then re-
 
 - **Keep in code (and/or config_secret.py):** Data path / file name (security and environment-specific). Optionally taxonomy locale if we’re happy for it to stay “edit and re-run” only.
 
-- **Expose in UI (Options tab or similar):** Display (map style, pin colours, lifer/last-seen toggles, popup sort/scroll), behaviour (date filter on/off and range, rankings visible rows, maintenance distance, etc.). For bootstrap we have two patterns: (A) “Config first” — notebook starts, no data path (or no file found); first thing user sees is an “Options / Setup” area with data folder (or path), maybe file name; “Load data” button or instruction: “Set path above, then run the cell below.” So “options” can include path but it’s still “set then run,” not dynamic. (B) “Code + optional UI mirror” — path stays in code/config only; Options tab only shows things that are safe to change at runtime (or “change then re-run from here” with a clear label). No expectation that path is editable in UI unless we add a dedicated “first-time setup” flow.
+- **Expose in UI (Settings tab):** Display (map style, pin colours, lifer/last-seen toggles, popup sort/scroll), behaviour (rankings visible rows, maintenance distance, etc.). **Date filter** lives in **map controls** so it stays map-centric and visible where it applies. For bootstrap: path is **visible** in Settings (read-only or with source: hardcoded / config / notebook folder); changing path stays “edit code or config, then re-run from Load.”
 
 ---
 
 ## 4. Making “restart required” obvious
 
-If we add an options UI we should **group by “when it applies”** (e.g. “Data & load” vs “Map display” vs “Tables & lists”) and add a **short hint** where it matters (e.g. under date filter: “Changing these requires re-running from the ‘Data prep’ cell”). One line at top of options: “Changes to data path or date filter require re-running the notebook from the appropriate cell. Map and display options may apply on next refresh.” That keeps the “static dataset” and “restart when needed” story visible without blocking a friendlier UI.
+Group settings by “when it applies” and add a **clear “Re-run from …”** for any that need it (e.g. “Re-run from Load” for path/file name; “Re-run from Data prep” only if date filter were not dynamic). For dynamic settings (map style, date filter in map controls), no restart hint. One line at top of Settings: “Some changes require re-running from the ‘Load config and data’ or ‘Data prep’ cell; those are marked below.”
 
 ---
 
 ## 5. Best practice fit with our stack
 
-- **Jupyter:** Variables are global; changing a variable and re-running later cells is normal. An “Options” tab that only **sets those same variables** (e.g. `MAP_STYLE = dropdown.value`) keeps everything in one place and doesn’t require persistence unless we want it.
+- **Jupyter:** Variables are global; changing a variable and re-running later cells is normal. A Settings tab that only **sets those same variables** (e.g. `MAP_STYLE = dropdown.value`) keeps everything in one place and doesn’t require persistence unless we want it.
 
 - **Voila:** Same idea — widgets can set variables; re-run is “restart app” or “run these cells again.” So “static” options (write variable, re-run) still make sense; “dynamic” only where we explicitly re-invoke the map/rankings builders.
 
-- **Persistence (optional later):** If we want options to survive restarts we could write a small JSON (or use a single “options” module) when user clicks “Save options,” and have the first cell read that file and set variables. That’s an enhancement; not required for a first version.
+- **Persistence (phase 2):** Not in scope for v1. Later we could write optional JSON into the config file the user already uses for path (only when that config exists), and have the first cell read it and set variables. To be decided when we add persistence.
 
 - **Validation:** For path, “check path exists and file exists” in the load cell is enough. For date range, “start ≤ end” and a note like “Re-run from Data prep” keeps behaviour clear.
 
@@ -59,12 +71,12 @@ If we add an options UI we should **group by “when it applies”** (e.g. “Da
 
 ## 6. Suggested direction (summary)
 
-- **Options tab (or “Settings” tab):** One place for “user-friendly” controls. Group into: Data / load (path if we expose it, taxonomy locale), Date filter, Map display, Tables & lists, etc.
+- **Settings tab:** One place for user-friendly controls. Groups: **Data & path** (path visible, source, file name, taxonomy locale — all “Re-run from Load”), **Map display** (style, pin colours, mark lifer/last seen, popup — dynamic where we redraw), **Tables & lists** (rankings rows, maintenance distance — “Re-run from …” or next render as applicable).
 
-- **Semantics:** Bootstrap / data-prep options: “Set above, then re-run from the ‘Load config and data’ (or ‘Data prep’) cell.” No promise of dynamic behaviour. Display options (map style, colours, popup, etc.): implement as “dynamic” where easy (e.g. redraw map when widget changes), or “apply on next redraw” with one sentence of explanation. Others: explicit “Re-run from … to apply” where they affect computed state.
+- **Date filter:** In **map controls** (not Settings), so it stays map-centric. Dynamic: when user changes it, re-apply filter and redraw map; reset map does **not** reset the date filter.
 
-- **Data path:** Either keep in code only, or expose in Options as a “first-time setup” with a clear “Re-run from top” message. Don’t imply that changing path mid-session is supported without re-run.
+- **Path:** Visible in Settings (current path and source: hardcoded / config / notebook folder). Change path only via code or config; “Re-run from Load” to apply.
 
-- **Implementation order:** (1) Add an Options/Settings tab that only **sets the same variables** the code already uses, with clear “re-run from …” for non-dynamic ones. (2) Optionally wire map-style (and similar) to a redraw so those feel “dynamic.” (3) Later: persistence or “load defaults from file” if we want.
+- **Implementation order:** (1) Add Settings tab; wire variables with clear “Re-run from …” for non-dynamic. (2) Add date filter to map controls and make it dynamic (refactor filter + map-data build so it can be re-run on change). (3) Wire map style and pin colours to redraw (dynamic). (4) Later: persistence if desired (e.g. optional JSON in config).
 
-This keeps our architecture (dataset static, notebook as thin UI, logic in modules), avoids over-promising “dynamic” behaviour, and still makes options more discoverable and easier to change than editing raw code.
+This keeps the architecture (dataset static, notebook as thin UI, logic in modules), makes “restart required” obvious, and makes options discoverable without editing code.

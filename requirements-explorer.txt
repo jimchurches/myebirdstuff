@@ -6,7 +6,7 @@ jupyterlab
 voila
 pandas
 folium
-ipywidgets
+ipywidgets>=8
 whoosh
 scikit-learn
 pycountry
