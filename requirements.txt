@@ -4,7 +4,7 @@ jupyterlab
 voila
 pandas>=2.0,<3
 folium
-ipywidgets
+ipywidgets>=8
 whoosh
 scikit-learn
 pycountry
