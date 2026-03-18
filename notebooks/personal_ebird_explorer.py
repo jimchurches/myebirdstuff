@@ -1846,9 +1846,10 @@ _NAMED_COLOURS = [
 _path_display = (DATA_FOLDER or "(not set)") if file_path else "(data not loaded)"
 _path_source_label = (_path_source or "—").replace("_", " ").title()
 settings_intro = widgets.HTML(value=(
-    "<p style='margin:0 0 12px 0;font-size:12px;color:#555;'>"
-    "Some changes require re-running from the <strong>Load config and data</strong> or <strong>Data prep</strong> cell; those are marked below."
-    "</p>"
+    "<div style='margin:0 0 12px 0;font-size:12px;color:#555;line-height:1.5;'>"
+    "<div><strong>Note:</strong> Settings do not persist between sessions yet. Support for persistent settings may come in a future iteration.</div>"
+    "<div style='margin-top:6px;'>Some changes require re-running from the <strong>Load config and data</strong> or <strong>Data prep</strong> section; those are marked below.</div>"
+    "</div>"
 ))
 # Data & path section
 settings_data_header = widgets.HTML(value="<span style='color:#888;font-size:11px;'>Re-run from Load to apply path/file/locale changes</span>")
@@ -1862,7 +1863,8 @@ settings_data_section = VBox([settings_data_header, settings_path_html, settings
 
 # Map display section
 settings_display_header = widgets.HTML(value="<span style='color:#0a0;font-size:11px;'>Changes apply immediately</span>")
-map_style_dropdown = widgets.Dropdown(options=["default", "satellite", "google", "carto"], value=MAP_STYLE, description="Map style:", layout=widgets.Layout(width="200px"))
+map_style_header = widgets.HTML(value="<strong>Map Style</strong>")
+map_style_dropdown = widgets.Dropdown(options=["default", "satellite", "google", "carto"], value=MAP_STYLE, description="Style:", layout=widgets.Layout(width="200px"))
 def _on_map_style_change(change):
     global MAP_STYLE
     v = change.get("new")
@@ -1878,18 +1880,18 @@ def _on_pin_color_change(_=None):
     SPECIES_COLOR, SPECIES_FILL = species_color_dd.value, species_fill_dd.value
     DEFAULT_COLOR, DEFAULT_FILL = default_color_dd.value, default_fill_dd.value
     draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
-lifer_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LIFER_COLOR, description="Lifer edge:", layout=widgets.Layout(width="160px"))
-lifer_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LIFER_FILL, description="Lifer fill:", layout=widgets.Layout(width="160px"))
-last_seen_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LAST_SEEN_COLOR, description="Last-seen edge:", layout=widgets.Layout(width="160px"))
-last_seen_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LAST_SEEN_FILL, description="Last-seen fill:", layout=widgets.Layout(width="160px"))
-species_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=SPECIES_COLOR, description="Species edge:", layout=widgets.Layout(width="160px"))
-species_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=SPECIES_FILL, description="Species fill:", layout=widgets.Layout(width="160px"))
-default_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=DEFAULT_COLOR, description="Default edge:", layout=widgets.Layout(width="160px"))
-default_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=DEFAULT_FILL, description="Default fill:", layout=widgets.Layout(width="160px"))
+lifer_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LIFER_COLOR, description="", layout=widgets.Layout(width="150px"))
+lifer_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LIFER_FILL, description="", layout=widgets.Layout(width="150px"))
+last_seen_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LAST_SEEN_COLOR, description="", layout=widgets.Layout(width="150px"))
+last_seen_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=LAST_SEEN_FILL, description="", layout=widgets.Layout(width="150px"))
+species_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=SPECIES_COLOR, description="", layout=widgets.Layout(width="150px"))
+species_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=SPECIES_FILL, description="", layout=widgets.Layout(width="150px"))
+default_color_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=DEFAULT_COLOR, description="", layout=widgets.Layout(width="150px"))
+default_fill_dd = widgets.Dropdown(options=_NAMED_COLOURS, value=DEFAULT_FILL, description="", layout=widgets.Layout(width="150px"))
 for _dd in [lifer_color_dd, lifer_fill_dd, last_seen_color_dd, last_seen_fill_dd, species_color_dd, species_fill_dd, default_color_dd, default_fill_dd]:
     _dd.observe(_on_pin_color_change, names="value")
 
-mark_lifer_cb = Checkbox(value=MARK_LIFER, description="Mark lifer (first sighting)", layout=widgets.Layout(width="200px"))
+mark_lifer_cb = Checkbox(value=MARK_LIFER, description="Mark lifer", layout=widgets.Layout(width="200px"))
 mark_last_seen_cb = Checkbox(value=MARK_LAST_SEEN, description="Mark last-seen", layout=widgets.Layout(width="200px"))
 def _on_mark_lifer_change(change):
     global MARK_LIFER
@@ -1902,8 +1904,8 @@ def _on_mark_last_seen_change(change):
 mark_lifer_cb.observe(_on_mark_lifer_change, names="value")
 mark_last_seen_cb.observe(_on_mark_last_seen_change, names="value")
 
-popup_sort_dd = widgets.Dropdown(options=["ascending", "descending"], value=POPUP_SORT_ORDER, description="Popup sort:", layout=widgets.Layout(width="200px"))
-popup_scroll_dd = widgets.Dropdown(options=["chevron", "shading", "both"], value=POPUP_SCROLL_HINT, description="Popup scroll hint:", layout=widgets.Layout(width="200px"))
+popup_sort_dd = widgets.Dropdown(options=["ascending", "descending"], value=POPUP_SORT_ORDER, description="", layout=widgets.Layout(width="170px"))
+popup_scroll_dd = widgets.Dropdown(options=["chevron", "shading", "both"], value=POPUP_SCROLL_HINT, description="", layout=widgets.Layout(width="170px"))
 def _on_popup_sort_change(change):
     global POPUP_SORT_ORDER
     v = change.get("new")
@@ -1918,20 +1920,108 @@ def _on_popup_scroll_change(change):
         draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
 popup_sort_dd.observe(_on_popup_sort_change, names="value")
 popup_scroll_dd.observe(_on_popup_scroll_change, names="value")
-settings_display_section = VBox([
-    settings_display_header,
-    map_style_dropdown,
-    HBox([lifer_color_dd, lifer_fill_dd, last_seen_color_dd, last_seen_fill_dd]),
-    HBox([species_color_dd, species_fill_dd, default_color_dd, default_fill_dd]),
-    HBox([mark_lifer_cb, mark_last_seen_cb]),
-    HBox([popup_sort_dd, popup_scroll_dd]),
-], layout=widgets.Layout(width="100%"))
+sorting_header = widgets.HTML(value="<strong>Pop-up Sorting and Scrolling</strong>")
+_pin_group_layout = widgets.Layout(width="100%", margin="4px 0 0 0")
+_pin_row_layout = widgets.Layout(align_items="center", margin="2px 0 0 0")
+default_pin_group = VBox(
+    [
+        widgets.HTML(value="<strong>Default pin</strong>"),
+        HBox(
+            [
+                widgets.Label(value="Edge:", layout=widgets.Layout(width="50px")),
+                default_color_dd,
+                widgets.Label(value="Fill:", layout=widgets.Layout(width="40px", margin="0 0 0 12px")),
+                default_fill_dd,
+            ],
+            layout=_pin_row_layout,
+        ),
+    ],
+    layout=_pin_group_layout,
+)
+species_pin_group = VBox(
+    [
+        widgets.HTML(value="<strong>Species pin</strong>"),
+        HBox(
+            [
+                widgets.Label(value="Edge:", layout=widgets.Layout(width="50px")),
+                species_color_dd,
+                widgets.Label(value="Fill:", layout=widgets.Layout(width="40px", margin="0 0 0 12px")),
+                species_fill_dd,
+            ],
+            layout=_pin_row_layout,
+        ),
+    ],
+    layout=_pin_group_layout,
+)
+lifer_pin_group = VBox(
+    [
+        widgets.HTML(value="<strong>Lifer pin</strong>"),
+        HBox(
+            [
+                widgets.Label(value="Edge:", layout=widgets.Layout(width="50px")),
+                lifer_color_dd,
+                widgets.Label(value="Fill:", layout=widgets.Layout(width="40px", margin="0 0 0 12px")),
+                lifer_fill_dd,
+            ],
+            layout=_pin_row_layout,
+        ),
+    ],
+    layout=_pin_group_layout,
+)
+last_seen_pin_group = VBox(
+    [
+        widgets.HTML(value="<strong>Last-seen pin</strong>"),
+        HBox(
+            [
+                widgets.Label(value="Edge:", layout=widgets.Layout(width="50px")),
+                last_seen_color_dd,
+                widgets.Label(value="Fill:", layout=widgets.Layout(width="40px", margin="0 0 0 12px")),
+                last_seen_fill_dd,
+            ],
+            layout=_pin_row_layout,
+        ),
+    ],
+    layout=_pin_group_layout,
+)
+pin_visibility_header = widgets.HTML(value="<strong>Pin visibility</strong>")
+settings_display_section = VBox(
+    [
+        settings_display_header,
+        map_style_header,
+        map_style_dropdown,
+        default_pin_group,
+        species_pin_group,
+        lifer_pin_group,
+        last_seen_pin_group,
+        sorting_header,
+        HBox(
+            [
+                widgets.Label(value="Sorting:", layout=widgets.Layout(width="70px")),
+                popup_sort_dd,
+                widgets.Label(value="Scrolling:", layout=widgets.Layout(width="80px", margin="0 0 0 12px")),
+                popup_scroll_dd,
+            ],
+            layout=widgets.Layout(align_items="center", margin="4px 0 0 0"),
+        ),
+        pin_visibility_header,
+        HBox([mark_lifer_cb, mark_last_seen_cb], layout=widgets.Layout(margin="6px 0 0 0")),
+    ],
+    layout=widgets.Layout(width="100%"),
+)
 
 # Tables & lists section
-settings_tables_header = widgets.HTML(value="<span style='color:#888;font-size:11px;'>Re-run from Data prep to apply</span>")
-rankings_visible_int = widgets.IntText(value=RANKINGS_TABLE_VISIBLE_ROWS, description="Rankings visible rows:", layout=widgets.Layout(width="220px"))
-top_n_int = widgets.IntText(value=TOP_N_TABLE_LIMIT, description="Top N table limit:", layout=widgets.Layout(width="220px"))
-close_meters_int = widgets.IntText(value=CLOSE_LOCATION_METERS, description="Close location (m):", layout=widgets.Layout(width="220px"))
+settings_tables_header = widgets.HTML(value=(
+    "<div style='color:#6b7280;font-size:12px;line-height:1.5;margin:0 0 8px 0;'>"
+    "<div style='font-weight:600;color:#374151;'>These settings apply after a refresh.</div>"
+    "<div>If you’re using the app (Voila/Binder): refresh/reload the page.</div>"
+    "<div>If you’re in Jupyter Notebook: select the <strong>Load config and data</strong> cell, then use <em>Run Selected Cell and All Below</em>.</div>"
+    "</div>"
+))
+rankings_visible_int = widgets.IntText(value=RANKINGS_TABLE_VISIBLE_ROWS, description="Rankings visible rows:", layout=widgets.Layout(width="340px"))
+top_n_int = widgets.IntText(value=TOP_N_TABLE_LIMIT, description="Top N table limit:", layout=widgets.Layout(width="340px"))
+close_meters_int = widgets.IntText(value=CLOSE_LOCATION_METERS, description="Close location (m):", layout=widgets.Layout(width="340px"))
+for _w in (rankings_visible_int, top_n_int, close_meters_int):
+    _w.style.description_width = "200px"
 def _on_rankings_visible_change(change):
     global RANKINGS_TABLE_VISIBLE_ROWS
     v = change.get("new")
