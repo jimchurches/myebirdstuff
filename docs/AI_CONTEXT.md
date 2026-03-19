@@ -47,6 +47,8 @@ In particular avoid:
 
 The project is intentionally lightweight.
 
+**Roadmap note:** **Streamlit** (or similar) is the **intended future** UI stack. Do **not** add Streamlit—or other full app frameworks—as a dependency **until** an explicit migration task or maintainer decision says so. Until then, keep the shipping stack minimal (Jupyter, Folium, ipywidgets, Voila as needed).
+
 ### Prefer readability over cleverness
 
 Code should be understandable to a human reader returning to the project months later.
@@ -107,6 +109,23 @@ Folium map displayed in notebook UI
 ```
 
 The notebook acts as a **thin UI layer**. All core logic should live in Python modules.
+
+---
+
+## Roadmap: Streamlit (or similar UI)
+
+**Long-term intent:** move the primary user interface from **Jupyter + ipywidgets + Voila** toward **Streamlit** (or another lightweight app framework if requirements change). This is a **roadmap** goal, not a requirement on every change.
+
+**Practical guidance for AI and contributors:**
+
+- **Not every feature or fix will be Streamlit-related yet.** The notebook remains the shipping UI until a dedicated migration effort lands.
+- When working on **any** area of the explorer, **bias toward** patterns that make a future Streamlit app easier:
+  - Put **new or refactored logic** in `personal_ebird_explorer/` (or other testable modules) with **explicit inputs and return values**, not buried only in notebook cells.
+  - Treat the notebook as **glue**: widgets, observers, and display—not the home for large orchestration, HTML compilers, or data-prep pipelines.
+  - Be mindful of **state boundaries** (loaded data vs filters vs display options vs caches), even if the notebook still uses globals today; a future app will likely use something like session-scoped state instead.
+- Larger migration themes (e.g. date-filter + index rebuild, map build/caches, checklist stats / yearly HTML, lifer lookups, search/autocomplete) may be tracked as separate GitHub issues or epics; follow those when implementing related work.
+
+This section exists so assistants **remember the direction** when suggesting architecture, refactors, or where new code should live—even when the user’s immediate request is still notebook-centric.
 
 ---
 
@@ -230,12 +249,14 @@ Discuss before implementing major refactors.
 
 ## Future direction
 
-Possible future improvements include:
+**Committed direction (roadmap):** migrate the explorer toward a **Streamlit**-style (or similar) app while keeping **core logic in modules** so the notebook is not the only place behaviour lives. See [Roadmap: Streamlit (or similar UI)](#roadmap-streamlit-or-similar-ui).
 
-- improved UI controls
+Other possible improvements include:
+
+- improved UI controls (notebook and/or future app)
 - better export options
-- optional web deployment (e.g. Voila)
+- optional web deployment (e.g. Voila) for the notebook-era UI
 - richer species analysis tools
 - easier onboarding for non-technical users
 
-These are exploratory and not committed features.
+Items beyond the Streamlit roadmap are exploratory unless tied to an issue or maintainer decision.
