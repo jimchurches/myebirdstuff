@@ -237,6 +237,7 @@ class TestRankingsByVisits:
         rows = rankings_by_visits(cl, limit=10)
         assert len(rows) == 2
         assert "Park A" in rows[0][0]
+        assert "ebird.org/mychecklists/L1" in rows[0][0]
         assert rows[0][5] == "2"
 
 
