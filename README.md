@@ -292,3 +292,9 @@ avoid my script. All the other steps should be fairly common to anyone creating 
 data created by the [Apple Shortcut described above](#bird-data-logging-with-apple-shortcut).
 
 Just don’t forget: the macro interacts with the live eBird system. Respect the data.
+
+## License
+
+This repository is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 James Churches.
