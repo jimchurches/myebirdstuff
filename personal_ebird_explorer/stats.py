@@ -519,7 +519,8 @@ def rankings_by_visits(cl_sub, limit):
     rows = []
     for _, r in vc.iterrows():
         lid = r["Location ID"]
-        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
+        # For visit-focused tables, link to the user's checklists at that location (refs #59).
+        loc_link = f'<a href="https://ebird.org/mychecklists/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
         state_str = ""
         country_str = ""
         if reg_col and reg_col in vc.columns:
