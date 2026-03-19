@@ -8,8 +8,12 @@ A Jupyter notebook that lets you explore your eBird data on an interactive map. 
 - **Search** — Type-ahead species search; “show only selected species” to hide other locations.
 - **Tabs** — Map, Checklist Statistics, Yearly Summary, Rankings, Maintenance (duplicates / close locations, incomplete checklists, sex notation in comments).
 - **Export** — “Export Map HTML” saves the current map view.
-- **Date filter** — Optional date range (set in the notebook’s User Variables; re-run from Data prep to apply).
+- **Date filter** — Optional date range (initial defaults come from the notebook’s User Variables; the toolbar controls update the map dynamically during this session).
 - **Species links** — Species names in the map banner, rankings tables, and maintenance tab link to eBird species and lifelist pages. Names are resolved using the eBird taxonomy API (fetched once at startup; no API key). Set **EBIRD_TAXONOMY_LOCALE** in User Variables (e.g. `"en_AU"`) so common names match your eBird export; leave empty for the API default.
+
+## Known problems (Voila)
+
+- In Voila, after changing Settings that trigger a map redraw (e.g. map style or pin colours), the next click anywhere may be ignored; click again to continue.
 
 **You need:** Your eBird data export (CSV). Download from [eBird.org](https://ebird.org) → My eBird → Manage My Data → Download My Data. The notebook expects `MyEBirdData.csv` by default.
 

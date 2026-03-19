@@ -1747,7 +1747,8 @@ def _compute_incomplete_checklists_html(incomplete_by_year):
 incomplete_checklists_html = _compute_incomplete_checklists_html(checklist_data.get("incomplete_by_year", {}))
 sex_notation_by_year = _get_sex_notation_by_year(df_full)
 sex_notation_html = _compute_sex_notation_html(sex_notation_by_year, species_url_fn=_species_url_fn)
-_maintenance_panel_parts = [widgets.HTML(value=map_maintenance_html)]
+map_maintenance_html_widget = widgets.HTML(value=map_maintenance_html)
+_maintenance_panel_parts = [map_maintenance_html_widget]
 if incomplete_checklists_html:
     _maintenance_panel_parts.append(widgets.HTML(value=incomplete_checklists_html))
 if sex_notation_html:
@@ -1837,7 +1838,7 @@ map_tab_container = VBox(
 map_tab_container.add_class("map-tab-container")
 
 # --------------------------------------------
-# Settings tab (refs #38): expose user variables; dynamic where possible, "Re-run from …" for rest.
+# Settings tab (refs #38): session-only live controls for map/list rendering; path/locale are information-only and require notebook re-run to change.
 # --------------------------------------------
 _NAMED_COLOURS = [
     "white", "black", "red", "lime", "blue", "yellow", "cyan", "magenta", "orange", "purple",
@@ -1847,24 +1848,31 @@ _path_display = (DATA_FOLDER or "(not set)") if file_path else "(data not loaded
 _path_source_label = (_path_source or "—").replace("_", " ").title()
 settings_intro = widgets.HTML(value=(
     "<div style='margin:0 0 12px 0;font-size:12px;color:#555;line-height:1.5;'>"
-    "<div><strong>Note:</strong> Settings do not persist between sessions yet. Support for persistent settings may come in a future iteration.</div>"
-    "<div style='margin-top:6px;'>Some changes require re-running from the <strong>Load config and data</strong> or <strong>Data prep</strong> section; those are marked below.</div>"
+    "<div><strong>Note:</strong> Some Settings update immediately during this session (Map display, Tables & lists). Data & path is information-only; to persist or change those values, edit the notebook’s User Variables and re-run.</div>"
     "</div>"
 ))
-# Data & path section
-settings_data_header = widgets.HTML(value="<span style='color:#888;font-size:11px;'>Re-run from Load to apply path/file/locale changes</span>")
-settings_path_html = widgets.HTML(value=f"<p style='margin:4px 0;font-size:12px;'>Path: <code style='word-break:break-all;'>{_path_display}</code><br>Source: {_path_source_label}<br>File: {EBIRD_DATA_FILE_NAME}</p>")
-settings_locale_text = widgets.Text(value=EBIRD_TAXONOMY_LOCALE or "", description="Taxonomy locale:", layout=widgets.Layout(width="280px"))
-def _on_settings_locale_change(change):
-    global EBIRD_TAXONOMY_LOCALE
-    EBIRD_TAXONOMY_LOCALE = (change.get("new") or "").strip()
-settings_locale_text.observe(_on_settings_locale_change, names="value")
-settings_data_section = VBox([settings_data_header, settings_path_html, settings_locale_text], layout=widgets.Layout(width="100%"))
+# Data & path section (read-only info)
+settings_data_header = widgets.HTML(value=(
+    "<span style='color:#888;font-size:11px;'>Information only. Data path/file/locale are configured in the notebook User Variables. See docs/explorer/README.md.</span>"
+))
+settings_path_html = widgets.HTML(value=(
+    "<p style='margin:4px 0;font-size:12px;'>"
+    f"Path: <code style='word-break:break-all;'>{_path_display}</code><br>"
+    f"Source: {_path_source_label}<br>"
+    f"File: {EBIRD_DATA_FILE_NAME}<br>"
+    f"Taxonomy locale: <code>{EBIRD_TAXONOMY_LOCALE or '(API default)'}</code>"
+    "</p>"
+))
+settings_data_section = VBox([settings_data_header, settings_path_html], layout=widgets.Layout(width="100%"))
 
 # Map display section
 settings_display_header = widgets.HTML(value="<span style='color:#0a0;font-size:11px;'>Changes apply immediately</span>")
 map_style_header = widgets.HTML(value="<strong>Map Style</strong>")
-map_style_dropdown = widgets.Dropdown(options=["default", "satellite", "google", "carto"], value=MAP_STYLE, description="Style:", layout=widgets.Layout(width="200px"))
+map_style_dropdown = widgets.Dropdown(options=["default", "satellite", "google", "carto"], value=MAP_STYLE, description="", layout=widgets.Layout(width="200px"))
+map_style_row = HBox(
+    [widgets.Label(value="Style:", layout=widgets.Layout(width="50px")), map_style_dropdown],
+    layout=widgets.Layout(align_items="center", margin="2px 0 0 0"),
+)
 def _on_map_style_change(change):
     global MAP_STYLE
     v = change.get("new")
@@ -1988,7 +1996,7 @@ settings_display_section = VBox(
     [
         settings_display_header,
         map_style_header,
-        map_style_dropdown,
+        map_style_row,
         default_pin_group,
         species_pin_group,
         lifer_pin_group,
@@ -2010,33 +2018,46 @@ settings_display_section = VBox(
 )
 
 # Tables & lists section
-settings_tables_header = widgets.HTML(value=(
-    "<div style='color:#6b7280;font-size:12px;line-height:1.5;margin:0 0 8px 0;'>"
-    "<div style='font-weight:600;color:#374151;'>These settings apply after a refresh.</div>"
-    "<div>If you’re using the app (Voila/Binder): refresh/reload the page.</div>"
-    "<div>If you’re in Jupyter Notebook: select the <strong>Load config and data</strong> cell, then use <em>Run Selected Cell and All Below</em>.</div>"
-    "</div>"
-))
+settings_tables_header = widgets.HTML(value="<span style='color:#0a0;font-size:11px;'>Lists recalculate immediately; there may be a short delay as data is processed.</span>")
 rankings_visible_int = widgets.IntText(value=RANKINGS_TABLE_VISIBLE_ROWS, description="Rankings visible rows:", layout=widgets.Layout(width="340px"))
 top_n_int = widgets.IntText(value=TOP_N_TABLE_LIMIT, description="Top N table limit:", layout=widgets.Layout(width="340px"))
 close_meters_int = widgets.IntText(value=CLOSE_LOCATION_METERS, description="Close location (m):", layout=widgets.Layout(width="340px"))
 for _w in (rankings_visible_int, top_n_int, close_meters_int):
     _w.style.description_width = "200px"
+
+def _refresh_rankings_panel():
+    """Rebuild Rankings & lists HTML with current TOP_N_TABLE_LIMIT / RANKINGS_TABLE_VISIBLE_ROWS."""
+    _data = _compute_checklist_stats(df_full, link_urls_fn=_link_urls_fn)
+    rankings_panel.value = _build_rankings_panel_html(
+        _data["rankings_sections_top_n"],
+        _data["rankings_sections_other"],
+    )
+
+def _refresh_map_maintenance_close_locations():
+    """Update the 'close locations' panel using the latest CLOSE_LOCATION_METERS."""
+    new_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
+    # Use explicit widget reference (avoid brittle children[0] indexing).
+    if getattr(map_maintenance_html_widget, "value", None) is not None:
+        map_maintenance_html_widget.value = new_html
+
 def _on_rankings_visible_change(change):
     global RANKINGS_TABLE_VISIBLE_ROWS
     v = change.get("new")
     if v is not None and v > 0:
         RANKINGS_TABLE_VISIBLE_ROWS = v
+        _refresh_rankings_panel()
 def _on_top_n_change(change):
     global TOP_N_TABLE_LIMIT
     v = change.get("new")
     if v is not None and v > 0:
         TOP_N_TABLE_LIMIT = v
+        _refresh_rankings_panel()
 def _on_close_meters_change(change):
     global CLOSE_LOCATION_METERS
     v = change.get("new")
     if v is not None and v >= 0:
         CLOSE_LOCATION_METERS = v
+        _refresh_map_maintenance_close_locations()
 rankings_visible_int.observe(_on_rankings_visible_change, names="value")
 top_n_int.observe(_on_top_n_change, names="value")
 close_meters_int.observe(_on_close_meters_change, names="value")
@@ -2044,8 +2065,8 @@ settings_tables_section = VBox([settings_tables_header, rankings_visible_int, to
 
 # Settings tab: three accordions to match Rankings/Maintenance tab behaviour and styling
 settings_accordion = Accordion(
-    children=[settings_data_section, settings_display_section, settings_tables_section],
-    titles=("Data & path", "Map display", "Tables & lists"),
+    children=[settings_display_section, settings_tables_section, settings_data_section],
+    titles=("Map display", "Tables & lists", "Data & path"),
     layout=widgets.Layout(width="100%", min_width="400px"),
 )
 settings_accordion.add_class("ebird-settings-accordion")  # same .p-Accordion-tab CSS applies via .jupyter-widgets
