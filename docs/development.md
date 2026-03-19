@@ -69,7 +69,7 @@ The notebook owns: widget creation, observers, Whoosh index creation, data-prep 
 
 ## AI guardrails
 
-**Important:** AI coding assistants should read [docs/AI_CONTEXT.md](AI_CONTEXT.md) before suggesting architectural changes.
+**Important:** AI coding assistants should read [docs/AI_CONTEXT.md](AI_CONTEXT.md) before suggesting architectural changes. That file includes a **roadmap toward Streamlit** (or similar): not every task is migration work yet, but new logic should still favour **modules with clear APIs** so a future app can reuse it.
 
 - **Avoid architectural rewrites** — Do not propose large restructures of the data pipeline or map rendering unless the user has asked for it.
 - **Prefer incremental changes** — Small, targeted edits over broad refactors.
