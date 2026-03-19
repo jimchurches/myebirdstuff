@@ -1855,14 +1855,19 @@ settings_intro = widgets.HTML(value=(
 settings_data_header = widgets.HTML(value=(
     "<span style='color:#888;font-size:11px;'>Information only. Data path/file/locale are configured in the notebook User Variables. See docs/explorer/README.md.</span>"
 ))
-settings_path_html = widgets.HTML(value=(
-    "<p style='margin:4px 0;font-size:12px;'>"
-    f"Path: <code style='word-break:break-all;'>{_path_display}</code><br>"
-    f"Source: {_path_source_label}<br>"
-    f"File: {EBIRD_DATA_FILE_NAME}<br>"
-    f"Taxonomy locale: <code>{EBIRD_TAXONOMY_LOCALE or '(API default)'}</code>"
-    "</p>"
-))
+_settings_path_table = (
+    "<table style='margin:4px 0;font-size:12px;font-family:inherit;border-collapse:collapse;border:none;'>"
+    f"<tr><td style='border:none;padding:2px 8px 2px 0;vertical-align:top;white-space:nowrap;'>Path:</td>"
+    f"<td style='border:none;padding:2px 0;word-break:break-all;'>{_path_display}</td></tr>"
+    f"<tr><td style='border:none;padding:2px 8px 2px 0;vertical-align:top;white-space:nowrap;'>Source:</td>"
+    f"<td style='border:none;padding:2px 0;'>{_path_source_label}</td></tr>"
+    f"<tr><td style='border:none;padding:2px 8px 2px 0;vertical-align:top;white-space:nowrap;'>File:</td>"
+    f"<td style='border:none;padding:2px 0;'>{EBIRD_DATA_FILE_NAME}</td></tr>"
+    f"<tr><td style='border:none;padding:2px 8px 2px 0;vertical-align:top;white-space:nowrap;'>Taxonomy locale:</td>"
+    f"<td style='border:none;padding:2px 0;'>{EBIRD_TAXONOMY_LOCALE or '(API default)'}</td></tr>"
+    "</table>"
+)
+settings_path_html = widgets.HTML(value=_settings_path_table)
 settings_data_section = VBox([settings_data_header, settings_path_html], layout=widgets.Layout(width="100%"))
 
 # Map display section
