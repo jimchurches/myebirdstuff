@@ -80,7 +80,11 @@ def rebuild_working_set_from_date_filter(
         except Exception:
             return None
 
-    df_new = df_full[df_full["Location ID"].isin(location_ids_with_checklists)].copy()
+    # Keep "full" groupings consistent with the notebook: only locations that
+    # have checklists are eligible for both working + full views.
+    df_full_filtered = df_full[df_full["Location ID"].isin(location_ids_with_checklists)].copy()
+
+    df_new = df_full_filtered
     if filter_by_date and start is not None and end is not None:
         df_new = df_new[(df_new["Date"] >= start) & (df_new["Date"] <= end)]
 
@@ -100,10 +104,10 @@ def rebuild_working_set_from_date_filter(
     )
 
     if filter_by_date:
-        records_by_loc_full = {lid: grp for lid, grp in df_full.groupby("Location ID")}
-        total_checklists_full = df_full["Submission ID"].nunique()
-        total_species_full = int(countable_species_vectorized(df_full).dropna().nunique())
-        total_individuals_full = int(df_full["Count"].apply(safe_count).sum())
+        records_by_loc_full = {lid: grp for lid, grp in df_full_filtered.groupby("Location ID")}
+        total_checklists_full = df_full_filtered["Submission ID"].nunique()
+        total_species_full = int(countable_species_vectorized(df_full_filtered).dropna().nunique())
+        total_individuals_full = int(df_full_filtered["Count"].apply(safe_count).sum())
     else:
         records_by_loc_full = {}
         total_checklists_full = total_checklists
