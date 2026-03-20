@@ -97,3 +97,4 @@ def test_lifer_map_mode_builds_banner():
     html = r.map._repr_html_()
     assert "Lifer locations" in html
     assert "lifer species" in html
+    assert "Sub-species included" in html
