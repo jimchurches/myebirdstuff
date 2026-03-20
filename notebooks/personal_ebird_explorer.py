@@ -142,8 +142,6 @@ from collections import OrderedDict
 from datetime import datetime, date
 
 import pandas as pd
-import folium
-from branca.element import Element
 import tempfile
 import threading
 import importlib.util
@@ -529,23 +527,10 @@ from personal_ebird_explorer.checklist_stats_display import (
 from personal_ebird_explorer.lifer_last_seen_prep import prepare_lifer_last_seen
 
 
-from personal_ebird_explorer.map_renderer import (
-    format_visit_time as _format_visit_time,
-    format_sighting_row as _format_sighting_row,
-    popup_scroll_script as _popup_scroll_script,
-    create_map as _create_map,
-    build_all_species_banner_html as _build_all_species_banner_html,
-    build_species_banner_html as _build_species_banner_html,
-    build_legend_html as _build_legend_html,
-    build_visit_info_html as _build_visit_info_html,
-    build_location_popup_html as _build_location_popup_html,
-    resolve_lifer_last_seen as _resolve_lifer_last_seen,
-    classify_locations as _classify_locations,
-)
+from personal_ebird_explorer.map_controller import build_species_overlay_map
 
 from personal_ebird_explorer.species_logic import (
     countable_species_vectorized as _countable_species_vectorized,
-    filter_species,
     base_species_for_lifer as _base_species_for_lifer,
 )
 
@@ -846,17 +831,9 @@ hide_non_matching_checkbox.observe(on_toggle_change, names="value")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🗺️ Map helpers (imported from personal_ebird_explorer.map_renderer).
-#
-
-# %%
-# Map helpers are imported from personal_ebird_explorer.map_renderer
-# in the cell group above (see imports after stats).
-
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 🗺️ Draw map (all-species or species-filtered; banners, popups, export on demand).
 #
+# Map build logic: ``personal_ebird_explorer.map_controller`` (refs #67). This cell only wires widgets/output.
 
 # %%
 # --------------------------------------------
@@ -875,183 +852,49 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         effective_records_by_loc = records_by_loc
         effective_totals = (total_checklists, total_species, total_individuals)
 
-    if selected_species:
-        filtered = filter_species(df, selected_species)
-        if filtered.empty:
-            with output:
-                output.clear_output()
-                print(f"⚠️ No sightings of '{selected_species}' in current data — check date range or filters.")
-            return
-        seen_location_ids = set(filtered["Location ID"])
-        species_locations = location_data[location_data["Location ID"].isin(seen_location_ids)]
-        map_center = [species_locations["Latitude"].mean(), species_locations["Longitude"].mean()]
-    else:
-        map_center = [effective_location_data["Latitude"].mean(), effective_location_data["Longitude"].mean()]
+    result = build_species_overlay_map(
+        df=df,
+        location_data=location_data,
+        records_by_loc=records_by_loc,
+        effective_location_data=effective_location_data,
+        effective_records_by_loc=effective_records_by_loc,
+        effective_totals=effective_totals,
+        effective_use_full=effective_use_full,
+        lifer_lookup_df=_lifer_lookup_df,
+        true_lifer_locations=true_lifer_locations,
+        true_last_seen_locations=true_last_seen_locations,
+        true_lifer_locations_taxon=true_lifer_locations_taxon,
+        true_last_seen_locations_taxon=true_last_seen_locations_taxon,
+        selected_species=selected_species,
+        selected_common_name=selected_common_name,
+        map_style=MAP_STYLE,
+        popup_sort_order=POPUP_SORT_ORDER,
+        popup_scroll_hint=POPUP_SCROLL_HINT,
+        lifer_color=LIFER_COLOR,
+        lifer_fill=LIFER_FILL,
+        last_seen_color=LAST_SEEN_COLOR,
+        last_seen_fill=LAST_SEEN_FILL,
+        species_color=SPECIES_COLOR,
+        species_fill=SPECIES_FILL,
+        default_color=DEFAULT_COLOR,
+        default_fill=DEFAULT_FILL,
+        mark_lifer=MARK_LIFER,
+        mark_last_seen=MARK_LAST_SEEN,
+        hide_non_matching_locations=hide_non_matching_checkbox.value,
+        date_filter_status=_date_filter_status_text(),
+        species_url_fn=_species_url_fn,
+        base_species_fn=_base_species_for_lifer,
+        popup_html_cache=_popup_html_cache,
+        filtered_by_loc_cache=_filtered_by_loc_cache,
+        filtered_by_loc_cache_max=_FILTERED_BY_LOC_CACHE_MAX,
+    )
+    if result.warning:
+        with output:
+            output.clear_output()
+            print(result.warning)
+        return
 
-    state.species_map = _create_map(map_center, MAP_STYLE)
-
-    # records_by_loc is built once at data prep (refs #37); reused on every redraw
-    if not selected_species:
-        # Case 1: No species selected – draw all as green, show totals banner
-        tc, ts, ti = effective_totals
-        state.species_map.get_root().html.add_child(Element(
-            _build_all_species_banner_html(tc, ts, ti, _date_filter_status_text())
-        ))
-        state.species_map.get_root().html.add_child(Element(
-            _build_legend_html([(DEFAULT_COLOR, DEFAULT_FILL, "All locations")])
-        ))
-
-        popup_asc = POPUP_SORT_ORDER == "ascending"
-        for _, row in effective_location_data.iterrows():
-            popup_key = (row["Location ID"], "", effective_use_full)
-            if popup_key not in _popup_html_cache:
-                base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
-                visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
-                visit_info = _build_visit_info_html(visit_records, _format_visit_time)
-                _popup_html_cache[popup_key] = _build_location_popup_html(row["Location"], row["Location ID"], visit_info)
-            popup_html = _popup_html_cache[popup_key]
-            folium.CircleMarker(
-                location=[row['Latitude'], row['Longitude']],
-                radius=4,
-                color=DEFAULT_COLOR,
-                fill=True,
-                fill_color=DEFAULT_FILL,
-                fill_opacity=0.6,
-                popup=folium.Popup(popup_html, max_width=800),
-            ).add_to(state.species_map)
-
-    else:
-        # Case 2: Filtered by species (filtered, seen_location_ids already computed above)
-        popup_asc = POPUP_SORT_ORDER == "ascending"
-        if selected_species not in _filtered_by_loc_cache:
-            if len(_filtered_by_loc_cache) >= _FILTERED_BY_LOC_CACHE_MAX:
-                _filtered_by_loc_cache.popitem(last=False)
-            _filtered_by_loc_cache[selected_species] = {lid: grp for lid, grp in filtered.groupby("Location ID")}
-        else:
-            _filtered_by_loc_cache.move_to_end(selected_species)
-        filtered_by_loc = _filtered_by_loc_cache[selected_species]
-
-        # Stats for banner (Count can be "X" for present; treat as 1)
-        n_checklists = filtered["Submission ID"].nunique()
-        n_individuals = int(filtered["Count"].apply(_safe_count).sum())
-        high_count = int(filtered["Count"].apply(_safe_count).max())
-
-        # Banner date format: dd MMM yyyy (e.g. 22 Jan 2025)
-        def _banner_date(d):
-            return d.strftime("%d-%b-%Y") if pd.notna(d) else "?"
-
-        # First seen / last seen (dates only, same as lifer and last-seen pins)
-        first_seen_date = ""
-        last_seen_date = ""
-        high_count_date = ""
-        sci_parts_banner = (selected_species or "").strip().split()
-        is_subspecies_banner = len(sci_parts_banner) >= 3
-        taxon_key_banner = selected_species.strip().lower() if selected_species else None
-        if is_subspecies_banner and taxon_key_banner:
-            subset = _lifer_lookup_df[_lifer_lookup_df["_taxon"] == taxon_key_banner]
-        else:
-            base = _base_species_for_lifer(selected_species)
-            subset = _lifer_lookup_df[_lifer_lookup_df["_base"] == base] if base else pd.DataFrame()
-        if not subset.empty:
-            first_rec = subset.iloc[0]
-            last_rec = subset.iloc[-1]
-            first_seen_date = _banner_date(first_rec["Date"])
-            last_seen_date = _banner_date(last_rec["Date"])
-
-        # Date when high count was achieved
-        high_count_rows = filtered[filtered["Count"].apply(_safe_count) == high_count]
-        if not high_count_rows.empty:
-            high_count_date = _banner_date(high_count_rows.iloc[0]["Date"])
-
-        state.species_map.get_root().html.add_child(Element(
-            _build_species_banner_html(
-                display_name=selected_common_name or selected_species,
-                n_checklists=n_checklists,
-                n_individuals=n_individuals,
-                high_count=high_count,
-                first_seen_date=first_seen_date,
-                last_seen_date=last_seen_date,
-                high_count_date=high_count_date,
-                date_filter_status=_date_filter_status_text(),
-                species_url=_species_url_fn(selected_common_name or selected_species) if _species_url_fn else None,
-            )
-        ))
-
-        lifer_location, last_seen_location = _resolve_lifer_last_seen(
-            selected_species,
-            seen_location_ids,
-            lifer_lookup=true_lifer_locations,
-            last_seen_lookup=true_last_seen_locations,
-            lifer_lookup_taxon=true_lifer_locations_taxon,
-            last_seen_lookup_taxon=true_last_seen_locations_taxon,
-            base_species_fn=_base_species_for_lifer,
-            mark_lifer=MARK_LIFER,
-            mark_last_seen=MARK_LAST_SEEN,
-        )
-        location_data_local = _classify_locations(
-            location_data, seen_location_ids, lifer_location, last_seen_location,
-        )
-
-        # Pin legend: only show pin types that are actually drawn (refs #40)
-        pin_types_present = set()
-        for _, row in location_data_local.iterrows():
-            if not row["has_species_match"] and hide_non_matching_checkbox.value:
-                continue
-            if row["is_lifer"]:
-                pin_types_present.add("Lifer")
-            elif row["is_last_seen"]:
-                pin_types_present.add("Last seen")
-            elif row["has_species_match"]:
-                pin_types_present.add("Species")
-            else:
-                pin_types_present.add("Other")
-        legend_order = [("Lifer", LIFER_COLOR, LIFER_FILL), ("Last seen", LAST_SEEN_COLOR, LAST_SEEN_FILL), ("Species", SPECIES_COLOR, SPECIES_FILL), ("Other", DEFAULT_COLOR, DEFAULT_FILL)]
-        legend_items = [(c, f, label) for label, c, f in legend_order if label in pin_types_present]
-        state.species_map.get_root().html.add_child(Element(
-            _build_legend_html(legend_items)
-        ))
-
-        # Single loop for marker drawing
-        for _, row in location_data_local.iterrows():
-            loc_id = row["Location ID"]
-
-            if not row["has_species_match"] and hide_non_matching_checkbox.value:
-                continue
-
-            popup_key = (loc_id, selected_species)
-            if popup_key not in _popup_html_cache:
-                base_records = records_by_loc.get(loc_id, pd.DataFrame())
-                visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values("datetime", ascending=popup_asc)
-                visit_info = _build_visit_info_html(visit_records, _format_visit_time)
-                sightings_html = ""
-                if row["has_species_match"]:
-                    sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values("datetime", ascending=popup_asc)
-                    sightings_html = "".join(_format_sighting_row(r) for _, r in sub.iterrows())
-                _popup_html_cache[popup_key] = _build_location_popup_html(row["Location"], loc_id, visit_info, sightings_html)
-            popup_html = _popup_html_cache[popup_key]
-            popup_content = folium.Popup(popup_html, max_width=800)
-
-            if row["is_lifer"]:
-                color, fill, radius, fill_opacity = LIFER_COLOR, LIFER_FILL, 4, 0.9
-            elif row["is_last_seen"]:
-                color, fill, radius, fill_opacity = LAST_SEEN_COLOR, LAST_SEEN_FILL, 4, 0.9
-            elif row["has_species_match"]:
-                color, fill, radius, fill_opacity = SPECIES_COLOR, SPECIES_FILL, 4, 0.9
-            else:
-                color, fill, radius, fill_opacity = DEFAULT_COLOR, DEFAULT_FILL, 4, 0.9
-
-            folium.CircleMarker(
-                location=[row['Latitude'], row['Longitude']],
-                radius=radius,
-                color=color,
-                fill=True,
-                fill_color=fill,
-                fill_opacity=fill_opacity,
-                popup=popup_content
-            ).add_to(state.species_map)
-
-    scroll_popup_script = _popup_scroll_script(POPUP_SCROLL_HINT, POPUP_SORT_ORDER == "ascending")
-    state.species_map.get_root().html.add_child(Element(scroll_popup_script))
+    state.species_map = result.map
 
     # Double-buffer: draw into the hidden output, then swap so the visible map never clears (refs #45)
     map_html = state.species_map._repr_html_()

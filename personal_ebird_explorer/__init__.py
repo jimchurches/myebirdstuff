@@ -47,6 +47,7 @@ from personal_ebird_explorer.maintenance_display import (
     format_incomplete_checklists_maintenance_html,
 )
 from personal_ebird_explorer.species_search import whoosh_common_name_suggestions
+from personal_ebird_explorer.map_controller import MapOverlayResult, build_species_overlay_map
 from personal_ebird_explorer.map_renderer import (
     create_map,
     format_visit_time,
@@ -82,6 +83,8 @@ __all__ = [
     "get_sex_notation_by_year",
     "get_map_maintenance_data",
     "ExplorerState",
+    "MapOverlayResult",
+    "build_species_overlay_map",
     "create_map",
     "format_visit_time",
     "format_sighting_row",

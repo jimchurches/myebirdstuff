@@ -12,8 +12,9 @@ Data flow:
 2. **data_loader** — Loads CSV, validates columns, adds canonical `datetime` column. Returns a single DataFrame. Missing/no-recorded times use synthetic **23:59** so same-day sorting is stable (user-facing explanation: [explorer README — Missing checklist times](explorer/README.md#missing-checklist-times-synthetic-2359); refs #44).
 3. **working_set** — After load, optional date filter rebuild: working DataFrame, `location_data`, `records_by_loc`, species list, totals, Whoosh repopulation, map-cache clears. Called from the notebook; same API usable from Streamlit (refs #66).
 4. **Statistics modules** — `stats`, `species_logic`, `duplicate_checks` provide rankings, species filtering, map-maintenance data. All operate on the DataFrame or derived structures.
-5. **map_renderer** — Builds Folium map, popups, banners, legend HTML. Receives data; no notebook globals.
-6. **Notebook (UI)** — Widgets (search, dropdown, checkbox, buttons), event handlers, and a single `draw_map_with_species_overlay()` that uses the precomputed structures and calls into `map_renderer`.
+5. **map_renderer** — Folium map factory, popups, banners, legend HTML helpers. Receives data; no notebook globals.
+6. **map_controller** — Species overlay pipeline: ``build_species_overlay_map(...)`` → :class:`MapOverlayResult` (Folium map or warning). Framework-neutral; notebook handles widget display (refs #67).
+7. **Notebook (UI)** — Widgets (search, dropdown, checkbox, buttons), event handlers, map tab output (double-buffer), and `draw_map_with_species_overlay()` calling **map_controller** with session caches and options.
 
 The notebook is a thin UI layer: it wires widgets to state and calls module APIs. Core logic lives in `personal_ebird_explorer/*.py`.
 
@@ -40,7 +41,7 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **maintenance_display** | Maintenance tab HTML: map duplicates/close locations, incomplete checklists, sex-notation sections (`format_*_maintenance_html`, refs #69). |
 | **species_search** | Whoosh species autocomplete helper: `whoosh_common_name_suggestions(index, query, ...)` (refs #69). |
 
-The notebook owns: widget creation, observers, initial Whoosh index creation (empty schema + first fill), session caches, and `draw_map_with_species_overlay()` orchestration. Filter-driven rebuild logic lives in **working_set**.
+The notebook owns: widget creation, observers, initial Whoosh index creation (empty schema + first fill), session caches, and map tab display (double-buffered output); it calls **map_controller**’s `build_species_overlay_map()` for the Folium map. Filter-driven rebuild logic lives in **working_set**.
 
 ---
 
@@ -57,7 +58,7 @@ The notebook owns: widget creation, observers, initial Whoosh index creation (em
 
 - **Location:** Tests live under `tests/`, with `tests/explorer/` for explorer-specific tests and `tests/conftest.py` for shared fixtures.
 - **Runner:** `pytest tests/ -v` (also used in CI).
-- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, region_display, rankings_display, taxonomy, working_set, lifer_last_seen_prep, checklist_stats_compute, checklist_stats_display (rankings tab shell), maintenance_display, species_search. No notebook execution in the test suite.
+- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, map_controller, region_display, rankings_display, taxonomy, working_set, lifer_last_seen_prep, checklist_stats_compute, checklist_stats_display (rankings tab shell), maintenance_display, species_search. No notebook execution in the test suite.
 - **Adding tests:** Prefer testing logic in modules. For new behaviour, add tests in the appropriate `tests/explorer/test_*.py` file.
 - **Integration fixture:** Tests in `tests/explorer/test_integration_fixture.py` use `tests/fixtures/ebird_integration_fixture.csv`; expected values are documented in `tests/fixtures/ebird_integration_fixture_notes.md`. If you change the fixture, update the notes and the test constants in the test file together.
 
