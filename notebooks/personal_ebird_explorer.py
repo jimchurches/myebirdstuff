@@ -707,6 +707,19 @@ hide_non_matching_checkbox = Checkbox(
     indent=False
 )
 
+# Map view mode: all locations, species overlay, or lifer-only pins (refs #71)
+map_view_mode_dd = widgets.Dropdown(
+    options=[
+        ("All locations", "all"),
+        ("Selected species", "species"),
+        ("Lifer locations", "lifers"),
+    ],
+    value="all",
+    description="Map view:",
+    layout=widgets.Layout(min_width="200px", width="min-content"),
+)
+map_view_mode_dd.style.description_width = "72px"
+
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
 # ### 📍 Maintenance tab HTML helpers (imported from personal_ebird_explorer; refs #69).
@@ -762,6 +775,8 @@ def _show_matches_dropdown(show):
 
 def update_suggestions(change):
     """Whoosh search as user types; show/hide matches dropdown. When search is empty, reset (clear) in this context."""
+    if map_view_mode_dd.value != "species":
+        return
     if state.skip_next_suggestion_update:
         state.skip_next_suggestion_update = False
         return
@@ -786,6 +801,11 @@ def update_suggestions(change):
 
 def on_species_selected(change):
     """Handle dropdown selection: set species and redraw map; if dropdown and search both empty, reset to all species."""
+    # Map view dropdown changes clear/reset the species widgets; ignore those UI events.
+    if map_view_mode_dd.value != "species":
+        return
+    if state.skip_next_suggestion_update:
+        return
     selected = change.get("new")
     search_text = search_box.value.strip()
 
@@ -837,10 +857,14 @@ def _clear_to_all_species():
     state.suppress_toggle_redraw = True
     hide_non_matching_checkbox.value = False
     state.suppress_toggle_redraw = False
+    prev_mode = map_view_mode_dd.value
+    map_view_mode_dd.value = "all"
+    _sync_map_view_controls()
     with output:
         output.clear_output()
         print("🧹 Reset view — showing all locations")
-    draw_map_with_species_overlay("", "")
+    if prev_mode == "all":
+        draw_map_with_species_overlay("", "")
 
 
 def _export_map_html():
@@ -926,6 +950,8 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
         popup_html_cache=_popup_html_cache,
         filtered_by_loc_cache=_filtered_by_loc_cache,
         filtered_by_loc_cache_max=_FILTERED_BY_LOC_CACHE_MAX,
+        map_view_mode=map_view_mode_dd.value,
+        full_location_data=full_location_data,
     )
     if result.warning:
         with output:
@@ -947,6 +973,64 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
     # Export is explicit via "Export Map HTML" button (refs #47); no automatic save on redraw
 
+
+def _sync_map_view_controls():
+    """Enable species search only in Selected species mode (refs #71)."""
+    species_on = map_view_mode_dd.value == "species"
+    search_box.disabled = not species_on
+    matches_dropdown.disabled = not species_on
+    hide_non_matching_checkbox.disabled = not species_on
+
+    # Lifer-only mode should ignore date filtering; disable the checkbox so the UI
+    # communicates the precedence clearly (refs #71).
+    is_lifers = map_view_mode_dd.value == "lifers"
+    if "filter_by_date_checkbox" in globals():
+        filter_by_date_checkbox.disabled = is_lifers
+    if "_use_date_picker" in globals() and _use_date_picker and is_lifers:
+        if "filter_start_date_widget" in globals():
+            filter_start_date_widget.disabled = True
+        if "filter_end_date_widget" in globals():
+            filter_end_date_widget.disabled = True
+    elif "_use_date_picker" in globals() and _use_date_picker and not is_lifers:
+        if "filter_start_date_widget" in globals():
+            filter_start_date_widget.disabled = False
+        if "filter_end_date_widget" in globals():
+            filter_end_date_widget.disabled = False
+
+
+def _on_map_view_change(change):
+    """Switching to All or Lifer mode clears species selection to avoid ambiguous map state (#71)."""
+    new = change.get("new")
+    if new in ("all", "lifers"):
+        state.skip_next_suggestion_update = True
+        search_box.value = ""
+        matches_dropdown.options = []
+        matches_dropdown.value = None
+        _show_matches_dropdown(False)
+        state.clear_selection()
+        state.suppress_toggle_redraw = True
+        hide_non_matching_checkbox.value = False
+        state.suppress_toggle_redraw = False
+
+        # In lifer-only mode, date filter should not affect which pins/sightings are shown.
+        # If date filtering is currently on, clear it to force the map to use the full dataset.
+        if new == "lifers" and FILTER_BY_DATE:
+            filter_by_date_checkbox.value = False  # triggers _on_date_filter_change redraw
+            _sync_map_view_controls()
+            return
+
+    _sync_map_view_controls()
+
+    # Avoid an immediate redraw to "all locations" when switching lifer -> species search
+    # while no species is selected. Keep the current lifer view until the user picks a species.
+    if new == "species" and not state.selected_species_scientific:
+        return
+
+    draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
+
+
+map_view_mode_dd.observe(_on_map_view_change, names="value")
+_sync_map_view_controls()
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -1068,9 +1152,11 @@ reset_view_btn = widgets.Button(description="Reset View", layout=widgets.Layout(
 reset_view_btn.on_click(lambda _: _clear_to_all_species())
 export_map_btn = widgets.Button(description="Export Map HTML", layout=widgets.Layout(width="140px"))
 export_map_btn.on_click(lambda _: _export_map_html())
-# Single horizontal row: species | date filter | reset | export (small spacers between sections to save space)
+# Single horizontal row: map view | species | date filter | reset | export (refs #71, #38, #47)
 map_control_row = HBox(
     [
+        map_view_mode_dd,
+        _spacer_small,
         search_box,
         _spacer,
         hide_non_matching_checkbox,

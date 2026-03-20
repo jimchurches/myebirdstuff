@@ -80,3 +80,21 @@ def test_all_species_builds_map_with_banner():
     html = r.map._repr_html_()
     assert "All species" in html
     assert "1 checklist" in html
+
+
+def test_lifer_map_mode_builds_banner():
+    df = _minimal_map_df()
+    kwargs = _common_kwargs(df)
+    full_loc = kwargs["location_data"]
+    r = build_species_overlay_map(
+        **kwargs,
+        selected_species="",
+        map_view_mode="lifers",
+        full_location_data=full_loc,
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map._repr_html_()
+    assert "Lifer locations" in html
+    assert " lifer " in html or "1 lifer" in html
+    assert "Sub-species included" in html

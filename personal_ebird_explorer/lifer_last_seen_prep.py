@@ -7,12 +7,16 @@ widgets or HTML (refs #68, Streamlit migration prep).
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import Callable, Dict
+from typing import Any, Callable, Dict, List, Tuple
 
 import pandas as pd
 
-from personal_ebird_explorer.species_logic import base_species_for_lifer as _default_base_species_for_lifer
+from personal_ebird_explorer.species_logic import (
+    base_species_for_lifer as _default_base_species_for_lifer,
+    countable_species_vectorized,
+)
 
 
 @dataclass(frozen=True)
@@ -50,6 +54,13 @@ def prepare_lifer_last_seen(
         )
     )
     lifer_lookup_df = lifer_lookup_df[lifer_lookup_df["_base"].notna()]
+    # Lifer pins should match the app's "countable species" rules:
+    # exclude spuhs/hybrids/domestics and species-level slashes.
+    # Keep subspecies (including slash later in the scientific name) intact.
+    if "Common Name" not in lifer_lookup_df.columns:
+        lifer_lookup_df = lifer_lookup_df.assign(**{"Common Name": pd.NA})
+    countable_mask = countable_species_vectorized(lifer_lookup_df).notna()
+    lifer_lookup_df = lifer_lookup_df[countable_mask]
     true_lifer_locations = lifer_lookup_df.groupby("_base").first()["Location ID"].to_dict()
     true_last_seen_locations = lifer_lookup_df.groupby("_base").last()["Location ID"].to_dict()
     true_lifer_locations_taxon = lifer_lookup_df.groupby("_taxon").first()["Location ID"].to_dict()
@@ -61,3 +72,64 @@ def prepare_lifer_last_seen(
         true_lifer_locations_taxon=true_lifer_locations_taxon,
         true_last_seen_locations_taxon=true_last_seen_locations_taxon,
     )
+
+
+def aggregate_lifer_sites(
+    lifer_lookup_df: pd.DataFrame,
+    true_lifer_locations: Dict[str, Any],
+    true_lifer_locations_taxon: Dict[str, Any],
+) -> Tuple[Dict[Any, List[Tuple[str, str]]], int]:
+    """Map each location ID to lifer species (scientific, common) and count unique lifer species.
+
+    Uses the same first-row-per-base and first-row-per-taxon rules as
+    :func:`prepare_lifer_last_seen`. Each scientific name appears at most once per
+    location; taxon-level entries dedupe with base-level when the first row matches.
+
+    Returns:
+        ``(location_id -> [(scientific_name, common_name), ...], n_distinct_lifer_species)``
+    """
+    by_loc: Dict[Any, List[Tuple[str, str]]] = defaultdict(list)
+    seen_at_loc: Dict[Any, set] = defaultdict(set)
+    global_sci: set = set()
+
+    def _valid_lid(lid: Any) -> bool:
+        if lid is None:
+            return False
+        try:
+            if pd.isna(lid):
+                return False
+        except TypeError:
+            pass
+        return True
+
+    def _add(lid: Any, sci: str, common: str) -> None:
+        if not _valid_lid(lid) or not sci:
+            return
+        if sci in seen_at_loc[lid]:
+            return
+        seen_at_loc[lid].add(sci)
+        by_loc[lid].append((sci, common))
+        global_sci.add(sci)
+
+    for _base, lid in true_lifer_locations.items():
+        subset = lifer_lookup_df[lifer_lookup_df["_base"] == _base]
+        if subset.empty:
+            continue
+        r = subset.iloc[0]
+        sci = str(r["Scientific Name"])
+        com = "" if pd.isna(r.get("Common Name")) else str(r["Common Name"])
+        _add(lid, sci, com)
+
+    for _taxon, lid in true_lifer_locations_taxon.items():
+        subset = lifer_lookup_df[lifer_lookup_df["_taxon"] == _taxon]
+        if subset.empty:
+            continue
+        r = subset.iloc[0]
+        sci = str(r["Scientific Name"])
+        com = "" if pd.isna(r.get("Common Name")) else str(r["Common Name"])
+        _add(lid, sci, com)
+
+    sorted_by_loc = {
+        k: sorted(v, key=lambda t: ((t[1] or t[0]).lower(), t[0].lower())) for k, v in by_loc.items()
+    }
+    return sorted_by_loc, len(global_sci)
