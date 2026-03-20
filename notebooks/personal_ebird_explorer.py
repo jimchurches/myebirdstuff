@@ -359,6 +359,45 @@ display(HTML("""
     font-weight: 600 !important;
     color: #374151 !important;
 }
+/* ipywidgets 8 / JupyterLab / Voila: Lumino Accordion (Settings tab) — same card look as Maintenance <details> */
+.ebird-dashboard .lm-AccordionPanel .jp-AccordionPanel-title {
+    background: #f9fafb !important;
+    color: #374151 !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    margin: 0 0 8px 0 !important;
+    padding: 8px 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    text-transform: none !important;
+    min-height: unset !important;
+    max-height: none !important;
+}
+.ebird-dashboard .lm-AccordionPanel .jp-AccordionPanel-title:hover {
+    background: #f3f4f6 !important;
+}
+.ebird-dashboard .lm-AccordionPanel .jp-AccordionPanel-title.lm-mod-expanded {
+    border-radius: 6px 6px 0 0 !important;
+    margin-bottom: 0 !important;
+}
+/* Section body: white interior attached to header */
+.ebird-dashboard .lm-AccordionPanel .jp-AccordionPanel-title + * {
+    box-sizing: border-box !important;
+    margin: 0 0 8px 0 !important;
+    padding: 8px 10px 14px !important;
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-top: none !important;
+    border-radius: 0 0 6px 6px !important;
+}
+/* Settings tab: same horizontal padding / max width as HTML data tabs */
+.ebird-dashboard .settings-tab-panel {
+    box-sizing: border-box !important;
+    max-width: 1400px !important;
+    padding: 0 clamp(16px, 3vw, 32px) !important;
+}
 /* Section headings and body text in HTML widgets */
 .ebird-dashboard h4 {
     color: #111827 !important;
@@ -1064,16 +1103,21 @@ _NAMED_COLOURS = [
 _path_display = (DATA_FOLDER or "(not set)") if file_path else "(data not loaded)"
 _path_source_label = (_path_source or "—").replace("_", " ").title()
 settings_intro = widgets.HTML(value=(
-    "<div style='margin:0 0 12px 0;font-size:12px;color:#555;line-height:1.5;'>"
-    "<div><strong>Note:</strong> Some Settings update immediately during this session (Map display, Tables & lists). Data & path is information-only; to persist or change those values, edit the notebook’s User Variables and re-run.</div>"
+    "<div style='margin:0 0 16px 0;max-width:800px;box-sizing:border-box;color:#6b7280;font-size:13px;"
+    "font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;'>"
+    "<strong style='color:#374151;'>Note:</strong> Some Settings update immediately during this session "
+    "(Map display, Tables &amp; lists). Data &amp; path is information-only; to persist or change those values, "
+    "edit the notebook’s User Variables and re-run."
     "</div>"
 ))
 # Data & path section (read-only info)
 settings_data_header = widgets.HTML(value=(
-    "<span style='color:#888;font-size:11px;'>Information only. Data path/file/locale are configured in the notebook User Variables. See docs/explorer/README.md.</span>"
+    "<span style='color:#6b7280;font-size:13px;line-height:1.6;'>"
+    "Information only. Data path/file/locale are configured in the notebook User Variables. "
+    "See docs/explorer/README.md.</span>"
 ))
 _settings_path_table = (
-    "<table style='margin:4px 0;font-size:12px;font-family:inherit;border-collapse:collapse;border:none;'>"
+    "<table style='margin:8px 0 0 0;font-size:13px;font-family:inherit;border-collapse:collapse;border:none;color:#1f2937;'>"
     f"<tr><td style='border:none;padding:2px 8px 2px 0;vertical-align:top;white-space:nowrap;'>Path:</td>"
     f"<td style='border:none;padding:2px 0;word-break:break-all;'>{_path_display}</td></tr>"
     f"<tr><td style='border:none;padding:2px 8px 2px 0;vertical-align:top;white-space:nowrap;'>Source:</td>"
@@ -1088,8 +1132,12 @@ settings_path_html = widgets.HTML(value=_settings_path_table)
 settings_data_section = VBox([settings_data_header, settings_path_html], layout=widgets.Layout(width="100%"))
 
 # Map display section
-settings_display_header = widgets.HTML(value="<span style='color:#0a0;font-size:11px;'>Changes apply immediately</span>")
-map_style_header = widgets.HTML(value="<strong>Map Style</strong>")
+settings_display_header = widgets.HTML(value=(
+    "<span style='color:#6b7280;font-size:13px;line-height:1.6;display:block;margin-bottom:8px;'>"
+    "<span style='color:#059669;font-weight:600;'>Changes apply immediately</span> — map style, pins, and pop-ups."
+    "</span>"
+))
+map_style_header = widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Map style</strong>")
 map_style_dropdown = widgets.Dropdown(options=["default", "satellite", "google", "carto"], value=MAP_STYLE, description="", layout=widgets.Layout(width="200px"))
 map_style_row = HBox(
     [widgets.Label(value="Style:", layout=widgets.Layout(width="50px")), map_style_dropdown],
@@ -1150,12 +1198,12 @@ def _on_popup_scroll_change(change):
         draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
 popup_sort_dd.observe(_on_popup_sort_change, names="value")
 popup_scroll_dd.observe(_on_popup_scroll_change, names="value")
-sorting_header = widgets.HTML(value="<strong>Pop-up Sorting and Scrolling</strong>")
+sorting_header = widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Pop-up sorting and scrolling</strong>")
 _pin_group_layout = widgets.Layout(width="100%", margin="4px 0 0 0")
 _pin_row_layout = widgets.Layout(align_items="center", margin="2px 0 0 0")
 default_pin_group = VBox(
     [
-        widgets.HTML(value="<strong>Default pin</strong>"),
+        widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Default pin</strong>"),
         HBox(
             [
                 widgets.Label(value="Edge:", layout=widgets.Layout(width="50px")),
@@ -1170,7 +1218,7 @@ default_pin_group = VBox(
 )
 species_pin_group = VBox(
     [
-        widgets.HTML(value="<strong>Species pin</strong>"),
+        widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Species pin</strong>"),
         HBox(
             [
                 widgets.Label(value="Edge:", layout=widgets.Layout(width="50px")),
@@ -1185,7 +1233,7 @@ species_pin_group = VBox(
 )
 lifer_pin_group = VBox(
     [
-        widgets.HTML(value="<strong>Lifer pin</strong>"),
+        widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Lifer pin</strong>"),
         HBox(
             [
                 widgets.Label(value="Edge:", layout=widgets.Layout(width="50px")),
@@ -1200,7 +1248,7 @@ lifer_pin_group = VBox(
 )
 last_seen_pin_group = VBox(
     [
-        widgets.HTML(value="<strong>Last-seen pin</strong>"),
+        widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Last-seen pin</strong>"),
         HBox(
             [
                 widgets.Label(value="Edge:", layout=widgets.Layout(width="50px")),
@@ -1213,7 +1261,7 @@ last_seen_pin_group = VBox(
     ],
     layout=_pin_group_layout,
 )
-pin_visibility_header = widgets.HTML(value="<strong>Pin visibility</strong>")
+pin_visibility_header = widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Pin visibility</strong>")
 settings_display_section = VBox(
     [
         settings_display_header,
@@ -1240,7 +1288,12 @@ settings_display_section = VBox(
 )
 
 # Tables & lists section
-settings_tables_header = widgets.HTML(value="<span style='color:#0a0;font-size:11px;'>Lists recalculate immediately; there may be a short delay as data is processed.</span>")
+settings_tables_header = widgets.HTML(value=(
+    "<span style='color:#6b7280;font-size:13px;line-height:1.6;display:block;margin-bottom:8px;'>"
+    "<span style='color:#059669;font-weight:600;'>Lists recalculate immediately</span> — rankings and maintenance "
+    "close-locations may take a moment."
+    "</span>"
+))
 rankings_visible_int = widgets.IntText(value=RANKINGS_TABLE_VISIBLE_ROWS, description="Rankings visible rows:", layout=widgets.Layout(width="340px"))
 top_n_int = widgets.IntText(value=TOP_N_TABLE_LIMIT, description="Top N table limit:", layout=widgets.Layout(width="340px"))
 close_meters_int = widgets.IntText(value=CLOSE_LOCATION_METERS, description="Close location (m):", layout=widgets.Layout(width="340px"))
@@ -1294,6 +1347,7 @@ settings_accordion = Accordion(
 )
 settings_accordion.add_class("ebird-settings-accordion")  # same .p-Accordion-tab CSS applies via .jupyter-widgets
 settings_panel = VBox([settings_intro, settings_accordion], layout=widgets.Layout(width="100%", min_width="400px"))
+settings_panel.add_class("settings-tab-panel")
 
 # --------------------------------------------
 # Build main tabs (Map, Checklist Statistics, Yearly Summary, Rankings, Maintenance, Settings) and dashboard.
