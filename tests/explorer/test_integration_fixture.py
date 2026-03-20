@@ -18,8 +18,9 @@ import pytest
 
 from personal_ebird_explorer.data_loader import load_dataset, REQUIRED_COLUMNS
 from personal_ebird_explorer.species_logic import countable_species_vectorized, filter_species
-from personal_ebird_explorer.stats import compute_rankings, yearly_summary_stats
+from personal_ebird_explorer.stats import compute_rankings, yearly_summary_stats, safe_count
 from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
+from personal_ebird_explorer.working_set import rebuild_working_set_from_date_filter
 
 
 # ---------------------------------------------------------------------------
@@ -334,3 +335,55 @@ def test_integration_blank_date_in_temp_copy():
             assert loaded["datetime"].isna().sum() >= 1
         finally:
             os.unlink(f.name)
+
+
+# ---------------------------------------------------------------------------
+# 8. Working-set / Reset View consistency (refs #66, #68)
+# ---------------------------------------------------------------------------
+
+def test_integration_working_set_full_view_matches_checklist_locations(fixture_df):
+    """Reset View structures should be derived from the same checklist-eligible locations.
+
+    Regression for Bug 1 in `rebuild_working_set_from_date_filter`:
+    when df_full contains location IDs that have no checklist rows, the
+    "full view" groupings/totals used by Reset View must exclude those
+    locations. This traps mismatches where map popups and banner totals
+    disagree after toggling date filters.
+    """
+    df_mod = fixture_df.copy()
+
+    # Pick a location and simulate "no checklist rows" by nulling Submission ID.
+    # This ensures that location is not part of `location_ids_with_checklists`,
+    # but it remains present in df_mod so the regression would be observable.
+    bad_lid = df_mod["Location ID"].iloc[0]
+    df_mod.loc[df_mod["Location ID"] == bad_lid, "Submission ID"] = None
+
+    location_ids_with_checklists = set(
+        df_mod.dropna(subset=["Submission ID"])["Location ID"].unique()
+    )
+    assert bad_lid not in location_ids_with_checklists
+
+    ws = rebuild_working_set_from_date_filter(
+        df_mod,
+        location_ids_with_checklists,
+        filter_by_date=True,
+        filter_start_date="2024-01-01",
+        filter_end_date="2024-12-31",
+        whoosh_index=None,
+        map_caches=None,
+    )
+    assert ws is not None
+
+    df_expected_full = df_mod[
+        df_mod["Location ID"].isin(location_ids_with_checklists)
+    ]
+    expected_lids = set(df_expected_full["Location ID"].unique())
+
+    assert set(ws.records_by_loc_full.keys()) == expected_lids
+    assert ws.total_checklists_full == df_expected_full["Submission ID"].nunique()
+    assert ws.total_individuals_full == int(
+        df_expected_full["Count"].apply(safe_count).sum()
+    )
+    assert ws.total_species_full == int(
+        countable_species_vectorized(df_expected_full).dropna().nunique()
+    )
