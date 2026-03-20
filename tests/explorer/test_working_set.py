@@ -124,3 +124,47 @@ def test_map_caches_cleared_on_success():
     )
     assert popup == {}
     assert len(filtered) == 0
+
+
+def test_records_by_loc_full_respects_location_ids_with_checklists():
+    df_full = _minimal_df()
+    # Add an extra location row to simulate locations that don't have checklists.
+    # The working set should exclude it, and the "full view" groupings should
+    # also exclude it to avoid mismatched location IDs when Reset View is used.
+    df_extra = pd.concat(
+        [
+            df_full,
+            pd.DataFrame(
+                [
+                    {
+                        "Location ID": "L3",
+                        "Location": "C",
+                        "Latitude": -35.0,
+                        "Longitude": 149.0,
+                        "Submission ID": "S5",
+                        "Date": pd.to_datetime("2024-04-15"),
+                        "Count": 2,
+                        "Common Name": "Northern Mockingbird",
+                        "Scientific Name": "Mimus polyglottos",
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+
+    lids_with_checklists = {"L1", "L2"}  # exclude L3
+    ws = rebuild_working_set_from_date_filter(
+        df_extra,
+        lids_with_checklists,
+        filter_by_date=True,
+        filter_start_date="2024-01-01",
+        filter_end_date="2024-02-01",
+        whoosh_index=None,
+        map_caches=None,
+    )
+    assert ws is not None
+    assert set(ws.records_by_loc_full.keys()) == {"L1", "L2"}
+    assert ws.total_checklists_full == 4
+    assert ws.total_individuals_full == 7
+    assert ws.total_species_full == 2
