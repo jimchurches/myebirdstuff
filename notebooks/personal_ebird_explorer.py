@@ -801,6 +801,11 @@ def update_suggestions(change):
 
 def on_species_selected(change):
     """Handle dropdown selection: set species and redraw map; if dropdown and search both empty, reset to all species."""
+    # Map view dropdown changes clear/reset the species widgets; ignore those UI events.
+    if map_view_mode_dd.value != "species":
+        return
+    if state.skip_next_suggestion_update:
+        return
     selected = change.get("new")
     search_text = search_box.value.strip()
 
@@ -990,7 +995,21 @@ def _on_map_view_change(change):
         state.suppress_toggle_redraw = True
         hide_non_matching_checkbox.value = False
         state.suppress_toggle_redraw = False
+
+        # In lifer-only mode, date filter should not affect which pins/sightings are shown.
+        # If date filtering is currently on, clear it to force the map to use the full dataset.
+        if new == "lifers" and FILTER_BY_DATE:
+            filter_by_date_checkbox.value = False  # triggers _on_date_filter_change redraw
+            _sync_map_view_controls()
+            return
+
     _sync_map_view_controls()
+
+    # Avoid an immediate redraw to "all locations" when switching lifer -> species search
+    # while no species is selected. Keep the current lifer view until the user picks a species.
+    if new == "species" and not state.selected_species_scientific:
+        return
+
     draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
 
 

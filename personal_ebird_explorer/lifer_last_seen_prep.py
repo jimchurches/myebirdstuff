@@ -13,7 +13,10 @@ from typing import Any, Callable, Dict, List, Tuple
 
 import pandas as pd
 
-from personal_ebird_explorer.species_logic import base_species_for_lifer as _default_base_species_for_lifer
+from personal_ebird_explorer.species_logic import (
+    base_species_for_lifer as _default_base_species_for_lifer,
+    countable_species_vectorized,
+)
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,13 @@ def prepare_lifer_last_seen(
         )
     )
     lifer_lookup_df = lifer_lookup_df[lifer_lookup_df["_base"].notna()]
+    # Lifer pins should match the app's "countable species" rules:
+    # exclude spuhs/hybrids/domestics and species-level slashes.
+    # Keep subspecies (including slash later in the scientific name) intact.
+    if "Common Name" not in lifer_lookup_df.columns:
+        lifer_lookup_df = lifer_lookup_df.assign(**{"Common Name": pd.NA})
+    countable_mask = countable_species_vectorized(lifer_lookup_df).notna()
+    lifer_lookup_df = lifer_lookup_df[countable_mask]
     true_lifer_locations = lifer_lookup_df.groupby("_base").first()["Location ID"].to_dict()
     true_last_seen_locations = lifer_lookup_df.groupby("_base").last()["Location ID"].to_dict()
     true_lifer_locations_taxon = lifer_lookup_df.groupby("_taxon").first()["Location ID"].to_dict()
