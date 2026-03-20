@@ -881,7 +881,12 @@ def _observation_details_is_sex_notation(s: str) -> bool:
     """
     import re
 
-    s = (s or "").strip()
+    # pandas 3 may pass missing values into the mapper as float('nan') even
+    # when the source Series is string-like (e.g. ArrowStringArray).
+    if s is None or pd.isna(s):
+        return False
+
+    s = str(s).strip()
     if not s or s.lower() == "nan":
         return False
     # One or more tokens: optional digits then exactly one of M,F,J,?

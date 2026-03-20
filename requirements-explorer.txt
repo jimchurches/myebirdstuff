@@ -4,7 +4,7 @@
 jupyter
 jupyterlab
 voila
-pandas
+pandas>=3.0,<4
 folium
 ipywidgets>=8
 whoosh
