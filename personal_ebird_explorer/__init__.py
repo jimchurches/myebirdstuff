@@ -34,6 +34,9 @@ from personal_ebird_explorer.taxonomy import (
     get_species_and_lifelist_urls,
 )
 from personal_ebird_explorer.working_set import WorkingSet, rebuild_working_set_from_date_filter
+from personal_ebird_explorer.lifer_last_seen_prep import LiferLastSeenPrep, prepare_lifer_last_seen
+from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload, compute_checklist_stats_payload
+from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
 from personal_ebird_explorer.map_renderer import (
     create_map,
     format_visit_time,
@@ -91,4 +94,9 @@ __all__ = [
     "rankings_seen_once_table",
     "WorkingSet",
     "rebuild_working_set_from_date_filter",
+    "LiferLastSeenPrep",
+    "prepare_lifer_last_seen",
+    "ChecklistStatsPayload",
+    "compute_checklist_stats_payload",
+    "format_checklist_stats_bundle",
 ]
