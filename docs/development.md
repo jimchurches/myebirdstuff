@@ -9,7 +9,7 @@ Guidance for developers and contributors. For AI-assisted coding, see [AI_CONTEX
 Data flow:
 
 1. **CSV** — User’s eBird export (`MyEBirdData.csv` or custom path).
-2. **data_loader** — Loads CSV, validates columns, adds canonical `datetime` column. Returns a single DataFrame.
+2. **data_loader** — Loads CSV, validates columns, adds canonical `datetime` column. Returns a single DataFrame. Missing/no-recorded times use synthetic **23:59** so same-day sorting is stable (user-facing explanation: [explorer README — Missing checklist times](explorer/README.md#missing-checklist-times-synthetic-2359); refs #44).
 3. **working_set** — After load, optional date filter rebuild: working DataFrame, `location_data`, `records_by_loc`, species list, totals, Whoosh repopulation, map-cache clears. Called from the notebook; same API usable from Streamlit (refs #66).
 4. **Statistics modules** — `stats`, `species_logic`, `duplicate_checks` provide rankings, species filtering, map-maintenance data. All operate on the DataFrame or derived structures.
 5. **map_renderer** — Builds Folium map, popups, banners, legend HTML. Receives data; no notebook globals.
@@ -23,7 +23,7 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 
 | Module | Role |
 |--------|------|
-| **data_loader** | Load CSV, validate columns, add `datetime` column. Single entry point: `load_dataset(path)`. |
+| **data_loader** | Load CSV, validate columns, add `datetime` column (missing times → synthetic 23:59 for sort order; see explorer README). Single entry point: `load_dataset(path)`. |
 | **path_resolution** | Resolve data file path (hardcoded, config, or fallbacks). Used by the notebook to find the CSV. |
 | **species_logic** | Species filtering (`filter_species`), countable-species logic, base-species for lifer/last-seen. |
 | **stats** | Rankings, yearly summary, streak calculation, safe count parsing. Pure functions on DataFrame. |
