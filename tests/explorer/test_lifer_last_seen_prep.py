@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from personal_ebird_explorer.lifer_last_seen_prep import prepare_lifer_last_seen
+from personal_ebird_explorer.lifer_last_seen_prep import aggregate_lifer_sites, prepare_lifer_last_seen
 from personal_ebird_explorer.species_logic import base_species_for_lifer
 
 
@@ -27,3 +27,16 @@ def test_prepare_lifer_last_seen_first_last_by_base():
     assert prep.true_lifer_locations_taxon["turdus migratorius"] == "A"
     assert prep.true_last_seen_locations_taxon["turdus migratorius"] == "B"
     assert len(prep.lifer_lookup_df) == 3
+
+
+def test_aggregate_lifer_sites_two_locations():
+    prep = prepare_lifer_last_seen(_tiny_df(), base_species_fn=base_species_for_lifer)
+    by_loc, n = aggregate_lifer_sites(
+        prep.lifer_lookup_df,
+        prep.true_lifer_locations,
+        prep.true_lifer_locations_taxon,
+    )
+    assert n == 2
+    assert set(by_loc.keys()) == {"A", "C"}
+    assert len(by_loc["A"]) == 1
+    assert len(by_loc["C"]) == 1
