@@ -520,11 +520,11 @@ state = ExplorerState()
 # Pre-calculate totals for "all species" banner (Count can be "X" for present; treat as 1)
 from personal_ebird_explorer.stats import (
     safe_count as _safe_count,
-    longest_streak as _longest_streak,
-    compute_rankings as _compute_rankings,
-    yearly_summary_stats as _yearly_summary_stats,
     get_sex_notation_by_year as _get_sex_notation_by_year,
 )
+from personal_ebird_explorer.checklist_stats_compute import compute_checklist_stats_payload
+from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
+from personal_ebird_explorer.lifer_last_seen_prep import prepare_lifer_last_seen
 
 
 from personal_ebird_explorer.map_renderer import (
@@ -545,14 +545,6 @@ from personal_ebird_explorer.species_logic import (
     countable_species_vectorized as _countable_species_vectorized,
     filter_species,
     base_species_for_lifer as _base_species_for_lifer,
-)
-
-from personal_ebird_explorer.rankings_display import (
-    rankings_table_location_5col,
-    rankings_table_with_rank,
-    rankings_visited_table,
-    rankings_seen_once_table,
-    rankings_subspecies_hierarchical_table,
 )
 
 total_checklists = df["Submission ID"].nunique()
@@ -706,7 +698,7 @@ from personal_ebird_explorer.duplicate_checks import (
 
 # %%
 # --------------------------------------------
-# ✅ Build True Lifer and Last-Seen Tables (from full dataset)
+# ✅ Build True Lifer and Last-Seen Tables (from full dataset; refs #68)
 # --------------------------------------------
 
 # Reload full dataset to avoid filtering effects (date filter, lifer calc)
@@ -714,26 +706,12 @@ full_df = load_dataset(file_path)
 # Exclude locations with no checklist (consistent with main data)
 full_df = full_df[full_df["Location ID"].isin(location_ids_with_checklists)]
 
-# Build lifer location dictionary: base species (genus + species) → first seen location.
-# Uses base species so subspecies (e.g. Tyto javanica [javanica Group]) roll up to the
-# same lifer as the nominate (Tyto javanica) — the chronologically first record wins.
-# _base_species_for_lifer imported from species_logic (see species-logic import cell above).
-
-_lifer_lookup_df = (
-    full_df.sort_values("datetime")
-    .dropna(subset=["Scientific Name", "Location ID", "datetime"])
-    .assign(
-        _base=lambda x: x["Scientific Name"].apply(_base_species_for_lifer),
-        _taxon=lambda x: x["Scientific Name"].str.strip().str.lower(),
-    )
-)
-_lifer_lookup_df = _lifer_lookup_df[_lifer_lookup_df["_base"].notna()]
-# Base species (genus + species): for parent selection, first/last across all subspecies
-true_lifer_locations = _lifer_lookup_df.groupby("_base").first()["Location ID"].to_dict()
-true_last_seen_locations = _lifer_lookup_df.groupby("_base").last()["Location ID"].to_dict()
-# Taxon (full scientific name): for subspecies selection, first/last of that taxon only
-true_lifer_locations_taxon = _lifer_lookup_df.groupby("_taxon").first()["Location ID"].to_dict()
-true_last_seen_locations_taxon = _lifer_lookup_df.groupby("_taxon").last()["Location ID"].to_dict()
+_lls = prepare_lifer_last_seen(full_df, base_species_fn=_base_species_for_lifer)
+_lifer_lookup_df = _lls.lifer_lookup_df
+true_lifer_locations = _lls.true_lifer_locations
+true_last_seen_locations = _lls.true_last_seen_locations
+true_lifer_locations_taxon = _lls.true_lifer_locations_taxon
+true_last_seen_locations_taxon = _lls.true_last_seen_locations_taxon
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -1121,339 +1099,20 @@ def draw_map_with_species_overlay(selected_species, selected_common_name=""):
 
 # %%
 # --------------------------------------------
-# ✅ Checklist Statistics (computed from data; table HTML from rankings_display)
+# ✅ Checklist Statistics (compute + HTML in modules; refs #68, #56)
 # --------------------------------------------
 def _compute_checklist_stats(df, link_urls_fn=None):
-    """Compute checklist statistics from df; returns dict with stats_html, rankings_sections_top_n, rankings_sections_other.
+    """Compute checklist statistics from df; returns dict with stats_html, rankings sections, incomplete_by_year.
 
-    Optional link_urls_fn(common_name) -> (species_url, lifelist_url) enables eBird links (refs #56); one lookup per row.
+    Optional link_urls_fn(common_name) -> (species_url, lifelist_url) enables eBird links (refs #56).
     """
-    import html
-
-    if df.empty:
-        return "<p>No data.</p>"
-
-    # Checklist-level data (one row per checklist)
-    cl = df.drop_duplicates(subset=["Submission ID"]).copy()
-    dur_col = "Duration (Min)" if "Duration (Min)" in df.columns else None
-    dist_col = "Distance Traveled (km)" if "Distance Traveled (km)" in df.columns else None
-
-    # Overview
-    n_checklists = cl["Submission ID"].nunique()
-    n_species = int(_countable_species_vectorized(df).dropna().nunique())
-    n_individuals = int(df["Count"].apply(_safe_count).sum())
-
-    # Completed checklists (All Obs Reported: 1/1.0 = complete, 0 = incomplete; also TRUE/YES/Y)
-    n_completed = "—"
-    if "All Obs Reported" in df.columns:
-        a = cl["All Obs Reported"]
-        reported = a.notna() & (
-            (pd.to_numeric(a, errors="coerce") == 1) |
-            (a.astype(str).str.strip().str.upper().isin(["TRUE", "YES", "Y"]))
-        )
-        n_completed = f"{reported.sum():,}"
-
-    # Protocol counts — all types with zero, roll unknown into Other
-    PROTOCOL_ORDER = ["Traveling", "Stationary", "Incidental", "Pelagic Protocol", "Historical", "Other"]
-    PROTOCOL_MAP = {
-        "traveling": "Traveling", "travelling": "Traveling", "traveling count": "Traveling",
-        "ebird - traveling count": "Traveling",
-        "stationary": "Stationary", "stationary count": "Stationary",
-        "ebird - stationary count": "Stationary",
-        "incidental": "Incidental", "incidental observation": "Incidental",
-        "ebird - casual observation": "Incidental", "casual observation": "Incidental",
-        "pelagic": "Pelagic Protocol", "pelagic protocol": "Pelagic Protocol",
-        "historical": "Historical", "historical checklist": "Historical",
-    }
-    protocol_counts = {p: 0 for p in PROTOCOL_ORDER}
-    if "Protocol" in df.columns:
-        proto_df = cl.dropna(subset=["Protocol"])
-        for _, row in proto_df.iterrows():
-            p = str(row["Protocol"]).strip().lower()
-            if not p:
-                continue
-            disp = PROTOCOL_MAP.get(p, "Other")
-            protocol_counts[disp] = protocol_counts.get(disp, 0) + 1
-    protocol_rows = [(k, f"{v:,}") for k, v in protocol_counts.items()]
-    protocol_rows.append(("Completed checklists", n_completed))
-
-    # Time eBirded (excludes incidental, historical, other for total time)
-    total_minutes = 0.0
-    if dur_col:
-        timed = cl.dropna(subset=[dur_col]).copy()
-        if "Protocol" in timed.columns:
-            excl = timed["Protocol"].str.strip().str.lower().str.contains("incidental|historical|casual observation", na=False, regex=True)
-            timed = timed[~excl]
-        total_minutes = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0).sum()
-    total_hours = total_minutes / 60
-    total_days_dec = total_minutes / (60 * 24)
-    total_months = total_minutes / (60 * 24 * 30.44)
-    total_years = total_minutes / (60 * 24 * 365.25)
-    dates = cl.dropna(subset=["Date"])["Date"]
-    unique_dates = dates.dt.normalize().unique()
-    n_days_with_checklist = len(unique_dates)
-
-    # Shared checklists and time with others
-    n_shared = 0
-    shared_minutes = 0.0
-    n_days_birding_with_others = 0
-    if "Number of Observers" in df.columns:
-        shared_cl = cl.dropna(subset=["Number of Observers"])
-        shared_mask = shared_cl["Number of Observers"].astype(float) > 1
-        n_shared = int(shared_mask.sum())
-        if n_shared > 0:
-            shared_ids = set(shared_cl.loc[shared_mask, "Submission ID"])
-            shared_subset = cl[cl["Submission ID"].isin(shared_ids)]
-            if "Date" in shared_subset.columns:
-                n_days_birding_with_others = shared_subset["Date"].dt.normalize().nunique()
-            if dur_col:
-                shared_dur = shared_subset.dropna(subset=[dur_col])
-                shared_minutes = pd.to_numeric(shared_dur[dur_col], errors="coerce").fillna(0).sum()
-    shared_hours = shared_minutes / 60
-
-    # Total distance
-    total_km = 0.0
-    if dist_col:
-        total_km = pd.to_numeric(cl[dist_col], errors="coerce").fillna(0).sum()
-    parkruns = total_km / 5
-    marathons = total_km / 42.195
-    equator_km = 40_075
-    times_equator = total_km / equator_km
-    godwit_km = 13_560
-    times_godwit = total_km / godwit_km
-
-    # Longest streak and start/end
-    streak, streak_start_date, streak_start_loc, streak_start_sid, streak_end_date, streak_end_loc, streak_end_sid = _longest_streak(unique_dates, cl)
-
-    # Top N rankings data (limit from TOP_N_TABLE_LIMIT)
-    rankings = _compute_rankings(df, cl, TOP_N_TABLE_LIMIT, dur_col, dist_col)
-
-    # Yearly summary: static table (includes Traveling/Stationary count rows), then accordions with detail tables
-    years_list, yearly_rows, incomplete_by_year = _yearly_summary_stats(df, cl, dur_col, dist_col)
-    yearly_table_html = ""
-    if years_list and yearly_rows:
-        def _any_value(vals):
-            return any(v != "—" for v in vals)
-        # Only detail rows (label starts with "Traveling checklist:" or "Stationary checklist:") go to accordions; count rows stay in main table
-        static_rows = []
-        traveling_detail = []
-        stationary_detail = []
-        traveling_count_vals = None
-        stationary_count_vals = None
-        for label, vals in yearly_rows:
-            ls = label.strip()
-            if ls.startswith("Traveling checklist:"):
-                traveling_detail.append((label, vals))
-            elif ls.startswith("Stationary checklist:"):
-                stationary_detail.append((label, vals))
-            else:
-                static_rows.append((label, vals))
-                if ls.startswith("Traveling checklists") and "Traveling checklist: " not in ls:
-                    traveling_count_vals = vals
-                if ls.startswith("Stationary checklists") and "Stationary checklist: " not in ls:
-                    stationary_count_vals = vals
-        visible_static = [(label, vals) for label, vals in static_rows if _any_value(vals)]
-        year_headers = "".join(f"<th style='text-align:right;'>{y}</th>" for y in years_list)
-        yearly_css = """
-    .yearly-maint-section { margin-bottom:8px; border:1px solid #e5e7eb; border-radius:6px; background:#f9fafb; padding:4px 10px; }
-    .yearly-maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
-"""
-        _yearly_comment_style = "margin:4px 0 8px;color:#6b7280;font-size:12px;line-height:1.5;"
-        _traveling_comment = "Incomplete checklists not counted."
-        _stationary_comment = "Incomplete checklists not counted."
-        # Short display names for accordion tables (strip "Traveling checklist: " / "Stationary checklist: " and any (i) HTML)
-        _traveling_order = ["Total distance (km)", "Average distance (km)", "Total hours", "Average minutes", "Average species", "Average individuals"]
-        _stationary_order = ["Total hours", "Average minutes", "Average species", "Average individuals"]
-        def _short_name(full_label, prefix):
-            # Strip prefix and any trailing HTML (e.g. info icon)
-            name = full_label.strip()
-            if name.startswith(prefix):
-                name = name[len(prefix):].strip()
-            # Drop trailing info-icon span (starts with " <span")
-            if " <span" in name:
-                name = name.split(" <span")[0].strip()
-            return name or full_label
-        def _ordered_detail_rows(detail_rows, order_list, prefix):
-            by_suffix = {}
-            for label, vals in detail_rows:
-                short = _short_name(label, prefix)
-                by_suffix[short] = vals
-            return [(name, by_suffix.get(name, ["—"] * len(years_list))) for name in order_list if name in by_suffix]
-        parts = []
-        if visible_static:
-            body_rows = "".join(
-                f"<tr><td>{label}</td>" + "".join(f"<td style='text-align:right;'>{v}</td>" for v in vals) + "</tr>"
-                for label, vals in visible_static
-            )
-            parts.append(f"""
-  <h4 style="margin-top:24px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">Yearly Summary Statistics</h4>
-  <div style="overflow-x:auto;">
-  <table class="stats-tbl" style="min-width:400px;">
-    <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
-    <tbody>{body_rows}</tbody>
-  </table>
-  </div>""")
-        elif traveling_detail or stationary_detail:
-            parts.append("\n  <h4 style=\"margin-top:24px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;\">Yearly Summary Statistics</h4>")
-        def _yearly_accordion_body(comment_text, total_checklists_vals, ordered_detail_rows):
-            rows_html = []
-            if total_checklists_vals is not None:
-                rows_html.append(f"<tr><td>Total checklists</td>" + "".join(f"<td style='text-align:right;'>{v}</td>" for v in total_checklists_vals) + "</tr>")
-            for name, vals in ordered_detail_rows:
-                rows_html.append(f"<tr><td>{name}</td>" + "".join(f"<td style='text-align:right;'>{v}</td>" for v in vals) + "</tr>")
-            if not rows_html:
-                return ""
-            body = "\n    ".join(rows_html)
-            return f"""  <p style="{_yearly_comment_style}">{comment_text}</p>
-  <div style="overflow-x:auto;">
-  <table class="stats-tbl" style="min-width:400px;">
-    <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
-    <tbody>
-    {body}
-    </tbody>
-  </table>
-  </div>"""
-        if traveling_detail or traveling_count_vals is not None:
-            ordered_trav = _ordered_detail_rows(traveling_detail, _traveling_order, "Traveling checklist:")
-            if ordered_trav or traveling_count_vals is not None:
-                body = _yearly_accordion_body(_traveling_comment, traveling_count_vals, ordered_trav)
-                if body:
-                    parts.append(f"""
-  <details class="yearly-maint-section">
-    <summary>Traveling checklists</summary>
-{body}  </details>""")
-        if stationary_detail or stationary_count_vals is not None:
-            ordered_stat = _ordered_detail_rows(stationary_detail, _stationary_order, "Stationary checklist:")
-            if ordered_stat or stationary_count_vals is not None:
-                body = _yearly_accordion_body(_stationary_comment, stationary_count_vals, ordered_stat)
-                if body:
-                    parts.append(f"""
-  <details class="yearly-maint-section">
-    <summary>Stationary checklists</summary>
-{body}  </details>""")
-        if parts:
-            yearly_table_html = f"""
-  <style>{yearly_css}</style>
-  <div style="width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px) 24px;box-sizing:border-box;">
-{"".join(parts)}
-  </div>"""
-
-    _table_css = """
-    .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
-    .stats-info-glyph { cursor:help; opacity:0.7; }
-    .stats-info-tooltip { position:absolute; bottom:100%; top:auto; margin-bottom:6px; margin-top:0; padding:10px 14px; background:#374151; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(320px,85vw); min-width:180px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); opacity:0; visibility:hidden; transition:opacity 0.15s; pointer-events:none; z-index:9999; right:0; left:auto; }
-    .stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
-    /* Left column: tooltip extends left into the page */
-    .stats-col:first-child .stats-info-tooltip { right:0; left:auto; }
-    /* Right column: tooltip extends right into the page */
-    .stats-col:last-child .stats-info-tooltip { left:0; right:auto; }
-    .stats-tbl-3 th:nth-child(2), .stats-tbl-3 td:nth-child(2) { text-align:center; }
-    .rankings-tbl td:first-child { font-weight:normal; }
-    """
-
-    def _row(label, value):
-        return f"<tr><td>{label}</td><td>{value}</td></tr>"
-
-    def _info_icon(title):
-        """Return HTML for info icon with tooltip."""
-        import html as _html
-        esc = _html.escape(title, quote=True)
-        return f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{esc}</span></span>'
-
-    def _table(title, rows, first=False, info_title=None, show_header=False, header_left="", header_right=""):
-        """Build a stats table. If show_header is False, no thead row (for Overview, Time eBirded, etc.)."""
-        info = f" {_info_icon(info_title)}" if info_title else ""
-        body = "".join(_row(label, value) for label, value in rows)
-        mt = "0" if first else "16px"
-        thead = f"<thead><tr><th>{header_left}</th><th>{header_right}</th></tr></thead>" if show_header else ""
-        return f"""
-  <h4 style="margin-top:{mt};margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">{title}{info}</h4>
-  <table class="stats-tbl">
-    {thead}<tbody>{body}</tbody>
-  </table>"""
-
-    time_hint = "Incidental, historical and other untimed checklists don't count towards total time, but do count towards Days with a checklist."
-    godwit_hint = "4BBRW: Bar-tailed Godwit, Alaska→Tasmania, ~13,560 km nonstop (2022). 11 days without landing."
-    godwit_link = '<a href="https://www.audubon.org/news/these-mighty-shorebirds-keep-breaking-flight-records-and-you-can-follow-along" target="_blank">4BBRW</a>'
-
-    streak_start_link = f'<a href="https://ebird.org/checklist/{streak_start_sid}" target="_blank">{streak_start_loc}</a>' if streak_start_sid else streak_start_loc
-    streak_end_link = f'<a href="https://ebird.org/checklist/{streak_end_sid}" target="_blank">{streak_end_loc}</a>' if streak_end_sid else streak_end_loc
-
-    left_col = f"""
-  {_table("Overview", [
-    ("Total checklists", f"{n_checklists:,}"),
-    ("Total species", f"{n_species:,}"),
-    ("Total individuals", f"{n_individuals:,}"),
-  ], first=True)}
-
-  {_table("Checklist types", protocol_rows)}
-
-  {_table("Total Distance", [
-    ("Kilometers traveled", f"{total_km:,.2f}"),
-    ("Parkruns (5 km)", f"{parkruns:,.2f}"),
-    ("Marathons (42.195 km)", f"{marathons:,.2f}"),
-    (f"Longest Flight ({godwit_link}){_info_icon(godwit_hint)}", f"{times_godwit:,.2f}"),
-    ("Times around the equator", f"{times_equator:,.2f}"),
-  ])}
-"""
-
-    right_col = f"""
-  {_table("Time eBirded", [
-    ("Total minutes", f"{total_minutes:,.2f}"),
-    ("Total hours", f"{total_hours:,.2f}"),
-    ("Total days", f"{total_days_dec:,.2f}"),
-    ("Months", f"{total_months:,.2f}"),
-    ("Total years", f"{total_years:,.2f}"),
-    ("Days with a checklist", f"{n_days_with_checklist:,}"),
-  ], first=True)}
-  <p style="margin:4px 0 0;color:#6b7280;font-size:12px;line-height:1.5;">
-    {time_hint}
-  </p>
-
-  {_table("eBirding with Others", [
-    ("Shared checklists", f"{n_shared:,}"),
-    ("Minutes eBirding with others", f"{shared_minutes:,.0f}"),
-    ("Hours eBirding with others", f"{shared_hours:,.2f}"),
-    ("Days birding with others", f"{n_days_birding_with_others:,}"),
-  ])}
-
-  {_table("Checklist Streak", [
-    ("Longest streak (consecutive days)", str(streak)),
-    ("Start date", streak_start_date),
-    ("Start location", streak_start_link),
-    ("End date", streak_end_date),
-    ("End location", streak_end_link),
-  ])}
-"""
-
-    # Rankings sections: Top N (limit 200) vs other (full/unlimited lists)
-    scroll_hint = POPUP_SCROLL_HINT
-    visible_rows = RANKINGS_TABLE_VISIBLE_ROWS
-    rankings_sections_top_n = [
-        ("Checklist: Longest by time", rankings_table_location_5col("Checklist: Longest by time", ["Location", "State", "Country", "Visited date/time", "Time"], rankings["time"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Longest by distance", rankings_table_location_5col("Checklist: Longest by distance", ["Location", "State", "Country", "Visited date/time", "Distance"], rankings["dist"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Most species", rankings_table_location_5col("Checklist: Most species", ["Location", "State", "Country", "Visited date/time", "Species"], rankings["species"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Checklist: Most individuals", rankings_table_location_5col("Checklist: Most individuals", ["Location", "State", "Country", "Visited date/time", "Count"], rankings["individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most species", rankings_table_location_5col("Location: Most species", ["Location", "State", "Country", "Checklists", "Species"], rankings["species_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most individuals", rankings_table_location_5col("Location: Most individuals", ["Location", "State", "Country", "Checklists", "Count"], rankings["individuals_loc"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-        ("Location: Most visited", rankings_visited_table(rankings["visited"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows)),
-    ]
-    rankings_sections_other = [
-        ("Species: Most individuals", rankings_table_with_rank("Species: Most individuals", ["Species", "", "Individuals"], rankings["species_individuals"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn, add_lifelist_link=False)),
-        ("Species: Most checklists", rankings_table_with_rank("Species: Most checklists", ["Species", "", "Checklists"], rankings["species_checklists"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn, add_lifelist_link=True)),
-        ("Species: Subspecies occurrence", rankings_subspecies_hierarchical_table("Species: Subspecies occurrence", rankings["subspecies"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, lifelist_url_fn=(lambda name: link_urls_fn(name)[1] if link_urls_fn else None), species_url_fn=(lambda name: link_urls_fn(name)[0] if link_urls_fn else None))),
-        ("Species: Seen only once", rankings_seen_once_table(rankings["seen_once"], include_heading=False, scroll_hint=scroll_hint, visible_rows=visible_rows, link_urls_fn=link_urls_fn)),
-    ]
-
-    stats_html = f"""
-<style>{_table_css}</style>
-<div class="stats-layout" style="font-family:sans-serif;font-size:13px;line-height:1.6;width:100%;max-width:1400px;display:flex;flex-wrap:wrap;gap:clamp(24px,4vw,48px);justify-content:flex-start;padding:0 clamp(16px,3vw,32px);box-sizing:border-box;">
-  <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{left_col}</div>
-  <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{right_col}</div>
-</div>
-"""
-    yearly_summary_html = f"<style>{_table_css}</style>{yearly_table_html}" if yearly_table_html else "<p style='font-family:sans-serif;color:#666;padding:16px;'>No yearly data.</p>"
-    return {"stats_html": stats_html, "yearly_summary_html": yearly_summary_html, "rankings_sections_top_n": rankings_sections_top_n, "rankings_sections_other": rankings_sections_other, "incomplete_by_year": incomplete_by_year}
+    payload = compute_checklist_stats_payload(df, TOP_N_TABLE_LIMIT)
+    return format_checklist_stats_bundle(
+        payload,
+        link_urls_fn=link_urls_fn,
+        scroll_hint=POPUP_SCROLL_HINT,
+        visible_rows=RANKINGS_TABLE_VISIBLE_ROWS,
+    )
 
 
 # Stats use df_full for all-time totals (unfiltered by date). Map uses df, which may be date-filtered.
