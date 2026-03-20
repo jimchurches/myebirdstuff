@@ -2,7 +2,7 @@
 jupyter
 jupyterlab
 voila
-pandas>=2.0,<3
+pandas>=3.0,<4
 folium
 ipywidgets>=8
 whoosh
