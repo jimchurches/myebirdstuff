@@ -981,6 +981,22 @@ def _sync_map_view_controls():
     matches_dropdown.disabled = not species_on
     hide_non_matching_checkbox.disabled = not species_on
 
+    # Lifer-only mode should ignore date filtering; disable the checkbox so the UI
+    # communicates the precedence clearly (refs #71).
+    is_lifers = map_view_mode_dd.value == "lifers"
+    if "filter_by_date_checkbox" in globals():
+        filter_by_date_checkbox.disabled = is_lifers
+    if "_use_date_picker" in globals() and _use_date_picker and is_lifers:
+        if "filter_start_date_widget" in globals():
+            filter_start_date_widget.disabled = True
+        if "filter_end_date_widget" in globals():
+            filter_end_date_widget.disabled = True
+    elif "_use_date_picker" in globals() and _use_date_picker and not is_lifers:
+        if "filter_start_date_widget" in globals():
+            filter_start_date_widget.disabled = False
+        if "filter_end_date_widget" in globals():
+            filter_end_date_widget.disabled = False
+
 
 def _on_map_view_change(change):
     """Switching to All or Lifer mode clears species selection to avoid ambiguous map state (#71)."""
