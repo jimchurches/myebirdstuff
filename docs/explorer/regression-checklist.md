@@ -6,7 +6,7 @@ Run before merging refactor branches to `main`.
 - Notebook launches locally
 - Notebook launches on Binder
 - Dataset loads successfully
-- Five tabs available and data displayed (`Map`, `Checklist Statistics`, `Yearly Summary`, `Rankings & lists`, `Maintenance`)
+- Seven tabs available and data displayed (`Map`, `Checklist Statistics`, `Rankings & lists`, `Yearly Summary`, `Country`, `Maintenance`, `Settings`)
 
 ## Map
 - Visit times: if the export has missing times, popups may show **23:59** as a documented placeholder — see [explorer README — Missing checklist times](README.md#missing-checklist-times-synthetic-2359)
@@ -37,10 +37,19 @@ Run before merging refactor branches to `main`.
   - Days with checklist / cumulative days eBird on
   - Shared checklists / days birding with others
 
+## Country
+- Per-country accordions load (export needs `Country` and/or `State/Province`); headings in **A–Z** order by display name (`Unknown` last)
+- Year columns are only those with data for that country (no wide empty years); **Total** column when more than one year
+- Initial statistic rows present (e.g. Lifers world/country, totals, days, cumulative days in country)
+- For **2-letter country keys**, **Lifers (country)** has **⧉** → eBird region life list (`lifelist?r=…`); **Total checklists** has **⧉** → `mychecklists/<CODE>`; **Unknown** / non-ISO keys have no links
+
 ## Rankings & lists
 - Rankings and lists load
 - Species tables (Most individuals, Most checklists, Subspecies occurrence, Seen only once) render correctly
 - Links work (locations and checklists)
+
+## Settings
+- **Tables & lists:** Country tab sorting dropdown (Alphabetically / By life birds / By total species) reorders Country accordions only
 
 ## Maintenance
 - **Location Maintenance**

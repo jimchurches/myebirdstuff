@@ -135,6 +135,59 @@ Using the current `countable_species_vectorized()` logic:
 - 2025: 29
 - 2026: 18
 
+### Yearly summary — Total checklists per year
+
+Cross-check: these values sum to the dataset checklist count (**15**).
+
+- 2022: 4
+- 2023: 1
+- 2024: 4
+- 2025: 3
+- 2026: 3
+
+## Country summary expectations (`country_summary_stats`)
+
+Grouping uses **`State/Province`** prefixes (`AU-…`, `ID-…`, `IN-…`) via `checklist_country_keys()` — same idea as rankings location tables. The fixture has **no** standalone `Country` column, so keys are **AU**, **ID**, **IN**.
+
+Integration tests assert:
+
+- exactly **three** country blocks, in keys **AU**, **ID**, **IN**
+- per-country **Total checklists** and **Total species** rows (including **Total** column when a country has more than one year)
+
+### Years present per country
+
+| Country key | Years (columns) |
+|-------------|-----------------|
+| AU | 2022, 2023, 2024, 2025, 2026 |
+| ID | 2022, 2024 |
+| IN | 2025 |
+
+### Total checklists row (year cells + `Total` when multi-year)
+
+| Country | Values |
+|---------|--------|
+| AU | 3, 1, 3, 1, 3, **11** |
+| ID | 1, 1, **2** |
+| IN | 2 |
+
+The final value per row is the **Total** column (or the only cell for single-year **IN**). Sum of those finals: 11 + 2 + 2 = **15** (matches dataset checklists).
+
+### Total species row (same column layout)
+
+| Country | Values |
+|---------|--------|
+| AU | 3, 21, 11, 17, 29, **64** |
+| ID | 14, 18, **29** |
+| IN | 23 |
+
+(Other rows — lifers, individuals, days, cumulative days — follow the same implementation as the Country tab; change the fixture only if you intentionally alter country/year coverage.)
+
+### Unknown or unresolvable country codes (display)
+
+**Computation** uses stable keys (`AU`, `_UNKNOWN`, `_R:…` for state-only strings, etc.). **Display** in the Country tab uses `country_for_display()` from `region_display` (same as rankings): ISO alpha-2 codes map to common names via **pycountry** when available; otherwise the **code is shown as-is** (e.g. invalid `XX`). Accordion titles are HTML-escaped. No crash if pycountry is missing — names fall back to the raw key.
+
+For ISO alpha-2 keys only, the **Lifers (country)** row includes **⧉** → `https://ebird.org/lifelist?r=<CODE>` and **Total checklists** includes **⧉** → `https://ebird.org/mychecklists/<CODE>` (e.g. AU, ID, IN for this fixture). `_UNKNOWN` and `_R:…` blocks omit those links.
+
 ## Duplicate-location expectations
 
 Using the current duplicate logic and a **200 m** threshold:
@@ -161,9 +214,11 @@ This fixture is well suited to tests around:
 5. slash/spuh/hybrid/domestic exclusion logic
 6. year counts
 7. life counts
-8. duplicate and near-duplicate detection
-9. location grouping for popups
-10. map-preparation functions using real-looking data
+8. yearly **Total checklists** sum vs dataset total
+9. country summary: all expected countries, years, and anchor statistic rows
+10. duplicate and near-duplicate detection
+11. location grouping for popups
+12. map-preparation functions using real-looking data
 
 ## Fixture groups
 

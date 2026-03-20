@@ -5,6 +5,8 @@ import pandas as pd
 import pytest
 
 from personal_ebird_explorer.stats import (
+    checklist_country_keys,
+    country_summary_stats,
     safe_count,
     longest_streak,
     region_column,
@@ -414,3 +416,59 @@ class TestYearlySummaryStats:
         })
         result = get_sex_notation_by_year(df)
         assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# Country summary (Country tab)
+# ---------------------------------------------------------------------------
+
+
+class TestChecklistCountryKeys:
+    def test_derives_iso_from_state_province(self):
+        cl = pd.DataFrame({"State/Province": ["AU-NSW", "US-CA", "XX-YY"]})
+        k = checklist_country_keys(cl)
+        assert list(k) == ["AU", "US", "XX"]
+
+    def test_unknown_when_no_region_columns(self):
+        cl = pd.DataFrame({"Submission ID": ["a"], "Date": [pd.Timestamp("2025-01-01")]})
+        k = checklist_country_keys(cl)
+        assert list(k) == ["_UNKNOWN"]
+
+
+class TestCountrySummaryStats:
+    def test_lifers_world_vs_country_across_two_countries(self):
+        """World lifer attributed to first country/year; country lifer when species is new there."""
+        df = pd.DataFrame(
+            {
+                "Submission ID": ["S1", "S2", "S3"],
+                "Date": [
+                    pd.Timestamp("2025-01-01"),
+                    pd.Timestamp("2025-01-02"),
+                    pd.Timestamp("2026-03-01"),
+                ],
+                "Count": [1, 1, 1],
+                "Scientific Name": ["Foo barbatus", "Baz qux", "Foo barbatus"],
+                "Common Name": ["a", "b", "a"],
+                "State/Province": ["US-CA", "AU-NSW", "AU-NSW"],
+            }
+        )
+        cl = df.copy()
+        blocks = country_summary_stats(df, cl)
+        by_key = {k: (years, {label: vals for label, vals in rows}) for k, years, rows in blocks}
+        assert set(by_key) == {"AU", "US"}
+
+        us = by_key["US"][1]
+        assert us["Lifers (world)"] == ["1"]
+        assert us["Lifers (country)"] == ["1"]
+        assert us["Total checklists"] == ["1"]
+
+        au = by_key["AU"][1]
+        assert by_key["AU"][0] == [2025, 2026]
+        # Multi-year blocks include a Total column
+        assert au["Lifers (world)"] == ["1", "0", "1"]
+        assert au["Lifers (country)"] == ["1", "1", "2"]
+        assert au["Total species"] == ["1", "1", "2"]
+        assert au["Total individuals"] == ["1", "1", "2"]
+        assert au["Total checklists"] == ["1", "1", "2"]
+        assert au["Days with a checklist"] == ["1", "1", "2"]
+        assert au["Cumulative days eBird on"] == ["1", "2", "2"]

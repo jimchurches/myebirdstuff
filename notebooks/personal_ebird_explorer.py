@@ -25,7 +25,7 @@
 # - **Focus on one species** — Optionally hide other locations so only that bird's pins show.
 # - **Click a pin** — See your visits to that location, with links to each checklist on eBird and to the location's life list. If you have photos in Macaulay Library, a 📷 link appears there too.
 # - **See the numbers** — The box above the map shows how many checklists, species, or individuals you're looking at (all data or for the bird you chose). Optional date filtering is available in the settings below.
-# - **Other tabs** — Besides the map, you get **Checklist Statistics** (overview, protocols, time birding), **Yearly Summary** (activity by year), **Rankings** (top species, locations, months), and **Maintenance** (duplicate or nearby locations). Switch tabs above the map to explore.
+# - **Other tabs** — Besides the map, you get **Checklist Statistics** (overview, protocols, time birding), **Rankings & lists** (top species, locations, months), **Yearly Summary** (activity by year), **Country** (per-country yearly-style stats), **Maintenance** (duplicate or nearby locations), and **Settings**. Switch tabs above the map to explore.
 #
 # **What to do now**
 #
@@ -79,6 +79,10 @@ POPUP_SCROLL_HINT = "shading"
 # Rankings tab: max rows per table (e.g. Top 200); tables show 16 rows visible, scroll for rest
 TOP_N_TABLE_LIMIT = 200
 RANKINGS_TABLE_VISIBLE_ROWS = 16
+
+# Country tab: accordion order (also configurable in Settings → Tables & lists).
+# Values: "alphabetical" | "lifers_world" | "total_species"
+COUNTRY_TAB_SORT = "alphabetical"
 
 # Map maintenance tab: locations within this distance (meters) are considered "close"
 CLOSE_LOCATION_METERS = 10
@@ -560,6 +564,9 @@ from personal_ebird_explorer.stats import (
 )
 from personal_ebird_explorer.checklist_stats_compute import compute_checklist_stats_payload
 from personal_ebird_explorer.checklist_stats_display import (
+    COUNTRY_TAB_SORT_ALPHABETICAL,
+    COUNTRY_TAB_SORT_LIFERS_WORLD,
+    COUNTRY_TAB_SORT_TOTAL_SPECIES,
     format_checklist_stats_bundle,
     format_rankings_tab_html,
 )
@@ -1064,6 +1071,7 @@ def _compute_checklist_stats(df, link_urls_fn=None):
         link_urls_fn=link_urls_fn,
         scroll_hint=POPUP_SCROLL_HINT,
         visible_rows=RANKINGS_TABLE_VISIBLE_ROWS,
+        country_sort=COUNTRY_TAB_SORT,
     )
 
 
@@ -1382,8 +1390,20 @@ settings_tables_header = widgets.HTML(value=(
 ))
 rankings_visible_int = widgets.IntText(value=RANKINGS_TABLE_VISIBLE_ROWS, description="Rankings visible rows:", layout=widgets.Layout(width="340px"))
 top_n_int = widgets.IntText(value=TOP_N_TABLE_LIMIT, description="Top N table limit:", layout=widgets.Layout(width="340px"))
+_country_sort_options = [
+    ("Alphabetically", COUNTRY_TAB_SORT_ALPHABETICAL),
+    ("By life birds", COUNTRY_TAB_SORT_LIFERS_WORLD),
+    ("By total species", COUNTRY_TAB_SORT_TOTAL_SPECIES),
+]
+_country_sort_values = {v for _l, v in _country_sort_options}
+country_tab_sort_dd = widgets.Dropdown(
+    options=_country_sort_options,
+    value=COUNTRY_TAB_SORT if COUNTRY_TAB_SORT in _country_sort_values else COUNTRY_TAB_SORT_ALPHABETICAL,
+    description="Country tab sorting:",
+    layout=widgets.Layout(width="420px"),
+)
 close_meters_int = widgets.IntText(value=CLOSE_LOCATION_METERS, description="Close location (m):", layout=widgets.Layout(width="340px"))
-for _w in (rankings_visible_int, top_n_int, close_meters_int):
+for _w in (rankings_visible_int, top_n_int, country_tab_sort_dd, close_meters_int):
     _w.style.description_width = "200px"
 
 def _refresh_rankings_panel():
@@ -1420,10 +1440,25 @@ def _on_close_meters_change(change):
     if v is not None and v >= 0:
         CLOSE_LOCATION_METERS = v
         _refresh_map_maintenance_close_locations()
+
+
+def _on_country_tab_sort_change(change):
+    global COUNTRY_TAB_SORT
+    v = change.get("new")
+    if v in _country_sort_values:
+        COUNTRY_TAB_SORT = v
+        _data = _compute_checklist_stats(df_full, link_urls_fn=_link_urls_fn)
+        country_summary_panel.value = _data["country_summary_html"]
+
+
 rankings_visible_int.observe(_on_rankings_visible_change, names="value")
 top_n_int.observe(_on_top_n_change, names="value")
 close_meters_int.observe(_on_close_meters_change, names="value")
-settings_tables_section = VBox([settings_tables_header, rankings_visible_int, top_n_int, close_meters_int], layout=widgets.Layout(width="100%"))
+country_tab_sort_dd.observe(_on_country_tab_sort_change, names="value")
+settings_tables_section = VBox(
+    [settings_tables_header, rankings_visible_int, top_n_int, country_tab_sort_dd, close_meters_int],
+    layout=widgets.Layout(width="100%"),
+)
 
 # Settings tab: three accordions to match Rankings/Maintenance tab behaviour and styling
 settings_accordion = Accordion(
@@ -1436,16 +1471,28 @@ settings_panel = VBox([settings_intro, settings_accordion], layout=widgets.Layou
 settings_panel.add_class("settings-tab-panel")
 
 # --------------------------------------------
-# Build main tabs (Map, Checklist Statistics, Yearly Summary, Rankings, Maintenance, Settings) and dashboard.
+# Build main tabs (Map, Checklist Statistics, Rankings, Yearly Summary, Country, Maintenance, Settings) and dashboard.
 # --------------------------------------------
 yearly_summary_panel = widgets.HTML(value=checklist_data["yearly_summary_html"])
-main_tabs = widgets.Tab(children=[map_tab_container, checklist_stats_panel, yearly_summary_panel, rankings_panel, map_maintenance_panel, settings_panel])
+country_summary_panel = widgets.HTML(value=checklist_data["country_summary_html"])
+main_tabs = widgets.Tab(
+    children=[
+        map_tab_container,
+        checklist_stats_panel,
+        rankings_panel,
+        yearly_summary_panel,
+        country_summary_panel,
+        map_maintenance_panel,
+        settings_panel,
+    ]
+)
 main_tabs.set_title(0, "Map")
 main_tabs.set_title(1, "Checklist Statistics")
-main_tabs.set_title(2, "Yearly Summary")
-main_tabs.set_title(3, "Rankings & lists")
-main_tabs.set_title(4, "Maintenance")
-main_tabs.set_title(5, "Settings")
+main_tabs.set_title(2, "Rankings & lists")
+main_tabs.set_title(3, "Yearly Summary")
+main_tabs.set_title(4, "Country")
+main_tabs.set_title(5, "Maintenance")
+main_tabs.set_title(6, "Settings")
 main_tabs.selected_index = 0  # Ensure map tab is visible on load
 main_tabs.layout = widgets.Layout(min_width="900px", min_height="650px")  # Wide enough for full tab labels (e.g. Checklist Statistics)
 

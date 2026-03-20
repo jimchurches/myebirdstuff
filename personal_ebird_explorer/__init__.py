@@ -41,6 +41,9 @@ from personal_ebird_explorer.lifer_last_seen_prep import (
 )
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload, compute_checklist_stats_payload
 from personal_ebird_explorer.checklist_stats_display import (
+    COUNTRY_TAB_SORT_ALPHABETICAL,
+    COUNTRY_TAB_SORT_LIFERS_WORLD,
+    COUNTRY_TAB_SORT_TOTAL_SPECIES,
     format_checklist_stats_bundle,
     format_rankings_tab_html,
 )
@@ -116,6 +119,9 @@ __all__ = [
     "prepare_lifer_last_seen",
     "ChecklistStatsPayload",
     "compute_checklist_stats_payload",
+    "COUNTRY_TAB_SORT_ALPHABETICAL",
+    "COUNTRY_TAB_SORT_LIFERS_WORLD",
+    "COUNTRY_TAB_SORT_TOTAL_SPECIES",
     "format_checklist_stats_bundle",
     "format_rankings_tab_html",
     "EBIRD_LOCATION_EDIT_BASE",

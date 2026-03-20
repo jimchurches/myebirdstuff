@@ -6,7 +6,8 @@ A Jupyter notebook that lets you explore your eBird data on an interactive map. 
 
 - **Map** — All checklist locations (green pins); optional species filter (red pins, lifer/last-seen highlights).
 - **Search** — Type-ahead species search; “show only selected species” to hide other locations.
-- **Tabs** — Map, Checklist Statistics, Yearly Summary, Rankings, Maintenance (duplicates / close locations, incomplete checklists, sex notation in comments).
+- **Tabs** — Map, Checklist Statistics, **Rankings & lists**, Yearly Summary, **Country**, Maintenance, **Settings** (duplicates / close locations, incomplete checklists, sex notation in comments; table limits and Country tab sort order).
+- **Country** — Per-country yearly-style stats (sparse year columns). When the export resolves to a **2-letter country code** (from `Country` or `State/Province`), **Lifers (country)** has an **⧉** link to that region’s eBird life list (e.g. [Australia](https://ebird.org/lifelist?r=AU)) and **Total checklists** has **⧉** to [my checklists for that country](https://ebird.org/mychecklists/FR) (example: France). Unknown or non-ISO keys have no links.
 - **Export** — “Export Map HTML” saves the current map view.
 - **Date filter** — Optional date range (initial defaults come from the notebook’s User Variables; the toolbar controls update the map dynamically during this session).
 - **Species links** — Species names in the map banner, rankings tables, and maintenance tab link to eBird species and lifelist pages. Names are resolved using the eBird taxonomy API (fetched once at startup; no API key). Set **EBIRD_TAXONOMY_LOCALE** in User Variables (e.g. `"en_AU"`) so common names match your eBird export; leave empty for the API default.

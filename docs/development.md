@@ -18,6 +18,8 @@ Data flow:
 
 The notebook is a thin UI layer: it wires widgets to state and calls module APIs. Core logic lives in `personal_ebird_explorer/*.py`.
 
+**Country tab / Streamlit:** Per-country numbers are computed in **stats** (`country_summary_stats`) and exposed on **checklist_stats_compute**’s payload; **checklist_stats_display** renders HTML (including optional **Country** accordion sort via `country_sort`). A Streamlit app can call the same `compute_checklist_stats_payload` + `format_checklist_stats_bundle(..., country_sort=...)` without duplicating logic.
+
 ---
 
 ## Module responsibilities
@@ -27,7 +29,7 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **data_loader** | Load CSV, validate columns, add `datetime` column (missing times → synthetic 23:59 for sort order; see explorer README). Single entry point: `load_dataset(path)`. |
 | **path_resolution** | Resolve data file path (hardcoded, config, or fallbacks). Used by the notebook to find the CSV. |
 | **species_logic** | Species filtering (`filter_species`), countable-species logic, base-species for lifer/last-seen. |
-| **stats** | Rankings, yearly summary, streak calculation, safe count parsing. Pure functions on DataFrame. |
+| **stats** | Rankings, yearly summary, **country summary** (`country_summary_stats` / `checklist_country_keys`), streak calculation, safe count parsing. Pure functions on DataFrame. |
 | **duplicate_checks** | Exact and near-duplicate location detection for the Map maintenance tab. |
 | **ui_state** | Lightweight app state (e.g. `ExplorerState` dataclass: selection, suppress flags). |
 | **map_renderer** | Folium map creation, popup/banner/legend HTML builders, lifer/last-seen resolution, location classification. No widget or notebook references. |
@@ -37,8 +39,8 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **taxonomy** | eBird taxonomy lookup for species links (refs #56). Fetches taxonomy once from eBird API (no key); optional `locale` (e.g. `en_AU`) so common names match the user’s export. Provides `get_species_url(common_name)` and `get_species_lifelist_url(common_name)` for species only. Locale is set via notebook user variable **EBIRD_TAXONOMY_LOCALE**. On API failure, lookups return None and the notebook continues without links. |
 | **working_set** | Rebuild filtered working DataFrame and derived structures after date-filter changes: `rebuild_working_set_from_date_filter(...)` returns a `WorkingSet` or `None` on invalid range. Handles Whoosh repopulation and map popup/location caches when passed in (refs #66). |
 | **lifer_last_seen_prep** | Full-dataset lifer/last-seen prep: `prepare_lifer_last_seen(full_df)` → `LiferLastSeenPrep`; `aggregate_lifer_sites` groups lifer species by location for lifer-only map mode (refs #68, #71). |
-| **checklist_stats_compute** | Structured checklist stats / yearly / rankings inputs: `compute_checklist_stats_payload(df, top_n_limit)` → `ChecklistStatsPayload` or `None` if empty (refs #68). |
-| **checklist_stats_display** | HTML bundle for Checklist Statistics + Yearly tabs and rankings sections: `format_checklist_stats_bundle(payload, ...)`; Rankings tab shell: `format_rankings_tab_html(sections_top_n, sections_other, top_n_limit=...)` (refs #68, #69). |
+| **checklist_stats_compute** | Structured checklist stats / yearly / country / rankings inputs: `compute_checklist_stats_payload(df, top_n_limit)` → `ChecklistStatsPayload` or `None` if empty (refs #68). |
+| **checklist_stats_display** | HTML bundle for Checklist Statistics + Yearly + Country tabs and rankings sections: `format_checklist_stats_bundle(payload, ..., country_sort=...)` (`alphabetical` / `lifers_world` / `total_species`); Rankings tab shell: `format_rankings_tab_html(...)` (refs #68, #69). |
 | **maintenance_display** | Maintenance tab HTML: map duplicates/close locations, incomplete checklists, sex-notation sections (`format_*_maintenance_html`, refs #69). |
 | **species_search** | Whoosh species autocomplete helper: `whoosh_common_name_suggestions(index, query, ...)` (refs #69). |
 
