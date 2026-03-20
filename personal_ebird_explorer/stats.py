@@ -868,18 +868,40 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
 # Sex notation in checklist comments (maintenance report)
 # ---------------------------------------------------------------------------
 
+def _observation_details_is_sex_notation(s: str) -> bool:
+    """True if the whole field looks like sex/age shorthand (conservative; refs #58).
+
+    Matches:
+    - Legacy: runs of M, F, J, ? only (e.g. ``MF``, ``MFFF``, ``MMF??``).
+    - Count + letter runs with no separators (e.g. ``2M2F2?``).
+    - Same tokens separated by whitespace and/or ``+`` (e.g. ``1M 1F``, ``M + F``).
+
+    Does not scan inside longer prose — the *entire* string must match. Prefer missing
+    odd cases over matching free text.
+    """
+    import re
+
+    s = (s or "").strip()
+    if not s or s.lower() == "nan":
+        return False
+    # One or more tokens: optional digits then exactly one of M,F,J,?
+    token = r"\d*[MFJ?]"
+    compact = re.compile(rf"^({token})+$")
+    # Two or more tokens separated only by whitespace or "+" (with optional spaces)
+    spaced = re.compile(rf"^(?:{token})(?:(?:\s+|\s*\+\s*){token})+$")
+    return bool(compact.match(s) or spaced.match(s))
+
+
 def get_sex_notation_by_year(df):
     """Find rows where Observation Details matches sex/age shorthand (M, F, J, ?).
 
     Returns dict year -> list of (sid, date_str, location, species, protocol, notation).
     Used by the Maintenance tab to list checklists that may need Age/Sex table updates.
     """
-    import re
     if "Observation Details" not in df.columns or df.empty:
         return {}
     col = df["Observation Details"].astype(str).str.strip()
-    pattern = re.compile(r"^[MFJ?]+$")
-    mask = col.ne("") & col.ne("nan") & col.apply(lambda s: bool(pattern.match(s)))
+    mask = col.ne("") & col.ne("nan") & col.apply(_observation_details_is_sex_notation)
     use_dt = "datetime" if "datetime" in df.columns else "Date"
     cols = ["Date", "Submission ID", "Location", "Common Name", "Protocol", "Observation Details"]
     if use_dt in df.columns:
