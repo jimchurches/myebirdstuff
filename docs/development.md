@@ -13,8 +13,8 @@ Data flow:
 3. **working_set** — After load, optional date filter rebuild: working DataFrame, `location_data`, `records_by_loc`, species list, totals, Whoosh repopulation, map-cache clears. Called from the notebook; same API usable from Streamlit (refs #66).
 4. **Statistics modules** — `stats`, `species_logic`, `duplicate_checks` provide rankings, species filtering, map-maintenance data. All operate on the DataFrame or derived structures.
 5. **map_renderer** — Folium map factory, popups, banners, legend HTML helpers. Receives data; no notebook globals.
-6. **map_controller** — Species overlay pipeline: ``build_species_overlay_map(...)`` → :class:`MapOverlayResult` (Folium map or warning). Framework-neutral; notebook handles widget display (refs #67).
-7. **Notebook (UI)** — Widgets (search, dropdown, checkbox, buttons), event handlers, map tab output (double-buffer), and `draw_map_with_species_overlay()` calling **map_controller** with session caches and options.
+6. **map_controller** — Map pipeline: ``build_species_overlay_map(...)`` → :class:`MapOverlayResult` (all locations, selected species, or lifer-only mode; refs #67, #71). Framework-neutral; notebook handles widget display.
+7. **Notebook (UI)** — Widgets (map view mode, search, checkbox, buttons), event handlers, map tab output (double-buffer), and `draw_map_with_species_overlay()` calling **map_controller** with session caches and options.
 
 The notebook is a thin UI layer: it wires widgets to state and calls module APIs. Core logic lives in `personal_ebird_explorer/*.py`.
 
@@ -31,11 +31,12 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **duplicate_checks** | Exact and near-duplicate location detection for the Map maintenance tab. |
 | **ui_state** | Lightweight app state (e.g. `ExplorerState` dataclass: selection, suppress flags). |
 | **map_renderer** | Folium map creation, popup/banner/legend HTML builders, lifer/last-seen resolution, location classification. No widget or notebook references. |
+| **map_controller** | ``build_species_overlay_map`` / ``MapOverlayResult``: all-species, species overlay, or lifer-only pins; uses ``aggregate_lifer_sites`` for lifer mode (refs #67, #71). |
 | **region_display** | Convert ISO country and subdivision (state/province) codes to human-readable names at display time. Used by rankings_display. |
 | **rankings_display** | HTML builders for rankings tables (scroll wrapper, location 5-col, visited, seen-once, rank tables). Used by the notebook when rendering Checklist Statistics rankings. |
 | **taxonomy** | eBird taxonomy lookup for species links (refs #56). Fetches taxonomy once from eBird API (no key); optional `locale` (e.g. `en_AU`) so common names match the user’s export. Provides `get_species_url(common_name)` and `get_species_lifelist_url(common_name)` for species only. Locale is set via notebook user variable **EBIRD_TAXONOMY_LOCALE**. On API failure, lookups return None and the notebook continues without links. |
 | **working_set** | Rebuild filtered working DataFrame and derived structures after date-filter changes: `rebuild_working_set_from_date_filter(...)` returns a `WorkingSet` or `None` on invalid range. Handles Whoosh repopulation and map popup/location caches when passed in (refs #66). |
-| **lifer_last_seen_prep** | Full-dataset lifer/last-seen prep: `prepare_lifer_last_seen(full_df)` → `LiferLastSeenPrep` (lookup DataFrame + location dicts for base species and taxon keys; refs #68). |
+| **lifer_last_seen_prep** | Full-dataset lifer/last-seen prep: `prepare_lifer_last_seen(full_df)` → `LiferLastSeenPrep`; `aggregate_lifer_sites` groups lifer species by location for lifer-only map mode (refs #68, #71). |
 | **checklist_stats_compute** | Structured checklist stats / yearly / rankings inputs: `compute_checklist_stats_payload(df, top_n_limit)` → `ChecklistStatsPayload` or `None` if empty (refs #68). |
 | **checklist_stats_display** | HTML bundle for Checklist Statistics + Yearly tabs and rankings sections: `format_checklist_stats_bundle(payload, ...)`; Rankings tab shell: `format_rankings_tab_html(sections_top_n, sections_other, top_n_limit=...)` (refs #68, #69). |
 | **maintenance_display** | Maintenance tab HTML: map duplicates/close locations, incomplete checklists, sex-notation sections (`format_*_maintenance_html`, refs #69). |

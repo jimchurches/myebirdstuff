@@ -363,6 +363,21 @@ def test_build_location_popup_html_with_sightings():
     assert "sighting1" in html
 
 
+def test_build_location_popup_html_with_lifer_species_section():
+    html = build_location_popup_html(
+        "My Park",
+        "L12345",
+        "<a>visit1</a>",
+        sightings_html="<br>should_not_show",
+        lifer_species_html="<br>Grey Teal",
+    )
+    assert "Visited:" in html
+    assert "Lifers (first recorded here):" in html
+    assert "Grey Teal" in html
+    assert "Seen:" not in html
+    assert "should_not_show" not in html
+
+
 def test_build_location_popup_html_empty_visit_info():
     html = build_location_popup_html("Empty Spot", "L00000", "")
     assert "Empty Spot" in html

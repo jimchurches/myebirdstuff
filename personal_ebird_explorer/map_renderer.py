@@ -80,7 +80,9 @@ def build_visit_info_html(visit_records, format_time_fn):
     )
 
 
-def build_location_popup_html(loc_name, loc_id, visit_info_html, sightings_html=""):
+def build_location_popup_html(
+    loc_name, loc_id, visit_info_html, sightings_html="", lifer_species_html=""
+):
     """Build the full popup HTML for a single map marker.
 
     Args:
@@ -88,19 +90,28 @@ def build_location_popup_html(loc_name, loc_id, visit_info_html, sightings_html=
         loc_id: eBird Location ID (used for the lifelist link).
         visit_info_html: Pre-built visit list HTML (from ``build_visit_info_html``).
         sightings_html: Optional species-sighting rows to append after
-            the visit list (from ``format_sighting_row``).
+            the visit list (from ``format_sighting_row``). Ignored if
+            *lifer_species_html* is set.
+        lifer_species_html: Optional HTML fragment listing lifer species first
+            recorded at this location (refs #71). When non-empty, shown instead
+            of the *sightings_html* "Seen:" block.
 
     Returns:
         Complete popup HTML string with scroll wrapper.
     """
     loc_url = f"https://ebird.org/lifelist/{loc_id}"
     loc_link = f'<a href="{loc_url}" target="_blank">{loc_name}</a>'
-    seen_section = f"<br><b>Seen:</b>{sightings_html}" if sightings_html else ""
+    if lifer_species_html:
+        extra_section = f"<br><b>Lifers (first recorded here):</b>{lifer_species_html}"
+    elif sightings_html:
+        extra_section = f"<br><b>Seen:</b>{sightings_html}"
+    else:
+        extra_section = ""
     return (
         f'<div class="popup-scroll-wrapper" style="position:relative;">'
         f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div>'
         f'<div style="max-height:300px;overflow-y:auto;">'
-        f'<b>Visited:</b><br>{visit_info_html}{seen_section}'
+        f'<b>Visited:</b><br>{visit_info_html}{extra_section}'
         f'</div></div>'
     )
 
@@ -154,6 +165,26 @@ def build_all_species_banner_html(
         f' &nbsp;|&nbsp; {total_species} species'
         f' &nbsp;|&nbsp; {total_individuals} individual{"s" if total_individuals != 1 else ""}'
         f'{date_line}'
+        f'</div>'
+    )
+
+
+def build_lifer_locations_banner_html(
+    n_lifer_species, n_locations, date_filter_status=None
+):
+    """Banner for lifer-only map mode (refs #71)."""
+    date_line = (
+        f'<br><span style="font-size: 0.85em; color: #999;">{date_filter_status}</span>'
+        if date_filter_status
+        else ""
+    )
+    loc_w = "locations" if n_locations != 1 else "location"
+    return (
+        f'<div style="{_BANNER_STYLE}">'
+        f'<b>Lifer locations</b><br>'
+        f'{n_lifer_species} lifer{"s" if n_lifer_species != 1 else ""}'
+        f' &nbsp;|&nbsp; {n_locations} {loc_w}'
+        f'<br><span style="font-size: 0.85em; color: #999;">Sub-species included</span>'
         f'</div>'
     )
 
