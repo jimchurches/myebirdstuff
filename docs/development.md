@@ -10,7 +10,7 @@ Data flow:
 
 1. **CSV** — User’s eBird export (`MyEBirdData.csv` or custom path).
 2. **data_loader** — Loads CSV, validates columns, adds canonical `datetime` column. Returns a single DataFrame.
-3. **Notebook (data prep)** — Applies optional date filter, builds `location_data`, `records_by_loc`, Whoosh index, lifer/last-seen lookups. Dataset is static for the session.
+3. **working_set** — After load, optional date filter rebuild: working DataFrame, `location_data`, `records_by_loc`, species list, totals, Whoosh repopulation, map-cache clears. Called from the notebook; same API usable from Streamlit (refs #66).
 4. **Statistics modules** — `stats`, `species_logic`, `duplicate_checks` provide rankings, species filtering, map-maintenance data. All operate on the DataFrame or derived structures.
 5. **map_renderer** — Builds Folium map, popups, banners, legend HTML. Receives data; no notebook globals.
 6. **Notebook (UI)** — Widgets (search, dropdown, checkbox, buttons), event handlers, and a single `draw_map_with_species_overlay()` that uses the precomputed structures and calls into `map_renderer`.
@@ -33,8 +33,9 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **region_display** | Convert ISO country and subdivision (state/province) codes to human-readable names at display time. Used by rankings_display. |
 | **rankings_display** | HTML builders for rankings tables (scroll wrapper, location 5-col, visited, seen-once, rank tables). Used by the notebook when rendering Checklist Statistics rankings. |
 | **taxonomy** | eBird taxonomy lookup for species links (refs #56). Fetches taxonomy once from eBird API (no key); optional `locale` (e.g. `en_AU`) so common names match the user’s export. Provides `get_species_url(common_name)` and `get_species_lifelist_url(common_name)` for species only. Locale is set via notebook user variable **EBIRD_TAXONOMY_LOCALE**. On API failure, lookups return None and the notebook continues without links. |
+| **working_set** | Rebuild filtered working DataFrame and derived structures after date-filter changes: `rebuild_working_set_from_date_filter(...)` returns a `WorkingSet` or `None` on invalid range. Handles Whoosh repopulation and map popup/location caches when passed in (refs #66). |
 
-The notebook owns: widget creation, observers, Whoosh index creation, data-prep groupbys and caches, and the single `draw_map_with_species_overlay()` that orchestrates the map.
+The notebook owns: widget creation, observers, initial Whoosh index creation (empty schema + first fill), session caches, and `draw_map_with_species_overlay()` orchestration. Filter-driven rebuild logic lives in **working_set**.
 
 ---
 
@@ -51,7 +52,7 @@ The notebook owns: widget creation, observers, Whoosh index creation, data-prep 
 
 - **Location:** Tests live under `tests/`, with `tests/explorer/` for explorer-specific tests and `tests/conftest.py` for shared fixtures.
 - **Runner:** `pytest tests/ -v` (also used in CI).
-- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, region_display, rankings_display, taxonomy. No notebook execution in the test suite.
+- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, region_display, rankings_display, taxonomy, working_set. No notebook execution in the test suite.
 - **Adding tests:** Prefer testing logic in modules. For new behaviour, add tests in the appropriate `tests/explorer/test_*.py` file.
 - **Integration fixture:** Tests in `tests/explorer/test_integration_fixture.py` use `tests/fixtures/ebird_integration_fixture.csv`; expected values are documented in `tests/fixtures/ebird_integration_fixture_notes.md`. If you change the fixture, update the notes and the test constants in the test file together.
 

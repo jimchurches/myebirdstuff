@@ -33,6 +33,7 @@ from personal_ebird_explorer.taxonomy import (
     get_species_lifelist_url,
     get_species_and_lifelist_urls,
 )
+from personal_ebird_explorer.working_set import WorkingSet, rebuild_working_set_from_date_filter
 from personal_ebird_explorer.map_renderer import (
     create_map,
     format_visit_time,
@@ -88,4 +89,6 @@ __all__ = [
     "rankings_table_with_rank",
     "rankings_visited_table",
     "rankings_seen_once_table",
+    "WorkingSet",
+    "rebuild_working_set_from_date_filter",
 ]
