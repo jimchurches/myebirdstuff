@@ -370,3 +370,47 @@ class TestYearlySummaryStats:
         })
         result = get_sex_notation_by_year(df)
         assert result == {}
+
+    def test_get_sex_notation_by_year_spaced_and_count_tokens_refs_58(self):
+        """Issue #58: 1M 1F, M + F, 2M2F2?, MFMM?? (last already legacy)."""
+        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        df = pd.DataFrame({
+            "Date": [
+                pd.Timestamp("2024-01-01"),
+                pd.Timestamp("2024-01-02"),
+                pd.Timestamp("2024-01-03"),
+                pd.Timestamp("2024-01-04"),
+            ],
+            "Submission ID": ["Sa", "Sb", "Sc", "Sd"],
+            "Location": ["A", "B", "C", "D"],
+            "Common Name": ["S1", "S2", "S3", "S4"],
+            "Protocol": ["Traveling"] * 4,
+            "Observation Details": ["1M 1F", "M + F", "2M2F2?", "MFMM??"],
+        })
+        df["datetime"] = df["Date"]
+        result = get_sex_notation_by_year(df)
+        assert 2024 in result
+        notations = {row[5] for row in result[2024]}
+        assert notations == {"1M 1F", "M + F", "2M2F2?", "MFMM??"}
+
+    def test_get_sex_notation_by_year_rejects_prose_and_partial_refs_58(self):
+        """Conservative: whole field must match; no substring matches in sentences."""
+        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        df = pd.DataFrame({
+            "Date": [
+                pd.Timestamp("2024-06-01"),
+                pd.Timestamp("2024-06-02"),
+                pd.Timestamp("2024-06-03"),
+            ],
+            "Submission ID": ["Sx", "Sy", "Sz"],
+            "Location": ["A", "B", "C"],
+            "Common Name": ["X", "Y", "Z"],
+            "Protocol": ["Traveling"] * 3,
+            "Observation Details": [
+                "Seen MF today in flock",
+                "About 2M distance",
+                "Male and female present",
+            ],
+        })
+        result = get_sex_notation_by_year(df)
+        assert result == {}
