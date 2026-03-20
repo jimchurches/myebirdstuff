@@ -14,6 +14,7 @@ import pandas as pd
 from personal_ebird_explorer.species_logic import countable_species_vectorized
 from personal_ebird_explorer.stats import (
     compute_rankings,
+    country_summary_stats,
     longest_streak,
     safe_count,
     yearly_summary_stats,
@@ -42,7 +43,7 @@ PROTOCOL_MAP = {
 
 @dataclass(frozen=True)
 class ChecklistStatsPayload:
-    """All values needed to render checklist stats, yearly summary, and rankings tables."""
+    """All values needed to render checklist stats, yearly summary, country sections, and rankings."""
 
     n_checklists: int
     n_species: int
@@ -75,6 +76,7 @@ class ChecklistStatsPayload:
     years_list: List[Any]
     yearly_rows: List[Tuple[str, List[str]]]
     incomplete_by_year: Dict[Any, Any]
+    country_sections: List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]]
 
 
 def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optional[ChecklistStatsPayload]:
@@ -165,6 +167,7 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
 
     rankings = compute_rankings(df, cl, top_n_limit, dur_col, dist_col)
     years_list, yearly_rows, incomplete_by_year = yearly_summary_stats(df, cl, dur_col, dist_col)
+    country_sections = country_summary_stats(df, cl)
 
     return ChecklistStatsPayload(
         n_checklists=n_checklists,
@@ -198,4 +201,5 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
         years_list=years_list,
         yearly_rows=yearly_rows,
         incomplete_by_year=incomplete_by_year,
+        country_sections=country_sections,
     )

@@ -865,6 +865,182 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
 
 
 # ---------------------------------------------------------------------------
+# Country summary (per-country yearly-style tables for Country tab)
+# ---------------------------------------------------------------------------
+
+
+def checklist_country_keys(cl: pd.DataFrame) -> pd.Series:
+    """Return a stable grouping key per checklist row (index aligned with *cl*).
+
+    Prefer ``Country`` when present; otherwise derive ISO-like codes from
+    ``State/Province`` (e.g. ``AU-NSW`` → ``AU``). Missing/blank → ``_UNKNOWN``.
+    """
+    if cl.empty:
+        return pd.Series(dtype=object)
+
+    def _from_country_col(val):
+        if val is None or (isinstance(val, float) and pd.isna(val)):
+            return "_UNKNOWN"
+        s = str(val).strip()
+        if not s:
+            return "_UNKNOWN"
+        if len(s) == 2 and s.isalpha():
+            return s.upper()
+        return s
+
+    def _from_state_province(val):
+        if val is None or (isinstance(val, float) and pd.isna(val)):
+            return "_UNKNOWN"
+        cc, st = format_region_parts(val)
+        if cc:
+            return str(cc).strip().upper()
+        if st:
+            return f"_R:{str(st).strip()}"
+        return "_UNKNOWN"
+
+    if "Country" in cl.columns:
+        keys = cl["Country"].map(_from_country_col)
+    elif "State/Province" in cl.columns:
+        keys = cl["State/Province"].map(_from_state_province)
+    else:
+        keys = pd.Series(["_UNKNOWN"] * len(cl), index=cl.index)
+    keys = keys.fillna("_UNKNOWN")
+    keys = keys.replace("", "_UNKNOWN")
+    return keys
+
+
+def country_summary_stats(df, cl):
+    """Compute per-country yearly blocks for the Country tab.
+
+    Returns a list of ``(country_key, years_sorted, rows)`` where *rows* is a
+    list of ``(label, [formatted value per year, ...])``. Only years that
+    appear in that country's checklists are included (no empty year columns).
+
+    When there is more than one year, each row includes a final **Total**
+    column: sums for lifers / individuals / checklists / days; distinct
+    species across all those years for **Total species**; last year's value
+    for **Cumulative days eBird on** (unique checklist days in the country
+    through the end of the range).
+
+    Lifers (world): species whose first-ever sighting in the dataset occurred
+    in this country and calendar year.
+
+    Lifers (country): species whose first sighting *in this country* occurred
+    in that calendar year.
+
+    Cumulative days eBird on: unique dates with a checklist in this country,
+    for all years up to and including each column year (same spirit as yearly
+    summary, but restricted to that country).
+    """
+    cl = cl.dropna(subset=["Date"])
+    if cl.empty or df.empty:
+        return []
+
+    cl = cl.copy()
+    cl["_country_key"] = checklist_country_keys(cl)
+    cl["_year"] = cl["Date"].dt.year
+
+    df_m = df.copy()
+    df_m["_base"] = countable_species_vectorized(df_m)
+    df_m["_count"] = df_m["Count"].apply(safe_count)
+    key_map = cl.set_index("Submission ID")["_country_key"]
+    df_m["_country_key"] = df_m["Submission ID"].map(key_map).fillna("_UNKNOWN")
+    df_m["_year"] = df_m["Date"].dt.year
+
+    country_keys = sorted(cl["_country_key"].dropna().unique(), key=lambda k: str(k))
+    blocks = []  # order finalized alphabetically by display name in checklist_stats_display
+
+    obs = df_m.dropna(subset=["_base"])
+    if not obs.empty:
+        idx_world = obs.groupby("_base")["Date"].idxmin()
+        first_world = obs.loc[idx_world].copy()
+        first_world["_yr"] = first_world["Date"].dt.year
+    else:
+        first_world = pd.DataFrame()
+
+    for ck in country_keys:
+        cl_c = cl[cl["_country_key"] == ck]
+        years_sorted = sorted(cl_c["_year"].dropna().astype(int).unique())
+        if not years_sorted:
+            continue
+
+        if not first_world.empty:
+            fw = first_world[(first_world["_country_key"] == ck)]
+            lifers_world = fw.groupby("_yr").size()
+        else:
+            lifers_world = pd.Series(dtype=int)
+
+        obs_c = obs[obs["_country_key"] == ck]
+        if not obs_c.empty:
+            idx_c = obs_c.groupby(["_base", "_country_key"])["Date"].idxmin()
+            first_c = obs_c.loc[idx_c].copy()
+            first_c["_yr"] = first_c["Date"].dt.year
+            lifers_country = first_c.groupby("_yr").size()
+        else:
+            lifers_country = pd.Series(dtype=int)
+
+        rows = []
+        multi_year = len(years_sorted) > 1
+
+        obs_ck = obs[(obs["_country_key"] == ck)]
+
+        vals_w_i = [int(lifers_world.get(y, 0)) for y in years_sorted]
+        vals_w = [f"{v:,}" for v in vals_w_i]
+        if multi_year:
+            vals_w.append(f"{sum(vals_w_i):,}")
+        rows.append(("Lifers (world)", vals_w))
+
+        vals_c_i = [int(lifers_country.get(y, 0)) for y in years_sorted]
+        vals_c = [f"{v:,}" for v in vals_c_i]
+        if multi_year:
+            vals_c.append(f"{sum(vals_c_i):,}")
+        rows.append(("Lifers (country)", vals_c))
+
+        by_yr_sp = obs_ck.groupby("_year")["_base"].nunique()
+        vals_sp = [int(by_yr_sp.get(y, 0)) for y in years_sorted]
+        vals_sp_fmt = [f"{v:,}" for v in vals_sp]
+        if multi_year:
+            total_sp = int(obs_ck["_base"].nunique()) if not obs_ck.empty else 0
+            vals_sp_fmt.append(f"{total_sp:,}")
+        rows.append(("Total species", vals_sp_fmt))
+
+        by_yr_ind = df_m[df_m["_country_key"] == ck].groupby("_year")["_count"].sum()
+        vals_ind_i = [int(by_yr_ind.get(y, 0)) for y in years_sorted]
+        vals_ind = [f"{v:,}" for v in vals_ind_i]
+        if multi_year:
+            vals_ind.append(f"{sum(vals_ind_i):,}")
+        rows.append(("Total individuals", vals_ind))
+
+        by_yr_cl = cl_c.groupby("_year").size()
+        vals_cl_i = [int(by_yr_cl.get(y, 0)) for y in years_sorted]
+        vals_cl = [f"{v:,}" for v in vals_cl_i]
+        if multi_year:
+            vals_cl.append(f"{sum(vals_cl_i):,}")
+        rows.append(("Total checklists", vals_cl))
+
+        by_yr_dates = cl_c.groupby("_year")["Date"].apply(lambda s: s.dt.normalize().nunique())
+        vals_days_i = [int(by_yr_dates.get(y, 0)) for y in years_sorted]
+        vals_days = [f"{v:,}" for v in vals_days_i]
+        if multi_year:
+            vals_days.append(f"{sum(vals_days_i):,}")
+        rows.append(("Days with a checklist", vals_days))
+
+        dates_c = cl_c["Date"].dt.normalize()
+        cum = []
+        for y in years_sorted:
+            mask = cl_c["Date"].dt.year <= y
+            cum.append(int(dates_c[mask].nunique()))
+        vals_cum = [f"{v:,}" for v in cum]
+        if multi_year:
+            vals_cum.append(f"{cum[-1]:,}" if cum else "0")
+        rows.append(("Cumulative days eBird on", vals_cum))
+
+        blocks.append((ck, years_sorted, rows))
+
+    return blocks
+
+
+# ---------------------------------------------------------------------------
 # Sex notation in checklist comments (maintenance report)
 # ---------------------------------------------------------------------------
 

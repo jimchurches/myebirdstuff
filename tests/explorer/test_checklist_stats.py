@@ -44,6 +44,7 @@ def test_compute_checklist_stats_returns_expected_keys():
     assert "rankings_sections_top_n" in stats
     assert "rankings_sections_other" in stats
     assert "yearly_summary_html" in stats
+    assert "country_summary_html" in stats
     assert "incomplete_by_year" in stats
 
     html = stats["stats_html"]
@@ -108,6 +109,132 @@ def test_compute_checklist_stats_repeated_species_and_multi_year():
         "<tr><td>Total checklists</td><td style='text-align:right;'>1</td>"
         "<td style='text-align:right;'>1</td></tr>" in yearly_html
     )
+
+
+def test_country_tab_html_sort_by_metric_changes_accordion_order():
+    """Country accordions order by Lifers (world) or Total species when requested."""
+    import re
+
+    from personal_ebird_explorer.checklist_stats_display import (
+        COUNTRY_TAB_SORT_ALPHABETICAL,
+        COUNTRY_TAB_SORT_LIFERS_WORLD,
+        COUNTRY_TAB_SORT_TOTAL_SPECIES,
+        _format_country_summary_html,
+    )
+
+    def _accordion_titles(html: str):
+        return re.findall(r"<summary>([^<]+)</summary>", html)
+
+    # Two countries: US has fewer lifers (world) but fewer total species than AU
+    rows_us = [
+        ("Lifers (world)", ["1"]),
+        ("Lifers (country)", ["1"]),
+        ("Total species", ["5"]),
+        ("Total individuals", ["10"]),
+        ("Total checklists", ["1"]),
+        ("Days with a checklist", ["1"]),
+        ("Cumulative days eBird on", ["1"]),
+    ]
+    rows_au = [
+        ("Lifers (world)", ["3"]),
+        ("Lifers (country)", ["3"]),
+        ("Total species", ["20"]),
+        ("Total individuals", ["100"]),
+        ("Total checklists", ["2"]),
+        ("Days with a checklist", ["2"]),
+        ("Cumulative days eBird on", ["2"]),
+    ]
+    sections = [("US", [2025], rows_us), ("AU", [2025], rows_au)]
+
+    html_alpha = _format_country_summary_html(sections, country_sort=COUNTRY_TAB_SORT_ALPHABETICAL)
+    html_lifers = _format_country_summary_html(sections, country_sort=COUNTRY_TAB_SORT_LIFERS_WORLD)
+    html_sp = _format_country_summary_html(sections, country_sort=COUNTRY_TAB_SORT_TOTAL_SPECIES)
+
+    ta = _accordion_titles(html_alpha)
+    tl = _accordion_titles(html_lifers)
+    ts = _accordion_titles(html_sp)
+    assert len(ta) == len(tl) == len(ts) == 2
+
+    # Alphabetical by display name
+    assert ta == sorted(ta)
+
+    # By life birds / total species: AU ranks above US (higher metric)
+    assert tl[0] in ("Australia", "AU") and tl[1] in ("United States", "US")
+    assert ts[0] in ("Australia", "AU") and ts[1] in ("United States", "US")
+
+
+def test_country_sections_sort_alphabetically_by_display_name():
+    """Country accordions follow alphabetical order of resolved country names (refs display sort)."""
+    pytest.importorskip("pycountry")
+    from personal_ebird_explorer.checklist_stats_display import _country_heading_sort_key
+
+    assert _country_heading_sort_key("AU") < _country_heading_sort_key("US")
+    assert _country_heading_sort_key("US") < _country_heading_sort_key("_UNKNOWN")
+
+
+def test_country_summary_html_includes_total_when_multi_year():
+    data = {
+        "Submission ID": ["S1", "S2"],
+        "Date": [pd.Timestamp("2025-01-01"), pd.Timestamp("2026-02-02")],
+        "Time": ["06:15", "08:00"],
+        "Count": [1, 1],
+        "Location ID": ["L1", "L2"],
+        "Location": ["Loc1", "Loc2"],
+        "Scientific Name": ["Anas gracilis", "Anas castanea"],
+        "Common Name": ["Grey Teal", "Chestnut Teal"],
+        "Latitude": [-35.0, -36.0],
+        "Longitude": [149.0, 150.0],
+        "Protocol": ["Traveling", "Stationary"],
+        "Duration (Min)": [30, 20],
+        "Distance Traveled (km)": [1.5, 0.0],
+        "All Obs Reported": [1, 1],
+        "Number of Observers": [1, 1],
+        "State/Province": ["AU-NSW", "AU-NSW"],
+    }
+    df = pd.DataFrame(data)
+    stats = _compute_checklist_stats(df)
+    assert "<th style='text-align:right;'>Total</th>" in stats["country_summary_html"]
+
+
+def test_country_summary_html_present_with_state_province():
+    data = {
+        **{k: v for k, v in make_minimal_df().to_dict("list").items()},
+        "State/Province": ["AU-NSW"],
+    }
+    df = pd.DataFrame(data)
+    stats = _compute_checklist_stats(df)
+    ch = stats["country_summary_html"]
+    assert "By country" in ch
+    assert "yearly-maint-section" in ch
+    assert "Lifers (world)" in ch
+    assert "Days with a checklist" in ch
+
+
+def test_country_iso_rows_have_ebird_region_links():
+    """Lifers (country) and Total checklists rows get ⧉ links when key is ISO alpha-2."""
+    from personal_ebird_explorer.checklist_stats_display import _format_country_summary_html
+
+    rows = [
+        ("Lifers (world)", ["1"]),
+        ("Lifers (country)", ["1"]),
+        ("Total species", ["1"]),
+        ("Total individuals", ["1"]),
+        ("Total checklists", ["1"]),
+        ("Days with a checklist", ["1"]),
+        ("Cumulative days eBird on", ["1"]),
+    ]
+    html_fr = _format_country_summary_html([("FR", [2025], rows)])
+    assert "Lifers (country)" in html_fr
+    assert "Total checklists" in html_fr
+    assert 'href="https://ebird.org/lifelist?r=FR"' in html_fr
+    assert 'href="https://ebird.org/mychecklists/FR"' in html_fr
+    # Two ⧉ links (lifers + checklists)
+    assert html_fr.count("⧉") >= 2
+
+    html_unknown = _format_country_summary_html([("_UNKNOWN", [2025], rows)])
+    assert "Lifers (country)" in html_unknown
+    assert 'href="https://ebird.org/lifelist?r=' not in html_unknown
+    assert 'href="https://ebird.org/mychecklists/' not in html_unknown
 
 
 def test_compute_checklist_stats_country_displayed_as_name():

@@ -10,6 +10,7 @@ import html as html_module
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
+from personal_ebird_explorer.region_display import country_for_display
 from personal_ebird_explorer.rankings_display import (
     rankings_seen_once_table,
     rankings_subspecies_hierarchical_table,
@@ -20,6 +21,194 @@ from personal_ebird_explorer.rankings_display import (
 
 LinkUrlsFn = Optional[Callable[[str], Tuple[Optional[str], Optional[str]]]]
 
+# Country tab accordion order (Settings → Tables & lists)
+COUNTRY_TAB_SORT_ALPHABETICAL = "alphabetical"
+COUNTRY_TAB_SORT_LIFERS_WORLD = "lifers_world"
+COUNTRY_TAB_SORT_TOTAL_SPECIES = "total_species"
+
+
+def _ebird_country_region_iso2(country_key: str) -> Optional[str]:
+    """Uppercased ISO alpha-2 when *country_key* can drive eBird country URLs; else ``None``."""
+    if country_key == "_UNKNOWN" or str(country_key).startswith("_R:"):
+        return None
+    k = str(country_key).strip().upper()
+    if len(k) == 2 and k.isalpha():
+        return k
+    return None
+
+
+def _ebird_country_lifelist_url(country_key: str) -> Optional[str]:
+    """eBird life list filtered by region, e.g. ``https://ebird.org/lifelist?r=AU``."""
+    k = _ebird_country_region_iso2(country_key)
+    if not k:
+        return None
+    return f"https://ebird.org/lifelist?r={k}"
+
+
+def _ebird_country_mychecklists_url(country_key: str) -> Optional[str]:
+    """eBird “my checklists” for a country, e.g. ``https://ebird.org/mychecklists/FR``."""
+    k = _ebird_country_region_iso2(country_key)
+    if not k:
+        return None
+    return f"https://ebird.org/mychecklists/{k}"
+
+
+def _country_table_statistic_label_cell(label: str, country_key: str) -> str:
+    """First-column cell HTML: plain text, or ⧉ links for *Lifers (country)* / *Total checklists*."""
+    esc_label = html_module.escape(label, quote=False)
+    if label == "Lifers (country)":
+        url = _ebird_country_lifelist_url(country_key)
+        title = "eBird life list (this country/region)"
+    elif label == "Total checklists":
+        url = _ebird_country_mychecklists_url(country_key)
+        title = "eBird my checklists (this country)"
+    else:
+        return esc_label
+    if not url:
+        return esc_label
+    esc_url = html_module.escape(url, quote=True)
+    link = (
+        f' <a href="{esc_url}" target="_blank" rel="noopener noreferrer" '
+        'style="color:inherit;text-decoration:none;" '
+        f'title="{html_module.escape(title, quote=True)}">⧉</a>'
+    )
+    return esc_label + link
+
+
+def _country_accordion_title(country_key: str) -> str:
+    """Plain-text title for a country ``<summary>`` (HTML-escaped)."""
+    if country_key == "_UNKNOWN":
+        t = "Unknown"
+    elif str(country_key).startswith("_R:"):
+        t = str(country_key)[3:]
+    else:
+        k = str(country_key).strip()
+        if len(k) == 2 and k.isalpha():
+            t = country_for_display(k) or k
+        else:
+            t = k
+    return html_module.escape(t, quote=False)
+
+
+def _country_heading_sort_key(country_key: str) -> Tuple[int, str]:
+    """Sort key: alphabetical by resolved display name; Unknown last."""
+    if country_key == "_UNKNOWN":
+        return (2, "")
+    if str(country_key).startswith("_R:"):
+        return (0, str(country_key)[3:].lower())
+    k = str(country_key).strip()
+    if len(k) == 2 and k.isalpha():
+        return (0, (country_for_display(k) or k).lower())
+    return (0, k.lower())
+
+
+def _country_metric_from_rows(
+    rows: List[Tuple[str, List[str]]],
+    sort_mode: str,
+) -> int:
+    """Numeric metric for sorting: uses the **Total** column when present, else the sole year cell."""
+    by_label = {label: vals for label, vals in rows}
+    if sort_mode == COUNTRY_TAB_SORT_LIFERS_WORLD:
+        label = "Lifers (world)"
+    elif sort_mode == COUNTRY_TAB_SORT_TOTAL_SPECIES:
+        label = "Total species"
+    else:
+        return 0
+    vals = by_label.get(label)
+    if not vals:
+        return 0
+    try:
+        return int(str(vals[-1]).replace(",", "").strip())
+    except ValueError:
+        return 0
+
+
+def _country_section_sort_key_metric(
+    section: Tuple[str, List[Any], List[Tuple[str, List[str]]]],
+    sort_mode: str,
+) -> Tuple[int, int, Tuple[int, str]]:
+    """Sort key: Unknown last; then descending metric; tie-break alphabetical by display name."""
+    ck, _years, rows = section
+    tier = 1 if ck == "_UNKNOWN" else 0
+    m = _country_metric_from_rows(rows, sort_mode)
+    return (tier, -m, _country_heading_sort_key(ck))
+
+
+def _sort_country_sections(
+    country_sections: List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]],
+    country_sort: str,
+) -> List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]]:
+    if country_sort == COUNTRY_TAB_SORT_LIFERS_WORLD:
+        return sorted(
+            country_sections,
+            key=lambda s: _country_section_sort_key_metric(s, COUNTRY_TAB_SORT_LIFERS_WORLD),
+        )
+    if country_sort == COUNTRY_TAB_SORT_TOTAL_SPECIES:
+        return sorted(
+            country_sections,
+            key=lambda s: _country_section_sort_key_metric(s, COUNTRY_TAB_SORT_TOTAL_SPECIES),
+        )
+    # Default: alphabetical by display name (Unknown last)
+    return sorted(country_sections, key=lambda s: _country_heading_sort_key(s[0]))
+
+
+def _format_country_summary_html(
+    country_sections: List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]],
+    *,
+    country_sort: str = COUNTRY_TAB_SORT_ALPHABETICAL,
+) -> str:
+    """Per-country accordions + yearly-style stats tables (sparse year columns).
+
+    *country_sort*: ``alphabetical`` | ``lifers_world`` | ``total_species`` — order of accordions only.
+    """
+    if not country_sections:
+        return (
+            "<p style='font-family:sans-serif;color:#666;padding:16px;'>"
+            "No country data (add Country or State/Province to your export).</p>"
+        )
+
+    yearly_css = """
+    .yearly-maint-section { margin-bottom:8px; border:1px solid #e5e7eb; border-radius:6px; background:#f9fafb; padding:4px 10px; }
+    .yearly-maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
+"""
+    blocks = []
+    sorted_sections = _sort_country_sections(country_sections, country_sort)
+    for country_key, years_list, rows in sorted_sections:
+        if not years_list or not rows:
+            continue
+        title = _country_accordion_title(country_key)
+        n_years = len(years_list)
+        multi_year = n_years > 1
+        n_cols = n_years + (1 if multi_year else 0)
+        min_w = "280px" if n_cols <= 2 else "360px" if n_cols <= 3 else "400px"
+        year_headers = "".join(f"<th style='text-align:right;'>{y}</th>" for y in years_list)
+        if multi_year:
+            year_headers += "<th style='text-align:right;'>Total</th>"
+        body_rows = "".join(
+            f"<tr><td>{_country_table_statistic_label_cell(label, country_key)}</td>"
+            + "".join(f"<td style='text-align:right;'>{html_module.escape(v, quote=False)}</td>" for v in vals)
+            + "</tr>"
+            for label, vals in rows
+        )
+        table_html = f"""  <div style="overflow-x:auto;">
+  <table class="stats-tbl" style="min-width:{min_w};">
+    <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
+    <tbody>{body_rows}</tbody>
+  </table>
+  </div>"""
+        blocks.append(f"""
+  <details class="yearly-maint-section">
+    <summary>{title}</summary>
+{table_html}  </details>""")
+
+    inner = "".join(blocks)
+    return f"""
+  <style>{yearly_css}</style>
+  <div style="width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px) 24px;box-sizing:border-box;">
+  <h4 style="margin-top:0;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">By country</h4>
+{inner}
+  </div>"""
+
 
 def format_checklist_stats_bundle(
     payload: Optional[ChecklistStatsPayload],
@@ -27,6 +216,7 @@ def format_checklist_stats_bundle(
     link_urls_fn: LinkUrlsFn = None,
     scroll_hint: int,
     visible_rows: int,
+    country_sort: str = COUNTRY_TAB_SORT_ALPHABETICAL,
 ) -> Dict[str, Any]:
     """Build the same dict the notebook expects: stats HTML, yearly HTML, rankings sections, incomplete map.
 
@@ -37,6 +227,9 @@ def format_checklist_stats_bundle(
             "stats_html": "<p>No data.</p>",
             "yearly_summary_html": (
                 "<p style='font-family:sans-serif;color:#666;padding:16px;'>No yearly data.</p>"
+            ),
+            "country_summary_html": (
+                "<p style='font-family:sans-serif;color:#666;padding:16px;'>No country data.</p>"
             ),
             "rankings_sections_top_n": [],
             "rankings_sections_other": [],
@@ -406,9 +599,15 @@ def format_checklist_stats_bundle(
         if yearly_table_html
         else "<p style='font-family:sans-serif;color:#666;padding:16px;'>No yearly data.</p>"
     )
+    country_summary_inner = _format_country_summary_html(
+        payload.country_sections,
+        country_sort=country_sort,
+    )
+    country_summary_html = f"<style>{_table_css}</style>{country_summary_inner}"
     return {
         "stats_html": stats_html,
         "yearly_summary_html": yearly_summary_html,
+        "country_summary_html": country_summary_html,
         "rankings_sections_top_n": rankings_sections_top_n,
         "rankings_sections_other": rankings_sections_other,
         "incomplete_by_year": payload.incomplete_by_year,

@@ -3,7 +3,8 @@ Integration-style tests using the curated eBird fixture CSV.
 
 Validates that the fixture flows through the pipeline and produces expected
 outputs. All expected values (row counts, checklist counts, countable species,
-lifer-by-year, duplicate counts, missing-time behaviour) are taken from
+lifer-by-year, yearly totals, country-summary tables, duplicate counts,
+missing-time behaviour) are taken from
 tests/fixtures/ebird_integration_fixture_notes.md.
 
 Refs #53.
@@ -18,7 +19,13 @@ import pytest
 
 from personal_ebird_explorer.data_loader import load_dataset, REQUIRED_COLUMNS
 from personal_ebird_explorer.species_logic import countable_species_vectorized, filter_species
-from personal_ebird_explorer.stats import compute_rankings, yearly_summary_stats, safe_count
+from personal_ebird_explorer.stats import (
+    checklist_country_keys,
+    compute_rankings,
+    country_summary_stats,
+    safe_count,
+    yearly_summary_stats,
+)
 from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
 from personal_ebird_explorer.working_set import rebuild_working_set_from_date_filter
 
@@ -70,6 +77,26 @@ DUPLICATE_DETECTION_THRESHOLD_M = 200
 # Exact duplicate in fixture: one coordinate group at this lat/lon (notes)
 EXPECTED_EXACT_DUPLICATE_LAT = -36.0924
 EXPECTED_EXACT_DUPLICATE_LON = 150.043724
+
+# Country summary (country_summary_stats on full fixture); see ebird_integration_fixture_notes.md
+EXPECTED_COUNTRY_KEYS_SORTED = ("AU", "ID", "IN")
+EXPECTED_COUNTRY_YEARS = {
+    "AU": [2022, 2023, 2024, 2025, 2026],
+    "ID": [2022, 2024],
+    "IN": [2025],
+}
+# Per-country "Total checklists" row (year columns + Total when multi-year)
+EXPECTED_COUNTRY_TOTAL_CHECKLISTS_ROW = {
+    "AU": ["3", "1", "3", "1", "3", "11"],
+    "ID": ["1", "1", "2"],
+    "IN": ["2"],
+}
+EXPECTED_COUNTRY_TOTAL_SPECIES_ROW = {
+    "AU": ["3", "21", "11", "17", "29", "64"],
+    "ID": ["14", "18", "29"],
+    "IN": ["23"],
+}
+EXPECTED_YEARLY_TOTAL_CHECKLISTS_PER_YEAR = ["4", "1", "4", "3", "3"]  # sums to EXPECTED_CHECKLISTS
 
 
 # ---------------------------------------------------------------------------
@@ -278,6 +305,47 @@ def test_integration_yearly_summary_stats_structure(fixture_df, fixture_checklis
     for i, yr in enumerate(years_list):
         assert int(species_vals[i].replace(",", "")) == EXPECTED_COUNTABLE_BY_YEAR.get(yr, 0), f"year {yr} total species"
         assert int(lifer_vals[i].replace(",", "")) == EXPECTED_LIFER_BY_YEAR.get(yr, 0), f"year {yr} lifers"
+
+
+def test_integration_yearly_total_checklists_sum_to_dataset_total(fixture_df, fixture_checklists):
+    """Yearly 'Total checklists' columns sum to dataset checklist count (cross-check)."""
+    dur_col = "Duration (Min)" if "Duration (Min)" in fixture_df.columns else None
+    dist_col = "Distance Traveled (km)" if "Distance Traveled (km)" in fixture_df.columns else None
+    years_list, yearly_rows, _ = yearly_summary_stats(
+        fixture_df, fixture_checklists, dur_col, dist_col
+    )
+    idx_cl = next(i for i, (label, _) in enumerate(yearly_rows) if label == "Total checklists")
+    vals = yearly_rows[idx_cl][1]
+    assert vals == EXPECTED_YEARLY_TOTAL_CHECKLISTS_PER_YEAR
+    assert sum(int(v.replace(",", "")) for v in vals) == EXPECTED_CHECKLISTS
+
+
+def test_integration_country_keys_from_state_province(fixture_checklists):
+    """Checklist-level country keys derived from State/Province match fixture countries (AU, ID, IN)."""
+    keys = checklist_country_keys(fixture_checklists)
+    uniq = sorted(str(x) for x in keys.dropna().unique())
+    assert tuple(uniq) == EXPECTED_COUNTRY_KEYS_SORTED
+
+
+def test_integration_country_summary_matches_fixture_notes(fixture_df, fixture_checklists):
+    """country_summary_stats finds all three countries and per-country tables match documented values."""
+    blocks = country_summary_stats(fixture_df, fixture_checklists)
+    by_key = {
+        ck: ([int(y) for y in years], {label: vals for label, vals in rows})
+        for ck, years, rows in blocks
+    }
+    assert tuple(sorted(by_key)) == EXPECTED_COUNTRY_KEYS_SORTED
+    for ck in EXPECTED_COUNTRY_KEYS_SORTED:
+        years, rowdict = by_key[ck]
+        assert years == EXPECTED_COUNTRY_YEARS[ck], f"{ck} years"
+        assert rowdict["Total checklists"] == EXPECTED_COUNTRY_TOTAL_CHECKLISTS_ROW[ck], f"{ck} checklists"
+        assert rowdict["Total species"] == EXPECTED_COUNTRY_TOTAL_SPECIES_ROW[ck], f"{ck} species"
+    # Per-country total checklist counts sum to dataset total (11 + 2 + 2 = 15)
+    totals = []
+    for ck in EXPECTED_COUNTRY_KEYS_SORTED:
+        vals = by_key[ck][1]["Total checklists"]
+        totals.append(int(vals[-1].replace(",", "")))
+    assert sum(totals) == EXPECTED_CHECKLISTS
 
 
 # ---------------------------------------------------------------------------
