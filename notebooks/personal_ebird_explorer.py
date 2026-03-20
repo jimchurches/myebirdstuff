@@ -522,7 +522,10 @@ from personal_ebird_explorer.stats import (
     get_sex_notation_by_year as _get_sex_notation_by_year,
 )
 from personal_ebird_explorer.checklist_stats_compute import compute_checklist_stats_payload
-from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
+from personal_ebird_explorer.checklist_stats_display import (
+    format_checklist_stats_bundle,
+    format_rankings_tab_html,
+)
 from personal_ebird_explorer.lifer_last_seen_prep import prepare_lifer_last_seen
 
 
@@ -1102,52 +1105,12 @@ def _compute_checklist_stats(df, link_urls_fn=None):
 checklist_data = _compute_checklist_stats(df_full, link_urls_fn=_link_urls_fn)
 checklist_stats_panel = widgets.HTML(value=checklist_data["stats_html"])
 
-# Rankings tab: two groups (Top N + Other) with headings, each group an accordion
-_rankings_heading_style = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;margin:0 0 8px;padding:0;color:#111827;"
-
-def _build_rankings_panel_html(sections_top_n, sections_other):
-    """Build HTML for Rankings & lists tab using <details> accordions (matching Maintenance style)."""
-    def _details_block(title, html_body):
-        return f"""
-<details class="maint-section">
-  <summary>{title}</summary>
-  <div style="margin-top:8px;">
-{html_body}
-  </div>
-</details>"""
-
-    top_html = "".join(_details_block(title, html) for title, html in sections_top_n)
-    other_html = "".join(_details_block(title, html) for title, html in sections_other)
-
-    return f"""
-<style>
-.maint-section {{
-  margin-bottom:8px;
-  border:1px solid #e5e7eb;
-  border-radius:6px;
-  background:#f9fafb;
-  padding:4px 10px;
-}}
-.maint-section > summary {{
-  font-weight:600;
-  padding:6px 0;
-  color:#374151;
-  cursor:pointer;
-}}
-</style>
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;line-height:1.6;width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px);box-sizing:border-box;">
-  <h3 style="{_rankings_heading_style}">Top {TOP_N_TABLE_LIMIT}</h3>
-  {top_html}
-  <h3 style="margin-top:24px;{_rankings_heading_style.split('margin:0 0 8px;')[0]}">Interesting Lists</h3>
-  {other_html}
-</div>
-"""
-
-
+# Rankings tab: two groups (Top N + Other) with headings (refs #69: format_rankings_tab_html)
 rankings_panel = widgets.HTML(
-    value=_build_rankings_panel_html(
+    value=format_rankings_tab_html(
         checklist_data["rankings_sections_top_n"],
         checklist_data["rankings_sections_other"],
+        top_n_limit=TOP_N_TABLE_LIMIT,
     )
 )
 
@@ -1444,9 +1407,10 @@ for _w in (rankings_visible_int, top_n_int, close_meters_int):
 def _refresh_rankings_panel():
     """Rebuild Rankings & lists HTML with current TOP_N_TABLE_LIMIT / RANKINGS_TABLE_VISIBLE_ROWS."""
     _data = _compute_checklist_stats(df_full, link_urls_fn=_link_urls_fn)
-    rankings_panel.value = _build_rankings_panel_html(
+    rankings_panel.value = format_rankings_tab_html(
         _data["rankings_sections_top_n"],
         _data["rankings_sections_other"],
+        top_n_limit=TOP_N_TABLE_LIMIT,
     )
 
 def _refresh_map_maintenance_close_locations():

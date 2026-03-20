@@ -36,7 +36,7 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **working_set** | Rebuild filtered working DataFrame and derived structures after date-filter changes: `rebuild_working_set_from_date_filter(...)` returns a `WorkingSet` or `None` on invalid range. Handles Whoosh repopulation and map popup/location caches when passed in (refs #66). |
 | **lifer_last_seen_prep** | Full-dataset lifer/last-seen prep: `prepare_lifer_last_seen(full_df)` → `LiferLastSeenPrep` (lookup DataFrame + location dicts for base species and taxon keys; refs #68). |
 | **checklist_stats_compute** | Structured checklist stats / yearly / rankings inputs: `compute_checklist_stats_payload(df, top_n_limit)` → `ChecklistStatsPayload` or `None` if empty (refs #68). |
-| **checklist_stats_display** | HTML bundle for Checklist Statistics + Yearly tabs and rankings sections: `format_checklist_stats_bundle(payload, ...)` (refs #68). |
+| **checklist_stats_display** | HTML bundle for Checklist Statistics + Yearly tabs and rankings sections: `format_checklist_stats_bundle(payload, ...)`; Rankings tab shell: `format_rankings_tab_html(sections_top_n, sections_other, top_n_limit=...)` (refs #68, #69). |
 | **maintenance_display** | Maintenance tab HTML: map duplicates/close locations, incomplete checklists, sex-notation sections (`format_*_maintenance_html`, refs #69). |
 | **species_search** | Whoosh species autocomplete helper: `whoosh_common_name_suggestions(index, query, ...)` (refs #69). |
 
@@ -57,7 +57,7 @@ The notebook owns: widget creation, observers, initial Whoosh index creation (em
 
 - **Location:** Tests live under `tests/`, with `tests/explorer/` for explorer-specific tests and `tests/conftest.py` for shared fixtures.
 - **Runner:** `pytest tests/ -v` (also used in CI).
-- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, region_display, rankings_display, taxonomy, working_set, lifer_last_seen_prep, checklist_stats_compute, maintenance_display, species_search. No notebook execution in the test suite.
+- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, region_display, rankings_display, taxonomy, working_set, lifer_last_seen_prep, checklist_stats_compute, checklist_stats_display (rankings tab shell), maintenance_display, species_search. No notebook execution in the test suite.
 - **Adding tests:** Prefer testing logic in modules. For new behaviour, add tests in the appropriate `tests/explorer/test_*.py` file.
 - **Integration fixture:** Tests in `tests/explorer/test_integration_fixture.py` use `tests/fixtures/ebird_integration_fixture.csv`; expected values are documented in `tests/fixtures/ebird_integration_fixture_notes.md`. If you change the fixture, update the notes and the test constants in the test file together.
 

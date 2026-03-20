@@ -7,7 +7,7 @@ Consumes :class:`ChecklistStatsPayload` from ``checklist_stats_compute`` (refs #
 from __future__ import annotations
 
 import html as html_module
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
 from personal_ebird_explorer.rankings_display import (
@@ -413,3 +413,58 @@ def format_checklist_stats_bundle(
         "rankings_sections_other": rankings_sections_other,
         "incomplete_by_year": payload.incomplete_by_year,
     }
+
+
+_RANKINGS_HEADING_STYLE_PRIMARY = (
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+    "font-size:15px;font-weight:600;margin:0 0 8px;padding:0;color:#111827;"
+)
+
+
+def format_rankings_tab_html(
+    sections_top_n: List[Tuple[str, str]],
+    sections_other: List[Tuple[str, str]],
+    *,
+    top_n_limit: int,
+) -> str:
+    """Wrap Rankings tab sections in accordions (same styling as Maintenance tab). Refs #69."""
+
+    def _details_block(title: str, html_body: str) -> str:
+        return f"""
+<details class="maint-section">
+  <summary>{title}</summary>
+  <div style="margin-top:8px;">
+{html_body}
+  </div>
+</details>"""
+
+    top_html = "".join(_details_block(title, html) for title, html in sections_top_n)
+    other_html = "".join(_details_block(title, html) for title, html in sections_other)
+    heading_second = (
+        "margin-top:24px;"
+        f"{_RANKINGS_HEADING_STYLE_PRIMARY.split('margin:0 0 8px;', 1)[0]}"
+    )
+
+    return f"""
+<style>
+.maint-section {{
+  margin-bottom:8px;
+  border:1px solid #e5e7eb;
+  border-radius:6px;
+  background:#f9fafb;
+  padding:4px 10px;
+}}
+.maint-section > summary {{
+  font-weight:600;
+  padding:6px 0;
+  color:#374151;
+  cursor:pointer;
+}}
+</style>
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;line-height:1.6;width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px);box-sizing:border-box;">
+  <h3 style="{_RANKINGS_HEADING_STYLE_PRIMARY}">Top {top_n_limit}</h3>
+  {top_html}
+  <h3 style="{heading_second}">Interesting Lists</h3>
+  {other_html}
+</div>
+"""
