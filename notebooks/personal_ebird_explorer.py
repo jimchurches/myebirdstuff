@@ -607,59 +607,38 @@ writer.commit()
 
 # %%
 # --------------------------------------------
-# ✅ Re-apply date filter and rebuild map data (dynamic date filter, refs #38)
+# ✅ Re-apply date filter and rebuild map data (dynamic date filter, refs #38; logic in working_set #66)
 # --------------------------------------------
 def _apply_date_filter_and_build_map_data():
     """Recompute df, records_by_loc, species_list, totals, and caches from df_full using current FILTER_* globals. Rebuilds Whoosh index. Call after changing date filter."""
     global df, location_data, records_by_loc, species_list
     global total_checklists, total_individuals, total_species
     global name_map, records_by_loc_full, total_checklists_full, total_species_full, total_individuals_full
-    global _popup_html_cache, _filtered_by_loc_cache
-    start, end = None, None
-    if FILTER_BY_DATE:
-        try:
-            start = datetime.strptime(FILTER_START_DATE, "%Y-%m-%d")
-            end = datetime.strptime(FILTER_END_DATE, "%Y-%m-%d")
-            assert start <= end, "Start date must be before end date"
-        except Exception:
-            return  # leave state unchanged on invalid dates
-    df_new = df_full[df_full["Location ID"].isin(location_ids_with_checklists)].copy()
-    if FILTER_BY_DATE and start is not None and end is not None:
-        df_new = df_new[(df_new["Date"] >= start) & (df_new["Date"] <= end)]
-    # Update globals
-    df = df_new
-    location_data = df[['Location ID', 'Location', 'Latitude', 'Longitude']].drop_duplicates()
-    records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
-    species_list = sorted(df["Common Name"].dropna().unique().tolist())
-    total_checklists = df["Submission ID"].nunique()
-    total_individuals = int(df["Count"].apply(_safe_count).sum())
-    total_species = int(_countable_species_vectorized(df).dropna().nunique())
-    name_map = (
-        df[['Common Name', 'Scientific Name']]
-        .dropna()
-        .drop_duplicates()
-        .set_index('Common Name')['Scientific Name']
-        .to_dict()
+    from personal_ebird_explorer.working_set import rebuild_working_set_from_date_filter
+
+    ws = rebuild_working_set_from_date_filter(
+        df_full,
+        location_ids_with_checklists,
+        filter_by_date=FILTER_BY_DATE,
+        filter_start_date=FILTER_START_DATE,
+        filter_end_date=FILTER_END_DATE,
+        whoosh_index=ix,
+        map_caches=(_popup_html_cache, _filtered_by_loc_cache),
     )
-    if FILTER_BY_DATE:
-        records_by_loc_full = {lid: grp for lid, grp in df_full.groupby("Location ID")}
-        total_checklists_full = df_full["Submission ID"].nunique()
-        total_species_full = int(_countable_species_vectorized(df_full).dropna().nunique())
-        total_individuals_full = int(df_full["Count"].apply(_safe_count).sum())
-    else:
-        records_by_loc_full = {}
-        total_checklists_full = total_checklists
-        total_species_full = total_species
-        total_individuals_full = total_individuals
-    _popup_html_cache.clear()
-    _filtered_by_loc_cache.clear()
-    # Rebuild Whoosh index for autocomplete
-    from whoosh.query import Every
-    w = ix.writer()
-    w.delete_by_query(Every())
-    for name in species_list:
-        w.add_document(common_name=name)
-    w.commit()
+    if ws is None:
+        return  # leave state unchanged on invalid dates
+    df = ws.df
+    location_data = ws.location_data
+    records_by_loc = ws.records_by_loc
+    species_list = ws.species_list
+    total_checklists = ws.total_checklists
+    total_individuals = ws.total_individuals
+    total_species = ws.total_species
+    name_map = ws.name_map
+    records_by_loc_full = ws.records_by_loc_full
+    total_checklists_full = ws.total_checklists_full
+    total_species_full = ws.total_species_full
+    total_individuals_full = ws.total_individuals_full
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
