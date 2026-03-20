@@ -183,6 +183,7 @@ def build_lifer_locations_banner_html(
         f'<div style="{_BANNER_STYLE}">'
         f'<b>Lifer locations</b><br>'
         f'{n_lifer_species} lifer species'
+        f'<br><span style="font-size: 0.85em; color: #999;">Sub-species included</span>'
         f' &nbsp;|&nbsp; {n_locations} {loc_w}'
         f'{date_line}'
         f'</div>'
