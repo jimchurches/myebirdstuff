@@ -57,6 +57,8 @@ This repo currently has three related pieces that work together:
 
 This repository includes a Jupyter notebook called `personal_ebird_explorer.ipynb` that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
 
+**Times in the explorer:** If you see **23:59** next to a visit, it may be a **synthetic placeholder** when your export has no real time for that row (not necessarily midnight birding). See [Missing checklist times (synthetic 23:59)](docs/explorer/README.md#missing-checklist-times-synthetic-2359) in the explorer README.
+
 > 📘 **User guide and run options:** [docs/explorer/README.md](docs/explorer/README.md)  
 > 📗 **Installation** (Python, Jupyter, Voila): [docs/explorer/install.md](docs/explorer/install.md)  
 > 📙 **Developers:** [docs/development.md](docs/development.md) · **AI-assisted work:** [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)

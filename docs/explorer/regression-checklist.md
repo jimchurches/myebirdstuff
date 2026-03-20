@@ -9,6 +9,7 @@ Run before merging refactor branches to `main`.
 - Five tabs available and data displayed (`Map`, `Checklist Statistics`, `Yearly Summary`, `Rankings & lists`, `Maintenance`)
 
 ## Map
+- Visit times: if the export has missing times, popups may show **23:59** as a documented placeholder — see [explorer README — Missing checklist times](README.md#missing-checklist-times-synthetic-2359)
 - Renders all locations
 - Species search works (matches, highlighting, clear)
 - Species overlay works

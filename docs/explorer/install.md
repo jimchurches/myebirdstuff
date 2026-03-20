@@ -13,6 +13,9 @@ The explorer is a Jupyter notebook (`personal_ebird_explorer.ipynb`) that loads 
 - **Your eBird data**  
   Download your full eBird data export from [eBird.org](https://ebird.org) (My eBird → Manage My Data → Download My Data). You get a CSV file. The notebook expects it to be named `MyEBirdData.csv` by default (you can change this in the notebook).
 
+- **Times in the explorer**  
+  Rows with no time in the export may appear with **23:59** as a **sorting placeholder** (not always a real clock time). See [Missing checklist times (synthetic 23:59)](README.md#missing-checklist-times-synthetic-2359) in the explorer README.
+
 - **This code**  
   Clone or download the `myebirdstuff` repo so you have the `notebooks` and `scripts` folders.
 

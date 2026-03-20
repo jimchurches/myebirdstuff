@@ -15,6 +15,23 @@ A Jupyter notebook that lets you explore your eBird data on an interactive map. 
 
 - In Voila, after changing Settings that trigger a map redraw (e.g. map style or pin colours), the next click anywhere may be ignored; click again to continue.
 
+## Missing checklist times (synthetic 23:59)
+
+Some checklist rows in an eBird export have **no time** (blank time, or eBird uses `00:00` when no time was recorded). That can happen for example when:
+
+- observations were entered via **Merlin** rather than the eBird app  
+- a checklist was **generalised** to protect a sensitive location  
+- occasional **data entry quirks** or older exports with incomplete times  
+
+The explorer builds a single **`datetime`** column for sorting visits (map popups, banners, etc.). For rows with **no meaningful time**, the loader assigns a **synthetic time of 23:59** on that date so that:
+
+- sorting stays stable and predictable  
+- those rows sort **after** other observations on the **same calendar day**
+
+**Important:** **23:59** in the app is often a **placeholder**, not proof that you birded at one minute to midnight. Treat it as “time unknown for this row.”
+
+Implementation detail: see `add_datetime_column()` in `personal_ebird_explorer/data_loader.py`. A fuller testing narrative (fixture counts) is in [`tests/fixtures/ebird_integration_fixture_notes.md`](../../tests/fixtures/ebird_integration_fixture_notes.md).
+
 **You need:** Your eBird data export (CSV). Download from [eBird.org](https://ebird.org) → My eBird → Manage My Data → Download My Data. The notebook expects `MyEBirdData.csv` by default.
 
 ## Screenshot
