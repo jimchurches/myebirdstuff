@@ -153,7 +153,6 @@ from ipywidgets import Accordion, Box, Checkbox, HBox, VBox
 from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT
 from whoosh.analysis import StemmingAnalyzer
-from whoosh.qparser import QueryParser, OrGroup
 
 from IPython.display import display, HTML
 
@@ -683,13 +682,16 @@ hide_non_matching_checkbox = Checkbox(
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 📍 Map maintenance data (duplicates / close locations via duplicate_checks).
+# ### 📍 Maintenance tab HTML helpers (imported from personal_ebird_explorer; refs #69).
 #
 
 # %%
-from personal_ebird_explorer.duplicate_checks import (
-    get_map_maintenance_data as _get_map_maintenance_data,
+from personal_ebird_explorer.maintenance_display import (
+    format_map_maintenance_html,
+    format_sex_notation_maintenance_html,
+    format_incomplete_checklists_maintenance_html,
 )
+from personal_ebird_explorer.species_search import whoosh_common_name_suggestions
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
@@ -747,29 +749,10 @@ def update_suggestions(change):
             matches_dropdown.options = []
             _show_matches_dropdown(False)
             return
-        with ix.searcher() as searcher:
-            qp = QueryParser("common_name", ix.schema, group=OrGroup)
-            tokens = query.split()
-            try:
-                q = qp.parse(" ".join(f"{t}*" for t in tokens))
-            except Exception:
-                matches_dropdown.options = []
-                _show_matches_dropdown(False)
-                return
-            results = searcher.search(q, limit=None)
-
-            def score(r):
-                name = r["common_name"].lower()
-                base = 100 - r.rank
-                if name.startswith(tokens[0]):
-                    base += 50
-                return base
-
-            ranked = sorted(results, key=score, reverse=True)
-            opts = [r["common_name"] for r in ranked[:6]]  # match rows=6, no scrollbar
-            matches_dropdown.options = opts
-            matches_dropdown.value = None
-            _show_matches_dropdown(len(opts) > 0)
+        opts = whoosh_common_name_suggestions(ix, query, max_options=6, min_query_len=3)
+        matches_dropdown.options = opts
+        matches_dropdown.value = None
+        _show_matches_dropdown(len(opts) > 0)
     finally:
         state.updating_suggestions = False
 
@@ -1169,222 +1152,12 @@ rankings_panel = widgets.HTML(
 )
 
 
-# Map maintenance tab: exact duplicates and close-location pairs
-# Link format for maintenance: edit page (merge/delete), not lifelist
-_MAINT_LOC_URL = "https://ebird.org/mylocations/edit/"
+# Map maintenance tab HTML (refs #69: personal_ebird_explorer.maintenance_display)
+map_maintenance_html = format_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
 
-
-def _compute_map_maintenance_html(loc_df, threshold_m):
-    """Build HTML for Map maintenance tab: exact duplicates and close-location pairs."""
-    exact_rows, near_pairs = _get_map_maintenance_data(loc_df, threshold_m)
-    css = """
-    .maint-tbl.maint-single-col td { text-align:left; font-weight:normal; }
-    .maint-pair-tbl { max-width:600px; }
-    .maint-pair-tbl tbody tr.maint-spacer { background:transparent; }
-    .maint-section {
-      margin-bottom:8px;
-      border:1px solid #e5e7eb;
-      border-radius:6px;
-      background:#f9fafb;
-      padding:4px 10px;
-    }
-    .maint-section > summary {
-      font-weight:600;
-      padding:6px 0;
-      color:#374151;
-      cursor:pointer;
-    }
-    .maint-subsection { margin-top:8px; margin-bottom:4px; margin-left:8px; }
-    .maint-subsection > summary {
-      font-weight:600;
-      padding:4px 0;
-      color:#374151;
-      cursor:pointer;
-      font-size:13px;
-    }
-    """
-    # Table 1: Exact duplicates (inner accordion)
-    dup_body = ""
-    if exact_rows:
-        for loc_name, loc_id, count, lat, lon in exact_rows:
-            link = f'<a href="{_MAINT_LOC_URL}{loc_id}" target="_blank">{loc_name}</a>' if loc_id else loc_name
-            coords = f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"
-            dup_body += f"<tr><td>{link}</td><td>{coords}</td><td>{count}</td></tr>"
-        exact_dup_content = f"""
-  <p style="margin:4px 0 8px;color:#6b7280;font-size:13px;">Different Location IDs at the same coordinates. Same name listed once; different names listed separately.</p>
-  <table class="maint-tbl">
-    <thead><tr><th>Location</th><th>Latitude/Longitude</th><th>Number of duplicates</th></tr></thead>
-    <tbody>{dup_body}</tbody>
-  </table>"""
-    else:
-        exact_dup_content = """
-  <p style="margin:4px 0;color:#6b7280;">None detected.</p>"""
-
-    # Table 2: Close locations (inner accordion)
-    if near_pairs:
-        all_rows = ""
-        for i, pair in enumerate(near_pairs):
-            pair_rows = "".join(
-                (f'<tr class="pair-first"><td><a href="{_MAINT_LOC_URL}{lid}" target="_blank">{name}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>'
-                 if idx == 0 else
-                 f'<tr class="pair-second"><td><a href="{_MAINT_LOC_URL}{lid}" target="_blank">{name}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>')
-                for idx, (lid, name, lat, lon) in enumerate(pair)
-            )
-            all_rows += pair_rows
-            if i < len(near_pairs) - 1:
-                all_rows += '<tr class="maint-spacer"><td colspan="2" style="height:12px;border:none;background:transparent;"></td></tr>'
-        close_loc_content = f"""
-  <p style="margin:4px 0 12px;color:#6b7280;font-size:13px;">Locations within {threshold_m} m of each other (excluding exact duplicates).</p>
-  <table class="maint-pair-tbl">
-    <thead><tr><th>Location</th><th>Latitude/Longitude</th></tr></thead>
-    <tbody>{all_rows}</tbody>
-  </table>"""
-    else:
-        close_loc_content = f"""
-  <p style="margin:4px 0;color:#6b7280;">None detected within the current threshold ({threshold_m} m).</p>"""
-
-    explanation = """
-  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
-    These tables highlight duplicate locations and locations that are very close to each other (within the configured distance) to help you keep your personal eBird locations organised. This is most useful if you regularly create new locations and build a large catalogue of them; if you mainly use hotspots it may be less relevant. Locations can be merged on the eBird website, though directly merging duplicates can sometimes be awkward. Often the simplest approach is to move checklists to the preferred location and then delete the now-empty duplicate. See eBird for details.
-  </div>"""
-
-    return f"""
-<style>{css}</style>
-<div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
-<details class="maint-section">
-  <summary>Location Maintenance</summary>
-{explanation}
-  <details class="maint-subsection">
-    <summary>Exact duplicates</summary>
-{exact_dup_content}
-  </details>
-  <details class="maint-subsection">
-    <summary>Close locations</summary>
-{close_loc_content}
-  </details>
-</details>
-</div>"""
-
-
-map_maintenance_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
-
-
-def _compute_sex_notation_html(sex_notation_by_year, species_url_fn=None):
-    """Build HTML for Maintenance tab: sex-notation strings in checklist comments, grouped by year.
-
-    Optional species_url_fn(common_name) -> url enables eBird species links in Species column (refs #56).
-    """
-    import html as _html
-    if not sex_notation_by_year:
-        return ""
-    css = """
-    details { margin-bottom:8px; }
-    summary { cursor:pointer; font-weight:600; padding:6px 0; color:#374151; }
-    .maint-section {
-      margin-bottom:8px;
-      border:1px solid #e5e7eb;
-      border-radius:6px;
-      background:#f9fafb;
-      padding:4px 10px;
-    }
-    .maint-section > summary {
-      font-weight:600;
-      padding:6px 0;
-      color:#374151;
-      cursor:pointer;
-    }
-    """
-    explanation = """
-  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
-    Some checklists contain shorthand sex or age notation (for example <code>MF</code>, <code>MFFF</code>, or <code>MMF??F</code>) entered in the field notes. These should ideally be converted into the structured Age/Sex table on the eBird website. The following lists identify checklists where this shorthand was detected.
-  </div>"""
-    sections = []
-    for y in sorted(sex_notation_by_year.keys(), reverse=True):
-        items = sex_notation_by_year[y]
-        rows = []
-        for sid, date_str, loc, species, protocol, notation in items:
-            loc_esc = _html.escape(loc, quote=True)
-            date_esc = _html.escape(date_str, quote=True)
-            species_esc = _html.escape(species, quote=True)
-            protocol_esc = _html.escape(protocol, quote=True)
-            notation_esc = _html.escape(notation, quote=True)
-            species_url = species_url_fn(species) if species_url_fn else None
-            species_cell = f"<a href=\"{_html.escape(species_url, quote=True)}\" target=\"_blank\" rel=\"noopener\">{species_esc}</a>" if species_url else species_esc
-            url = f"https://ebird.org/checklist/{sid}" if sid else "#"
-            loc_link = f"<a href=\"{url}\" target=\"_blank\">{loc_esc}</a>" if url != "#" else loc_esc
-            rows.append(f"<tr><td>{date_esc}</td><td>{protocol_esc}</td><td>{species_cell}</td><td>{notation_esc}</td><td>{loc_link}</td></tr>")
-        table_body = "".join(rows)
-        table = f"<table class=\"maint-tbl\"><thead><tr><th>Date</th><th>Protocol</th><th>Species</th><th>Sex Notation</th><th>Location</th></tr></thead><tbody>{table_body}</tbody></table>"
-        sections.append(f"<details><summary>{y} ({len(items)})</summary>{table}</details>")
-    return f"""
-<style>{css}</style>
-<div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
-<details class="maint-section">
-  <summary>Sex notation in checklist comments</summary>
-{explanation}
-  <div style="margin-top:16px;">
-{"".join(sections)}
-  </div>
-</details>
-</div>"""
-
-
-def _compute_incomplete_checklists_html(incomplete_by_year):
-    """Build HTML for Maintenance tab: explanation + accordion (details/summary) of incomplete checklists by year in tables."""
-    import html as _html
-    if not incomplete_by_year:
-        return ""
-    css = """
-    details { margin-bottom:8px; }
-    summary { cursor:pointer; font-weight:600; padding:6px 0; color:#374151; }
-    .maint-section {
-      margin-bottom:8px;
-      border:1px solid #e5e7eb;
-      border-radius:6px;
-      background:#f9fafb;
-      padding:4px 10px;
-    }
-    .maint-section > summary {
-      font-weight:600;
-      padding:6px 0;
-      color:#374151;
-      cursor:pointer;
-    }
-    """
-    explanation = """
-  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
-    Incomplete travelling and stationary checklists often occur when submitting a checklist in the eBird mobile app. The default setting is incomplete, and if you move quickly through the submission prompts you may accidentally answer "No" to the question asking whether the list is complete.<br><br>
-    Incomplete checklists can certainly be intentional and acceptable (for example, when other species were present but not recorded). These checklists tables below are provided so you can review your data for checklists that may have been marked incomplete by mistake. Incidental checklists are not included.<br><br>
-    Reference: <a href="https://support.ebird.org/en/support/solutions/articles/48000950859-guide-to-ebird-protocols" target="_blank">Guide to eBird Protocols</a>
-  </div>"""
-    sections = []
-    for y in sorted(incomplete_by_year.keys(), reverse=True):
-        items = incomplete_by_year[y]
-        rows = []
-        for sid, date_str, loc in items:
-            loc_esc = _html.escape(loc, quote=True)
-            date_esc = _html.escape(date_str, quote=True)
-            url = f"https://ebird.org/checklist/{sid}" if sid else "#"
-            rows.append(f"<tr><td>{date_esc}</td><td><a href=\"{url}\" target=\"_blank\">{loc_esc}</a></td></tr>")
-        table_body = "".join(rows)
-        table = f"<table class=\"maint-tbl\"><thead><tr><th>Date</th><th>Location</th></tr></thead><tbody>{table_body}</tbody></table>"
-        sections.append(f"<details><summary>{y} ({len(items)})</summary>{table}</details>")
-    return f"""
-<style>{css}</style>
-<div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
-<details class="maint-section">
-  <summary>Incomplete checklists (Traveling or Stationary)</summary>
-{explanation}
-  <div style="margin-top:16px;">
-{"".join(sections)}
-  </div>
-</details>
-</div>"""
-
-
-incomplete_checklists_html = _compute_incomplete_checklists_html(checklist_data.get("incomplete_by_year", {}))
+incomplete_checklists_html = format_incomplete_checklists_maintenance_html(checklist_data.get("incomplete_by_year", {}))
 sex_notation_by_year = _get_sex_notation_by_year(df_full)
-sex_notation_html = _compute_sex_notation_html(sex_notation_by_year, species_url_fn=_species_url_fn)
+sex_notation_html = format_sex_notation_maintenance_html(sex_notation_by_year, species_url_fn=_species_url_fn)
 map_maintenance_html_widget = widgets.HTML(value=map_maintenance_html)
 _maintenance_panel_parts = [map_maintenance_html_widget]
 if incomplete_checklists_html:
@@ -1678,7 +1451,7 @@ def _refresh_rankings_panel():
 
 def _refresh_map_maintenance_close_locations():
     """Update the 'close locations' panel using the latest CLOSE_LOCATION_METERS."""
-    new_html = _compute_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
+    new_html = format_map_maintenance_html(full_location_data, CLOSE_LOCATION_METERS)
     # Use explicit widget reference (avoid brittle children[0] indexing).
     if getattr(map_maintenance_html_widget, "value", None) is not None:
         map_maintenance_html_widget.value = new_html
