@@ -230,7 +230,7 @@ CHECKLIST_STATS_TABLE_CSS = """
 # **Alternate:** ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE`` (eBird-style blue); enable via
 # ``_USE_EBIRD_BLUE_HTML_TAB_THEME`` in ``checklist_stats_streamlit_html.py``.
 #
-# Typography is slightly smaller than 1rem so body matches Streamlit sub-tab labels (which read ~14px / normal weight).
+# Typography aligned with Streamlit nested ``st.tabs`` labels (~13px / normal weight in default theme).
 def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
     """Build scoped Streamlit HTML-tab CSS (blue or green accent + zebra rows)."""
     if blue_theme:
@@ -252,9 +252,12 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   min-width: min(100%, 20rem);
   box-sizing: border-box;
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: 0.8125rem;
+  line-height: 1.45;
   font-weight: 400;
+  letter-spacing: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   color: var(--text-color, {text_fb});
 }}
 .streamlit-checklist-html-ab .stats-tbl {{
@@ -262,7 +265,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: inherit;
+  font-size: 1em;
   font-weight: 400;
   background: var(--background-color, #fafcfa);
   color: var(--text-color, {text_fb});
@@ -312,8 +315,9 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 .streamlit-checklist-html-ab > p {{
   margin: 0.5rem 0 0;
   color: color-mix(in srgb, var(--text-color, {text_fb}) 64%, transparent);
-  font-size: 0.75rem;
-  line-height: 1.5;
+  font-size: 0.923em;
+  line-height: 1.45;
+  font-weight: 400;
 }}
 @supports not (color: color-mix(in srgb, black 50%, white)) {{
   .streamlit-checklist-html-ab > p {{
