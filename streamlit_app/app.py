@@ -26,8 +26,9 @@ custom component, or heuristics from export columns (e.g. dominant ``Country``) 
 
 **Checklist Statistics:** Native Streamlit layout (nested ``st.tabs`` + ``st.dataframe``) from
 ``compute_checklist_stats_payload``. **Checklist Statistics (HTML)** shows the same sections as shared HTML
-fragments. Both tabs wrap ``_cached_checklist_stats_payload`` with ``st.spinner("Computing checklist statistics…")``
-so loading feedback matches (refs #70).
+fragments. ``_cached_checklist_stats_payload`` runs **once** immediately under the main tab bar (inside
+``st.spinner("Computing checklist statistics…")``) so the loading message shows no matter which tab is selected
+(refs #70).
 """
 
 from __future__ import annotations
@@ -270,6 +271,10 @@ def main() -> None:
         tab_settings,
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
+    # Hoisted: spinner lives in the main column (not inside a tab panel) so it’s visible on Map, etc.
+    with st.spinner("Computing checklist statistics…"):
+        checklist_payload = _cached_checklist_stats_payload(df)
+
     def _tab_test_placeholder(notebook_name: str, blurb: str) -> None:
         st.markdown(f"**TEST** — `{notebook_name}` tab (placeholder only).")
         st.write(blurb)
@@ -330,19 +335,15 @@ def main() -> None:
                 )
 
     with tab_checklist:
-        with st.spinner("Computing checklist statistics…"):
-            checklist_payload = _cached_checklist_stats_payload(df)
         if checklist_payload is not None:
             render_checklist_stats_streamlit_native(checklist_payload)
         else:
             st.warning("No checklist data to show.")
 
     with tab_checklist_html:
-        with st.spinner("Computing checklist statistics…"):
-            checklist_payload_html = _cached_checklist_stats_payload(df)
-        if checklist_payload_html is not None:
+        if checklist_payload is not None:
             render_checklist_stats_streamlit_html(
-                checklist_payload_html,
+                checklist_payload,
                 species_url_fn=species_url_fn,
             )
         else:
