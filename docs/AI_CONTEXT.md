@@ -49,14 +49,15 @@ The project is intentionally lightweight.
 
 **Roadmap note:** **Streamlit** is the **intended future** primary UI ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70): phased prototype → parallel dev → cutover; preserve notebook/Binder until then). A **prototype** lives in `streamlit_app/` (`requirements-streamlit.txt`); keep **shipping** `requirements.txt` / Binder focused on Jupyter unless `main` explicitly switches. Do not add **other** full UI frameworks without maintainer agreement.
 
-### Streamlit UI: prefer native components
+### Streamlit UI
 
-For work in **`streamlit_app/`** and any future Streamlit-first UI:
+For work in **`streamlit_app/`** and any future Streamlit-first UI ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)). **Native widgets first**; **shared HTML formatters** for notebook-parity tables where `st.dataframe` is not enough:
 
-- **Default to Streamlit primitives** — e.g. `st.tabs`, `st.expander`, `st.columns`, `st.dataframe`, `st.metric`, sidebar inputs, and theme via `.streamlit/config.toml`. This keeps layouts maintainable and consistent with Streamlit updates.
-- **Keep eBird deep links when porting tables** — The notebook HTML puts many **links inside table cells** (species pages, checklists, lifelists, regional lists on eBird so users can use eBird’s own tallies). That parity is **intentional**: we do not re-implement everything eBird already exposes. In Streamlit, `st.dataframe` **does not** render Markdown `[label](url)` in cells. Prefer, in order of fit: reuse **shared HTML** from existing formatters (`checklist_stats_display`, rankings/maintenance helpers), **`st.markdown`** row layouts where each value can be a link, **`column_config.LinkColumn`** when a cell is a URL (friendly per-row labels are limited), or **small `unsafe_allow_html`** fragments — and call out the tradeoff. Do **not** drop eBird URLs from a migrated table just to use a plain dataframe.
-- **Treat custom HTML/CSS as a conscious exception** — Large `st.markdown(..., unsafe_allow_html=True)` blobs, inline styles, and copied notebook HTML are fine when **explicitly** chosen (e.g. comparing to the Jupyter UI, embedded Folium, or a one-off migration step), but they add fragility and bypass Streamlit’s accessibility/theming story.
-- **When suggesting implementations**, if a request drifts toward bespoke HTML/CSS where native widgets would suffice, **say so briefly** and offer the Streamlit-native option first; the maintainer may still prefer HTML for a good reason. Ask for confirmation in such cases.
+- **Use Streamlit primitives first** when they are enough — `st.tabs`, `st.expander`, `st.columns`, `st.dataframe`, `st.metric`, sidebar, `.streamlit/config.toml` theme. Simple **metric / key–value** blocks and uniform **URL** columns (`LinkColumn`) fit here.
+- **Rankings, “Interesting lists”, and similar notebook tables** — The Jupyter UI uses **HTML tables** with **links in cells** (species, locations, datetimes), **mixed styling** (e.g. dotted vs solid underlines, bold counts), and **⧉** affordances. **`st.dataframe` cannot replicate that** in a maintainable way. **Approved approach:** emit the **same HTML** the notebook uses from **shared module formatters** (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, maintenance/ranking helpers, etc.) and render it with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`** (when available). **Do not duplicate** table markup inside `streamlit_app/` — extend or call the formatter. Treat this like **Folium popup HTML**: trusted formatter output; escape user-origin text **inside** the formatter.
+- **Keep eBird deep links** — Do **not** drop URLs from a ported view just to stay on a plain dataframe. Prefer shared HTML for rich tables; use **`LinkColumn`** or **layout + `st.markdown` links** only where that still matches UX.
+- **Ad-hoc HTML/CSS** — One-off `unsafe_allow_html` blobs **not** produced by a shared formatter are still a **conscious exception** (fragility, theming). Prefer routing table HTML through **`personal_ebird_explorer/`** helpers so notebook and Streamlit stay aligned.
+- **When suggesting implementations**, note briefly if **`st.dataframe` would suffice** vs formatter HTML, so the choice stays explicit.
 
 ### Prefer readability over cleverness
 
