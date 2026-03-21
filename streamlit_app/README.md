@@ -4,7 +4,7 @@ Early **Personal eBird Explorer** UI on Streamlit. The Jupyter notebook remains 
 
 **Tracking:** [Issue #70 — Plan transition from Notebook UI to Streamlit UI](https://github.com/jimchurches/myebirdstuff/issues/70) (branch-based prototype → parallel dev → cutover when ready; Binder/notebook preserved until then).
 
-**Landing (no CSV yet):** If disk resolution finds no file and the user has not uploaded one, the app shows a simple title + instructions in the main area and only **Data** (plus an optional expander for local/Cloud setup) in the sidebar. Map controls, taxonomy fetch, and tabs appear after data loads.
+**Landing (no CSV yet):** If disk resolution finds no file and this browser session has no cached upload yet, the app shows title + copy + **file uploader in the main column** (sidebar stays empty of data controls). After CSV load, only the **Map** sidebar + tabs appear — there is no control to swap CSV without a new session / refresh (loading APIs stay in `_load_dataframe` for future work).
 
 ## UI guidelines
 
@@ -55,13 +55,13 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 | Method | When |
 |--------|------|
-| **File uploader** | In the **sidebar** under *Data* (drag-and-drop or browse). Best for **Streamlit Community Cloud**. |
+| **File uploader** | On the **landing** page only (main area). Upload is cached in session for reruns. Best for **Streamlit Community Cloud**. |
 | **CSV in this folder** | Put `MyEBirdData.csv` (or name from `STREAMLIT_EBIRD_DATA_FILE`) in `streamlit_app/`. |
 | **`STREAMLIT_EBIRD_DATA_FOLDER`** | Env var: directory containing the CSV (like notebook `DATA_FOLDER_HARDCODED`). |
 | **`scripts/config_secret.py`** | `DATA_FOLDER = "..."` — same as the notebook. |
 | **Streamlit secret `EBIRD_DATA_FOLDER`** | Optional; same as hardcoded folder if you use Cloud secrets. |
 
-Uploader wins over disk if a file is selected.
+**Precedence:** A new pick from the landing uploader → **disk** (if resolvable) → **cached upload** for this session. Stale cache is cleared when disk wins.
 
 ## Streamlit Community Cloud
 

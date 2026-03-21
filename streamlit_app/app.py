@@ -12,11 +12,11 @@ Same path resolution as the notebook when no file is uploaded: optional
 ``STREAMLIT_EBIRD_DATA_FOLDER``, then ``scripts/config_*.py``, then CSV in
 this ``streamlit_app/`` folder.
 
-Streamlit Cloud: use the **sidebar** file uploader (drag-and-drop or browse; no repo CSV required).
+Streamlit Cloud: CSV upload on the **landing** main area when disk resolution finds no file; session
+state keeps upload bytes for reruns (no data picker on the dashboard).
 
-**No-data landing:** If no CSV is found on disk and nothing is uploaded, the app shows a simple
-landing page (title + short copy) and a sidebar focused on upload. The map, taxonomy prefetch, and
-main tabs appear after data loads.
+**No-data landing:** No disk file and no cached upload → title, copy, uploader in the main column.
+Disk path takes precedence over a stale session upload when both exist.
 
 **Taxonomy:** After CSV load, the app fetches the eBird taxonomy once per session (cached) so species
 names in popups can link to eBird species pages. Default locale is **en_AU**; override with
@@ -34,7 +34,7 @@ import io
 import os
 import sys
 from collections import OrderedDict
-from typing import Callable
+from typing import Any, Callable
 
 import pandas as pd
 import streamlit as st
@@ -83,6 +83,9 @@ CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
 # Match notebook-friendly default; eBird API uses this for common-name spellings in taxonomy CSV.
 DEFAULT_TAXONOMY_LOCALE = "en_AU"
 
+# Session-only: bytes + filename so reruns work without rendering ``st.file_uploader`` on the dashboard.
+_SESSION_UPLOAD_CACHE_KEY = "_ebird_streamlit_upload_csv_cache"
+
 
 def _env_taxonomy_locale() -> str:
     """Non-empty locale from env if set (notebook parity)."""
@@ -119,15 +122,21 @@ def _secrets_data_folder() -> str | None:
     return None
 
 
-def _load_dataframe(*, uploaded) -> tuple[pd.DataFrame | None, str | None]:
+def _load_dataframe(
+    *,
+    uploaded: Any | None = None,
+    upload_cache: tuple[bytes, str] | None = None,
+) -> tuple[pd.DataFrame | None, str | None]:
     """
     Return ``(df, provenance_html)`` or ``(None, None)`` if nothing loaded yet.
 
-    Precedence: *uploaded* file (from sidebar) → disk resolution (env/secrets/config/anchor).
+    Precedence: *uploaded* (landing widget, new pick) → **disk** (config / path resolution) →
+    *upload_cache* (session bytes from a prior upload this session). ``load_dataset`` / path logic stay
+    here for later enhancements (refs #70).
     """
     if uploaded is not None:
         try:
-            raw = uploaded.read()
+            raw = uploaded.getvalue()
             df = load_dataset(io.BytesIO(raw))
             return df, f"Upload: **{uploaded.name}**"
         except Exception as e:
@@ -150,36 +159,18 @@ def _load_dataframe(*, uploaded) -> tuple[pd.DataFrame | None, str | None]:
         label = src.replace("_", " ").title()
         return df, f"Disk: `{path}` (_{label}_)"
     except FileNotFoundError:
-        return None, None
+        pass
 
+    if upload_cache is not None:
+        raw, name = upload_cache
+        try:
+            df = load_dataset(io.BytesIO(raw))
+            return df, f"Upload: **{name}**"
+        except Exception as e:
+            st.error(f"Could not load CSV: {e}")
+            return None, None
 
-def _render_landing_no_data() -> None:
-    """Minimal first-run view when no CSV is on disk and nothing uploaded (e.g. Streamlit Cloud)."""
-    with st.sidebar:
-        st.divider()
-        with st.expander("Local file or advanced setup"):
-            st.markdown(
-                f"""
-                **Local:** Put **{DEFAULT_EBIRD_FILENAME}** in `streamlit_app/`, or set
-                `STREAMLIT_EBIRD_DATA_FOLDER`, or use `scripts/config_secret.py` like the Jupyter notebook.
-
-                **Streamlit Cloud:** Upload your export via **Data** above. Optional secret
-                `EBIRD_DATA_FOLDER` only helps if your host provides a mounted path.
-
-                Replacing a file on disk does not auto-reload; rerun the app if needed.
-                """
-            )
-
-    st.title("Personal eBird Explorer")
-    st.subheader("Streamlit prototype")
-    st.write(
-        "Explore your personal eBird checklists on a map and in summary tabs. "
-        "Load an official **My eBird Data** CSV export to begin."
-    )
-    st.info(
-        f"**Upload a CSV** using **Data** in the sidebar (drag-and-drop or **Browse files**). "
-        f"Expected name by default: `{DEFAULT_EBIRD_FILENAME}`."
-    )
+    return None, None
 
 
 def main() -> None:
@@ -188,23 +179,43 @@ def main() -> None:
     if "streamlit_taxonomy_locale" not in st.session_state:
         st.session_state.streamlit_taxonomy_locale = _env_taxonomy_locale() or DEFAULT_TAXONOMY_LOCALE
 
-    with st.sidebar:
-        st.header("Data")
+    upload_cache = st.session_state.get(_SESSION_UPLOAD_CACHE_KEY)
+    if upload_cache is not None and not (
+        isinstance(upload_cache, tuple) and len(upload_cache) == 2 and isinstance(upload_cache[0], bytes)
+    ):
+        upload_cache = None
+
+    df, provenance = _load_dataframe(uploaded=None, upload_cache=upload_cache)
+
+    if df is not None and provenance and "Disk:" in provenance:
+        # Drop stale session upload when disk resolution wins (local path after a prior Cloud upload).
+        st.session_state.pop(_SESSION_UPLOAD_CACHE_KEY, None)
+
+    if df is None:
+        st.title("Personal eBird Explorer")
+        st.subheader("Streamlit prototype")
+        st.write(
+            "Explore your personal eBird checklists on a map and in summary tabs. "
+            "Load an official **My eBird Data** CSV export to begin."
+        )
         uploaded = st.file_uploader(
             "eBird export (CSV)",
             type=["csv"],
-            help="Drag-and-drop or browse. For a fixed local file without uploading, "
-            "set STREAMLIT_EBIRD_DATA_FOLDER or place the CSV in streamlit_app/.",
+            key="ebird_landing_csv_uploader",
+            help="Official eBird full data export (CSV).",
         )
-
-    df, provenance = _load_dataframe(uploaded=uploaded)
-
-    if df is None:
-        _render_landing_no_data()
+        if uploaded is not None:
+            df_up, _prov_up = _load_dataframe(uploaded=uploaded, upload_cache=None)
+            if df_up is not None:
+                st.session_state[_SESSION_UPLOAD_CACHE_KEY] = (uploaded.getvalue(), uploaded.name)
+                st.rerun()
+        st.caption(
+            f"Typical filename: `{DEFAULT_EBIRD_FILENAME}`. "
+            "If this machine has a configured data path with that file, the app skips this page."
+        )
         return
 
     with st.sidebar:
-        st.divider()
         st.header("Map")
         map_style = st.selectbox(
             "Basemap",
