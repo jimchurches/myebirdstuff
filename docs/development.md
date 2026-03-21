@@ -61,7 +61,7 @@ The notebook owns: widget creation, observers, initial Whoosh index creation (em
 - **Caching strategy** — In-memory, simple. Location groupbys and popup HTML are cached to avoid recomputation on redraw. Cache keys include enough context (e.g. location ID, species, date-filter view) to avoid stale data.
 - **Separation of UI and logic** — Notebook: widgets, event handlers, and orchestration. Modules: data loading, statistics, map rendering. Do not move business logic into the notebook.
 - **Jupytext** — The notebook is paired with `personal_ebird_explorer.py` (percent format). Use `jupytext --sync` to keep them in sync.
-- **Streamlit UI (prototype)** — Prefer **native Streamlit** (`st.expander`, `st.tabs`, `st.dataframe`, sidebar, `config.toml` theming) over custom HTML/CSS and `unsafe_allow_html`, unless there is a deliberate reason (shared notebook renderers, map embeds, experiments, **or preserving eBird links in tables** as in the notebook). See [AI_CONTEXT.md — Streamlit UI](AI_CONTEXT.md#streamlit-ui-prefer-native-components) and `streamlit_app/README.md` — *UI guidelines*.
+- **Streamlit UI (prototype)** — Use **native Streamlit** for layouts and simple tables. For **rankings / list tables** that mirror the notebook (linked species, locations, datetimes, styled cells), **`st.dataframe` is not sufficient** — use **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`** with HTML from **`checklist_stats_display`**, **`rankings_display`**, and related formatters in `personal_ebird_explorer/`; avoid parallel HTML in `streamlit_app/`. See [AI_CONTEXT.md — Streamlit UI](AI_CONTEXT.md#streamlit-ui) and `streamlit_app/README.md` — *UI guidelines*.
 
 ---
 
