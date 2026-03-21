@@ -66,12 +66,12 @@ Uploader wins over disk if a file is selected.
 ## Streamlit Community Cloud
 
 1. Connect the repo and set **Main file path** to `streamlit_app/app.py`.
-2. **Python requirements:** point to `requirements-streamlit.txt` (app settings).
+2. **Python requirements file (required):** in app **Settings → Advanced settings**, set this to  
+   **`requirements-streamlit.txt`** (repo root) **or** **`streamlit_app/requirements.txt`**.  
+   If you leave the default **`requirements.txt`**, the build only installs the **Jupyter** stack — you will get **Missing streamlit-folium** at runtime.
 3. Users upload their CSV via the app (do not commit private exports).
 
 ## Scope of this prototype
 
-- Load CSV via `personal_ebird_explorer.data_loader.load_dataset`.
-- Deduplicate by **Location ID** and show points with `st.map`.
-
-Not here yet: species filter, Folium popups, stats tabs, Whoosh, date filter, etc.
+- Load CSV via `personal_ebird_explorer.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (native Streamlit).  
+- Not here yet: species filter UI, rankings/yearly/country/maintenance parity, Whoosh, date filter, etc.

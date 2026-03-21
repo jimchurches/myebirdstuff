@@ -1,3 +1,9 @@
+# Jupyter / Binder / local notebook stack (pandas 3.x).
+#
+# Streamlit Community Cloud: do **not** use this file for the Streamlit app — it has no
+# streamlit / streamlit-folium and the pandas major version differs. In Cloud app settings
+# set **Python requirements** to `requirements-streamlit.txt` or `streamlit_app/requirements.txt`.
+#
 # Dependencies for personal_ebird_explorer notebook (Binder + pip install -r)
 jupyter
 jupyterlab
