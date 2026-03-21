@@ -1,5 +1,5 @@
 """
-A/B **Checklist Statistics (HTML)** tab: same six sections as native tabs, one ``st.tabs`` pane per table.
+**Checklist Statistics** (Streamlit): six sections as nested ``st.tabs``, one pane per table.
 
 Uses ``checklist_stats_streamlit_tab_sections_html`` (shared with ``format_checklist_stats_bundle`` column blocks).
 Styles: ``CHECKLIST_STATS_TABLE_CSS`` + tab-surface CSS from ``checklist_stats_display`` — injected **once** per page; all rules scoped under ``.streamlit-checklist-html-ab``.
@@ -36,9 +36,9 @@ def render_checklist_stats_streamlit_html(
     *,
     species_url_fn: Callable[[str], Optional[str]],
 ) -> None:
-    """Render checklist stats as nested Streamlit tabs (labels match ``checklist_stats_streamlit_native``)."""
+    """Render checklist stats as nested Streamlit tabs (section order fixed in ``checklist_stats_display``)."""
 
-    _ = species_url_fn  # API parity with native tab; rankings HTML not shown here.
+    _ = species_url_fn  # Reserved for future species links in this tab; rankings HTML not shown here.
 
     sections = checklist_stats_streamlit_tab_sections_html(payload)
     labels = [label for label, _ in sections]
@@ -50,11 +50,6 @@ def render_checklist_stats_streamlit_html(
         f"{_CHECKLIST_HTML_TAB_SURFACE_CSS}"
         "</style>",
         unsafe_allow_html=True,
-    )
-
-    st.caption(
-        "**A/B:** Shared HTML tables (`checklist_stats_streamlit_tab_sections_html`), one sub-tab per section. "
-        "Compare with **Checklist Statistics** (native `st.dataframe`)."
     )
 
     tab_objs = st.tabs(labels)

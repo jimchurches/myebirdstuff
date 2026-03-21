@@ -8,7 +8,7 @@ Early **Personal eBird Explorer** UI on Streamlit. The Jupyter notebook remains 
 
 ## UI guidelines
 
-- **Layouts and simple data** — Prefer Streamlit primitives: tabs, sidebar, `st.expander`, nested `st.tabs`, `st.dataframe` / `st.table`, `st.metric`, `st.columns`, `.streamlit/config.toml` theme (eBird-adjacent greens in `[theme]`). **Checklist Statistics** uses nested tabs (Streamlit expanders can’t act as a single-open accordion). Simple metric blocks may use `st.dataframe` with **Metric** / **Value** (and **eBird link** + `LinkColumn` on the streak tab where that pattern fits).
+- **Layouts and simple data** — Prefer Streamlit primitives: tabs, sidebar, `st.expander`, nested `st.tabs`, `st.dataframe` / `st.table`, `st.metric`, `st.columns`, `.streamlit/config.toml` theme (eBird-adjacent greens in `[theme]`). **Checklist Statistics** uses nested `st.tabs` plus **shared HTML** tables from `checklist_stats_streamlit_tab_sections_html` (same source as the notebook stats columns). Streamlit expanders can’t act as a single-open accordion for mutually exclusive panels — nested tabs are the pattern.
 - **Rich tables (rankings, “Interesting lists”, notebook-style lists)** — Jupyter builds these as **HTML** (linked species/locations/dates, bold counts, ⧉, dotted/solid link styling). **`st.dataframe` is the wrong tool** for that parity. **Use HTML from shared formatters** in `personal_ebird_explorer/` (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, etc.) and render with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`**. **Do not fork** duplicate table HTML in `streamlit_app/`. Same trust model as Folium popups: escape in formatters.
 - **eBird links** — Never drop deep links just to avoid HTML; match the notebook’s linking behaviour. See [AI_CONTEXT.md — Streamlit UI](../docs/AI_CONTEXT.md#streamlit-ui).
 - **One-off HTML** — Ad-hoc `unsafe_allow_html` not produced by a shared formatter is a last resort; prefer extending a module helper so notebook and Streamlit stay aligned.
@@ -51,7 +51,7 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 **Map height:** The Folium iframe uses a **fixed pixel height** (streamlit-folium). Use the sidebar slider **Map height (px)** (default 720). The app passes a `key` that includes the height so the component **remounts** when you change the slider (streamlit-folium otherwise keeps the same internal identity and ignores the new height). Changing height may reset pan/zoom on the map.
 
-**Tabs:** The main area mostly matches the Jupyter notebook tab order (`Map`, `Checklist Statistics`, …). **Streamlit-only:** an extra tab **Checklist Statistics (HTML)** A/B-tests the same metrics via shared section HTML (`checklist_stats_streamlit_tab_sections_html`) and theme-scoped CSS (default **green** zebra + accents, `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS`; optional **eBird-blue** via `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE` + `_USE_EBIRD_BLUE_HTML_TAB_THEME` in `checklist_stats_streamlit_html.py`) injected once next to the native `st.dataframe` version (`checklist_stats_streamlit_native.py`). **Map** uses **map_controller** + Folium. Checklist stats are computed once right under the main tab row (`st.spinner`), so the loading line appears whichever tab is open. Other tabs are still placeholders.
+**Tabs:** The main area matches the Jupyter notebook tab order (`Map`, `Checklist Statistics`, …). **Checklist Statistics** is shared section HTML (`checklist_stats_streamlit_tab_sections_html`) with theme-scoped CSS (default **green** zebra + accents, `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS`; optional **eBird-blue** via `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE` + `_USE_EBIRD_BLUE_HTML_TAB_THEME` in `checklist_stats_streamlit_html.py`), injected once. **Map** uses **map_controller** + Folium. Checklist stats are computed once right under the main tab row (`st.spinner`), so the loading line appears whichever tab is open. Other tabs are still placeholders.
 
 ## Data loading (same ideas as the notebook)
 
@@ -75,5 +75,5 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 ## Scope of this prototype
 
-- Load CSV via `personal_ebird_explorer.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (native Streamlit).  
+- Load CSV via `personal_ebird_explorer.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (shared HTML + nested `st.tabs`).  
 - Not here yet: species filter UI, rankings/yearly/country/maintenance parity, Whoosh, date filter, etc.

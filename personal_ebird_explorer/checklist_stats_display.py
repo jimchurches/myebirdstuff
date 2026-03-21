@@ -355,8 +355,9 @@ def _checklist_stats_hint_paragraph(plain_text: str) -> str:
 
 
 def checklist_stats_streamlit_tab_sections_html(payload: ChecklistStatsPayload) -> List[Tuple[str, str]]:
-    """Six ``(tab_label, inner_html)`` blocks for Streamlit nested tabs — same order as ``checklist_stats_streamlit_native``.
+    """Six ``(tab_label, inner_html)`` blocks for Streamlit nested checklist tabs (fixed section order).
 
+    Order: Overview, Checklist types, Total distance, Time eBirded, eBirding with Others, Checklist streak.
     *inner_html* is table + optional caption ``<p>`` only (no ``<h4>``; the tab supplies the title).
     """
     time_hint = (
