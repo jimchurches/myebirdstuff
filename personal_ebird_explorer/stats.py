@@ -83,20 +83,54 @@ def format_region_parts(value):
 # Longest streak
 # ---------------------------------------------------------------------------
 
+def _row_lid_str(row) -> str:
+    """Normalize Location ID from a checklist row for lifelist URLs."""
+    if row is None:
+        return ""
+    lid = row.get("Location ID", "")
+    if lid is None or (isinstance(lid, float) and pd.isna(lid)):
+        return ""
+    s = str(lid).strip()
+    return s
+
+
+def _row_loc_str(row) -> str:
+    """Normalize Location display string from a checklist row."""
+    if row is None:
+        return ""
+    loc = row.get("Location", "")
+    if loc is None or (isinstance(loc, float) and pd.isna(loc)):
+        return ""
+    return str(loc).strip()
+
+
 def longest_streak(unique_dates, cl):
     """Find longest streak of consecutive days with a checklist.
 
-    Returns (streak, start_date, start_loc, start_sid, end_date, end_loc, end_sid).
+    Returns (streak, start_date, start_loc, start_sid, start_lid, end_date, end_loc, end_sid, end_lid).
+    *start_lid* / *end_lid* are eBird Location IDs for lifelist links (empty if unknown).
     """
     streak = 0
     streak_start_date = ""
     streak_start_loc = ""
     streak_start_sid = ""
+    streak_start_lid = ""
     streak_end_date = ""
     streak_end_loc = ""
     streak_end_sid = ""
+    streak_end_lid = ""
     if len(unique_dates) == 0:
-        return streak, streak_start_date, streak_start_loc, streak_start_sid, streak_end_date, streak_end_loc, streak_end_sid
+        return (
+            streak,
+            streak_start_date,
+            streak_start_loc,
+            streak_start_sid,
+            streak_start_lid,
+            streak_end_date,
+            streak_end_loc,
+            streak_end_sid,
+            streak_end_lid,
+        )
 
     arr = np.asarray(pd.to_datetime(unique_dates)).astype("datetime64[D]")
     day_ints = np.unique(arr.view("int64"))
@@ -142,15 +176,27 @@ def longest_streak(unique_dates, cl):
         if not start_m.empty:
             start_sorted = start_m.sort_values(sort_col) if sort_col and start_m[sort_col].notna().any() else start_m
             start_row = start_sorted.iloc[0]
-            streak_start_loc = start_row.get("Location", "")
+            streak_start_loc = _row_loc_str(start_row)
             streak_start_sid = str(start_row.get("Submission ID", ""))
+            streak_start_lid = _row_lid_str(start_row)
         if not end_m.empty:
             end_sorted = end_m.sort_values(sort_col) if sort_col and end_m[sort_col].notna().any() else end_m
             end_row = end_sorted.iloc[-1]
-            streak_end_loc = end_row.get("Location", "")
+            streak_end_loc = _row_loc_str(end_row)
             streak_end_sid = str(end_row.get("Submission ID", ""))
+            streak_end_lid = _row_lid_str(end_row)
 
-    return streak, streak_start_date, streak_start_loc, streak_start_sid, streak_end_date, streak_end_loc, streak_end_sid
+    return (
+        streak,
+        streak_start_date,
+        streak_start_loc,
+        streak_start_sid,
+        streak_start_lid,
+        streak_end_date,
+        streak_end_loc,
+        streak_end_sid,
+        streak_end_lid,
+    )
 
 
 # ---------------------------------------------------------------------------

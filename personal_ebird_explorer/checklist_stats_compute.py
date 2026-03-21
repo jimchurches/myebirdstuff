@@ -69,9 +69,11 @@ class ChecklistStatsPayload:
     streak_start_date: str
     streak_start_loc: str
     streak_start_sid: str
+    streak_start_lid: str
     streak_end_date: str
     streak_end_loc: str
     streak_end_sid: str
+    streak_end_lid: str
     rankings: Dict[str, Any]
     years_list: List[Any]
     yearly_rows: List[Tuple[str, List[str]]]
@@ -97,6 +99,7 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
     n_individuals = int(df["Count"].apply(safe_count).sum())
 
     n_completed = "—"
+    n_incomplete = "—"
     if "All Obs Reported" in df.columns:
         a = cl["All Obs Reported"]
         reported = a.notna() & (
@@ -104,6 +107,14 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
             | (a.astype(str).str.strip().str.upper().isin(["TRUE", "YES", "Y"]))
         )
         n_completed = f"{reported.sum():,}"
+        incomplete = a.notna() & ~reported
+        if "Protocol" in cl.columns:
+            excl_inc_hist = cl["Protocol"].astype(str).str.strip().str.lower().str.contains(
+                "incidental|historical|casual observation", na=False, regex=True
+            )
+        else:
+            excl_inc_hist = pd.Series(False, index=cl.index)
+        n_incomplete = f"{int((incomplete & ~excl_inc_hist).sum()):,}"
 
     protocol_counts = {p: 0 for p in PROTOCOL_ORDER}
     if "Protocol" in df.columns:
@@ -115,6 +126,7 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
             disp = PROTOCOL_MAP.get(p, "Other")
             protocol_counts[disp] = protocol_counts.get(disp, 0) + 1
     protocol_rows = [(k, f"{v:,}") for k, v in protocol_counts.items()]
+    protocol_rows.append(("Incomplete checklists", n_incomplete))
     protocol_rows.append(("Completed checklists", n_completed))
 
     total_minutes = 0.0
@@ -161,9 +173,17 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
     godwit_km = 13_560
     times_godwit = total_km / godwit_km
 
-    streak, streak_start_date, streak_start_loc, streak_start_sid, streak_end_date, streak_end_loc, streak_end_sid = longest_streak(
-        unique_dates, cl
-    )
+    (
+        streak,
+        streak_start_date,
+        streak_start_loc,
+        streak_start_sid,
+        streak_start_lid,
+        streak_end_date,
+        streak_end_loc,
+        streak_end_sid,
+        streak_end_lid,
+    ) = longest_streak(unique_dates, cl)
 
     rankings = compute_rankings(df, cl, top_n_limit, dur_col, dist_col)
     years_list, yearly_rows, incomplete_by_year = yearly_summary_stats(df, cl, dur_col, dist_col)
@@ -194,9 +214,11 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
         streak_start_date=streak_start_date,
         streak_start_loc=streak_start_loc,
         streak_start_sid=streak_start_sid,
+        streak_start_lid=streak_start_lid,
         streak_end_date=streak_end_date,
         streak_end_loc=streak_end_loc,
         streak_end_sid=streak_end_sid,
+        streak_end_lid=streak_end_lid,
         rankings=rankings,
         years_list=years_list,
         yearly_rows=yearly_rows,
