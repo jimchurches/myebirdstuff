@@ -20,9 +20,8 @@ Disk path takes precedence over a stale session upload when both exist.
 
 **Taxonomy:** After CSV load, the app fetches the eBird taxonomy once per session (cached) so species
 names in popups can link to eBird species pages. Default locale is **en_AU**; override with
-``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE`` or the sidebar field. Streamlit does
-not expose the browser language to Python; optional future approaches are query params, a tiny
-custom component, or heuristics from export columns (e.g. dominant ``Country``) — none wired yet.
+``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE`` or **Settings → Species links**.
+Streamlit does not expose the browser language to Python.
 
 **Checklist Statistics:** Shared HTML sections (nested ``st.tabs`` + formatted tables from
 ``checklist_stats_streamlit_tab_sections_html``). ``_cached_checklist_stats_payload`` runs **once** immediately
@@ -65,6 +64,11 @@ from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
     prepare_all_locations_map_context,
 )
 from checklist_stats_streamlit_html import render_checklist_stats_streamlit_html  # noqa: E402
+from map_working import (  # noqa: E402
+    date_inception_to_today_default,
+    folium_map_to_html_bytes,
+    streamlit_working_set_and_status,
+)
 
 DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", "MyEBirdData.csv")
 
@@ -87,6 +91,9 @@ DEFAULT_TAXONOMY_LOCALE = "en_AU"
 
 # Session-only: bytes + filename so reruns work without rendering ``st.file_uploader`` on the dashboard.
 _SESSION_UPLOAD_CACHE_KEY = "_ebird_streamlit_upload_csv_cache"
+# Survive Map view switch All locations ↔ Lifer (widgets not rendered on Lifer runs).
+_PERSIST_MAP_DATE_FILTER_KEY = "_preserve_map_date_filter"
+_PERSIST_MAP_DATE_RANGE_KEY = "_preserve_map_date_range"
 
 
 def _env_taxonomy_locale() -> str:
@@ -187,13 +194,13 @@ def main() -> None:
     ):
         upload_cache = None
 
-    df, provenance = _load_dataframe(uploaded=None, upload_cache=upload_cache)
+    df_full, provenance = _load_dataframe(uploaded=None, upload_cache=upload_cache)
 
-    if df is not None and provenance and "Disk:" in provenance:
+    if df_full is not None and provenance and "Disk:" in provenance:
         # Drop stale session upload when disk resolution wins (local path after a prior Cloud upload).
         st.session_state.pop(_SESSION_UPLOAD_CACHE_KEY, None)
 
-    if df is None:
+    if df_full is None:
         st.title("Personal eBird Explorer")
         st.subheader("Streamlit prototype")
         st.write("Upload your **My eBird Data** CSV to open the map and tabs.")
@@ -220,7 +227,7 @@ def main() -> None:
             """
         )
         st.caption(
-            "Species links use **en_AU** taxonomy for now; wider locale support may come later. "
+            "Species links default to **en_AU**; change locale under **Settings → Species links** after load. "
             "Data still loads if names don’t match.\n\n"
             "This page is skipped when a CSV is already found on disk (local config path). "
             "Support for local files works when Streamlit is running locally; see the code repo for more information. "
@@ -228,19 +235,94 @@ def main() -> None:
         )
         return
 
+    if "popup_html_cache" not in st.session_state:
+        st.session_state.popup_html_cache = {}
+    if "filtered_by_loc_cache" not in st.session_state:
+        st.session_state.filtered_by_loc_cache = OrderedDict()
+
     with st.sidebar:
         st.header("Map")
+
+        map_view_label = st.selectbox(
+            "Map view",
+            ["All locations", "Lifer locations"],
+            index=0,
+        )
+        map_view_mode = "lifers" if map_view_label == "Lifer locations" else "all"
+        is_lifer_view = map_view_mode == "lifers"
+
+        st.markdown("**Date**")
+        if is_lifer_view:
+            st.caption("Lifer locations is not date-filtered.")
+            if st.session_state.get(_PERSIST_MAP_DATE_FILTER_KEY, False):
+                st.caption(
+                    "Your date filter is preserved for other map views."
+                )
+            date_filter_on_effective = False
+            date_range_sel: tuple | None = None
+        else:
+            # Restore widget keys after Lifer view (those widgets were not rendered, keys may be missing).
+            if "streamlit_map_date_filter" not in st.session_state:
+                st.session_state.streamlit_map_date_filter = bool(
+                    st.session_state.get(_PERSIST_MAP_DATE_FILTER_KEY, False)
+                )
+            if st.session_state.get("streamlit_map_date_filter", False):
+                if "streamlit_map_date_range" not in st.session_state:
+                    pr = st.session_state.get(_PERSIST_MAP_DATE_RANGE_KEY)
+                    if isinstance(pr, tuple) and len(pr) == 2:
+                        st.session_state.streamlit_map_date_range = pr
+                    else:
+                        a, b = date_inception_to_today_default(df_full)
+                        st.session_state.streamlit_map_date_range = (a, b)
+
+            date_filter_on_effective = st.toggle(
+                "Date filter",
+                key="streamlit_map_date_filter",
+                help="Turn on to limit the map and checklist stats to a date range.",
+            )
+            if not date_filter_on_effective:
+                date_range_sel = None
+            else:
+                d_inception, today = date_inception_to_today_default(df_full)
+                # Clamp range into [d_inception, today] via session state only — do not pass
+                # `value=` here or Streamlit warns when the key is also set via session_state.
+                if "streamlit_map_date_range" not in st.session_state:
+                    st.session_state.streamlit_map_date_range = (d_inception, today)
+                rng = st.session_state["streamlit_map_date_range"]
+                if not isinstance(rng, tuple) or len(rng) != 2:
+                    st.session_state.streamlit_map_date_range = (d_inception, today)
+                else:
+                    r0 = max(min(rng[0], today), d_inception)
+                    r1 = max(min(rng[1], today), d_inception)
+                    rng_val = (r0, r1) if r0 <= r1 else (r1, r0)
+                    if rng_val != rng:
+                        st.session_state.streamlit_map_date_range = rng_val
+                dr = st.date_input(
+                    "Date range",
+                    min_value=d_inception,
+                    max_value=today,
+                    key="streamlit_map_date_range",
+                )
+                if isinstance(dr, tuple) and len(dr) == 2:
+                    date_range_sel = (dr[0], dr[1])
+                else:
+                    date_range_sel = (d_inception, today)
+
+            # Persist for return from Lifer map (and page reruns).
+            st.session_state[_PERSIST_MAP_DATE_FILTER_KEY] = date_filter_on_effective
+            if date_filter_on_effective and date_range_sel is not None:
+                st.session_state[_PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
+
+        st.divider()
+
         map_style = st.selectbox(
             "Basemap",
             options=["default", "satellite", "google", "carto"],
             index=0,
-            help="Same tile sets as the notebook User Variables.",
         )
-        st.text_input(
-            "Taxonomy locale (species links)",
-            key="streamlit_taxonomy_locale",
-            help="eBird API locale (e.g. en_AU, en_GB). Empty input is treated as en_AU. "
-            "First visit default: STREAMLIT_EBIRD_TAXONOMY_LOCALE / EBIRD_TAXONOMY_LOCALE, else en_AU.",
+        st.markdown(
+            '<div style="height:0.65rem" aria-hidden="true"></div>',
+            unsafe_allow_html=True,
         )
         map_height = st.slider(
             "Map height (px)",
@@ -248,9 +330,25 @@ def main() -> None:
             max_value=1200,
             value=720,
             step=20,
-            help="Folium is embedded at a fixed pixel height — adjust for your display. "
-            "True “full viewport” height isn’t available without custom components.",
         )
+
+    ws, date_filter_banner = streamlit_working_set_and_status(
+        df_full,
+        map_view_mode=map_view_mode,
+        date_filter_on=date_filter_on_effective,
+        date_range=date_range_sel,
+        map_caches=(st.session_state.popup_html_cache, st.session_state.filtered_by_loc_cache),
+    )
+    if ws is None:
+        st.error("Invalid date range. Using all-time data for this run.")
+        ws, date_filter_banner = streamlit_working_set_and_status(
+            df_full,
+            map_view_mode=map_view_mode,
+            date_filter_on=False,
+            date_range=None,
+            map_caches=(st.session_state.popup_html_cache, st.session_state.filtered_by_loc_cache),
+        )
+    work_df = ws.df
 
     tax_locale_effective = (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE)
     species_url_fn = _cached_species_url_fn(tax_locale_effective)
@@ -269,7 +367,7 @@ def main() -> None:
 
     # Hoisted: spinner lives in the main column (not inside a tab panel) so it’s visible on Map, etc.
     with st.spinner("Computing checklist statistics…"):
-        checklist_payload = _cached_checklist_stats_payload(df)
+        checklist_payload = _cached_checklist_stats_payload(work_df)
 
     def _tab_test_placeholder(notebook_name: str, blurb: str) -> None:
         st.markdown(f"**TEST** — `{notebook_name}` tab (placeholder only).")
@@ -277,16 +375,17 @@ def main() -> None:
 
     with tab_map:
         prov_plain = provenance or ""
-        sig = data_signature_for_caches(df, prov_plain)
+        sig = data_signature_for_caches(df_full, prov_plain)
         if st.session_state.get("ebird_data_sig") != sig:
             st.session_state.ebird_data_sig = sig
             st.session_state.popup_html_cache = {}
             st.session_state.filtered_by_loc_cache = OrderedDict()
 
         try:
-            ctx = prepare_all_locations_map_context(df)
+            ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
         except ValueError as e:
             st.warning(str(e))
+            st.session_state.pop("_explorer_map_html_bytes", None)
         else:
             result = build_species_overlay_map(
                 **ctx,
@@ -295,20 +394,23 @@ def main() -> None:
                 map_style=map_style,
                 popup_sort_order="ascending",
                 popup_scroll_hint="shading",
-                date_filter_status="",
+                date_filter_status=date_filter_banner,
                 species_url_fn=species_url_fn,
                 base_species_fn=base_species_for_lifer,
                 popup_html_cache=st.session_state.popup_html_cache,
                 filtered_by_loc_cache=st.session_state.filtered_by_loc_cache,
-                map_view_mode="all",
+                map_view_mode=map_view_mode,
                 hide_non_matching_locations=False,
             )
 
             if result.warning:
                 st.warning(result.warning)
+                st.session_state.pop("_explorer_map_html_bytes", None)
             elif result.map is None:
                 st.warning("Map could not be built.")
+                st.session_state.pop("_explorer_map_html_bytes", None)
             else:
+                st.session_state["_explorer_map_html_bytes"] = folium_map_to_html_bytes(result.map)
                 try:
                     from streamlit_folium import st_folium
                 except ImportError:
@@ -368,11 +470,35 @@ def main() -> None:
         st.warning("TEST warning style — not a real problem.")
 
     with tab_settings:
+        st.subheader("Species links")
+        st.text_input(
+            "Taxonomy locale (species page URLs)",
+            key="streamlit_taxonomy_locale",
+            help="eBird API locale for species names in taxonomy CSV (e.g. en_AU, en_GB). "
+            "Empty is treated as en_AU.",
+        )
+        st.caption(
+            "Used for species links in map popups and elsewhere. First-visit default: "
+            "``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE``, else en_AU."
+        )
+        st.divider()
         _tab_test_placeholder(
-            "Settings",
-            "Pretend: table row limits, country tab sort order, close-location metres.",
+            "More settings",
+            "Table row limits, country tab sort order, close-location metres — not wired yet.",
         )
         st.button("TEST button (does nothing)", disabled=True)
+
+    if st.session_state.get("_explorer_map_html_bytes"):
+        with st.sidebar:
+            st.divider()
+            st.download_button(
+                "Export map HTML",
+                data=st.session_state["_explorer_map_html_bytes"],
+                file_name="ebird_map.html",
+                mime="text/html",
+                key="export_map_html_btn",
+                help="Standalone HTML for the current map (notebook-style export).",
+            )
 
 
 if __name__ == "__main__":

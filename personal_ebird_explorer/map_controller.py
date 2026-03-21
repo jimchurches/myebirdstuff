@@ -29,6 +29,7 @@ from personal_ebird_explorer.map_renderer import (
     create_map,
     format_sighting_row,
     format_visit_time,
+    map_popup_theme_stylesheet,
     popup_scroll_script,
     resolve_lifer_last_seen,
 )
@@ -41,13 +42,17 @@ BaseSpeciesFn = Callable[[str], Optional[str]]
 _VALID_MAP_VIEWS = frozenset({"all", "species", "lifers"})
 
 
+def _inject_map_popup_theme(map_obj: folium.Map) -> None:
+    """One ``<style>`` block so Leaflet popups match Streamlit checklist HTML typography (refs #70)."""
+    map_obj.get_root().html.add_child(Element(map_popup_theme_stylesheet()))
+
+
 def _format_lifer_species_popup_lines(
     rows: List[Tuple[str, str]],
     species_url_fn: SpeciesUrlFn,
 ) -> str:
     """HTML fragment: one line per lifer species (optional eBird species links)."""
     parts: List[str] = []
-    link_style = "color:inherit;text-decoration:underline dotted;text-underline-offset:2px;"
     for sci, common in rows:
         label = common if common else sci
         esc_label = html_module.escape(label)
@@ -57,8 +62,7 @@ def _format_lifer_species_popup_lines(
         if url:
             esc_url = html_module.escape(url, quote=True)
             parts.append(
-                f'<br><a href="{esc_url}" target="_blank" rel="noopener" '
-                f'style="{link_style}">{esc_label}</a>'
+                f'<br><a href="{esc_url}" target="_blank" rel="noopener">{esc_label}</a>'
             )
         else:
             parts.append(f"<br>{esc_label}")
@@ -158,6 +162,7 @@ def build_species_overlay_map(
             )
         map_center = [loc_rows["Latitude"].mean(), loc_rows["Longitude"].mean()]
         species_map = create_map(map_center, map_style)
+        _inject_map_popup_theme(species_map)
         popup_asc = popup_sort_order == "ascending"
         dfs = date_filter_status or None
         n_locations = int(loc_rows["Location ID"].nunique())
@@ -220,6 +225,7 @@ def build_species_overlay_map(
         ]
 
     species_map = create_map(map_center, map_style)
+    _inject_map_popup_theme(species_map)
     popup_asc = popup_sort_order == "ascending"
     dfs = date_filter_status or None
 

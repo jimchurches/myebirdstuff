@@ -51,6 +51,8 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 **Map height:** The Folium iframe uses a **fixed pixel height** (streamlit-folium). Use the sidebar slider **Map height (px)** (default 720). The app passes a `key` that includes the height so the component **remounts** when you change the slider (streamlit-folium otherwise keeps the same internal identity and ignores the new height). Changing height may reset pan/zoom on the map.
 
+**Map sidebar (controls):** **Map view** (`All locations` / `Lifer locations`) is the main mode switch (same roles as the notebook’s Map View). **Date** — **Date filter** toggle (off = all-time; on = show **date range** picker, default inception → today, `max` is today so the calendar matches wall-clock day). In **Lifer locations** mode, date controls are hidden and the map uses all-time data; your **All locations** filter choice is **remembered in session** so when you switch back, the toggle and range match what you had (until you change or clear them). A **divider** separates Date from Basemap; another appears above **Export map HTML**. **Export map HTML** — `st.download_button` at the bottom of the sidebar (bytes from `folium.Map.get_root().render()` after each successful build). **Taxonomy locale** for species links lives under **Settings → Species links** (not the map sidebar).
+
 **Tabs:** The main area matches the Jupyter notebook tab order (`Map`, `Checklist Statistics`, …). **Checklist Statistics** is shared section HTML (`checklist_stats_streamlit_tab_sections_html`) with theme-scoped CSS (default **green** zebra + accents, `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS`; optional **eBird-blue** via `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE` + `_USE_EBIRD_BLUE_HTML_TAB_THEME` in `checklist_stats_streamlit_html.py`), injected once. **Map** uses **map_controller** + Folium. Checklist stats are computed once right under the main tab row (`st.spinner`), so the loading line appears whichever tab is open. Other tabs are still placeholders.
 
 ## Data loading (same ideas as the notebook)
@@ -76,4 +78,4 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 ## Scope of this prototype
 
 - Load CSV via `personal_ebird_explorer.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (shared HTML + nested `st.tabs`).  
-- Not here yet: species filter UI, rankings/yearly/country/maintenance parity, Whoosh, date filter, etc.
+- Not here yet: species filter UI, rankings/yearly/country/maintenance parity, Whoosh, etc.

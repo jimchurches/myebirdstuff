@@ -4,11 +4,63 @@ Map rendering helpers for Personal eBird Explorer.
 Pure helper functions used by the notebook's map overlay pipeline.
 Each function takes explicit inputs and returns a value — no notebook
 globals, widget references, or side effects.
+
+Popup HTML is plain strings passed to ``folium.Popup``; typography and colours are **not** locked to
+Leaflet defaults: ``map_popup_theme_stylesheet`` (injected once per map in ``map_controller``) and
+``EXPLORER_UI_*`` constants align with the Streamlit checklist stats HTML tab and ``.streamlit/config.toml``.
 """
 
 import html as _html_module
 import folium
 import pandas as pd
+
+# ---------------------------------------------------------------------------
+# UI theme (aligned with Streamlit Checklist Statistics HTML + ``.streamlit/config.toml``; refs #70)
+# ---------------------------------------------------------------------------
+
+EXPLORER_UI_FONT_STACK = (
+    '"Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+)
+EXPLORER_UI_TEXT_COLOR = "#1a2e22"
+EXPLORER_UI_PRIMARY_GREEN = "#1f6f54"
+EXPLORER_UI_PANEL_BG = "rgba(250, 252, 250, 0.97)"
+EXPLORER_UI_MUTED = "rgba(26, 46, 34, 0.55)"
+
+
+def map_popup_theme_stylesheet() -> str:
+    """Return a ``<style>`` block for Leaflet popups (injected once per map via ``branca.element.Element``).
+
+    Targets ``.pebird-map-popup`` wrappers from ``build_location_popup_html``. Font size matches the
+    checklist HTML tab panel (~0.8125rem); links use the same primary green as Streamlit theme fallbacks.
+    """
+    return f"""
+<style>
+.leaflet-popup-content .pebird-map-popup,
+.leaflet-popup-content .pebird-map-popup * {{
+  box-sizing: border-box;
+}}
+.pebird-map-popup {{
+  font-family: {EXPLORER_UI_FONT_STACK};
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 400;
+  color: {EXPLORER_UI_TEXT_COLOR};
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}}
+.pebird-map-popup b {{
+  font-weight: 600;
+}}
+.pebird-map-popup a {{
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  text-decoration: none;
+  font-weight: 400;
+}}
+.pebird-map-popup a:hover {{
+  text-decoration: underline;
+}}
+</style>
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +160,7 @@ def build_location_popup_html(
     else:
         extra_section = ""
     return (
-        f'<div class="popup-scroll-wrapper" style="position:relative;">'
+        f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
         f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div>'
         f'<div style="max-height:300px;overflow-y:auto;">'
         f'<b>Visited:</b><br>{visit_info_html}{extra_section}'
@@ -122,17 +174,23 @@ def build_location_popup_html(
 
 _BANNER_STYLE = (
     "position:fixed;top:10px;right:10px;z-index:1000;"
-    "background:rgba(255,255,255,0.95);padding:10px 14px;"
-    "border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);"
-    "font-family:sans-serif;font-size:13px;line-height:1.5;"
+    f"background:{EXPLORER_UI_PANEL_BG};padding:10px 14px;"
+    "border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.12);"
+    f"border:1px solid rgba(31,111,84,0.15);"
+    f"font-family:{EXPLORER_UI_FONT_STACK};font-size:0.8125rem;line-height:1.45;"
+    f"color:{EXPLORER_UI_TEXT_COLOR};"
+    "-webkit-font-smoothing:antialiased;"
 )
 
 _LEGEND_STYLE = (
     "position:fixed;bottom:10px;left:10px;z-index:1000;"
-    "background:rgba(255,255,255,0.95);padding:6px 10px;"
-    "border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.2);"
-    "font-family:sans-serif;font-size:11px;line-height:1.5;"
+    f"background:{EXPLORER_UI_PANEL_BG};padding:6px 10px;"
+    "border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.12);"
+    f"border:1px solid rgba(31,111,84,0.15);"
+    f"font-family:{EXPLORER_UI_FONT_STACK};font-size:0.75rem;line-height:1.45;"
+    f"color:{EXPLORER_UI_TEXT_COLOR};"
     "display:flex;flex-wrap:wrap;gap:8px 12px;"
+    "-webkit-font-smoothing:antialiased;"
 )
 
 def pin_legend_item(color, fill, label):
@@ -154,7 +212,7 @@ def build_all_species_banner_html(
     it is shown as a second line in the banner, smaller and lighter so it is less prominent.
     """
     date_line = (
-        f'<br><span style="font-size: 0.85em; color: #999;">{date_filter_status}</span>'
+        f'<br><span style="font-size:0.85em;color:{EXPLORER_UI_MUTED};">{date_filter_status}</span>'
         if date_filter_status
         else ""
     )
@@ -174,7 +232,7 @@ def build_lifer_locations_banner_html(
 ):
     """Banner for lifer-only map mode (refs #71)."""
     date_line = (
-        f'<br><span style="font-size: 0.85em; color: #999;">{date_filter_status}</span>'
+        f'<br><span style="font-size:0.85em;color:{EXPLORER_UI_MUTED};">{date_filter_status}</span>'
         if date_filter_status
         else ""
     )
@@ -184,7 +242,7 @@ def build_lifer_locations_banner_html(
         f'<b>Lifer locations</b><br>'
         f'{n_lifer_species} lifer{"s" if n_lifer_species != 1 else ""}'
         f' &nbsp;|&nbsp; {n_locations} {loc_w}'
-        f'<br><span style="font-size: 0.85em; color: #999;">Sub-species included</span>'
+        f'<br><span style="font-size:0.85em;color:{EXPLORER_UI_MUTED};">Sub-species included</span>'
         f'</div>'
     )
 
@@ -234,7 +292,7 @@ def build_species_banner_html(
     line3 = sep.join(line3_parts)
     line4 = f"High count: {high_count_date} ({high_count})"
     date_line = (
-        f'<br><span style="font-size: 0.85em; color: #999;">{date_filter_status}</span>'
+        f'<br><span style="font-size:0.85em;color:{EXPLORER_UI_MUTED};">{date_filter_status}</span>'
         if date_filter_status
         else ""
     )
@@ -321,10 +379,10 @@ def popup_scroll_script(scroll_hint, scroll_to_bottom):
     if (HINT === 'shading' || HINT === 'both') {{
       var topShade = document.createElement('div');
       topShade.className = 'popup-scroll-shade-top';
-      topShade.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);';
+      topShade.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(250,252,250,0.97),transparent);';
       var botShade = document.createElement('div');
       botShade.className = 'popup-scroll-shade-bot';
-      botShade.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);';
+      botShade.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(250,252,250,0.97),transparent);';
       wrapper.appendChild(topShade);
       wrapper.appendChild(botShade);
     }}
