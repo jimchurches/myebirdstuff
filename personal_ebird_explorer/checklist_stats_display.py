@@ -208,7 +208,248 @@ def _format_country_summary_html(
   <div style="width:100%;max-width:1400px;padding:0 clamp(16px,3vw,32px) 24px;box-sizing:border-box;">
   <h4 style="margin-top:0;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">By country</h4>
 {inner}
-  </div>"""
+    </div>"""
+
+
+# Shared with notebook stats panel HTML and Streamlit HTML tab (refs #70).
+CHECKLIST_STATS_TABLE_CSS = """
+    .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
+    .stats-info-glyph { cursor:help; opacity:0.7; }
+    .stats-info-tooltip { position:absolute; bottom:100%; top:auto; margin-bottom:6px; margin-top:0; padding:10px 14px; background:#374151; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(320px,85vw); min-width:180px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); opacity:0; visibility:hidden; transition:opacity 0.15s; pointer-events:none; z-index:9999; right:0; left:auto; }
+    .stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
+    .stats-col:first-child .stats-info-tooltip { right:0; left:auto; }
+    .stats-col:last-child .stats-info-tooltip { left:0; right:auto; }
+    .stats-tbl-3 th:nth-child(2), .stats-tbl-3 td:nth-child(2) { text-align:center; }
+    .rankings-tbl td:first-child { font-weight:normal; }
+    """
+
+# Injected once by ``streamlit_app/checklist_stats_streamlit_html`` around checklist sub-tabs only.
+# Scoped under ``.streamlit-checklist-html-ab`` so Jupyter ``stats_html`` / notebook layout stay unchanged.
+#
+# **Default:** green accents + zebra (``#1f6f54`` — aligns with ``.streamlit/config.toml`` primary).
+# **Alternate:** ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE`` (eBird-style blue); enable via
+# ``_USE_EBIRD_BLUE_HTML_TAB_THEME`` in ``checklist_stats_streamlit_html.py``.
+#
+# Typography is slightly smaller than 1rem so body matches Streamlit sub-tab labels (which read ~14px / normal weight).
+def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
+    """Build scoped Streamlit HTML-tab CSS (blue or green accent + zebra rows)."""
+    if blue_theme:
+        # eBird-ish blue (links / nav on eBird.org lean this way; tweak if you standardise on brand specs).
+        acc = "21, 101, 168"  # #1565a8
+        link = "#1565a8"
+        text_fb = "#1a2e22"
+        p_fallback = "26, 46, 34"
+    else:
+        acc = "31, 111, 84"  # #1f6f54 — matches Streamlit config.toml primary / prior green tab
+        link = "#1f6f54"
+        text_fb = "#1a2e22"
+        p_fallback = "26, 46, 34"
+    return f"""
+.streamlit-checklist-html-ab {{
+  display: block;
+  width: 100%;
+  max-width: min(68rem, 100%);
+  min-width: min(100%, 20rem);
+  box-sizing: border-box;
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-color, {text_fb});
+}}
+.streamlit-checklist-html-ab .stats-tbl {{
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: inherit;
+  font-weight: 400;
+  background: var(--background-color, #fafcfa);
+  color: var(--text-color, {text_fb});
+  border: 1px solid rgba({acc}, 0.22);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}}
+.streamlit-checklist-html-ab .stats-tbl td {{
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid rgba({acc}, 0.12);
+  vertical-align: top;
+}}
+.streamlit-checklist-html-ab .stats-tbl tbody tr:nth-child(odd) td {{
+  background: rgba({acc}, 0.04);
+}}
+.streamlit-checklist-html-ab .stats-tbl tbody tr:nth-child(even) td {{
+  background: rgba({acc}, 0.085);
+}}
+.streamlit-checklist-html-ab .stats-tbl tr:last-child td {{
+  border-bottom: none;
+}}
+.streamlit-checklist-html-ab .stats-tbl td:first-child {{
+  width: 58%;
+  font-weight: 400;
+  padding-right: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}}
+.streamlit-checklist-html-ab .stats-tbl td:last-child {{
+  width: 42%;
+  text-align: right;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}}
+.streamlit-checklist-html-ab .stats-tbl tbody tr:hover td {{
+  background: rgba({acc}, 0.14) !important;
+}}
+.streamlit-checklist-html-ab a {{
+  color: var(--primary-color, {link});
+  text-decoration: none;
+  font-weight: 400;
+}}
+.streamlit-checklist-html-ab a:hover {{
+  text-decoration: underline;
+}}
+.streamlit-checklist-html-ab > p {{
+  margin: 0.5rem 0 0;
+  color: color-mix(in srgb, var(--text-color, {text_fb}) 64%, transparent);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}}
+@supports not (color: color-mix(in srgb, black 50%, white)) {{
+  .streamlit-checklist-html-ab > p {{
+    color: rgba({p_fallback}, 0.7);
+  }}
+}}
+"""
+
+
+# Canonical Streamlit HTML-tab surface (green — app default).
+CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS = _streamlit_checklist_html_tab_css(blue_theme=False)
+CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE = _streamlit_checklist_html_tab_css(blue_theme=True)
+# Back-compat: same string as ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS``.
+CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_GREEN = CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS
+
+_AUDUBON_4BBRW_ARTICLE_URL = (
+    "https://www.audubon.org/news/these-mighty-shorebirds-keep-breaking-flight-records-and-you-can-follow-along"
+)
+
+
+def _checklist_stats_kv_row(label: str, value: str) -> str:
+    return f"<tr><td>{label}</td><td>{value}</td></tr>"
+
+
+def _checklist_stats_tbody_table(rows: List[Tuple[str, str]]) -> str:
+    body = "".join(_checklist_stats_kv_row(lab, val) for lab, val in rows)
+    return f"<table class=\"stats-tbl\"><tbody>{body}</tbody></table>"
+
+
+def _checklist_stats_hint_paragraph(plain_text: str) -> str:
+    return (
+        "<p style=\"margin:4px 0 0;color:#6b7280;font-size:12px;line-height:1.5;\">"
+        f"{html_module.escape(plain_text)}</p>"
+    )
+
+
+def checklist_stats_streamlit_tab_sections_html(payload: ChecklistStatsPayload) -> List[Tuple[str, str]]:
+    """Six ``(tab_label, inner_html)`` blocks for Streamlit nested tabs — same order as ``checklist_stats_streamlit_native``.
+
+    *inner_html* is table + optional caption ``<p>`` only (no ``<h4>``; the tab supplies the title).
+    """
+    time_hint = (
+        "Incidental, historical and other untimed checklists don't count towards total time, "
+        "but do count towards Days with a checklist."
+    )
+    incomplete_checklist_hint = (
+        "Incidental, historical and other untimed checklists don't count towards the incomplete checklist total."
+    )
+    godwit_hint = (
+        "4BBRW: Bar-tailed Godwit, Alaska→Tasmania, ~13,560 km nonstop (2022). 11 days without landing."
+    )
+
+    def _esc(s: Any) -> str:
+        return html_module.escape(str(s) if s is not None else "")
+
+    def _checklist_date_cell(date_str: str, sid: str) -> str:
+        if sid:
+            href = f"https://ebird.org/checklist/{url_quote(str(sid), safe='')}"
+            return f'<a href="{href}" target="_blank" rel="noopener noreferrer">{_esc(date_str)}</a>'
+        return _esc(date_str)
+
+    def _lifelist_loc_cell(loc: str, lid: str) -> str:
+        if lid:
+            href = f"https://ebird.org/lifelist/{url_quote(str(lid), safe='')}"
+            return f'<a href="{href}" target="_blank" rel="noopener noreferrer">{_esc(loc)}</a>'
+        return _esc(loc)
+
+    streak_start_date_cell = _checklist_date_cell(payload.streak_start_date, payload.streak_start_sid)
+    streak_end_date_cell = _checklist_date_cell(payload.streak_end_date, payload.streak_end_sid)
+    streak_start_loc_cell = _lifelist_loc_cell(payload.streak_start_loc, payload.streak_start_lid)
+    streak_end_loc_cell = _lifelist_loc_cell(payload.streak_end_loc, payload.streak_end_lid)
+
+    godwit_caption_p = (
+        "<p style=\"margin:8px 0 0;color:#6b7280;font-size:12px;line-height:1.5;\">"
+        f"{html_module.escape(godwit_hint)} "
+        f'<a href="{html_module.escape(_AUDUBON_4BBRW_ARTICLE_URL, quote=True)}" '
+        'target="_blank" rel="noopener noreferrer">Audubon article</a>.</p>'
+    )
+
+    overview_rows: List[Tuple[str, str]] = [
+        ("Total checklists", f"{payload.n_checklists:,}"),
+        ("Total species", f"{payload.n_species:,}"),
+        ("Total individuals", f"{payload.n_individuals:,}"),
+    ]
+    dist_rows: List[Tuple[str, str]] = [
+        ("Kilometers traveled", f"{payload.total_km:,.2f}"),
+        ("Parkruns (5 km)", f"{payload.parkruns:,.2f}"),
+        ("Marathons (42.195 km)", f"{payload.marathons:,.2f}"),
+        ("Longest Flight (4BBRW)", f"{payload.times_godwit:,.2f}"),
+        ("Times around the equator", f"{payload.times_equator:,.2f}"),
+    ]
+    time_rows: List[Tuple[str, str]] = [
+        ("Total minutes", f"{payload.total_minutes:,.2f}"),
+        ("Total hours", f"{payload.total_hours:,.2f}"),
+        ("Total days", f"{payload.total_days_dec:,.2f}"),
+        ("Months", f"{payload.total_months:,.2f}"),
+        ("Total years", f"{payload.total_years:,.2f}"),
+        ("Days with a checklist", f"{payload.n_days_with_checklist:,}"),
+    ]
+    others_rows: List[Tuple[str, str]] = [
+        ("Shared checklists", f"{payload.n_shared:,}"),
+        ("Minutes eBirding with others", f"{payload.shared_minutes:,.0f}"),
+        ("Hours eBirding with others", f"{payload.shared_hours:,.2f}"),
+        ("Days birding with others", f"{payload.n_days_birding_with_others:,}"),
+    ]
+    streak_rows: List[Tuple[str, str]] = [
+        ("Longest streak (consecutive days)", str(payload.streak)),
+        ("Start date", streak_start_date_cell),
+        ("Start location", streak_start_loc_cell),
+        ("End date", streak_end_date_cell),
+        ("End location", streak_end_loc_cell),
+    ]
+
+    return [
+        ("Overview", _checklist_stats_tbody_table(overview_rows)),
+        (
+            "Checklist types",
+            _checklist_stats_tbody_table(list(payload.protocol_rows))
+            + _checklist_stats_hint_paragraph(incomplete_checklist_hint),
+        ),
+        ("Total distance", _checklist_stats_tbody_table(dist_rows) + godwit_caption_p),
+        (
+            "Time eBirded",
+            _checklist_stats_tbody_table(time_rows) + _checklist_stats_hint_paragraph(time_hint),
+        ),
+        ("eBirding with Others", _checklist_stats_tbody_table(others_rows)),
+        ("Checklist streak", _checklist_stats_tbody_table(streak_rows)),
+    ]
+
+
+def _checklist_stats_panel_h4_block(title: str, inner_html: str, *, first: bool) -> str:
+    mt = "0" if first else "16px"
+    title_esc = html_module.escape(title, quote=False)
+    return f"""  <h4 style="margin-top:{mt};margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">{title_esc}</h4>
+  {inner_html}
+"""
 
 
 def format_checklist_stats_bundle(
@@ -366,114 +607,17 @@ def format_checklist_stats_bundle(
 {"".join(parts)}
   </div>"""
 
-    _table_css = """
-    .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
-    .stats-info-glyph { cursor:help; opacity:0.7; }
-    .stats-info-tooltip { position:absolute; bottom:100%; top:auto; margin-bottom:6px; margin-top:0; padding:10px 14px; background:#374151; color:#fff; font-size:12px; font-weight:normal; line-height:1.5; white-space:normal; max-width:min(320px,85vw); min-width:180px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); opacity:0; visibility:hidden; transition:opacity 0.15s; pointer-events:none; z-index:9999; right:0; left:auto; }
-    .stats-info-icon:hover .stats-info-tooltip { opacity:1; visibility:visible; }
-    .stats-col:first-child .stats-info-tooltip { right:0; left:auto; }
-    .stats-col:last-child .stats-info-tooltip { left:0; right:auto; }
-    .stats-tbl-3 th:nth-child(2), .stats-tbl-3 td:nth-child(2) { text-align:center; }
-    .rankings-tbl td:first-child { font-weight:normal; }
-    """
-
-    def _row(label, value):
-        return f"<tr><td>{label}</td><td>{value}</td></tr>"
-
-    def _info_icon(title):
-        esc = html_module.escape(title, quote=True)
-        return f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{esc}</span></span>'
-
-    def _table(title, rows, first=False, info_title=None, show_header=False, header_left="", header_right=""):
-        info = f" {_info_icon(info_title)}" if info_title else ""
-        body = "".join(_row(label, value) for label, value in rows)
-        mt = "0" if first else "16px"
-        thead = f"<thead><tr><th>{header_left}</th><th>{header_right}</th></tr></thead>" if show_header else ""
-        return f"""
-  <h4 style="margin-top:{mt};margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">{title}{info}</h4>
-  <table class="stats-tbl">
-    {thead}<tbody>{body}</tbody>
-  </table>"""
-
-    time_hint = (
-        "Incidental, historical and other untimed checklists don't count towards total time, "
-        "but do count towards Days with a checklist."
+    sections = checklist_stats_streamlit_tab_sections_html(payload)
+    left_col = (
+        _checklist_stats_panel_h4_block(sections[0][0], sections[0][1], first=True)
+        + _checklist_stats_panel_h4_block(sections[1][0], sections[1][1], first=False)
+        + _checklist_stats_panel_h4_block(sections[2][0], sections[2][1], first=False)
     )
-    incomplete_checklist_hint = (
-        "Incidental, historical and other untimed checklists don't count towards the incomplete checklist total."
+    right_col = (
+        _checklist_stats_panel_h4_block(sections[3][0], sections[3][1], first=True)
+        + _checklist_stats_panel_h4_block(sections[4][0], sections[4][1], first=False)
+        + _checklist_stats_panel_h4_block(sections[5][0], sections[5][1], first=False)
     )
-    godwit_hint = "4BBRW: Bar-tailed Godwit, Alaska→Tasmania, ~13,560 km nonstop (2022). 11 days without landing."
-    godwit_link = '<a href="https://www.audubon.org/news/these-mighty-shorebirds-keep-breaking-flight-records-and-you-can-follow-along" target="_blank">4BBRW</a>'
-
-    def _esc(s: Any) -> str:
-        return html_module.escape(str(s) if s is not None else "")
-
-    def _checklist_date_cell(date_str: str, sid: str) -> str:
-        if sid:
-            href = f"https://ebird.org/checklist/{url_quote(str(sid), safe='')}"
-            return f'<a href="{href}" target="_blank">{_esc(date_str)}</a>'
-        return _esc(date_str)
-
-    def _lifelist_loc_cell(loc: str, lid: str) -> str:
-        if lid:
-            href = f"https://ebird.org/lifelist/{url_quote(str(lid), safe='')}"
-            return f'<a href="{href}" target="_blank">{_esc(loc)}</a>'
-        return _esc(loc)
-
-    streak_start_date_cell = _checklist_date_cell(payload.streak_start_date, payload.streak_start_sid)
-    streak_end_date_cell = _checklist_date_cell(payload.streak_end_date, payload.streak_end_sid)
-    streak_start_loc_cell = _lifelist_loc_cell(payload.streak_start_loc, payload.streak_start_lid)
-    streak_end_loc_cell = _lifelist_loc_cell(payload.streak_end_loc, payload.streak_end_lid)
-
-    left_col = f"""
-  {_table("Overview", [
-    ("Total checklists", f"{payload.n_checklists:,}"),
-    ("Total species", f"{payload.n_species:,}"),
-    ("Total individuals", f"{payload.n_individuals:,}"),
-  ], first=True)}
-
-  {_table("Checklist types", payload.protocol_rows)}
-  <p style="margin:4px 0 0;color:#6b7280;font-size:12px;line-height:1.5;">
-    {incomplete_checklist_hint}
-  </p>
-
-  {_table("Total Distance", [
-    ("Kilometers traveled", f"{payload.total_km:,.2f}"),
-    ("Parkruns (5 km)", f"{payload.parkruns:,.2f}"),
-    ("Marathons (42.195 km)", f"{payload.marathons:,.2f}"),
-    (f"Longest Flight ({godwit_link}){_info_icon(godwit_hint)}", f"{payload.times_godwit:,.2f}"),
-    ("Times around the equator", f"{payload.times_equator:,.2f}"),
-  ])}
-"""
-
-    right_col = f"""
-  {_table("Time eBirded", [
-    ("Total minutes", f"{payload.total_minutes:,.2f}"),
-    ("Total hours", f"{payload.total_hours:,.2f}"),
-    ("Total days", f"{payload.total_days_dec:,.2f}"),
-    ("Months", f"{payload.total_months:,.2f}"),
-    ("Total years", f"{payload.total_years:,.2f}"),
-    ("Days with a checklist", f"{payload.n_days_with_checklist:,}"),
-  ], first=True)}
-  <p style="margin:4px 0 0;color:#6b7280;font-size:12px;line-height:1.5;">
-    {time_hint}
-  </p>
-
-  {_table("eBirding with Others", [
-    ("Shared checklists", f"{payload.n_shared:,}"),
-    ("Minutes eBirding with others", f"{payload.shared_minutes:,.0f}"),
-    ("Hours eBirding with others", f"{payload.shared_hours:,.2f}"),
-    ("Days birding with others", f"{payload.n_days_birding_with_others:,}"),
-  ])}
-
-  {_table("Checklist Streak", [
-    ("Longest streak (consecutive days)", str(payload.streak)),
-    ("Start date", streak_start_date_cell),
-    ("Start location", streak_start_loc_cell),
-    ("End date", streak_end_date_cell),
-    ("End location", streak_end_loc_cell),
-  ])}
-"""
 
     rankings_sections_top_n = [
         (
@@ -604,14 +748,14 @@ def format_checklist_stats_bundle(
     ]
 
     stats_html = f"""
-<style>{_table_css}</style>
+<style>{CHECKLIST_STATS_TABLE_CSS}</style>
 <div class="stats-layout" style="font-family:sans-serif;font-size:13px;line-height:1.6;width:100%;max-width:1400px;display:flex;flex-wrap:wrap;gap:clamp(24px,4vw,48px);justify-content:flex-start;padding:0 clamp(16px,3vw,32px);box-sizing:border-box;">
   <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{left_col}</div>
   <div class="stats-col" style="flex:1 1 320px;min-width:280px;max-width:480px;padding:16px;box-sizing:border-box;">{right_col}</div>
 </div>
 """
     yearly_summary_html = (
-        f"<style>{_table_css}</style>{yearly_table_html}"
+        f"<style>{CHECKLIST_STATS_TABLE_CSS}</style>{yearly_table_html}"
         if yearly_table_html
         else "<p style='font-family:sans-serif;color:#666;padding:16px;'>No yearly data.</p>"
     )
@@ -619,7 +763,7 @@ def format_checklist_stats_bundle(
         payload.country_sections,
         country_sort=country_sort,
     )
-    country_summary_html = f"<style>{_table_css}</style>{country_summary_inner}"
+    country_summary_html = f"<style>{CHECKLIST_STATS_TABLE_CSS}</style>{country_summary_inner}"
     return {
         "stats_html": stats_html,
         "yearly_summary_html": yearly_summary_html,

@@ -24,8 +24,10 @@ names in popups can link to eBird species pages. Default locale is **en_AU**; ov
 not expose the browser language to Python; optional future approaches are query params, a tiny
 custom component, or heuristics from export columns (e.g. dominant ``Country``) — none wired yet.
 
-**Checklist Statistics:** Native Streamlit layout (nested ``st.tabs`` + tables) from
-``compute_checklist_stats_payload`` — same metrics as the notebook tab, without injected HTML.
+**Checklist Statistics:** Native Streamlit layout (nested ``st.tabs`` + ``st.dataframe``) from
+``compute_checklist_stats_payload``. **Checklist Statistics (HTML)** shows the same sections as shared HTML
+fragments. Both tabs wrap ``_cached_checklist_stats_payload`` with ``st.spinner("Computing checklist statistics…")``
+so loading feedback matches (refs #70).
 """
 
 from __future__ import annotations
@@ -62,14 +64,16 @@ from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
     data_signature_for_caches,
     prepare_all_locations_map_context,
 )
+from checklist_stats_streamlit_html import render_checklist_stats_streamlit_html  # noqa: E402
 from checklist_stats_streamlit_native import render_checklist_stats_streamlit_native  # noqa: E402
 
 DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", "MyEBirdData.csv")
 
-# Same order and labels as ``main_tabs`` in ``notebooks/personal_ebird_explorer`` (refs #70).
+# Aligns with ``main_tabs`` in ``notebooks/personal_ebird_explorer`` plus one Streamlit-only A/B tab (refs #70).
 NOTEBOOK_MAIN_TAB_LABELS = (
     "Map",
     "Checklist Statistics",
+    "Checklist Statistics (HTML)",
     "Rankings & lists",
     "Yearly Summary",
     "Country",
@@ -95,7 +99,7 @@ def _env_taxonomy_locale() -> str:
     )
 
 
-@st.cache_data(show_spinner="Computing checklist statistics…")
+@st.cache_data(show_spinner=False)
 def _cached_checklist_stats_payload(df: pd.DataFrame) -> ChecklistStatsPayload | None:
     """Structured checklist stats for the Checklist Statistics tab (refs #68)."""
     return compute_checklist_stats_payload(df, CHECKLIST_STATS_TOP_N_TABLE_LIMIT)
@@ -258,6 +262,7 @@ def main() -> None:
     (
         tab_map,
         tab_checklist,
+        tab_checklist_html,
         tab_rankings,
         tab_yearly,
         tab_country,
@@ -325,9 +330,21 @@ def main() -> None:
                 )
 
     with tab_checklist:
-        checklist_payload = _cached_checklist_stats_payload(df)
+        with st.spinner("Computing checklist statistics…"):
+            checklist_payload = _cached_checklist_stats_payload(df)
         if checklist_payload is not None:
             render_checklist_stats_streamlit_native(checklist_payload)
+        else:
+            st.warning("No checklist data to show.")
+
+    with tab_checklist_html:
+        with st.spinner("Computing checklist statistics…"):
+            checklist_payload_html = _cached_checklist_stats_payload(df)
+        if checklist_payload_html is not None:
+            render_checklist_stats_streamlit_html(
+                checklist_payload_html,
+                species_url_fn=species_url_fn,
+            )
         else:
             st.warning("No checklist data to show.")
 

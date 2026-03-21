@@ -51,7 +51,7 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 **Map height:** The Folium iframe uses a **fixed pixel height** (streamlit-folium). Use the sidebar slider **Map height (px)** (default 720). The app passes a `key` that includes the height so the component **remounts** when you change the slider (streamlit-folium otherwise keeps the same internal identity and ignores the new height). Changing height may reset pan/zoom on the map.
 
-**Tabs:** The main area uses Streamlit tabs with the **same labels and order** as the Jupyter notebook (`Map`, `Checklist Statistics`, …). **Map** uses **map_controller** + Folium. **Checklist Statistics** uses `compute_checklist_stats_payload` and nested `st.tabs` + tables (`checklist_stats_streamlit_native.py`). Other tabs are still placeholders.
+**Tabs:** The main area mostly matches the Jupyter notebook tab order (`Map`, `Checklist Statistics`, …). **Streamlit-only:** an extra tab **Checklist Statistics (HTML)** A/B-tests the same metrics via shared section HTML (`checklist_stats_streamlit_tab_sections_html`) and theme-scoped CSS (default **green** zebra + accents, `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS`; optional **eBird-blue** via `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE` + `_USE_EBIRD_BLUE_HTML_TAB_THEME` in `checklist_stats_streamlit_html.py`) injected once next to the native `st.dataframe` version (`checklist_stats_streamlit_native.py`). **Map** uses **map_controller** + Folium. Other tabs are still placeholders.
 
 ## Data loading (same ideas as the notebook)
 
