@@ -24,11 +24,10 @@ names in popups can link to eBird species pages. Default locale is **en_AU**; ov
 not expose the browser language to Python; optional future approaches are query params, a tiny
 custom component, or heuristics from export columns (e.g. dominant ``Country``) — none wired yet.
 
-**Checklist Statistics:** Native Streamlit layout (nested ``st.tabs`` + ``st.dataframe``) from
-``compute_checklist_stats_payload``. **Checklist Statistics (HTML)** shows the same sections as shared HTML
-fragments. ``_cached_checklist_stats_payload`` runs **once** immediately under the main tab bar (inside
-``st.spinner("Computing checklist statistics…")``) so the loading message shows no matter which tab is selected
-(refs #70).
+**Checklist Statistics:** Shared HTML sections (nested ``st.tabs`` + formatted tables from
+``checklist_stats_streamlit_tab_sections_html``). ``_cached_checklist_stats_payload`` runs **once** immediately
+under the main tab bar (inside ``st.spinner("Computing checklist statistics…")``) so the loading message shows
+no matter which tab is selected (refs #70).
 """
 
 from __future__ import annotations
@@ -66,15 +65,13 @@ from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
     prepare_all_locations_map_context,
 )
 from checklist_stats_streamlit_html import render_checklist_stats_streamlit_html  # noqa: E402
-from checklist_stats_streamlit_native import render_checklist_stats_streamlit_native  # noqa: E402
 
 DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", "MyEBirdData.csv")
 
-# Aligns with ``main_tabs`` in ``notebooks/personal_ebird_explorer`` plus one Streamlit-only A/B tab (refs #70).
+# Aligns with ``main_tabs`` in ``notebooks/personal_ebird_explorer`` (refs #70).
 NOTEBOOK_MAIN_TAB_LABELS = (
     "Map",
     "Checklist Statistics",
-    "Checklist Statistics (HTML)",
     "Rankings & lists",
     "Yearly Summary",
     "Country",
@@ -263,7 +260,6 @@ def main() -> None:
     (
         tab_map,
         tab_checklist,
-        tab_checklist_html,
         tab_rankings,
         tab_yearly,
         tab_country,
@@ -335,12 +331,6 @@ def main() -> None:
                 )
 
     with tab_checklist:
-        if checklist_payload is not None:
-            render_checklist_stats_streamlit_native(checklist_payload)
-        else:
-            st.warning("No checklist data to show.")
-
-    with tab_checklist_html:
         if checklist_payload is not None:
             render_checklist_stats_streamlit_html(
                 checklist_payload,
