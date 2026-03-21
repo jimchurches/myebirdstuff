@@ -1,5 +1,10 @@
 # Personal eBird Explorer — dataset loading and utilities
 
+from __future__ import annotations
+
+import importlib
+from typing import Any
+
 from personal_ebird_explorer.data_loader import load_dataset, add_datetime_column
 from personal_ebird_explorer.path_resolution import find_data_file
 from personal_ebird_explorer.species_logic import (
@@ -53,22 +58,48 @@ from personal_ebird_explorer.maintenance_display import (
     format_sex_notation_maintenance_html,
     format_incomplete_checklists_maintenance_html,
 )
-from personal_ebird_explorer.species_search import whoosh_common_name_suggestions
-from personal_ebird_explorer.map_controller import MapOverlayResult, build_species_overlay_map
-from personal_ebird_explorer.map_renderer import (
-    create_map,
-    format_visit_time,
-    format_sighting_row,
-    popup_scroll_script,
-    pin_legend_item,
-    build_all_species_banner_html,
-    build_species_banner_html,
-    build_legend_html,
-    build_visit_info_html,
-    build_location_popup_html,
-    resolve_lifer_last_seen,
-    classify_locations,
-)
+
+# Whoosh / Folium are heavy optional stacks for search + map UIs. Lazy-load so
+# ``from personal_ebird_explorer.data_loader import load_dataset`` (e.g. Streamlit
+# prototype) does not require whoosh or folium installed.
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "whoosh_common_name_suggestions": (
+        "personal_ebird_explorer.species_search",
+        "whoosh_common_name_suggestions",
+    ),
+    "MapOverlayResult": ("personal_ebird_explorer.map_controller", "MapOverlayResult"),
+    "build_species_overlay_map": (
+        "personal_ebird_explorer.map_controller",
+        "build_species_overlay_map",
+    ),
+    "create_map": ("personal_ebird_explorer.map_renderer", "create_map"),
+    "format_visit_time": ("personal_ebird_explorer.map_renderer", "format_visit_time"),
+    "format_sighting_row": ("personal_ebird_explorer.map_renderer", "format_sighting_row"),
+    "popup_scroll_script": ("personal_ebird_explorer.map_renderer", "popup_scroll_script"),
+    "pin_legend_item": ("personal_ebird_explorer.map_renderer", "pin_legend_item"),
+    "build_all_species_banner_html": (
+        "personal_ebird_explorer.map_renderer",
+        "build_all_species_banner_html",
+    ),
+    "build_species_banner_html": ("personal_ebird_explorer.map_renderer", "build_species_banner_html"),
+    "build_legend_html": ("personal_ebird_explorer.map_renderer", "build_legend_html"),
+    "build_visit_info_html": ("personal_ebird_explorer.map_renderer", "build_visit_info_html"),
+    "build_location_popup_html": ("personal_ebird_explorer.map_renderer", "build_location_popup_html"),
+    "resolve_lifer_last_seen": ("personal_ebird_explorer.map_renderer", "resolve_lifer_last_seen"),
+    "classify_locations": ("personal_ebird_explorer.map_renderer", "classify_locations"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _LAZY_IMPORTS:
+        mod_path, attr = _LAZY_IMPORTS[name]
+        return getattr(importlib.import_module(mod_path), attr)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)
+
 
 __all__ = [
     "load_taxonomy",

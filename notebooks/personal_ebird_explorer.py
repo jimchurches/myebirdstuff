@@ -148,7 +148,6 @@ from datetime import datetime, date
 import pandas as pd
 import tempfile
 import threading
-import importlib.util
 import ipywidgets as widgets
 
 from ipywidgets import Accordion, Box, Checkbox, HBox, VBox
@@ -453,18 +452,6 @@ if _repo_root not in sys.path:
 # Fallback order: (1) hardcoded path, (2) config_secret, (3) config_template, (4) notebook folder.
 # Cross-platform: works on macOS and Windows.
 
-def _load_config_module(path):
-    """Load a config module from path; return DATA_FOLDER or None."""
-    if not os.path.exists(path):
-        return None
-    try:
-        spec = importlib.util.spec_from_file_location("config", path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return getattr(mod, "DATA_FOLDER", None)
-    except Exception:
-        return None
-
 # Notebook directory: where this .py file lives (or cwd when running as .ipynb)
 try:
     _notebook_dir = os.path.dirname(os.path.abspath(__file__))
@@ -476,47 +463,25 @@ _repo_root = os.path.abspath(os.path.join(_notebook_dir, ".."))
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
-# Scripts folder (relative to notebook)
-_scripts_dir = os.path.abspath(os.path.join(_notebook_dir, "..", "scripts"))
-_config_secret_path = os.path.join(_scripts_dir, "config_secret.py")
-_config_template_path = os.path.join(_scripts_dir, "config_template.py")
+# Build candidate folders (shared with Streamlit — see personal_ebird_explorer.explorer_paths)
+from personal_ebird_explorer.explorer_paths import (
+    build_explorer_candidate_dirs,
+    resolve_ebird_data_file,
+)
 
-# Build candidate folders and path source labels (for Settings tab, refs #38)
-_candidate_folders = []
-_path_sources = []
-if DATA_FOLDER_HARDCODED and str(DATA_FOLDER_HARDCODED).strip():
-    _candidate_folders.append(os.path.normpath(str(DATA_FOLDER_HARDCODED).strip()))
-    _path_sources.append("hardcoded")
-for _config_path in (_config_secret_path, _config_template_path):
-    _folder = _load_config_module(_config_path)
-    if _folder and str(_folder).strip():
-        _candidate_folders.append(os.path.normpath(str(_folder).strip()))
-        _path_sources.append("config_secret" if _config_path == _config_secret_path else "config_template")
-_candidate_folders.append(_notebook_dir)
-_path_sources.append("notebook folder")
-
-# Find data file in first candidate that has it
-from personal_ebird_explorer.path_resolution import find_data_file
-file_path, DATA_FOLDER = find_data_file(EBIRD_DATA_FILE_NAME, _candidate_folders)
-_path_source = None
-if file_path and DATA_FOLDER:
-    for i, cand in enumerate(_candidate_folders):
-        if os.path.normpath(cand) == os.path.normpath(DATA_FOLDER):
-            _path_source = _path_sources[i]
-            break
-    if _path_source is None:
-        _path_source = "notebook folder"
-
-if file_path is None:
-    raise FileNotFoundError(
-        f"Data file not found: {EBIRD_DATA_FILE_NAME}\n\n"
-        f"Tried locations:\n  " + "\n  ".join(_candidate_folders) + "\n\n"
-        "Options:\n"
-        "  1. Set DATA_FOLDER_HARDCODED in User Variables (e.g. macOS: \"/Users/you/Documents/eBird\"; Windows: r\"C:\\Users\\you\\Documents\\eBird\")\n"
-        "  2. Create scripts/config_secret.py with DATA_FOLDER = \"your/path\"\n"
-        "  3. On Binder: upload your .csv to the notebook folder (File → Upload)\n\n"
-        f"Expected filename: {EBIRD_DATA_FILE_NAME}"
-    )
+_candidate_folders, _path_sources = build_explorer_candidate_dirs(
+    repo_root=_repo_root,
+    anchor_dir=_notebook_dir,
+    data_folder_hardcoded=(
+        str(DATA_FOLDER_HARDCODED).strip() if DATA_FOLDER_HARDCODED and str(DATA_FOLDER_HARDCODED).strip() else None
+    ),
+    anchor_label="notebook folder",
+)
+file_path, DATA_FOLDER, _path_source = resolve_ebird_data_file(
+    EBIRD_DATA_FILE_NAME,
+    _candidate_folders,
+    _path_sources,
+)
 
 map_output_path = os.path.join(DATA_FOLDER, OUTPUT_HTML_FILE_NAME)
 os.makedirs(DATA_FOLDER, exist_ok=True)

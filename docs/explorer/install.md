@@ -6,6 +6,8 @@ The explorer is a Jupyter notebook (`personal_ebird_explorer.ipynb`) that loads 
 
 > **No installation?** You can run the notebook on [Binder](https://mybinder.org) — just upload your CSV and go. See the **[Explorer README](README.md)** for the Binder quick-start.
 
+> **Streamlit:** To run the experimental web app instead of Jupyter, see **[streamlit_app/README.md](../../streamlit_app/README.md)** (`pip install -r requirements-streamlit.txt`, then `streamlit run streamlit_app/app.py`). Use a **separate virtualenv** from Jupyter: Streamlit currently needs **pandas 2.x**; the notebook uses **pandas 3.x**. Migration plan: [issue #70](https://github.com/jimchurches/myebirdstuff/issues/70).
+
 ---
 
 ## What you need before you start

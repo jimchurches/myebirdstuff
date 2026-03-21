@@ -32,9 +32,10 @@ Various tools and utilities I've written to help me with eBird.
 This repo currently has three related pieces that work together:
 
 - **eBird Data Visualisation Tool (personal eBird explorer)**  
-  A Jupyter notebook that loads your eBird export and provides an interactive map, statistics, yearly summary, rankings, and maintenance views.  
+  Primary UI: a **Jupyter** notebook (map, stats, rankings, maintenance). An experimental **Streamlit** app (`streamlit_app/`) is in progress for local + Streamlit Community Cloud runs ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)).  
   Documentation:  
   - Overview & quick-start: [`docs/explorer/README.md`](docs/explorer/README.md)  
+  - Streamlit prototype: [`streamlit_app/README.md`](streamlit_app/README.md)  
   - Installation guide: [`docs/explorer/install.md`](docs/explorer/install.md)  
   - Developer guide: [`docs/development.md`](docs/development.md)  
   - For AI-assisted development: [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md)  

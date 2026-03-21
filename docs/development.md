@@ -15,8 +15,11 @@ Data flow:
 5. **map_renderer** — Folium map factory, popups, banners, legend HTML helpers. Receives data; no notebook globals.
 6. **map_controller** — Map pipeline: ``build_species_overlay_map(...)`` → :class:`MapOverlayResult` (all locations, selected species, or lifer-only mode; refs #67, #71). Framework-neutral; notebook handles widget display.
 7. **Notebook (UI)** — Widgets (map view mode, search, checkbox, buttons), event handlers, map tab output (double-buffer), and `draw_map_with_species_overlay()` calling **map_controller** with session caches and options.
+8. **Streamlit (prototype)** — `streamlit_app/app.py`: upload or disk discovery via **explorer_paths**, `load_dataset`, then **map_controller.build_species_overlay_map** (all-locations mode) + **streamlit_folium** for Folium popups matching the notebook. Prep helper: **streamlit_map_prep.prepare_all_locations_map_context**. Strategy: [issue #70](https://github.com/jimchurches/myebirdstuff/issues/70).
 
 The notebook is a thin UI layer: it wires widgets to state and calls module APIs. Core logic lives in `personal_ebird_explorer/*.py`.
+
+**Package `__init__`:** Whoosh- and Folium-backed symbols (`whoosh_common_name_suggestions`, `build_species_overlay_map`, `create_map`, …) are loaded **lazily** via `__getattr__` so lightweight imports (e.g. `data_loader`, `explorer_paths` for Streamlit) do not require those dependencies.
 
 **Country tab / Streamlit:** Per-country numbers are computed in **stats** (`country_summary_stats`) and exposed on **checklist_stats_compute**’s payload; **checklist_stats_display** renders HTML (including optional **Country** accordion sort via `country_sort`). A Streamlit app can call the same `compute_checklist_stats_payload` + `format_checklist_stats_bundle(..., country_sort=...)` without duplicating logic.
 
@@ -27,7 +30,9 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | Module | Role |
 |--------|------|
 | **data_loader** | Load CSV, validate columns, add `datetime` column (missing times → synthetic 23:59 for sort order; see explorer README). Single entry point: `load_dataset(path)`. |
-| **path_resolution** | Resolve data file path (hardcoded, config, or fallbacks). Used by the notebook to find the CSV. |
+| **path_resolution** | Low-level helper: ``find_data_file(filename, candidate_dirs)``. |
+| **explorer_paths** | Builds the same candidate folder list as the notebook / Streamlit (hardcoded → ``config_secret`` → ``config_template`` → anchor folder), then resolves the CSV. Shared by ``notebooks/personal_ebird_explorer`` and ``streamlit_app/app.py``. |
+| **streamlit_map_prep** | Builds kwargs for ``build_species_overlay_map`` in all-locations mode (Streamlit; refs #70). |
 | **species_logic** | Species filtering (`filter_species`), countable-species logic, base-species for lifer/last-seen. |
 | **stats** | Rankings, yearly summary, **country summary** (`country_summary_stats` / `checklist_country_keys`), streak calculation, safe count parsing. Pure functions on DataFrame. |
 | **duplicate_checks** | Exact and near-duplicate location detection for the Map maintenance tab. |
@@ -46,6 +51,8 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 
 The notebook owns: widget creation, observers, initial Whoosh index creation (empty schema + first fill), session caches, and map tab display (double-buffered output); it calls **map_controller**’s `build_species_overlay_map()` for the Folium map. Filter-driven rebuild logic lives in **working_set**.
 
+**Jupytext:** `notebooks/personal_ebird_explorer.ipynb` is paired with `notebooks/personal_ebird_explorer.py` (percent format; see notebook metadata). After editing the `.py`, run `jupytext --sync notebooks/personal_ebird_explorer.py` so the `.ipynb` stays aligned (`pip install jupytext`).
+
 ---
 
 ## Design principles
@@ -54,6 +61,7 @@ The notebook owns: widget creation, observers, initial Whoosh index creation (em
 - **Caching strategy** — In-memory, simple. Location groupbys and popup HTML are cached to avoid recomputation on redraw. Cache keys include enough context (e.g. location ID, species, date-filter view) to avoid stale data.
 - **Separation of UI and logic** — Notebook: widgets, event handlers, and orchestration. Modules: data loading, statistics, map rendering. Do not move business logic into the notebook.
 - **Jupytext** — The notebook is paired with `personal_ebird_explorer.py` (percent format). Use `jupytext --sync` to keep them in sync.
+- **Streamlit UI (prototype)** — Prefer **native Streamlit** (`st.expander`, `st.dataframe`, tabs, sidebar, `config.toml` theming) over custom HTML/CSS and `unsafe_allow_html`, unless there is a deliberate reason (shared notebook renderers, map embeds, experiments). See [AI_CONTEXT.md — Streamlit UI](AI_CONTEXT.md#streamlit-ui-prefer-native-components) and `streamlit_app/README.md` — *UI guidelines*.
 
 ---
 

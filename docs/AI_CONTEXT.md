@@ -47,7 +47,15 @@ In particular avoid:
 
 The project is intentionally lightweight.
 
-**Roadmap note:** **Streamlit** (or similar) is the **intended future** UI stack. Do **not** add Streamlit—or other full app frameworks—as a dependency **until** an explicit migration task or maintainer decision says so. Until then, keep the shipping stack minimal (Jupyter, Folium, ipywidgets, Voila as needed).
+**Roadmap note:** **Streamlit** is the **intended future** primary UI ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70): phased prototype → parallel dev → cutover; preserve notebook/Binder until then). A **prototype** lives in `streamlit_app/` (`requirements-streamlit.txt`); keep **shipping** `requirements.txt` / Binder focused on Jupyter unless `main` explicitly switches. Do not add **other** full UI frameworks without maintainer agreement.
+
+### Streamlit UI: prefer native components
+
+For work in **`streamlit_app/`** and any future Streamlit-first UI:
+
+- **Default to Streamlit primitives** — e.g. `st.tabs`, `st.expander`, `st.columns`, `st.dataframe`, `st.metric`, sidebar inputs, and theme via `.streamlit/config.toml`. This keeps layouts maintainable and consistent with Streamlit updates.
+- **Treat custom HTML/CSS as a conscious exception** — Large `st.markdown(..., unsafe_allow_html=True)` blobs, inline styles, and copied notebook HTML are fine when **explicitly** chosen (e.g. comparing to the Jupyter UI, embedded Folium, or a one-off migration step), but they add fragility and bypass Streamlit’s accessibility/theming story.
+- **When suggesting implementations**, if a request drifts toward bespoke HTML/CSS where native widgets would suffice, **say so briefly** and offer the Streamlit-native option first; the maintainer may still prefer HTML for a good reason.
 
 ### Prefer readability over cleverness
 
@@ -114,11 +122,12 @@ The notebook acts as a **thin UI layer**. All core logic should live in Python m
 
 ## Roadmap: Streamlit (or similar UI)
 
-**Long-term intent:** move the primary user interface from **Jupyter + ipywidgets + Voila** toward **Streamlit** (or another lightweight app framework if requirements change). This is a **roadmap** goal, not a requirement on every change.
+**Long-term intent:** move the primary user interface from **Jupyter + ipywidgets + Voila** toward **Streamlit**, following the plan in **[issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)** (prototype on a feature branch, notebook unchanged on `main` until cutover, optional legacy tag/branch).
 
 **Practical guidance for AI and contributors:**
 
-- **Not every feature or fix will be Streamlit-related yet.** The notebook remains the shipping UI until a dedicated migration effort lands.
+- **Not every feature or fix will be Streamlit-related yet.** The notebook remains the default full-featured UI until migration phases in #70 complete.
+- **Prototype:** `streamlit_app/app.py` — extend here for Streamlit experiments; reuse `personal_ebird_explorer` modules.
 - When working on **any** area of the explorer, **bias toward** patterns that make a future Streamlit app easier:
   - Put **new or refactored logic** in `personal_ebird_explorer/` (or other testable modules) with **explicit inputs and return values**, not buried only in notebook cells.
   - Treat the notebook as **glue**: widgets, observers, and display—not the home for large orchestration, HTML compilers, or data-prep pipelines.
