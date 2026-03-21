@@ -8,7 +8,8 @@ Early **Personal eBird Explorer** UI on Streamlit. The Jupyter notebook remains 
 
 ## UI guidelines
 
-- **Prefer Streamlit-native layout and widgets** — tabs, sidebar, `st.expander` (accordions), `st.dataframe` / `st.table`, `st.metric`, `st.columns`, and theme tweaks in `.streamlit/config.toml`. This stays aligned with Streamlit’s theming and future releases.
+- **Prefer Streamlit-native layout and widgets** — tabs, sidebar, `st.expander`, nested `st.tabs`, `st.dataframe` / `st.table`, `st.metric`, `st.columns`, and theme tweaks in `.streamlit/config.toml` (default theme uses eBird-style greens via `[theme]`). **Checklist Statistics** uses nested tabs so only one stats subsection is visible at a time (Streamlit expanders can’t be grouped as a single-open accordion). Metric tables use `st.dataframe` with **Metric** / **Value** headers (and **eBird link** for streak links). This stays aligned with Streamlit’s primitives.
+- **eBird links in tables (notebook parity)** — The Jupyter UI links heavily from table cells to eBird (species, checklists, lifelists, regions). Preserve that behaviour when porting: plain `st.dataframe` cells won’t render Markdown links — use shared HTML formatters, `st.markdown` rows, `LinkColumn` for URL cells, or captions only as a fallback. See [AI_CONTEXT.md — Streamlit UI](../docs/AI_CONTEXT.md#streamlit-ui-prefer-native-components).
 - **Use custom HTML/CSS sparingly** — `st.markdown(..., unsafe_allow_html=True)`, `st.html`, and large injected style blocks are acceptable when **intentional** (e.g. Folium, reusing `format_*_bundle` HTML from the notebook for parity or migration). For new features, default to native components unless there is a strong reason not to.
 - **Contributors / AI assistants:** If a change could be done with native Streamlit instead of bespoke HTML, mention that tradeoff so the choice stays explicit.
 
@@ -49,7 +50,7 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 **Map height:** The Folium iframe uses a **fixed pixel height** (streamlit-folium). Use the sidebar slider **Map height (px)** (default 720). The app passes a `key` that includes the height so the component **remounts** when you change the slider (streamlit-folium otherwise keeps the same internal identity and ignores the new height). Changing height may reset pan/zoom on the map.
 
-**Tabs:** The main area uses Streamlit tabs with the **same labels and order** as the Jupyter notebook (`Map`, `Checklist Statistics`, …). **Map** uses **map_controller** + Folium. **Checklist Statistics** uses `compute_checklist_stats_payload` and native widgets (`checklist_stats_streamlit_native.py`). Other tabs are still placeholders.
+**Tabs:** The main area uses Streamlit tabs with the **same labels and order** as the Jupyter notebook (`Map`, `Checklist Statistics`, …). **Map** uses **map_controller** + Folium. **Checklist Statistics** uses `compute_checklist_stats_payload` and nested `st.tabs` + tables (`checklist_stats_streamlit_native.py`). Other tabs are still placeholders.
 
 ## Data loading (same ideas as the notebook)
 

@@ -23,6 +23,34 @@ def test_format_bundle_empty_dataframe():
     assert out["incomplete_by_year"] == {}
 
 
+def test_incomplete_checklists_excludes_incidental_and_historical():
+    """Incomplete row counts not-all-reported checklists except Incidental/Historical/casual."""
+    df = pd.DataFrame(
+        {
+            "Submission ID": ["a", "b", "c", "d"],
+            "Common Name": ["X", "X", "X", "X"],
+            "Scientific Name": ["Sp", "Sp", "Sp", "Sp"],
+            "Count": [1, 1, 1, 1],
+            "Date": pd.to_datetime(["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04"]),
+            "Location": ["L1", "L2", "L3", "L4"],
+            "Location ID": ["1", "2", "3", "4"],
+            "Latitude": [-33.0, -33.0, -34.0, -34.0],
+            "Longitude": [151.0, 151.0, 150.0, 150.0],
+            "Protocol": ["Traveling", "Incidental", "Historical", "Traveling"],
+            "Duration (Min)": [10, 10, 10, 10],
+            "Distance Traveled (km)": [0.0, 0.0, 0.0, 0.0],
+            "All Obs Reported": [0, 0, 0, 1],
+        }
+    )
+    payload = compute_checklist_stats_payload(df, top_n_limit=5)
+    assert payload is not None
+    rows = dict(payload.protocol_rows)
+    assert rows["Incomplete checklists"] == "1"
+    assert rows["Completed checklists"] == "1"
+    keys = [k for k, _ in payload.protocol_rows]
+    assert keys.index("Incomplete checklists") < keys.index("Completed checklists")
+
+
 def test_compute_and_format_smoke():
     df = pd.DataFrame(
         {

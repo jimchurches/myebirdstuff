@@ -54,8 +54,9 @@ The project is intentionally lightweight.
 For work in **`streamlit_app/`** and any future Streamlit-first UI:
 
 - **Default to Streamlit primitives** — e.g. `st.tabs`, `st.expander`, `st.columns`, `st.dataframe`, `st.metric`, sidebar inputs, and theme via `.streamlit/config.toml`. This keeps layouts maintainable and consistent with Streamlit updates.
+- **Keep eBird deep links when porting tables** — The notebook HTML puts many **links inside table cells** (species pages, checklists, lifelists, regional lists on eBird so users can use eBird’s own tallies). That parity is **intentional**: we do not re-implement everything eBird already exposes. In Streamlit, `st.dataframe` **does not** render Markdown `[label](url)` in cells. Prefer, in order of fit: reuse **shared HTML** from existing formatters (`checklist_stats_display`, rankings/maintenance helpers), **`st.markdown`** row layouts where each value can be a link, **`column_config.LinkColumn`** when a cell is a URL (friendly per-row labels are limited), or **small `unsafe_allow_html`** fragments — and call out the tradeoff. Do **not** drop eBird URLs from a migrated table just to use a plain dataframe.
 - **Treat custom HTML/CSS as a conscious exception** — Large `st.markdown(..., unsafe_allow_html=True)` blobs, inline styles, and copied notebook HTML are fine when **explicitly** chosen (e.g. comparing to the Jupyter UI, embedded Folium, or a one-off migration step), but they add fragility and bypass Streamlit’s accessibility/theming story.
-- **When suggesting implementations**, if a request drifts toward bespoke HTML/CSS where native widgets would suffice, **say so briefly** and offer the Streamlit-native option first; the maintainer may still prefer HTML for a good reason.
+- **When suggesting implementations**, if a request drifts toward bespoke HTML/CSS where native widgets would suffice, **say so briefly** and offer the Streamlit-native option first; the maintainer may still prefer HTML for a good reason. Ask for confirmation in such cases.
 
 ### Prefer readability over cleverness
 

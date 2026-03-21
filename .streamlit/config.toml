@@ -1,5 +1,15 @@
 # Shared defaults for `streamlit run streamlit_app/app.py` from repo root.
 # Streamlit Cloud reads app settings from the dashboard; this file is optional locally.
+#
+# Theme: approximate eBird-style greens (forest / teal used on ebird.org and My eBird).
+# Not official brand tokens — only Streamlit [theme] keys, no custom CSS.
+
+[theme]
+base = "light"
+primaryColor = "#1F6F54"
+backgroundColor = "#FAFCFA"
+secondaryBackgroundColor = "#EEF4F0"
+textColor = "#1A2E22"
 
 [browser]
 gatherUsageStats = false

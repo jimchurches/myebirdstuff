@@ -24,7 +24,7 @@ names in popups can link to eBird species pages. Default locale is **en_AU**; ov
 not expose the browser language to Python; optional future approaches are query params, a tiny
 custom component, or heuristics from export columns (e.g. dominant ``Country``) — none wired yet.
 
-**Checklist Statistics:** Native Streamlit layout (``st.expander`` + tables) from
+**Checklist Statistics:** Native Streamlit layout (nested ``st.tabs`` + tables) from
 ``compute_checklist_stats_payload`` — same metrics as the notebook tab, without injected HTML.
 """
 
@@ -194,10 +194,7 @@ def main() -> None:
     if df is None:
         st.title("Personal eBird Explorer")
         st.subheader("Streamlit prototype")
-        st.write(
-            "Explore your personal eBird checklists on a map and in summary tabs. "
-            "Load an official **My eBird Data** CSV export to begin."
-        )
+        st.write("Upload your **My eBird Data** CSV to open the map and tabs.")
         uploaded = st.file_uploader(
             "eBird export (CSV)",
             type=["csv"],
@@ -209,9 +206,23 @@ def main() -> None:
             if df_up is not None:
                 st.session_state[_SESSION_UPLOAD_CACHE_KEY] = (uploaded.getvalue(), uploaded.name)
                 st.rerun()
+        st.markdown(
+            """
+**From eBird**
+
+1. Sign in: [Download My Data](https://ebird.org/downloadMyData)
+2. Under **My eBird Observations**, use **Request My Observations**.
+3. A link to your data will be sent to your email address (often a few minutes; sometimes longer).
+4. Open the email, download the **.zip** and unzip it.
+5. Upload the CSV here (in English the file name should be **MyEBirdData.csv**).
+            """
+        )
         st.caption(
-            f"Typical filename: `{DEFAULT_EBIRD_FILENAME}`. "
-            "If this machine has a configured data path with that file, the app skips this page."
+            "Species links use **en_AU** taxonomy for now; wider locale support may come later. "
+            "Data still loads if names don’t match.\n\n"
+            "This page is skipped when a CSV is already found on disk (local config path). "
+            "Support for local files works when Streamlit is running locally; see the code repo for more information. "
+            "Proper instructions will appear here in future releases."
         )
         return
 

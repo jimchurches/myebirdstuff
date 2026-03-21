@@ -109,7 +109,7 @@ class TestLongestStreak:
     def test_single_day(self):
         dates = pd.to_datetime(["2025-01-01"])
         cl = _make_cl(["2025-01-01"])
-        streak, start, start_loc, _, end, end_loc, _ = longest_streak(dates, cl)
+        streak, start, start_loc, _, _, end, end_loc, _, _ = longest_streak(dates, cl)
         assert streak == 1
         assert start == end
 
@@ -128,12 +128,30 @@ class TestLongestStreak:
     def test_locations_populated(self):
         dates = pd.to_datetime(["2025-03-01", "2025-03-02"])
         cl = _make_cl(["2025-03-01", "2025-03-02"], locations=["Park A", "Park B"], sids=["S100", "S101"])
-        streak, start_date, start_loc, start_sid, end_date, end_loc, end_sid = longest_streak(dates, cl)
+        streak, start_date, start_loc, start_sid, start_lid, end_date, end_loc, end_sid, end_lid = longest_streak(
+            dates, cl
+        )
         assert streak == 2
         assert start_loc == "Park A"
         assert end_loc == "Park B"
         assert start_sid == "S100"
         assert end_sid == "S101"
+        assert start_lid == ""
+        assert end_lid == ""
+
+    def test_location_ids_populated(self):
+        dates = pd.to_datetime(["2025-03-01", "2025-03-02"])
+        cl = pd.DataFrame(
+            {
+                "Date": dates,
+                "Location": ["Park A", "Park B"],
+                "Location ID": ["L100", "L200"],
+                "Submission ID": ["S100", "S101"],
+            }
+        )
+        _, _, _, _, start_lid, _, _, _, end_lid = longest_streak(dates, cl)
+        assert start_lid == "L100"
+        assert end_lid == "L200"
 
 
 # ---------------------------------------------------------------------------

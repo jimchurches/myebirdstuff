@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html as html_module
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from urllib.parse import quote as url_quote
 
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
 from personal_ebird_explorer.region_display import country_for_display
@@ -398,19 +399,31 @@ def format_checklist_stats_bundle(
         "Incidental, historical and other untimed checklists don't count towards total time, "
         "but do count towards Days with a checklist."
     )
+    incomplete_checklist_hint = (
+        "Incidental, historical and other untimed checklists don't count towards the incomplete checklist total."
+    )
     godwit_hint = "4BBRW: Bar-tailed Godwit, Alaska→Tasmania, ~13,560 km nonstop (2022). 11 days without landing."
     godwit_link = '<a href="https://www.audubon.org/news/these-mighty-shorebirds-keep-breaking-flight-records-and-you-can-follow-along" target="_blank">4BBRW</a>'
 
-    streak_start_link = (
-        f'<a href="https://ebird.org/checklist/{payload.streak_start_sid}" target="_blank">{payload.streak_start_loc}</a>'
-        if payload.streak_start_sid
-        else payload.streak_start_loc
-    )
-    streak_end_link = (
-        f'<a href="https://ebird.org/checklist/{payload.streak_end_sid}" target="_blank">{payload.streak_end_loc}</a>'
-        if payload.streak_end_sid
-        else payload.streak_end_loc
-    )
+    def _esc(s: Any) -> str:
+        return html_module.escape(str(s) if s is not None else "")
+
+    def _checklist_date_cell(date_str: str, sid: str) -> str:
+        if sid:
+            href = f"https://ebird.org/checklist/{url_quote(str(sid), safe='')}"
+            return f'<a href="{href}" target="_blank">{_esc(date_str)}</a>'
+        return _esc(date_str)
+
+    def _lifelist_loc_cell(loc: str, lid: str) -> str:
+        if lid:
+            href = f"https://ebird.org/lifelist/{url_quote(str(lid), safe='')}"
+            return f'<a href="{href}" target="_blank">{_esc(loc)}</a>'
+        return _esc(loc)
+
+    streak_start_date_cell = _checklist_date_cell(payload.streak_start_date, payload.streak_start_sid)
+    streak_end_date_cell = _checklist_date_cell(payload.streak_end_date, payload.streak_end_sid)
+    streak_start_loc_cell = _lifelist_loc_cell(payload.streak_start_loc, payload.streak_start_lid)
+    streak_end_loc_cell = _lifelist_loc_cell(payload.streak_end_loc, payload.streak_end_lid)
 
     left_col = f"""
   {_table("Overview", [
@@ -420,6 +433,9 @@ def format_checklist_stats_bundle(
   ], first=True)}
 
   {_table("Checklist types", payload.protocol_rows)}
+  <p style="margin:4px 0 0;color:#6b7280;font-size:12px;line-height:1.5;">
+    {incomplete_checklist_hint}
+  </p>
 
   {_table("Total Distance", [
     ("Kilometers traveled", f"{payload.total_km:,.2f}"),
@@ -452,10 +468,10 @@ def format_checklist_stats_bundle(
 
   {_table("Checklist Streak", [
     ("Longest streak (consecutive days)", str(payload.streak)),
-    ("Start date", payload.streak_start_date),
-    ("Start location", streak_start_link),
-    ("End date", payload.streak_end_date),
-    ("End location", streak_end_link),
+    ("Start date", streak_start_date_cell),
+    ("Start location", streak_start_loc_cell),
+    ("End date", streak_end_date_cell),
+    ("End location", streak_end_loc_cell),
   ])}
 """
 
