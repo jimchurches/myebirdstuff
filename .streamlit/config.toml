@@ -1,0 +1,5 @@
+# Shared defaults for `streamlit run streamlit_app/app.py` from repo root.
+# Streamlit Cloud reads app settings from the dashboard; this file is optional locally.
+
+[browser]
+gatherUsageStats = false

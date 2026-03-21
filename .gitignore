@@ -1,7 +1,14 @@
 .DS_Store
 
+# Python virtual environments (create anywhere you like; these names are common locally)
+.venv/
+.venv-streamlit/
+venv/
+env/
+
 # Don't track secrets
 config_secret.py
+.streamlit/secrets.toml
 *.ipynb_checkpoints
 __pycache__/
 voila_debug.log
