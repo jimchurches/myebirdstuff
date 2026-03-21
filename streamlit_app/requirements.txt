@@ -1,0 +1,3 @@
+# Streamlit Community Cloud: set the app "Python requirements file" to this path
+# (or to ../requirements-streamlit.txt at repo root — same packages).
+-r ../requirements-streamlit.txt

@@ -2,7 +2,7 @@
 
 A Jupyter notebook that lets you explore your eBird data on an interactive map. Search for species, filter by date, view lifers and last-seen locations, and explore checklist details.
 
-**Streamlit (early prototype):** [`streamlit_app/`](../../streamlit_app/README.md) loads the same CSV (upload or local discovery) and shows a **Folium** map with **notebook-style location popups** (checklist links, visits) via `build_species_overlay_map`. It does **not** replace the notebook yet. Roadmap: [issue #70](https://github.com/jimchurches/myebirdstuff/issues/70). Prefer **native Streamlit** UI over custom HTML/CSS where practical — see [Streamlit UI guidelines](../../streamlit_app/README.md#ui-guidelines).
+**Streamlit (early prototype):** [`streamlit_app/`](../../streamlit_app/README.md) loads the same CSV (upload or local discovery) and shows a **Folium** map with **notebook-style location popups** (checklist links, visits) via `build_species_overlay_map`. It does **not** replace the notebook yet. Roadmap: [issue #70](https://github.com/jimchurches/myebirdstuff/issues/70). **Streamlit Community Cloud** must use **`requirements-streamlit.txt`** or **`streamlit_app/requirements.txt`** as the Python requirements file (not root `requirements.txt`). Prefer **native Streamlit** UI over custom HTML/CSS where practical — see [Streamlit UI guidelines](../../streamlit_app/README.md#ui-guidelines).
 
 ## What it does
 

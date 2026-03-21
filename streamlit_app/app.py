@@ -284,12 +284,13 @@ def main() -> None:
                 try:
                     from streamlit_folium import st_folium
                 except ImportError:
-                    st.error(
-                        "Missing **streamlit-folium** (needed to embed the Folium map). "
-                        "In this repo’s Streamlit venv run:\n\n"
-                        "`pip install -r requirements-streamlit.txt`\n\n"
-                        "or: `pip install streamlit-folium`"
-                    )
+                        st.error(
+                            "Missing **streamlit-folium** (needed to embed the Folium map). "
+                            "Locally: `pip install -r requirements-streamlit.txt`. "
+                            "**Streamlit Community Cloud:** set app **Python requirements** to "
+                            "`requirements-streamlit.txt` or `streamlit_app/requirements.txt` "
+                            "(not the repo root `requirements.txt`)."
+                        )
                     st.stop()
                 # returned_objects=[] avoids pan/zoom reruns; key includes height for resize.
                 st_folium(
