@@ -43,8 +43,8 @@ def test_format_map_maintenance_html_contains_section():
     assert "Location Maintenance" in html
     assert "Exact duplicates" in html
     assert "Close locations" in html
-    assert "Update eBird locations with caution." in html
-    assert "particular use case related to his own location data" in html
+    assert "Update locations in eBird with caution." in html
+    assert "particular use cases related to his own location data" in html
     assert "maint-caution-symbol" in html
 
 
