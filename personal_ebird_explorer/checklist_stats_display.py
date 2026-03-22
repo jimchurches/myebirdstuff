@@ -54,6 +54,14 @@ def _ebird_country_mychecklists_url(country_key: str) -> Optional[str]:
     return f"https://ebird.org/mychecklists/{k}"
 
 
+def _ebird_country_region_page_url(country_key: str) -> Optional[str]:
+    """eBird region hub for a country, e.g. ``https://ebird.org/region/US``."""
+    k = _ebird_country_region_iso2(country_key)
+    if not k:
+        return None
+    return f"https://ebird.org/region/{k}"
+
+
 def _country_table_statistic_label_cell(label: str, country_key: str) -> str:
     """First-column cell HTML: plain text, or ⧉ links for *Lifers (country)* / *Total checklists*."""
     esc_label = html_module.escape(label, quote=False)
@@ -76,19 +84,21 @@ def _country_table_statistic_label_cell(label: str, country_key: str) -> str:
     return esc_label + link
 
 
+def country_display_name_plain(country_key: str) -> str:
+    """Human-readable country/region label for UI widgets (not HTML-escaped)."""
+    if country_key == "_UNKNOWN":
+        return "Unknown"
+    if str(country_key).startswith("_R:"):
+        return str(country_key)[3:]
+    k = str(country_key).strip()
+    if len(k) == 2 and k.isalpha():
+        return country_for_display(k) or k
+    return k
+
+
 def _country_accordion_title(country_key: str) -> str:
     """Plain-text title for a country ``<summary>`` (HTML-escaped)."""
-    if country_key == "_UNKNOWN":
-        t = "Unknown"
-    elif str(country_key).startswith("_R:"):
-        t = str(country_key)[3:]
-    else:
-        k = str(country_key).strip()
-        if len(k) == 2 and k.isalpha():
-            t = country_for_display(k) or k
-        else:
-            t = k
-    return html_module.escape(t, quote=False)
+    return html_module.escape(country_display_name_plain(country_key), quote=False)
 
 
 def _country_heading_sort_key(country_key: str) -> Tuple[int, str]:
@@ -209,6 +219,66 @@ def _format_country_summary_html(
   <h4 style="margin-top:0;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e5e7eb;">By country</h4>
 {inner}
     </div>"""
+
+
+def format_country_yearly_table_html(
+    country_key: str,
+    years_list: List[Any],
+    rows: List[Tuple[str, List[str]]],
+) -> str:
+    """HTML table for one country's yearly statistics (same structure as Country tab accordion)."""
+    if not years_list or not rows:
+        return (
+            "<p style='font-family:sans-serif;color:#666;padding:8px 0;'>No yearly rows for this country.</p>"
+        )
+    n_years = len(years_list)
+    multi_year = n_years > 1
+    n_cols = n_years + (1 if multi_year else 0)
+    min_w = "280px" if n_cols <= 2 else "360px" if n_cols <= 3 else "400px"
+    year_headers = "".join(
+        f"<th style='text-align:right;'>{html_module.escape(str(y), quote=False)}</th>" for y in years_list
+    )
+    if multi_year:
+        year_headers += "<th style='text-align:right;'>Total</th>"
+    body_rows = "".join(
+        f"<tr><td>{_country_table_statistic_label_cell(label, country_key)}</td>"
+        + "".join(
+            f"<td style='text-align:right;'>{html_module.escape(str(v), quote=False)}</td>" for v in vals
+        )
+        + "</tr>"
+        for label, vals in rows
+    )
+    return f"""  <div style="overflow-x:auto;">
+  <table class="stats-tbl" style="min-width:{min_w};">
+    <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
+    <tbody>{body_rows}</tbody>
+  </table>
+  </div>"""
+
+
+def country_yearly_links_bar_html(country_key: str) -> str:
+    """Optional row of links (life list, country page) for ISO countries; empty for regions/unknown."""
+    parts: List[str] = []
+    life = _ebird_country_lifelist_url(country_key)
+    region_page = _ebird_country_region_page_url(country_key)
+    if life:
+        esc = html_module.escape(life, quote=True)
+        parts.append(
+            f'<a href="{esc}" target="_blank" rel="noopener noreferrer" '
+            'title="eBird life list (this country/region)">'
+            '<span class="stats-link-icon" aria-hidden="true">⧉</span> Country life list</a>'
+        )
+    if region_page:
+        esc = html_module.escape(region_page, quote=True)
+        parts.append(
+            f'<a href="{esc}" target="_blank" rel="noopener noreferrer" '
+            'title="eBird region page">'
+            '<span class="stats-link-icon" aria-hidden="true">⧉</span> Country page</a>'
+        )
+    if not parts:
+        return ""
+    sep = ' <span class="stats-link-sep" aria-hidden="true">·</span> '
+    return f'<p class="stats-links-row">{sep.join(parts)}</p>'
 
 
 # Shared with notebook stats panel HTML and Streamlit HTML tab (refs #70).

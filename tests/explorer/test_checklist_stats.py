@@ -237,6 +237,43 @@ def test_country_iso_rows_have_ebird_region_links():
     assert 'href="https://ebird.org/mychecklists/' not in html_unknown
 
 
+def test_format_country_yearly_table_html_matches_accordion_markup():
+    """Extracted yearly table HTML matches Country-tab accordion table structure (refs #75)."""
+    from personal_ebird_explorer.checklist_stats_display import (
+        format_country_yearly_table_html,
+        _format_country_summary_html,
+    )
+
+    rows = [
+        ("Lifers (world)", ["1", "2", "3"]),
+        ("Lifers (country)", ["0", "1", "1"]),
+        ("Total species", ["5", "6", "11"]),
+        ("Total individuals", ["10", "20", "30"]),
+        ("Total checklists", ["1", "1", "2"]),
+        ("Days with a checklist", ["1", "1", "2"]),
+        ("Cumulative days eBird on", ["1", "2", "2"]),
+    ]
+    inner = format_country_yearly_table_html("DE", [2024, 2025], rows)
+    full = _format_country_summary_html([("DE", [2024, 2025], rows)])
+    assert "<th style='text-align:right;'>Total</th>" in inner
+    assert inner in full
+    # Same eBird links in first column as full country HTML
+    assert 'href="https://ebird.org/lifelist?r=DE"' in inner
+    assert 'href="https://ebird.org/mychecklists/DE"' in inner
+
+
+def test_country_yearly_links_bar_html_for_iso():
+    from personal_ebird_explorer.checklist_stats_display import country_yearly_links_bar_html
+
+    h = country_yearly_links_bar_html("NZ")
+    assert "Country life list" in h
+    assert "Country page" in h
+    assert 'href="https://ebird.org/lifelist?r=NZ"' in h
+    assert 'href="https://ebird.org/region/NZ"' in h
+
+    assert country_yearly_links_bar_html("_UNKNOWN") == ""
+
+
 def test_compute_checklist_stats_country_displayed_as_name():
     """Country codes are shown as country names in rankings tables (refs #43)."""
     pytest.importorskip("pycountry")
