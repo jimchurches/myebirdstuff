@@ -46,7 +46,7 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 | **lifer_last_seen_prep** | Full-dataset lifer/last-seen prep: `prepare_lifer_last_seen(full_df)` → `LiferLastSeenPrep`; `aggregate_lifer_sites` groups lifer species by location for lifer-only map mode (refs #68, #71). |
 | **checklist_stats_compute** | Structured checklist stats / yearly / country / rankings inputs: `compute_checklist_stats_payload(df, top_n_limit)` → `ChecklistStatsPayload` or `None` if empty (refs #68). |
 | **checklist_stats_display** | HTML bundle for Checklist Statistics + Yearly + Country tabs and rankings sections: `format_checklist_stats_bundle(payload, ..., country_sort=...)` (`alphabetical` / `lifers_world` / `total_species`); Rankings tab shell: `format_rankings_tab_html(...)` (refs #68, #69). |
-| **maintenance_display** | Maintenance tab HTML: map duplicates/close locations, incomplete checklists, sex-notation sections (`format_*_maintenance_html`, refs #69). |
+| **maintenance_display** | Maintenance tab HTML: map duplicates/close locations, incomplete checklists, sex-notation sections (`format_*_maintenance_html`, composable helpers + CSS constants for Streamlit; refs #69, #79). |
 | **species_search** | Whoosh species autocomplete helper: `whoosh_common_name_suggestions(index, query, ...)` (refs #69). |
 
 The notebook owns: widget creation, observers, initial Whoosh index creation (empty schema + first fill), session caches, and map tab display (double-buffered output); it calls **map_controller**’s `build_species_overlay_map()` for the Folium map. Filter-driven rebuild logic lives in **working_set**.
