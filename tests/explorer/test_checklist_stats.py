@@ -266,12 +266,31 @@ def test_country_yearly_links_bar_html_for_iso():
     from personal_ebird_explorer.checklist_stats_display import country_yearly_links_bar_html
 
     h = country_yearly_links_bar_html("NZ")
-    assert "Country life list" in h
     assert "Country page" in h
-    assert 'href="https://ebird.org/lifelist?r=NZ"' in h
+    assert "Country lifers" in h
+    assert "Country checklists" in h
     assert 'href="https://ebird.org/region/NZ"' in h
+    assert 'href="https://ebird.org/lifelist?r=NZ"' in h
+    assert 'href="https://ebird.org/mychecklists/NZ"' in h
+    assert h.index("Country page") < h.index("Country lifers") < h.index("Country checklists")
 
     assert country_yearly_links_bar_html("_UNKNOWN") == ""
+
+
+def test_format_country_yearly_table_html_inline_links_optional():
+    from personal_ebird_explorer.checklist_stats_display import format_country_yearly_table_html
+
+    rows = [
+        ("Lifers (country)", ["1"]),
+        ("Total checklists", ["1"]),
+    ]
+    with_links = format_country_yearly_table_html("FR", [2025], rows, inline_statistic_links=True)
+    without = format_country_yearly_table_html("FR", [2025], rows, inline_statistic_links=False)
+    assert "⧉" in with_links
+    assert 'href="https://ebird.org/lifelist?r=FR"' in with_links
+    assert "⧉" not in without
+    assert 'href="https://ebird.org/lifelist' not in without
+    assert 'href="https://ebird.org/mychecklists' not in without
 
 
 def test_compute_checklist_stats_country_displayed_as_name():
