@@ -27,6 +27,7 @@ PROTOCOL_MAP = {
     "travelling": "Traveling",
     "traveling count": "Traveling",
     "ebird - traveling count": "Traveling",
+    "ebird - travelling count": "Traveling",
     "stationary": "Stationary",
     "stationary count": "Stationary",
     "ebird - stationary count": "Stationary",
@@ -39,6 +40,23 @@ PROTOCOL_MAP = {
     "historical": "Historical",
     "historical checklist": "Historical",
 }
+
+
+def protocol_display_name(protocol: Any) -> str:
+    """Map raw eBird export *Protocol* strings to short labels (same buckets as checklist stats).
+
+    Unknown values are returned stripped, unchanged. Empty / missing → ``\"\"``.
+    Used after :func:`load_dataset` normalizes the ``Protocol`` column and anywhere a single
+    protocol string is shown (Maintenance, etc.).
+    """
+    if protocol is None:
+        return ""
+    if isinstance(protocol, float) and pd.isna(protocol):
+        return ""
+    p = str(protocol).strip()
+    if not p or p.lower() == "nan":
+        return ""
+    return PROTOCOL_MAP.get(p.lower(), p)
 
 
 @dataclass(frozen=True)

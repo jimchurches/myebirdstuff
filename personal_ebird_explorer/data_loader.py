@@ -4,9 +4,13 @@ Dataset loading and preprocessing for Personal eBird Explorer.
 Single entry point: load_dataset(path_or_file)
 - Loads CSV (expected encoding: UTF-8), validates required columns and that the
   dataset is non-empty, creates canonical datetime column, returns DataFrame.
+- Normalizes ``Protocol`` values to short labels (e.g. ``eBird - Traveling Count`` → ``Traveling``)
+  when that column is present (see :func:`personal_ebird_explorer.checklist_stats_compute.protocol_display_name`).
 """
 
 import pandas as pd
+
+from personal_ebird_explorer.checklist_stats_compute import protocol_display_name
 
 
 # Columns required for the explorer to work; missing any of these raises a clear ValueError at load time.
@@ -71,4 +75,24 @@ def load_dataset(path_or_file):
         raise ValueError(f"Dataset missing required columns: {missing}")
     if df.empty:
         raise ValueError("Dataset is empty (no data rows).")
-    return add_datetime_column(df)
+    df = add_datetime_column(df)
+    if "Protocol" in df.columns:
+        df = _normalize_protocol_column(df)
+    return df
+
+
+def _normalize_protocol_column(df: pd.DataFrame) -> pd.DataFrame:
+    """Replace eBird verbose protocol strings with display labels; empty → missing."""
+
+    def cell(x):
+        if x is None or pd.isna(x):
+            return pd.NA
+        p = str(x).strip()
+        if not p or p.lower() == "nan":
+            return pd.NA
+        out = protocol_display_name(x)
+        return out if out else pd.NA
+
+    out = df.copy()
+    out["Protocol"] = out["Protocol"].map(cell)
+    return out

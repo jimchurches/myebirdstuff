@@ -2,12 +2,28 @@
 
 import pandas as pd
 
-from personal_ebird_explorer.checklist_stats_compute import compute_checklist_stats_payload
+from personal_ebird_explorer.checklist_stats_compute import (
+    compute_checklist_stats_payload,
+    protocol_display_name,
+)
 from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
 
 
 def test_compute_payload_empty():
     assert compute_checklist_stats_payload(pd.DataFrame(), top_n_limit=10) is None
+
+
+def test_protocol_display_name_ebird_export_strings():
+    assert protocol_display_name("eBird - Traveling Count") == "Traveling"
+    assert protocol_display_name("eBird - Stationary Count") == "Stationary"
+    assert protocol_display_name("eBird - Casual Observation") == "Incidental"
+    assert protocol_display_name("  ebird - travelling count  ") == "Traveling"
+
+
+def test_protocol_display_name_unknown_unchanged():
+    assert protocol_display_name("Banding") == "Banding"
+    assert protocol_display_name("") == ""
+    assert protocol_display_name(float("nan")) == ""
 
 
 def test_format_bundle_empty_dataframe():

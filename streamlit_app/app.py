@@ -34,7 +34,8 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 
 **Maintenance:** Location duplicates / close locations, incomplete checklists, and sex-notation scan use
 ``maintenance_streamlit_html`` (nested tabs + expanders + shared HTML builders). Incomplete lists and sex
-notation use the **full** export (``df_full``), not the date-filtered working set (refs #79).
+notation use the **full** export (``df_full``), not the date-filtered working set. **Close location (m)** is
+configurable under **Settings → Maintenance** (refs #79).
 
 **Yearly Summary** (global-by-year) is not migrated in Streamlit yet.
 """
@@ -110,8 +111,8 @@ NOTEBOOK_MAIN_TAB_LABELS = (
 # Same cap as notebook ``TOP_N_TABLE_LIMIT`` (rankings prep inside payload; Rankings tab not wired yet).
 CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
 
-# Map maintenance: near-duplicate location threshold (metres); notebook ``CLOSE_LOCATION_METERS`` (refs #79).
-CLOSE_LOCATION_METERS = 10
+# Default Maintenance → close-location threshold (metres); overridden by Settings (refs #79).
+DEFAULT_CLOSE_LOCATION_METERS = 10
 
 # Match notebook-friendly default; eBird API uses this for common-name spellings in taxonomy CSV.
 DEFAULT_TAXONOMY_LOCALE = "en_AU"
@@ -311,6 +312,8 @@ def main() -> None:
         st.session_state.streamlit_taxonomy_locale = _env_taxonomy_locale() or DEFAULT_TAXONOMY_LOCALE
     if "streamlit_country_tab_sort" not in st.session_state:
         st.session_state.streamlit_country_tab_sort = COUNTRY_TAB_SORT_ALPHABETICAL
+    if "streamlit_close_location_meters" not in st.session_state:
+        st.session_state.streamlit_close_location_meters = DEFAULT_CLOSE_LOCATION_METERS
 
     upload_cache = st.session_state.get(_SESSION_UPLOAD_CACHE_KEY)
     if upload_cache is not None and not (
@@ -679,7 +682,7 @@ def main() -> None:
             incomplete_maint = maint_full_payload.incomplete_by_year or {}
         render_maintenance_streamlit_tab(
             loc_maint,
-            close_location_meters=CLOSE_LOCATION_METERS,
+            close_location_meters=int(st.session_state.streamlit_close_location_meters),
             incomplete_by_year=incomplete_maint,
             sex_notation_by_year=sex_notation_by_year,
             species_url_fn=species_url_fn,
@@ -710,7 +713,22 @@ def main() -> None:
             key="streamlit_country_tab_sort",
             help="Order of countries on the **Country** tab.",
         )
-        st.caption("Row limits for rankings tables and close-location metres — not wired yet.")
+        st.divider()
+        st.subheader("Maintenance")
+        st.number_input(
+            "Close location (m)",
+            min_value=0,
+            max_value=10_000,
+            step=1,
+            key="streamlit_close_location_meters",
+            help=(
+                "Locations within this distance (metres), excluding exact duplicate coordinates, "
+                "are listed under **Maintenance → Location Maintenance → Close locations**."
+            ),
+        )
+        st.caption(
+            "Rankings **visible rows** and **Top N** table limits are Jupyter-only until the Rankings tab is migrated."
+        )
 
     if st.session_state.get("_explorer_map_html_bytes"):
         with st.sidebar:
