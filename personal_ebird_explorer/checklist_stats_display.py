@@ -225,8 +225,15 @@ def format_country_yearly_table_html(
     country_key: str,
     years_list: List[Any],
     rows: List[Tuple[str, List[str]]],
+    *,
+    inline_statistic_links: bool = True,
 ) -> str:
-    """HTML table for one country's yearly statistics (same structure as Country tab accordion)."""
+    """HTML table for one country's yearly statistics (same structure as Country tab accordion).
+
+    *inline_statistic_links*: when ``True`` (default), *Lifers (country)* and *Total checklists* get ⧉
+    links like the notebook Country tab. Set ``False`` when those URLs are shown above the table
+    (e.g. Streamlit Yearly Summary).
+    """
     if not years_list or not rows:
         return (
             "<p style='font-family:sans-serif;color:#666;padding:8px 0;'>No yearly rows for this country.</p>"
@@ -240,8 +247,14 @@ def format_country_yearly_table_html(
     )
     if multi_year:
         year_headers += "<th style='text-align:right;'>Total</th>"
+
+    def _first_col(label: str) -> str:
+        if inline_statistic_links:
+            return _country_table_statistic_label_cell(label, country_key)
+        return html_module.escape(label, quote=False)
+
     body_rows = "".join(
-        f"<tr><td>{_country_table_statistic_label_cell(label, country_key)}</td>"
+        f"<tr><td>{_first_col(label)}</td>"
         + "".join(
             f"<td style='text-align:right;'>{html_module.escape(str(v), quote=False)}</td>" for v in vals
         )
@@ -257,23 +270,31 @@ def format_country_yearly_table_html(
 
 
 def country_yearly_links_bar_html(country_key: str) -> str:
-    """Optional row of links (life list, country page) for ISO countries; empty for regions/unknown."""
+    """Optional row of links for ISO countries: page → lifers → checklists; empty for regions/unknown."""
     parts: List[str] = []
-    life = _ebird_country_lifelist_url(country_key)
     region_page = _ebird_country_region_page_url(country_key)
-    if life:
-        esc = html_module.escape(life, quote=True)
-        parts.append(
-            f'<a href="{esc}" target="_blank" rel="noopener noreferrer" '
-            'title="eBird life list (this country/region)">'
-            '<span class="stats-link-icon" aria-hidden="true">⧉</span> Country life list</a>'
-        )
+    life = _ebird_country_lifelist_url(country_key)
+    my_ck = _ebird_country_mychecklists_url(country_key)
     if region_page:
         esc = html_module.escape(region_page, quote=True)
         parts.append(
             f'<a href="{esc}" target="_blank" rel="noopener noreferrer" '
             'title="eBird region page">'
             '<span class="stats-link-icon" aria-hidden="true">⧉</span> Country page</a>'
+        )
+    if life:
+        esc = html_module.escape(life, quote=True)
+        parts.append(
+            f'<a href="{esc}" target="_blank" rel="noopener noreferrer" '
+            'title="eBird life list (this country/region)">'
+            '<span class="stats-link-icon" aria-hidden="true">⧉</span> Country lifers</a>'
+        )
+    if my_ck:
+        esc = html_module.escape(my_ck, quote=True)
+        parts.append(
+            f'<a href="{esc}" target="_blank" rel="noopener noreferrer" '
+            'title="eBird my checklists (this country)">'
+            '<span class="stats-link-icon" aria-hidden="true">⧉</span> Country checklists</a>'
         )
     if not parts:
         return ""

@@ -80,7 +80,12 @@ def render_yearly_summary_streamlit_html(
 
     st.subheader(country_display_name_plain(selected))
     links_html = country_yearly_links_bar_html(selected)
-    table_html = format_country_yearly_table_html(selected, years_list, rows)
+    table_html = format_country_yearly_table_html(
+        selected,
+        years_list,
+        rows,
+        inline_statistic_links=False,
+    )
 
     inner = f"{links_html}{table_html}" if links_html else table_html
     st.markdown(
