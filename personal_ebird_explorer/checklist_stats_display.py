@@ -202,7 +202,7 @@ def _format_country_summary_html(
             for label, vals in rows
         )
         table_html = f"""  <div style="overflow-x:auto;">
-  <table class="stats-tbl" style="min-width:{min_w};">
+  <table class="stats-tbl stats-tbl-yearly" style="min-width:{min_w};">
     <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
     <tbody>{body_rows}</tbody>
   </table>
@@ -262,7 +262,7 @@ def format_country_yearly_table_html(
         for label, vals in rows
     )
     return f"""  <div style="overflow-x:auto;">
-  <table class="stats-tbl" style="min-width:{min_w};">
+  <table class="stats-tbl stats-tbl-yearly" style="min-width:{min_w};">
     <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
     <tbody>{body_rows}</tbody>
   </table>
@@ -414,6 +414,26 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   .streamlit-checklist-html-ab > p {{
     color: rgba({p_fallback}, 0.7);
   }}
+}}
+/* Multi-column yearly tables (Country / Yearly Summary): lock statistic column width; year cells nowrap. */
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:first-child,
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:first-child {{
+  width: 15rem;
+  min-width: 15rem;
+  max-width: 15rem;
+  box-sizing: border-box;
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:not(:first-child),
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:not(:first-child) {{
+  width: auto;
+  min-width: 3.25rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:last-child {{
+  width: auto;
+  min-width: 3.25rem;
 }}
 """
 
