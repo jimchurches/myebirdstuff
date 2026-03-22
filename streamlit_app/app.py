@@ -31,6 +31,11 @@ no matter which tab is selected (refs #70).
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
 (``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
 triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
+
+**Maintenance:** Location duplicates / close locations, incomplete checklists, and sex-notation scan use
+``maintenance_streamlit_html`` (nested tabs + expanders + shared HTML builders). Incomplete lists and sex
+notation use the **full** export (``df_full``), not the date-filtered working set (refs #79).
+
 **Yearly Summary** (global-by-year) is not migrated in Streamlit yet.
 """
 
@@ -82,6 +87,7 @@ from country_stats_streamlit_html import (  # noqa: E402
     run_country_tab_streamlit_fragment,
     sync_country_tab_session_inputs,
 )
+from maintenance_streamlit_html import render_maintenance_streamlit_tab  # noqa: E402
 from map_working import (  # noqa: E402
     date_inception_to_today_default,
     folium_map_to_html_bytes,
@@ -103,6 +109,9 @@ NOTEBOOK_MAIN_TAB_LABELS = (
 
 # Same cap as notebook ``TOP_N_TABLE_LIMIT`` (rankings prep inside payload; Rankings tab not wired yet).
 CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
+
+# Map maintenance: near-duplicate location threshold (metres); notebook ``CLOSE_LOCATION_METERS`` (refs #79).
+CLOSE_LOCATION_METERS = 10
 
 # Match notebook-friendly default; eBird API uses this for common-name spellings in taxonomy CSV.
 DEFAULT_TAXONOMY_LOCALE = "en_AU"
@@ -156,6 +165,22 @@ def _env_taxonomy_locale() -> str:
 def _cached_checklist_stats_payload(df: pd.DataFrame) -> ChecklistStatsPayload | None:
     """Structured checklist stats for the Checklist Statistics tab (refs #68)."""
     return compute_checklist_stats_payload(df, CHECKLIST_STATS_TOP_N_TABLE_LIMIT)
+
+
+@st.cache_data(show_spinner=False)
+def _cached_sex_notation_by_year(df: pd.DataFrame) -> dict:
+    """Sex-notation maintenance scan on full export (refs #79)."""
+    from personal_ebird_explorer.stats import get_sex_notation_by_year
+
+    return get_sex_notation_by_year(df)
+
+
+def _full_location_data_for_maintenance(df: pd.DataFrame) -> pd.DataFrame:
+    """Unique locations for map maintenance (same columns as notebook ``full_location_data``)."""
+    cols = ["Location ID", "Location", "Latitude", "Longitude"]
+    if not all(c in df.columns for c in cols):
+        return pd.DataFrame(columns=cols)
+    return df[cols].drop_duplicates()
 
 
 @st.cache_resource(show_spinner="Loading eBird taxonomy…")
@@ -515,8 +540,10 @@ def main() -> None:
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
     # Hoisted: spinner lives in the main column (not inside a tab panel) so it’s visible on Map, etc.
-    with st.spinner("Computing checklist statistics…"):
+    with st.spinner("Computing checklist statistics 🐣 🐥 🐧 🦆 🦉 🦢 🦅 …"):
         checklist_payload = _cached_checklist_stats_payload(work_df)
+        maint_full_payload = _cached_checklist_stats_payload(df_full)
+        sex_notation_by_year = _cached_sex_notation_by_year(df_full)
 
     def _tab_test_placeholder(notebook_name: str, blurb: str) -> None:
         st.markdown(f"**TEST** — `{notebook_name}` tab (placeholder only).")
@@ -646,11 +673,17 @@ def main() -> None:
             st.warning("No checklist data to show.")
 
     with tab_maint:
-        _tab_test_placeholder(
-            "Maintenance",
-            "Pretend: duplicate locations, incomplete checklists, sex-notation scan.",
+        loc_maint = _full_location_data_for_maintenance(df_full)
+        incomplete_maint: dict = {}
+        if maint_full_payload is not None:
+            incomplete_maint = maint_full_payload.incomplete_by_year or {}
+        render_maintenance_streamlit_tab(
+            loc_maint,
+            close_location_meters=CLOSE_LOCATION_METERS,
+            incomplete_by_year=incomplete_maint,
+            sex_notation_by_year=sex_notation_by_year,
+            species_url_fn=species_url_fn,
         )
-        st.warning("TEST warning style — not a real problem.")
 
     with tab_settings:
         st.subheader("Species links")
