@@ -61,13 +61,29 @@ def render_maintenance_streamlit_tab(
         "</style>"
     )
 
-    tab_inc, tab_loc, tab_sex = st.tabs(
+    tab_sex, tab_inc, tab_loc = st.tabs(
         [
+            "Sex notation in checklist comments",
             "Incomplete checklists (Traveling or Stationary)",
             "Location Maintenance",
-            "Sex notation in checklist comments",
         ]
     )
+
+    with tab_sex:
+        _md(_WRAPPER_OPEN + sex_notation_intro_html() + _WRAPPER_CLOSE)
+        if not sex_notation_by_year:
+            _md(
+                _WRAPPER_OPEN
+                + '<p class="maint-html-caption">No shorthand sex or age notation detected in checklist comments.</p>'
+                + _WRAPPER_CLOSE
+            )
+        else:
+            for y, items in iter_sex_notation_years_desc(sex_notation_by_year):
+                with st.expander(str(y), expanded=False):
+                    table = sex_notation_year_table_html(
+                        y, items, species_url_fn=species_url_fn
+                    )
+                    _md(_WRAPPER_OPEN + table + _WRAPPER_CLOSE)
 
     with tab_inc:
         _md(_WRAPPER_OPEN + incomplete_checklists_intro_html() + _WRAPPER_CLOSE)
@@ -92,19 +108,3 @@ def render_maintenance_streamlit_tab(
             _md(_WRAPPER_OPEN + exact_body + _WRAPPER_CLOSE)
         with st.expander("Close locations", expanded=False):
             _md(_WRAPPER_OPEN + close_body + _WRAPPER_CLOSE)
-
-    with tab_sex:
-        _md(_WRAPPER_OPEN + sex_notation_intro_html() + _WRAPPER_CLOSE)
-        if not sex_notation_by_year:
-            _md(
-                _WRAPPER_OPEN
-                + '<p class="maint-html-caption">No shorthand sex or age notation detected in checklist comments.</p>'
-                + _WRAPPER_CLOSE
-            )
-        else:
-            for y, items in iter_sex_notation_years_desc(sex_notation_by_year):
-                with st.expander(str(y), expanded=False):
-                    table = sex_notation_year_table_html(
-                        y, items, species_url_fn=species_url_fn
-                    )
-                    _md(_WRAPPER_OPEN + table + _WRAPPER_CLOSE)
