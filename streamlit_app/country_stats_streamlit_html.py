@@ -1,5 +1,5 @@
 """
-**Yearly Summary** (Streamlit): one country at a time, custom HTML aligned with Checklist Statistics (refs #75).
+**Country** (Streamlit): one country at a time — same HTML/CSS patterns as Checklist Statistics (refs #75).
 
 Country order follows **Settings → Tables & lists → Country ordering** (``streamlit_country_tab_sort``).
 """
@@ -22,7 +22,7 @@ from personal_ebird_explorer.checklist_stats_display import (
 # Match ``checklist_stats_streamlit_html`` default (green); flip there if you theme the whole app blue.
 _USE_EBIRD_BLUE_HTML_TAB_THEME = False
 
-_YEARLY_EXTRA_CSS = """
+_COUNTRY_TAB_EXTRA_CSS = """
 .streamlit-checklist-html-ab .stats-links-row { margin: 0 0 0.65rem; line-height: 1.45; }
 .streamlit-checklist-html-ab .stats-links-row a { font-weight: 500; }
 .streamlit-checklist-html-ab .stats-link-sep { opacity: 0.55; padding: 0 0.15em; }
@@ -30,12 +30,12 @@ _YEARLY_EXTRA_CSS = """
 """
 
 
-def render_yearly_summary_streamlit_html(
+def render_country_stats_streamlit_html(
     payload: ChecklistStatsPayload | None,
     *,
     country_sort: str,
 ) -> None:
-    """Yearly-by-country table for the selected country; ordering from *country_sort*."""
+    """Per-country yearly statistics table; ordering from *country_sort*."""
     tab_css = (
         CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE
         if _USE_EBIRD_BLUE_HTML_TAB_THEME
@@ -46,7 +46,7 @@ def render_yearly_summary_streamlit_html(
         "<style>"
         f"{CHECKLIST_STATS_TABLE_CSS}"
         f"{tab_css}"
-        f"{_YEARLY_EXTRA_CSS}"
+        f"{_COUNTRY_TAB_EXTRA_CSS}"
         "</style>",
         unsafe_allow_html=True,
     )
@@ -59,20 +59,25 @@ def render_yearly_summary_streamlit_html(
     valid = [(ck, ys, rs) for ck, ys, rs in sorted_sections if ys and rs]
     keys = [ck for ck, _, _ in valid]
     if not keys:
-        st.info("No per-country yearly statistics for this dataset.")
+        st.info("No per-country statistics for this dataset.")
         return
 
-    cur = st.session_state.get("streamlit_yearly_country")
+    # Prefer new key; fall back if user had a session from the old Yearly tab widget.
+    if (
+        st.session_state.get("streamlit_country_tab_country") is None
+        and st.session_state.get("streamlit_yearly_country") is not None
+    ):
+        st.session_state.streamlit_country_tab_country = st.session_state.streamlit_yearly_country
+    cur = st.session_state.get("streamlit_country_tab_country")
     if cur not in keys:
-        st.session_state.streamlit_yearly_country = keys[0]
+        st.session_state.streamlit_country_tab_country = keys[0]
 
     st.markdown("#### By country")
     selected = st.selectbox(
         "Country",
         options=keys,
         format_func=country_display_name_plain,
-        key="streamlit_yearly_country",
-        help="Order of countries is controlled under **Settings → Tables & lists**.",
+        key="streamlit_country_tab_country",
     )
 
     section_by_key = {ck: (ys, rs) for ck, ys, rs in valid}

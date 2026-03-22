@@ -27,6 +27,9 @@ Streamlit does not expose the browser language to Python.
 ``checklist_stats_streamlit_tab_sections_html``). ``_cached_checklist_stats_payload`` runs **once** immediately
 under the main tab bar (inside ``st.spinner("Computing checklist statistics…")``) so the loading message shows
 no matter which tab is selected (refs #70).
+
+**Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
+(``country_stats_streamlit_html``). **Yearly Summary** (global-by-year) is not migrated in Streamlit yet.
 """
 
 from __future__ import annotations
@@ -73,7 +76,7 @@ from personal_ebird_explorer.checklist_stats_display import (  # noqa: E402
     COUNTRY_TAB_SORT_LIFERS_WORLD,
     COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
-from yearly_summary_streamlit_html import render_yearly_summary_streamlit_html  # noqa: E402
+from country_stats_streamlit_html import render_country_stats_streamlit_html  # noqa: E402
 from map_working import (  # noqa: E402
     date_inception_to_today_default,
     folium_map_to_html_bytes,
@@ -625,20 +628,19 @@ def main() -> None:
         st.json({"rankings": "TEST", "species": ["Alpha", "Beta", "Gamma"]})
 
     with tab_yearly:
+        _tab_test_placeholder(
+            "Yearly Summary",
+            "Global yearly statistics (not per-country) — notebook parity not migrated here yet.",
+        )
+
+    with tab_country:
         if checklist_payload is not None:
-            render_yearly_summary_streamlit_html(
+            render_country_stats_streamlit_html(
                 checklist_payload,
                 country_sort=st.session_state.streamlit_country_tab_sort,
             )
         else:
             st.warning("No checklist data to show.")
-
-    with tab_country:
-        _tab_test_placeholder(
-            "Country",
-            "Pretend: accordions per country with sparse year columns.",
-        )
-        st.code("TEST country block\n  AU: 12 lifers\n  NZ: 4 lifers", language="text")
 
     with tab_maint:
         _tab_test_placeholder(
@@ -670,7 +672,7 @@ def main() -> None:
             ],
             format_func=lambda k: _COUNTRY_SORT_LABELS[k],
             key="streamlit_country_tab_sort",
-            help="Order of countries in **Yearly Summary** (and the Country tab when implemented).",
+            help="Order of countries on the **Country** tab.",
         )
         st.caption("Row limits for rankings tables and close-location metres — not wired yet.")
 

@@ -202,7 +202,7 @@ def _format_country_summary_html(
             for label, vals in rows
         )
         table_html = f"""  <div style="overflow-x:auto;">
-  <table class="stats-tbl stats-tbl-yearly" style="min-width:{min_w};">
+  <table class="stats-tbl stats-tbl-yearly" style="min-width:{min_w};width:100%;">
     <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
     <tbody>{body_rows}</tbody>
   </table>
@@ -232,7 +232,7 @@ def format_country_yearly_table_html(
 
     *inline_statistic_links*: when ``True`` (default), *Lifers (country)* and *Total checklists* get ⧉
     links like the notebook Country tab. Set ``False`` when those URLs are shown above the table
-    (e.g. Streamlit Yearly Summary).
+    (e.g. Streamlit Country tab).
     """
     if not years_list or not rows:
         return (
@@ -262,7 +262,7 @@ def format_country_yearly_table_html(
         for label, vals in rows
     )
     return f"""  <div style="overflow-x:auto;">
-  <table class="stats-tbl stats-tbl-yearly" style="min-width:{min_w};">
+  <table class="stats-tbl stats-tbl-yearly" style="min-width:{min_w};width:100%;">
     <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
     <tbody>{body_rows}</tbody>
   </table>
@@ -415,25 +415,25 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
     color: rgba({p_fallback}, 0.7);
   }}
 }}
-/* Multi-column yearly tables (Country / Yearly Summary): lock statistic column width; year cells nowrap. */
+/* Multi-column country yearly tables: same base as checklist stats-tbl, but undo 2-col % rules.
+   First column: fixed width so every country’s table lines up (year columns flex with count). */
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:first-child,
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:first-child {{
-  width: 15rem;
-  min-width: 15rem;
-  max-width: 15rem;
+  width: 16rem;
+  min-width: 16rem;
+  max-width: 16rem;
   box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:last-child,
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:last-child {{
+  width: auto;
 }}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:not(:first-child),
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:not(:first-child) {{
-  width: auto;
-  min-width: 3.25rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}}
-.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:last-child {{
-  width: auto;
-  min-width: 3.25rem;
 }}
 """
 
