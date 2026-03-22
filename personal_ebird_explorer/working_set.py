@@ -124,8 +124,9 @@ def rebuild_working_set_from_date_filter(
 
         w = whoosh_index.writer()
         w.delete_by_query(Every())
-        for name in species_list:
-            w.add_document(common_name=name)
+        for common in species_list:
+            sci = str(name_map.get(common, "") or "")
+            w.add_document(common_name=common, scientific_name=sci)
         w.commit()
 
     return WorkingSet(

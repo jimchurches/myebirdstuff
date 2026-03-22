@@ -58,6 +58,10 @@ from personal_ebird_explorer.explorer_paths import (  # noqa: E402
     resolve_ebird_data_file,
 )
 from personal_ebird_explorer.map_controller import build_species_overlay_map  # noqa: E402
+from personal_ebird_explorer.species_search import (  # noqa: E402
+    build_ram_species_whoosh_index,
+    whoosh_species_suggestions,
+)
 from personal_ebird_explorer.species_logic import base_species_for_lifer  # noqa: E402
 from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
     data_signature_for_caches,
@@ -94,6 +98,30 @@ _SESSION_UPLOAD_CACHE_KEY = "_ebird_streamlit_upload_csv_cache"
 # Survive Map view switch All locations ↔ Lifer (widgets not rendered on Lifer runs).
 _PERSIST_MAP_DATE_FILTER_KEY = "_preserve_map_date_filter"
 _PERSIST_MAP_DATE_RANGE_KEY = "_preserve_map_date_range"
+# Remember species pick when switching map view (e.g. species → Lifer → back).
+_PERSIST_SPECIES_COMMON_KEY = "_preserve_streamlit_species_common"
+_PERSIST_SPECIES_SCI_KEY = "_preserve_streamlit_species_sci"
+_SESSION_PREV_MAP_VIEW_KEY = "_streamlit_prev_map_view_mode"
+_SESSION_SPECIES_SEARCH_KEY = "streamlit_species_searchbox"
+_SESSION_SPECIES_WS_KEY = "_ws_for_species_search_fragment"
+_SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
+_SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
+_SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
+_FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
+
+
+def _static_map_cache_key(
+    work_df: pd.DataFrame,
+    map_view_mode: str,
+    date_filter_banner: str,
+    map_style: str,
+) -> tuple:
+    """Stable key for All / Lifer map reuse (same CSV + filter + basemap)."""
+    n = len(work_df)
+    sid0 = ""
+    if n > 0 and "Submission ID" in work_df.columns:
+        sid0 = str(work_df["Submission ID"].iloc[0])
+    return (map_view_mode, date_filter_banner, map_style, n, sid0)
 
 
 def _env_taxonomy_locale() -> str:
@@ -119,6 +147,55 @@ def _cached_species_url_fn(locale_key: str) -> Callable[[str], str | None]:
     if load_taxonomy(locale=loc):
         return get_species_url
     return lambda _: None
+
+
+@st.fragment
+def _species_searchbox_fragment() -> None:
+    """Whoosh-backed search; fragment-scoped reruns avoid greying the whole app (refs #70)."""
+    try:
+        from streamlit_searchbox import st_searchbox
+    except ImportError:
+        st.error(
+            "Missing **streamlit-searchbox**. Install with: "
+            "`pip install -r requirements-streamlit.txt` (refs #70)."
+        )
+        return
+    ix = st.session_state.get(_SESSION_SPECIES_IX_KEY)
+    if ix is None:
+        return
+    persisted = st.session_state.get(_PERSIST_SPECIES_COMMON_KEY)
+
+    def _search(term: str) -> list:
+        return whoosh_species_suggestions(
+            ix,
+            term,
+            max_options=12,
+            min_query_len=3,
+        )
+
+    def _on_species_submit(selected: Any) -> None:
+        """Library does not rerun the full app on submit; the map lives outside this fragment."""
+        st.session_state[_SESSION_SPECIES_PICK_KEY] = selected
+        st.rerun()
+
+    def _on_species_reset() -> None:
+        st.session_state.pop(_SESSION_SPECIES_PICK_KEY, None)
+        st.rerun()
+
+    pick = st_searchbox(
+        _search,
+        key=_SESSION_SPECIES_SEARCH_KEY,
+        placeholder="Type species name…",
+        label="Species",
+        default=persisted,
+        default_searchterm=persisted or "",
+        debounce=400,
+        edit_after_submit="option",
+        rerun_scope="fragment",
+        submit_function=_on_species_submit,
+        reset_function=_on_species_reset,
+    )
+    st.session_state[_SESSION_SPECIES_PICK_KEY] = pick
 
 
 def _secrets_data_folder() -> str | None:
@@ -240,15 +317,21 @@ def main() -> None:
     if "filtered_by_loc_cache" not in st.session_state:
         st.session_state.filtered_by_loc_cache = OrderedDict()
 
+    _MAP_VIEW_LABEL_TO_MODE = {
+        "All locations": "all",
+        "Selected species": "species",
+        "Lifer locations": "lifers",
+    }
+
     with st.sidebar:
         st.header("Map")
 
         map_view_label = st.selectbox(
             "Map view",
-            ["All locations", "Lifer locations"],
-            index=0,
+            ["All locations", "Selected species", "Lifer locations"],
+            key="streamlit_map_view_label",
         )
-        map_view_mode = "lifers" if map_view_label == "Lifer locations" else "all"
+        map_view_mode = _MAP_VIEW_LABEL_TO_MODE[map_view_label]
         is_lifer_view = map_view_mode == "lifers"
 
         st.markdown("**Date**")
@@ -313,25 +396,6 @@ def main() -> None:
             if date_filter_on_effective and date_range_sel is not None:
                 st.session_state[_PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
 
-        st.divider()
-
-        map_style = st.selectbox(
-            "Basemap",
-            options=["default", "satellite", "google", "carto"],
-            index=0,
-        )
-        st.markdown(
-            '<div style="height:0.65rem" aria-hidden="true"></div>',
-            unsafe_allow_html=True,
-        )
-        map_height = st.slider(
-            "Map height (px)",
-            min_value=440,
-            max_value=1200,
-            value=720,
-            step=20,
-        )
-
     ws, date_filter_banner = streamlit_working_set_and_status(
         df_full,
         map_view_mode=map_view_mode,
@@ -349,6 +413,69 @@ def main() -> None:
             map_caches=(st.session_state.popup_html_cache, st.session_state.filtered_by_loc_cache),
         )
     work_df = ws.df
+
+    hide_non_matching_locations = False
+    species_pick_common: str | None = None
+    species_pick_sci = ""
+
+    # Re-entering Selected species from another view: drop widget state so default + searchterm apply.
+    _prev_mv = st.session_state.get(_SESSION_PREV_MAP_VIEW_KEY)
+    if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
+        st.session_state.pop(_SESSION_SPECIES_SEARCH_KEY, None)
+
+    if map_view_mode == "species":
+        _ix_sig = (len(ws.species_list), st.session_state.get("ebird_data_sig"))
+        if st.session_state.get(_SESSION_SPECIES_IX_SIG_KEY) != _ix_sig:
+            st.session_state[_SESSION_SPECIES_IX_KEY] = build_ram_species_whoosh_index(
+                ws.species_list, ws.name_map
+            )
+            st.session_state[_SESSION_SPECIES_IX_SIG_KEY] = _ix_sig
+        st.session_state[_SESSION_SPECIES_WS_KEY] = ws
+
+        with st.sidebar:
+            st.markdown("**Species**")
+            st.caption("Type at least three letters. Searches common and scientific names.")
+            _species_searchbox_fragment()
+            hide_non_matching_locations = st.toggle(
+                "Show only selected species",
+                key="streamlit_species_hide_only",
+                help=(
+                    "When off, all locations are shown with your species highlighted. "
+                    "When on, only locations where you recorded the species."
+                ),
+            )
+
+        species_pick_common = st.session_state.get(_SESSION_SPECIES_PICK_KEY)
+        if species_pick_common:
+            species_pick_sci = str(ws.name_map.get(species_pick_common, "") or "")
+            st.session_state[_PERSIST_SPECIES_COMMON_KEY] = species_pick_common
+            st.session_state[_PERSIST_SPECIES_SCI_KEY] = species_pick_sci
+        else:
+            st.session_state.pop(_PERSIST_SPECIES_COMMON_KEY, None)
+            st.session_state.pop(_PERSIST_SPECIES_SCI_KEY, None)
+    else:
+        st.session_state.pop(_SESSION_SPECIES_PICK_KEY, None)
+
+    with st.sidebar:
+        st.divider()
+        map_style = st.selectbox(
+            "Basemap",
+            options=["default", "satellite", "google", "carto"],
+            index=0,
+        )
+        st.markdown(
+            '<div style="height:0.65rem" aria-hidden="true"></div>',
+            unsafe_allow_html=True,
+        )
+        map_height = st.slider(
+            "Map height (px)",
+            min_value=440,
+            max_value=1200,
+            value=720,
+            step=20,
+        )
+
+    st.session_state[_SESSION_PREV_MAP_VIEW_KEY] = map_view_mode
 
     tax_locale_effective = (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE)
     species_url_fn = _cached_species_url_fn(tax_locale_effective)
@@ -380,6 +507,7 @@ def main() -> None:
             st.session_state.ebird_data_sig = sig
             st.session_state.popup_html_cache = {}
             st.session_state.filtered_by_loc_cache = OrderedDict()
+            st.session_state.pop(_FOLIUM_STATIC_MAP_CACHE_KEY, None)
 
         try:
             ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
@@ -387,30 +515,64 @@ def main() -> None:
             st.warning(str(e))
             st.session_state.pop("_explorer_map_html_bytes", None)
         else:
-            result = build_species_overlay_map(
-                **ctx,
-                selected_species="",
-                selected_common_name="",
-                map_style=map_style,
-                popup_sort_order="ascending",
-                popup_scroll_hint="shading",
-                date_filter_status=date_filter_banner,
-                species_url_fn=species_url_fn,
-                base_species_fn=base_species_for_lifer,
-                popup_html_cache=st.session_state.popup_html_cache,
-                filtered_by_loc_cache=st.session_state.filtered_by_loc_cache,
-                map_view_mode=map_view_mode,
-                hide_non_matching_locations=False,
+            overlay_common = (
+                (species_pick_common or "").strip() if map_view_mode == "species" else ""
             )
+            overlay_sci = (
+                (species_pick_sci or "").strip() if map_view_mode == "species" else ""
+            )
+            hide_nm = (
+                map_view_mode == "species"
+                and bool(overlay_sci)
+                and hide_non_matching_locations
+            )
+            _map_kw = {
+                **ctx,
+                "selected_species": overlay_sci,
+                "selected_common_name": overlay_common,
+                "map_style": map_style,
+                "popup_sort_order": "ascending",
+                "popup_scroll_hint": "shading",
+                "date_filter_status": date_filter_banner,
+                "species_url_fn": species_url_fn,
+                "base_species_fn": base_species_for_lifer,
+                "popup_html_cache": st.session_state.popup_html_cache,
+                "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
+                "map_view_mode": map_view_mode,
+                "hide_non_matching_locations": hide_nm,
+            }
+            _ck = _static_map_cache_key(work_df, map_view_mode, date_filter_banner, map_style)
+            _use_static_cache = map_view_mode in ("all", "lifers")
+            _cached = (
+                st.session_state.get(_FOLIUM_STATIC_MAP_CACHE_KEY) if _use_static_cache else None
+            )
+            if (
+                _use_static_cache
+                and isinstance(_cached, dict)
+                and _cached.get("key") == _ck
+                and _cached.get("map") is not None
+            ):
+                result_map = _cached["map"]
+                result_warning = _cached.get("warning")
+            else:
+                result = build_species_overlay_map(**_map_kw)
+                result_map = result.map
+                result_warning = result.warning
+                if _use_static_cache and result_map is not None:
+                    st.session_state[_FOLIUM_STATIC_MAP_CACHE_KEY] = {
+                        "key": _ck,
+                        "map": result_map,
+                        "warning": result_warning,
+                    }
 
-            if result.warning:
-                st.warning(result.warning)
+            if result_warning:
+                st.warning(result_warning)
                 st.session_state.pop("_explorer_map_html_bytes", None)
-            elif result.map is None:
+            elif result_map is None:
                 st.warning("Map could not be built.")
                 st.session_state.pop("_explorer_map_html_bytes", None)
             else:
-                st.session_state["_explorer_map_html_bytes"] = folium_map_to_html_bytes(result.map)
+                st.session_state["_explorer_map_html_bytes"] = folium_map_to_html_bytes(result_map)
                 try:
                     from streamlit_folium import st_folium
                 except ImportError:
@@ -424,7 +586,7 @@ def main() -> None:
                     st.stop()
                 # returned_objects=[] avoids pan/zoom reruns; key includes height for resize.
                 st_folium(
-                    result.map,
+                    result_map,
                     use_container_width=True,
                     height=map_height,
                     key=f"explorer_folium_map_h{map_height}",

@@ -6,8 +6,9 @@ Each function takes explicit inputs and returns a value — no notebook
 globals, widget references, or side effects.
 
 Popup HTML is plain strings passed to ``folium.Popup``; typography and colours are **not** locked to
-Leaflet defaults: ``map_popup_theme_stylesheet`` (injected once per map in ``map_controller``) and
-``EXPLORER_UI_*`` constants align with the Streamlit checklist stats HTML tab and ``.streamlit/config.toml``.
+Leaflet defaults: ``map_overlay_theme_stylesheet`` (popups + top/bottom map chrome, injected once per map
+in ``map_controller``) and ``EXPLORER_UI_*`` constants align with the Streamlit app and
+``streamlit_app/.streamlit/config.toml`` (refs #70).
 """
 
 import html as _html_module
@@ -24,7 +25,9 @@ EXPLORER_UI_FONT_STACK = (
 EXPLORER_UI_TEXT_COLOR = "#1a2e22"
 EXPLORER_UI_PRIMARY_GREEN = "#1f6f54"
 EXPLORER_UI_PANEL_BG = "rgba(250, 252, 250, 0.97)"
+EXPLORER_UI_PANEL_BG_SOLID = "#eef4f0"
 EXPLORER_UI_MUTED = "rgba(26, 46, 34, 0.55)"
+EXPLORER_UI_BORDER_PANEL = "rgba(31, 111, 84, 0.18)"
 
 
 def map_popup_theme_stylesheet() -> str:
@@ -61,6 +64,78 @@ def map_popup_theme_stylesheet() -> str:
 }}
 </style>
 """
+
+
+def map_banner_and_legend_theme_stylesheet() -> str:
+    """CSS for fixed top banner + bottom legend (same visual language as Streamlit sidebar)."""
+    return f"""
+<style>
+.pebird-map-banner,
+.pebird-map-legend {{
+  box-sizing: border-box;
+  font-family: {EXPLORER_UI_FONT_STACK};
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  font-weight: 400;
+  color: {EXPLORER_UI_TEXT_COLOR};
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(180deg, {EXPLORER_UI_PANEL_BG_SOLID} 0%, {EXPLORER_UI_PANEL_BG} 100%);
+  border: 1px solid {EXPLORER_UI_BORDER_PANEL};
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(26, 46, 34, 0.06), 0 4px 16px rgba(26, 46, 34, 0.08);
+}}
+.pebird-map-banner {{
+  padding: 12px 16px;
+  max-width: min(420px, calc(100vw - 24px));
+}}
+.pebird-map-banner__title {{
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  margin: 0 0 6px 0;
+}}
+.pebird-map-banner__title a {{
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  text-decoration: none;
+  font-weight: 600;
+}}
+.pebird-map-banner__title a:hover {{
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}}
+.pebird-map-banner__stats {{
+  font-weight: 400;
+  margin: 0;
+}}
+.pebird-map-banner__sep {{
+  color: {EXPLORER_UI_MUTED};
+  font-weight: 400;
+  padding: 0 0.2em;
+}}
+.pebird-map-banner__muted {{
+  display: block;
+  font-size: 0.88em;
+  font-weight: 400;
+  color: {EXPLORER_UI_MUTED};
+  margin-top: 6px;
+}}
+.pebird-map-legend {{
+  padding: 8px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 0.8125rem;
+}}
+</style>
+"""
+
+
+def map_overlay_theme_stylesheet() -> str:
+    """All injected map UI chrome: Leaflet popups + top banner + bottom legend (refs #70)."""
+    return map_popup_theme_stylesheet() + map_banner_and_legend_theme_stylesheet()
 
 
 # ---------------------------------------------------------------------------
@@ -172,26 +247,21 @@ def build_location_popup_html(
 # Banner and legend HTML builders
 # ---------------------------------------------------------------------------
 
-_BANNER_STYLE = (
-    "position:fixed;top:10px;right:10px;z-index:1000;"
-    f"background:{EXPLORER_UI_PANEL_BG};padding:10px 14px;"
-    "border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.12);"
-    f"border:1px solid rgba(31,111,84,0.15);"
-    f"font-family:{EXPLORER_UI_FONT_STACK};font-size:0.8125rem;line-height:1.45;"
-    f"color:{EXPLORER_UI_TEXT_COLOR};"
-    "-webkit-font-smoothing:antialiased;"
-)
+_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
 
-_LEGEND_STYLE = (
-    "position:fixed;bottom:10px;left:10px;z-index:1000;"
-    f"background:{EXPLORER_UI_PANEL_BG};padding:6px 10px;"
-    "border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.12);"
-    f"border:1px solid rgba(31,111,84,0.15);"
-    f"font-family:{EXPLORER_UI_FONT_STACK};font-size:0.75rem;line-height:1.45;"
-    f"color:{EXPLORER_UI_TEXT_COLOR};"
-    "display:flex;flex-wrap:wrap;gap:8px 12px;"
-    "-webkit-font-smoothing:antialiased;"
-)
+_LEGEND_POSITION = "position:fixed;bottom:10px;left:10px;z-index:1000;"
+
+
+def _banner_sep() -> str:
+    """Muted separator between stat clauses (aligned with app chrome)."""
+    return '<span class="pebird-map-banner__sep" aria-hidden="true">·</span>'
+
+
+def _banner_muted_line(text: str | None) -> str:
+    if not text:
+        return ""
+    esc = _html_module.escape(str(text), quote=False)
+    return f'<span class="pebird-map-banner__muted">{esc}</span>'
 
 def pin_legend_item(color, fill, label):
     """Small coloured circle + label for the map legend."""
@@ -211,18 +281,18 @@ def build_all_species_banner_html(
     If date_filter_status is provided (e.g. "Date filter: Off" or "Date filter: 2026-01-01 to 2026-12-31"),
     it is shown as a second line in the banner, smaller and lighter so it is less prominent.
     """
-    date_line = (
-        f'<br><span style="font-size:0.85em;color:{EXPLORER_UI_MUTED};">{date_filter_status}</span>'
-        if date_filter_status
-        else ""
-    )
-    return (
-        f'<div style="{_BANNER_STYLE}">'
-        f'<b>All species</b><br>'
+    sep = _banner_sep()
+    stats = (
         f'{total_checklists} checklist{"s" if total_checklists != 1 else ""}'
-        f' &nbsp;|&nbsp; {total_species} species'
-        f' &nbsp;|&nbsp; {total_individuals} individual{"s" if total_individuals != 1 else ""}'
-        f'{date_line}'
+        f'{sep}{total_species} species'
+        f'{sep}{total_individuals} individual{"s" if total_individuals != 1 else ""}'
+    )
+    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
+    return (
+        f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
+        f'<span class="pebird-map-banner__title">All species</span>'
+        f'<div class="pebird-map-banner__stats">{stats}</div>'
+        f'{date_block}'
         f'</div>'
     )
 
@@ -231,18 +301,20 @@ def build_lifer_locations_banner_html(
     n_lifer_species, n_locations, date_filter_status=None
 ):
     """Banner for lifer-only map mode (refs #71)."""
-    date_line = (
-        f'<br><span style="font-size:0.85em;color:{EXPLORER_UI_MUTED};">{date_filter_status}</span>'
-        if date_filter_status
-        else ""
-    )
+    sep = _banner_sep()
     loc_w = "locations" if n_locations != 1 else "location"
-    return (
-        f'<div style="{_BANNER_STYLE}">'
-        f'<b>Lifer locations</b><br>'
+    stats = (
         f'{n_lifer_species} lifer{"s" if n_lifer_species != 1 else ""}'
-        f' &nbsp;|&nbsp; {n_locations} {loc_w}'
-        f'<br><span style="font-size:0.85em;color:{EXPLORER_UI_MUTED};">Sub-species included</span>'
+        f'{sep}{n_locations} {loc_w}'
+    )
+    note = _banner_muted_line("Sub-species included")
+    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
+    muted_stack = f"{note}<br>{date_block}" if date_block else note
+    return (
+        f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
+        f'<span class="pebird-map-banner__title">Lifer locations</span>'
+        f'<div class="pebird-map-banner__stats">{stats}</div>'
+        f'{muted_stack}'
         f'</div>'
     )
 
@@ -271,38 +343,31 @@ def build_species_banner_html(
         date_filter_status: Optional string (e.g. "Date filter: Off" or range) shown on last line, smaller and lighter.
         species_url: Optional eBird species page URL; if set, display_name is rendered as a clickable link (refs #56).
     """
-    sep = " &nbsp;|&nbsp; "
-    title_esc = _html_module.escape(str(display_name), quote=True)
-    # Match other tabs: same colour as text, dotted underline (no blue link)
-    _link_style = "color:inherit;text-decoration:underline dotted;text-underline-offset:2px;"
+    title_esc = _html_module.escape(str(display_name), quote=False)
     title_html = (
-        f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener" style="{_link_style}">{title_esc}</a>'
+        f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">'
+        f'{title_esc}</a>'
         if species_url
         else title_esc
     )
+    sep_dot = _banner_sep()
     line2 = (
         f'{n_checklists} checklist{"s" if n_checklists != 1 else ""}'
-        f'{sep}{n_individuals} individual{"s" if n_individuals != 1 else ""}'
+        f'{sep_dot}{n_individuals} individual{"s" if n_individuals != 1 else ""}'
     )
     line3_parts = []
     if first_seen_date:
         line3_parts.append(f"First seen: {first_seen_date}")
     if last_seen_date:
         line3_parts.append(f"Last seen: {last_seen_date}")
-    line3 = sep.join(line3_parts)
+    line3 = sep_dot.join(line3_parts)
     line4 = f"High count: {high_count_date} ({high_count})"
-    date_line = (
-        f'<br><span style="font-size:0.85em;color:{EXPLORER_UI_MUTED};">{date_filter_status}</span>'
-        if date_filter_status
-        else ""
-    )
+    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
     return (
-        f'<div style="{_BANNER_STYLE}">'
-        f'<b>{title_html}</b><br>'
-        f'{line2}<br>'
-        f'{line3}<br>'
-        f'{line4}'
-        f'{date_line}'
+        f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
+        f'<span class="pebird-map-banner__title">{title_html}</span>'
+        f'<div class="pebird-map-banner__stats">{line2}<br>{line3}<br>{line4}</div>'
+        f'{date_block}'
         f'</div>'
     )
 
@@ -313,7 +378,7 @@ def build_legend_html(items):
     Each tuple is rendered via ``pin_legend_item``.
     """
     parts = "".join(pin_legend_item(c, f, l) for c, f, l in items)
-    return f'<div style="{_LEGEND_STYLE}">{parts}</div>'
+    return f'<div class="pebird-map-legend" style="{_LEGEND_POSITION}">{parts}</div>'
 
 
 # ---------------------------------------------------------------------------

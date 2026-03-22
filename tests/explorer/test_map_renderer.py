@@ -202,8 +202,8 @@ def test_build_all_species_banner_html_content():
 
 def test_build_all_species_banner_html_singular():
     html = build_all_species_banner_html(1, 1, 1)
-    assert "1 checklist " in html or "1 checklist&" in html
-    assert "1 individual<" in html or "1 individual&" in html
+    assert "1 checklist" in html
+    assert "1 individual" in html
 
 
 def test_build_all_species_banner_html_is_div():
@@ -284,8 +284,8 @@ def test_build_species_banner_html_singular():
         high_count=1,
         first_seen_date="01-Jan-2026",
     )
-    assert "1 checklist " in html or "1 checklist&" in html
-    assert "1 individual<" in html or "1 individual&" in html
+    assert "1 checklist" in html
+    assert "1 individual" in html
 
 
 def test_build_species_banner_html_is_div():
