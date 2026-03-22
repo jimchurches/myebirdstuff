@@ -16,9 +16,39 @@ from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
 # eBird location edit URL (merge/delete personal locations), not lifelist.
 EBIRD_LOCATION_EDIT_BASE = "https://ebird.org/mylocations/edit/"
 
+# Shared with notebook; Streamlit ``stats-tbl`` / ``stats-tbl-maint`` rules live in
+# ``checklist_stats_display._streamlit_checklist_html_tab_css`` (refs #79).
+MAINTENANCE_TABLE_CLASSES = "maint-tbl stats-tbl stats-tbl-maint"
+MAINTENANCE_PAIR_TABLE_CLASSES = "maint-tbl stats-tbl stats-tbl-maint maint-pair-tbl"
+
 # --- CSS (notebook accordions + Streamlit can inject once) ---
 
-MAP_MAINTENANCE_CSS = """
+_MAINT_TEXT_CSS = """
+    .maint-html-blurb {
+      margin-top:0;
+      margin-bottom:16px;
+      max-width:600px;
+      box-sizing:border-box;
+      color:#6b7280;
+      font-size:13px;
+      font-weight:normal;
+      line-height:1.6;
+      text-align:left;
+      overflow-wrap:break-word;
+      word-break:break-word;
+    }
+    .maint-html-caption {
+      margin:4px 0 8px;
+      color:#6b7280;
+      font-size:13px;
+      line-height:1.45;
+      font-weight:normal;
+    }
+"""
+
+MAP_MAINTENANCE_CSS = (
+    _MAINT_TEXT_CSS
+    + """
     .maint-tbl.maint-single-col td { text-align:left; font-weight:normal; }
     .maint-pair-tbl { max-width:600px; }
     .maint-pair-tbl tbody tr.maint-spacer { background:transparent; }
@@ -44,9 +74,12 @@ MAP_MAINTENANCE_CSS = """
       font-size:13px;
     }
 """
+)
 
 # Used by incomplete + sex notation notebook wrappers (details/summary).
-MAINTENANCE_YEAR_SECTION_CSS = """
+MAINTENANCE_YEAR_SECTION_CSS = (
+    _MAINT_TEXT_CSS
+    + """
     details { margin-bottom:8px; }
     summary { cursor:pointer; font-weight:600; padding:6px 0; color:#374151; }
     .maint-section {
@@ -63,15 +96,13 @@ MAINTENANCE_YEAR_SECTION_CSS = """
       cursor:pointer;
     }
 """
-
-# All maintenance CSS for Streamlit (single injection); refs #79.
-MAINTENANCE_STREAMLIT_COMBINED_CSS = MAP_MAINTENANCE_CSS + MAINTENANCE_YEAR_SECTION_CSS
+)
 
 
 def map_maintenance_intro_html() -> str:
     """Introductory paragraph for Location maintenance (HTML fragment)."""
     return """
-  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+  <div class="maint-html-blurb">
     These tables highlight duplicate locations and locations that are very close to each other (within the configured distance) to help you keep your personal eBird locations organised. This is most useful if you regularly create new locations and build a large catalogue of them; if you mainly use hotspots it may be less relevant. Locations can be merged on the eBird website, though directly merging duplicates can sometimes be awkward. Often the simplest approach is to move checklists to the preferred location and then delete the now-empty duplicate. See eBird for details.
   </div>"""
 
@@ -80,7 +111,7 @@ def map_maintenance_exact_duplicates_body_html(exact_rows: List[Tuple[Any, ...]]
     """Table HTML for exact duplicate locations (one ``get_map_maintenance_data`` result)."""
     if not exact_rows:
         return """
-  <p style="margin:4px 0;color:#6b7280;">None detected.</p>"""
+  <p class="maint-html-caption">None detected.</p>"""
     dup_body = ""
     for loc_name, loc_id, count, lat, lon in exact_rows:
         link = (
@@ -91,8 +122,8 @@ def map_maintenance_exact_duplicates_body_html(exact_rows: List[Tuple[Any, ...]]
         coords = f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"
         dup_body += f"<tr><td>{link}</td><td>{coords}</td><td>{count}</td></tr>"
     return f"""
-  <p style="margin:4px 0 8px;color:#6b7280;font-size:13px;">Different Location IDs at the same coordinates. Same name listed once; different names listed separately.</p>
-  <table class="maint-tbl">
+  <p class="maint-html-caption">Different Location IDs at the same coordinates. Same name listed once; different names listed separately.</p>
+  <table class="{MAINTENANCE_TABLE_CLASSES}">
     <thead><tr><th>Location</th><th>Latitude/Longitude</th><th>Number of duplicates</th></tr></thead>
     <tbody>{dup_body}</tbody>
   </table>"""
@@ -102,7 +133,7 @@ def map_maintenance_close_locations_body_html(near_pairs: List[Any], threshold_m
     """Table HTML for close location pairs."""
     if not near_pairs:
         return f"""
-  <p style="margin:4px 0;color:#6b7280;">None detected within the current threshold ({threshold_m} m).</p>"""
+  <p class="maint-html-caption">None detected within the current threshold ({threshold_m} m).</p>"""
     all_rows = ""
     for i, pair in enumerate(near_pairs):
         pair_rows = "".join(
@@ -120,8 +151,8 @@ def map_maintenance_close_locations_body_html(near_pairs: List[Any], threshold_m
                 'background:transparent;"></td></tr>'
             )
     return f"""
-  <p style="margin:4px 0 12px;color:#6b7280;font-size:13px;">Locations within {threshold_m} m of each other (excluding exact duplicates).</p>
-  <table class="maint-pair-tbl">
+  <p class="maint-html-caption">Locations within {threshold_m} m of each other (excluding exact duplicates).</p>
+  <table class="{MAINTENANCE_PAIR_TABLE_CLASSES}">
     <thead><tr><th>Location</th><th>Latitude/Longitude</th></tr></thead>
     <tbody>{all_rows}</tbody>
   </table>"""
@@ -163,7 +194,7 @@ def format_map_maintenance_html(loc_df: pd.DataFrame, threshold_m: int) -> str:
 def sex_notation_intro_html() -> str:
     """Intro HTML for sex-notation maintenance."""
     return """
-  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+  <div class="maint-html-blurb">
     Some checklists contain shorthand sex or age notation (for example <code>MF</code>, <code>MFFF</code>, or <code>MMF??F</code>) entered in the field notes. These should ideally be converted into the structured Age/Sex table on the eBird website. The following lists identify checklists where this shorthand was detected.
   </div>"""
 
@@ -195,7 +226,7 @@ def sex_notation_year_table_html(
         )
     table_body = "".join(rows)
     return (
-        f'<table class="maint-tbl"><thead><tr><th>Date</th><th>Protocol</th><th>Species</th>'
+        f'<table class="{MAINTENANCE_TABLE_CLASSES}"><thead><tr><th>Date</th><th>Protocol</th><th>Species</th>'
         f"<th>Sex Notation</th><th>Location</th></tr></thead><tbody>{table_body}</tbody></table>"
     )
 
@@ -236,7 +267,7 @@ def format_sex_notation_maintenance_html(
 def incomplete_checklists_intro_html() -> str:
     """Intro HTML for incomplete travelling/stationary checklists."""
     return """
-  <div style="margin-top:0;margin-bottom:16px;max-width:600px;box-sizing:border-box;color:#6b7280;font-size:13px;font-weight:normal;line-height:1.6;text-align:left;overflow-wrap:break-word;word-break:break-word;">
+  <div class="maint-html-blurb">
     Incomplete travelling and stationary checklists often occur when submitting a checklist in the eBird mobile app. The default setting is incomplete, and if you move quickly through the submission prompts you may accidentally answer "No" to the question asking whether the list is complete.<br><br>
     Incomplete checklists can certainly be intentional and acceptable (for example, when other species were present but not recorded). These checklists tables below are provided so you can review your data for checklists that may have been marked incomplete by mistake. Incidental checklists are not included.<br><br>
     Reference: <a href="https://support.ebird.org/en/support/solutions/articles/48000950859-guide-to-ebird-protocols" target="_blank">Guide to eBird Protocols</a>
@@ -253,7 +284,7 @@ def incomplete_checklists_year_table_html(year: Any, items: List[Tuple[Any, ...]
         rows.append(f'<tr><td>{date_esc}</td><td><a href="{url}" target="_blank">{loc_esc}</a></td></tr>')
     table_body = "".join(rows)
     return (
-        f'<table class="maint-tbl"><thead><tr><th>Date</th><th>Location</th></tr></thead>'
+        f'<table class="{MAINTENANCE_TABLE_CLASSES}"><thead><tr><th>Date</th><th>Location</th></tr></thead>'
         f"<tbody>{table_body}</tbody></table>"
     )
 

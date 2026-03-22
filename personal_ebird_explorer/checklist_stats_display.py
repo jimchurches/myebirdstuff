@@ -435,6 +435,67 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   text-align: right;
   font-variant-numeric: tabular-nums;
 }}
+/* Maintenance tab: multi-column tables share stats-tbl chrome; undo 2-col KV widths (refs #79). */
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-maint th {{
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid rgba({acc}, 0.2);
+  vertical-align: bottom;
+  text-align: left;
+  font-weight: 600;
+  background: rgba({acc}, 0.09);
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-maint td:first-child,
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-maint td:last-child {{
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  text-align: left;
+  font-weight: 400;
+  font-variant-numeric: normal;
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-maint tbody tr.maint-spacer td {{
+  background: transparent !important;
+  border-bottom: none !important;
+  height: 12px;
+  padding: 0;
+  line-height: 0;
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-maint.maint-pair-tbl {{
+  max-width: 600px;
+}}
+.streamlit-checklist-html-ab .maint-html-blurb {{
+  margin-top: 0;
+  margin-bottom: 1rem;
+  max-width: min(37.5rem, 100%);
+  box-sizing: border-box;
+  color: color-mix(in srgb, var(--text-color, {text_fb}) 64%, transparent);
+  font-size: 0.923em;
+  line-height: 1.45;
+  font-weight: 400;
+  text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}}
+.streamlit-checklist-html-ab .maint-html-blurb code {{
+  font-size: 0.94em;
+}}
+@supports not (color: color-mix(in srgb, black 50%, white)) {{
+  .streamlit-checklist-html-ab .maint-html-blurb {{
+    color: rgba({p_fallback}, 0.7);
+  }}
+}}
+.streamlit-checklist-html-ab p.maint-html-caption {{
+  margin: 0.35rem 0 0.65rem;
+  color: color-mix(in srgb, var(--text-color, {text_fb}) 64%, transparent);
+  font-size: 0.923em;
+  line-height: 1.45;
+  font-weight: 400;
+}}
+@supports not (color: color-mix(in srgb, black 50%, white)) {{
+  .streamlit-checklist-html-ab p.maint-html-caption {{
+    color: rgba({p_fallback}, 0.7);
+  }}
+}}
 """
 
 
