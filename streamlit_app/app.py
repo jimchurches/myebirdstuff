@@ -97,6 +97,9 @@ from map_working import (  # noqa: E402
 
 DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", "MyEBirdData.csv")
 
+# Open-source repo (sidebar footer; subtle link pattern used in many Streamlit apps).
+GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
+
 # Aligns with ``main_tabs`` in ``notebooks/personal_ebird_explorer`` (refs #70).
 NOTEBOOK_MAIN_TAB_LABELS = (
     "Map",
@@ -159,6 +162,31 @@ def _env_taxonomy_locale() -> str:
     return (
         os.environ.get("STREAMLIT_EBIRD_TAXONOMY_LOCALE", "").strip()
         or os.environ.get("EBIRD_TAXONOMY_LOCALE", "").strip()
+    )
+
+
+def _sidebar_github_footer() -> None:
+    """Small centred GitHub link at the bottom of the sidebar (icon + “Source”)."""
+    st.sidebar.divider()
+    # GitHub mark SVG (monochrome); no emoji — matches common OSS Streamlit footers.
+    gh_icon = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" '
+        'viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" '
+        'style="vertical-align:-0.125em;margin-right:0.3em;opacity:0.72">'
+        '<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 '
+        "0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 "
+        "1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 "
+        "0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 "
+        "1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 "
+        "3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 "
+        '8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
+    )
+    st.sidebar.markdown(
+        f'<div style="text-align:center;font-size:0.8rem;">'
+        f'<a href="{GITHUB_REPO_URL}" target="_blank" rel="noopener noreferrer" '
+        'style="color:#868e96;text-decoration:none;" title="View source on GitHub">'
+        f"{gh_icon}Source</a></div>",
+        unsafe_allow_html=True,
     )
 
 
@@ -360,6 +388,7 @@ def main() -> None:
             "Support for local files works when Streamlit is running locally; see the code repo for more information. "
             "Proper instructions will appear here in future releases."
         )
+        _sidebar_github_footer()
         return
 
     if "popup_html_cache" not in st.session_state:
@@ -741,6 +770,8 @@ def main() -> None:
                 key="export_map_html_btn",
                 help="Standalone HTML for the current map (notebook-style export).",
             )
+
+    _sidebar_github_footer()
 
 
 if __name__ == "__main__":
