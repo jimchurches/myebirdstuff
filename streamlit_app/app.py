@@ -25,7 +25,7 @@ Streamlit does not expose the browser language to Python.
 
 **Checklist Statistics:** Shared HTML sections (nested ``st.tabs`` + formatted tables from
 ``checklist_stats_streamlit_tab_sections_html``). ``_cached_checklist_stats_payload`` runs **once** immediately
-under the main tab bar (inside ``st.spinner("Computing checklist statistics…")``) so the loading message shows
+under the main tab bar (inside ``st.spinner("Doing interesting things with your eBird data...")``) so the loading message shows
 no matter which tab is selected (refs #70).
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
@@ -543,7 +543,7 @@ def main() -> None:
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
     # Hoisted: spinner lives in the main column (not inside a tab panel) so it’s visible on Map, etc.
-    with st.spinner("Computing checklist statistics 🐣 🐥 🐧 🦆 🦉 🦢 🦅 …"):
+    with st.spinner("Doing interesting things with your eBird data  🐣  🐥  🐧  🦆  🦉  🦢  🦅  …"):
         checklist_payload = _cached_checklist_stats_payload(work_df)
         maint_full_payload = _cached_checklist_stats_payload(df_full)
         sex_notation_by_year = _cached_sex_notation_by_year(df_full)
