@@ -55,10 +55,14 @@ MAP_MAINTENANCE_CSS = (
     .maint-close-pair-stack {
       display:flex;
       flex-direction:column;
-      gap:1rem;
+      gap:1.35rem;
       max-width:600px;
     }
     .maint-close-pair-wrap { margin:0; }
+    .maint-close-pair-wrap:not(:first-child) {
+      padding-top:1rem;
+      border-top:1px solid #e5e7eb;
+    }
     .maint-section {
       margin-bottom:8px;
       border:1px solid #e5e7eb;
