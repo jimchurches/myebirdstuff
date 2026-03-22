@@ -42,6 +42,10 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 notation use the **full** export (``df_full``), not the date-filtered working set. **Close location (m)** is
 configurable under **Settings → Maintenance** (refs #79).
 
+**Rankings & lists:** ``rankings_streamlit_html`` — nested **Top Lists** / **Interesting Lists** tabs,
+expanders per list, HTML from ``format_checklist_stats_bundle`` on ``df_full``. **Top N** and **visible rows**
+sliders in Top Lists; duplicate sliders under **Settings → Tables & lists** for UI evaluation (refs `#81`).
+
 **Yearly Summary** (global-by-year) is not migrated in Streamlit yet.
 """
 
@@ -84,6 +88,7 @@ from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
     prepare_all_locations_map_context,
 )
 from checklist_stats_streamlit_html import render_checklist_stats_streamlit_html  # noqa: E402
+from rankings_streamlit_html import render_rankings_streamlit_tab  # noqa: E402
 from personal_ebird_explorer.checklist_stats_display import (  # noqa: E402
     COUNTRY_TAB_SORT_ALPHABETICAL,
     COUNTRY_TAB_SORT_LIFERS_WORLD,
@@ -116,7 +121,7 @@ NOTEBOOK_MAIN_TAB_LABELS = (
     "Settings",
 )
 
-# Same cap as notebook ``TOP_N_TABLE_LIMIT`` (rankings prep inside payload; Rankings tab not wired yet).
+# Same cap as notebook ``TOP_N_TABLE_LIMIT`` (checklist stats payload; Rankings tab uses its own sliders).
 CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
 
 # Default Maintenance → close-location threshold (metres); overridden by Settings (refs #79).
@@ -697,11 +702,14 @@ def main() -> None:
             st.warning("No checklist data to show.")
 
     with tab_rankings:
-        _tab_test_placeholder(
-            "Rankings & lists",
-            "Pretend: top species, locations, months, seen-once table.",
-        )
-        st.json({"rankings": "TEST", "species": ["Alpha", "Beta", "Gamma"]})
+        if df_full is None or df_full.empty:
+            st.info("Load checklist data to use Rankings & lists.")
+        else:
+            render_rankings_streamlit_tab(
+                df_full,
+                country_sort=st.session_state.streamlit_country_tab_sort,
+                taxonomy_locale=tax_locale_effective,
+            )
 
     with tab_yearly:
         _tab_test_placeholder(
@@ -743,6 +751,24 @@ def main() -> None:
         )
         st.divider()
         st.subheader("Tables & lists")
+        st.slider(
+            "Top N table limit (mirror)",
+            min_value=5,
+            max_value=500,
+            value=200,
+            step=1,
+            key="streamlit_settings_top_n",
+            help="Duplicate of **Rankings & lists → Top Lists** for evaluation; does not drive the Rankings tab yet.",
+        )
+        st.slider(
+            "Visible rows (mirror)",
+            min_value=4,
+            max_value=80,
+            value=16,
+            step=1,
+            key="streamlit_settings_visible_rows",
+            help="Duplicate of **Rankings & lists → Top Lists** for evaluation.",
+        )
         st.radio(
             "Country ordering",
             options=[
@@ -768,7 +794,8 @@ def main() -> None:
             ),
         )
         st.caption(
-            "Rankings **visible rows** and **Top N** table limits are Jupyter-only until the Rankings tab is migrated."
+            "Rankings **Top N** and **visible rows** also appear under **Rankings & lists → Top Lists**; "
+            "the two places are intentionally independent for now (refs #81)."
         )
 
     if st.session_state.get("_explorer_map_html_bytes"):
