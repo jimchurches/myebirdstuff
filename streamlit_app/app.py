@@ -68,6 +68,12 @@ from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
     prepare_all_locations_map_context,
 )
 from checklist_stats_streamlit_html import render_checklist_stats_streamlit_html  # noqa: E402
+from personal_ebird_explorer.checklist_stats_display import (  # noqa: E402
+    COUNTRY_TAB_SORT_ALPHABETICAL,
+    COUNTRY_TAB_SORT_LIFERS_WORLD,
+    COUNTRY_TAB_SORT_TOTAL_SPECIES,
+)
+from yearly_summary_streamlit_html import render_yearly_summary_streamlit_html  # noqa: E402
 from map_working import (  # noqa: E402
     date_inception_to_today_default,
     folium_map_to_html_bytes,
@@ -108,6 +114,12 @@ _SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 _SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 _SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
 _FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
+
+_COUNTRY_SORT_LABELS = {
+    COUNTRY_TAB_SORT_ALPHABETICAL: "Alphabetical",
+    COUNTRY_TAB_SORT_LIFERS_WORLD: "By lifers (world)",
+    COUNTRY_TAB_SORT_TOTAL_SPECIES: "By total species",
+}
 
 
 def _static_map_cache_key(
@@ -264,6 +276,8 @@ def main() -> None:
 
     if "streamlit_taxonomy_locale" not in st.session_state:
         st.session_state.streamlit_taxonomy_locale = _env_taxonomy_locale() or DEFAULT_TAXONOMY_LOCALE
+    if "streamlit_country_tab_sort" not in st.session_state:
+        st.session_state.streamlit_country_tab_sort = COUNTRY_TAB_SORT_ALPHABETICAL
 
     upload_cache = st.session_state.get(_SESSION_UPLOAD_CACHE_KEY)
     if upload_cache is not None and not (
@@ -611,11 +625,13 @@ def main() -> None:
         st.json({"rankings": "TEST", "species": ["Alpha", "Beta", "Gamma"]})
 
     with tab_yearly:
-        _tab_test_placeholder(
-            "Yearly Summary",
-            "Pretend: one row per year with species counts and km traveled.",
-        )
-        st.bar_chart(pd.DataFrame({"TEST_year": [2022, 2023, 2024], "TEST_n": [3, 7, 2]}).set_index("TEST_year"))
+        if checklist_payload is not None:
+            render_yearly_summary_streamlit_html(
+                checklist_payload,
+                country_sort=st.session_state.streamlit_country_tab_sort,
+            )
+        else:
+            st.warning("No checklist data to show.")
 
     with tab_country:
         _tab_test_placeholder(
@@ -644,11 +660,19 @@ def main() -> None:
             "``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE``, else en_AU."
         )
         st.divider()
-        _tab_test_placeholder(
-            "More settings",
-            "Table row limits, country tab sort order, close-location metres — not wired yet.",
+        st.subheader("Tables & lists")
+        st.radio(
+            "Country ordering",
+            options=[
+                COUNTRY_TAB_SORT_ALPHABETICAL,
+                COUNTRY_TAB_SORT_LIFERS_WORLD,
+                COUNTRY_TAB_SORT_TOTAL_SPECIES,
+            ],
+            format_func=lambda k: _COUNTRY_SORT_LABELS[k],
+            key="streamlit_country_tab_sort",
+            help="Order of countries in **Yearly Summary** (and the Country tab when implemented).",
         )
-        st.button("TEST button (does nothing)", disabled=True)
+        st.caption("Row limits for rankings tables and close-location metres — not wired yet.")
 
     if st.session_state.get("_explorer_map_html_bytes"):
         with st.sidebar:
