@@ -13,7 +13,12 @@ Same path resolution as the notebook when no file is uploaded: optional
 this ``streamlit_app/`` folder.
 
 Streamlit Cloud: CSV upload on the **landing** main area when disk resolution finds no file; session
-state keeps upload bytes for reruns (no data picker on the dashboard).
+state keeps upload bytes for reruns (no data picker on the dashboard). After a successful pick we
+``st.rerun()`` so the next run loads from cache and **does not** emit landing widgets (title/uploader)
+in the same pass as the dashboard — otherwise Streamlit’s top-to-bottom execution leaves landing + tabs
+on screen together. If Streamlit Cloud still shows a stray upload blurb under tabs, treat as a
+separate delta/orphan issue (e.g. container boundaries, Streamlit version); same-run load traded that
+for a worse duplicate layout locally.
 
 **No-data landing:** No disk file and no cached upload → title, copy, uploader in the main column.
 Disk path takes precedence over a stale session upload when both exist.
@@ -356,22 +361,28 @@ def main() -> None:
         st.session_state.pop(_SESSION_UPLOAD_CACHE_KEY, None)
 
     if df_full is None:
-        st.title("Personal eBird Explorer")
-        st.subheader("Streamlit prototype")
-        st.write("Upload your **My eBird Data** CSV to open the map and tabs.")
-        uploaded = st.file_uploader(
-            "eBird export (CSV)",
-            type=["csv"],
-            key="ebird_landing_csv_uploader",
-            help="Official eBird full data export (CSV).",
-        )
-        if uploaded is not None:
-            df_up, _prov_up = _load_dataframe(uploaded=uploaded, upload_cache=None)
-            if df_up is not None:
-                st.session_state[_SESSION_UPLOAD_CACHE_KEY] = (uploaded.getvalue(), uploaded.name)
-                st.rerun()
-        st.markdown(
-            """
+        # Keyed container: on the post-upload rerun this block is skipped entirely, so Cloud/Streamlit
+        # can drop the whole landing subtree instead of leaving orphan markdown under tabs.
+        with st.container(key="ebird_landing_main"):
+            st.title("Personal eBird Explorer")
+            st.subheader("Streamlit prototype")
+            st.markdown("Upload your **My eBird Data** CSV to open the map and tabs.")
+            uploaded = st.file_uploader(
+                "eBird export (CSV)",
+                type=["csv"],
+                key="ebird_landing_csv_uploader",
+                help="Official eBird full data export (CSV).",
+            )
+            if uploaded is not None:
+                df_full, provenance = _load_dataframe(uploaded=uploaded, upload_cache=None)
+                if df_full is not None:
+                    st.session_state[_SESSION_UPLOAD_CACHE_KEY] = (uploaded.getvalue(), uploaded.name)
+                    # Landing widgets already ran above in this run; rerun loads from cache and skips this block.
+                    st.rerun()
+
+            if df_full is None:
+                st.markdown(
+                    """
 **From eBird**
 
 1. Sign in: [Download My Data](https://ebird.org/downloadMyData)
@@ -379,17 +390,18 @@ def main() -> None:
 3. A link to your data will be sent to your email address (often a few minutes; sometimes longer).
 4. Open the email, download the **.zip** and unzip it.
 5. Upload the CSV here (in English the file name should be **MyEBirdData.csv**).
-            """
-        )
-        st.caption(
-            "Species links default to **en_AU**; change locale under **Settings → Species links** after load. "
-            "Data still loads if names don’t match.\n\n"
-            "This page is skipped when a CSV is already found on disk (local config path). "
-            "Support for local files works when Streamlit is running locally; see the code repo for more information. "
-            "Proper instructions will appear here in future releases."
-        )
+                    """
+                )
+                st.caption(
+                    "Species links default to **en_AU**; change locale under **Settings → Species links** after load. "
+                    "Data still loads if names don’t match.\n\n"
+                    "This page is skipped when a CSV is already found on disk (local config path). "
+                    "Support for local files works when Streamlit is running locally; see the code repo for more information. "
+                    "Proper instructions will appear here in future releases."
+                )
         _sidebar_github_footer()
-        return
+        if df_full is None:
+            return
 
     if "popup_html_cache" not in st.session_state:
         st.session_state.popup_html_cache = {}
