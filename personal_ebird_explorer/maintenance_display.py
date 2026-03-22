@@ -134,8 +134,7 @@ def map_maintenance_intro_html() -> str:
     return f"""
   <div class="maint-html-blurb">
     <p>These tables highlight duplicate locations and locations that are very close to each other (within the configured distance) to help you keep your personal eBird locations organised. This is most useful if you regularly create new locations and build a large catalogue of them; if you mainly use hotspots it may be less relevant. Locations can be merged on the eBird website, though directly merging duplicates can sometimes be awkward. Often the simplest approach is to move checklists to the preferred location and then delete the now-empty duplicate. See eBird for details.</p>
-    <p>{caution_glyph}Update eBird locations with caution.</p>
-    <p>This data is provided here to help the author with a particular use case related to his own location data.</p>
+    <p>{caution_glyph}Update locations in eBird with caution. This data is provided here to help the author with a particular use case(s) related to his own location data.</p>
   </div>"""
 
 
