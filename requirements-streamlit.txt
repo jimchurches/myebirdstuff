@@ -14,6 +14,8 @@ folium>=0.15
 streamlit-folium>=0.20.0
 # Maintenance tab: close-location pairs (BallTree / haversine); refs #69, #79
 scikit-learn>=1.3,<2
+# Country tab + rankings: ISO codes → display names (``region_display.country_for_display``)
+pycountry>=23.12.11
 # Species autocomplete (Python >= 3.10); refs #70
 whoosh
 streamlit-searchbox>=0.1.24

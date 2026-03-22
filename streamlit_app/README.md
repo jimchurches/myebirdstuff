@@ -79,7 +79,7 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 2. **Python requirements file (required):** in app **Settings → Advanced settings**, set this to  
    **`requirements-streamlit.txt`** (repo root) **or** **`streamlit_app/requirements.txt`**.  
    If you leave the default **`requirements.txt`**, the build only installs the **Jupyter** stack — you will get **Missing streamlit-folium** at runtime.  
-   **`requirements-streamlit.txt`** includes **scikit-learn** for the **Maintenance** tab (close-location BallTree); without it, Cloud fails on `ModuleNotFoundError: sklearn` when opening Maintenance.
+   **`requirements-streamlit.txt`** includes **scikit-learn** (Maintenance close-location BallTree) and **pycountry** (Country tab / ISO → names). Without them, Cloud can fail on `sklearn` or show raw codes like `AU` instead of `Australia`.
 3. Users upload their CSV via the app (do not commit private exports).
 
 ## Scope of this prototype
