@@ -52,6 +52,13 @@ MAP_MAINTENANCE_CSS = (
     .maint-tbl.maint-single-col td { text-align:left; font-weight:normal; }
     .maint-pair-tbl { max-width:600px; }
     .maint-pair-tbl tbody tr.maint-spacer { background:transparent; }
+    .maint-close-pair-stack {
+      display:flex;
+      flex-direction:column;
+      gap:1rem;
+      max-width:600px;
+    }
+    .maint-close-pair-wrap { margin:0; }
     .maint-section {
       margin-bottom:8px;
       border:1px solid #e5e7eb;
@@ -130,12 +137,12 @@ def map_maintenance_exact_duplicates_body_html(exact_rows: List[Tuple[Any, ...]]
 
 
 def map_maintenance_close_locations_body_html(near_pairs: List[Any], threshold_m: int) -> str:
-    """Table HTML for close location pairs."""
+    """One table per close pair (or per group if a pair list ever has >2 rows); same columns/styling each."""
     if not near_pairs:
         return f"""
   <p class="maint-html-caption">None detected within the current threshold ({threshold_m} m).</p>"""
-    all_rows = ""
-    for i, pair in enumerate(near_pairs):
+
+    def _one_pair_table(pair: List[Any]) -> str:
         pair_rows = "".join(
             (
                 f'<tr class="pair-first"><td><a href="{EBIRD_LOCATION_EDIT_BASE}{lid}" target="_blank">{name}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>'
@@ -144,18 +151,20 @@ def map_maintenance_close_locations_body_html(near_pairs: List[Any], threshold_m
             )
             for idx, (lid, name, lat, lon) in enumerate(pair)
         )
-        all_rows += pair_rows
-        if i < len(near_pairs) - 1:
-            all_rows += (
-                '<tr class="maint-spacer"><td colspan="2" style="height:12px;border:none;'
-                'background:transparent;"></td></tr>'
-            )
+        return (
+            f'<table class="{MAINTENANCE_PAIR_TABLE_CLASSES}">'
+            '<thead><tr><th>Location</th><th>Latitude/Longitude</th></tr></thead>'
+            f"<tbody>{pair_rows}</tbody></table>"
+        )
+
+    blocks = "".join(
+        f'<div class="maint-close-pair-wrap">{_one_pair_table(pair)}</div>' for pair in near_pairs
+    )
     return f"""
   <p class="maint-html-caption">Locations within {threshold_m} m of each other (excluding exact duplicates).</p>
-  <table class="{MAINTENANCE_PAIR_TABLE_CLASSES}">
-    <thead><tr><th>Location</th><th>Latitude/Longitude</th></tr></thead>
-    <tbody>{all_rows}</tbody>
-  </table>"""
+  <div class="maint-close-pair-stack">
+{blocks}
+  </div>"""
 
 
 def map_maintenance_table_sections_html(loc_df: pd.DataFrame, threshold_m: int) -> Tuple[str, str, str]:
