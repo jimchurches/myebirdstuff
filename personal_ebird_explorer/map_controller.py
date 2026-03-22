@@ -29,7 +29,7 @@ from personal_ebird_explorer.map_renderer import (
     create_map,
     format_sighting_row,
     format_visit_time,
-    map_popup_theme_stylesheet,
+    map_overlay_theme_stylesheet,
     popup_scroll_script,
     resolve_lifer_last_seen,
 )
@@ -43,8 +43,8 @@ _VALID_MAP_VIEWS = frozenset({"all", "species", "lifers"})
 
 
 def _inject_map_popup_theme(map_obj: folium.Map) -> None:
-    """One ``<style>`` block so Leaflet popups match Streamlit checklist HTML typography (refs #70)."""
-    map_obj.get_root().html.add_child(Element(map_popup_theme_stylesheet()))
+    """Inject shared CSS: Leaflet popups + fixed banner/legend chrome (Streamlit theme; refs #70)."""
+    map_obj.get_root().html.add_child(Element(map_overlay_theme_stylesheet()))
 
 
 def _format_lifer_species_popup_lines(

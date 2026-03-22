@@ -152,8 +152,8 @@ import ipywidgets as widgets
 
 from ipywidgets import Accordion, Box, Checkbox, HBox, VBox
 from whoosh.index import create_in
-from whoosh.fields import Schema, TEXT
-from whoosh.analysis import StemmingAnalyzer
+
+from personal_ebird_explorer.species_search import species_whoosh_schema
 
 from IPython.display import display, HTML
 
@@ -585,13 +585,13 @@ _link_urls_fn = get_species_and_lifelist_urls if _taxonomy_loaded else (lambda _
 # --------------------------------------------
 # ✅  Build Whoosh index for species autocomplete
 # --------------------------------------------
-schema = Schema(common_name=TEXT(stored=True, analyzer=StemmingAnalyzer()))
 index_dir = tempfile.mkdtemp()
-ix = create_in(index_dir, schema)
+ix = create_in(index_dir, species_whoosh_schema())
 
 writer = ix.writer()
 for name in species_list:
-    writer.add_document(common_name=name)
+    sci = str(name_map.get(name, "") or "")
+    writer.add_document(common_name=name, scientific_name=sci)
 writer.commit()
 
 

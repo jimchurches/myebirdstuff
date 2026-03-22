@@ -72,6 +72,27 @@ def test_streamlit_date_filter_on(df: pd.DataFrame) -> None:
     assert "Date filter:" in status
 
 
+def test_streamlit_species_view_uses_same_date_filter_as_all(df: pd.DataFrame) -> None:
+    lo, hi = date_bounds_from_df(df)
+    ws_all, st_all = streamlit_working_set_and_status(
+        df,
+        map_view_mode="all",
+        date_filter_on=True,
+        date_range=(lo, hi),
+        map_caches=None,
+    )
+    ws_sp, st_sp = streamlit_working_set_and_status(
+        df,
+        map_view_mode="species",
+        date_filter_on=True,
+        date_range=(lo, hi),
+        map_caches=None,
+    )
+    assert ws_all is not None and ws_sp is not None
+    assert len(ws_all.df) == len(ws_sp.df)
+    assert st_all == st_sp
+
+
 def test_folium_map_to_html_bytes() -> None:
     import folium
 

@@ -56,7 +56,8 @@ def streamlit_working_set_and_status(
     """
     Return ``(working_set, date_filter_status)`` for map banners.
 
-    *map_view_mode* — ``\"all\"`` or ``\"lifers\"`` (species mode not wired yet).
+    *map_view_mode* — ``\"all\"`` | ``\"species\"`` | ``\"lifers\"``.
+    ``\"species\"`` uses the same date filter as ``\"all\"`` (refs #70).
     Lifer mode forces all-time data and returns status ``\"Lifer view uses all-time data\"``.
 
     *date_filter_on* — when ``True`` (and *map_view_mode* is ``all``), apply *date_range*; when ``False``, no filter.
@@ -75,6 +76,7 @@ def streamlit_working_set_and_status(
         )
         return ws, "Lifer view uses all-time data"
 
+    # "all" and "species" share the same date-filter semantics.
     filter_by_date = bool(date_filter_on)
     if not filter_by_date:
         ws = rebuild_working_set_from_date_filter(

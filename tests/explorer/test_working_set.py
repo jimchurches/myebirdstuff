@@ -3,10 +3,9 @@
 import tempfile
 
 import pandas as pd
-from whoosh.analysis import StemmingAnalyzer
-from whoosh.fields import TEXT, Schema
 from whoosh.index import create_in
 
+from personal_ebird_explorer.species_search import species_whoosh_schema
 from personal_ebird_explorer.working_set import WorkingSet, rebuild_working_set_from_date_filter
 
 
@@ -87,11 +86,10 @@ def test_rebuild_invalid_dates_returns_none():
 def test_rebuild_whoosh_index_updated():
     df_full = _minimal_df()
     lids = set(df_full["Location ID"].unique())
-    schema = Schema(common_name=TEXT(stored=True, analyzer=StemmingAnalyzer()))
     index_dir = tempfile.mkdtemp()
-    ix = create_in(index_dir, schema)
+    ix = create_in(index_dir, species_whoosh_schema())
     w = ix.writer()
-    w.add_document(common_name="Old Name")
+    w.add_document(common_name="Old Name", scientific_name="oldus nameus")
     w.commit()
 
     ws = rebuild_working_set_from_date_filter(
@@ -106,7 +104,9 @@ def test_rebuild_whoosh_index_updated():
     assert ws is not None
     with ix.searcher() as searcher:
         assert searcher.doc_count() == 1
-        assert list(searcher.all_stored_fields()) == [{"common_name": "Grey Teal"}]
+        assert list(searcher.all_stored_fields()) == [
+            {"common_name": "Grey Teal", "scientific_name": "Anas gracilis"}
+        ]
 
 
 def test_map_caches_cleared_on_success():
