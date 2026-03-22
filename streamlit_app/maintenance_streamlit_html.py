@@ -61,23 +61,13 @@ def render_maintenance_streamlit_tab(
         "</style>"
     )
 
-    tab_loc, tab_inc, tab_sex = st.tabs(
+    tab_inc, tab_loc, tab_sex = st.tabs(
         [
-            "Location Maintenance",
             "Incomplete checklists (Traveling or Stationary)",
+            "Location Maintenance",
             "Sex notation in checklist comments",
         ]
     )
-
-    with tab_loc:
-        intro, exact_body, close_body = map_maintenance_table_sections_html(
-            loc_df, close_location_meters
-        )
-        _md(_WRAPPER_OPEN + intro + _WRAPPER_CLOSE)
-        with st.expander("Exact duplicates", expanded=False):
-            _md(_WRAPPER_OPEN + exact_body + _WRAPPER_CLOSE)
-        with st.expander("Close locations", expanded=False):
-            _md(_WRAPPER_OPEN + close_body + _WRAPPER_CLOSE)
 
     with tab_inc:
         _md(_WRAPPER_OPEN + incomplete_checklists_intro_html() + _WRAPPER_CLOSE)
@@ -92,6 +82,16 @@ def render_maintenance_streamlit_tab(
                 with st.expander(str(y), expanded=False):
                     table = incomplete_checklists_year_table_html(y, items)
                     _md(_WRAPPER_OPEN + table + _WRAPPER_CLOSE)
+
+    with tab_loc:
+        intro, exact_body, close_body = map_maintenance_table_sections_html(
+            loc_df, close_location_meters
+        )
+        _md(_WRAPPER_OPEN + intro + _WRAPPER_CLOSE)
+        with st.expander("Exact duplicates", expanded=False):
+            _md(_WRAPPER_OPEN + exact_body + _WRAPPER_CLOSE)
+        with st.expander("Close locations", expanded=False):
+            _md(_WRAPPER_OPEN + close_body + _WRAPPER_CLOSE)
 
     with tab_sex:
         _md(_WRAPPER_OPEN + sex_notation_intro_html() + _WRAPPER_CLOSE)
