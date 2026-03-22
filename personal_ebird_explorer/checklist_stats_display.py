@@ -492,6 +492,22 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 .streamlit-checklist-html-ab .maint-html-blurb code {{
   font-size: 0.94em;
 }}
+.streamlit-checklist-html-ab .maint-html-blurb p {{
+  margin: 0 0 0.65em;
+  font-size: inherit;
+  line-height: inherit;
+}}
+.streamlit-checklist-html-ab .maint-html-blurb p:last-child {{
+  margin-bottom: 0;
+}}
+.streamlit-checklist-html-ab .maint-caution-symbol {{
+  display: inline-block;
+  margin-right: 0.35em;
+  font-size: 0.92em;
+  opacity: 0.88;
+  vertical-align: 0.06em;
+  font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;
+}}
 @supports not (color: color-mix(in srgb, black 50%, white)) {{
   .streamlit-checklist-html-ab .maint-html-blurb {{
     color: rgba({p_fallback}, 0.7);
