@@ -9,7 +9,7 @@ Guidance for developers and contributors. For AI-assisted coding, see [AI_CONTEX
 Data flow:
 
 1. **CSV** — User’s eBird export (`MyEBirdData.csv` or custom path).
-2. **data_loader** — Loads CSV, validates columns, adds canonical `datetime` column. Returns a single DataFrame. Missing/no-recorded times use synthetic **23:59** so same-day sorting is stable (user-facing explanation: [explorer README — Missing checklist times](explorer/README.md#missing-checklist-times-synthetic-2359); refs #44).
+2. **data_loader** — Loads CSV, validates columns, adds canonical `datetime` column, and normalizes **`Protocol`** to short labels when present (e.g. `eBird - Traveling Count` → `Traveling`; same mapping as checklist stats). Missing/no-recorded times use synthetic **23:59** so same-day sorting is stable (user-facing explanation: [explorer README — Missing checklist times](explorer/README.md#missing-checklist-times-synthetic-2359); refs #44).
 3. **working_set** — After load, optional date filter rebuild: working DataFrame, `location_data`, `records_by_loc`, species list, totals, Whoosh repopulation, map-cache clears. Called from the notebook; same API usable from Streamlit (refs #66).
 4. **Statistics modules** — `stats`, `species_logic`, `duplicate_checks` provide rankings, species filtering, map-maintenance data. All operate on the DataFrame or derived structures.
 5. **map_renderer** — Folium map factory, popups, banners, legend HTML helpers. Receives data; no notebook globals.

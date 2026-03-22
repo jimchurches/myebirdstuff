@@ -44,7 +44,11 @@ from personal_ebird_explorer.lifer_last_seen_prep import (
     aggregate_lifer_sites,
     prepare_lifer_last_seen,
 )
-from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload, compute_checklist_stats_payload
+from personal_ebird_explorer.checklist_stats_compute import (
+    ChecklistStatsPayload,
+    compute_checklist_stats_payload,
+    protocol_display_name,
+)
 from personal_ebird_explorer.checklist_stats_display import (
     COUNTRY_TAB_SORT_ALPHABETICAL,
     COUNTRY_TAB_SORT_LIFERS_WORLD,
@@ -150,6 +154,7 @@ __all__ = [
     "prepare_lifer_last_seen",
     "ChecklistStatsPayload",
     "compute_checklist_stats_payload",
+    "protocol_display_name",
     "COUNTRY_TAB_SORT_ALPHABETICAL",
     "COUNTRY_TAB_SORT_LIFERS_WORLD",
     "COUNTRY_TAB_SORT_TOTAL_SPECIES",

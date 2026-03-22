@@ -66,3 +66,13 @@ def test_load_dataset_preserves_extra_columns():
     assert "ML Catalog Numbers" in df.columns
     assert df.loc[0, "Common Name"] == "House Sparrow"
     assert df.loc[0, "Location ID"] == "L123"
+
+
+def test_load_dataset_normalizes_protocol_column():
+    """eBird verbose Protocol values become short labels when Protocol is present."""
+    csv = """Date,Time,Location ID,Location,Latitude,Longitude,Common Name,Scientific Name,Submission ID,Count,Protocol
+2025-01-15,08:30,L123,My Patch,-33.8,151.2,House Sparrow,Passer domesticus,S12345678,2,eBird - Traveling Count
+2025-01-16,08:30,L124,Other,-33.9,151.3,Robin,Turdus,S87654321,1,eBird - Casual Observation"""
+    df = load_dataset(StringIO(csv))
+    assert df.loc[0, "Protocol"] == "Traveling"
+    assert df.loc[1, "Protocol"] == "Incidental"
