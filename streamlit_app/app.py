@@ -29,7 +29,9 @@ under the main tab bar (inside ``st.spinner("Computing checklist statistics…")
 no matter which tab is selected (refs #70).
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
-(``country_stats_streamlit_html``). **Yearly Summary** (global-by-year) is not migrated in Streamlit yet.
+(``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
+triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
+**Yearly Summary** (global-by-year) is not migrated in Streamlit yet.
 """
 
 from __future__ import annotations
@@ -76,7 +78,10 @@ from personal_ebird_explorer.checklist_stats_display import (  # noqa: E402
     COUNTRY_TAB_SORT_LIFERS_WORLD,
     COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
-from country_stats_streamlit_html import render_country_stats_streamlit_html  # noqa: E402
+from country_stats_streamlit_html import (  # noqa: E402
+    run_country_tab_streamlit_fragment,
+    sync_country_tab_session_inputs,
+)
 from map_working import (  # noqa: E402
     date_inception_to_today_default,
     folium_map_to_html_bytes,
@@ -635,10 +640,8 @@ def main() -> None:
 
     with tab_country:
         if checklist_payload is not None:
-            render_country_stats_streamlit_html(
-                checklist_payload,
-                country_sort=st.session_state.streamlit_country_tab_sort,
-            )
+            sync_country_tab_session_inputs(checklist_payload)
+            run_country_tab_streamlit_fragment()
         else:
             st.warning("No checklist data to show.")
 

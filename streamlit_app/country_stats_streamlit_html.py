@@ -29,6 +29,9 @@ _COUNTRY_TAB_EXTRA_CSS = """
 .streamlit-checklist-html-ab .stats-link-icon { opacity: 0.85; }
 """
 
+# Set by ``app.py`` on every full script run so ``@st.fragment`` partial reruns still see the payload.
+_SESSION_PAYLOAD_KEY = "_streamlit_country_tab_checklist_payload"
+
 
 def render_country_stats_streamlit_html(
     payload: ChecklistStatsPayload | None,
@@ -91,9 +94,27 @@ def render_country_stats_streamlit_html(
         rows,
         inline_statistic_links=False,
     )
-
     inner = f"{links_html}{table_html}" if links_html else table_html
     st.markdown(
         f'<div class="streamlit-checklist-html-ab">{inner}</div>',
         unsafe_allow_html=True,
+    )
+
+
+def sync_country_tab_session_inputs(payload: ChecklistStatsPayload | None) -> None:
+    """Call from the main script each full run so ``@st.fragment`` partial reruns read the payload."""
+    st.session_state[_SESSION_PAYLOAD_KEY] = payload
+
+
+@st.fragment
+def run_country_tab_streamlit_fragment() -> None:
+    """Partial reruns: only this fragment when Country selectbox changes (refs #75).
+
+    Full app reruns still call :func:`sync_country_tab_session_inputs`.
+    """
+    payload = st.session_state.get(_SESSION_PAYLOAD_KEY)
+    country_sort = st.session_state.streamlit_country_tab_sort
+    render_country_stats_streamlit_html(
+        payload,
+        country_sort=country_sort,
     )
