@@ -466,11 +466,15 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 .streamlit-checklist-html-ab .maint-close-pair-stack {{
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.35rem;
   max-width: 600px;
 }}
 .streamlit-checklist-html-ab .maint-close-pair-wrap {{
   margin: 0;
+}}
+.streamlit-checklist-html-ab .maint-close-pair-wrap:not(:first-child) {{
+  padding-top: 1rem;
+  border-top: 1px solid rgba({acc}, 0.22);
 }}
 .streamlit-checklist-html-ab .maint-html-blurb {{
   margin-top: 0;
