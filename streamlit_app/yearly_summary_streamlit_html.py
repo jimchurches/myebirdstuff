@@ -44,18 +44,15 @@ def render_yearly_summary_streamlit_tab(payload: Optional[ChecklistStatsPayload]
         st.info("No yearly data.")
         return
     tab_all, tab_travelling, tab_stationary = st.tabs(["All", "Travelling", "Stationary"])
+    def _yearly_wrap(inner: str) -> str:
+        return (
+            '<div class="streamlit-checklist-html-ab streamlit-yearly-summary-ab">'
+            f"{inner}</div>"
+        )
+
     with tab_all:
-        st.markdown(
-            f'<div class="streamlit-checklist-html-ab">{bodies["all"]}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(_yearly_wrap(bodies["all"]), unsafe_allow_html=True)
     with tab_travelling:
-        st.markdown(
-            f'<div class="streamlit-checklist-html-ab">{bodies["travelling"]}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(_yearly_wrap(bodies["travelling"]), unsafe_allow_html=True)
     with tab_stationary:
-        st.markdown(
-            f'<div class="streamlit-checklist-html-ab">{bodies["stationary"]}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(_yearly_wrap(bodies["stationary"]), unsafe_allow_html=True)

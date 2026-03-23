@@ -420,8 +420,31 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
     color: rgba({p_fallback}, 0.7);
   }}
 }}
-/* Multi-column country yearly tables: same base as checklist stats-tbl, but undo 2-col % rules.
-   First column: fixed width so every country’s table lines up (year columns flex with count). */
+/* Multi-column yearly tables (country + global Yearly Summary): undo fixed layout squeeze.
+   Default .stats-tbl uses table-layout:fixed + width:100%, which splits many year columns
+   equally and wraps headers/values; use content-sized columns + nowrap (refs #85). */
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly {{
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  font-size: 0.92em;
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly thead th {{
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid rgba({acc}, 0.2);
+  vertical-align: bottom;
+  font-weight: 600;
+  background: rgba({acc}, 0.09);
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly tbody td {{
+  vertical-align: middle;
+}}
+/* Yearly Summary tab: use full Streamlit main-column width (default .streamlit-checklist-html-ab caps at 68rem). */
+.streamlit-checklist-html-ab.streamlit-yearly-summary-ab {{
+  max-width: 100%;
+}}
+/* First column: statistic labels (fixed width so country tables line up). */
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:first-child,
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:first-child {{
   width: 16rem;
@@ -431,6 +454,9 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   word-wrap: break-word;
   overflow-wrap: break-word;
 }}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly thead th:first-child {{
+  text-align: left;
+}}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:last-child,
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:last-child {{
   width: auto;
@@ -439,6 +465,11 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:not(:first-child) {{
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 5.5rem;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+  box-sizing: border-box;
 }}
 /* Maintenance tab: multi-column tables share stats-tbl chrome; undo 2-col KV widths (refs #79). */
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-maint th {{
@@ -877,8 +908,8 @@ def _yearly_streamlit_wide_table_html(
         )
         body.append(f"<tr><td>{lab_esc}</td>{cells}</tr>")
     return (
-        '<div style="overflow-x:auto;">'
-        '<table class="stats-tbl stats-tbl-yearly" style="min-width:400px;width:100%;">'
+        '<div class="yearly-tbl-scroll" style="overflow-x:auto;width:100%;max-width:100%;">'
+        '<table class="stats-tbl stats-tbl-yearly" style="min-width:min(100%,400px);">'
         f"<thead><tr><th>Statistic</th>{year_headers}</tr></thead>"
         f"<tbody>{''.join(body)}</tbody>"
         "</table></div>"
