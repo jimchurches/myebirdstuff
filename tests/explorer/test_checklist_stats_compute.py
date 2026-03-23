@@ -6,7 +6,11 @@ from personal_ebird_explorer.checklist_stats_compute import (
     compute_checklist_stats_payload,
     protocol_display_name,
 )
-from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
+from personal_ebird_explorer.checklist_stats_display import (
+    build_yearly_summary_streamlit_tab_html_dict,
+    format_checklist_stats_bundle,
+    strip_yearly_stats_info_icons,
+)
 
 
 def test_compute_payload_empty():
@@ -98,3 +102,46 @@ def test_compute_and_format_smoke():
     assert "<table" in bundle["stats_html"]
     assert len(bundle["rankings_sections_top_n"]) == 7
     assert len(bundle["rankings_sections_other"]) == 4
+
+
+def test_strip_yearly_stats_info_icons_removes_span():
+    raw = (
+        'Traveling checklists <span class="stats-info-icon">'
+        '<span class="stats-info-glyph">&#9432;</span>'
+        "<span class=\"stats-info-tooltip\">hint</span></span>"
+    )
+    out = strip_yearly_stats_info_icons(raw)
+    assert "stats-info-icon" not in out
+    assert out == "Traveling checklists"
+
+
+def test_build_yearly_summary_streamlit_tab_html_dict_smoke():
+    """Streamlit yearly tabs: three bodies, no inline info icons, yearly table class (refs #85)."""
+    df = pd.DataFrame(
+        {
+            "Submission ID": ["s1", "s1", "s2"],
+            "Common Name": ["Robin", "Duck", "Duck"],
+            "Scientific Name": ["Turdus migratorius", "Anas platyrhynchos", "Anas platyrhynchos"],
+            "Count": [1, 2, 1],
+            "Date": pd.to_datetime(["2020-01-01", "2020-01-01", "2020-02-01"]),
+            "Location": ["L1", "L1", "L2"],
+            "Location ID": ["1", "1", "2"],
+            "Latitude": [-33.0, -33.0, -34.0],
+            "Longitude": [151.0, 151.0, 150.0],
+            "Protocol": ["Traveling", "Traveling", "Stationary"],
+            "Duration (Min)": [30, 30, 20],
+            "Distance Traveled (km)": [1.0, 1.0, 0.0],
+            "All Obs Reported": [1, 1, 1],
+        }
+    )
+    payload = compute_checklist_stats_payload(df, top_n_limit=5)
+    assert payload is not None
+    bodies = build_yearly_summary_streamlit_tab_html_dict(payload)
+    assert bodies is not None
+    assert set(bodies) == {"all", "travelling", "stationary"}
+    assert "stats-tbl-yearly" in bodies["all"]
+    assert "stats-info-icon" not in bodies["all"]
+    assert "stats-info-icon" not in bodies["travelling"]
+    assert "stats-info-icon" not in bodies["stationary"]
+    assert "Travelling and Stationary checklist counts" in bodies["all"]
+    assert "Incomplete checklists are excluded" in bodies["travelling"]

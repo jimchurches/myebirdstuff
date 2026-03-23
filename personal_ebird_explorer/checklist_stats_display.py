@@ -7,6 +7,7 @@ Consumes :class:`ChecklistStatsPayload` from ``checklist_stats_compute`` (refs #
 from __future__ import annotations
 
 import html as html_module
+import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import quote as url_quote
 
@@ -758,6 +759,239 @@ def checklist_stats_streamlit_tab_sections_html(payload: ChecklistStatsPayload) 
     ]
 
 
+# Matches the nested spans emitted in ``stats.py`` (glyph + tooltip inside stats-info-icon).
+_YEARLY_INFO_ICON_RE = re.compile(
+    r'\s*<span class="stats-info-icon">\s*'
+    r'<span class="stats-info-glyph">.*?</span>\s*'
+    r'<span class="stats-info-tooltip">.*?</span>\s*'
+    r"</span>",
+    re.DOTALL,
+)
+
+# Order for traveling / stationary detail rows (same as notebook yearly expanders; refs #85).
+_YEARLY_TRAVELING_ORDER = [
+    "Total distance (km)",
+    "Average distance (km)",
+    "Total hours",
+    "Average minutes",
+    "Average species",
+    "Average individuals",
+]
+_YEARLY_STATIONARY_ORDER = [
+    "Total hours",
+    "Average minutes",
+    "Average species",
+    "Average individuals",
+]
+
+_YEARLY_STREAMLIT_CAPTION_STYLE = (
+    "margin:10px 0 0;color:#6b7280;font-size:12px;line-height:1.5;max-width:52rem;"
+)
+
+
+def strip_yearly_stats_info_icons(label_html: str) -> str:
+    """Remove inline ``stats-info-icon`` spans from yearly row labels (Streamlit yearly tab; refs #85)."""
+    return _YEARLY_INFO_ICON_RE.sub("", label_html or "").strip()
+
+
+def _partition_yearly_rows(
+    yearly_rows: List[Tuple[str, List[str]]],
+) -> Tuple[
+    List[Tuple[str, List[str]]],
+    List[Tuple[str, List[str]]],
+    List[Tuple[str, List[str]]],
+    Optional[List[str]],
+    Optional[List[str]],
+]:
+    """Split ``yearly_rows`` into main-table rows, protocol detail rows, and count value rows."""
+    static_rows: List[Tuple[str, List[str]]] = []
+    traveling_detail: List[Tuple[str, List[str]]] = []
+    stationary_detail: List[Tuple[str, List[str]]] = []
+    traveling_count_vals: Optional[List[str]] = None
+    stationary_count_vals: Optional[List[str]] = None
+    for label, vals in yearly_rows:
+        ls = label.strip()
+        if ls.startswith("Traveling checklist:"):
+            traveling_detail.append((label, vals))
+        elif ls.startswith("Stationary checklist:"):
+            stationary_detail.append((label, vals))
+        else:
+            static_rows.append((label, vals))
+            if ls.startswith("Traveling checklists") and "Traveling checklist: " not in ls:
+                traveling_count_vals = vals
+            if ls.startswith("Stationary checklists") and "Stationary checklist: " not in ls:
+                stationary_count_vals = vals
+    return static_rows, traveling_detail, stationary_detail, traveling_count_vals, stationary_count_vals
+
+
+def _any_yearly_value(vals: List[str]) -> bool:
+    return any(v != "—" for v in vals)
+
+
+def _yearly_short_name(full_label: str, prefix: str) -> str:
+    name = full_label.strip()
+    if name.startswith(prefix):
+        name = name[len(prefix) :].strip()
+    if " <span" in name:
+        name = name.split(" <span")[0].strip()
+    return name or full_label
+
+
+def _yearly_ordered_detail_rows(
+    detail_rows: List[Tuple[str, List[str]]],
+    order_list: List[str],
+    prefix: str,
+    years_list: List[Any],
+) -> List[Tuple[str, List[str]]]:
+    by_suffix: Dict[str, List[str]] = {}
+    for label, vals in detail_rows:
+        short = _yearly_short_name(label, prefix)
+        by_suffix[short] = vals
+    return [(name, by_suffix.get(name, ["—"] * len(years_list))) for name in order_list if name in by_suffix]
+
+
+def _yearly_streamlit_caption(plain_text: str) -> str:
+    return (
+        f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">'
+        f"{html_module.escape(plain_text, quote=False)}</p>"
+    )
+
+
+def _yearly_streamlit_wide_table_html(
+    years_list: List[Any],
+    rows: List[Tuple[str, List[str]]],
+) -> str:
+    """Wide yearly table: first column plain text (escaped), value cells escaped."""
+    if not rows:
+        return ""
+    year_headers = "".join(
+        f"<th style='text-align:right;'>{html_module.escape(str(y), quote=False)}</th>"
+        for y in years_list
+    )
+    body = []
+    for label, vals in rows:
+        lab_esc = html_module.escape(str(label), quote=False)
+        cells = "".join(
+            f"<td style='text-align:right;'>{html_module.escape(str(v), quote=False)}</td>"
+            for v in vals
+        )
+        body.append(f"<tr><td>{lab_esc}</td>{cells}</tr>")
+    return (
+        '<div style="overflow-x:auto;">'
+        '<table class="stats-tbl stats-tbl-yearly" style="min-width:400px;width:100%;">'
+        f"<thead><tr><th>Statistic</th>{year_headers}</tr></thead>"
+        f"<tbody>{''.join(body)}</tbody>"
+        "</table></div>"
+    )
+
+
+def _yearly_streamlit_protocol_table_html(
+    years_list: List[Any],
+    *,
+    count_vals: Optional[List[str]],
+    ordered_detail_rows: List[Tuple[str, List[str]]],
+) -> str:
+    body_rows: List[Tuple[str, List[str]]] = []
+    if count_vals is not None:
+        body_rows.append(("Total checklists", count_vals))
+    body_rows.extend(ordered_detail_rows)
+    return _yearly_streamlit_wide_table_html(years_list, body_rows)
+
+
+def build_yearly_summary_streamlit_tab_html_dict(
+    payload: ChecklistStatsPayload,
+) -> Optional[Dict[str, str]]:
+    """Build inner HTML for Streamlit Yearly Summary nested tabs (All / Travelling / Stationary; refs #85).
+
+    Returns ``None`` when there is no yearly grid. Icons are stripped from labels; footnotes sit below tables.
+    """
+    years_list = payload.years_list
+    yearly_rows = payload.yearly_rows
+    if not years_list or not yearly_rows:
+        return None
+
+    static_rows, traveling_detail, stationary_detail, traveling_count_vals, stationary_count_vals = (
+        _partition_yearly_rows(yearly_rows)
+    )
+
+    visible_static_plain = [
+        (strip_yearly_stats_info_icons(label), vals)
+        for label, vals in static_rows
+        if _any_yearly_value(vals)
+    ]
+
+    all_table = _yearly_streamlit_wide_table_html(years_list, visible_static_plain)
+    cap_all = _yearly_streamlit_caption(
+        "Travelling and Stationary checklist counts in this table include only complete checklists "
+        "(incomplete submissions are excluded). Use the Travelling and Stationary tabs for protocol-specific metrics."
+    )
+    if all_table:
+        all_html = all_table + cap_all
+    else:
+        all_html = (
+            "<p style=\"color:#6b7280;font-size:14px;\">No yearly summary statistics in this view.</p>"
+            + cap_all
+        )
+
+    ordered_trav = _yearly_ordered_detail_rows(
+        traveling_detail,
+        _YEARLY_TRAVELING_ORDER,
+        "Traveling checklist:",
+        years_list,
+    )
+    trav_table = _yearly_streamlit_protocol_table_html(
+        years_list,
+        count_vals=traveling_count_vals,
+        ordered_detail_rows=ordered_trav,
+    )
+    cap_trav = _yearly_streamlit_caption(
+        "Incomplete checklists are excluded from these counts and metrics."
+    )
+    if trav_table:
+        travelling_html = trav_table + cap_trav
+    elif traveling_detail or traveling_count_vals is not None:
+        travelling_html = (
+            "<p style=\"color:#6b7280;font-size:14px;\">No travelling checklist statistics to display.</p>"
+            + cap_trav
+        )
+    else:
+        travelling_html = (
+            "<p style=\"color:#6b7280;font-size:14px;\">No travelling checklist data for this selection.</p>"
+        )
+
+    ordered_stat = _yearly_ordered_detail_rows(
+        stationary_detail,
+        _YEARLY_STATIONARY_ORDER,
+        "Stationary checklist:",
+        years_list,
+    )
+    stat_table = _yearly_streamlit_protocol_table_html(
+        years_list,
+        count_vals=stationary_count_vals,
+        ordered_detail_rows=ordered_stat,
+    )
+    cap_stat = _yearly_streamlit_caption(
+        "Incomplete checklists are excluded from these counts and metrics."
+    )
+    if stat_table:
+        stationary_html = stat_table + cap_stat
+    elif stationary_detail or stationary_count_vals is not None:
+        stationary_html = (
+            "<p style=\"color:#6b7280;font-size:14px;\">No stationary checklist statistics to display.</p>"
+            + cap_stat
+        )
+    else:
+        stationary_html = (
+            "<p style=\"color:#6b7280;font-size:14px;\">No stationary checklist data for this selection.</p>"
+        )
+
+    return {
+        "all": all_html,
+        "travelling": travelling_html,
+        "stationary": stationary_html,
+    }
+
+
 def _checklist_stats_panel_h4_block(title: str, inner_html: str, *, first: bool) -> str:
     mt = "0" if first else "16px"
     title_esc = html_module.escape(title, quote=False)
@@ -798,27 +1032,14 @@ def format_checklist_stats_bundle(
 
     yearly_table_html = ""
     if years_list and yearly_rows:
-        def _any_value(vals):
-            return any(v != "—" for v in vals)
-
-        static_rows = []
-        traveling_detail = []
-        stationary_detail = []
-        traveling_count_vals = None
-        stationary_count_vals = None
-        for label, vals in yearly_rows:
-            ls = label.strip()
-            if ls.startswith("Traveling checklist:"):
-                traveling_detail.append((label, vals))
-            elif ls.startswith("Stationary checklist:"):
-                stationary_detail.append((label, vals))
-            else:
-                static_rows.append((label, vals))
-                if ls.startswith("Traveling checklists") and "Traveling checklist: " not in ls:
-                    traveling_count_vals = vals
-                if ls.startswith("Stationary checklists") and "Stationary checklist: " not in ls:
-                    stationary_count_vals = vals
-        visible_static = [(label, vals) for label, vals in static_rows if _any_value(vals)]
+        (
+            static_rows,
+            traveling_detail,
+            stationary_detail,
+            traveling_count_vals,
+            stationary_count_vals,
+        ) = _partition_yearly_rows(yearly_rows)
+        visible_static = [(label, vals) for label, vals in static_rows if _any_yearly_value(vals)]
         year_headers = "".join(f"<th style='text-align:right;'>{y}</th>" for y in years_list)
         yearly_css = """
     .yearly-maint-section { margin-bottom:8px; border:1px solid #e5e7eb; border-radius:6px; background:#f9fafb; padding:4px 10px; }
@@ -827,30 +1048,6 @@ def format_checklist_stats_bundle(
         _yearly_comment_style = "margin:4px 0 8px;color:#6b7280;font-size:12px;line-height:1.5;"
         _traveling_comment = "Incomplete checklists not counted."
         _stationary_comment = "Incomplete checklists not counted."
-        _traveling_order = [
-            "Total distance (km)",
-            "Average distance (km)",
-            "Total hours",
-            "Average minutes",
-            "Average species",
-            "Average individuals",
-        ]
-        _stationary_order = ["Total hours", "Average minutes", "Average species", "Average individuals"]
-
-        def _short_name(full_label, prefix):
-            name = full_label.strip()
-            if name.startswith(prefix):
-                name = name[len(prefix) :].strip()
-            if " <span" in name:
-                name = name.split(" <span")[0].strip()
-            return name or full_label
-
-        def _ordered_detail_rows(detail_rows, order_list, prefix):
-            by_suffix = {}
-            for label, vals in detail_rows:
-                short = _short_name(label, prefix)
-                by_suffix[short] = vals
-            return [(name, by_suffix.get(name, ["—"] * len(years_list))) for name in order_list if name in by_suffix]
 
         parts = []
         if visible_static:
@@ -897,7 +1094,12 @@ def format_checklist_stats_bundle(
   </div>"""
 
         if traveling_detail or traveling_count_vals is not None:
-            ordered_trav = _ordered_detail_rows(traveling_detail, _traveling_order, "Traveling checklist:")
+            ordered_trav = _yearly_ordered_detail_rows(
+                traveling_detail,
+                _YEARLY_TRAVELING_ORDER,
+                "Traveling checklist:",
+                years_list,
+            )
             if ordered_trav or traveling_count_vals is not None:
                 body = _yearly_accordion_body(_traveling_comment, traveling_count_vals, ordered_trav)
                 if body:
@@ -906,7 +1108,12 @@ def format_checklist_stats_bundle(
     <summary>Traveling checklists</summary>
 {body}  </details>""")
         if stationary_detail or stationary_count_vals is not None:
-            ordered_stat = _ordered_detail_rows(stationary_detail, _stationary_order, "Stationary checklist:")
+            ordered_stat = _yearly_ordered_detail_rows(
+                stationary_detail,
+                _YEARLY_STATIONARY_ORDER,
+                "Stationary checklist:",
+                years_list,
+            )
             if ordered_stat or stationary_count_vals is not None:
                 body = _yearly_accordion_body(_stationary_comment, stationary_count_vals, ordered_stat)
                 if body:

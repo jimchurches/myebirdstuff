@@ -46,7 +46,8 @@ configurable under **Settings → Maintenance** (refs #79).
 expanders per list, HTML from ``format_checklist_stats_bundle`` on ``df_full``. **Top N** and **visible rows**
 are configured under **Settings → Tables & lists** (refs `#81`).
 
-**Yearly Summary** (global-by-year) is not migrated in Streamlit yet.
+**Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs,
+HTML tables from ``build_yearly_summary_streamlit_tab_html_dict`` on the date-filtered working set (refs #85).
 """
 
 from __future__ import annotations
@@ -99,6 +100,7 @@ from country_stats_streamlit_html import (  # noqa: E402
     sync_country_tab_session_inputs,
 )
 from maintenance_streamlit_html import render_maintenance_streamlit_tab  # noqa: E402
+from yearly_summary_streamlit_html import render_yearly_summary_streamlit_tab  # noqa: E402
 from map_working import (  # noqa: E402
     date_inception_to_today_default,
     folium_map_to_html_bytes,
@@ -674,10 +676,6 @@ def main() -> None:
         maint_full_payload = _cached_checklist_stats_payload(df_full)
         sex_notation_by_year = _cached_sex_notation_by_year(df_full)
 
-    def _tab_test_placeholder(notebook_name: str, blurb: str) -> None:
-        st.markdown(f"**TEST** — `{notebook_name}` tab (placeholder only).")
-        st.write(blurb)
-
     with tab_map:
         prov_plain = provenance or ""
         sig = data_signature_for_caches(df_full, prov_plain)
@@ -792,10 +790,7 @@ def main() -> None:
             )
 
     with tab_yearly:
-        _tab_test_placeholder(
-            "Yearly Summary",
-            "Global yearly statistics (not per-country) — notebook parity not migrated here yet.",
-        )
+        render_yearly_summary_streamlit_tab(checklist_payload)
 
     with tab_country:
         if checklist_payload is not None:
