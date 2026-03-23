@@ -262,7 +262,7 @@ def format_country_yearly_table_html(
         + "</tr>"
         for label, vals in rows
     )
-    return f"""  <div style="overflow-x:auto;">
+    return f"""  <div class="yearly-tbl-scroll" style="overflow-x:auto;width:100%;max-width:100%;">
   <table class="stats-tbl stats-tbl-yearly" style="min-width:{min_w};width:100%;">
     <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
     <tbody>{body_rows}</tbody>
@@ -429,6 +429,8 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   min-width: 100%;
   max-width: none;
   font-size: 0.92em;
+  /* Sticky first column needs a non-clipping overflow (default .stats-tbl is hidden). */
+  overflow: visible;
 }}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly thead th {{
   padding: 0.4rem 0.5rem;
@@ -444,7 +446,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 .streamlit-checklist-html-ab.streamlit-yearly-summary-ab {{
   max-width: 100%;
 }}
-/* First column: statistic labels (fixed width so country tables line up). */
+/* First column: statistic labels + sticky “freeze” while scrolling horizontally (refs #85). */
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:first-child,
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:first-child {{
   width: 16rem;
@@ -453,9 +455,25 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   box-sizing: border-box;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  border-right: 1px solid rgba({acc}, 0.2);
+  box-shadow: 4px 0 12px -6px rgba(0, 0, 0, 0.18);
 }}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly thead th:first-child {{
   text-align: left;
+  z-index: 4;
+  background: rgba({acc}, 0.09);
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly tbody tr:nth-child(odd) td:first-child {{
+  background: rgba({acc}, 0.04);
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly tbody tr:nth-child(even) td:first-child {{
+  background: rgba({acc}, 0.085);
+}}
+.streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly tbody tr:hover td:first-child {{
+  background: rgba({acc}, 0.14) !important;
 }}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:last-child,
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:last-child {{
