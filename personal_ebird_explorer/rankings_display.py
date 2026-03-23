@@ -262,9 +262,10 @@ def rankings_subspecies_hierarchical_table(
         else:
             total_line = f"{total_count_html}{link_suffix}"
 
-        header_parts = [species_common]
+        header_parts = [_html_module.escape(str(species_common))]
         if species_sci:
-            header_parts.append(f"<span style='color:#6b7280;font-size:12px;'>({species_sci})</span>")
+            esc_sci = _html_module.escape(str(species_sci))
+            header_parts.append(f'<span class="subspecies-sci-secondary">({esc_sci})</span>')
         header_text = " ".join(header_parts)
 
         subspecies_rows = []
@@ -272,8 +273,13 @@ def rankings_subspecies_hierarchical_table(
             label = sub.get("subspecies_common", "")
             sub_sci = sub.get("subspecies_scientific", "")
             count = sub.get("individuals", 0)
-            label_html = label or sub.get("subspecies_common_full", "")
-            sci_html = f"<span style='color:#6b7280;font-size:12px;'>{sub_sci}</span>" if sub_sci else ""
+            label_raw = label or sub.get("subspecies_common_full", "") or ""
+            label_html = _html_module.escape(str(label_raw))
+            sci_html = (
+                f'<span class="subspecies-sci-secondary">{_html_module.escape(str(sub_sci))}</span>'
+                if sub_sci
+                else ""
+            )
             subspecies_rows.append(
                 f"<tr><td>{label_html}</td><td>{sci_html}</td>"
                 f"<td style='text-align:right;font-weight:600;'>{count:,}</td></tr>"
@@ -313,10 +319,8 @@ def rankings_subspecies_hierarchical_table(
     wrapped = rankings_scroll_wrapper(all_html, scroll_hint, visible_rows)
 
     css = """
-.subspecies-accordion {
-  font-size: 13px;
-  line-height: 1.5;
-}
+/* Typography inherits from parent (e.g. Streamlit ``.streamlit-checklist-html-ab``); do not override
+   font-size here — that mismatched other rankings tables (refs #81). */
 .subspecies-section {
   margin-bottom: 6px;
   border: 1px solid #e5e7eb;

@@ -314,6 +314,8 @@ CHECKLIST_STATS_TABLE_CSS = """
     .rankings-tbl td:first-child { font-weight:normal; }
     /* Scroll area: slight top inset so header sits below strongest part of top fade (refs #81). */
     .rankings-scroll-inner { box-sizing: border-box; padding-top: 0.5rem; }
+    /* Subspecies: scientific names share table/summary font size; muted color only (refs #81). */
+    .subspecies-sci-secondary { color: #6b7280; font-size: inherit; line-height: inherit; font-weight: inherit; }
     """
 
 # Injected once by ``streamlit_app/checklist_stats_streamlit_html`` around checklist sub-tabs only.
@@ -549,9 +551,19 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   min-width: 0;
   max-width: none;
 }}
-.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl th,
+/* Location / visited rankings: align plain-text columns with Checklist Statistics KV labels
+   (proportional numerals, 400). Checklist uses tabular-nums only on the value column; we were
+   applying tabular-nums to every cell here, which subtly changes state/country (refs #81). */
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl th {{
+  text-align: left;
+  font-variant-numeric: normal;
+}}
 .streamlit-checklist-html-ab .stats-tbl.location-cols-tbl td {{
   text-align: left;
+  font-variant-numeric: normal;
+  font-weight: 400;
+}}
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl td:nth-child(n + 4) {{
   font-variant-numeric: tabular-nums;
 }}
 .streamlit-checklist-html-ab .stats-tbl.location-cols-tbl td:last-child {{
@@ -598,6 +610,28 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   border-bottom: 1px solid rgba({acc}, 0.2);
   font-weight: 600;
   background: rgba({acc}, 0.09);
+}}
+.streamlit-checklist-html-ab .stats-tbl.subspecies-tbl tbody td:nth-child(1),
+.streamlit-checklist-html-ab .stats-tbl.subspecies-tbl tbody td:nth-child(2) {{
+  text-align: left;
+  font-variant-numeric: normal;
+  font-weight: 400;
+}}
+.streamlit-checklist-html-ab .stats-tbl.subspecies-tbl tbody td:last-child {{
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}}
+.streamlit-checklist-html-ab .subspecies-sci-secondary {{
+  color: color-mix(in srgb, var(--text-color, {text_fb}) 58%, transparent);
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}}
+@supports not (color: color-mix(in srgb, black 50%, transparent)) {{
+  .streamlit-checklist-html-ab .subspecies-sci-secondary {{
+    color: #6b7280;
+  }}
 }}
 """
 
