@@ -332,14 +332,30 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
     if blue_theme:
         # eBird-ish blue (links / nav on eBird.org lean this way; tweak if you standardise on brand specs).
         acc = "21, 101, 168"  # #1565a8
+        acc_rgb = (21, 101, 168)
         link = "#1565a8"
         text_fb = "#1a2e22"
         p_fallback = "26, 46, 34"
     else:
         acc = "31, 111, 84"  # #1f6f54 — matches Streamlit config.toml primary / prior green tab
+        acc_rgb = (31, 111, 84)
         link = "#1f6f54"
         text_fb = "#1a2e22"
         p_fallback = "26, 46, 34"
+    # Opaque zebra/header fills for sticky yearly first column (semi-transparent rgba shows
+    # scrolling cells through; blend accent onto same base as .stats-tbl background — refs #85).
+    _base_tbl = (250, 252, 250)  # #fafcfa — matches var(--background-color, #fafcfa)
+
+    def _opaque_accent_on_base(alpha: float) -> str:
+        r = round(_base_tbl[0] * (1.0 - alpha) + acc_rgb[0] * alpha)
+        g = round(_base_tbl[1] * (1.0 - alpha) + acc_rgb[1] * alpha)
+        b = round(_base_tbl[2] * (1.0 - alpha) + acc_rgb[2] * alpha)
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    freeze_odd = _opaque_accent_on_base(0.04)
+    freeze_even = _opaque_accent_on_base(0.085)
+    freeze_head = _opaque_accent_on_base(0.09)
+    freeze_hover = _opaque_accent_on_base(0.14)
     return f"""
 .streamlit-checklist-html-ab {{
   display: block;
@@ -464,16 +480,16 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly thead th:first-child {{
   text-align: left;
   z-index: 4;
-  background: rgba({acc}, 0.09);
+  background-color: {freeze_head} !important;
 }}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly tbody tr:nth-child(odd) td:first-child {{
-  background: rgba({acc}, 0.04);
+  background-color: {freeze_odd} !important;
 }}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly tbody tr:nth-child(even) td:first-child {{
-  background: rgba({acc}, 0.085);
+  background-color: {freeze_even} !important;
 }}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly tbody tr:hover td:first-child {{
-  background: rgba({acc}, 0.14) !important;
+  background-color: {freeze_hover} !important;
 }}
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:last-child,
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:last-child {{
