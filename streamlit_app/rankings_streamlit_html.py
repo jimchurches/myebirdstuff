@@ -3,10 +3,12 @@
 
 Uses HTML from :func:`personal_ebird_explorer.checklist_stats_display.format_checklist_stats_bundle`
 (``rankings_sections_top_n`` / ``rankings_sections_other``) — same tables as the Jupyter notebook,
-rendered with ``st.markdown(..., unsafe_allow_html=True)``. Do not use ``st.dataframe`` for these tables.
+rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matches **Checklist Statistics**:
+``CHECKLIST_STATS_TABLE_CSS`` + ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS`` scoped under
+``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). Do not use ``st.dataframe``.
 
-**Top N** / **visible rows** sliders live in **Top Lists**; duplicate controls may exist under **Settings**
-for UI evaluation (refs `#81`).
+**Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
+``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`).
 """
 
 from __future__ import annotations
@@ -18,12 +20,15 @@ import streamlit as st
 
 from personal_ebird_explorer.checklist_stats_compute import compute_checklist_stats_payload
 from personal_ebird_explorer.checklist_stats_display import (
+    CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS,
     CHECKLIST_STATS_TABLE_CSS,
     format_checklist_stats_bundle,
 )
 from personal_ebird_explorer.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 
-_RANKINGS_WRAPPER_CLASS = "streamlit-rankings-html"
+# Must include ``streamlit-checklist-html-ab`` — ``CHECKLIST_STATS_*`` rules are scoped to it (same as Checklist Statistics).
+_STREAMLIT_TABLE_SCOPE = "streamlit-checklist-html-ab"
+_RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"
 
 
 @st.cache_data(show_spinner=False)
@@ -55,46 +60,31 @@ def render_rankings_streamlit_tab(
 ) -> None:
     """Render Rankings & lists from the full export (notebook parity: ``df_full``)."""
 
+    # Same injection pattern as ``checklist_stats_streamlit_html`` (table CSS + Streamlit tab-surface polish).
     st.markdown(
         "<style>"
         f"{CHECKLIST_STATS_TABLE_CSS}"
-        f".{_RANKINGS_WRAPPER_CLASS} {{ font-size:13px;line-height:1.6;max-width:1400px;width:100%; }}"
+        f"{CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS}"
+        f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:1400px;width:100%; }}"
         "</style>",
         unsafe_allow_html=True,
+    )
+
+    bundle = _cached_rankings_stats_bundle(
+        df_full,
+        int(st.session_state.streamlit_rankings_top_n),
+        int(st.session_state.streamlit_rankings_visible_rows),
+        country_sort,
+        taxonomy_locale,
     )
 
     tab_top, tab_int = st.tabs(["Top Lists", "Interesting Lists"])
 
     with tab_top:
-        st.slider(
-            "Top N table limit",
-            min_value=5,
-            max_value=500,
-            value=200,
-            step=1,
-            key="streamlit_rankings_top_n",
-            help="Maximum rows that feed each “Top …” ranking (same role as notebook Top N).",
-        )
-        st.slider(
-            "Visible rows (scroll)",
-            min_value=4,
-            max_value=80,
-            value=16,
-            step=1,
-            key="streamlit_rankings_visible_rows",
-            help="Scroll area height for rankings tables (row shading).",
-        )
-        bundle = _cached_rankings_stats_bundle(
-            df_full,
-            int(st.session_state.streamlit_rankings_top_n),
-            int(st.session_state.streamlit_rankings_visible_rows),
-            country_sort,
-            taxonomy_locale,
-        )
         for title, inner_html in bundle.get("rankings_sections_top_n") or []:
             with st.expander(title, expanded=False):
                 st.markdown(
-                    f'<div class="{_RANKINGS_WRAPPER_CLASS}">{inner_html}</div>',
+                    f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">{inner_html}</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -102,6 +92,6 @@ def render_rankings_streamlit_tab(
         for title, inner_html in bundle.get("rankings_sections_other") or []:
             with st.expander(title, expanded=False):
                 st.markdown(
-                    f'<div class="{_RANKINGS_WRAPPER_CLASS}">{inner_html}</div>',
+                    f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">{inner_html}</div>',
                     unsafe_allow_html=True,
                 )

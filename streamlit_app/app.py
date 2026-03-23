@@ -44,7 +44,7 @@ configurable under **Settings → Maintenance** (refs #79).
 
 **Rankings & lists:** ``rankings_streamlit_html`` — nested **Top Lists** / **Interesting Lists** tabs,
 expanders per list, HTML from ``format_checklist_stats_bundle`` on ``df_full``. **Top N** and **visible rows**
-sliders in Top Lists; duplicate sliders under **Settings → Tables & lists** for UI evaluation (refs `#81`).
+are configured under **Settings → Tables & lists** (refs `#81`).
 
 **Yearly Summary** (global-by-year) is not migrated in Streamlit yet.
 """
@@ -151,6 +151,88 @@ _COUNTRY_SORT_LABELS = {
     COUNTRY_TAB_SORT_LIFERS_WORLD: "By lifers (world)",
     COUNTRY_TAB_SORT_TOTAL_SPECIES: "By total species",
 }
+
+# Match ``.streamlit/config.toml`` [theme] (forest / eBird-adjacent greens).
+_THEME_TEXT = "#1A2E22"
+_THEME_PRIMARY = "#1F6F54"
+_THEME_SECONDARY_BG = "#EEF4F0"
+
+# Session flag: avoid stacking duplicate ``<style>`` blocks on every rerun.
+# Bump suffix when CSS changes so returning users pick up new rules without clearing session.
+_SPINNER_THEME_CSS_INJECTED_KEY = "_ebird_spinner_theme_css_injected_v3"
+
+_SPINNER_THEME_CSS = f"""
+<style>
+/* Hoisted ``st.spinner`` — align with [theme] in .streamlit/config.toml */
+/* Modern Streamlit uses an icon spinner (``iconValue: spinner``), not a CSS border ring. */
+div[data-testid="stSpinner"],
+div[data-testid="stSpinner"].stSpinner {{
+  color: {_THEME_TEXT};
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}}
+/* Graphic: ``currentColor`` on the SVG so the arc tracks primary (not default grey). */
+div[data-testid="stSpinner"] svg {{
+  color: {_THEME_PRIMARY} !important;
+}}
+div[data-testid="stSpinner"] svg path,
+div[data-testid="stSpinner"] svg circle {{
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}}
+/* Spinner message is rendered as Streamlit markdown — target container + descendants. */
+div[data-testid="stSpinner"] [data-testid="stMarkdownContainer"],
+div[data-testid="stSpinner"] [data-testid="stMarkdownContainer"] * {{
+  color: {_THEME_TEXT} !important;
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}}
+div[data-testid="stSpinner"] p,
+div[data-testid="stSpinner"] span,
+div[data-testid="stSpinner"] label {{
+  color: {_THEME_TEXT} !important;
+}}
+/* Older border-based spinner (harmless if unused) */
+div[data-testid="stSpinner"] div[class*="Spinner"] {{
+  border-color: {_THEME_SECONDARY_BG} !important;
+  border-top-color: {_THEME_PRIMARY} !important;
+}}
+</style>
+"""
+
+
+def _inject_spinner_theme_css() -> None:
+    """Tweak hoisted checklist-stats spinner to match our theme (refs #70).
+
+    Use :func:`streamlit.html` for **style-only** blocks: ``st.markdown(..., unsafe_allow_html)``
+    sanitizes or scopes HTML so global ``<style>`` may not affect the spinner; style-only
+    ``st.html`` is applied via Streamlit’s event container (see Streamlit ``HtmlMixin.html``).
+    """
+    if st.session_state.get(_SPINNER_THEME_CSS_INJECTED_KEY):
+        return
+    # ``st.html`` exists from Streamlit 1.31+; requirements pin 1.40+.
+    st.html(_SPINNER_THEME_CSS.strip())
+    st.session_state[_SPINNER_THEME_CSS_INJECTED_KEY] = True
+
+
+def _init_and_clamp_streamlit_table_settings() -> None:
+    """Defaults and ranges for Settings → tables / maintenance (refs #81)."""
+    if "streamlit_rankings_top_n" not in st.session_state:
+        st.session_state.streamlit_rankings_top_n = 200
+    else:
+        st.session_state.streamlit_rankings_top_n = max(
+            10, min(500, int(st.session_state.streamlit_rankings_top_n))
+        )
+    if "streamlit_rankings_visible_rows" not in st.session_state:
+        st.session_state.streamlit_rankings_visible_rows = 16
+    else:
+        st.session_state.streamlit_rankings_visible_rows = max(
+            10, min(50, int(st.session_state.streamlit_rankings_visible_rows))
+        )
+    if "streamlit_close_location_meters" not in st.session_state:
+        st.session_state.streamlit_close_location_meters = DEFAULT_CLOSE_LOCATION_METERS
+    else:
+        st.session_state.streamlit_close_location_meters = max(
+            0, min(250, int(st.session_state.streamlit_close_location_meters))
+        )
 
 
 def _static_map_cache_key(
@@ -350,8 +432,7 @@ def main() -> None:
         st.session_state.streamlit_taxonomy_locale = _env_taxonomy_locale() or DEFAULT_TAXONOMY_LOCALE
     if "streamlit_country_tab_sort" not in st.session_state:
         st.session_state.streamlit_country_tab_sort = COUNTRY_TAB_SORT_ALPHABETICAL
-    if "streamlit_close_location_meters" not in st.session_state:
-        st.session_state.streamlit_close_location_meters = DEFAULT_CLOSE_LOCATION_METERS
+    _init_and_clamp_streamlit_table_settings()
 
     upload_cache = st.session_state.get(_SESSION_UPLOAD_CACHE_KEY)
     if upload_cache is not None and not (
@@ -576,6 +657,8 @@ def main() -> None:
     tax_locale_effective = (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE)
     species_url_fn = _cached_species_url_fn(tax_locale_effective)
 
+    _inject_spinner_theme_css()
+
     st.title("Personal eBird Explorer — Streamlit prototype")
 
     (
@@ -752,22 +835,22 @@ def main() -> None:
         st.divider()
         st.subheader("Tables & lists")
         st.slider(
-            "Top N table limit (mirror)",
-            min_value=5,
+            "Top N table limit",
+            min_value=10,
             max_value=500,
             value=200,
             step=1,
-            key="streamlit_settings_top_n",
-            help="Duplicate of **Rankings & lists → Top Lists** for evaluation; does not drive the Rankings tab yet.",
+            key="streamlit_rankings_top_n",
+            help="Caps how many rows feed each “Top …” ranking on **Rankings & lists**.",
         )
         st.slider(
-            "Visible rows (mirror)",
-            min_value=4,
-            max_value=80,
+            "Rankings visible rows",
+            min_value=10,
+            max_value=50,
             value=16,
             step=1,
-            key="streamlit_settings_visible_rows",
-            help="Duplicate of **Rankings & lists → Top Lists** for evaluation.",
+            key="streamlit_rankings_visible_rows",
+            help="Scroll area height for rankings tables (row shading) on **Rankings & lists**.",
         )
         st.radio(
             "Country ordering",
@@ -782,20 +865,17 @@ def main() -> None:
         )
         st.divider()
         st.subheader("Maintenance")
-        st.number_input(
+        st.slider(
             "Close location (m)",
             min_value=0,
-            max_value=10_000,
+            max_value=250,
+            value=DEFAULT_CLOSE_LOCATION_METERS,
             step=1,
             key="streamlit_close_location_meters",
             help=(
                 "Locations within this distance (metres), excluding exact duplicate coordinates, "
                 "are listed under **Maintenance → Location Maintenance → Close locations**."
             ),
-        )
-        st.caption(
-            "Rankings **Top N** and **visible rows** also appear under **Rankings & lists → Top Lists**; "
-            "the two places are intentionally independent for now (refs #81)."
         )
 
     if st.session_state.get("_explorer_map_html_bytes"):

@@ -312,6 +312,8 @@ CHECKLIST_STATS_TABLE_CSS = """
     .stats-col:last-child .stats-info-tooltip { left:0; right:auto; }
     .stats-tbl-3 th:nth-child(2), .stats-tbl-3 td:nth-child(2) { text-align:center; }
     .rankings-tbl td:first-child { font-weight:normal; }
+    /* Scroll area: slight top inset so header sits below strongest part of top fade (refs #81). */
+    .rankings-scroll-inner { box-sizing: border-box; padding-top: 0.5rem; }
     """
 
 # Injected once by ``streamlit_app/checklist_stats_streamlit_html`` around checklist sub-tabs only.
@@ -524,6 +526,78 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   .streamlit-checklist-html-ab p.maint-html-caption {{
     color: rgba({p_fallback}, 0.7);
   }}
+}}
+/* Rankings & lists (refs #81): ``.stats-tbl`` defaults assume 2-col KV tables — rankings use 3–6 columns.
+   Reset widths + match maintenance-style header band so expanders match other Streamlit HTML tabs. */
+.streamlit-checklist-html-ab .stats-tbl.rankings-tbl thead th {{
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid rgba({acc}, 0.2);
+  vertical-align: bottom;
+  text-align: left;
+  font-weight: 600;
+  background: rgba({acc}, 0.09);
+}}
+/* Scroll area: match notebook — top padding under scroll fade (refs #81). */
+.streamlit-checklist-html-ab .rankings-scroll-inner {{
+  box-sizing: border-box;
+  padding-top: 0.5rem;
+}}
+/* Undo 2-col KV widths for rankings tables except ``rank-tbl`` (narrow rank column set below). */
+.streamlit-checklist-html-ab .stats-tbl.rankings-tbl:not(.rank-tbl) td:first-child,
+.streamlit-checklist-html-ab .stats-tbl.rankings-tbl:not(.rank-tbl) td:last-child {{
+  width: auto !important;
+  min-width: 0;
+  max-width: none;
+}}
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl th,
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl td {{
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}}
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl td:last-child {{
+  text-align: right;
+  font-weight: 600;
+}}
+/* Species rankings (Rank | … | metric): keep rank column index-narrow; metric column medium weight. */
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl {{
+  table-layout: fixed;
+  width: 100%;
+}}
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl th:nth-child(1),
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl td:nth-child(1) {{
+  width: 3.25rem;
+  max-width: 4rem;
+  min-width: 2.5rem;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+  box-sizing: border-box;
+  white-space: nowrap;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}}
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl th:nth-child(2),
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl td:nth-child(2) {{
+  width: auto;
+  min-width: 0;
+}}
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl th:last-child,
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl td:last-child {{
+  width: 8.5rem;
+  max-width: 11rem;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}}
+.streamlit-checklist-html-ab .stats-tbl.seen-once-tbl td:last-child {{
+  text-align: right;
+  font-weight: 600;
+}}
+.streamlit-checklist-html-ab .stats-tbl.subspecies-tbl thead th {{
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid rgba({acc}, 0.2);
+  font-weight: 600;
+  background: rgba({acc}, 0.09);
 }}
 """
 

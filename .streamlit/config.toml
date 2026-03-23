@@ -3,6 +3,7 @@
 #
 # Theme: approximate eBird-style greens (forest / teal used on ebird.org and My eBird).
 # Not official brand tokens — only Streamlit [theme] keys, no custom CSS.
+# Hoisted ``st.spinner`` tweaks in ``streamlit_app/app.py`` (_THEME_*) mirror these hex values.
 
 [theme]
 base = "light"

@@ -9,9 +9,32 @@ import html as _html_module
 
 from personal_ebird_explorer.region_display import country_for_display, state_for_display
 
+# Middle column in ``rankings_table_with_rank`` was historically unused (stats emit "—"); omit when safe.
+_PLACEHOLDER_MIDDLE_VALUES = frozenset({"", "—", "–", "-"})
+
+
+def _omit_placeholder_middle_column(headers_3col, rows_3col) -> bool:
+    """True when middle header is blank and every row's middle cell is a placeholder (refs #81)."""
+    if len(headers_3col) < 3:
+        return False
+    if str(headers_3col[1]).strip():
+        return False
+    for r in rows_3col:
+        if len(r) < 2:
+            return False
+        mid = str(r[1]).strip()
+        if mid not in _PLACEHOLDER_MIDDLE_VALUES:
+            return False
+    return True
+
 
 def rankings_scroll_wrapper(table_html, scroll_hint, visible_rows):
-    """Wrap table HTML in scrollable div with shading hints. Pure CSS (ipywidgets HTML does not run scripts)."""
+    """Wrap table HTML in scrollable div with shading hints. Pure CSS (ipywidgets HTML does not run scripts).
+
+    Top and bottom fades when ``scroll_hint`` is ``"shading"`` or ``"both"``. Padding on
+    ``.rankings-scroll-inner`` (CSS) offsets the table slightly so the top gradient is less harsh on
+    the header row. Scroll-position–aware shading would need JavaScript (refs #81).
+    """
     max_h = visible_rows * 38  # ~38px per row
     shade_css = "position:absolute;left:0;right:0;height:24px;pointer-events:none;z-index:5;"
     top_shade = f'<div class="rankings-scroll-shade-top" style="{shade_css}top:0;background:linear-gradient(to bottom,rgba(255,255,255,0.95),transparent);"></div>'
@@ -33,7 +56,7 @@ def rankings_table(title, headers, rows, include_heading=True, scroll_hint="shad
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
     body = "".join(
-        f"<tr><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{r[2]}</td></tr>"
+        f"<tr><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:600;'>{r[2]}</td></tr>"
         for r in rows
     )
     tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead><tbody>{body}</tbody></table>"
@@ -43,15 +66,20 @@ def rankings_table(title, headers, rows, include_heading=True, scroll_hint="shad
 
 
 def rankings_table_location_5col(title, headers_5, rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-    """5-column table: Location, State, Country, then two more (e.g. Checklists, Species). Last column right-aligned."""
+    """5-column table: Location, State, Country, then two more (Top Lists tab; no Rank column, refs #81)."""
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
     body = "".join(
-        f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td><td>{r[3]}</td><td style='text-align:right;font-weight:bold;'>{r[4]}</td></tr>"
+        f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
+        f"<td>{r[3]}</td><td style='text-align:right;font-weight:600;'>{r[4]}</td></tr>"
         for r in rows
     )
-    tbl = f"<table class='stats-tbl rankings-tbl location-cols-tbl'><thead><tr><th>{headers_5[0]}</th><th>{headers_5[1]}</th><th>{headers_5[2]}</th><th>{headers_5[3]}</th><th>{headers_5[4]}</th></tr></thead><tbody>{body}</tbody></table>"
+    head_cells = "".join(f"<th>{hdr}</th>" for hdr in headers_5)
+    tbl = (
+        f"<table class='stats-tbl rankings-tbl location-cols-tbl'>"
+        f"<thead><tr>{head_cells}</tr></thead><tbody>{body}</tbody></table>"
+    )
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
     content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
     return content
@@ -69,7 +97,10 @@ def rankings_table_with_rank(
     link_urls_fn=None,
     add_lifelist_link=False,
 ):
-    """Build a 4-column rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3).
+    """Build a rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3).
+
+    If the middle header is blank and every middle cell is a placeholder (e.g. "—"), that column is
+    omitted so only Rank + two data columns remain (refs #81).
 
     Optional link helpers (refs #56). Prefer link_urls_fn(common_name) -> (species_url, lifelist_url)
     so one lookup per row; when provided, add_lifelist_link controls whether the last column gets the
@@ -78,7 +109,9 @@ def rankings_table_with_rank(
     if not rows_3col:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+    omit_middle = _omit_placeholder_middle_column(headers_3col, rows_3col)
     rows_html = []
+    metric_style = "text-align:right;font-weight:600;"
     for i, r in enumerate(rows_3col, start=1):
         cell1_esc = _html_module.escape(str(r[0]), quote=True)
         species_url = None
@@ -95,24 +128,46 @@ def rankings_table_with_rank(
         if lifelist_url and (add_lifelist_link or lifelist_url_fn):
             count_esc = _html_module.escape(cell3, quote=True)
             cell3 = f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" target=\"_blank\" rel=\"noopener\">{count_esc}</a>"
-        rows_html.append(f"<tr><td>{i}</td><td>{cell1}</td><td>{r[1]}</td><td style='text-align:right;font-weight:bold;'>{cell3}</td></tr>")
+        if omit_middle:
+            rows_html.append(
+                f"<tr><td>{i}</td><td>{cell1}</td><td style='{metric_style}'>{cell3}</td></tr>"
+            )
+        else:
+            rows_html.append(
+                f"<tr><td>{i}</td><td>{cell1}</td><td>{r[1]}</td><td style='{metric_style}'>{cell3}</td></tr>"
+            )
     body = "".join(rows_html)
-    tbl = f"<table class='stats-tbl rankings-tbl rank-tbl'><thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th><th>{headers_3col[2]}</th></tr></thead><tbody>{body}</tbody></table>"
+    if omit_middle:
+        thead = (
+            f"<thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[2]}</th></tr></thead>"
+        )
+    else:
+        thead = (
+            f"<thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th>"
+            f"<th>{headers_3col[2]}</th></tr></thead>"
+        )
+    tbl = f"<table class='stats-tbl rankings-tbl rank-tbl'>{thead}<tbody>{body}</tbody></table>"
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
     content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
     return content
 
 
 def rankings_visited_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-    """6-column table: Location | State | Country | First visit | Last visit | Visits."""
+    """6-column table: Location | State | Country | First visit | Last visit | Visits (Top Lists; no Rank)."""
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
     body = "".join(
-        f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td><td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
+        f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
+        f"<td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
         for r in rows
     )
-    tbl = f"<table class='stats-tbl rankings-tbl location-cols-tbl'><thead><tr><th>Location</th><th>State</th><th>Country</th><th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>{body}</tbody></table>"
+    tbl = (
+        "<table class='stats-tbl rankings-tbl location-cols-tbl'>"
+        "<thead><tr><th>Location</th><th>State</th><th>Country</th>"
+        "<th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>"
+        f"{body}</tbody></table>"
+    )
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
     return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
 
@@ -144,7 +199,7 @@ def rankings_seen_once_table(
             species_url = None
         species_cell = f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>' if species_url else species_esc
         rows_html.append(
-            f"<tr><td>{species_cell}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:bold;'>{r[5]}</td></tr>"
+            f"<tr><td>{species_cell}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
         )
     body = "".join(rows_html)
     tbl = (
@@ -221,7 +276,7 @@ def rankings_subspecies_hierarchical_table(
             sci_html = f"<span style='color:#6b7280;font-size:12px;'>{sub_sci}</span>" if sub_sci else ""
             subspecies_rows.append(
                 f"<tr><td>{label_html}</td><td>{sci_html}</td>"
-                f"<td style='text-align:right;font-weight:bold;'>{count:,}</td></tr>"
+                f"<td style='text-align:right;font-weight:600;'>{count:,}</td></tr>"
             )
         subspecies_table = (
             "<table class='stats-tbl rankings-tbl subspecies-tbl'>"
