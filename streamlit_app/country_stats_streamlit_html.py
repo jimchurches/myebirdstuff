@@ -75,12 +75,12 @@ def render_country_stats_streamlit_html(
     if cur not in keys:
         st.session_state.streamlit_country_tab_country = keys[0]
 
-    st.markdown("#### By country")
     selected = st.selectbox(
-        "Country",
+        "Country for statistics",
         options=keys,
         format_func=country_display_name_plain,
         key="streamlit_country_tab_country",
+        label_visibility="hidden",
     )
 
     section_by_key = {ck: (ys, rs) for ck, ys, rs in valid}

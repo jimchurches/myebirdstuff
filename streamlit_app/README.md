@@ -4,9 +4,9 @@ Early **Personal eBird Explorer** UI on Streamlit. The Jupyter notebook remains 
 
 **Tracking:** [Issue #70 — Plan transition from Notebook UI to Streamlit UI](https://github.com/jimchurches/myebirdstuff/issues/70) (branch-based prototype → parallel dev → cutover when ready; Binder/notebook preserved until then).
 
-**Landing (no CSV yet):** If disk resolution finds no file and this browser session has no cached upload yet, the app shows title + copy + **file uploader in the main column**. The **sidebar** still shows a small **GitHub** link (icon + “Source”) at the bottom. After CSV load, the **Map** sidebar fills in above that footer — there is no control to swap CSV without a new session / refresh (loading APIs stay in `_load_dataframe` for future work).
+**Landing (no CSV yet):** If disk resolution finds no file and this browser session has no cached upload yet, the app shows title + copy + **file uploader in the main column**. The **sidebar** still shows a small text footer: **GitHub** · **eBird** · **Instagram** (no icons — reads better in a narrow sidebar). After CSV load, the **Map** sidebar fills in above that footer — there is no control to swap CSV without a new session / refresh (loading APIs stay in `_load_dataframe` for future work).
 
-**GitHub link:** `app.py` sets `GITHUB_REPO_URL` and renders `_sidebar_github_footer()` after the sidebar controls (and after the optional map export button). *Other common patterns* if you want to change it: put the link only on **Settings → About**; use a **shields.io** badge in markdown; add **“Fork me on GitHub”** ribbon (CSS, more prominent); or a **footer line** in the main area with `st.caption` under specific tabs (repeats unless hoisted).
+**Sidebar footer:** `app.py` sets `GITHUB_REPO_URL`, `EBIRD_PROFILE_URL`, and `INSTAGRAM_PROFILE_URL`; `_sidebar_footer_links()` renders those as plain text links separated by middots. *Other common patterns* if you want to change it: put links only on **Settings → About**; use a **shields.io** badge in markdown; add **“Fork me on GitHub”** ribbon (CSS, more prominent); or a **footer line** in the main area with `st.caption` under specific tabs (repeats unless hoisted).
 
 ## UI guidelines
 
