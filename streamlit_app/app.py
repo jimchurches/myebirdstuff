@@ -47,7 +47,8 @@ expanders per list, HTML from ``format_checklist_stats_bundle`` on ``df_full``. 
 are configured under **Settings → Tables & lists** (refs `#81`).
 
 **Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs,
-HTML tables from ``build_yearly_summary_streamlit_tab_html_dict`` on the date-filtered working set (refs #85).
+HTML tables from ``build_yearly_summary_streamlit_tab_html_dict`` on the date-filtered working set. When there are
+more than 10 years, default columns are the most recent 10 with a **Show full history** toggle (refs #85).
 """
 
 from __future__ import annotations

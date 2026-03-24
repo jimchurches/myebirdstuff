@@ -853,6 +853,9 @@ _YEARLY_STREAMLIT_CAPTION_STYLE = (
     "margin:10px 0 0;color:#6b7280;font-size:12px;line-height:1.5;max-width:52rem;"
 )
 
+# Streamlit Yearly Summary: default to the most recent N calendar years when count exceeds this (refs #85).
+YEARLY_STREAMLIT_RECENT_YEAR_COUNT = 10
+
 
 def strip_yearly_stats_info_icons(label_html: str) -> str:
     """Remove inline ``stats-info-icon`` spans from yearly row labels (Streamlit yearly tab; refs #85)."""
@@ -922,6 +925,30 @@ def _yearly_streamlit_caption(plain_text: str) -> str:
     )
 
 
+def yearly_streamlit_year_window_slice(
+    years_list: List[Any],
+    *,
+    show_full_history: bool,
+    recent_count: int = YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
+) -> slice:
+    """Return a ``slice`` into *years_list* and aligned per-year value lists.
+
+    When ``len(years_list) <= recent_count`` or *show_full_history* is true, returns
+    ``slice(None)`` (all years). Otherwise returns the last *recent_count* entries
+    (data-sorted years are ascending — see :func:`yearly_summary_stats`).
+    """
+    n = len(years_list)
+    if n <= recent_count or show_full_history:
+        return slice(None)
+    return slice(n - recent_count, n)
+
+
+def _slice_yearly_row_vals(vals: List[str], years_list: List[Any], s: slice) -> List[str]:
+    if len(vals) != len(years_list):
+        return vals
+    return vals[s]
+
+
 def _yearly_streamlit_wide_table_html(
     years_list: List[Any],
     rows: List[Tuple[str, List[str]]],
@@ -965,8 +992,14 @@ def _yearly_streamlit_protocol_table_html(
 
 def build_yearly_summary_streamlit_tab_html_dict(
     payload: ChecklistStatsPayload,
+    *,
+    show_full_history: bool = False,
+    recent_year_count: int = YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
 ) -> Optional[Dict[str, str]]:
     """Build inner HTML for Streamlit Yearly Summary nested tabs (All / Travelling / Stationary; refs #85).
+
+    When ``len(years_list) > recent_year_count`` and *show_full_history* is false, only the most
+    recent *recent_year_count* years are shown (columns), preserving notebook ordering.
 
     Returns ``None`` when there is no yearly grid. Icons are stripped from labels; footnotes sit below tables.
     """
@@ -975,17 +1008,27 @@ def build_yearly_summary_streamlit_tab_html_dict(
     if not years_list or not yearly_rows:
         return None
 
+    y_slice = yearly_streamlit_year_window_slice(
+        years_list,
+        show_full_history=show_full_history,
+        recent_count=recent_year_count,
+    )
+    display_years = years_list[y_slice]
+
     static_rows, traveling_detail, stationary_detail, traveling_count_vals, stationary_count_vals = (
         _partition_yearly_rows(yearly_rows)
     )
 
-    visible_static_plain = [
-        (strip_yearly_stats_info_icons(label), vals)
-        for label, vals in static_rows
-        if _any_yearly_value(vals)
-    ]
+    visible_static_plain = []
+    for label, vals in static_rows:
+        if not _any_yearly_value(vals):
+            continue
+        sliced = _slice_yearly_row_vals(vals, years_list, y_slice)
+        if not _any_yearly_value(sliced):
+            continue
+        visible_static_plain.append((strip_yearly_stats_info_icons(label), sliced))
 
-    all_table = _yearly_streamlit_wide_table_html(years_list, visible_static_plain)
+    all_table = _yearly_streamlit_wide_table_html(display_years, visible_static_plain)
     cap_all = _yearly_streamlit_caption(
         "Travelling and Stationary checklist counts in this table include only complete checklists "
         "(incomplete submissions are excluded). Use the Travelling and Stationary tabs for protocol-specific metrics."
@@ -1004,10 +1047,18 @@ def build_yearly_summary_streamlit_tab_html_dict(
         "Traveling checklist:",
         years_list,
     )
+    ordered_trav_sliced = [
+        (name, _slice_yearly_row_vals(vals, years_list, y_slice)) for name, vals in ordered_trav
+    ]
+    trav_count_sliced = (
+        _slice_yearly_row_vals(traveling_count_vals, years_list, y_slice)
+        if traveling_count_vals is not None
+        else None
+    )
     trav_table = _yearly_streamlit_protocol_table_html(
-        years_list,
-        count_vals=traveling_count_vals,
-        ordered_detail_rows=ordered_trav,
+        display_years,
+        count_vals=trav_count_sliced,
+        ordered_detail_rows=ordered_trav_sliced,
     )
     cap_trav = _yearly_streamlit_caption(
         "Incomplete checklists are excluded from these counts and metrics."
@@ -1030,10 +1081,18 @@ def build_yearly_summary_streamlit_tab_html_dict(
         "Stationary checklist:",
         years_list,
     )
+    ordered_stat_sliced = [
+        (name, _slice_yearly_row_vals(vals, years_list, y_slice)) for name, vals in ordered_stat
+    ]
+    stat_count_sliced = (
+        _slice_yearly_row_vals(stationary_count_vals, years_list, y_slice)
+        if stationary_count_vals is not None
+        else None
+    )
     stat_table = _yearly_streamlit_protocol_table_html(
-        years_list,
-        count_vals=stationary_count_vals,
-        ordered_detail_rows=ordered_stat,
+        display_years,
+        count_vals=stat_count_sliced,
+        ordered_detail_rows=ordered_stat_sliced,
     )
     cap_stat = _yearly_streamlit_caption(
         "Incomplete checklists are excluded from these counts and metrics."

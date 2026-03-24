@@ -7,9 +7,11 @@ from personal_ebird_explorer.checklist_stats_compute import (
     protocol_display_name,
 )
 from personal_ebird_explorer.checklist_stats_display import (
+    YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
     build_yearly_summary_streamlit_tab_html_dict,
     format_checklist_stats_bundle,
     strip_yearly_stats_info_icons,
+    yearly_streamlit_year_window_slice,
 )
 
 
@@ -102,6 +104,60 @@ def test_compute_and_format_smoke():
     assert "<table" in bundle["stats_html"]
     assert len(bundle["rankings_sections_top_n"]) == 7
     assert len(bundle["rankings_sections_other"]) == 4
+
+
+def test_yearly_streamlit_year_window_slice():
+    years = list(range(2010, 2022))  # 12 years, ascending
+    assert yearly_streamlit_year_window_slice(years, show_full_history=True) == slice(None)
+    assert yearly_streamlit_year_window_slice(years, show_full_history=False) == slice(2, 12)
+    assert years[yearly_streamlit_year_window_slice(years, show_full_history=False)] == list(
+        range(2012, 2022)
+    )
+    short = list(range(2020, 2027))  # 7 years
+    assert yearly_streamlit_year_window_slice(short, show_full_history=False) == slice(None)
+
+
+def test_build_yearly_summary_respects_recent_year_window():
+    """>10 years + show_full_history False → 10 year columns in HTML (#85)."""
+    rows = []
+    for sid, y in [(f"s{i}", 2000 + i) for i in range(15)]:
+        rows.append(
+            {
+                "Submission ID": [sid],
+                "Date": [pd.Timestamp(f"{y}-06-01")],
+                "Time": ["06:15"],
+                "Count": [1],
+                "Location ID": ["L1"],
+                "Location": ["Loc"],
+                "Scientific Name": ["Sp sp"],
+                "Common Name": ["Bird"],
+                "Latitude": [-35.0],
+                "Longitude": [149.0],
+                "Protocol": ["Traveling"],
+                "Duration (Min)": [10],
+                "Distance Traveled (km)": [0.0],
+                "All Obs Reported": [1],
+                "Number of Observers": [1],
+            }
+        )
+    df = pd.concat([pd.DataFrame(r) for r in rows], ignore_index=True)
+    payload = compute_checklist_stats_payload(df, top_n_limit=5)
+    assert payload is not None
+    assert len(payload.years_list) > YEARLY_STREAMLIT_RECENT_YEAR_COUNT
+
+    bodies_recent = build_yearly_summary_streamlit_tab_html_dict(
+        payload, show_full_history=False
+    )
+    bodies_full = build_yearly_summary_streamlit_tab_html_dict(payload, show_full_history=True)
+    assert bodies_recent is not None and bodies_full is not None
+
+    # Count year header cells in "All" table (one <th> per year after Statistic).
+    import re
+
+    th_years_recent = len(re.findall(r"<th style='text-align:right;'>", bodies_recent["all"]))
+    th_years_full = len(re.findall(r"<th style='text-align:right;'>", bodies_full["all"]))
+    assert th_years_recent == YEARLY_STREAMLIT_RECENT_YEAR_COUNT
+    assert th_years_full == len(payload.years_list)
 
 
 def test_strip_yearly_stats_info_icons_removes_span():
