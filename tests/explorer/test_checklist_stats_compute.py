@@ -10,7 +10,6 @@ from personal_ebird_explorer.checklist_stats_display import (
     YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
     build_yearly_summary_streamlit_tab_html_dict,
     format_checklist_stats_bundle,
-    format_yearly_streamlit_dual_view_html,
     slice_yearly_table_rows,
     strip_yearly_stats_info_icons,
     yearly_streamlit_year_window_slice,
@@ -108,38 +107,38 @@ def test_compute_and_format_smoke():
     assert len(bundle["rankings_sections_other"]) == 4
 
 
-def test_format_yearly_streamlit_dual_view_html_structure():
-    out = format_yearly_streamlit_dual_view_html(
-        "<p>recent</p>",
-        "<p>full</p>",
-        dom_suffix="test-all",
-        recent_year_count=10,
-    )
-    assert 'type="checkbox"' in out
-    assert 'class="yearly-dual-cb" aria-label' in out
-    out_full = format_yearly_streamlit_dual_view_html(
-        "<p>recent</p>",
-        "<p>full</p>",
-        dom_suffix="test-all-b",
-        recent_year_count=10,
-        initial_show_full=True,
-    )
-    assert 'class="yearly-dual-cb" checked' in out_full
-    assert "yearly-dual-status-stack" in out
-    assert "yearly-dual-status-full" in out
-    assert "Displaying all years" in out
-    assert "yearly-dual-recent" in out
-    assert "yearly-dual-full" in out
-    assert "<p>recent</p>" in out
-    assert "<p>full</p>" in out
-
-
 def test_slice_yearly_table_rows():
     years = [2020, 2021, 2022]
     rows = [("A", ["1", "2", "3"])]
     s = slice(1, 3)
     out = slice_yearly_table_rows(rows, years, s)
     assert out == [("A", ["2", "3"])]
+
+
+def test_slice_yearly_table_rows_trailing_total_recomputed_when_sum():
+    """Country-style rows: per-year cells + Total; slice years and re-sum when Total equals sum(years)."""
+    years = [2018, 2019, 2020, 2021, 2022, 2023]
+    rows = [("Lifers (world)", ["1", "2", "3", "4", "5", "6", "21"])]
+    s = slice(2, 6)
+    out = slice_yearly_table_rows(rows, years, s)
+    assert out == [("Lifers (world)", ["3", "4", "5", "6", "18"])]
+
+
+def test_slice_yearly_table_rows_trailing_total_grand_when_not_sum():
+    """Total species: last cell is grand uniques, not sum of year columns — keep tail after slice."""
+    years = [2020, 2021, 2022]
+    rows = [("Total species", ["10", "20", "30", "100"])]
+    s = slice(1, 3)
+    out = slice_yearly_table_rows(rows, years, s)
+    assert out == [("Total species", ["20", "30", "100"])]
+
+
+def test_slice_yearly_table_rows_single_display_year_drops_total():
+    years = [2019, 2020, 2021]
+    rows = [("Total checklists", ["1", "2", "3", "6"])]
+    s = slice(2, 3)
+    out = slice_yearly_table_rows(rows, years, s)
+    assert out == [("Total checklists", ["3"])]
 
 
 def test_yearly_streamlit_year_window_slice():
@@ -238,5 +237,6 @@ def test_build_yearly_summary_streamlit_tab_html_dict_smoke():
     assert "stats-info-icon" not in bodies["all"]
     assert "stats-info-icon" not in bodies["travelling"]
     assert "stats-info-icon" not in bodies["stationary"]
-    assert "Travelling and Stationary checklist counts" in bodies["all"]
-    assert "Incomplete checklists are excluded" in bodies["travelling"]
+    assert "Travelling and Stationary checklist counts" not in bodies["all"]
+    assert "Incomplete checklists are excluded" not in bodies["travelling"]
+    assert "Incomplete checklists are excluded" not in bodies["stationary"]

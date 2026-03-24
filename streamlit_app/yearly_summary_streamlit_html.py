@@ -5,12 +5,13 @@ HTML from :func:`build_yearly_summary_streamlit_tab_html_dict`; styles match Che
 (``CHECKLIST_STATS_TABLE_CSS`` + tab surface CSS under ``.streamlit-checklist-html-ab``).
 
 When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**
-(3–25, default 10), **both** the recent window and full history are rendered once; a **native HTML checkbox**
-swaps visibility **without a Streamlit rerun**. A **Streamlit** ``st.toggle`` (same fragment) is also shown
-for comparison: it reruns the fragment and sets the checkbox’s initial ``checked`` state to match.
+(3–25, default 10), a **Show full history** ``st.toggle`` below the nested tabs switches between the
+recent window and all columns. One protocol note (All + Travelling/Stationary completeness) sits below
+that control with spacing—redundant per-tab footnotes were removed. Reruns are limited to this ``@st.fragment``
+(same pattern as **Country**).
 
-The tab body runs inside :func:`run_yearly_summary_streamlit_fragment` so interacting with nested
-``st.tabs`` only triggers a **partial** fragment rerun (see Streamlit fragments docs).
+**Placement:** A single toggle after all ``with tab:`` blocks stays below the active table while avoiding
+duplicate keys (the same widget cannot be declared inside each nested tab).
 
 Call :func:`sync_yearly_summary_session_inputs` from the main script on every full run so the fragment
 can read the current :class:`~personal_ebird_explorer.checklist_stats_compute.ChecklistStatsPayload`.
@@ -28,7 +29,7 @@ from personal_ebird_explorer.checklist_stats_display import (
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE,
     CHECKLIST_STATS_TABLE_CSS,
     build_yearly_summary_streamlit_tab_html_dict,
-    format_yearly_streamlit_dual_view_html,
+    format_yearly_streamlit_all_tab_protocol_note_html,
 )
 
 _USE_EBIRD_BLUE_HTML_TAB_THEME = False
@@ -39,8 +40,7 @@ _YEARLY_HTML_TAB_SURFACE_CSS = (
 )
 
 _SESSION_YEARLY_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
-# Fragment-only toggle (mirrors checkbox intent; triggers fragment rerun — refs #85 testing).
-_STREAMLIT_YEARLY_STREAMLIT_TOGGLE_FULL_KEY = "streamlit_yearly_summary_streamlit_toggle_full"
+_STREAMLIT_YEARLY_SHOW_FULL_KEY = "streamlit_yearly_summary_show_full"
 
 
 def get_yearly_recent_column_count() -> int:
@@ -55,13 +55,6 @@ def sync_yearly_summary_session_inputs(payload: Optional[ChecklistStatsPayload])
 
 
 def _yearly_wrap_markdown(inner: str) -> str:
-    return (
-        '<div class="streamlit-checklist-html-ab streamlit-yearly-summary-ab">'
-        f"{inner}</div>"
-    )
-
-
-def _yearly_wrap_html(inner: str) -> str:
     return (
         '<div class="streamlit-checklist-html-ab streamlit-yearly-summary-ab">'
         f"{inner}</div>"
@@ -89,55 +82,17 @@ def run_yearly_summary_streamlit_fragment() -> None:
 
     n_years = len(payload.years_list)
     recent_n = get_yearly_recent_column_count()
+
     if n_years > recent_n:
-        bodies_recent = build_yearly_summary_streamlit_tab_html_dict(
-            payload,
-            show_full_history=False,
-            recent_year_count=recent_n,
-        )
-        bodies_full = build_yearly_summary_streamlit_tab_html_dict(
-            payload,
-            show_full_history=True,
-            recent_year_count=recent_n,
-        )
-        if bodies_recent is None or bodies_full is None:
-            st.info("No yearly data.")
-            return
+        show_full = bool(st.session_state.get(_STREAMLIT_YEARLY_SHOW_FULL_KEY, False))
+    else:
+        show_full = True
 
-        show_full_streamlit = st.toggle(
-            "Show full history (Streamlit)",
-            key=_STREAMLIT_YEARLY_STREAMLIT_TOGGLE_FULL_KEY,
-            help=(
-                "Reruns this tab’s fragment only. The HTML checkbox below does the same swap in the "
-                "browser without a rerun — use whichever you prefer while testing."
-            ),
-        )
-        st.caption(
-            "Two ways to switch views: Streamlit toggle (fragment rerun) vs HTML checkbox "
-            "(instant, no Python). They can show different states if you mix them—use the toggle "
-            "again to realign."
-        )
-
-        def _pane(key: str, dom_suffix: str) -> None:
-            dual = format_yearly_streamlit_dual_view_html(
-                bodies_recent[key],
-                bodies_full[key],
-                dom_suffix=dom_suffix,
-                recent_year_count=recent_n,
-                initial_show_full=show_full_streamlit,
-            )
-            st.html(_yearly_wrap_html(dual))
-
-        tab_all, tab_travelling, tab_stationary = st.tabs(["All", "Travelling", "Stationary"])
-        with tab_all:
-            _pane("all", "yearly-sum-all")
-        with tab_travelling:
-            _pane("travelling", "yearly-sum-travelling")
-        with tab_stationary:
-            _pane("stationary", "yearly-sum-stationary")
-        return
-
-    bodies = build_yearly_summary_streamlit_tab_html_dict(payload, show_full_history=True)
+    bodies = build_yearly_summary_streamlit_tab_html_dict(
+        payload,
+        show_full_history=show_full,
+        recent_year_count=recent_n,
+    )
     if bodies is None:
         st.info("No yearly data.")
         return
@@ -149,3 +104,15 @@ def run_yearly_summary_streamlit_fragment() -> None:
         st.markdown(_yearly_wrap_markdown(bodies["travelling"]), unsafe_allow_html=True)
     with tab_stationary:
         st.markdown(_yearly_wrap_markdown(bodies["stationary"]), unsafe_allow_html=True)
+
+    if n_years > recent_n:
+        st.toggle(
+            "Show full history",
+            key=_STREAMLIT_YEARLY_SHOW_FULL_KEY,
+            width="content",
+        )
+        if not st.session_state.get(_STREAMLIT_YEARLY_SHOW_FULL_KEY, False):
+            st.caption(f"Showing results for the most recent {recent_n} years.")
+
+    st.markdown('<div style="height:1rem;" aria-hidden="true"></div>', unsafe_allow_html=True)
+    st.markdown(format_yearly_streamlit_all_tab_protocol_note_html(), unsafe_allow_html=True)

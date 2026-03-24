@@ -699,60 +699,6 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
     color: #6b7280;
   }}
 }}
-/* Yearly dual-view: native checkbox toggles recent vs full HTML without a Streamlit rerun (#85). */
-.streamlit-checklist-html-ab .yearly-dual-wrap {{
-  margin: 0 0 0.75rem 0;
-}}
-.streamlit-checklist-html-ab .yearly-dual-cb {{
-  accent-color: rgb({acc});
-  width: 1rem;
-  height: 1rem;
-  margin: 0 0.4rem 0 0;
-  vertical-align: middle;
-}}
-.streamlit-checklist-html-ab .yearly-dual-label {{
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.94em;
-  user-select: none;
-  vertical-align: middle;
-  color: var(--text-color, {text_fb});
-}}
-/* Fixed-height status slot so the table does not jump when swapping recent vs full (#85). */
-.streamlit-checklist-html-ab .yearly-dual-status-stack {{
-  margin: 0.35rem 0 0.65rem 1.45rem;
-  min-height: 2.75em;
-}}
-.streamlit-checklist-html-ab .yearly-dual-status-stack p {{
-  margin: 0;
-  font-size: 0.85em;
-  line-height: 1.45;
-  min-height: 2.75em;
-  color: color-mix(in srgb, var(--text-color, {text_fb}) 62%, transparent);
-}}
-@supports not (color: color-mix(in srgb, black 50%, white)) {{
-  .streamlit-checklist-html-ab .yearly-dual-status-stack p {{
-    color: rgba({p_fallback}, 0.62);
-  }}
-}}
-.streamlit-checklist-html-ab .yearly-dual-status-stack .yearly-dual-status-full {{
-  display: none;
-}}
-.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-status-stack .yearly-dual-helper {{
-  display: none !important;
-}}
-.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-status-stack .yearly-dual-status-full {{
-  display: block !important;
-}}
-.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-full {{
-  display: none !important;
-}}
-.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-full {{
-  display: block !important;
-}}
-.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-recent {{
-  display: none !important;
-}}
 """
 
 
@@ -910,6 +856,30 @@ _YEARLY_STREAMLIT_CAPTION_STYLE = (
 # Streamlit Yearly Summary: default to the most recent N calendar years when count exceeds this (refs #85).
 YEARLY_STREAMLIT_RECENT_YEAR_COUNT = 10
 
+# Shown below the Yearly Summary toggle in ``yearly_summary_streamlit_html`` (not embedded in All-tab HTML).
+YEARLY_STREAMLIT_ALL_TAB_PROTOCOL_NOTE = (
+    "Travelling and Stationary checklist counts in this table include only complete checklists "
+    "(incomplete submissions are excluded).",
+    "Use the Travelling and Stationary tabs for protocol-specific metrics.",
+)
+
+
+def format_yearly_streamlit_all_tab_protocol_note_html() -> str:
+    """HTML for the protocol note below the Yearly Summary toggle (refs #85).
+
+    Wrapped in ``.streamlit-checklist-html-ab`` so the ``<p>`` picks up the same scoped ``> p`` rules
+    as tables in this tab, with ``_YEARLY_STREAMLIT_CAPTION_STYLE`` inline (same as old footnotes).
+    """
+    line_a, line_b = YEARLY_STREAMLIT_ALL_TAB_PROTOCOL_NOTE
+    inner = (
+        f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">'
+        f"{html_module.escape(line_a, quote=False)}<br/>"
+        f"{html_module.escape(line_b, quote=False)}</p>"
+    )
+    return (
+        f'<div class="streamlit-checklist-html-ab streamlit-yearly-summary-ab">{inner}</div>'
+    )
+
 
 def strip_yearly_stats_info_icons(label_html: str) -> str:
     """Remove inline ``stats-info-icon`` spans from yearly row labels (Streamlit yearly tab; refs #85)."""
@@ -972,13 +942,6 @@ def _yearly_ordered_detail_rows(
     return [(name, by_suffix.get(name, ["—"] * len(years_list))) for name in order_list if name in by_suffix]
 
 
-def _yearly_streamlit_caption(plain_text: str) -> str:
-    return (
-        f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">'
-        f"{html_module.escape(plain_text, quote=False)}</p>"
-    )
-
-
 def yearly_streamlit_year_window_slice(
     years_list: List[Any],
     *,
@@ -997,10 +960,44 @@ def yearly_streamlit_year_window_slice(
     return slice(n - recent_count, n)
 
 
+def _parse_yearly_display_int(cell: str) -> Optional[int]:
+    """Parse a stats table cell like ``1,234`` for recomputing sliced totals; non-numeric → ``None``."""
+    t = str(cell).strip().replace(",", "")
+    if t in ("—", "-", "", "N/A", "n/a") or t.lower() == "nan":
+        return None
+    try:
+        return int(float(t))
+    except ValueError:
+        return None
+
+
 def _slice_yearly_row_vals(vals: List[str], years_list: List[Any], s: slice) -> List[str]:
-    if len(vals) != len(years_list):
-        return vals
-    return vals[s]
+    """Slice per-year cells in lockstep with *years_list*.
+
+    Country yearly rows often end with a **Total** column (``len(vals) == len(years_list) + 1``).
+    That tail must be dropped, sliced, or recomputed so headers stay aligned (#85).
+    """
+    n = len(years_list)
+    n_disp = len(years_list[s])
+    if len(vals) == n:
+        return vals[s]
+    if len(vals) == n + 1:
+        year_part, tail = vals[:-1], vals[-1]
+        year_sliced = year_part[s]
+        if n_disp <= 1:
+            return year_sliced
+        nums = [_parse_yearly_display_int(x) for x in year_part]
+        tnum = _parse_yearly_display_int(tail)
+        if all(v is not None for v in nums) and tnum is not None and tnum == sum(nums):
+            sn = [_parse_yearly_display_int(x) for x in year_sliced]
+            if all(v is not None for v in sn):
+                return year_sliced + [f"{sum(sn):,}"]
+        if nums and nums[-1] is not None and tnum is not None and tnum == nums[-1]:
+            sl = _parse_yearly_display_int(year_sliced[-1])
+            if sl is not None:
+                return year_sliced + [f"{sl:,}"]
+        return year_sliced + [tail]
+    return vals
 
 
 def slice_yearly_table_rows(
@@ -1010,45 +1007,6 @@ def slice_yearly_table_rows(
 ) -> List[Tuple[str, List[str]]]:
     """Slice each row's per-year values in lockstep with *years_list* (e.g. Country yearly table; #85)."""
     return [(lab, _slice_yearly_row_vals(vals, years_list, s)) for lab, vals in rows]
-
-
-def format_yearly_streamlit_dual_view_html(
-    recent_inner_html: str,
-    full_inner_html: str,
-    *,
-    dom_suffix: str,
-    recent_year_count: int,
-    initial_show_full: bool = False,
-) -> str:
-    """Embed two HTML fragments; a native checkbox + CSS swaps visibility (no Streamlit rerun; #85).
-
-    *dom_suffix* becomes the HTML ``id`` (sanitized to ``[a-zA-Z0-9_-]+``).
-    *initial_show_full*: when true, the checkbox is rendered ``checked`` (e.g. after a Streamlit
-    ``st.toggle`` in the same fragment reruns).
-    """
-    safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", dom_suffix).strip("-") or "yearly"
-    safe = safe[:56]
-    helper = (
-        f"Showing the most recent {recent_year_count} years. "
-        "Turn on Show full history above to see every year column."
-    )
-    full_status = (
-        "Displaying all years. Scroll horizontally to see every column."
-    )
-    checked_attr = " checked" if initial_show_full else ""
-    return (
-        '<div class="yearly-dual-wrap">'
-        f'<input type="checkbox" id="{safe}" class="yearly-dual-cb"{checked_attr} '
-        'aria-label="Show full year history" />'
-        f'<label for="{safe}" class="yearly-dual-label">Show full history</label>'
-        '<div class="yearly-dual-status-stack">'
-        f'<p class="yearly-dual-helper">{html_module.escape(helper, quote=False)}</p>'
-        f'<p class="yearly-dual-status-full">{html_module.escape(full_status, quote=False)}</p>'
-        "</div>"
-        f'<div class="yearly-dual-recent">{recent_inner_html}</div>'
-        f'<div class="yearly-dual-full">{full_inner_html}</div>'
-        "</div>"
-    )
 
 
 def _yearly_streamlit_wide_table_html(
@@ -1103,7 +1061,8 @@ def build_yearly_summary_streamlit_tab_html_dict(
     When ``len(years_list) > recent_year_count`` and *show_full_history* is false, only the most
     recent *recent_year_count* years are shown (columns), preserving notebook ordering.
 
-    Returns ``None`` when there is no yearly grid. Icons are stripped from labels; footnotes sit below tables.
+    Returns ``None`` when there is no yearly grid. Icons are stripped from labels; incomplete-checklist
+    guidance for protocol tabs is consolidated into the note below the Yearly Summary toggle in Streamlit.
     """
     years_list = payload.years_list
     yearly_rows = payload.yearly_rows
@@ -1131,16 +1090,11 @@ def build_yearly_summary_streamlit_tab_html_dict(
         visible_static_plain.append((strip_yearly_stats_info_icons(label), sliced))
 
     all_table = _yearly_streamlit_wide_table_html(display_years, visible_static_plain)
-    cap_all = _yearly_streamlit_caption(
-        "Travelling and Stationary checklist counts in this table include only complete checklists "
-        "(incomplete submissions are excluded). Use the Travelling and Stationary tabs for protocol-specific metrics."
-    )
     if all_table:
-        all_html = all_table + cap_all
+        all_html = all_table
     else:
         all_html = (
             "<p style=\"color:#6b7280;font-size:14px;\">No yearly summary statistics in this view.</p>"
-            + cap_all
         )
 
     ordered_trav = _yearly_ordered_detail_rows(
@@ -1162,15 +1116,11 @@ def build_yearly_summary_streamlit_tab_html_dict(
         count_vals=trav_count_sliced,
         ordered_detail_rows=ordered_trav_sliced,
     )
-    cap_trav = _yearly_streamlit_caption(
-        "Incomplete checklists are excluded from these counts and metrics."
-    )
     if trav_table:
-        travelling_html = trav_table + cap_trav
+        travelling_html = trav_table
     elif traveling_detail or traveling_count_vals is not None:
         travelling_html = (
             "<p style=\"color:#6b7280;font-size:14px;\">No travelling checklist statistics to display.</p>"
-            + cap_trav
         )
     else:
         travelling_html = (
@@ -1196,15 +1146,11 @@ def build_yearly_summary_streamlit_tab_html_dict(
         count_vals=stat_count_sliced,
         ordered_detail_rows=ordered_stat_sliced,
     )
-    cap_stat = _yearly_streamlit_caption(
-        "Incomplete checklists are excluded from these counts and metrics."
-    )
     if stat_table:
-        stationary_html = stat_table + cap_stat
+        stationary_html = stat_table
     elif stationary_detail or stationary_count_vals is not None:
         stationary_html = (
             "<p style=\"color:#6b7280;font-size:14px;\">No stationary checklist statistics to display.</p>"
-            + cap_stat
         )
     else:
         stationary_html = (

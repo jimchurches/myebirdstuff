@@ -84,5 +84,5 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 ## Scope of this prototype
 
-- Load CSV via `personal_ebird_explorer.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (shared HTML + nested `st.tabs`), **Yearly Summary** (`yearly_summary_streamlit_html`: `@st.fragment` + nested tabs; client-side checkbox swaps recent/full HTML when year count exceeds **Settings → Yearly tables: recent year columns**, 3–25 default 10), **Country** tab (fragment + same pattern), **Maintenance** tab (`maintenance_streamlit_html`: nested tabs + expanders + `maintenance_display` HTML).  
+- Load CSV via `personal_ebird_explorer.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (shared HTML + nested `st.tabs`), **Yearly Summary** (`yearly_summary_streamlit_html`: `@st.fragment` + nested tabs; `st.toggle` for recent vs full columns when year count exceeds **Settings → Yearly tables: recent year columns**, 3–25 default 10), **Country** tab (fragment + same toggle behavior), **Maintenance** tab (`maintenance_streamlit_html`: nested tabs + expanders + `maintenance_display` HTML).  
 - **Rankings & lists** is migrated separately (`rankings_streamlit_html`).

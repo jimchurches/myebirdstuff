@@ -47,10 +47,9 @@ expanders per list, HTML from ``format_checklist_stats_bundle`` on ``df_full``. 
 are configured under **Settings → Tables & lists** (refs `#81`).
 
 **Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs inside
-``@st.fragment``; HTML from ``build_yearly_summary_streamlit_tab_html_dict``. When there are more years than the configured recent-column count (Settings → Tables & lists; default 10),
-recent + full tables are both emitted and a **native HTML checkbox** swaps visibility (no Streamlit rerun on that
-control). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment`` mirror the Country tab
-pattern (refs #85).
+``@st.fragment``; ``st.toggle`` switches recent vs full year columns when count exceeds **Settings → Yearly tables:
+recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
+match the Country tab fragment pattern (refs #85).
 """
 
 from __future__ import annotations
