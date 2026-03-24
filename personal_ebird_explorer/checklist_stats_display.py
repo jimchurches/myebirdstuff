@@ -699,6 +699,48 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
     color: #6b7280;
   }}
 }}
+/* Yearly dual-view: native checkbox toggles recent vs full HTML without a Streamlit rerun (#85). */
+.streamlit-checklist-html-ab .yearly-dual-wrap {{
+  margin: 0 0 0.75rem 0;
+}}
+.streamlit-checklist-html-ab .yearly-dual-cb {{
+  accent-color: rgb({acc});
+  width: 1rem;
+  height: 1rem;
+  margin: 0 0.4rem 0 0;
+  vertical-align: middle;
+}}
+.streamlit-checklist-html-ab .yearly-dual-label {{
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.94em;
+  user-select: none;
+  vertical-align: middle;
+  color: var(--text-color, {text_fb});
+}}
+.streamlit-checklist-html-ab .yearly-dual-helper {{
+  margin: 0.4rem 0 0.65rem 1.45rem;
+  font-size: 0.85em;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--text-color, {text_fb}) 62%, transparent);
+}}
+@supports not (color: color-mix(in srgb, black 50%, white)) {{
+  .streamlit-checklist-html-ab .yearly-dual-helper {{
+    color: rgba({p_fallback}, 0.62);
+  }}
+}}
+.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-full {{
+  display: none !important;
+}}
+.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-full {{
+  display: block !important;
+}}
+.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-recent {{
+  display: none !important;
+}}
+.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-helper {{
+  display: none !important;
+}}
 """
 
 
@@ -947,6 +989,44 @@ def _slice_yearly_row_vals(vals: List[str], years_list: List[Any], s: slice) -> 
     if len(vals) != len(years_list):
         return vals
     return vals[s]
+
+
+def slice_yearly_table_rows(
+    rows: List[Tuple[str, List[str]]],
+    years_list: List[Any],
+    s: slice,
+) -> List[Tuple[str, List[str]]]:
+    """Slice each row's per-year values in lockstep with *years_list* (e.g. Country yearly table; #85)."""
+    return [(lab, _slice_yearly_row_vals(vals, years_list, s)) for lab, vals in rows]
+
+
+def format_yearly_streamlit_dual_view_html(
+    recent_inner_html: str,
+    full_inner_html: str,
+    *,
+    dom_suffix: str,
+    recent_year_count: int,
+) -> str:
+    """Embed two HTML fragments; a native checkbox + CSS swaps visibility (no Streamlit rerun; #85).
+
+    *dom_suffix* becomes the HTML ``id`` (sanitized to ``[a-zA-Z0-9_-]+``).
+    """
+    safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", dom_suffix).strip("-") or "yearly"
+    safe = safe[:56]
+    helper = (
+        f"Showing the most recent {recent_year_count} years. "
+        "Expand to view full history using the control below."
+    )
+    return (
+        '<div class="yearly-dual-wrap">'
+        f'<input type="checkbox" id="{safe}" class="yearly-dual-cb" '
+        'aria-label="Show full year history" />'
+        f'<label for="{safe}" class="yearly-dual-label">Show full history</label>'
+        f'<p class="yearly-dual-helper">{html_module.escape(helper, quote=False)}</p>'
+        f'<div class="yearly-dual-recent">{recent_inner_html}</div>'
+        f'<div class="yearly-dual-full">{full_inner_html}</div>'
+        "</div>"
+    )
 
 
 def _yearly_streamlit_wide_table_html(

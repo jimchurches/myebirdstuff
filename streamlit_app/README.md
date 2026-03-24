@@ -84,5 +84,5 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 ## Scope of this prototype
 
-- Load CSV via `personal_ebird_explorer.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (shared HTML + nested `st.tabs`), **Yearly Summary** (`yearly_summary_streamlit_html`: nested All / Travelling / Stationary), **Country** tab (fragment + shared HTML), **Maintenance** tab (`maintenance_streamlit_html`: nested tabs + expanders + `maintenance_display` HTML).  
+- Load CSV via `personal_ebird_explorer.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (shared HTML + nested `st.tabs`), **Yearly Summary** (`yearly_summary_streamlit_html`: `@st.fragment` + nested tabs; >10 years uses a client-side checkbox to swap recent/full HTML), **Country** tab (fragment + same yearly dual-view when >10 years), **Maintenance** tab (`maintenance_streamlit_html`: nested tabs + expanders + `maintenance_display` HTML).  
 - **Rankings & lists** is migrated separately (`rankings_streamlit_html`).

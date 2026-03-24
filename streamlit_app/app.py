@@ -46,9 +46,11 @@ configurable under **Settings → Maintenance** (refs #79).
 expanders per list, HTML from ``format_checklist_stats_bundle`` on ``df_full``. **Top N** and **visible rows**
 are configured under **Settings → Tables & lists** (refs `#81`).
 
-**Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs,
-HTML tables from ``build_yearly_summary_streamlit_tab_html_dict`` on the date-filtered working set. When there are
-more than 10 years, default columns are the most recent 10 with a **Show full history** toggle (refs #85).
+**Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs inside
+``@st.fragment``; HTML from ``build_yearly_summary_streamlit_tab_html_dict``. When there are more than 10 years,
+recent + full tables are both emitted and a **native HTML checkbox** swaps visibility (no Streamlit rerun on that
+toggle). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment`` mirror the Country tab
+pattern (refs #85).
 """
 
 from __future__ import annotations
@@ -101,7 +103,10 @@ from country_stats_streamlit_html import (  # noqa: E402
     sync_country_tab_session_inputs,
 )
 from maintenance_streamlit_html import render_maintenance_streamlit_tab  # noqa: E402
-from yearly_summary_streamlit_html import render_yearly_summary_streamlit_tab  # noqa: E402
+from yearly_summary_streamlit_html import (  # noqa: E402
+    run_yearly_summary_streamlit_fragment,
+    sync_yearly_summary_session_inputs,
+)
 from map_working import (  # noqa: E402
     date_inception_to_today_default,
     folium_map_to_html_bytes,
@@ -791,7 +796,8 @@ def main() -> None:
             )
 
     with tab_yearly:
-        render_yearly_summary_streamlit_tab(checklist_payload)
+        sync_yearly_summary_session_inputs(checklist_payload)
+        run_yearly_summary_streamlit_fragment()
 
     with tab_country:
         if checklist_payload is not None:

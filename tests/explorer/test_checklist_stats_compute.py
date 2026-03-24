@@ -10,6 +10,8 @@ from personal_ebird_explorer.checklist_stats_display import (
     YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
     build_yearly_summary_streamlit_tab_html_dict,
     format_checklist_stats_bundle,
+    format_yearly_streamlit_dual_view_html,
+    slice_yearly_table_rows,
     strip_yearly_stats_info_icons,
     yearly_streamlit_year_window_slice,
 )
@@ -104,6 +106,28 @@ def test_compute_and_format_smoke():
     assert "<table" in bundle["stats_html"]
     assert len(bundle["rankings_sections_top_n"]) == 7
     assert len(bundle["rankings_sections_other"]) == 4
+
+
+def test_format_yearly_streamlit_dual_view_html_structure():
+    out = format_yearly_streamlit_dual_view_html(
+        "<p>recent</p>",
+        "<p>full</p>",
+        dom_suffix="test-all",
+        recent_year_count=10,
+    )
+    assert 'type="checkbox"' in out
+    assert "yearly-dual-recent" in out
+    assert "yearly-dual-full" in out
+    assert "<p>recent</p>" in out
+    assert "<p>full</p>" in out
+
+
+def test_slice_yearly_table_rows():
+    years = [2020, 2021, 2022]
+    rows = [("A", ["1", "2", "3"])]
+    s = slice(1, 3)
+    out = slice_yearly_table_rows(rows, years, s)
+    assert out == [("A", ["2", "3"])]
 
 
 def test_yearly_streamlit_year_window_slice():
