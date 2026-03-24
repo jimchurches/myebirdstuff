@@ -72,6 +72,18 @@ MAP_PIN_COLOUR_ALLOWLIST: tuple[str, ...] = (
     "green",
 )
 
+# Folium ``CircleMarker`` geometry (``map_controller``). ``weight`` matches Leaflet/Folium default when
+# previously omitted (explicit for discovery).
+MAP_CIRCLE_MARKER_RADIUS_PX = 4
+MAP_CIRCLE_MARKER_STROKE_WEIGHT = 3
+MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 0.6
+MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
+MAP_POPUP_MAX_WIDTH_PX = 800
+
+# Legend sample dots (``map_renderer.pin_legend_item`` HTML).
+MAP_LEGEND_PIN_DOT_PX = 8
+MAP_LEGEND_PIN_BORDER_PX = 2
+
 
 def build_persisted_settings_defaults_dict() -> dict[str, Any]:
     """Full default payload matching :class:`StreamlitSettingsConfig` (embedded YAML)."""

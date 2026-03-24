@@ -12,8 +12,11 @@ in ``map_controller``) and ``EXPLORER_UI_*`` constants align with the Streamlit 
 """
 
 import html as _html_module
+
 import folium
 import pandas as pd
+
+from streamlit_app.defaults import MAP_LEGEND_PIN_BORDER_PX, MAP_LEGEND_PIN_DOT_PX
 
 # ---------------------------------------------------------------------------
 # UI theme (aligned with Streamlit Checklist Statistics HTML + ``.streamlit/config.toml``; refs #70)
@@ -61,6 +64,10 @@ def map_popup_theme_stylesheet() -> str:
 }}
 .pebird-map-popup a:hover {{
   text-decoration: underline;
+}}
+/* Location title link: heavier than body links (refs #70). */
+.pebird-map-popup a.pebird-map-popup__location-heading {{
+  font-weight: 600;
 }}
 </style>
 """
@@ -227,7 +234,11 @@ def build_location_popup_html(
         Complete popup HTML string with scroll wrapper.
     """
     loc_url = f"https://ebird.org/lifelist/{loc_id}"
-    loc_link = f'<a href="{loc_url}" target="_blank">{loc_name}</a>'
+    esc_loc = _html_module.escape(str(loc_name), quote=False)
+    loc_link = (
+        f'<a class="pebird-map-popup__location-heading" href="{loc_url}" '
+        f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'
+    )
     if lifer_species_html:
         extra_section = f"<br><b>Lifers (first recorded here):</b>{lifer_species_html}"
     elif sightings_html:
@@ -236,7 +247,7 @@ def build_location_popup_html(
         extra_section = ""
     return (
         f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
-        f'<div style="margin-bottom:6px;"><b>{loc_link}</b></div>'
+        f'<div style="margin-bottom:6px;">{loc_link}</div>'
         f'<div style="max-height:300px;overflow-y:auto;">'
         f'<b>Visited:</b><br>{visit_info_html}{extra_section}'
         f'</div></div>'
@@ -265,10 +276,12 @@ def _banner_muted_line(text: str | None) -> str:
 
 def pin_legend_item(color, fill, label):
     """Small coloured circle + label for the map legend."""
+    d = MAP_LEGEND_PIN_DOT_PX
+    bw = MAP_LEGEND_PIN_BORDER_PX
     return (
         f'<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">'
-        f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;'
-        f'border:2px solid {color};background:{fill};"></span>'
+        f'<span style="display:inline-block;width:{d}px;height:{d}px;border-radius:50%;'
+        f'border:{bw}px solid {color};background:{fill};"></span>'
         f'{label}</span>'
     )
 

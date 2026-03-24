@@ -1185,7 +1185,7 @@ settings_data_section = VBox([settings_data_header, settings_path_html], layout=
 # Map display section
 settings_display_header = widgets.HTML(value=(
     "<span style='color:#6b7280;font-size:13px;line-height:1.6;display:block;margin-bottom:8px;'>"
-    "<span style='color:#059669;font-weight:600;'>Changes apply immediately</span> — map style, pins, and pop-ups."
+    "<span style='color:#059669;font-weight:600;'>Changes apply immediately</span> — map style, pins, and popups."
     "</span>"
 ))
 map_style_header = widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Map style</strong>")
@@ -1249,7 +1249,7 @@ def _on_popup_scroll_change(change):
         draw_map_with_species_overlay(state.selected_species_scientific, state.selected_species_common)
 popup_sort_dd.observe(_on_popup_sort_change, names="value")
 popup_scroll_dd.observe(_on_popup_scroll_change, names="value")
-sorting_header = widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Pop-up sorting and scrolling</strong>")
+sorting_header = widgets.HTML(value="<strong style='color:#111827;font-size:13px;'>Popup sorting and scrolling</strong>")
 _pin_group_layout = widgets.Layout(width="100%", margin="4px 0 0 0")
 _pin_row_layout = widgets.Layout(align_items="center", margin="2px 0 0 0")
 default_pin_group = VBox(

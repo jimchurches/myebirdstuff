@@ -33,6 +33,13 @@ from personal_ebird_explorer.map_renderer import (
     popup_scroll_script,
     resolve_lifer_last_seen,
 )
+from streamlit_app.defaults import (
+    MAP_CIRCLE_MARKER_RADIUS_PX,
+    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+    MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+    MAP_PIN_FILL_OPACITY_EMPHASIS,
+    MAP_POPUP_MAX_WIDTH_PX,
+)
 from personal_ebird_explorer.species_logic import base_species_for_lifer, filter_species
 from personal_ebird_explorer.stats import safe_count
 
@@ -194,12 +201,13 @@ def build_species_overlay_map(
             popup_html = popup_html_cache[popup_key]
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=4,
+                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
                 color=lifer_color,
+                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
                 fill=True,
                 fill_color=lifer_fill,
-                fill_opacity=0.9,
-                popup=folium.Popup(popup_html, max_width=800),
+                fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+                popup=folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX),
             ).add_to(species_map)
         scroll_popup_script = popup_scroll_script(popup_scroll_hint, popup_sort_order == "ascending")
         species_map.get_root().html.add_child(Element(scroll_popup_script))
@@ -252,12 +260,13 @@ def build_species_overlay_map(
             popup_html = popup_html_cache[popup_key]
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=4,
+                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
                 color=default_color,
+                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
                 fill=True,
                 fill_color=default_fill,
-                fill_opacity=0.6,
-                popup=folium.Popup(popup_html, max_width=800),
+                fill_opacity=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+                popup=folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX),
             ).add_to(species_map)
 
     else:
@@ -377,21 +386,22 @@ def build_species_overlay_map(
                     row["Location"], loc_id, visit_info, sightings_html
                 )
             popup_html = popup_html_cache[popup_key]
-            popup_content = folium.Popup(popup_html, max_width=800)
+            popup_content = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
 
             if row["is_lifer"]:
-                color, fill, radius, fill_opacity = lifer_color, lifer_fill, 4, 0.9
+                color, fill, fill_opacity = lifer_color, lifer_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
             elif row["is_last_seen"]:
-                color, fill, radius, fill_opacity = last_seen_color, last_seen_fill, 4, 0.9
+                color, fill, fill_opacity = last_seen_color, last_seen_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
             elif row["has_species_match"]:
-                color, fill, radius, fill_opacity = species_color, species_fill, 4, 0.9
+                color, fill, fill_opacity = species_color, species_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
             else:
-                color, fill, radius, fill_opacity = default_color, default_fill, 4, 0.9
+                color, fill, fill_opacity = default_color, default_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
 
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=radius,
+                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
                 color=color,
+                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
                 fill=True,
                 fill_color=fill,
                 fill_opacity=fill_opacity,

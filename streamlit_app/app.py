@@ -191,6 +191,23 @@ div[data-testid="stVerticalBlockBorderWrapper"].st-key-ebird_settings_panel,
 div.st-key-ebird_settings_panel {{
     max-width: min(100%, {SETTINGS_PANEL_MAX_WIDTH_REM}rem);
 }}
+/* Save / Reset feedback: full width, theme greens (not default Streamlit info blue). */
+.ebird-settings-persistence-banner {{
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0 0.75rem 0;
+    border-radius: 0.35rem;
+    border-left: 4px solid {THEME_PRIMARY_HEX};
+    background: {THEME_SECONDARY_BG_HEX};
+    color: {THEME_TEXT_HEX};
+    font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}}
+.ebird-settings-persistence-banner strong {{
+    font-weight: 600;
+}}
 </style>
 """
 
@@ -217,6 +234,8 @@ _SETTINGS_CONFIG_SOURCE_KEY = "_streamlit_settings_source_label"
 _SETTINGS_LOADED_FROM_KEY = "_streamlit_settings_loaded_from_path"
 _SETTINGS_BASELINE_KEY = "_streamlit_settings_saved_baseline"
 _SETTINGS_WARNED_KEY = "_streamlit_settings_warned"
+_SETTINGS_FLASH_SAVE_KEY = "_streamlit_settings_flash_save"
+_SETTINGS_FLASH_RESET_KEY = "_streamlit_settings_flash_reset"
 
 _COUNTRY_SORT_LABELS = {
     COUNTRY_TAB_SORT_ALPHABETICAL: "Alphabetical",
@@ -299,6 +318,25 @@ def _inject_spinner_theme_css() -> None:
     # ``st.html`` exists from Streamlit 1.31+; requirements pin 1.40+.
     st.html(_SPINNER_THEME_CSS.strip())
     st.session_state[_SPINNER_THEME_CSS_INJECTED_KEY] = True
+
+
+def _settings_persistence_flash_banners() -> None:
+    """Full-width save/reset notices using theme greens (same style for both)."""
+    if st.session_state.pop(_SETTINGS_FLASH_SAVE_KEY, False):
+        st.markdown(
+            '<div class="ebird-settings-persistence-banner">'
+            "<strong>Saved.</strong> Preferences written to your configuration file."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    if st.session_state.pop(_SETTINGS_FLASH_RESET_KEY, False):
+        st.markdown(
+            '<div class="ebird-settings-persistence-banner">'
+            "<strong>Defaults restored for this session.</strong> "
+            "Click <strong>Save settings</strong> to persist."
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
 
 def _init_and_clamp_streamlit_table_settings() -> None:
@@ -1098,73 +1136,53 @@ def main() -> None:
             settings_yaml_path = st.session_state.get(_SETTINGS_CONFIG_PATH_KEY, "") or ""
             settings_module_ready = _settings_config_module_available()
             can_save_settings = bool(settings_yaml_path) and settings_module_ready
-            current_payload = _settings_state_payload()
-            baseline_payload = st.session_state.get(_SETTINGS_BASELINE_KEY, current_payload)
-            has_unsaved_changes = current_payload != baseline_payload
 
-            st.caption(
-                "Settings apply immediately in-session. Save writes YAML only when data is loaded from "
-                "`config_secret.py` or `config.py`."
-            )
-            b1, b2 = st.columns(2)
-            with b1:
-                if st.button(
-                    "Save settings",
-                    key="streamlit_save_settings_btn",
-                    disabled=not can_save_settings,
-                    use_container_width=True,
-                ):
-                    ok, err = _write_settings_yaml_via_module(
-                        settings_yaml_path, _settings_state_payload()
-                    )
-                    if ok:
-                        st.session_state[_SETTINGS_BASELINE_KEY] = _settings_state_payload()
-                        st.success(f"Saved settings: `{settings_yaml_path}`")
-                    else:
-                        st.error(err or "Failed to save settings.")
-            with b2:
-                if st.button(
-                    "Reset to defaults",
-                    key="streamlit_reset_settings_btn",
-                    use_container_width=True,
-                ):
-                    _apply_settings_payload_to_state(_settings_defaults_payload())
-                    _init_and_clamp_streamlit_table_settings()
-                    st.info("Defaults restored for this session. Click **Save settings** to persist.")
             if can_save_settings:
+                b1, b2 = st.columns(2)
+                with b1:
+                    if st.button(
+                        "Save settings",
+                        key="streamlit_save_settings_btn",
+                        use_container_width=True,
+                    ):
+                        ok, err = _write_settings_yaml_via_module(
+                            settings_yaml_path, _settings_state_payload()
+                        )
+                        if ok:
+                            st.session_state[_SETTINGS_BASELINE_KEY] = _settings_state_payload()
+                            st.session_state[_SETTINGS_FLASH_SAVE_KEY] = True
+                        else:
+                            st.error(err or "Failed to save settings.")
+                with b2:
+                    if st.button(
+                        "Reset to defaults",
+                        key="streamlit_reset_settings_btn",
+                        use_container_width=True,
+                    ):
+                        _apply_settings_payload_to_state(_settings_defaults_payload())
+                        _init_and_clamp_streamlit_table_settings()
+                        st.session_state[_SETTINGS_FLASH_RESET_KEY] = True
+
+                _settings_persistence_flash_banners()
                 st.caption(
-                    f"Settings file: `{settings_yaml_path}` (embedded YAML)"
-                    + (" • unsaved changes" if has_unsaved_changes else " • saved")
+                    "Settings apply immediately in-session. Save writes your preferences to your "
+                    "configuration file."
                 )
-            else:
-                if not settings_module_ready:
-                    st.caption("Settings persistence disabled until optional dependencies are installed.")
-                else:
-                    st.caption("No config-backed data source detected; settings are session-only.")
+                st.caption(f"Configuration file: {settings_yaml_path}")
 
             st.divider()
             st.subheader("Map display")
+            st.toggle("Mark lifer", key="streamlit_mark_lifer")
+            st.toggle("Mark last-seen", key="streamlit_mark_last_seen")
             st.selectbox(
                 "Popup sort order",
                 options=["ascending", "descending"],
                 key="streamlit_popup_sort_order",
-                help="Order checklist visits in map popups.",
             )
             st.selectbox(
                 "Popup scroll hint",
                 options=["shading", "chevron", "both"],
                 key="streamlit_popup_scroll_hint",
-                help="Visual hint style for popup overflow.",
-            )
-            st.toggle(
-                "Mark lifer",
-                key="streamlit_mark_lifer",
-                help="Show marker for first-ever sighting when viewing a selected species.",
-            )
-            st.toggle(
-                "Mark last-seen",
-                key="streamlit_mark_last_seen",
-                help="Show marker for most recent sighting when viewing a selected species.",
             )
             st.caption("Pin colors")
             c1, c2 = st.columns(2)

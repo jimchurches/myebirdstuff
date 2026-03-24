@@ -388,6 +388,7 @@ def test_build_location_popup_html_structure():
     html = build_location_popup_html("Loc", "L1", "visits")
     assert html.startswith('<div class="pebird-map-popup popup-scroll-wrapper"')
     assert html.endswith("</div></div>")
+    assert "pebird-map-popup__location-heading" in html
 
 
 # ---------------------------------------------------------------------------
