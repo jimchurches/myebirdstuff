@@ -7,8 +7,9 @@
 venv/
 env/
 
-# Don't track secrets
+# Don't track secrets or local Streamlit/Jupyter config paths
 config_secret.py
+scripts/config.py
 .streamlit/secrets.toml
 *.ipynb_checkpoints
 __pycache__/

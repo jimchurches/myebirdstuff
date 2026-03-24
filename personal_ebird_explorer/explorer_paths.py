@@ -1,17 +1,17 @@
 """
-Shared CSV path resolution for the Personal eBird Explorer (notebook + Streamlit).
+CSV path resolution for the Personal eBird Explorer (Streamlit + legacy notebook stub).
 
-Introduced for the Streamlit UI prototype; migration plan: issue #70
-(https://github.com/jimchurches/myebirdstuff/issues/70).
+Migration plan: issue #70 (https://github.com/jimchurches/myebirdstuff/issues/70).
 
-Search order matches the historical notebook behaviour:
+Search order (first folder that contains the filename wins):
 
-1. Optional hardcoded folder (``DATA_FOLDER_HARDCODED`` or ``STREAMLIT_EBIRD_DATA_FOLDER``)
-2. ``scripts/config_secret.py`` → ``DATA_FOLDER``
-3. ``scripts/config_template.py`` → ``DATA_FOLDER``
-4. *anchor* directory (notebook folder or ``streamlit_app/``)
+1. ``scripts/config_secret.py`` → ``DATA_FOLDER`` (if set)
+2. ``scripts/config.py`` → ``DATA_FOLDER`` (if set)
+3. **Working directory** — ``cwd`` argument, default ``os.getcwd()`` (where the process started)
 
-Streamlit Cloud typically has no local CSV; use **file upload** or set secrets (see ``streamlit_app`` README).
+``scripts/config_template.py`` is **never** read by this module — it exists only as a **copy-paste template** into ``config_secret.py`` or ``config.py``.
+
+No env-based data folder: use config files, CWD, or Streamlit **file upload**. Streamlit Cloud: upload on the landing page.
 """
 
 from __future__ import annotations
@@ -44,27 +44,16 @@ def data_folder_from_config_file(config_path: str) -> Optional[str]:
 def build_explorer_candidate_dirs(
     *,
     repo_root: str,
-    anchor_dir: str,
-    data_folder_hardcoded: Optional[str] = None,
-    anchor_label: str = "notebook folder",
+    cwd: Optional[str] = None,
 ) -> Tuple[List[str], List[str]]:
-    """
-    Build parallel lists: candidate folders and short source labels (for UI / debugging).
-
-    *anchor_dir* is the directory treated as “drop your CSV here” (notebook dir or Streamlit app dir).
-    *anchor_label* is the human-readable name for that slot (e.g. ``notebook folder``, ``streamlit app folder``).
-    """
+    """Return ``(folders, source_labels)`` for :func:`resolve_ebird_data_file`."""
     folders: List[str] = []
     sources: List[str] = []
-
-    if data_folder_hardcoded and str(data_folder_hardcoded).strip():
-        folders.append(os.path.normpath(str(data_folder_hardcoded).strip()))
-        sources.append("hardcoded")
-
     scripts_dir = os.path.join(repo_root, "scripts")
+
     for label, name in (
         ("config_secret", "config_secret.py"),
-        ("config_template", "config_template.py"),
+        ("config", "config.py"),
     ):
         cfg_path = os.path.join(scripts_dir, name)
         dfolder = data_folder_from_config_file(cfg_path)
@@ -72,8 +61,9 @@ def build_explorer_candidate_dirs(
             folders.append(dfolder)
             sources.append(label)
 
-    folders.append(os.path.normpath(anchor_dir))
-    sources.append(anchor_label)
+    cwd_norm = os.path.normpath(cwd or os.getcwd())
+    folders.append(cwd_norm)
+    sources.append("cwd")
 
     return folders, sources
 
@@ -96,10 +86,8 @@ def resolve_ebird_data_file(
             f"Data file not found: {filename}\n\n"
             f"Tried locations:\n  " + "\n  ".join(candidate_folders) + "\n\n"
             "Options:\n"
-            "  1. Set DATA_FOLDER_HARDCODED (notebook) or STREAMLIT_EBIRD_DATA_FOLDER (Streamlit)\n"
-            "  2. Create scripts/config_secret.py with DATA_FOLDER = \"your/path\"\n"
-            "  3. Put the CSV in the notebook or streamlit_app folder, or use Streamlit file upload\n"
-            "  4. On Binder: upload your .csv to the notebook folder\n\n"
+            "  • Set DATA_FOLDER in scripts/config_secret.py or scripts/config.py (create from config_template.py; the template is not loaded at runtime).\n"
+            "  • Put the CSV in the process working directory, or use the Streamlit landing-page file upload.\n\n"
             f"Expected filename: {filename}"
         )
 
@@ -117,6 +105,6 @@ def settings_yaml_path_for_source(repo_root: str, source_label: str) -> Optional
     src = (source_label or "").strip().lower()
     if src == "config_secret":
         return os.path.join(scripts_dir, "config_secret.py")
-    if src == "config_template":
-        return os.path.join(scripts_dir, "config_template.py")
+    if src == "config":
+        return os.path.join(scripts_dir, "config.py")
     return None

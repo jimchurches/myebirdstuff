@@ -1,4 +1,4 @@
-"""Tests for shared notebook/Streamlit path resolution."""
+"""Tests for explorer CSV path resolution (Streamlit-aligned)."""
 
 from __future__ import annotations
 
@@ -8,28 +8,21 @@ import textwrap
 import pytest
 
 
-def test_build_explorer_candidate_dirs_order_and_anchor_label(tmp_path):
+def test_build_explorer_candidate_dirs_config_then_cwd(tmp_path):
     from personal_ebird_explorer.explorer_paths import build_explorer_candidate_dirs
 
     repo = tmp_path / "repo"
     scripts = repo / "scripts"
     scripts.mkdir(parents=True)
-    anchor = repo / "notebooks"
-    anchor.mkdir()
+    cwd_dir = tmp_path / "cwd_here"
+    cwd_dir.mkdir()
 
-    folders, sources = build_explorer_candidate_dirs(
-        repo_root=str(repo),
-        anchor_dir=str(anchor),
-        data_folder_hardcoded=str(tmp_path / "hard"),
-        anchor_label="notebook folder",
-    )
-    assert folders[0] == os.path.normpath(str(tmp_path / "hard"))
-    assert sources[0] == "hardcoded"
-    assert folders[-1] == os.path.normpath(str(anchor))
-    assert sources[-1] == "notebook folder"
+    folders, sources = build_explorer_candidate_dirs(repo_root=str(repo), cwd=str(cwd_dir))
+    assert folders == [os.path.normpath(str(cwd_dir))]
+    assert sources == ["cwd"]
 
 
-def test_resolve_ebird_data_file_finds_first_match(tmp_path):
+def test_resolve_ebird_data_file_finds_in_cwd_when_no_config(tmp_path):
     from personal_ebird_explorer.explorer_paths import (
         build_explorer_candidate_dirs,
         resolve_ebird_data_file,
@@ -37,45 +30,46 @@ def test_resolve_ebird_data_file_finds_first_match(tmp_path):
 
     repo = tmp_path / "repo"
     (repo / "scripts").mkdir(parents=True)
-    anchor = repo / "app"
-    anchor.mkdir()
-    csv_path = anchor / "MyEBirdData.csv"
+    cwd_dir = tmp_path / "run_from_here"
+    cwd_dir.mkdir()
+    csv_path = cwd_dir / "MyEBirdData.csv"
     csv_path.write_text("Date,Time\n", encoding="utf-8")
 
-    folders, sources = build_explorer_candidate_dirs(
-        repo_root=str(repo),
-        anchor_dir=str(anchor),
-        anchor_label="streamlit app folder",
-    )
+    folders, sources = build_explorer_candidate_dirs(repo_root=str(repo), cwd=str(cwd_dir))
     path, folder, src = resolve_ebird_data_file("MyEBirdData.csv", folders, sources)
     assert os.path.normpath(path) == os.path.normpath(str(csv_path))
-    assert src == "streamlit app folder"
+    assert src == "cwd"
 
 
-def test_resolve_ebird_data_file_prefers_hardcoded_over_anchor(tmp_path):
+def test_resolve_prefers_config_secret_over_cwd(tmp_path):
     from personal_ebird_explorer.explorer_paths import (
         build_explorer_candidate_dirs,
         resolve_ebird_data_file,
     )
 
     repo = tmp_path / "repo"
-    (repo / "scripts").mkdir(parents=True)
-    hard = tmp_path / "data"
-    hard.mkdir()
-    anchor = repo / "app"
-    anchor.mkdir()
-    (hard / "MyEBirdData.csv").write_text("Date,Time\n", encoding="utf-8")
-    (anchor / "MyEBirdData.csv").write_text("wrong\n", encoding="utf-8")
+    scripts = repo / "scripts"
+    scripts.mkdir(parents=True)
+    data_secret = tmp_path / "secret_data"
+    data_secret.mkdir()
+    cwd_dir = tmp_path / "cwd_here"
+    cwd_dir.mkdir()
+    (data_secret / "MyEBirdData.csv").write_text("Date,Time\n", encoding="utf-8")
+    (cwd_dir / "MyEBirdData.csv").write_text("wrong\n", encoding="utf-8")
 
-    folders, sources = build_explorer_candidate_dirs(
-        repo_root=str(repo),
-        anchor_dir=str(anchor),
-        data_folder_hardcoded=str(hard),
-        anchor_label="streamlit app folder",
+    (scripts / "config_secret.py").write_text(
+        textwrap.dedent(
+            f'''
+            DATA_FOLDER = r"{data_secret}"
+            '''
+        ).strip(),
+        encoding="utf-8",
     )
+
+    folders, sources = build_explorer_candidate_dirs(repo_root=str(repo), cwd=str(cwd_dir))
     path, folder, src = resolve_ebird_data_file("MyEBirdData.csv", folders, sources)
-    assert os.path.normpath(folder) == os.path.normpath(str(hard))
-    assert src == "hardcoded"
+    assert os.path.normpath(folder) == os.path.normpath(str(data_secret))
+    assert src == "config_secret"
 
 
 def test_data_folder_from_config_file_reads_data_folder(tmp_path):
@@ -111,9 +105,41 @@ def test_settings_yaml_path_for_source(tmp_path):
     scripts.mkdir(parents=True)
 
     p1 = settings_yaml_path_for_source(str(repo), "config_secret")
-    p2 = settings_yaml_path_for_source(str(repo), "config_template")
-    p3 = settings_yaml_path_for_source(str(repo), "hardcoded")
+    p2 = settings_yaml_path_for_source(str(repo), "config")
+    p3 = settings_yaml_path_for_source(str(repo), "cwd")
 
     assert p1 and p1.endswith("scripts/config_secret.py")
-    assert p2 and p2.endswith("scripts/config_template.py")
+    assert p2 and p2.endswith("scripts/config.py")
     assert p3 is None
+
+
+def test_config_py_wins_over_cwd_when_both_have_csv(tmp_path):
+    from personal_ebird_explorer.explorer_paths import (
+        build_explorer_candidate_dirs,
+        resolve_ebird_data_file,
+    )
+
+    repo = tmp_path / "repo"
+    scripts = repo / "scripts"
+    scripts.mkdir(parents=True)
+    data_from_config = tmp_path / "from_config"
+    data_from_config.mkdir()
+    cwd_dir = tmp_path / "cwd_here"
+    cwd_dir.mkdir()
+    (data_from_config / "MyEBirdData.csv").write_text("Date,Time\n", encoding="utf-8")
+    (cwd_dir / "MyEBirdData.csv").write_text("wrong\n", encoding="utf-8")
+
+    (scripts / "config.py").write_text(
+        textwrap.dedent(
+            f'''
+            DATA_FOLDER = r"{data_from_config}"
+            '''
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    folders, sources = build_explorer_candidate_dirs(repo_root=str(repo), cwd=str(cwd_dir))
+    assert sources == ["config", "cwd"]
+    path, folder, src = resolve_ebird_data_file("MyEBirdData.csv", folders, sources)
+    assert os.path.normpath(folder) == os.path.normpath(str(data_from_config))
+    assert src == "config"

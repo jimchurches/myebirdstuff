@@ -8,9 +8,9 @@ Run locally from repo root::
     pip install -r requirements-streamlit.txt
     streamlit run streamlit_app/app.py
 
-Same path resolution as the notebook when no file is uploaded: optional
-``STREAMLIT_EBIRD_DATA_FOLDER``, then ``scripts/config_*.py``, then CSV in
-this ``streamlit_app/`` folder.
+Disk resolution when no file is uploaded: ``scripts/config_secret.py`` and
+``scripts/config.py`` (``DATA_FOLDER``), then the **process working directory**
+(where you ran ``streamlit run``). See ``streamlit_app/README.md`` — *Data loading*.
 
 Streamlit Cloud: CSV upload on the **landing** main area when disk resolution finds no file; session
 state keeps upload bytes for reruns (no data picker on the dashboard). After a successful pick we
@@ -621,16 +621,6 @@ def _species_searchbox_fragment() -> None:
     st.session_state[_SESSION_SPECIES_PICK_KEY] = pick
 
 
-def _secrets_data_folder() -> str | None:
-    try:
-        s = st.secrets
-        if "EBIRD_DATA_FOLDER" in s and str(s["EBIRD_DATA_FOLDER"]).strip():
-            return str(s["EBIRD_DATA_FOLDER"]).strip()
-    except Exception:
-        pass
-    return None
-
-
 def _load_dataframe(
     *,
     uploaded: Any | None = None,
@@ -652,16 +642,10 @@ def _load_dataframe(
             st.error(f"Could not load CSV: {e}")
             return None, None, None
 
-    env_folder = os.environ.get("STREAMLIT_EBIRD_DATA_FOLDER", "").strip() or None
-    secrets_folder = _secrets_data_folder()
-    hardcoded = env_folder or secrets_folder
-
     try:
         folders, sources = build_explorer_candidate_dirs(
             repo_root=_REPO_ROOT,
-            anchor_dir=_APP_DIR,
-            data_folder_hardcoded=hardcoded,
-            anchor_label="streamlit app folder",
+            cwd=os.getcwd(),
         )
         path, _folder, src = resolve_ebird_data_file(DEFAULT_EBIRD_FILENAME, folders, sources)
         df = load_dataset(path)
@@ -1120,7 +1104,7 @@ def main() -> None:
 
             st.caption(
                 "Settings apply immediately in-session. Save writes YAML only when data is loaded from "
-                "`config_secret.py` or `config_template.py`."
+                "`config_secret.py` or `config.py`."
             )
             b1, b2 = st.columns(2)
             with b1:

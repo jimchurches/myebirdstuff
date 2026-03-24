@@ -152,15 +152,15 @@ What these are for:
 
 ## 4. Configure the data folder and CSV
 
-The notebook looks for your eBird CSV in this order until it finds the file: (1) hardcoded path in User Variables, (2) config_secret.py, (3) config_template.py, (4) notebook folder (e.g. Binder uploads).
+**Streamlit (recommended):** See **[streamlit_app/README.md — Data loading](../../streamlit_app/README.md#data-loading)** — `config_secret.py` → `config.py` → working directory, then first folder that contains the CSV.
 
-**Option A: Hardcoded path** — In the first code cell, set `DATA_FOLDER_HARDCODED = r"C:\Users\You\Documents\eBirdData"` (Windows) or `"/Users/you/Documents/eBirdData"` (macOS).
+**Legacy Jupyter notebook** uses the **same search order** via `personal_ebird_explorer.explorer_paths`: the **working directory** is usually whatever folder you started Jupyter from (often `notebooks/`), not “notebook folder last”. `DATA_FOLDER_HARDCODED` in the notebook is **ignored**.
 
-**Option B: Config file**
+**Config file (typical setup)**
 
 1. Open the **scripts** folder in the repo.  
-2. Copy `config_template.py` to `config_secret.py` (so your personal paths aren’t in the template).  
-3. Edit **scripts/config_secret.py** and set `DATA_FOLDER` to the folder that contains (or will contain) your eBird CSV.
+2. Copy `config_template.py` to `config_secret.py` (gitignored) or `config.py` (gitignored).  
+3. Edit that file and set `DATA_FOLDER` to the folder that contains (or will contain) your eBird CSV.
 
 **Examples:**
 
@@ -177,11 +177,11 @@ DATA_FOLDER = r"C:\Users\YourName\Documents\eBirdData"
 DATA_FOLDER = "/Users/yourname/Documents/eBirdData"
 ```
 
-4. Put your eBird export CSV in that folder and name it **MyEBirdData.csv** (or change the `EBIRD_DATA_FILE_NAME` variable in the first code cell of the notebook to match your filename).
+Put your eBird export CSV in that folder and name it **MyEBirdData.csv** (or set `STREAMLIT_EBIRD_DATA_FILE` / the notebook’s `EBIRD_DATA_FILE_NAME` to match your filename).
 
 **Species links and locale** — The notebook can add clickable eBird species links by fetching the eBird taxonomy once at startup (no API key). In the notebook’s **User Variables** cell, set **EBIRD_TAXONOMY_LOCALE** so common names match your export (e.g. `"en_AU"` for Australian English, `"en_GB"` for British; leave `""` for the API default). If the API is unavailable, the notebook runs without links.
 
-The `config_template.py` file also has an example `GOOGLE_API_KEY`; that’s only used by the separate location-naming script in this repo, not by the explorer notebook. You can ignore it for the explorer.
+The explorer and Streamlit app **never load** `config_template.py` at runtime — copy it to `config_secret.py` or `config.py` first. The template also shows an example `GOOGLE_API_KEY` for the separate location-naming script in this repo, not for CSV path resolution.
 
 ---
 
@@ -252,7 +252,7 @@ The `voila.json` in the notebooks folder hides the documentation cells so only t
 | 1 | Install Python 3.8+ (Windows: Store or python.org; macOS: python.org or Homebrew). |
 | 2 | (Optional) Create and activate a virtual environment. |
 | 3 | `python -m pip install -r requirements-explorer.txt` (or install packages individually; see step 3). |
-| 4 | Set `DATA_FOLDER_HARDCODED` in the notebook, or copy `config_template.py` → `config_secret.py`, set `DATA_FOLDER`, put `MyEBirdData.csv` there. |
+| 4 | Copy `config_template.py` → `config_secret.py` or `config.py`, set `DATA_FOLDER`, put `MyEBirdData.csv` there (or use Streamlit upload / working-directory discovery; see [Streamlit README](../../streamlit_app/README.md#data-loading)). |
 | 5 | From **notebooks** folder: `jupyter notebook` or `jupyter lab`, open `personal_ebird_explorer.ipynb`, Run All Cells. |
 | 6 | (Optional) From **notebooks** folder: `voila personal_ebird_explorer.ipynb --config=voila.json` |
 
@@ -264,8 +264,8 @@ The `voila.json` in the notebooks folder hides the documentation cells so only t
   Install the missing package, e.g. `python -m pip install pandas` (or `pip3 install pandas` on macOS). The list in step 3 should cover everything the notebook uses. The notebook will show the exact command if a dependency is missing.
 
 - **Config or CSV not found**  
-  Make sure you’re starting Jupyter/Voila from the **notebooks** folder so `../scripts/config_secret.py` points to the repo’s scripts folder.  
-  Check that `DATA_FOLDER` in `config_secret.py` uses the correct path and that `MyEBirdData.csv` (or your chosen filename) is in that folder.
+  Make sure you’re starting Jupyter/Voila from the **notebooks** folder so repo-relative `scripts/config_*.py` resolves correctly.  
+  Check `DATA_FOLDER` in `config_secret.py` or `config.py`, or put the CSV in the **working directory** (where you launched Jupyter). For Streamlit, see [streamlit_app/README.md](../../streamlit_app/README.md#data-loading).
 
 - **Windows path in config**  
   Use a raw string: `r"C:\Users\You\Documents\eBirdData"` or forward slashes: `"C:/Users/You/Documents/eBirdData"`.

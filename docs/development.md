@@ -31,7 +31,7 @@ The notebook is a thin UI layer: it wires widgets to state and calls module APIs
 |--------|------|
 | **data_loader** | Load CSV, validate columns, add `datetime` column (missing times → synthetic 23:59 for sort order; see explorer README). Single entry point: `load_dataset(path)`. |
 | **path_resolution** | Low-level helper: ``find_data_file(filename, candidate_dirs)``. |
-| **explorer_paths** | Builds the same candidate folder list as the notebook / Streamlit (hardcoded → ``config_secret`` → ``config_template`` → anchor folder), then resolves the CSV. Shared by ``notebooks/personal_ebird_explorer`` and ``streamlit_app/app.py``. |
+| **explorer_paths** | ``config_secret`` → ``config.py`` → process CWD; ``find_data_file`` picks the first folder that contains the CSV. Settings persist only when the winning source is ``config_secret`` or ``config.py``. Used by ``streamlit_app/app.py``; the Jupyter notebook is legacy/unmaintained. |
 | **streamlit_map_prep** | Builds kwargs for ``build_species_overlay_map`` in all-locations mode (Streamlit; refs #70). |
 | **species_logic** | Species filtering (`filter_species`), countable-species logic, base-species for lifer/last-seen. |
 | **stats** | Rankings, yearly summary, **country summary** (`country_summary_stats` / `checklist_country_keys`), streak calculation, safe count parsing. Pure functions on DataFrame. |
@@ -81,7 +81,7 @@ The notebook owns: widget creation, observers, initial Whoosh index creation (em
 - **Incremental changes** — Prefer small, reviewable edits over large rewrites.
 - **Preserve boundaries** — Keep data loading, stats, and map rendering in modules; keep the notebook thin.
 - **Caching** — If you change what drives the map (e.g. date filter, new grouping), ensure cache keys and invalidation stay consistent. Document any new cache in comments.
-- **Config and paths** — Path resolution and config (e.g. `config_secret.py`, `config_template.py`) are documented in the notebook and in docs/explorer; avoid duplicating logic.
+- **Config and paths** — `scripts/config_secret.py` / `config.py` (`DATA_FOLDER`) and CWD resolution are documented in `streamlit_app/README.md` and `docs/explorer/install.md`; `config_template.py` is the copy-paste template only.
 - **Dependencies** — Avoid new dependencies unless clearly necessary. Current stack: pandas, folium, ipywidgets, Whoosh, scikit-learn (for TF–IDF in search, if used), pycountry (country/state names in rankings tables).
 
 ---

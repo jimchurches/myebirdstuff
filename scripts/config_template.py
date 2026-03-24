@@ -1,4 +1,6 @@
-# This file is tracked in Git
+# Tracked template only — do not rely on this file being imported for the explorer or Streamlit app.
+# Copy to scripts/config_secret.py or scripts/config.py (gitignored), then set DATA_FOLDER there.
+# Path resolution loads only those two filenames, then the process working directory (see streamlit_app/README.md).
 GOOGLE_API_KEY = "REPLACE_WITH_YOUR_KEY"
 DATA_FOLDER = "the/path/to/eBird/Data/Folder/"
 DEPLOY_DESTINATION = "/path/to/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py"  # deploy_to_live target

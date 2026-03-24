@@ -285,7 +285,7 @@ def _extract_embedded_yaml_from_py(path: str) -> str | None:
 
 
 def load_settings_from_python_config(config_py_path: str) -> tuple[dict[str, Any], str | None]:
-    """Load embedded STREAMLIT_SETTINGS_YAML from config_secret/template .py."""
+    """Load embedded STREAMLIT_SETTINGS_YAML from ``config_secret.py`` or ``config.py`` (never from ``config_template.py``)."""
     yaml_text = _extract_embedded_yaml_from_py(config_py_path)
     if yaml_text:
         return _load_yaml_text(yaml_text)

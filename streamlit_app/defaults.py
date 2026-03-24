@@ -115,8 +115,9 @@ def build_persisted_settings_defaults_dict() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 DEFAULT_EBIRD_DATA_FILENAME = "MyEBirdData.csv"
-# Env overrides (see ``app.py`` / ``explorer_paths``): ``STREAMLIT_EBIRD_DATA_FILE`` (filename),
-# ``STREAMLIT_EBIRD_DATA_FOLDER``, ``STREAMLIT_EBIRD_TAXONOMY_LOCALE``, ``EBIRD_TAXONOMY_LOCALE``.
+# Env overrides (see ``app.py``): ``STREAMLIT_EBIRD_DATA_FILE`` (CSV basename),
+# ``STREAMLIT_EBIRD_TAXONOMY_LOCALE``, ``EBIRD_TAXONOMY_LOCALE``. Data folder: ``scripts/config_*.py``
+# or process working directory — not an env var (see ``explorer_paths`` / ``streamlit_app/README.md``).
 
 MAP_EXPORT_HTML_FILENAME = "ebird_map.html"
 

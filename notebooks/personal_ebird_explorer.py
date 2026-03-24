@@ -37,7 +37,7 @@
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["voila_hide"]
-# ### 🛠️ User Variables — data file, map style, pin colours, date filter, etc. Paths: `DATA_FOLDER_HARDCODED`, or `scripts/config_secret.py`, or `scripts/config_template.py`; notebook folder last. Full options: [docs/explorer/README.md](docs/explorer/README.md).
+# ### 🛠️ User Variables — map style, pin colours, date filter, etc. **CSV path** matches Streamlit: `scripts/config_secret.py` / `config.py` (`DATA_FOLDER`), then process working directory — see [streamlit_app/README.md](../streamlit_app/README.md#data-loading). This notebook is **legacy** (see issue #70).
 
 # %% editable=true slideshow={"slide_type": ""}
 # --------------------------------------------
@@ -47,9 +47,7 @@
 # Name of your eBird export file (in the DATA_FOLDER below)
 EBIRD_DATA_FILE_NAME = "MyEBirdData.csv"
 
-# Optional hardcoded data folder (overrides config files). Leave empty ("") to use config or fallbacks.
-# macOS example: "/Users/yourname/Documents/eBird"
-# Windows example: r"C:\Users\yourname\Documents\eBird" or "C:/Users/yourname/Documents/eBird"
+# Legacy — ignored. Set DATA_FOLDER in scripts/config_secret.py or scripts/config.py (copy from config_template.py; template is not loaded at runtime).
 DATA_FOLDER_HARDCODED = ""
 
 # Where your .csv file is located, and where the output map will be saved
@@ -448,9 +446,7 @@ if _repo_root not in sys.path:
 # --------------------------------------------
 # ✅ Configuration & Data Loading
 # --------------------------------------------
-# Resolve data file location: try each candidate in order until file is found.
-# Fallback order: (1) hardcoded path, (2) config_secret, (3) config_template, (4) notebook folder.
-# Cross-platform: works on macOS and Windows.
+# Resolve data file (shared helper with Streamlit): config_secret → config.py → working directory.
 
 # Notebook directory: where this .py file lives (or cwd when running as .ipynb)
 try:
@@ -471,11 +467,7 @@ from personal_ebird_explorer.explorer_paths import (
 
 _candidate_folders, _path_sources = build_explorer_candidate_dirs(
     repo_root=_repo_root,
-    anchor_dir=_notebook_dir,
-    data_folder_hardcoded=(
-        str(DATA_FOLDER_HARDCODED).strip() if DATA_FOLDER_HARDCODED and str(DATA_FOLDER_HARDCODED).strip() else None
-    ),
-    anchor_label="notebook folder",
+    cwd=os.getcwd(),
 )
 file_path, DATA_FOLDER, _path_source = resolve_ebird_data_file(
     EBIRD_DATA_FILE_NAME,

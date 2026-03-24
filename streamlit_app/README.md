@@ -61,17 +61,25 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 **Tabs:** The main area matches the Jupyter notebook tab order (`Map`, `Checklist Statistics`, …). **Checklist Statistics** is shared section HTML (`checklist_stats_streamlit_tab_sections_html`) with theme-scoped CSS (default **green** zebra + accents, `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS`; optional **eBird-blue** via `CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE` + `_USE_EBIRD_BLUE_HTML_TAB_THEME` in `checklist_stats_streamlit_html.py`), injected once. **Map** uses **map_controller** + Folium. Checklist stats are computed once right under the main tab row (`st.spinner`), so the loading line appears whichever tab is open. Other tabs are still placeholders.
 
-## Data loading (same ideas as the notebook)
+## Data loading
+
+**`scripts/config_template.py` is not used at runtime** — it is a **tracked template** to copy into `config_secret.py` or `config.py`. The app only reads those two filenames (plus working-directory search).
+
+Disk search is **first folder that contains the CSV**, in this order:
+
+1. **`scripts/config_secret.py`** — if it exists and defines non-empty `DATA_FOLDER`, that directory is searched first. **Settings** (embedded YAML) save here when this source wins. Typical for developers using git (file is gitignored).
+2. **`scripts/config.py`** — same fields as the template (create by copying the template file); gitignored. Use when you want `DATA_FOLDER` without `config_secret.py`. **Settings** save here when this source wins.
+3. **Current working directory** — the directory you were in when you ran `streamlit run ...` (often the repo root). CSV can live next to your clone; **no** settings file is associated, so **Save settings** stays disabled for persistence (session-only).
 
 | Method | When |
 |--------|------|
-| **File uploader** | On the **landing** page only (main area). Upload is cached in session for reruns. Best for **Streamlit Community Cloud**. |
-| **CSV in this folder** | Put `MyEBirdData.csv` (or name from `STREAMLIT_EBIRD_DATA_FILE`) in `streamlit_app/`. |
-| **`STREAMLIT_EBIRD_DATA_FOLDER`** | Env var: directory containing the CSV (like notebook `DATA_FOLDER_HARDCODED`). |
-| **`scripts/config_secret.py`** | `DATA_FOLDER = "..."` — same as the notebook. |
-| **Streamlit secret `EBIRD_DATA_FOLDER`** | Optional; same as hardcoded folder if you use Cloud secrets. |
+| **File uploader** | **Landing** page (main area). Cached in session. Primary path for **Streamlit Community Cloud**. |
+| **Config `DATA_FOLDER`** | As above (`config_secret` → `config.py`). |
+| **Working directory** | Put `MyEBirdData.csv` (or override basename with env **`STREAMLIT_EBIRD_DATA_FILE`**) in the directory you start Streamlit from. |
 
-**Precedence:** A new pick from the landing uploader → **disk** (if resolvable) → **cached upload** for this session. Stale cache is cleared when disk wins.
+There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder override; use config files, CWD, or upload.
+
+**Precedence (load):** A new pick from the landing uploader → **disk** (config paths + CWD) → **cached upload**. Stale upload cache is cleared when disk wins.
 
 ## Streamlit Community Cloud
 
