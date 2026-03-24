@@ -1199,23 +1199,29 @@ def main() -> None:
 
             st.divider()
             st.subheader("Tables & lists")
+            # Sliders feed Rankings & lists / Yearly Summary / Country sparse-year UI (shared formatters).
             st.slider(
-                "Top N table limit",
+                "Ranking tables: number of results",
                 min_value=TABLES_RANKINGS_TOP_N_MIN,
                 max_value=TABLES_RANKINGS_TOP_N_MAX,
                 step=1,
                 key="streamlit_rankings_top_n",
-                help="Caps how many rows feed each “Top …” ranking on **Rankings & lists**.",
             )
             st.slider(
-                "Rankings visible rows",
+                "Ranking tables: visible rows",
                 min_value=TABLES_RANKINGS_VISIBLE_ROWS_MIN,
                 max_value=TABLES_RANKINGS_VISIBLE_ROWS_MAX,
                 step=1,
                 key="streamlit_rankings_visible_rows",
-                help="Scroll area height for rankings tables (row shading) on **Rankings & lists**.",
             )
-            st.radio(
+            st.slider(
+                "Yearly tables: recent year columns",
+                min_value=YEARLY_RECENT_COLUMN_COUNT_MIN,
+                max_value=YEARLY_RECENT_COLUMN_COUNT_MAX,
+                step=1,
+                key="streamlit_yearly_recent_column_count",
+            )
+            st.selectbox(
                 "Country ordering",
                 options=[
                     COUNTRY_TAB_SORT_ALPHABETICAL,
@@ -1224,19 +1230,6 @@ def main() -> None:
                 ],
                 format_func=lambda k: _COUNTRY_SORT_LABELS[k],
                 key="streamlit_country_tab_sort",
-                help="Order of countries on the **Country** tab.",
-            )
-            st.slider(
-                "Yearly tables: recent year columns",
-                min_value=YEARLY_RECENT_COLUMN_COUNT_MIN,
-                max_value=YEARLY_RECENT_COLUMN_COUNT_MAX,
-                step=1,
-                key="streamlit_yearly_recent_column_count",
-                help=(
-                    "When **Yearly Summary** or **Country** has more calendar years than this, the default "
-                    "view shows only the most recent N columns. Use **Show full history** to reveal all years "
-                    "(horizontal scroll). Larger screens often suit a higher N."
-                ),
             )
             st.divider()
             st.subheader("Maintenance")
