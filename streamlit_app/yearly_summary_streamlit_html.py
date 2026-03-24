@@ -4,8 +4,8 @@
 HTML from :func:`build_yearly_summary_streamlit_tab_html_dict`; styles match Checklist Statistics
 (``CHECKLIST_STATS_TABLE_CSS`` + tab surface CSS under ``.streamlit-checklist-html-ab``).
 
-When more than :data:`~personal_ebird_explorer.checklist_stats_display.YEARLY_STREAMLIT_RECENT_YEAR_COUNT`
-years exist, **both** the recent window and full history are rendered once; a **native HTML checkbox**
+When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**
+(3–25, default 10), **both** the recent window and full history are rendered once; a **native HTML checkbox**
 swaps visibility **without a Streamlit rerun** (avoids full-app “busy” state on toggle).
 
 The tab body runs inside :func:`run_yearly_summary_streamlit_fragment` so interacting with nested
@@ -26,7 +26,6 @@ from personal_ebird_explorer.checklist_stats_display import (
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS,
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE,
     CHECKLIST_STATS_TABLE_CSS,
-    YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
     build_yearly_summary_streamlit_tab_html_dict,
     format_yearly_streamlit_dual_view_html,
 )
@@ -39,6 +38,12 @@ _YEARLY_HTML_TAB_SURFACE_CSS = (
 )
 
 _SESSION_YEARLY_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
+
+
+def get_yearly_recent_column_count() -> int:
+    """Recent-year column window for Yearly Summary + Country (``streamlit_yearly_recent_column_count``; 3–25)."""
+    n = int(st.session_state.get("streamlit_yearly_recent_column_count", 10))
+    return max(3, min(25, n))
 
 
 def sync_yearly_summary_session_inputs(payload: Optional[ChecklistStatsPayload]) -> None:
@@ -80,14 +85,17 @@ def run_yearly_summary_streamlit_fragment() -> None:
         return
 
     n_years = len(payload.years_list)
-    if n_years > YEARLY_STREAMLIT_RECENT_YEAR_COUNT:
+    recent_n = get_yearly_recent_column_count()
+    if n_years > recent_n:
         bodies_recent = build_yearly_summary_streamlit_tab_html_dict(
             payload,
             show_full_history=False,
+            recent_year_count=recent_n,
         )
         bodies_full = build_yearly_summary_streamlit_tab_html_dict(
             payload,
             show_full_history=True,
+            recent_year_count=recent_n,
         )
         if bodies_recent is None or bodies_full is None:
             st.info("No yearly data.")
@@ -98,7 +106,7 @@ def run_yearly_summary_streamlit_fragment() -> None:
                 bodies_recent[key],
                 bodies_full[key],
                 dom_suffix=dom_suffix,
-                recent_year_count=YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
+                recent_year_count=recent_n,
             )
             st.html(_yearly_wrap_html(dual))
 

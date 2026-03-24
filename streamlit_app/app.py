@@ -47,9 +47,9 @@ expanders per list, HTML from ``format_checklist_stats_bundle`` on ``df_full``. 
 are configured under **Settings → Tables & lists** (refs `#81`).
 
 **Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs inside
-``@st.fragment``; HTML from ``build_yearly_summary_streamlit_tab_html_dict``. When there are more than 10 years,
+``@st.fragment``; HTML from ``build_yearly_summary_streamlit_tab_html_dict``. When there are more years than the configured recent-column count (Settings → Tables & lists; default 10),
 recent + full tables are both emitted and a **native HTML checkbox** swaps visibility (no Streamlit rerun on that
-toggle). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment`` mirror the Country tab
+control). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment`` mirror the Country tab
 pattern (refs #85).
 """
 
@@ -242,6 +242,13 @@ def _init_and_clamp_streamlit_table_settings() -> None:
     else:
         st.session_state.streamlit_close_location_meters = max(
             0, min(250, int(st.session_state.streamlit_close_location_meters))
+        )
+    if "streamlit_yearly_recent_column_count" not in st.session_state:
+        st.session_state.streamlit_yearly_recent_column_count = 10
+    else:
+        st.session_state.streamlit_yearly_recent_column_count = max(
+            3,
+            min(25, int(st.session_state.streamlit_yearly_recent_column_count)),
         )
 
 
@@ -861,6 +868,19 @@ def main() -> None:
             format_func=lambda k: _COUNTRY_SORT_LABELS[k],
             key="streamlit_country_tab_sort",
             help="Order of countries on the **Country** tab.",
+        )
+        st.slider(
+            "Yearly tables: recent year columns",
+            min_value=3,
+            max_value=25,
+            value=10,
+            step=1,
+            key="streamlit_yearly_recent_column_count",
+            help=(
+                "When **Yearly Summary** or **Country** has more calendar years than this, the default "
+                "view shows only the most recent N columns. Use **Show full history** to reveal all years "
+                "(horizontal scroll). Larger screens often suit a higher N."
+            ),
         )
         st.divider()
         st.subheader("Maintenance")

@@ -16,7 +16,6 @@ from personal_ebird_explorer.checklist_stats_display import (
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS,
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE,
     CHECKLIST_STATS_TABLE_CSS,
-    YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
     _sort_country_sections,
     country_display_name_plain,
     country_yearly_links_bar_html,
@@ -25,6 +24,7 @@ from personal_ebird_explorer.checklist_stats_display import (
     slice_yearly_table_rows,
     yearly_streamlit_year_window_slice,
 )
+from yearly_summary_streamlit_html import get_yearly_recent_column_count
 
 # Match ``checklist_stats_streamlit_html`` default (green); flip there if you theme the whole app blue.
 _USE_EBIRD_BLUE_HTML_TAB_THEME = False
@@ -96,11 +96,12 @@ def render_country_stats_streamlit_html(
     st.subheader(country_display_name_plain(selected))
     links_html = country_yearly_links_bar_html(selected)
 
-    if len(years_list) > YEARLY_STREAMLIT_RECENT_YEAR_COUNT:
+    recent_n = get_yearly_recent_column_count()
+    if len(years_list) > recent_n:
         y_slice = yearly_streamlit_year_window_slice(
             years_list,
             show_full_history=False,
-            recent_count=YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
+            recent_count=recent_n,
         )
         years_recent = years_list[y_slice]
         rows_recent = slice_yearly_table_rows(rows, years_list, y_slice)
@@ -120,7 +121,7 @@ def render_country_stats_streamlit_html(
             table_recent,
             table_full,
             dom_suffix=f"country-{selected}",
-            recent_year_count=YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
+            recent_year_count=recent_n,
         )
         inner = f"{links_html}{dual}" if links_html else dual
         st.html(f'<div class="streamlit-checklist-html-ab">{inner}</div>')

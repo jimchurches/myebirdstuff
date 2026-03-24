@@ -116,6 +116,9 @@ def test_format_yearly_streamlit_dual_view_html_structure():
         recent_year_count=10,
     )
     assert 'type="checkbox"' in out
+    assert "yearly-dual-status-stack" in out
+    assert "yearly-dual-status-full" in out
+    assert "Displaying all years" in out
     assert "yearly-dual-recent" in out
     assert "yearly-dual-full" in out
     assert "<p>recent</p>" in out
@@ -137,6 +140,9 @@ def test_yearly_streamlit_year_window_slice():
     assert years[yearly_streamlit_year_window_slice(years, show_full_history=False)] == list(
         range(2012, 2022)
     )
+    assert yearly_streamlit_year_window_slice(
+        years, show_full_history=False, recent_count=3
+    ) == slice(9, 12)
     short = list(range(2020, 2027))  # 7 years
     assert yearly_streamlit_year_window_slice(short, show_full_history=False) == slice(None)
 

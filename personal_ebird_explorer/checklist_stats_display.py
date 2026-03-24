@@ -718,16 +718,31 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   vertical-align: middle;
   color: var(--text-color, {text_fb});
 }}
-.streamlit-checklist-html-ab .yearly-dual-helper {{
-  margin: 0.4rem 0 0.65rem 1.45rem;
+/* Fixed-height status slot so the table does not jump when swapping recent vs full (#85). */
+.streamlit-checklist-html-ab .yearly-dual-status-stack {{
+  margin: 0.35rem 0 0.65rem 1.45rem;
+  min-height: 2.75em;
+}}
+.streamlit-checklist-html-ab .yearly-dual-status-stack p {{
+  margin: 0;
   font-size: 0.85em;
   line-height: 1.45;
+  min-height: 2.75em;
   color: color-mix(in srgb, var(--text-color, {text_fb}) 62%, transparent);
 }}
 @supports not (color: color-mix(in srgb, black 50%, white)) {{
-  .streamlit-checklist-html-ab .yearly-dual-helper {{
+  .streamlit-checklist-html-ab .yearly-dual-status-stack p {{
     color: rgba({p_fallback}, 0.62);
   }}
+}}
+.streamlit-checklist-html-ab .yearly-dual-status-stack .yearly-dual-status-full {{
+  display: none;
+}}
+.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-status-stack .yearly-dual-helper {{
+  display: none !important;
+}}
+.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-status-stack .yearly-dual-status-full {{
+  display: block !important;
 }}
 .streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-full {{
   display: none !important;
@@ -736,9 +751,6 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   display: block !important;
 }}
 .streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-recent {{
-  display: none !important;
-}}
-.streamlit-checklist-html-ab .yearly-dual-wrap .yearly-dual-cb:checked ~ .yearly-dual-helper {{
   display: none !important;
 }}
 """
@@ -1015,14 +1027,20 @@ def format_yearly_streamlit_dual_view_html(
     safe = safe[:56]
     helper = (
         f"Showing the most recent {recent_year_count} years. "
-        "Expand to view full history using the control below."
+        "Turn on Show full history above to see every year column."
+    )
+    full_status = (
+        "Displaying all years. Scroll horizontally to see every column."
     )
     return (
         '<div class="yearly-dual-wrap">'
         f'<input type="checkbox" id="{safe}" class="yearly-dual-cb" '
         'aria-label="Show full year history" />'
         f'<label for="{safe}" class="yearly-dual-label">Show full history</label>'
+        '<div class="yearly-dual-status-stack">'
         f'<p class="yearly-dual-helper">{html_module.escape(helper, quote=False)}</p>'
+        f'<p class="yearly-dual-status-full">{html_module.escape(full_status, quote=False)}</p>'
+        "</div>"
         f'<div class="yearly-dual-recent">{recent_inner_html}</div>'
         f'<div class="yearly-dual-full">{full_inner_html}</div>'
         "</div>"
