@@ -116,6 +116,15 @@ def test_format_yearly_streamlit_dual_view_html_structure():
         recent_year_count=10,
     )
     assert 'type="checkbox"' in out
+    assert 'class="yearly-dual-cb" aria-label' in out
+    out_full = format_yearly_streamlit_dual_view_html(
+        "<p>recent</p>",
+        "<p>full</p>",
+        dom_suffix="test-all-b",
+        recent_year_count=10,
+        initial_show_full=True,
+    )
+    assert 'class="yearly-dual-cb" checked' in out_full
     assert "yearly-dual-status-stack" in out
     assert "yearly-dual-status-full" in out
     assert "Displaying all years" in out

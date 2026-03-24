@@ -6,7 +6,8 @@ HTML from :func:`build_yearly_summary_streamlit_tab_html_dict`; styles match Che
 
 When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**
 (3–25, default 10), **both** the recent window and full history are rendered once; a **native HTML checkbox**
-swaps visibility **without a Streamlit rerun** (avoids full-app “busy” state on toggle).
+swaps visibility **without a Streamlit rerun**. A **Streamlit** ``st.toggle`` (same fragment) is also shown
+for comparison: it reruns the fragment and sets the checkbox’s initial ``checked`` state to match.
 
 The tab body runs inside :func:`run_yearly_summary_streamlit_fragment` so interacting with nested
 ``st.tabs`` only triggers a **partial** fragment rerun (see Streamlit fragments docs).
@@ -38,6 +39,8 @@ _YEARLY_HTML_TAB_SURFACE_CSS = (
 )
 
 _SESSION_YEARLY_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
+# Fragment-only toggle (mirrors checkbox intent; triggers fragment rerun — refs #85 testing).
+_STREAMLIT_YEARLY_STREAMLIT_TOGGLE_FULL_KEY = "streamlit_yearly_summary_streamlit_toggle_full"
 
 
 def get_yearly_recent_column_count() -> int:
@@ -101,12 +104,27 @@ def run_yearly_summary_streamlit_fragment() -> None:
             st.info("No yearly data.")
             return
 
+        show_full_streamlit = st.toggle(
+            "Show full history (Streamlit)",
+            key=_STREAMLIT_YEARLY_STREAMLIT_TOGGLE_FULL_KEY,
+            help=(
+                "Reruns this tab’s fragment only. The HTML checkbox below does the same swap in the "
+                "browser without a rerun — use whichever you prefer while testing."
+            ),
+        )
+        st.caption(
+            "Two ways to switch views: Streamlit toggle (fragment rerun) vs HTML checkbox "
+            "(instant, no Python). They can show different states if you mix them—use the toggle "
+            "again to realign."
+        )
+
         def _pane(key: str, dom_suffix: str) -> None:
             dual = format_yearly_streamlit_dual_view_html(
                 bodies_recent[key],
                 bodies_full[key],
                 dom_suffix=dom_suffix,
                 recent_year_count=recent_n,
+                initial_show_full=show_full_streamlit,
             )
             st.html(_yearly_wrap_html(dual))
 

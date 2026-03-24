@@ -1018,10 +1018,13 @@ def format_yearly_streamlit_dual_view_html(
     *,
     dom_suffix: str,
     recent_year_count: int,
+    initial_show_full: bool = False,
 ) -> str:
     """Embed two HTML fragments; a native checkbox + CSS swaps visibility (no Streamlit rerun; #85).
 
     *dom_suffix* becomes the HTML ``id`` (sanitized to ``[a-zA-Z0-9_-]+``).
+    *initial_show_full*: when true, the checkbox is rendered ``checked`` (e.g. after a Streamlit
+    ``st.toggle`` in the same fragment reruns).
     """
     safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", dom_suffix).strip("-") or "yearly"
     safe = safe[:56]
@@ -1032,9 +1035,10 @@ def format_yearly_streamlit_dual_view_html(
     full_status = (
         "Displaying all years. Scroll horizontally to see every column."
     )
+    checked_attr = " checked" if initial_show_full else ""
     return (
         '<div class="yearly-dual-wrap">'
-        f'<input type="checkbox" id="{safe}" class="yearly-dual-cb" '
+        f'<input type="checkbox" id="{safe}" class="yearly-dual-cb"{checked_attr} '
         'aria-label="Show full year history" />'
         f'<label for="{safe}" class="yearly-dual-label">Show full history</label>'
         '<div class="yearly-dual-status-stack">'
