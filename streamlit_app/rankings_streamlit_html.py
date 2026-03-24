@@ -26,6 +26,8 @@ from personal_ebird_explorer.checklist_stats_display import (
 )
 from personal_ebird_explorer.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 
+from streamlit_app.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
+
 # Must include ``streamlit-checklist-html-ab`` — ``CHECKLIST_STATS_*`` rules are scoped to it (same as Checklist Statistics).
 _STREAMLIT_TABLE_SCOPE = "streamlit-checklist-html-ab"
 _RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"
@@ -46,7 +48,7 @@ def _cached_rankings_stats_bundle(
     return format_checklist_stats_bundle(
         payload,
         link_urls_fn=link_urls_fn,
-        scroll_hint="shading",
+        scroll_hint=RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT,
         visible_rows=visible_rows,
         country_sort=country_sort,
     )
@@ -65,7 +67,7 @@ def render_rankings_streamlit_tab(
         "<style>"
         f"{CHECKLIST_STATS_TABLE_CSS}"
         f"{CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS}"
-        f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:1400px;width:100%; }}"
+        f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:{RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX}px;width:100%; }}"
         "</style>",
         unsafe_allow_html=True,
     )

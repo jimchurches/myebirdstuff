@@ -50,6 +50,10 @@ are configured under **Settings → Tables & lists** (refs `#81`).
 ``@st.fragment``; ``st.toggle`` switches recent vs full year columns when count exceeds **Settings → Yearly tables:
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
+
+**Main tabs + sidebar:** All tab bodies run each rerun (instant tab switching), with one always-on sidebar that
+contains map controls plus footer links (refs #70). Settings sliders use a keyed container with
+``max-width: min(100%, 40rem)`` on wide viewports.
 """
 
 from __future__ import annotations
@@ -79,6 +83,7 @@ from personal_ebird_explorer.data_loader import load_dataset  # noqa: E402
 from personal_ebird_explorer.explorer_paths import (  # noqa: E402
     build_explorer_candidate_dirs,
     resolve_ebird_data_file,
+    settings_yaml_path_for_source,
 )
 from personal_ebird_explorer.map_controller import build_species_overlay_map  # noqa: E402
 from personal_ebird_explorer.species_search import (  # noqa: E402
@@ -111,33 +116,86 @@ from map_working import (  # noqa: E402
     folium_map_to_html_bytes,
     streamlit_working_set_and_status,
 )
-
-DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", "MyEBirdData.csv")
-
-# Open-source repo + author links (sidebar footer — text-only links; refs #70).
-GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
-EBIRD_PROFILE_URL = "https://ebird.org/profile/MjkxNDYyNQ"
-INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
-
-# Aligns with ``main_tabs`` in ``notebooks/personal_ebird_explorer`` (refs #70).
-NOTEBOOK_MAIN_TAB_LABELS = (
-    "Map",
-    "Checklist Statistics",
-    "Rankings & lists",
-    "Yearly Summary",
-    "Country",
-    "Maintenance",
-    "Settings",
+from streamlit_app.defaults import (  # noqa: E402
+    CHECKLIST_STATS_SPINNER_MESSAGE,
+    CHECKLIST_STATS_TOP_N_TABLE_LIMIT,
+    DEFAULT_EBIRD_DATA_FILENAME,
+    EBIRD_PROFILE_URL,
+    GITHUB_REPO_URL,
+    INSTAGRAM_PROFILE_URL,
+    MAP_BASEMAP_DEFAULT,
+    MAP_BASEMAP_OPTIONS,
+    MAP_DATE_FILTER_DEFAULT,
+    MAP_EXPORT_HTML_FILENAME,
+    MAP_HEIGHT_PX_DEFAULT,
+    MAP_HEIGHT_PX_MAX,
+    MAP_HEIGHT_PX_MIN,
+    MAP_HEIGHT_PX_STEP,
+    MAP_VIEW_LABELS,
+    MAP_LAST_SEEN_COLOR_DEFAULT,
+    MAP_LAST_SEEN_FILL_DEFAULT,
+    MAP_DEFAULT_COLOR_DEFAULT,
+    MAP_DEFAULT_FILL_DEFAULT,
+    MAP_LIFER_COLOR_DEFAULT,
+    MAP_LIFER_FILL_DEFAULT,
+    MAP_MARK_LAST_SEEN_DEFAULT,
+    MAP_MARK_LIFER_DEFAULT,
+    MAP_PIN_COLOUR_ALLOWLIST,
+    MAP_POPUP_SCROLL_HINT_DEFAULT,
+    MAP_POPUP_SORT_ORDER_DEFAULT,
+    MAP_SPECIES_COLOR_DEFAULT,
+    MAP_SPECIES_FILL_DEFAULT,
+    MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
+    MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
+    MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
+    NOTEBOOK_MAIN_TAB_LABELS,
+    SETTINGS_PANEL_MAX_WIDTH_REM,
+    SETTINGS_SCHEMA_VERSION,
+    SPECIES_SEARCH_CAPTION,
+    SPECIES_SEARCH_DEBOUNCE_MS,
+    SPECIES_SEARCH_EDIT_AFTER_SUBMIT,
+    SPECIES_SEARCH_MAX_OPTIONS,
+    SPECIES_SEARCH_MIN_QUERY_LEN,
+    SPECIES_SEARCH_PLACEHOLDER,
+    SPECIES_SEARCH_RERUN_SCOPE,
+    SPINNER_THEME_CSS_CACHE_KEY_SUFFIX,
+    TABLES_RANKINGS_TOP_N_DEFAULT,
+    TABLES_RANKINGS_TOP_N_MAX,
+    TABLES_RANKINGS_TOP_N_MIN,
+    TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
+    TABLES_RANKINGS_VISIBLE_ROWS_MAX,
+    TABLES_RANKINGS_VISIBLE_ROWS_MIN,
+    TAXONOMY_LOCALE_DEFAULT,
+    THEME_PRIMARY_HEX,
+    THEME_SECONDARY_BG_HEX,
+    THEME_TEXT_HEX,
+    YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
+    YEARLY_RECENT_COLUMN_COUNT_MAX,
+    YEARLY_RECENT_COLUMN_COUNT_MIN,
+    build_persisted_settings_defaults_dict,
 )
 
-# Same cap as notebook ``TOP_N_TABLE_LIMIT`` (checklist stats payload; Rankings tab uses its own sliders).
-CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
+DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", DEFAULT_EBIRD_DATA_FILENAME)
 
-# Default Maintenance → close-location threshold (metres); overridden by Settings (refs #79).
-DEFAULT_CLOSE_LOCATION_METERS = 10
+# Map view labels → mode string; basemap/height use session keys (refs #70).
+_MAP_VIEW_LABEL_TO_MODE = {
+    "All locations": "all",
+    "Selected species": "species",
+    "Lifer locations": "lifers",
+}
+# Settings tab: cap control width on large viewports; column still uses full width on narrow screens (refs #70).
+_SETTINGS_PANEL_CSS = f"""
+<style>
+/* Cap slider/track width on wide screens; stays full width when the block is narrow (refs #70). */
+div[data-testid="stVerticalBlockBorderWrapper"].st-key-ebird_settings_panel,
+div.st-key-ebird_settings_panel {{
+    max-width: min(100%, {SETTINGS_PANEL_MAX_WIDTH_REM}rem);
+}}
+</style>
+"""
 
-# Match notebook-friendly default; eBird API uses this for common-name spellings in taxonomy CSV.
-DEFAULT_TAXONOMY_LOCALE = "en_AU"
+DEFAULT_CLOSE_LOCATION_METERS = MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT
+DEFAULT_TAXONOMY_LOCALE = TAXONOMY_LOCALE_DEFAULT
 
 # Session-only: bytes + filename so reruns work without rendering ``st.file_uploader`` on the dashboard.
 _SESSION_UPLOAD_CACHE_KEY = "_ebird_streamlit_upload_csv_cache"
@@ -154,6 +212,11 @@ _SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 _SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 _SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
 _FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
+_SETTINGS_CONFIG_PATH_KEY = "_streamlit_settings_yaml_path"
+_SETTINGS_CONFIG_SOURCE_KEY = "_streamlit_settings_source_label"
+_SETTINGS_LOADED_FROM_KEY = "_streamlit_settings_loaded_from_path"
+_SETTINGS_BASELINE_KEY = "_streamlit_settings_saved_baseline"
+_SETTINGS_WARNED_KEY = "_streamlit_settings_warned"
 
 _COUNTRY_SORT_LABELS = {
     COUNTRY_TAB_SORT_ALPHABETICAL: "Alphabetical",
@@ -161,14 +224,30 @@ _COUNTRY_SORT_LABELS = {
     COUNTRY_TAB_SORT_TOTAL_SPECIES: "By total species",
 }
 
-# Match ``.streamlit/config.toml`` [theme] (forest / eBird-adjacent greens).
-_THEME_TEXT = "#1A2E22"
-_THEME_PRIMARY = "#1F6F54"
-_THEME_SECONDARY_BG = "#EEF4F0"
+_SETTINGS_SESSION_KEYS = (
+    "streamlit_popup_sort_order",
+    "streamlit_popup_scroll_hint",
+    "streamlit_mark_lifer",
+    "streamlit_mark_last_seen",
+    "streamlit_default_color",
+    "streamlit_default_fill",
+    "streamlit_species_color",
+    "streamlit_species_fill",
+    "streamlit_lifer_color",
+    "streamlit_lifer_fill",
+    "streamlit_last_seen_color",
+    "streamlit_last_seen_fill",
+    "streamlit_taxonomy_locale",
+    "streamlit_rankings_top_n",
+    "streamlit_rankings_visible_rows",
+    "streamlit_yearly_recent_column_count",
+    "streamlit_country_tab_sort",
+    "streamlit_close_location_meters",
+)
 
 # Session flag: avoid stacking duplicate ``<style>`` blocks on every rerun.
-# Bump suffix when CSS changes so returning users pick up new rules without clearing session.
-_SPINNER_THEME_CSS_INJECTED_KEY = "_ebird_spinner_theme_css_injected_v3"
+# Bump ``SPINNER_THEME_CSS_CACHE_KEY_SUFFIX`` in :mod:`streamlit_app.defaults` when CSS changes.
+_SPINNER_THEME_CSS_INJECTED_KEY = f"_ebird_spinner_theme_css_injected_{SPINNER_THEME_CSS_CACHE_KEY_SUFFIX}"
 
 _SPINNER_THEME_CSS = f"""
 <style>
@@ -176,12 +255,12 @@ _SPINNER_THEME_CSS = f"""
 /* Modern Streamlit uses an icon spinner (``iconValue: spinner``), not a CSS border ring. */
 div[data-testid="stSpinner"],
 div[data-testid="stSpinner"].stSpinner {{
-  color: {_THEME_TEXT};
+  color: {THEME_TEXT_HEX};
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }}
 /* Graphic: ``currentColor`` on the SVG so the arc tracks primary (not default grey). */
 div[data-testid="stSpinner"] svg {{
-  color: {_THEME_PRIMARY} !important;
+  color: {THEME_PRIMARY_HEX} !important;
 }}
 div[data-testid="stSpinner"] svg path,
 div[data-testid="stSpinner"] svg circle {{
@@ -191,18 +270,18 @@ div[data-testid="stSpinner"] svg circle {{
 /* Spinner message is rendered as Streamlit markdown — target container + descendants. */
 div[data-testid="stSpinner"] [data-testid="stMarkdownContainer"],
 div[data-testid="stSpinner"] [data-testid="stMarkdownContainer"] * {{
-  color: {_THEME_TEXT} !important;
+  color: {THEME_TEXT_HEX} !important;
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
 }}
 div[data-testid="stSpinner"] p,
 div[data-testid="stSpinner"] span,
 div[data-testid="stSpinner"] label {{
-  color: {_THEME_TEXT} !important;
+  color: {THEME_TEXT_HEX} !important;
 }}
 /* Older border-based spinner (harmless if unused) */
 div[data-testid="stSpinner"] div[class*="Spinner"] {{
-  border-color: {_THEME_SECONDARY_BG} !important;
-  border-top-color: {_THEME_PRIMARY} !important;
+  border-color: {THEME_SECONDARY_BG_HEX} !important;
+  border-top-color: {THEME_PRIMARY_HEX} !important;
 }}
 </style>
 """
@@ -223,32 +302,188 @@ def _inject_spinner_theme_css() -> None:
 
 
 def _init_and_clamp_streamlit_table_settings() -> None:
-    """Defaults and ranges for Settings → tables / maintenance (refs #81)."""
+    """Defaults/ranges for Settings values (tables, maintenance, map display)."""
     if "streamlit_rankings_top_n" not in st.session_state:
-        st.session_state.streamlit_rankings_top_n = 200
+        st.session_state.streamlit_rankings_top_n = TABLES_RANKINGS_TOP_N_DEFAULT
     else:
         st.session_state.streamlit_rankings_top_n = max(
-            10, min(500, int(st.session_state.streamlit_rankings_top_n))
+            TABLES_RANKINGS_TOP_N_MIN,
+            min(TABLES_RANKINGS_TOP_N_MAX, int(st.session_state.streamlit_rankings_top_n)),
         )
     if "streamlit_rankings_visible_rows" not in st.session_state:
-        st.session_state.streamlit_rankings_visible_rows = 16
+        st.session_state.streamlit_rankings_visible_rows = TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT
     else:
         st.session_state.streamlit_rankings_visible_rows = max(
-            10, min(50, int(st.session_state.streamlit_rankings_visible_rows))
+            TABLES_RANKINGS_VISIBLE_ROWS_MIN,
+            min(
+                TABLES_RANKINGS_VISIBLE_ROWS_MAX,
+                int(st.session_state.streamlit_rankings_visible_rows),
+            ),
         )
     if "streamlit_close_location_meters" not in st.session_state:
         st.session_state.streamlit_close_location_meters = DEFAULT_CLOSE_LOCATION_METERS
     else:
         st.session_state.streamlit_close_location_meters = max(
-            0, min(250, int(st.session_state.streamlit_close_location_meters))
+            MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
+            min(
+                MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
+                int(st.session_state.streamlit_close_location_meters),
+            ),
         )
     if "streamlit_yearly_recent_column_count" not in st.session_state:
-        st.session_state.streamlit_yearly_recent_column_count = 10
+        st.session_state.streamlit_yearly_recent_column_count = YEARLY_RECENT_COLUMN_COUNT_DEFAULT
     else:
         st.session_state.streamlit_yearly_recent_column_count = max(
-            3,
-            min(25, int(st.session_state.streamlit_yearly_recent_column_count)),
+            YEARLY_RECENT_COLUMN_COUNT_MIN,
+            min(
+                YEARLY_RECENT_COLUMN_COUNT_MAX,
+                int(st.session_state.streamlit_yearly_recent_column_count),
+            ),
         )
+    if "streamlit_popup_sort_order" not in st.session_state:
+        st.session_state.streamlit_popup_sort_order = MAP_POPUP_SORT_ORDER_DEFAULT
+    elif st.session_state.streamlit_popup_sort_order not in ("ascending", "descending"):
+        st.session_state.streamlit_popup_sort_order = MAP_POPUP_SORT_ORDER_DEFAULT
+    if "streamlit_popup_scroll_hint" not in st.session_state:
+        st.session_state.streamlit_popup_scroll_hint = MAP_POPUP_SCROLL_HINT_DEFAULT
+    elif st.session_state.streamlit_popup_scroll_hint not in ("chevron", "shading", "both"):
+        st.session_state.streamlit_popup_scroll_hint = MAP_POPUP_SCROLL_HINT_DEFAULT
+    if "streamlit_mark_lifer" not in st.session_state:
+        st.session_state.streamlit_mark_lifer = MAP_MARK_LIFER_DEFAULT
+    if "streamlit_mark_last_seen" not in st.session_state:
+        st.session_state.streamlit_mark_last_seen = MAP_MARK_LAST_SEEN_DEFAULT
+    for k, default in (
+        ("streamlit_lifer_color", MAP_LIFER_COLOR_DEFAULT),
+        ("streamlit_lifer_fill", MAP_LIFER_FILL_DEFAULT),
+        ("streamlit_last_seen_color", MAP_LAST_SEEN_COLOR_DEFAULT),
+        ("streamlit_last_seen_fill", MAP_LAST_SEEN_FILL_DEFAULT),
+        ("streamlit_species_color", MAP_SPECIES_COLOR_DEFAULT),
+        ("streamlit_species_fill", MAP_SPECIES_FILL_DEFAULT),
+        ("streamlit_default_color", MAP_DEFAULT_COLOR_DEFAULT),
+        ("streamlit_default_fill", MAP_DEFAULT_FILL_DEFAULT),
+    ):
+        if k not in st.session_state:
+            st.session_state[k] = default
+        elif st.session_state[k] not in MAP_PIN_COLOUR_ALLOWLIST:
+            st.session_state[k] = default
+
+
+def _settings_state_payload() -> dict[str, Any]:
+    """Current Settings payload in config schema shape."""
+    return {
+        "version": SETTINGS_SCHEMA_VERSION,
+        "map_display": {
+            "popup_sort_order": st.session_state.streamlit_popup_sort_order,
+            "popup_scroll_hint": st.session_state.streamlit_popup_scroll_hint,
+            "mark_lifer": bool(st.session_state.streamlit_mark_lifer),
+            "mark_last_seen": bool(st.session_state.streamlit_mark_last_seen),
+            "default_color": st.session_state.streamlit_default_color,
+            "default_fill": st.session_state.streamlit_default_fill,
+            "species_color": st.session_state.streamlit_species_color,
+            "species_fill": st.session_state.streamlit_species_fill,
+            "lifer_color": st.session_state.streamlit_lifer_color,
+            "lifer_fill": st.session_state.streamlit_lifer_fill,
+            "last_seen_color": st.session_state.streamlit_last_seen_color,
+            "last_seen_fill": st.session_state.streamlit_last_seen_fill,
+        },
+        "tables_lists": {
+            "rankings_top_n": int(st.session_state.streamlit_rankings_top_n),
+            "rankings_visible_rows": int(st.session_state.streamlit_rankings_visible_rows),
+        },
+        "yearly_summary": {
+            "recent_column_count": int(st.session_state.streamlit_yearly_recent_column_count),
+        },
+        "country": {
+            "sort": st.session_state.streamlit_country_tab_sort,
+        },
+        "maintenance": {
+            "close_location_meters": int(st.session_state.streamlit_close_location_meters),
+        },
+        "taxonomy": {
+            "locale": (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE),
+        },
+    }
+
+
+def _apply_settings_payload_to_state(cfg: dict[str, Any]) -> None:
+    """Apply validated config payload to Streamlit session keys."""
+    mp = cfg.get("map_display", {})
+    tl = cfg.get("tables_lists", {})
+    ys = cfg.get("yearly_summary", {})
+    ct = cfg.get("country", {})
+    mn = cfg.get("maintenance", {})
+    tx = cfg.get("taxonomy", {})
+    if isinstance(mp, dict):
+        st.session_state.streamlit_popup_sort_order = mp.get(
+            "popup_sort_order", MAP_POPUP_SORT_ORDER_DEFAULT
+        )
+        st.session_state.streamlit_popup_scroll_hint = mp.get(
+            "popup_scroll_hint", MAP_POPUP_SCROLL_HINT_DEFAULT
+        )
+        st.session_state.streamlit_mark_lifer = bool(mp.get("mark_lifer", MAP_MARK_LIFER_DEFAULT))
+        st.session_state.streamlit_mark_last_seen = bool(
+            mp.get("mark_last_seen", MAP_MARK_LAST_SEEN_DEFAULT)
+        )
+        st.session_state.streamlit_default_color = mp.get("default_color", MAP_DEFAULT_COLOR_DEFAULT)
+        st.session_state.streamlit_default_fill = mp.get("default_fill", MAP_DEFAULT_FILL_DEFAULT)
+        st.session_state.streamlit_species_color = mp.get("species_color", MAP_SPECIES_COLOR_DEFAULT)
+        st.session_state.streamlit_species_fill = mp.get("species_fill", MAP_SPECIES_FILL_DEFAULT)
+        st.session_state.streamlit_lifer_color = mp.get("lifer_color", MAP_LIFER_COLOR_DEFAULT)
+        st.session_state.streamlit_lifer_fill = mp.get("lifer_fill", MAP_LIFER_FILL_DEFAULT)
+        st.session_state.streamlit_last_seen_color = mp.get(
+            "last_seen_color", MAP_LAST_SEEN_COLOR_DEFAULT
+        )
+        st.session_state.streamlit_last_seen_fill = mp.get(
+            "last_seen_fill", MAP_LAST_SEEN_FILL_DEFAULT
+        )
+    if isinstance(tl, dict):
+        st.session_state.streamlit_rankings_top_n = int(
+            tl.get("rankings_top_n", TABLES_RANKINGS_TOP_N_DEFAULT)
+        )
+        st.session_state.streamlit_rankings_visible_rows = int(
+            tl.get("rankings_visible_rows", TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT)
+        )
+    if isinstance(ys, dict):
+        st.session_state.streamlit_yearly_recent_column_count = int(
+            ys.get("recent_column_count", YEARLY_RECENT_COLUMN_COUNT_DEFAULT)
+        )
+    if isinstance(ct, dict):
+        st.session_state.streamlit_country_tab_sort = ct.get("sort", COUNTRY_TAB_SORT_ALPHABETICAL)
+    if isinstance(mn, dict):
+        st.session_state.streamlit_close_location_meters = int(
+            mn.get("close_location_meters", DEFAULT_CLOSE_LOCATION_METERS)
+        )
+    if isinstance(tx, dict):
+        st.session_state.streamlit_taxonomy_locale = str(tx.get("locale", DEFAULT_TAXONOMY_LOCALE))
+
+
+def _settings_defaults_payload() -> dict[str, Any]:
+    """Built-in defaults; used when config module/deps are unavailable."""
+    return build_persisted_settings_defaults_dict()
+
+
+def _load_settings_yaml_via_module(path: str) -> tuple[dict[str, Any], str | None]:
+    try:
+        from personal_ebird_explorer.streamlit_settings_config import load_settings_from_python_config
+    except Exception as e:
+        return _settings_defaults_payload(), f"Settings validation unavailable ({e}); using defaults."
+    return load_settings_from_python_config(path)
+
+
+def _write_settings_yaml_via_module(path: str, payload: dict[str, Any]) -> tuple[bool, str | None]:
+    try:
+        from personal_ebird_explorer.streamlit_settings_config import write_sparse_settings_to_python_config
+    except Exception as e:
+        return False, f"Settings save unavailable ({e}). Install requirements-streamlit.txt."
+    return write_sparse_settings_to_python_config(path, payload)
+
+
+def _settings_config_module_available() -> bool:
+    try:
+        import personal_ebird_explorer.streamlit_settings_config  # noqa: F401
+    except Exception:
+        return False
+    return True
 
 
 def _static_map_cache_key(
@@ -256,13 +491,14 @@ def _static_map_cache_key(
     map_view_mode: str,
     date_filter_banner: str,
     map_style: str,
+    render_opts_sig: tuple = (),
 ) -> tuple:
     """Stable key for All / Lifer map reuse (same CSV + filter + basemap)."""
     n = len(work_df)
     sid0 = ""
     if n > 0 and "Submission ID" in work_df.columns:
         sid0 = str(work_df["Submission ID"].iloc[0])
-    return (map_view_mode, date_filter_banner, map_style, n, sid0)
+    return (map_view_mode, date_filter_banner, map_style, render_opts_sig, n, sid0)
 
 
 def _env_taxonomy_locale() -> str:
@@ -271,6 +507,16 @@ def _env_taxonomy_locale() -> str:
         os.environ.get("STREAMLIT_EBIRD_TAXONOMY_LOCALE", "").strip()
         or os.environ.get("EBIRD_TAXONOMY_LOCALE", "").strip()
     )
+
+
+def _ensure_streamlit_map_basemap_height_keys() -> None:
+    """Seed basemap + map height in session state (keyed widgets; refs #70)."""
+    if "streamlit_map_basemap" not in st.session_state:
+        st.session_state.streamlit_map_basemap = MAP_BASEMAP_DEFAULT
+    elif st.session_state.streamlit_map_basemap not in MAP_BASEMAP_OPTIONS:
+        st.session_state.streamlit_map_basemap = MAP_BASEMAP_DEFAULT
+    if "streamlit_map_height_px" not in st.session_state:
+        st.session_state.streamlit_map_height_px = MAP_HEIGHT_PX_DEFAULT
 
 
 def _sidebar_footer_links() -> None:
@@ -346,8 +592,8 @@ def _species_searchbox_fragment() -> None:
         return whoosh_species_suggestions(
             ix,
             term,
-            max_options=12,
-            min_query_len=3,
+            max_options=SPECIES_SEARCH_MAX_OPTIONS,
+            min_query_len=SPECIES_SEARCH_MIN_QUERY_LEN,
         )
 
     def _on_species_submit(selected: Any) -> None:
@@ -362,13 +608,13 @@ def _species_searchbox_fragment() -> None:
     pick = st_searchbox(
         _search,
         key=_SESSION_SPECIES_SEARCH_KEY,
-        placeholder="Type species name…",
+        placeholder=SPECIES_SEARCH_PLACEHOLDER,
         label="Species",
         default=persisted,
         default_searchterm=persisted or "",
-        debounce=400,
-        edit_after_submit="option",
-        rerun_scope="fragment",
+        debounce=SPECIES_SEARCH_DEBOUNCE_MS,
+        edit_after_submit=SPECIES_SEARCH_EDIT_AFTER_SUBMIT,
+        rerun_scope=SPECIES_SEARCH_RERUN_SCOPE,
         submit_function=_on_species_submit,
         reset_function=_on_species_reset,
     )
@@ -389,7 +635,7 @@ def _load_dataframe(
     *,
     uploaded: Any | None = None,
     upload_cache: tuple[bytes, str] | None = None,
-) -> tuple[pd.DataFrame | None, str | None]:
+) -> tuple[pd.DataFrame | None, str | None, str | None]:
     """
     Return ``(df, provenance_html)`` or ``(None, None)`` if nothing loaded yet.
 
@@ -401,10 +647,10 @@ def _load_dataframe(
         try:
             raw = uploaded.getvalue()
             df = load_dataset(io.BytesIO(raw))
-            return df, f"Upload: **{uploaded.name}**"
+            return df, f"Upload: **{uploaded.name}**", None
         except Exception as e:
             st.error(f"Could not load CSV: {e}")
-            return None, None
+            return None, None, None
 
     env_folder = os.environ.get("STREAMLIT_EBIRD_DATA_FOLDER", "").strip() or None
     secrets_folder = _secrets_data_folder()
@@ -420,7 +666,7 @@ def _load_dataframe(
         path, _folder, src = resolve_ebird_data_file(DEFAULT_EBIRD_FILENAME, folders, sources)
         df = load_dataset(path)
         label = src.replace("_", " ").title()
-        return df, f"Disk: `{path}` (_{label}_)"
+        return df, f"Disk: `{path}` (_{label}_)", src
     except FileNotFoundError:
         pass
 
@@ -428,12 +674,12 @@ def _load_dataframe(
         raw, name = upload_cache
         try:
             df = load_dataset(io.BytesIO(raw))
-            return df, f"Upload: **{name}**"
+            return df, f"Upload: **{name}**", None
         except Exception as e:
             st.error(f"Could not load CSV: {e}")
-            return None, None
+            return None, None, None
 
-    return None, None
+    return None, None, None
 
 
 def main() -> None:
@@ -443,7 +689,6 @@ def main() -> None:
         st.session_state.streamlit_taxonomy_locale = _env_taxonomy_locale() or DEFAULT_TAXONOMY_LOCALE
     if "streamlit_country_tab_sort" not in st.session_state:
         st.session_state.streamlit_country_tab_sort = COUNTRY_TAB_SORT_ALPHABETICAL
-    _init_and_clamp_streamlit_table_settings()
 
     upload_cache = st.session_state.get(_SESSION_UPLOAD_CACHE_KEY)
     if upload_cache is not None and not (
@@ -451,7 +696,7 @@ def main() -> None:
     ):
         upload_cache = None
 
-    df_full, provenance = _load_dataframe(uploaded=None, upload_cache=upload_cache)
+    df_full, provenance, source_label = _load_dataframe(uploaded=None, upload_cache=upload_cache)
 
     if df_full is not None and provenance and "Disk:" in provenance:
         # Drop stale session upload when disk resolution wins (local path after a prior Cloud upload).
@@ -471,7 +716,7 @@ def main() -> None:
                 help="Official eBird full data export (CSV).",
             )
             if uploaded is not None:
-                df_full, provenance = _load_dataframe(uploaded=uploaded, upload_cache=None)
+                df_full, provenance, source_label = _load_dataframe(uploaded=uploaded, upload_cache=None)
                 if df_full is not None:
                     st.session_state[_SESSION_UPLOAD_CACHE_KEY] = (uploaded.getvalue(), uploaded.name)
                     # Landing widgets already ran above in this run; rerun loads from cache and skips this block.
@@ -500,23 +745,35 @@ def main() -> None:
         if df_full is None:
             return
 
+    st.session_state[_SETTINGS_CONFIG_SOURCE_KEY] = source_label or ""
+    settings_yaml_path = settings_yaml_path_for_source(_REPO_ROOT, source_label or "")
+    st.session_state[_SETTINGS_CONFIG_PATH_KEY] = settings_yaml_path or ""
+    if settings_yaml_path and st.session_state.get(_SETTINGS_LOADED_FROM_KEY) != settings_yaml_path:
+        cfg_data, cfg_warn = _load_settings_yaml_via_module(settings_yaml_path)
+        if cfg_warn and not st.session_state.get(_SETTINGS_WARNED_KEY):
+            st.warning(cfg_warn)
+            st.session_state[_SETTINGS_WARNED_KEY] = True
+        _apply_settings_payload_to_state(cfg_data)
+        st.session_state[_SETTINGS_LOADED_FROM_KEY] = settings_yaml_path
+        st.session_state[_SETTINGS_BASELINE_KEY] = _settings_state_payload()
+
+    _init_and_clamp_streamlit_table_settings()
+    if _SETTINGS_BASELINE_KEY not in st.session_state:
+        st.session_state[_SETTINGS_BASELINE_KEY] = _settings_state_payload()
+
     if "popup_html_cache" not in st.session_state:
         st.session_state.popup_html_cache = {}
     if "filtered_by_loc_cache" not in st.session_state:
         st.session_state.filtered_by_loc_cache = OrderedDict()
 
-    _MAP_VIEW_LABEL_TO_MODE = {
-        "All locations": "all",
-        "Selected species": "species",
-        "Lifer locations": "lifers",
-    }
+    _ensure_streamlit_map_basemap_height_keys()
 
     with st.sidebar:
         st.header("Map")
 
         map_view_label = st.selectbox(
             "Map view",
-            ["All locations", "Selected species", "Lifer locations"],
+            list(MAP_VIEW_LABELS),
             key="streamlit_map_view_label",
         )
         map_view_mode = _MAP_VIEW_LABEL_TO_MODE[map_view_label]
@@ -525,17 +782,15 @@ def main() -> None:
         st.markdown("**Date**")
         if is_lifer_view:
             st.caption("Lifer locations is not date-filtered.")
-            if st.session_state.get(_PERSIST_MAP_DATE_FILTER_KEY, False):
-                st.caption(
-                    "Your date filter is preserved for other map views."
-                )
+            if st.session_state.get(_PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT):
+                st.caption("Your date filter is preserved for other map views.")
             date_filter_on_effective = False
             date_range_sel: tuple | None = None
         else:
             # Restore widget keys after Lifer view (those widgets were not rendered, keys may be missing).
             if "streamlit_map_date_filter" not in st.session_state:
                 st.session_state.streamlit_map_date_filter = bool(
-                    st.session_state.get(_PERSIST_MAP_DATE_FILTER_KEY, False)
+                    st.session_state.get(_PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT)
                 )
             if st.session_state.get("streamlit_map_date_filter", False):
                 if "streamlit_map_date_range" not in st.session_state:
@@ -555,8 +810,6 @@ def main() -> None:
                 date_range_sel = None
             else:
                 d_inception, today = date_inception_to_today_default(df_full)
-                # Clamp range into [d_inception, today] via session state only — do not pass
-                # `value=` here or Streamlit warns when the key is also set via session_state.
                 if "streamlit_map_date_range" not in st.session_state:
                     st.session_state.streamlit_map_date_range = (d_inception, today)
                 rng = st.session_state["streamlit_map_date_range"]
@@ -579,7 +832,6 @@ def main() -> None:
                 else:
                     date_range_sel = (d_inception, today)
 
-            # Persist for return from Lifer map (and page reruns).
             st.session_state[_PERSIST_MAP_DATE_FILTER_KEY] = date_filter_on_effective
             if date_filter_on_effective and date_range_sel is not None:
                 st.session_state[_PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
@@ -606,7 +858,6 @@ def main() -> None:
     species_pick_common: str | None = None
     species_pick_sci = ""
 
-    # Re-entering Selected species from another view: drop widget state so default + searchterm apply.
     _prev_mv = st.session_state.get(_SESSION_PREV_MAP_VIEW_KEY)
     if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
         st.session_state.pop(_SESSION_SPECIES_SEARCH_KEY, None)
@@ -622,7 +873,7 @@ def main() -> None:
 
         with st.sidebar:
             st.markdown("**Species**")
-            st.caption("Type at least three letters. Searches common and scientific names.")
+            st.caption(SPECIES_SEARCH_CAPTION)
             _species_searchbox_fragment()
             hide_non_matching_locations = st.toggle(
                 "Show only selected species",
@@ -648,8 +899,8 @@ def main() -> None:
         st.divider()
         map_style = st.selectbox(
             "Basemap",
-            options=["default", "satellite", "google", "carto"],
-            index=0,
+            options=list(MAP_BASEMAP_OPTIONS),
+            key="streamlit_map_basemap",
         )
         st.markdown(
             '<div style="height:0.65rem" aria-hidden="true"></div>',
@@ -657,16 +908,20 @@ def main() -> None:
         )
         map_height = st.slider(
             "Map height (px)",
-            min_value=440,
-            max_value=1200,
-            value=720,
-            step=20,
+            min_value=MAP_HEIGHT_PX_MIN,
+            max_value=MAP_HEIGHT_PX_MAX,
+            step=MAP_HEIGHT_PX_STEP,
+            key="streamlit_map_height_px",
         )
 
     st.session_state[_SESSION_PREV_MAP_VIEW_KEY] = map_view_mode
 
     tax_locale_effective = (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE)
     species_url_fn = _cached_species_url_fn(tax_locale_effective)
+    popup_sort_order = st.session_state.streamlit_popup_sort_order
+    popup_scroll_hint = st.session_state.streamlit_popup_scroll_hint
+    mark_lifer = bool(st.session_state.streamlit_mark_lifer)
+    mark_last_seen = bool(st.session_state.streamlit_mark_last_seen)
 
     _inject_spinner_theme_css()
 
@@ -682,8 +937,7 @@ def main() -> None:
         tab_settings,
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
-    # Hoisted: spinner lives in the main column (not inside a tab panel) so it’s visible on Map, etc.
-    with st.spinner("Doing interesting things with your eBird data  🐣  🐥  🐧  🦆  🦉  🦢  🦅  …"):
+    with st.spinner(CHECKLIST_STATS_SPINNER_MESSAGE):
         checklist_payload = _cached_checklist_stats_payload(work_df)
         maint_full_payload = _cached_checklist_stats_payload(df_full)
         sex_notation_by_year = _cached_sex_notation_by_year(df_full)
@@ -719,8 +973,18 @@ def main() -> None:
                 "selected_species": overlay_sci,
                 "selected_common_name": overlay_common,
                 "map_style": map_style,
-                "popup_sort_order": "ascending",
-                "popup_scroll_hint": "shading",
+                "popup_sort_order": popup_sort_order,
+                "popup_scroll_hint": popup_scroll_hint,
+                "lifer_color": st.session_state.streamlit_lifer_color,
+                "lifer_fill": st.session_state.streamlit_lifer_fill,
+                "last_seen_color": st.session_state.streamlit_last_seen_color,
+                "last_seen_fill": st.session_state.streamlit_last_seen_fill,
+                "species_color": st.session_state.streamlit_species_color,
+                "species_fill": st.session_state.streamlit_species_fill,
+                "default_color": st.session_state.streamlit_default_color,
+                "default_fill": st.session_state.streamlit_default_fill,
+                "mark_lifer": mark_lifer,
+                "mark_last_seen": mark_last_seen,
                 "date_filter_status": date_filter_banner,
                 "species_url_fn": species_url_fn,
                 "base_species_fn": base_species_for_lifer,
@@ -729,7 +993,27 @@ def main() -> None:
                 "map_view_mode": map_view_mode,
                 "hide_non_matching_locations": hide_nm,
             }
-            _ck = _static_map_cache_key(work_df, map_view_mode, date_filter_banner, map_style)
+            _render_opts_sig = (
+                popup_sort_order,
+                popup_scroll_hint,
+                st.session_state.streamlit_lifer_color,
+                st.session_state.streamlit_lifer_fill,
+                st.session_state.streamlit_last_seen_color,
+                st.session_state.streamlit_last_seen_fill,
+                st.session_state.streamlit_species_color,
+                st.session_state.streamlit_species_fill,
+                st.session_state.streamlit_default_color,
+                st.session_state.streamlit_default_fill,
+                mark_lifer,
+                mark_last_seen,
+            )
+            _ck = _static_map_cache_key(
+                work_df,
+                map_view_mode,
+                date_filter_banner,
+                map_style,
+                _render_opts_sig,
+            )
             _use_static_cache = map_view_mode in ("all", "lifers")
             _cached = (
                 st.session_state.get(_FOLIUM_STATIC_MAP_CACHE_KEY) if _use_static_cache else None
@@ -772,7 +1056,6 @@ def main() -> None:
                         "(not the repo root `requirements.txt`)."
                     )
                     st.stop()
-                # returned_objects=[] avoids pan/zoom reruns; key includes height for resize.
                 st_folium(
                     result_map,
                     use_container_width=True,
@@ -826,75 +1109,163 @@ def main() -> None:
         )
 
     with tab_settings:
-        st.subheader("Species links")
-        st.text_input(
-            "Taxonomy locale (species page URLs)",
-            key="streamlit_taxonomy_locale",
-            help="eBird API locale for species names in taxonomy CSV (e.g. en_AU, en_GB). "
-            "Empty is treated as en_AU.",
-        )
-        st.caption(
-            "Used for species links in map popups and elsewhere. First-visit default: "
-            "``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE``, else en_AU."
-        )
-        st.divider()
-        st.subheader("Tables & lists")
-        st.slider(
-            "Top N table limit",
-            min_value=10,
-            max_value=500,
-            value=200,
-            step=1,
-            key="streamlit_rankings_top_n",
-            help="Caps how many rows feed each “Top …” ranking on **Rankings & lists**.",
-        )
-        st.slider(
-            "Rankings visible rows",
-            min_value=10,
-            max_value=50,
-            value=16,
-            step=1,
-            key="streamlit_rankings_visible_rows",
-            help="Scroll area height for rankings tables (row shading) on **Rankings & lists**.",
-        )
-        st.radio(
-            "Country ordering",
-            options=[
-                COUNTRY_TAB_SORT_ALPHABETICAL,
-                COUNTRY_TAB_SORT_LIFERS_WORLD,
-                COUNTRY_TAB_SORT_TOTAL_SPECIES,
-            ],
-            format_func=lambda k: _COUNTRY_SORT_LABELS[k],
-            key="streamlit_country_tab_sort",
-            help="Order of countries on the **Country** tab.",
-        )
-        st.slider(
-            "Yearly tables: recent year columns",
-            min_value=3,
-            max_value=25,
-            value=10,
-            step=1,
-            key="streamlit_yearly_recent_column_count",
-            help=(
-                "When **Yearly Summary** or **Country** has more calendar years than this, the default "
-                "view shows only the most recent N columns. Use **Show full history** to reveal all years "
-                "(horizontal scroll). Larger screens often suit a higher N."
-            ),
-        )
-        st.divider()
-        st.subheader("Maintenance")
-        st.slider(
-            "Close location (m)",
-            min_value=0,
-            max_value=250,
-            value=DEFAULT_CLOSE_LOCATION_METERS,
-            step=1,
-            key="streamlit_close_location_meters",
-            help=(
-                "Locations within this distance (metres), excluding exact duplicate coordinates, "
-                "are listed under **Maintenance → Location Maintenance → Close locations**."
-            ),
-        )
+        st.markdown(_SETTINGS_PANEL_CSS, unsafe_allow_html=True)
+        with st.container(key="ebird_settings_panel"):
+            settings_yaml_path = st.session_state.get(_SETTINGS_CONFIG_PATH_KEY, "") or ""
+            settings_module_ready = _settings_config_module_available()
+            can_save_settings = bool(settings_yaml_path) and settings_module_ready
+            current_payload = _settings_state_payload()
+            baseline_payload = st.session_state.get(_SETTINGS_BASELINE_KEY, current_payload)
+            has_unsaved_changes = current_payload != baseline_payload
+
+            st.caption(
+                "Settings apply immediately in-session. Save writes YAML only when data is loaded from "
+                "`config_secret.py` or `config_template.py`."
+            )
+            b1, b2 = st.columns(2)
+            with b1:
+                if st.button(
+                    "Save settings",
+                    key="streamlit_save_settings_btn",
+                    disabled=not can_save_settings,
+                    use_container_width=True,
+                ):
+                    ok, err = _write_settings_yaml_via_module(
+                        settings_yaml_path, _settings_state_payload()
+                    )
+                    if ok:
+                        st.session_state[_SETTINGS_BASELINE_KEY] = _settings_state_payload()
+                        st.success(f"Saved settings: `{settings_yaml_path}`")
+                    else:
+                        st.error(err or "Failed to save settings.")
+            with b2:
+                if st.button(
+                    "Reset to defaults",
+                    key="streamlit_reset_settings_btn",
+                    use_container_width=True,
+                ):
+                    _apply_settings_payload_to_state(_settings_defaults_payload())
+                    _init_and_clamp_streamlit_table_settings()
+                    st.info("Defaults restored for this session. Click **Save settings** to persist.")
+            if can_save_settings:
+                st.caption(
+                    f"Settings file: `{settings_yaml_path}` (embedded YAML)"
+                    + (" • unsaved changes" if has_unsaved_changes else " • saved")
+                )
+            else:
+                if not settings_module_ready:
+                    st.caption("Settings persistence disabled until optional dependencies are installed.")
+                else:
+                    st.caption("No config-backed data source detected; settings are session-only.")
+
+            st.divider()
+            st.subheader("Map display")
+            st.selectbox(
+                "Popup sort order",
+                options=["ascending", "descending"],
+                key="streamlit_popup_sort_order",
+                help="Order checklist visits in map popups.",
+            )
+            st.selectbox(
+                "Popup scroll hint",
+                options=["shading", "chevron", "both"],
+                key="streamlit_popup_scroll_hint",
+                help="Visual hint style for popup overflow.",
+            )
+            st.toggle(
+                "Mark lifer",
+                key="streamlit_mark_lifer",
+                help="Show marker for first-ever sighting when viewing a selected species.",
+            )
+            st.toggle(
+                "Mark last-seen",
+                key="streamlit_mark_last_seen",
+                help="Show marker for most recent sighting when viewing a selected species.",
+            )
+            st.caption("Pin colors")
+            c1, c2 = st.columns(2)
+            with c1:
+                st.selectbox("Default edge", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_default_color")
+                st.selectbox("Species edge", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_species_color")
+                st.selectbox("Lifer edge", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_lifer_color")
+                st.selectbox("Last-seen edge", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_last_seen_color")
+            with c2:
+                st.selectbox("Default fill", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_default_fill")
+                st.selectbox("Species fill", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_species_fill")
+                st.selectbox("Lifer fill", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_lifer_fill")
+                st.selectbox("Last-seen fill", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_last_seen_fill")
+
+            st.divider()
+            st.subheader("Tables & lists")
+            st.slider(
+                "Top N table limit",
+                min_value=TABLES_RANKINGS_TOP_N_MIN,
+                max_value=TABLES_RANKINGS_TOP_N_MAX,
+                step=1,
+                key="streamlit_rankings_top_n",
+                help="Caps how many rows feed each “Top …” ranking on **Rankings & lists**.",
+            )
+            st.slider(
+                "Rankings visible rows",
+                min_value=TABLES_RANKINGS_VISIBLE_ROWS_MIN,
+                max_value=TABLES_RANKINGS_VISIBLE_ROWS_MAX,
+                step=1,
+                key="streamlit_rankings_visible_rows",
+                help="Scroll area height for rankings tables (row shading) on **Rankings & lists**.",
+            )
+            st.radio(
+                "Country ordering",
+                options=[
+                    COUNTRY_TAB_SORT_ALPHABETICAL,
+                    COUNTRY_TAB_SORT_LIFERS_WORLD,
+                    COUNTRY_TAB_SORT_TOTAL_SPECIES,
+                ],
+                format_func=lambda k: _COUNTRY_SORT_LABELS[k],
+                key="streamlit_country_tab_sort",
+                help="Order of countries on the **Country** tab.",
+            )
+            st.slider(
+                "Yearly tables: recent year columns",
+                min_value=YEARLY_RECENT_COLUMN_COUNT_MIN,
+                max_value=YEARLY_RECENT_COLUMN_COUNT_MAX,
+                step=1,
+                key="streamlit_yearly_recent_column_count",
+                help=(
+                    "When **Yearly Summary** or **Country** has more calendar years than this, the default "
+                    "view shows only the most recent N columns. Use **Show full history** to reveal all years "
+                    "(horizontal scroll). Larger screens often suit a higher N."
+                ),
+            )
+            st.divider()
+            st.subheader("Maintenance")
+            st.slider(
+                "Close location (m)",
+                min_value=MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
+                max_value=MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
+                step=1,
+                key="streamlit_close_location_meters",
+                help=(
+                    "Locations within this distance (metres), excluding exact duplicate coordinates, "
+                    "are listed under **Maintenance → Location Maintenance → Close locations**."
+                ),
+            )
+            st.divider()
+            st.subheader("Data & path")
+            st.caption("Read-only runtime source details for this session.")
+            st.markdown(f"**Loaded source:** {provenance or '—'}")
+            st.code(f"Default file name: {DEFAULT_EBIRD_FILENAME}")
+            st.divider()
+            st.subheader("Taxonomy")
+            st.text_input(
+                "Taxonomy locale (species page URLs)",
+                key="streamlit_taxonomy_locale",
+                help="eBird API locale for species names in taxonomy CSV (e.g. en_AU, en_GB). "
+                "Empty is treated as en_AU.",
+            )
+            st.caption(
+                "Used for species links in map popups and elsewhere. First-visit default: "
+                "``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE``, else en_AU."
+            )
 
     if st.session_state.get("_explorer_map_html_bytes"):
         with st.sidebar:
@@ -902,7 +1273,7 @@ def main() -> None:
             st.download_button(
                 "Export map HTML",
                 data=st.session_state["_explorer_map_html_bytes"],
-                file_name="ebird_map.html",
+                file_name=MAP_EXPORT_HTML_FILENAME,
                 mime="text/html",
                 key="export_map_html_btn",
                 help="Standalone HTML for the current map (notebook-style export).",

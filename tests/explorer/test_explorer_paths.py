@@ -101,3 +101,19 @@ def test_resolve_raises_file_not_found():
     with pytest.raises(FileNotFoundError) as exc:
         resolve_ebird_data_file("nope.csv", ["/nonexistent"], ["x"])
     assert "nope.csv" in str(exc.value)
+
+
+def test_settings_yaml_path_for_source(tmp_path):
+    from personal_ebird_explorer.explorer_paths import settings_yaml_path_for_source
+
+    repo = tmp_path / "repo"
+    scripts = repo / "scripts"
+    scripts.mkdir(parents=True)
+
+    p1 = settings_yaml_path_for_source(str(repo), "config_secret")
+    p2 = settings_yaml_path_for_source(str(repo), "config_template")
+    p3 = settings_yaml_path_for_source(str(repo), "hardcoded")
+
+    assert p1 and p1.endswith("scripts/config_secret.py")
+    assert p2 and p2.endswith("scripts/config_template.py")
+    assert p3 is None

@@ -109,3 +109,14 @@ def resolve_ebird_data_file(
             source = path_sources[i] if i < len(path_sources) else source
             break
     return file_path, data_folder, source
+
+
+def settings_yaml_path_for_source(repo_root: str, source_label: str) -> Optional[str]:
+    """Primary settings store path for a resolved config source (or ``None``)."""
+    scripts_dir = os.path.join(repo_root, "scripts")
+    src = (source_label or "").strip().lower()
+    if src == "config_secret":
+        return os.path.join(scripts_dir, "config_secret.py")
+    if src == "config_template":
+        return os.path.join(scripts_dir, "config_template.py")
+    return None

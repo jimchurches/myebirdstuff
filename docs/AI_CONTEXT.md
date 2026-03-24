@@ -58,6 +58,7 @@ For work in **`streamlit_app/`** and any future Streamlit-first UI ([issue #70](
 - **Keep eBird deep links** — Do **not** drop URLs from a ported view just to stay on a plain dataframe. Prefer shared HTML for rich tables; use **`LinkColumn`** or **layout + `st.markdown` links** only where that still matches UX.
 - **Ad-hoc HTML/CSS** — One-off `unsafe_allow_html` blobs **not** produced by a shared formatter are still a **conscious exception** (fragility, theming). Prefer routing table HTML through **`personal_ebird_explorer/`** helpers so notebook and Streamlit stay aligned.
 - **When suggesting implementations**, note briefly if **`st.dataframe` would suffice** vs formatter HTML, so the choice stays explicit.
+- **Defaults live in one module** — Put new or changed **user-visible defaults** (limits, colours, labels, session seeds, export filenames, etc.) in **`streamlit_app/defaults.py`**, then wire them into **`app.py`** and, if the value is **persisted in settings YAML**, into **`personal_ebird_explorer/streamlit_settings_config.py`** (reuse the same constants for `Field(...)` defaults and allowlists). Streamlit-only HTML helpers (e.g. rankings layout) should import from **`defaults.py`** instead of inlining magic numbers. Extend **`tests/explorer/test_streamlit_defaults.py`** when the persisted schema or default payload changes so the builder and model stay aligned.
 
 ### Prefer readability over cleverness
 

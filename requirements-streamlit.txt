@@ -19,3 +19,5 @@ pycountry>=23.12.11
 # Species autocomplete (Python >= 3.10); refs #70
 whoosh
 streamlit-searchbox>=0.1.24
+pydantic>=2,<3
+PyYAML>=6,<7
