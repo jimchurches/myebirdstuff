@@ -1,125 +1,53 @@
 """
 Developer reference: default values for the Streamlit explorer (refs #70).
 
-Single place to discover literals that would otherwise be scattered across ``app.py``,
-settings models, and HTML helpers. Persisted settings (embedded YAML) are built with
-:func:`build_persisted_settings_defaults_dict`; UI-only defaults are module-level constants.
+Embedded settings schema and map geometry live under ``personal_ebird_explorer`` so the
+core package does not depend on this module (refs #89). This file re-exports those
+symbols for the Streamlit app and keeps UI-only literals here.
 """
 
 from __future__ import annotations
 
-from typing import Any
-
-from personal_ebird_explorer.checklist_stats_display import COUNTRY_TAB_SORT_ALPHABETICAL
-
-# ---------------------------------------------------------------------------
-# Embedded settings schema (``personal_ebird_explorer.streamlit_settings_config``)
-# ---------------------------------------------------------------------------
-
-SETTINGS_SCHEMA_VERSION = 1
-
-MAP_POPUP_SORT_ORDER_DEFAULT = "ascending"
-MAP_POPUP_SCROLL_HINT_DEFAULT = "shading"
-MAP_MARK_LIFER_DEFAULT = True
-MAP_MARK_LAST_SEEN_DEFAULT = True
-MAP_DEFAULT_COLOR_DEFAULT = "green"
-MAP_DEFAULT_FILL_DEFAULT = "lightgray"
-MAP_SPECIES_COLOR_DEFAULT = "purple"
-MAP_SPECIES_FILL_DEFAULT = "red"
-MAP_LIFER_COLOR_DEFAULT = "purple"
-MAP_LIFER_FILL_DEFAULT = "yellow"
-MAP_LAST_SEEN_COLOR_DEFAULT = "purple"
-MAP_LAST_SEEN_FILL_DEFAULT = "lightgreen"
-
-TABLES_RANKINGS_TOP_N_DEFAULT = 200
-TABLES_RANKINGS_TOP_N_MIN = 10
-TABLES_RANKINGS_TOP_N_MAX = 500
-
-TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT = 16
-TABLES_RANKINGS_VISIBLE_ROWS_MIN = 10
-TABLES_RANKINGS_VISIBLE_ROWS_MAX = 50
-
-YEARLY_RECENT_COLUMN_COUNT_DEFAULT = 10
-YEARLY_RECENT_COLUMN_COUNT_MIN = 3
-YEARLY_RECENT_COLUMN_COUNT_MAX = 25
-
-MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT = 10
-MAINTENANCE_CLOSE_LOCATION_METERS_MIN = 0
-MAINTENANCE_CLOSE_LOCATION_METERS_MAX = 250
-
-TAXONOMY_LOCALE_DEFAULT = "en_AU"
-
-# Allowed pin / selectbox colours (settings + session clamping).
-MAP_PIN_COLOUR_ALLOWLIST: tuple[str, ...] = (
-    "white",
-    "black",
-    "red",
-    "lime",
-    "blue",
-    "yellow",
-    "cyan",
-    "magenta",
-    "orange",
-    "purple",
-    "pink",
-    "lightgreen",
-    "lightblue",
-    "gray",
-    "lightgray",
-    "darkgray",
-    "coral",
-    "gold",
-    "green",
+# Re-export schema + map UI constants (single source in ``personal_ebird_explorer``).
+from personal_ebird_explorer.map_ui_constants import (  # noqa: F401
+    MAP_CIRCLE_MARKER_RADIUS_PX,
+    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+    MAP_LEGEND_PIN_BORDER_PX,
+    MAP_LEGEND_PIN_DOT_PX,
+    MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+    MAP_PIN_FILL_OPACITY_EMPHASIS,
+    MAP_POPUP_MAX_WIDTH_PX,
 )
-
-# Folium ``CircleMarker`` geometry (``map_controller``). ``weight`` matches Leaflet/Folium default when
-# previously omitted (explicit for discovery).
-MAP_CIRCLE_MARKER_RADIUS_PX = 4
-MAP_CIRCLE_MARKER_STROKE_WEIGHT = 3
-MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 0.6
-MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
-MAP_POPUP_MAX_WIDTH_PX = 800
-
-# Legend sample dots (``map_renderer.pin_legend_item`` HTML).
-MAP_LEGEND_PIN_DOT_PX = 8
-MAP_LEGEND_PIN_BORDER_PX = 2
-
-
-def build_persisted_settings_defaults_dict() -> dict[str, Any]:
-    """Full default payload matching :class:`StreamlitSettingsConfig` (embedded YAML)."""
-    return {
-        "version": SETTINGS_SCHEMA_VERSION,
-        "map_display": {
-            "popup_sort_order": MAP_POPUP_SORT_ORDER_DEFAULT,
-            "popup_scroll_hint": MAP_POPUP_SCROLL_HINT_DEFAULT,
-            "mark_lifer": MAP_MARK_LIFER_DEFAULT,
-            "mark_last_seen": MAP_MARK_LAST_SEEN_DEFAULT,
-            "default_color": MAP_DEFAULT_COLOR_DEFAULT,
-            "default_fill": MAP_DEFAULT_FILL_DEFAULT,
-            "species_color": MAP_SPECIES_COLOR_DEFAULT,
-            "species_fill": MAP_SPECIES_FILL_DEFAULT,
-            "lifer_color": MAP_LIFER_COLOR_DEFAULT,
-            "lifer_fill": MAP_LIFER_FILL_DEFAULT,
-            "last_seen_color": MAP_LAST_SEEN_COLOR_DEFAULT,
-            "last_seen_fill": MAP_LAST_SEEN_FILL_DEFAULT,
-        },
-        "tables_lists": {
-            "rankings_top_n": TABLES_RANKINGS_TOP_N_DEFAULT,
-            "rankings_visible_rows": TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
-        },
-        "yearly_summary": {
-            "recent_column_count": YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
-        },
-        "country": {
-            "sort": COUNTRY_TAB_SORT_ALPHABETICAL,
-        },
-        "maintenance": {
-            "close_location_meters": MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
-        },
-        "taxonomy": {
-            "locale": TAXONOMY_LOCALE_DEFAULT,
-        },
-    }
+from personal_ebird_explorer.settings_schema_defaults import (  # noqa: F401
+    MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
+    MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
+    MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
+    MAP_DEFAULT_COLOR_DEFAULT,
+    MAP_DEFAULT_FILL_DEFAULT,
+    MAP_LAST_SEEN_COLOR_DEFAULT,
+    MAP_LAST_SEEN_FILL_DEFAULT,
+    MAP_LIFER_COLOR_DEFAULT,
+    MAP_LIFER_FILL_DEFAULT,
+    MAP_MARK_LAST_SEEN_DEFAULT,
+    MAP_MARK_LIFER_DEFAULT,
+    MAP_PIN_COLOUR_ALLOWLIST,
+    MAP_POPUP_SCROLL_HINT_DEFAULT,
+    MAP_POPUP_SORT_ORDER_DEFAULT,
+    MAP_SPECIES_COLOR_DEFAULT,
+    MAP_SPECIES_FILL_DEFAULT,
+    SETTINGS_SCHEMA_VERSION,
+    TABLES_RANKINGS_TOP_N_DEFAULT,
+    TABLES_RANKINGS_TOP_N_MAX,
+    TABLES_RANKINGS_TOP_N_MIN,
+    TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
+    TABLES_RANKINGS_VISIBLE_ROWS_MAX,
+    TABLES_RANKINGS_VISIBLE_ROWS_MIN,
+    TAXONOMY_LOCALE_DEFAULT,
+    YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
+    YEARLY_RECENT_COLUMN_COUNT_MAX,
+    YEARLY_RECENT_COLUMN_COUNT_MIN,
+    build_persisted_settings_defaults_dict,
+)
 
 
 # ---------------------------------------------------------------------------

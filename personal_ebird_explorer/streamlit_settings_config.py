@@ -11,8 +11,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from personal_ebird_explorer.checklist_stats_display import COUNTRY_TAB_SORT_ALPHABETICAL
-
-from streamlit_app.defaults import (
+from personal_ebird_explorer.settings_schema_defaults import (
     MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,

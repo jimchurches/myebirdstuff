@@ -33,7 +33,7 @@ from personal_ebird_explorer.map_renderer import (
     popup_scroll_script,
     resolve_lifer_last_seen,
 )
-from streamlit_app.defaults import (
+from personal_ebird_explorer.map_ui_constants import (
     MAP_CIRCLE_MARKER_RADIUS_PX,
     MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
