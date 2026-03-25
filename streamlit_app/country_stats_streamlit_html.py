@@ -72,12 +72,6 @@ def render_country_stats_streamlit_html(
         st.info("No per-country statistics for this dataset.")
         return
 
-    # Prefer new key; fall back if user had a session from the old Yearly tab widget.
-    if (
-        st.session_state.get("streamlit_country_tab_country") is None
-        and st.session_state.get("streamlit_yearly_country") is not None
-    ):
-        st.session_state.streamlit_country_tab_country = st.session_state.streamlit_yearly_country
     cur = st.session_state.get("streamlit_country_tab_country")
     if cur not in keys:
         st.session_state.streamlit_country_tab_country = keys[0]

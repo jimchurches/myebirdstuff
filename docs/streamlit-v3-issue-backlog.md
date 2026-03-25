@@ -84,26 +84,9 @@ Move shared UI/geometry constants into a **neutral module** under `personal_ebir
 
 ---
 
-## 4. [Enhancement] Remove legacy session-state bridge (`streamlit_yearly_country` → `streamlit_country_tab_country`)
+## 4. ~~[Enhancement] Remove legacy session-state bridge~~ (done, #93)
 
-**Type:** Enhancement (cleanup)  
-**Optional:** Yes — only if you are comfortable dropping old browser sessions
-
-**Problem**
-
-`country_stats_streamlit_html.py` copies `streamlit_yearly_country` into `streamlit_country_tab_country` for older sessions.
-
-**Goal**
-
-After v3.0.0 with **no backward compatibility**, remove the fallback block and any docs referencing the old key.
-
-**Acceptance**
-
-- Grep finds no `streamlit_yearly_country` in codebase.
-
-**Depends on**
-
-- Release policy: ship only when you’re OK invalidating long-lived Streamlit sessions.
+Previously, `country_stats_streamlit_html.py` copied the old Yearly-tab key into `streamlit_country_tab_country`. That bridge is removed; Country uses `streamlit_country_tab_country` only.
 
 ---
 

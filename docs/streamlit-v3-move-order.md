@@ -45,7 +45,7 @@ explorer/
 
 ### Phase 3 — deprecations and deletion
 
-8. Remove legacy session-state bridges (`streamlit_yearly_country` fallback).
+8. ~~Remove legacy session-state bridges~~ (done: #93).
 9. Delete notebook-specific references/docs and retire `notebooks/`.
 10. Remove compatibility shims and old module paths when grep confirms no references.
 
