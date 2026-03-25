@@ -179,7 +179,7 @@ test coverage indirectly via existing `tests/explorer/test_streamlit_settings_co
 
 ---
 
-## 11. [Enhancement] Add automated coverage for Streamlit UI modules (smoke / integration)
+## 11. ~~[Enhancement] Add automated coverage for Streamlit UI modules (smoke / integration)~~ (done, #101)
 
 **Type:** Enhancement  
 **Optional:** Yes
@@ -197,6 +197,8 @@ Core explorer modules are tested; **`app.py` and tab `*_streamlit_html.py` files
 **Acceptance**
 
 - At least one new test file or expanded tests targeting extracted helpers; CI documented.
+
+Added `tests/explorer/test_streamlit_ui_helpers.py` which runs UI helper logic (payload sync + key clamping) using a minimal `streamlit` stub, so tests work even when `requirements-streamlit.txt` is not installed.
 
 ---
 
