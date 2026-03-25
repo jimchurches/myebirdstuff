@@ -1209,10 +1209,7 @@ def main() -> None:
 
     with tab_checklist:
         if checklist_payload is not None:
-            render_checklist_stats_streamlit_html(
-                checklist_payload,
-                species_url_fn=species_url_fn,
-            )
+            render_checklist_stats_streamlit_html(checklist_payload)
         else:
             st.warning("No checklist data to show.")
 

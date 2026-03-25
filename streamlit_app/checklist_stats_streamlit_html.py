@@ -10,8 +10,6 @@ Refs #70.
 
 from __future__ import annotations
 
-from typing import Callable, Optional
-
 import streamlit as st
 
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
@@ -33,12 +31,8 @@ _CHECKLIST_HTML_TAB_SURFACE_CSS = (
 
 def render_checklist_stats_streamlit_html(
     payload: ChecklistStatsPayload,
-    *,
-    species_url_fn: Callable[[str], Optional[str]],
 ) -> None:
     """Render checklist stats as nested Streamlit tabs (section order fixed in ``checklist_stats_display``)."""
-
-    _ = species_url_fn  # Reserved for future species links in this tab; rankings HTML not shown here.
 
     sections = checklist_stats_streamlit_tab_sections_html(payload)
     labels = [label for label, _ in sections]
