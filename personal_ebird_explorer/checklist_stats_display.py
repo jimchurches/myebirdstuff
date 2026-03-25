@@ -146,10 +146,16 @@ def _country_section_sort_key_metric(
     return (tier, -m, _country_heading_sort_key(ck))
 
 
-def _sort_country_sections(
+def sort_country_sections_for_display(
     country_sections: List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]],
     country_sort: str,
 ) -> List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]]:
+    """Order country sections for Country tab / HTML (refs #91).
+
+    *country_sort*: ``alphabetical`` | ``lifers_world`` | ``total_species`` — same keys as
+    :data:`COUNTRY_TAB_SORT_*` in :mod:`personal_ebird_explorer.checklist_stats_display`.
+    Unknown region (``_UNKNOWN``) is sorted last when using alphabetical display order.
+    """
     if country_sort == COUNTRY_TAB_SORT_LIFERS_WORLD:
         return sorted(
             country_sections,
@@ -184,7 +190,7 @@ def _format_country_summary_html(
     .yearly-maint-section > summary { font-weight:600; padding:6px 0; color:#374151; cursor:pointer; }
 """
     blocks = []
-    sorted_sections = _sort_country_sections(country_sections, country_sort)
+    sorted_sections = sort_country_sections_for_display(country_sections, country_sort)
     for country_key, years_list, rows in sorted_sections:
         if not years_list or not rows:
             continue

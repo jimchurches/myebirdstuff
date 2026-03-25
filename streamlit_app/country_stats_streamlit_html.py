@@ -16,7 +16,7 @@ from personal_ebird_explorer.checklist_stats_display import (
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS,
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE,
     CHECKLIST_STATS_TABLE_CSS,
-    _sort_country_sections,
+    sort_country_sections_for_display,
     country_display_name_plain,
     country_yearly_links_bar_html,
     format_country_yearly_table_html,
@@ -65,7 +65,7 @@ def render_country_stats_streamlit_html(
         st.info("No country data to show. Add **Country** or **State/Province** to your eBird export.")
         return
 
-    sorted_sections = _sort_country_sections(payload.country_sections, country_sort)
+    sorted_sections = sort_country_sections_for_display(payload.country_sections, country_sort)
     valid = [(ck, ys, rs) for ck, ys, rs in sorted_sections if ys and rs]
     keys = [ck for ck, _, _ in valid]
     if not keys:
