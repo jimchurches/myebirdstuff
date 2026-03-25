@@ -314,8 +314,8 @@ CHECKLIST_STATS_TABLE_CSS = """
 # Scoped under ``.streamlit-checklist-html-ab`` so Jupyter ``stats_html`` / notebook layout stay unchanged.
 #
 # **Default:** green accents + zebra (``#1f6f54`` — aligns with ``.streamlit/config.toml`` primary).
-# **Alternate:** ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE`` (eBird-style blue); enable via
-# ``_USE_EBIRD_BLUE_HTML_TAB_THEME`` in ``checklist_stats_streamlit_html.py``.
+# **Alternate:** ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE`` (eBird-style blue); Streamlit enables
+# it via ``USE_EBIRD_BLUE_HTML_TAB_THEME`` in ``streamlit_app/streamlit_theme.py`` (refs #95).
 #
 # Typography aligned with Streamlit nested ``st.tabs`` labels (~13px / normal weight in default theme).
 def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:

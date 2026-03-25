@@ -110,23 +110,9 @@ Previously, `country_stats_streamlit_html.py` copied the old Yearly-tab key into
 
 ---
 
-## 6. [Enhancement] Single source for HTML table theme (green vs blue) across Streamlit tab modules
+## 6. ~~[Enhancement] Single source for HTML table theme (green vs blue)~~ (done, #95)
 
-**Type:** Enhancement  
-**Optional:** Yes
-
-**Problem**
-
-`_USE_EBIRD_BLUE_HTML_TAB_THEME` is duplicated in `checklist_stats_streamlit_html`, `yearly_summary_streamlit_html`, `country_stats_streamlit_html`, `maintenance_streamlit_html`.
-
-**Goal**
-
-- One constant or small helper (e.g. in `defaults.py` or `streamlit_theme.py`) that selects the correct `CHECKLIST_STATS_*_CSS` bundle.
-- All tab modules read from that.
-
-**Acceptance**
-
-- One place to flip global table theme.
+`streamlit_app/streamlit_theme.py`: `USE_EBIRD_BLUE_HTML_TAB_THEME` + `CHECKLIST_STATS_HTML_TAB_SURFACE_CSS`. Tab-specific CSS still layers on top (e.g. Country links, Rankings width).
 
 ---
 

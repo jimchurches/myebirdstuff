@@ -12,11 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_display import (
-    CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS,
-    CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE,
-    CHECKLIST_STATS_TABLE_CSS,
-)
+from personal_ebird_explorer.checklist_stats_display import CHECKLIST_STATS_TABLE_CSS
 from personal_ebird_explorer.maintenance_display import (
     incomplete_checklists_intro_html,
     incomplete_checklists_year_table_html,
@@ -26,15 +22,7 @@ from personal_ebird_explorer.maintenance_display import (
     sex_notation_intro_html,
     sex_notation_year_table_html,
 )
-
-# Keep in sync with ``checklist_stats_streamlit_html`` / ``country_stats_streamlit_html``.
-_USE_EBIRD_BLUE_HTML_TAB_THEME = False
-
-_MAINT_TAB_SURFACE_CSS = (
-    CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE
-    if _USE_EBIRD_BLUE_HTML_TAB_THEME
-    else CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS
-)
+from streamlit_app.streamlit_theme import CHECKLIST_STATS_HTML_TAB_SURFACE_CSS
 
 # Same wrapper class as Checklist Statistics + Country HTML tabs (typography, tables, links).
 _WRAPPER_OPEN = '<div class="streamlit-checklist-html-ab">'
@@ -57,7 +45,7 @@ def render_maintenance_streamlit_tab(
     _md(
         "<style>"
         f"{CHECKLIST_STATS_TABLE_CSS}"
-        f"{_MAINT_TAB_SURFACE_CSS}"
+        f"{CHECKLIST_STATS_HTML_TAB_SURFACE_CSS}"
         "</style>"
     )
 
