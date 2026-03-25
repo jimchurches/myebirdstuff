@@ -64,14 +64,14 @@ Move shared UI/geometry constants into a **neutral module** under `personal_ebir
 
 ---
 
-## 3. [Enhancement] Stabilise Country tab dependency on private `checklist_stats_display` helpers
+## 3. ~~[Enhancement] Stabilise Country tab dependency on private `checklist_stats_display` helpers~~ (done)
 
 **Type:** Enhancement  
 **Optional:** No (small, safe refactor)
 
 **Problem**
 
-`country_stats_streamlit_html.py` imports **`_sort_country_sections`** (private) from `checklist_stats_display`. Refactors to “private” helpers can break Country without a clear contract.
+`country_stats_streamlit_html.py` previously imported **`_sort_country_sections`** (private) from `checklist_stats_display`. Refactors to “private” helpers can break Country without a clear contract.
 
 **Goal**
 
@@ -81,6 +81,10 @@ Move shared UI/geometry constants into a **neutral module** under `personal_ebir
 **Acceptance**
 
 - No imports of underscore-prefixed names from `checklist_stats_display` in Streamlit modules (unless explicitly documented).
+
+**Resolution**
+
+`country_stats_streamlit_html.py` uses **`sort_country_sections_for_display`** from `checklist_stats_display` only.
 
 ---
 

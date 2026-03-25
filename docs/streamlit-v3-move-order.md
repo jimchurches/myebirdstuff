@@ -30,7 +30,7 @@ explorer/
 
 1. Decouple `personal_ebird_explorer` from `streamlit_app.defaults`.
 2. Standardize Streamlit imports (`streamlit_app.<module>` consistently).
-3. Replace private helper dependency in Country tab (`_sort_country_sections`).
+3. ~~Replace private helper dependency in Country tab (`_sort_country_sections`).~~ (done: public `sort_country_sections_for_display` API)
 4. Remove dead Checklist Statistics `species_url_fn` wiring.
 
 ### Phase 2 — package move with compatibility shims
@@ -51,7 +51,7 @@ explorer/
 
 ## Checklist per move PR
 
-- [ ] `pytest tests/explorer -q` (or updated equivalent) passes
+- [ ] `pytest tests/explorer -q` (or updated equivalent) passes — repo root is on `PYTHONPATH` via `pytest.ini` (`pythonpath = .`) and import mode is `importlib`, so the top-level `explorer` package is not confused with `tests/explorer/`.
 - [ ] Streamlit-focused tests run in CI
 - [ ] `streamlit run ...` smoke run works locally
 - [ ] docs updated for any path/command changes
