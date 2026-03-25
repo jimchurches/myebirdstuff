@@ -23,7 +23,7 @@ from personal_ebird_explorer.checklist_stats_display import (
     slice_yearly_table_rows,
     yearly_streamlit_year_window_slice,
 )
-from yearly_summary_streamlit_html import get_yearly_recent_column_count
+from streamlit_app.yearly_summary_streamlit_html import get_yearly_recent_column_count
 
 # Match ``checklist_stats_streamlit_html`` default (green); flip there if you theme the whole app blue.
 _USE_EBIRD_BLUE_HTML_TAB_THEME = False

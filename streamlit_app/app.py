@@ -68,13 +68,11 @@ from typing import Any, Callable
 import pandas as pd
 import streamlit as st
 
-# Repo root (parent of streamlit_app/)
+# Repo root on sys.path so ``import streamlit_app...`` works (refs #90).
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.normpath(os.path.join(_APP_DIR, ".."))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
-if _APP_DIR not in sys.path:
-    sys.path.insert(0, _APP_DIR)
 
 from personal_ebird_explorer.checklist_stats_compute import (  # noqa: E402
     ChecklistStatsPayload,
@@ -96,23 +94,23 @@ from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
     data_signature_for_caches,
     prepare_all_locations_map_context,
 )
-from checklist_stats_streamlit_html import render_checklist_stats_streamlit_html  # noqa: E402
-from rankings_streamlit_html import render_rankings_streamlit_tab  # noqa: E402
+from streamlit_app.checklist_stats_streamlit_html import render_checklist_stats_streamlit_html  # noqa: E402
+from streamlit_app.rankings_streamlit_html import render_rankings_streamlit_tab  # noqa: E402
 from personal_ebird_explorer.checklist_stats_display import (  # noqa: E402
     COUNTRY_TAB_SORT_ALPHABETICAL,
     COUNTRY_TAB_SORT_LIFERS_WORLD,
     COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
-from country_stats_streamlit_html import (  # noqa: E402
+from streamlit_app.country_stats_streamlit_html import (  # noqa: E402
     run_country_tab_streamlit_fragment,
     sync_country_tab_session_inputs,
 )
-from maintenance_streamlit_html import render_maintenance_streamlit_tab  # noqa: E402
-from yearly_summary_streamlit_html import (  # noqa: E402
+from streamlit_app.maintenance_streamlit_html import render_maintenance_streamlit_tab  # noqa: E402
+from streamlit_app.yearly_summary_streamlit_html import (  # noqa: E402
     run_yearly_summary_streamlit_fragment,
     sync_yearly_summary_session_inputs,
 )
-from map_working import (  # noqa: E402
+from streamlit_app.map_working import (  # noqa: E402
     date_inception_to_today_default,
     folium_map_to_html_bytes,
     streamlit_working_set_and_status,

@@ -20,7 +20,7 @@ Early **Personal eBird Explorer** UI on Streamlit. The Jupyter notebook remains 
 
 ## Run locally
 
-From the **repository root** (after activating a Streamlit-only venv — see below):
+From the **repository root** (after activating a Streamlit-only venv — see below). The app uses package imports (`streamlit_app.*`); running from the repo root keeps those resolvable.
 
 ```bash
 pip install -r requirements-streamlit.txt
