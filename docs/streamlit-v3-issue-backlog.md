@@ -122,27 +122,14 @@ Previously, `country_stats_streamlit_html.py` copied the old Yearly-tab key into
 
 ---
 
-## 8. [Enhancement] Split `streamlit_app/app.py` into focused modules
+## 8. ~~[Enhancement] Split `streamlit_app/app.py` into focused modules~~ (done, #98)
 
-**Type:** Enhancement  
-**Optional:** Yes (large refactor; plan milestone)
-
-**Problem**
-
-`app.py` is ~1.4k lines: settings, data load, map, caches, fragments, CSS.
-
-**Goal**
-
-- Extract coherent units, e.g. `settings_state.py`, `data_loading.py`, `map_tab.py`, or mirror tab boundaries.
-- Keep `app.py` as thin orchestration + `main()`.
-
-**Acceptance**
-
-- New modules have clear names; no circular imports; tests pass.
-
-**Depends on**
-
-- **§2** (import hygiene) reduces pain when moving files.
+- `app_constants.py` — repo path, session keys, settings/spinner CSS  
+- `app_settings_state.py` — YAML load/save, payload, clamping, settings HTML  
+- `app_data_loading.py` — `load_dataframe`  
+- `app_caches.py` — cached checklist / taxonomy / sex-notation / static map key  
+- `app_map_ui.py` — spinner CSS, basemap/height seeds, sidebar footer, species search fragment  
+- `app.py` — `main()` orchestration + `sys.path` bootstrap
 
 ---
 
