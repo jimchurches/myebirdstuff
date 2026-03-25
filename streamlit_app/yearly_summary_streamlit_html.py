@@ -2,7 +2,7 @@
 **Yearly Summary** (Streamlit): nested **All** / **Travelling** / **Stationary** tabs (refs #85).
 
 HTML from :func:`build_yearly_summary_streamlit_tab_html_dict`; styles match Checklist Statistics
-(``CHECKLIST_STATS_TABLE_CSS`` + :data:`~streamlit_app.streamlit_theme.CHECKLIST_STATS_HTML_TAB_SURFACE_CSS` under ``.streamlit-checklist-html-ab``).
+(:func:`~streamlit_app.streamlit_theme.inject_streamlit_checklist_css` under ``.streamlit-checklist-html-ab``).
 
 When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**
 (3–25, default 10), a **Show full history** ``st.toggle`` below the nested tabs switches between the
@@ -25,11 +25,10 @@ import streamlit as st
 
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
 from personal_ebird_explorer.checklist_stats_display import (
-    CHECKLIST_STATS_TABLE_CSS,
     build_yearly_summary_streamlit_tab_html_dict,
     format_yearly_streamlit_all_tab_protocol_note_html,
 )
-from streamlit_app.streamlit_theme import CHECKLIST_STATS_HTML_TAB_SURFACE_CSS
+from streamlit_app.streamlit_theme import inject_streamlit_checklist_css
 
 _SESSION_YEARLY_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
 _STREAMLIT_YEARLY_SHOW_FULL_KEY = "streamlit_yearly_summary_show_full"
@@ -56,13 +55,7 @@ def _yearly_wrap_markdown(inner: str) -> str:
 @st.fragment
 def run_yearly_summary_streamlit_fragment() -> None:
     """Yearly Summary UI; widget interactions here avoid rerunning the whole app where possible."""
-    st.markdown(
-        "<style>"
-        f"{CHECKLIST_STATS_TABLE_CSS}"
-        f"{CHECKLIST_STATS_HTML_TAB_SURFACE_CSS}"
-        "</style>",
-        unsafe_allow_html=True,
-    )
+    inject_streamlit_checklist_css()
 
     payload: Optional[ChecklistStatsPayload] = st.session_state.get(_SESSION_YEARLY_PAYLOAD_KEY)
     if payload is None:

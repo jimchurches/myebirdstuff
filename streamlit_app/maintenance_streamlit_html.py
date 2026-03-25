@@ -12,7 +12,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_display import CHECKLIST_STATS_TABLE_CSS
 from personal_ebird_explorer.maintenance_display import (
     incomplete_checklists_intro_html,
     incomplete_checklists_year_table_html,
@@ -22,7 +21,7 @@ from personal_ebird_explorer.maintenance_display import (
     sex_notation_intro_html,
     sex_notation_year_table_html,
 )
-from streamlit_app.streamlit_theme import CHECKLIST_STATS_HTML_TAB_SURFACE_CSS
+from streamlit_app.streamlit_theme import inject_streamlit_checklist_css
 
 # Same wrapper class as Checklist Statistics + Country HTML tabs (typography, tables, links).
 _WRAPPER_OPEN = '<div class="streamlit-checklist-html-ab">'
@@ -42,12 +41,7 @@ def render_maintenance_streamlit_tab(
     species_url_fn: Callable[[str], Optional[str]],
 ) -> None:
     """Three category tabs; expanders collapsed by default; HTML tables only (refs #79)."""
-    _md(
-        "<style>"
-        f"{CHECKLIST_STATS_TABLE_CSS}"
-        f"{CHECKLIST_STATS_HTML_TAB_SURFACE_CSS}"
-        "</style>"
-    )
+    inject_streamlit_checklist_css()
 
     tab_sex, tab_inc, tab_loc = st.tabs(
         [

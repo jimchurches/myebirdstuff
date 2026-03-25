@@ -4,7 +4,7 @@
 Uses HTML from :func:`personal_ebird_explorer.checklist_stats_display.format_checklist_stats_bundle`
 (``rankings_sections_top_n`` / ``rankings_sections_other``) — same tables as the Jupyter notebook,
 rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matches **Checklist Statistics**:
-``CHECKLIST_STATS_TABLE_CSS`` + tab surface CSS from ``streamlit_app.streamlit_theme`` scoped under
+:func:`~streamlit_app.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
 ``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). Do not use ``st.dataframe``.
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
@@ -19,14 +19,11 @@ import pandas as pd
 import streamlit as st
 
 from personal_ebird_explorer.checklist_stats_compute import compute_checklist_stats_payload
-from personal_ebird_explorer.checklist_stats_display import (
-    CHECKLIST_STATS_TABLE_CSS,
-    format_checklist_stats_bundle,
-)
+from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
 from personal_ebird_explorer.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 
 from streamlit_app.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
-from streamlit_app.streamlit_theme import CHECKLIST_STATS_HTML_TAB_SURFACE_CSS
+from streamlit_app.streamlit_theme import inject_streamlit_checklist_css
 
 # Must include ``streamlit-checklist-html-ab`` — ``CHECKLIST_STATS_*`` rules are scoped to it (same as Checklist Statistics).
 _STREAMLIT_TABLE_SCOPE = "streamlit-checklist-html-ab"
@@ -63,13 +60,8 @@ def render_rankings_streamlit_tab(
     """Render Rankings & lists from the full export (notebook parity: ``df_full``)."""
 
     # Same injection pattern as ``checklist_stats_streamlit_html`` (table CSS + Streamlit tab-surface polish).
-    st.markdown(
-        "<style>"
-        f"{CHECKLIST_STATS_TABLE_CSS}"
-        f"{CHECKLIST_STATS_HTML_TAB_SURFACE_CSS}"
+    inject_streamlit_checklist_css(
         f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:{RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX}px;width:100%; }}"
-        "</style>",
-        unsafe_allow_html=True,
     )
 
     bundle = _cached_rankings_stats_bundle(

@@ -116,23 +116,9 @@ Previously, `country_stats_streamlit_html.py` copied the old Yearly-tab key into
 
 ---
 
-## 7. [Enhancement] DRY optional helper for scoped checklist CSS injection
+## 7. ~~[Enhancement] DRY optional helper for scoped checklist CSS injection~~ (done, #96)
 
-**Type:** Enhancement  
-**Optional:** Yes
-
-**Problem**
-
-Several modules repeat: concatenate `CHECKLIST_STATS_TABLE_CSS` + tab-surface CSS (+ extras), then `st.markdown(..., unsafe_allow_html=True)`.
-
-**Goal**
-
-- Add something like `inject_streamlit_checklist_css(extra_css: str = "", use_blue_theme: bool = False)` in a small Streamlit helper module.
-- Refactor tab modules to use it (incremental OK).
-
-**Depends on**
-
-- Pairs with **§6** if you want one theme switch for both injection and bundle choice.
+`streamlit_app/streamlit_theme.py`: `inject_streamlit_checklist_css(extra_css="")` — theme from #95; tab modules refactored.
 
 ---
 

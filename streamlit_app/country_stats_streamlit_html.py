@@ -13,7 +13,6 @@ import streamlit as st
 
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
 from personal_ebird_explorer.checklist_stats_display import (
-    CHECKLIST_STATS_TABLE_CSS,
     sort_country_sections_for_display,
     country_display_name_plain,
     country_yearly_links_bar_html,
@@ -21,7 +20,7 @@ from personal_ebird_explorer.checklist_stats_display import (
     slice_yearly_table_rows,
     yearly_streamlit_year_window_slice,
 )
-from streamlit_app.streamlit_theme import CHECKLIST_STATS_HTML_TAB_SURFACE_CSS
+from streamlit_app.streamlit_theme import inject_streamlit_checklist_css
 from streamlit_app.yearly_summary_streamlit_html import get_yearly_recent_column_count
 
 _COUNTRY_TAB_EXTRA_CSS = """
@@ -42,14 +41,7 @@ def render_country_stats_streamlit_html(
     country_sort: str,
 ) -> None:
     """Per-country yearly statistics table; ordering from *country_sort*."""
-    st.markdown(
-        "<style>"
-        f"{CHECKLIST_STATS_TABLE_CSS}"
-        f"{CHECKLIST_STATS_HTML_TAB_SURFACE_CSS}"
-        f"{_COUNTRY_TAB_EXTRA_CSS}"
-        "</style>",
-        unsafe_allow_html=True,
-    )
+    inject_streamlit_checklist_css(_COUNTRY_TAB_EXTRA_CSS)
 
     if payload is None or not payload.country_sections:
         st.info("No country data to show. Add **Country** or **State/Province** to your eBird export.")
