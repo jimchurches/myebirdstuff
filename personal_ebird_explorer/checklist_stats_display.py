@@ -189,25 +189,10 @@ def _format_country_summary_html(
         if not years_list or not rows:
             continue
         title = _country_accordion_title(country_key)
-        n_years = len(years_list)
-        multi_year = n_years > 1
-        n_cols = n_years + (1 if multi_year else 0)
-        min_w = "280px" if n_cols <= 2 else "360px" if n_cols <= 3 else "400px"
-        year_headers = "".join(f"<th style='text-align:right;'>{y}</th>" for y in years_list)
-        if multi_year:
-            year_headers += "<th style='text-align:right;'>Total</th>"
-        body_rows = "".join(
-            f"<tr><td>{_country_table_statistic_label_cell(label, country_key)}</td>"
-            + "".join(f"<td style='text-align:right;'>{html_module.escape(v, quote=False)}</td>" for v in vals)
-            + "</tr>"
-            for label, vals in rows
+        # Same table fragment as :func:`format_country_yearly_table_html` (refs #75, single source of truth).
+        table_html = format_country_yearly_table_html(
+            country_key, years_list, rows, inline_statistic_links=True
         )
-        table_html = f"""  <div style="overflow-x:auto;">
-  <table class="stats-tbl stats-tbl-yearly" style="min-width:{min_w};width:100%;">
-    <thead><tr><th>Statistic</th>{year_headers}</tr></thead>
-    <tbody>{body_rows}</tbody>
-  </table>
-  </div>"""
         blocks.append(f"""
   <details class="yearly-maint-section">
     <summary>{title}</summary>
