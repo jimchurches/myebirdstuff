@@ -135,8 +135,10 @@ def load_yaml_settings(path: str) -> tuple[dict[str, Any], str | None]:
             raw = yaml.safe_load(f) or {}
     except FileNotFoundError:
         return defaults_dict(), None
-    except Exception as e:
+    except OSError as e:
         return defaults_dict(), f"Could not read settings YAML: {e}"
+    except yaml.YAMLError as e:
+        return defaults_dict(), f"Could not parse settings YAML: {e}"
 
     if not isinstance(raw, dict):
         return defaults_dict(), "Settings YAML must be a mapping; using defaults."
@@ -192,7 +194,7 @@ def write_sparse_yaml_settings(
             existing = raw
     except FileNotFoundError:
         existing = {}
-    except Exception:
+    except (OSError, yaml.YAMLError):
         existing = {}
 
     # Preserve unknown keys by overlaying known sections only.
@@ -215,7 +217,7 @@ def write_sparse_yaml_settings(
     try:
         with open(path, "w", encoding="utf-8") as f:
             yaml.safe_dump(out, f, sort_keys=False, allow_unicode=False)
-    except Exception as e:
+    except OSError as e:
         return False, f"Could not write settings YAML: {e}"
     return True, None
 
@@ -228,7 +230,7 @@ _PY_SETTINGS_VAR = "STREAMLIT_SETTINGS_YAML"
 def _load_yaml_text(yaml_text: str) -> tuple[dict[str, Any], str | None]:
     try:
         raw = yaml.safe_load(yaml_text) or {}
-    except Exception as e:
+    except yaml.YAMLError as e:
         return defaults_dict(), f"Could not parse settings YAML: {e}"
     if not isinstance(raw, dict):
         return defaults_dict(), "Settings YAML must be a mapping; using defaults."
@@ -258,7 +260,7 @@ def _extract_embedded_yaml_from_py(path: str) -> str | None:
             text = f.read()
     except FileNotFoundError:
         return None
-    except Exception:
+    except OSError:
         text = ""
     if text:
         pat = re.compile(
@@ -278,7 +280,7 @@ def _extract_embedded_yaml_from_py(path: str) -> str | None:
         val = getattr(mod, _PY_SETTINGS_VAR, None)
         if isinstance(val, str) and val.strip():
             return val.strip()
-    except Exception:
+    except (ImportError, SyntaxError, AttributeError, OSError):
         return None
     return None
 
@@ -315,7 +317,7 @@ def write_sparse_settings_to_python_config(
             raw = yaml.safe_load(existing_yaml) or {}
             if isinstance(raw, dict):
                 existing = raw
-        except Exception:
+        except yaml.YAMLError:
             existing = {}
 
     out = dict(existing)
@@ -346,7 +348,7 @@ def write_sparse_settings_to_python_config(
             text = f.read()
     except FileNotFoundError:
         return False, f"Config file not found: {config_py_path}"
-    except Exception as e:
+    except OSError as e:
         return False, f"Could not read config file: {e}"
 
     pat = re.compile(
@@ -361,7 +363,7 @@ def write_sparse_settings_to_python_config(
     try:
         with open(config_py_path, "w", encoding="utf-8") as f:
             f.write(new_text)
-    except Exception as e:
+    except OSError as e:
         return False, f"Could not write config file: {e}"
     return True, None
 

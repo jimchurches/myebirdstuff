@@ -253,7 +253,7 @@ def settings_defaults_payload() -> dict[str, Any]:
 def load_settings_yaml_via_module(path: str) -> tuple[dict[str, Any], str | None]:
     try:
         from personal_ebird_explorer.streamlit_settings_config import load_settings_from_python_config
-    except Exception as e:
+    except ImportError as e:
         return settings_defaults_payload(), f"Settings validation unavailable ({e}); using defaults."
     return load_settings_from_python_config(path)
 
@@ -261,7 +261,7 @@ def load_settings_yaml_via_module(path: str) -> tuple[dict[str, Any], str | None
 def write_settings_yaml_via_module(path: str, payload: dict[str, Any]) -> tuple[bool, str | None]:
     try:
         from personal_ebird_explorer.streamlit_settings_config import write_sparse_settings_to_python_config
-    except Exception as e:
+    except ImportError as e:
         return False, f"Settings save unavailable ({e}). Install requirements-streamlit.txt."
     return write_sparse_settings_to_python_config(path, payload)
 
@@ -269,7 +269,7 @@ def write_settings_yaml_via_module(path: str, payload: dict[str, Any]) -> tuple[
 def settings_config_module_available() -> bool:
     try:
         import personal_ebird_explorer.streamlit_settings_config  # noqa: F401
-    except Exception:
+    except ImportError:
         return False
     return True
 

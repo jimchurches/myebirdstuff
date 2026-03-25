@@ -155,7 +155,7 @@ Implemented by centralising `streamlit_*` / `_streamlit_*` session keys in `stre
 
 ---
 
-## 10. [Enhancement] Narrow or log broad `except Exception` in settings persistence
+## 10. ~~[Enhancement] Narrow or log broad `except Exception` in settings persistence~~ (done, #100)
 
 **Type:** Enhancement  
 **Optional:** Yes
@@ -172,6 +172,10 @@ Implemented by centralising `streamlit_*` / `_streamlit_*` session keys in `stre
 **Acceptance**
 
 - No silent failures for “save settings” without user-visible feedback.
+
+Implemented by narrowing the broad exception handlers in `personal_ebird_explorer/streamlit_settings_config.py`
+(YAML parse vs file I/O errors) and in `streamlit_app/app_settings_state.py` (import availability). Added
+test coverage indirectly via existing `tests/explorer/test_streamlit_settings_config.py`.
 
 ---
 
