@@ -26,7 +26,7 @@ def prepare_all_locations_map_context(
 
     *df* — rows shown on the map (checklists / observations).
     *full_df* — if given, used only for :func:`prepare_lifer_last_seen` (e.g. unfiltered
-    export). Defaults to *df* when omitted (Streamlit prototype has no date filter yet).
+    export). Defaults to *df* when omitted.
     """
     if df.empty:
         raise ValueError("Cannot build map context from an empty DataFrame.")

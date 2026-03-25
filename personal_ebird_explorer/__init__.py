@@ -65,7 +65,7 @@ from personal_ebird_explorer.maintenance_display import (
 
 # Whoosh / Folium are heavy optional stacks for search + map UIs. Lazy-load so
 # ``from personal_ebird_explorer.data_loader import load_dataset`` (e.g. Streamlit
-# prototype) does not require whoosh or folium installed.
+# app) does not require whoosh or folium installed.
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "whoosh_common_name_suggestions": (
         "personal_ebird_explorer.species_search",

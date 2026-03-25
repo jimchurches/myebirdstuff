@@ -1,8 +1,11 @@
 # Personal eBird Explorer
 
-Primary UI: **Streamlit** (map + tabs) via [`streamlit_app/`](../../streamlit_app/README.md).
+Primary UI: **Streamlit** (map + tabs).
 
-The Streamlit app loads your eBird export CSV via main-area upload (recommended for Streamlit Community Cloud) or via disk discovery using **`scripts/config_secret.py` / `scripts/config.py`** (`DATA_FOLDER`) and the **working directory** where you run `streamlit run` — details under [Streamlit — Data loading](../../streamlit_app/README.md#data-loading). The app shows a **Folium** map with rich location popups (checklist links, visits) via `build_species_overlay_map`. **Streamlit Community Cloud** must use **`requirements-streamlit.txt`** or **`streamlit_app/requirements.txt`** as the Python requirements file (not root `requirements.txt`). Use **native Streamlit** for layouts and simple tables; for **rankings and other richly-linked tables**, reuse **HTML from the same `personal_ebird_explorer/` formatters** (`st.markdown` / `st.html` with `unsafe_allow_html` as needed) — `st.dataframe` cannot match linked-cell styling. **Keep eBird links** everywhere. See [Streamlit UI guidelines](../../streamlit_app/README.md#ui-guidelines) and [AI_CONTEXT.md — Streamlit UI](../AI_CONTEXT.md#streamlit-ui).
+Start here:
+
+- **Getting started**: [`docs/explorer/getting-started.md`](getting-started.md)
+- **Streamlit app README** (details): [`streamlit_app/README.md`](../../streamlit_app/README.md)
 
 ## What it does
 

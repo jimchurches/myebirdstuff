@@ -234,7 +234,7 @@ def main() -> None:
         # can drop the whole landing subtree instead of leaving orphan markdown under tabs.
         with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
             st.title("Personal eBird Explorer")
-            st.subheader("Streamlit prototype")
+            st.subheader("Streamlit app")
             st.markdown("Upload your **My eBird Data** CSV to open the map and tabs.")
             uploaded = st.file_uploader(
                 "eBird export (CSV)",
@@ -454,7 +454,7 @@ def main() -> None:
 
     inject_spinner_theme_css()
 
-    st.title("Personal eBird Explorer — Streamlit prototype")
+    st.title("Personal eBird Explorer")
 
     (
         tab_map,

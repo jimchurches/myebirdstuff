@@ -35,6 +35,7 @@ This repo currently has three related pieces that work together:
   Primary UI: the **Streamlit app** (`streamlit_app/`) for local runs + Streamlit Community Cloud ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)).  
   Documentation:  
   - Overview & quick-start: [`docs/explorer/README.md`](docs/explorer/README.md)  
+  - Getting started (Cloud + local): [`docs/explorer/getting-started.md`](docs/explorer/getting-started.md)  
   - Streamlit app: [`streamlit_app/README.md`](streamlit_app/README.md)  
   - Installation guide: [`streamlit_app/README.md#run-locally`](streamlit_app/README.md#run-locally) and [`streamlit_app/README.md#streamlit-community-cloud`](streamlit_app/README.md#streamlit-community-cloud)  
   - Developer guide: [`docs/development.md`](docs/development.md)  
