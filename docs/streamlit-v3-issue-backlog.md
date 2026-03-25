@@ -133,7 +133,7 @@ Previously, `country_stats_streamlit_html.py` copied the old Yearly-tab key into
 
 ---
 
-## 9. [Enhancement] Centralise Streamlit session-state key names
+## 9. ~~[Enhancement] Centralise Streamlit session-state key names~~ (done, #99)
 
 **Type:** Enhancement  
 **Optional:** Yes
@@ -150,6 +150,8 @@ Many string keys and module-local `_SESSION_*` constants; risk of typos and hard
 **Acceptance**
 
 - Documented pattern for new keys.
+
+Implemented by centralising `streamlit_*` / `_streamlit_*` session keys in `streamlit_app/app_constants.py` and refactoring the Yearly + Country fragments (plus `app.py`/settings key usage) to reference those constants.
 
 ---
 

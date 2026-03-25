@@ -28,21 +28,23 @@ from personal_ebird_explorer.checklist_stats_display import (
     build_yearly_summary_streamlit_tab_html_dict,
     format_yearly_streamlit_all_tab_protocol_note_html,
 )
+from streamlit_app.app_constants import (
+    STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
+    STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY,
+    YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY,
+)
 from streamlit_app.streamlit_theme import inject_streamlit_checklist_css
-
-_SESSION_YEARLY_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
-_STREAMLIT_YEARLY_SHOW_FULL_KEY = "streamlit_yearly_summary_show_full"
 
 
 def get_yearly_recent_column_count() -> int:
     """Recent-year column window for Yearly Summary + Country (``streamlit_yearly_recent_column_count``; 3–25)."""
-    n = int(st.session_state.get("streamlit_yearly_recent_column_count", 10))
+    n = int(st.session_state.get(STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY, 10))
     return max(3, min(25, n))
 
 
 def sync_yearly_summary_session_inputs(payload: Optional[ChecklistStatsPayload]) -> None:
     """Store payload for :func:`run_yearly_summary_streamlit_fragment` (full script runs only)."""
-    st.session_state[_SESSION_YEARLY_PAYLOAD_KEY] = payload
+    st.session_state[YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY] = payload
 
 
 def _yearly_wrap_markdown(inner: str) -> str:
@@ -57,7 +59,7 @@ def run_yearly_summary_streamlit_fragment() -> None:
     """Yearly Summary UI; widget interactions here avoid rerunning the whole app where possible."""
     inject_streamlit_checklist_css()
 
-    payload: Optional[ChecklistStatsPayload] = st.session_state.get(_SESSION_YEARLY_PAYLOAD_KEY)
+    payload: Optional[ChecklistStatsPayload] = st.session_state.get(YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY)
     if payload is None:
         st.warning("No checklist data to show.")
         return
@@ -69,7 +71,7 @@ def run_yearly_summary_streamlit_fragment() -> None:
     recent_n = get_yearly_recent_column_count()
 
     if n_years > recent_n:
-        show_full = bool(st.session_state.get(_STREAMLIT_YEARLY_SHOW_FULL_KEY, False))
+        show_full = bool(st.session_state.get(STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY, False))
     else:
         show_full = True
 
@@ -93,10 +95,10 @@ def run_yearly_summary_streamlit_fragment() -> None:
     if n_years > recent_n:
         st.toggle(
             "Show full history",
-            key=_STREAMLIT_YEARLY_SHOW_FULL_KEY,
+            key=STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY,
             width="content",
         )
-        if not st.session_state.get(_STREAMLIT_YEARLY_SHOW_FULL_KEY, False):
+        if not st.session_state.get(STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY, False):
             st.caption(f"Showing results for the most recent {recent_n} years.")
 
     st.markdown('<div style="height:1rem;" aria-hidden="true"></div>', unsafe_allow_html=True)

@@ -112,6 +112,71 @@ div.st-key-ebird_settings_panel {{
 DEFAULT_CLOSE_LOCATION_METERS = MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT
 DEFAULT_TAXONOMY_LOCALE = TAXONOMY_LOCALE_DEFAULT
 
+# ---------------------------------------------------------------------------
+# Streamlit session-state key names (refs #99)
+# ---------------------------------------------------------------------------
+# Keep session-state keys (especially ``streamlit_*`` and internal ``_streamlit_*``)
+# in one place to avoid typos and hard-to-find mismatches during refactors.
+
+# App-wide misc/internal session keys used in ``streamlit_app/app.py``.
+EBIRD_DATA_SIG_KEY = "ebird_data_sig"
+EXPLORER_MAP_HTML_BYTES_KEY = "_explorer_map_html_bytes"
+POPUP_HTML_CACHE_KEY = "popup_html_cache"
+FILTERED_BY_LOC_CACHE_KEY = "filtered_by_loc_cache"
+
+# Landing page container/widget keys.
+EBIRD_LANDING_MAIN_CONTAINER_KEY = "ebird_landing_main"
+EBIRD_LANDING_CSV_UPLOADER_KEY = "ebird_landing_csv_uploader"
+
+# Map view widget keys.
+STREAMLIT_MAP_VIEW_LABEL_KEY = "streamlit_map_view_label"
+STREAMLIT_MAP_DATE_FILTER_KEY = "streamlit_map_date_filter"
+STREAMLIT_MAP_DATE_RANGE_KEY = "streamlit_map_date_range"
+STREAMLIT_SPECIES_HIDE_ONLY_KEY = "streamlit_species_hide_only"
+STREAMLIT_MAP_BASEMAP_KEY = "streamlit_map_basemap"
+STREAMLIT_MAP_HEIGHT_PX_KEY = "streamlit_map_height_px"
+
+# Settings button keys.
+STREAMLIT_SAVE_SETTINGS_BTN_KEY = "streamlit_save_settings_btn"
+STREAMLIT_RESET_SETTINGS_BTN_KEY = "streamlit_reset_settings_btn"
+
+# Download/export button keys.
+EXPORT_MAP_HTML_BTN_KEY = "export_map_html_btn"
+
+# Checklist stats payload keys (used by fragments).
+YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
+COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY = "_streamlit_country_tab_checklist_payload"
+
+# "Show full history" toggles.
+STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY = "streamlit_yearly_summary_show_full"
+STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY = "streamlit_country_yearly_show_full"
+
+# Country selectbox key.
+STREAMLIT_COUNTRY_TAB_COUNTRY_KEY = "streamlit_country_tab_country"
+
+# Settings/table/list/toggle keys (all used as ``key=...`` or ``st.session_state[...]``).
+STREAMLIT_POPUP_SORT_ORDER_KEY = "streamlit_popup_sort_order"
+STREAMLIT_POPUP_SCROLL_HINT_KEY = "streamlit_popup_scroll_hint"
+STREAMLIT_MARK_LIFER_KEY = "streamlit_mark_lifer"
+STREAMLIT_MARK_LAST_SEEN_KEY = "streamlit_mark_last_seen"
+
+STREAMLIT_DEFAULT_COLOR_KEY = "streamlit_default_color"
+STREAMLIT_SPECIES_COLOR_KEY = "streamlit_species_color"
+STREAMLIT_LIFER_COLOR_KEY = "streamlit_lifer_color"
+STREAMLIT_LAST_SEEN_COLOR_KEY = "streamlit_last_seen_color"
+
+STREAMLIT_DEFAULT_FILL_KEY = "streamlit_default_fill"
+STREAMLIT_SPECIES_FILL_KEY = "streamlit_species_fill"
+STREAMLIT_LIFER_FILL_KEY = "streamlit_lifer_fill"
+STREAMLIT_LAST_SEEN_FILL_KEY = "streamlit_last_seen_fill"
+
+STREAMLIT_TAXONOMY_LOCALE_KEY = "streamlit_taxonomy_locale"
+STREAMLIT_RANKINGS_TOP_N_KEY = "streamlit_rankings_top_n"
+STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY = "streamlit_rankings_visible_rows"
+STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY = "streamlit_yearly_recent_column_count"
+STREAMLIT_COUNTRY_TAB_SORT_KEY = "streamlit_country_tab_sort"
+STREAMLIT_CLOSE_LOCATION_METERS_KEY = "streamlit_close_location_meters"
+
 SESSION_UPLOAD_CACHE_KEY = "_ebird_streamlit_upload_csv_cache"
 PERSIST_MAP_DATE_FILTER_KEY = "_preserve_map_date_filter"
 PERSIST_MAP_DATE_RANGE_KEY = "_preserve_map_date_range"
@@ -139,24 +204,24 @@ COUNTRY_SORT_LABELS = {
 }
 
 SETTINGS_SESSION_KEYS = (
-    "streamlit_popup_sort_order",
-    "streamlit_popup_scroll_hint",
-    "streamlit_mark_lifer",
-    "streamlit_mark_last_seen",
-    "streamlit_default_color",
-    "streamlit_default_fill",
-    "streamlit_species_color",
-    "streamlit_species_fill",
-    "streamlit_lifer_color",
-    "streamlit_lifer_fill",
-    "streamlit_last_seen_color",
-    "streamlit_last_seen_fill",
-    "streamlit_taxonomy_locale",
-    "streamlit_rankings_top_n",
-    "streamlit_rankings_visible_rows",
-    "streamlit_yearly_recent_column_count",
-    "streamlit_country_tab_sort",
-    "streamlit_close_location_meters",
+    STREAMLIT_POPUP_SORT_ORDER_KEY,
+    STREAMLIT_POPUP_SCROLL_HINT_KEY,
+    STREAMLIT_MARK_LIFER_KEY,
+    STREAMLIT_MARK_LAST_SEEN_KEY,
+    STREAMLIT_DEFAULT_COLOR_KEY,
+    STREAMLIT_DEFAULT_FILL_KEY,
+    STREAMLIT_SPECIES_COLOR_KEY,
+    STREAMLIT_SPECIES_FILL_KEY,
+    STREAMLIT_LIFER_COLOR_KEY,
+    STREAMLIT_LIFER_FILL_KEY,
+    STREAMLIT_LAST_SEEN_COLOR_KEY,
+    STREAMLIT_LAST_SEEN_FILL_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
+    STREAMLIT_RANKINGS_TOP_N_KEY,
+    STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
+    STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
+    STREAMLIT_COUNTRY_TAB_SORT_KEY,
+    STREAMLIT_CLOSE_LOCATION_METERS_KEY,
 )
 
 SPINNER_THEME_CSS_INJECTED_KEY = f"_ebird_spinner_theme_css_injected_{SPINNER_THEME_CSS_CACHE_KEY_SUFFIX}"

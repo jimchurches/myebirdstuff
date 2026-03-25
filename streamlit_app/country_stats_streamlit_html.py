@@ -22,6 +22,11 @@ from personal_ebird_explorer.checklist_stats_display import (
 )
 from streamlit_app.streamlit_theme import inject_streamlit_checklist_css
 from streamlit_app.yearly_summary_streamlit_html import get_yearly_recent_column_count
+from streamlit_app.app_constants import (
+    COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY,
+    STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
+    STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY,
+)
 
 _COUNTRY_TAB_EXTRA_CSS = """
 .streamlit-checklist-html-ab .stats-links-row { margin: 0 0 0.65rem; line-height: 1.45; }
@@ -31,8 +36,6 @@ _COUNTRY_TAB_EXTRA_CSS = """
 """
 
 # Set by ``app.py`` on every full script run so ``@st.fragment`` partial reruns still see the payload.
-_SESSION_PAYLOAD_KEY = "_streamlit_country_tab_checklist_payload"
-_STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY = "streamlit_country_yearly_show_full"
 
 
 def render_country_stats_streamlit_html(
@@ -54,15 +57,15 @@ def render_country_stats_streamlit_html(
         st.info("No per-country statistics for this dataset.")
         return
 
-    cur = st.session_state.get("streamlit_country_tab_country")
+    cur = st.session_state.get(STREAMLIT_COUNTRY_TAB_COUNTRY_KEY)
     if cur not in keys:
-        st.session_state.streamlit_country_tab_country = keys[0]
+        st.session_state[STREAMLIT_COUNTRY_TAB_COUNTRY_KEY] = keys[0]
 
     selected = st.selectbox(
         "Country for statistics",
         options=keys,
         format_func=country_display_name_plain,
-        key="streamlit_country_tab_country",
+        key=STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
         label_visibility="hidden",
     )
 
@@ -75,7 +78,9 @@ def render_country_stats_streamlit_html(
     recent_n = get_yearly_recent_column_count()
     n_years = len(years_list)
     if n_years > recent_n:
-        show_full = bool(st.session_state.get(_STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY, False))
+        show_full = bool(
+            st.session_state.get(STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY, False)
+        )
         if show_full:
             table_html = format_country_yearly_table_html(
                 selected,
@@ -114,16 +119,16 @@ def render_country_stats_streamlit_html(
     if n_years > recent_n:
         st.toggle(
             "Show full history",
-            key=_STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY,
+            key=STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY,
             width="content",
         )
-        if not st.session_state.get(_STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY, False):
+        if not st.session_state.get(STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY, False):
             st.caption(f"Showing results for the most recent {recent_n} years.")
 
 
 def sync_country_tab_session_inputs(payload: ChecklistStatsPayload | None) -> None:
     """Call from the main script each full run so ``@st.fragment`` partial reruns read the payload."""
-    st.session_state[_SESSION_PAYLOAD_KEY] = payload
+    st.session_state[COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY] = payload
 
 
 @st.fragment
@@ -132,7 +137,7 @@ def run_country_tab_streamlit_fragment() -> None:
 
     Full app reruns still call :func:`sync_country_tab_session_inputs`.
     """
-    payload = st.session_state.get(_SESSION_PAYLOAD_KEY)
+    payload = st.session_state.get(COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY)
     country_sort = st.session_state.streamlit_country_tab_sort
     render_country_stats_streamlit_html(
         payload,

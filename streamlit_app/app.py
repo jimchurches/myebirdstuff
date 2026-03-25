@@ -93,9 +93,14 @@ from streamlit_app.app_caches import (  # noqa: E402
 )
 from streamlit_app.app_constants import (  # noqa: E402
     COUNTRY_SORT_LABELS,
+    EBIRD_DATA_SIG_KEY,
+    EBIRD_LANDING_CSV_UPLOADER_KEY,
+    EBIRD_LANDING_MAIN_CONTAINER_KEY,
+    EXPLORER_MAP_HTML_BYTES_KEY,
     DEFAULT_TAXONOMY_LOCALE,
     FOLIUM_STATIC_MAP_CACHE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
+    EXPORT_MAP_HTML_BTN_KEY,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
@@ -116,6 +121,33 @@ from streamlit_app.app_constants import (  # noqa: E402
     SETTINGS_PANEL_CSS,
     SETTINGS_WARNED_KEY,
     REPO_ROOT,
+    STREAMLIT_CLOSE_LOCATION_METERS_KEY,
+    STREAMLIT_COUNTRY_TAB_SORT_KEY,
+    STREAMLIT_DEFAULT_COLOR_KEY,
+    STREAMLIT_DEFAULT_FILL_KEY,
+    STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
+    STREAMLIT_LIFER_COLOR_KEY,
+    STREAMLIT_LIFER_FILL_KEY,
+    STREAMLIT_LAST_SEEN_COLOR_KEY,
+    STREAMLIT_LAST_SEEN_FILL_KEY,
+    STREAMLIT_MAP_BASEMAP_KEY,
+    STREAMLIT_MAP_DATE_FILTER_KEY,
+    STREAMLIT_MAP_DATE_RANGE_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_KEY,
+    STREAMLIT_MAP_VIEW_LABEL_KEY,
+    STREAMLIT_MARK_LAST_SEEN_KEY,
+    STREAMLIT_MARK_LIFER_KEY,
+    STREAMLIT_POPUP_SCROLL_HINT_KEY,
+    STREAMLIT_POPUP_SORT_ORDER_KEY,
+    STREAMLIT_RANKINGS_TOP_N_KEY,
+    STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
+    STREAMLIT_SAVE_SETTINGS_BTN_KEY,
+    STREAMLIT_RESET_SETTINGS_BTN_KEY,
+    STREAMLIT_SPECIES_COLOR_KEY,
+    STREAMLIT_SPECIES_FILL_KEY,
+    STREAMLIT_SPECIES_HIDE_ONLY_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
+    STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
 )
 from streamlit_app.app_data_loading import load_dataframe  # noqa: E402
 from streamlit_app.app_map_ui import (  # noqa: E402
@@ -200,14 +232,14 @@ def main() -> None:
     if df_full is None:
         # Keyed container: on the post-upload rerun this block is skipped entirely, so Cloud/Streamlit
         # can drop the whole landing subtree instead of leaving orphan markdown under tabs.
-        with st.container(key="ebird_landing_main"):
+        with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
             st.title("Personal eBird Explorer")
             st.subheader("Streamlit prototype")
             st.markdown("Upload your **My eBird Data** CSV to open the map and tabs.")
             uploaded = st.file_uploader(
                 "eBird export (CSV)",
                 type=["csv"],
-                key="ebird_landing_csv_uploader",
+                key=EBIRD_LANDING_CSV_UPLOADER_KEY,
                 help="Official eBird full data export (CSV).",
             )
             if uploaded is not None:
@@ -271,7 +303,7 @@ def main() -> None:
         map_view_label = st.selectbox(
             "Map view",
             list(MAP_VIEW_LABELS),
-            key="streamlit_map_view_label",
+            key=STREAMLIT_MAP_VIEW_LABEL_KEY,
         )
         map_view_mode = MAP_VIEW_LABEL_TO_MODE[map_view_label]
         is_lifer_view = map_view_mode == "lifers"
@@ -285,12 +317,12 @@ def main() -> None:
             date_range_sel: tuple | None = None
         else:
             # Restore widget keys after Lifer view (those widgets were not rendered, keys may be missing).
-            if "streamlit_map_date_filter" not in st.session_state:
+            if STREAMLIT_MAP_DATE_FILTER_KEY not in st.session_state:
                 st.session_state.streamlit_map_date_filter = bool(
                     st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT)
                 )
-            if st.session_state.get("streamlit_map_date_filter", False):
-                if "streamlit_map_date_range" not in st.session_state:
+            if st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False):
+                if STREAMLIT_MAP_DATE_RANGE_KEY not in st.session_state:
                     pr = st.session_state.get(PERSIST_MAP_DATE_RANGE_KEY)
                     if isinstance(pr, tuple) and len(pr) == 2:
                         st.session_state.streamlit_map_date_range = pr
@@ -300,14 +332,14 @@ def main() -> None:
 
             date_filter_on_effective = st.toggle(
                 "Date filter",
-                key="streamlit_map_date_filter",
+                key=STREAMLIT_MAP_DATE_FILTER_KEY,
                 help="Turn on to limit the map and checklist stats to a date range.",
             )
             if not date_filter_on_effective:
                 date_range_sel = None
             else:
                 d_inception, today = date_inception_to_today_default(df_full)
-                if "streamlit_map_date_range" not in st.session_state:
+                if STREAMLIT_MAP_DATE_RANGE_KEY not in st.session_state:
                     st.session_state.streamlit_map_date_range = (d_inception, today)
                 rng = st.session_state["streamlit_map_date_range"]
                 if not isinstance(rng, tuple) or len(rng) != 2:
@@ -322,7 +354,7 @@ def main() -> None:
                     "Date range",
                     min_value=d_inception,
                     max_value=today,
-                    key="streamlit_map_date_range",
+                    key=STREAMLIT_MAP_DATE_RANGE_KEY,
                 )
                 if isinstance(dr, tuple) and len(dr) == 2:
                     date_range_sel = (dr[0], dr[1])
@@ -360,7 +392,7 @@ def main() -> None:
         st.session_state.pop(SESSION_SPECIES_SEARCH_KEY, None)
 
     if map_view_mode == "species":
-        _ix_sig = (len(ws.species_list), st.session_state.get("ebird_data_sig"))
+        _ix_sig = (len(ws.species_list), st.session_state.get(EBIRD_DATA_SIG_KEY))
         if st.session_state.get(SESSION_SPECIES_IX_SIG_KEY) != _ix_sig:
             st.session_state[SESSION_SPECIES_IX_KEY] = build_ram_species_whoosh_index(
                 ws.species_list, ws.name_map
@@ -374,7 +406,7 @@ def main() -> None:
             species_searchbox_fragment()
             hide_non_matching_locations = st.toggle(
                 "Show only selected species",
-                key="streamlit_species_hide_only",
+                key=STREAMLIT_SPECIES_HIDE_ONLY_KEY,
                 help=(
                     "When off, all locations are shown with your species highlighted. "
                     "When on, only locations where you recorded the species."
@@ -397,7 +429,7 @@ def main() -> None:
         map_style = st.selectbox(
             "Basemap",
             options=list(MAP_BASEMAP_OPTIONS),
-            key="streamlit_map_basemap",
+            key=STREAMLIT_MAP_BASEMAP_KEY,
         )
         st.markdown(
             '<div style="height:0.65rem" aria-hidden="true"></div>',
@@ -408,7 +440,7 @@ def main() -> None:
             min_value=MAP_HEIGHT_PX_MIN,
             max_value=MAP_HEIGHT_PX_MAX,
             step=MAP_HEIGHT_PX_STEP,
-            key="streamlit_map_height_px",
+            key=STREAMLIT_MAP_HEIGHT_PX_KEY,
         )
 
     st.session_state[SESSION_PREV_MAP_VIEW_KEY] = map_view_mode
@@ -442,7 +474,7 @@ def main() -> None:
     with tab_map:
         prov_plain = provenance or ""
         sig = data_signature_for_caches(df_full, prov_plain)
-        if st.session_state.get("ebird_data_sig") != sig:
+        if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
             st.session_state.ebird_data_sig = sig
             st.session_state.popup_html_cache = {}
             st.session_state.filtered_by_loc_cache = OrderedDict()
@@ -452,7 +484,7 @@ def main() -> None:
             ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
         except ValueError as e:
             st.warning(str(e))
-            st.session_state.pop("_explorer_map_html_bytes", None)
+            st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         else:
             overlay_common = (
                 (species_pick_common or "").strip() if map_view_mode == "species" else ""
@@ -538,12 +570,12 @@ def main() -> None:
 
             if result_warning:
                 st.warning(result_warning)
-                st.session_state.pop("_explorer_map_html_bytes", None)
+                st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
             elif result_map is None:
                 st.warning("Map could not be built.")
-                st.session_state.pop("_explorer_map_html_bytes", None)
+                st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
             else:
-                st.session_state["_explorer_map_html_bytes"] = folium_map_to_html_bytes(result_map)
+                st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(result_map)
                 try:
                     from streamlit_folium import st_folium
                 except ImportError:
@@ -616,7 +648,7 @@ def main() -> None:
                 with b1:
                     if st.button(
                         "Save settings",
-                        key="streamlit_save_settings_btn",
+                        key=STREAMLIT_SAVE_SETTINGS_BTN_KEY,
                         use_container_width=True,
                     ):
                         ok, err = write_settings_yaml_via_module(
@@ -630,7 +662,7 @@ def main() -> None:
                 with b2:
                     if st.button(
                         "Reset to defaults",
-                        key="streamlit_reset_settings_btn",
+                        key=STREAMLIT_RESET_SETTINGS_BTN_KEY,
                         use_container_width=True,
                     ):
                         apply_settings_payload_to_state(settings_defaults_payload())
@@ -646,30 +678,62 @@ def main() -> None:
 
             st.divider()
             st.subheader("Map display")
-            st.toggle("Mark lifer", key="streamlit_mark_lifer")
-            st.toggle("Mark last-seen", key="streamlit_mark_last_seen")
+            st.toggle("Mark lifer", key=STREAMLIT_MARK_LIFER_KEY)
+            st.toggle("Mark last-seen", key=STREAMLIT_MARK_LAST_SEEN_KEY)
             st.selectbox(
                 "Popup sort order",
                 options=["ascending", "descending"],
-                key="streamlit_popup_sort_order",
+                key=STREAMLIT_POPUP_SORT_ORDER_KEY,
             )
             st.selectbox(
                 "Popup scroll hint",
                 options=["shading", "chevron", "both"],
-                key="streamlit_popup_scroll_hint",
+                key=STREAMLIT_POPUP_SCROLL_HINT_KEY,
             )
             st.caption("Pin colors")
             c1, c2 = st.columns(2)
             with c1:
-                st.selectbox("Default edge", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_default_color")
-                st.selectbox("Species edge", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_species_color")
-                st.selectbox("Lifer edge", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_lifer_color")
-                st.selectbox("Last-seen edge", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_last_seen_color")
+                st.selectbox(
+                    "Default edge",
+                    MAP_PIN_COLOUR_ALLOWLIST,
+                    key=STREAMLIT_DEFAULT_COLOR_KEY,
+                )
+                st.selectbox(
+                    "Species edge",
+                    MAP_PIN_COLOUR_ALLOWLIST,
+                    key=STREAMLIT_SPECIES_COLOR_KEY,
+                )
+                st.selectbox(
+                    "Lifer edge",
+                    MAP_PIN_COLOUR_ALLOWLIST,
+                    key=STREAMLIT_LIFER_COLOR_KEY,
+                )
+                st.selectbox(
+                    "Last-seen edge",
+                    MAP_PIN_COLOUR_ALLOWLIST,
+                    key=STREAMLIT_LAST_SEEN_COLOR_KEY,
+                )
             with c2:
-                st.selectbox("Default fill", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_default_fill")
-                st.selectbox("Species fill", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_species_fill")
-                st.selectbox("Lifer fill", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_lifer_fill")
-                st.selectbox("Last-seen fill", MAP_PIN_COLOUR_ALLOWLIST, key="streamlit_last_seen_fill")
+                st.selectbox(
+                    "Default fill",
+                    MAP_PIN_COLOUR_ALLOWLIST,
+                    key=STREAMLIT_DEFAULT_FILL_KEY,
+                )
+                st.selectbox(
+                    "Species fill",
+                    MAP_PIN_COLOUR_ALLOWLIST,
+                    key=STREAMLIT_SPECIES_FILL_KEY,
+                )
+                st.selectbox(
+                    "Lifer fill",
+                    MAP_PIN_COLOUR_ALLOWLIST,
+                    key=STREAMLIT_LIFER_FILL_KEY,
+                )
+                st.selectbox(
+                    "Last-seen fill",
+                    MAP_PIN_COLOUR_ALLOWLIST,
+                    key=STREAMLIT_LAST_SEEN_FILL_KEY,
+                )
 
             st.divider()
             st.subheader("Tables & lists")
@@ -679,21 +743,21 @@ def main() -> None:
                 min_value=TABLES_RANKINGS_TOP_N_MIN,
                 max_value=TABLES_RANKINGS_TOP_N_MAX,
                 step=1,
-                key="streamlit_rankings_top_n",
+                key=STREAMLIT_RANKINGS_TOP_N_KEY,
             )
             st.slider(
                 "Ranking tables: visible rows",
                 min_value=TABLES_RANKINGS_VISIBLE_ROWS_MIN,
                 max_value=TABLES_RANKINGS_VISIBLE_ROWS_MAX,
                 step=1,
-                key="streamlit_rankings_visible_rows",
+                key=STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
             )
             st.slider(
                 "Yearly tables: recent year columns",
                 min_value=YEARLY_RECENT_COLUMN_COUNT_MIN,
                 max_value=YEARLY_RECENT_COLUMN_COUNT_MAX,
                 step=1,
-                key="streamlit_yearly_recent_column_count",
+                key=STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
             )
             st.selectbox(
                 "Country ordering",
@@ -703,7 +767,7 @@ def main() -> None:
                     COUNTRY_TAB_SORT_TOTAL_SPECIES,
                 ],
                 format_func=lambda k: COUNTRY_SORT_LABELS[k],
-                key="streamlit_country_tab_sort",
+                key=STREAMLIT_COUNTRY_TAB_SORT_KEY,
             )
             st.divider()
             st.subheader("Maintenance")
@@ -712,7 +776,7 @@ def main() -> None:
                 min_value=MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
                 max_value=MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
                 step=1,
-                key="streamlit_close_location_meters",
+                key=STREAMLIT_CLOSE_LOCATION_METERS_KEY,
                 help=(
                     "Locations within this distance (metres), excluding exact duplicate coordinates, "
                     "are listed under **Maintenance → Location Maintenance → Close locations**."
@@ -722,7 +786,7 @@ def main() -> None:
             st.subheader("Taxonomy")
             st.text_input(
                 "Taxonomy locale",
-                key="streamlit_taxonomy_locale",
+                key=STREAMLIT_TAXONOMY_LOCALE_KEY,
             )
             st.markdown(settings_taxonomy_help_html(), unsafe_allow_html=True)
             st.divider()
@@ -738,15 +802,15 @@ def main() -> None:
                 unsafe_allow_html=True,
             )
 
-    if st.session_state.get("_explorer_map_html_bytes"):
+    if st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY):
         with st.sidebar:
             st.divider()
             st.download_button(
                 "Export map HTML",
-                data=st.session_state["_explorer_map_html_bytes"],
+                data=st.session_state[EXPLORER_MAP_HTML_BYTES_KEY],
                 file_name=MAP_EXPORT_HTML_FILENAME,
                 mime="text/html",
-                key="export_map_html_btn",
+                key=EXPORT_MAP_HTML_BTN_KEY,
                 help="Standalone HTML for the current map (notebook-style export).",
             )
 

@@ -15,6 +15,22 @@ from streamlit_app.app_constants import (
     DEFAULT_TAXONOMY_LOCALE,
     SETTINGS_FLASH_RESET_KEY,
     SETTINGS_FLASH_SAVE_KEY,
+    STREAMLIT_CLOSE_LOCATION_METERS_KEY,
+    STREAMLIT_DEFAULT_COLOR_KEY,
+    STREAMLIT_DEFAULT_FILL_KEY,
+    STREAMLIT_LIFER_COLOR_KEY,
+    STREAMLIT_LIFER_FILL_KEY,
+    STREAMLIT_LAST_SEEN_COLOR_KEY,
+    STREAMLIT_LAST_SEEN_FILL_KEY,
+    STREAMLIT_MARK_LAST_SEEN_KEY,
+    STREAMLIT_MARK_LIFER_KEY,
+    STREAMLIT_POPUP_SCROLL_HINT_KEY,
+    STREAMLIT_POPUP_SORT_ORDER_KEY,
+    STREAMLIT_RANKINGS_TOP_N_KEY,
+    STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
+    STREAMLIT_SPECIES_COLOR_KEY,
+    STREAMLIT_SPECIES_FILL_KEY,
+    STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
 )
 from streamlit_app.defaults import (
     MAP_DEFAULT_COLOR_DEFAULT,
@@ -75,14 +91,14 @@ def settings_persistence_flash_banners() -> None:
 
 def init_and_clamp_streamlit_table_settings() -> None:
     """Defaults/ranges for Settings values (tables, maintenance, map display)."""
-    if "streamlit_rankings_top_n" not in st.session_state:
+    if STREAMLIT_RANKINGS_TOP_N_KEY not in st.session_state:
         st.session_state.streamlit_rankings_top_n = TABLES_RANKINGS_TOP_N_DEFAULT
     else:
         st.session_state.streamlit_rankings_top_n = max(
             TABLES_RANKINGS_TOP_N_MIN,
             min(TABLES_RANKINGS_TOP_N_MAX, int(st.session_state.streamlit_rankings_top_n)),
         )
-    if "streamlit_rankings_visible_rows" not in st.session_state:
+    if STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY not in st.session_state:
         st.session_state.streamlit_rankings_visible_rows = TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT
     else:
         st.session_state.streamlit_rankings_visible_rows = max(
@@ -92,7 +108,7 @@ def init_and_clamp_streamlit_table_settings() -> None:
                 int(st.session_state.streamlit_rankings_visible_rows),
             ),
         )
-    if "streamlit_close_location_meters" not in st.session_state:
+    if STREAMLIT_CLOSE_LOCATION_METERS_KEY not in st.session_state:
         st.session_state.streamlit_close_location_meters = DEFAULT_CLOSE_LOCATION_METERS
     else:
         st.session_state.streamlit_close_location_meters = max(
@@ -102,7 +118,7 @@ def init_and_clamp_streamlit_table_settings() -> None:
                 int(st.session_state.streamlit_close_location_meters),
             ),
         )
-    if "streamlit_yearly_recent_column_count" not in st.session_state:
+    if STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY not in st.session_state:
         st.session_state.streamlit_yearly_recent_column_count = YEARLY_RECENT_COLUMN_COUNT_DEFAULT
     else:
         st.session_state.streamlit_yearly_recent_column_count = max(
@@ -112,27 +128,27 @@ def init_and_clamp_streamlit_table_settings() -> None:
                 int(st.session_state.streamlit_yearly_recent_column_count),
             ),
         )
-    if "streamlit_popup_sort_order" not in st.session_state:
+    if STREAMLIT_POPUP_SORT_ORDER_KEY not in st.session_state:
         st.session_state.streamlit_popup_sort_order = MAP_POPUP_SORT_ORDER_DEFAULT
     elif st.session_state.streamlit_popup_sort_order not in ("ascending", "descending"):
         st.session_state.streamlit_popup_sort_order = MAP_POPUP_SORT_ORDER_DEFAULT
-    if "streamlit_popup_scroll_hint" not in st.session_state:
+    if STREAMLIT_POPUP_SCROLL_HINT_KEY not in st.session_state:
         st.session_state.streamlit_popup_scroll_hint = MAP_POPUP_SCROLL_HINT_DEFAULT
     elif st.session_state.streamlit_popup_scroll_hint not in ("chevron", "shading", "both"):
         st.session_state.streamlit_popup_scroll_hint = MAP_POPUP_SCROLL_HINT_DEFAULT
-    if "streamlit_mark_lifer" not in st.session_state:
+    if STREAMLIT_MARK_LIFER_KEY not in st.session_state:
         st.session_state.streamlit_mark_lifer = MAP_MARK_LIFER_DEFAULT
-    if "streamlit_mark_last_seen" not in st.session_state:
+    if STREAMLIT_MARK_LAST_SEEN_KEY not in st.session_state:
         st.session_state.streamlit_mark_last_seen = MAP_MARK_LAST_SEEN_DEFAULT
     for k, default in (
-        ("streamlit_lifer_color", MAP_LIFER_COLOR_DEFAULT),
-        ("streamlit_lifer_fill", MAP_LIFER_FILL_DEFAULT),
-        ("streamlit_last_seen_color", MAP_LAST_SEEN_COLOR_DEFAULT),
-        ("streamlit_last_seen_fill", MAP_LAST_SEEN_FILL_DEFAULT),
-        ("streamlit_species_color", MAP_SPECIES_COLOR_DEFAULT),
-        ("streamlit_species_fill", MAP_SPECIES_FILL_DEFAULT),
-        ("streamlit_default_color", MAP_DEFAULT_COLOR_DEFAULT),
-        ("streamlit_default_fill", MAP_DEFAULT_FILL_DEFAULT),
+        (STREAMLIT_LIFER_COLOR_KEY, MAP_LIFER_COLOR_DEFAULT),
+        (STREAMLIT_LIFER_FILL_KEY, MAP_LIFER_FILL_DEFAULT),
+        (STREAMLIT_LAST_SEEN_COLOR_KEY, MAP_LAST_SEEN_COLOR_DEFAULT),
+        (STREAMLIT_LAST_SEEN_FILL_KEY, MAP_LAST_SEEN_FILL_DEFAULT),
+        (STREAMLIT_SPECIES_COLOR_KEY, MAP_SPECIES_COLOR_DEFAULT),
+        (STREAMLIT_SPECIES_FILL_KEY, MAP_SPECIES_FILL_DEFAULT),
+        (STREAMLIT_DEFAULT_COLOR_KEY, MAP_DEFAULT_COLOR_DEFAULT),
+        (STREAMLIT_DEFAULT_FILL_KEY, MAP_DEFAULT_FILL_DEFAULT),
     ):
         if k not in st.session_state:
             st.session_state[k] = default
