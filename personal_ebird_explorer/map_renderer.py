@@ -596,16 +596,20 @@ def create_map(map_center, map_style="default"):
     ``"google"``, ``"carto"``.  Unknown values fall back to the default
     OpenStreetMap tiles.
     """
+    # Default initial zoom for first render. Lower = more zoomed out.
+    zoom_start = 5
     if map_style == "satellite":
-        return folium.Map(location=map_center, zoom_start=6, tiles="Esri WorldImagery", attr="Esri")
+        return folium.Map(location=map_center, zoom_start=zoom_start, tiles="Esri WorldImagery", attr="Esri")
     elif map_style == "google":
         return folium.Map(
             location=map_center,
-            zoom_start=6,
+            zoom_start=zoom_start,
             tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
             attr="Google",
         )
     elif map_style == "carto":
-        return folium.Map(location=map_center, zoom_start=6, tiles="CartoDB Positron", attr="CartoDB")
+        return folium.Map(
+            location=map_center, zoom_start=zoom_start, tiles="CartoDB Positron", attr="CartoDB"
+        )
     else:
-        return folium.Map(location=map_center, zoom_start=6)
+        return folium.Map(location=map_center, zoom_start=zoom_start)
