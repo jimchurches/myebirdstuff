@@ -11,7 +11,7 @@ Use this document to open **child issues** under #70. Each section below is writ
 
 ---
 
-## 1. [Enhancement] Decouple `personal_ebird_explorer` from `streamlit_app.defaults`
+## 1. ~~[Enhancement] Decouple `personal_ebird_explorer` from `streamlit_app.defaults`~~ (done, #89)
 
 **Type:** Enhancement  
 **Optional:** No (foundational for package layout)
@@ -39,7 +39,7 @@ Move shared UI/geometry constants into a **neutral module** under `personal_ebir
 
 ---
 
-## 2. [Enhancement] Unify `streamlit_app` import paths and entrypoint assumptions
+## 2. ~~[Enhancement] Unify `streamlit_app` import paths and entrypoint assumptions~~ (done, #90)
 
 **Type:** Enhancement  
 **Optional:** No
@@ -90,14 +90,14 @@ Previously, `country_stats_streamlit_html.py` copied the old Yearly-tab key into
 
 ---
 
-## 5. [Enhancement] Remove unused `species_url_fn` from Checklist Statistics Streamlit renderer
+## 5. ~~[Enhancement] Remove unused `species_url_fn` from Checklist Statistics Streamlit renderer~~ (done, #94)
 
 **Type:** Enhancement  
 **Optional:** Yes
 
 **Problem**
 
-`render_checklist_stats_streamlit_html` accepts `species_url_fn` but does not use it (`_ = species_url_fn`).
+`render_checklist_stats_streamlit_html` previously accepted `species_url_fn` but did not use it.
 
 **Goal**
 
