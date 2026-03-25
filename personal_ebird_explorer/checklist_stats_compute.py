@@ -103,7 +103,7 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
     """Build structured checklist statistics from a sighting-level DataFrame.
 
     Returns ``None`` when *df* is empty. *top_n_limit* caps ranking list lengths
-    (same as notebook **Top N table limit**).
+    (same as **Top N table limit**).
     """
     if df.empty:
         return None

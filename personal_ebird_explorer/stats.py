@@ -5,7 +5,7 @@ Pure calculation functions: accept DataFrames and explicit parameters, return
 data structures (dicts, lists of tuples, DataFrames). No widget, display, or
 HTML-rendering dependencies. Some functions return row tuples that include
 HTML links (eBird checklist/lifelist URLs) because those are part of the data
-contract the notebook expects; separating them would be a redesign.
+contract the UI expects; separating them would be a redesign.
 """
 
 import html as _html

@@ -3,7 +3,7 @@ Species-related pure logic for Personal eBird Explorer.
 
 Functions for species filtering, countable-species normalisation, and
 base-species extraction. All functions are pure (explicit inputs/outputs,
-no widget or notebook state dependencies).
+no widget or UI state dependencies).
 """
 
 import pandas as pd

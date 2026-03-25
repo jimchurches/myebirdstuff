@@ -32,11 +32,11 @@ Various tools and utilities I've written to help me with eBird.
 This repo currently has three related pieces that work together:
 
 - **eBird Data Visualisation Tool (personal eBird explorer)**  
-  Primary UI: a **Jupyter** notebook (map, stats, rankings, maintenance). An experimental **Streamlit** app (`streamlit_app/`) is in progress for local + Streamlit Community Cloud runs ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)).  
+  Primary UI: the **Streamlit app** (`streamlit_app/`) for local runs + Streamlit Community Cloud ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)).  
   Documentation:  
   - Overview & quick-start: [`docs/explorer/README.md`](docs/explorer/README.md)  
-  - Streamlit prototype: [`streamlit_app/README.md`](streamlit_app/README.md)  
-  - Installation guide: [`docs/explorer/install.md`](docs/explorer/install.md)  
+  - Streamlit app: [`streamlit_app/README.md`](streamlit_app/README.md)  
+  - Installation guide: [`streamlit_app/README.md#run-locally`](streamlit_app/README.md#run-locally) and [`streamlit_app/README.md#streamlit-community-cloud`](streamlit_app/README.md#streamlit-community-cloud)  
   - Developer guide: [`docs/development.md`](docs/development.md)  
   - For AI-assisted development: [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md)  
   - Future ideas: [`docs/explorer/future-ideas.md`](docs/explorer/future-ideas.md)  
@@ -56,12 +56,14 @@ This repo currently has three related pieces that work together:
 
 ## eBird Data Visualisation Tool
 
-This repository includes a Jupyter notebook called `personal_ebird_explorer.ipynb` that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
+This repository includes a Streamlit app (`streamlit_app/app.py`) that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
+
+Legacy note: the explorer was originally developed as a Jupyter Notebook based solution and outgrew the original intent. The notebook code is still available at tag `<TBA>` or in the legacy branch `notebook-legacy`. It remains there largely as a curiosity, but should still be in working order (and may be useful to someone using Jupyter in a parallel universe).
 
 **Times in the explorer:** If you see **23:59** next to a visit, it may be a **synthetic placeholder** when your export has no real time for that row (not necessarily midnight birding). See [Missing checklist times (synthetic 23:59)](docs/explorer/README.md#missing-checklist-times-synthetic-2359) in the explorer README.
 
 > 📘 **User guide and run options:** [docs/explorer/README.md](docs/explorer/README.md)  
-> 📗 **Installation** (Python, Jupyter, Voila): [docs/explorer/install.md](docs/explorer/install.md)  
+> 📗 **Install / run:** [streamlit_app/README.md](streamlit_app/README.md)  
 > 📙 **Developers:** [docs/development.md](docs/development.md) · **AI-assisted work:** [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)
 
 
@@ -217,7 +219,7 @@ This setup is tailored to my quirks. I don’t expect anyone else to use it. But
 
 I use Google's Geocoding API for reverse geocoding (GPS → name). It's free for low volumes of queries — low volume means thousands a month, so for this purpose I'm never going to get close to the volume where I could be charged. An API key is required and is removed from my code here as that is private (like a password). You'll find how to get one with a quick Google search. You'll need to drop your key into the code; look at the Python script and you'll find where to do that easily enough.
 
-The Python script (`scripts/eBirdChecklistNameFromGPS.py`) is used by the UI.Vision macros. It does not run on Binder. Before using the macros, install its dependencies:
+The Python script (`scripts/eBirdChecklistNameFromGPS.py`) is used by the UI.Vision macros. Before using the macros, install its dependencies:
 
     pip install -r requirements-gps-script.txt
 

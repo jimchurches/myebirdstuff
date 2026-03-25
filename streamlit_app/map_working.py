@@ -18,7 +18,7 @@ MapCaches = Tuple[dict, MutableMapping[Any, Any]]
 
 
 def location_ids_with_checklists(df: pd.DataFrame) -> Set[Any]:
-    """Location IDs that have at least one checklist row (notebook parity)."""
+    """Location IDs that have at least one checklist row."""
     if df.empty or "Submission ID" not in df.columns:
         return set()
     return set(df.dropna(subset=["Submission ID"])["Location ID"].unique())

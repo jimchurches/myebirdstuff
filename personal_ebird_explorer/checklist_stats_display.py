@@ -223,7 +223,7 @@ def format_country_yearly_table_html(
     """HTML table for one country's yearly statistics (same structure as Country tab accordion).
 
     *inline_statistic_links*: when ``True`` (default), *Lifers (country)* and *Total checklists* get ⧉
-    links like the notebook Country tab. Set ``False`` when those URLs are shown above the table
+    links like the Country tab. Set ``False`` when those URLs are shown above the table
     (e.g. Streamlit Country tab).
     """
     if not years_list or not rows:
@@ -294,7 +294,7 @@ def country_yearly_links_bar_html(country_key: str) -> str:
     return f'<p class="stats-links-row">{sep.join(parts)}</p>'
 
 
-# Shared with notebook stats panel HTML and Streamlit HTML tab (refs #70).
+# Shared stats panel HTML and Streamlit HTML tab (refs #70).
 CHECKLIST_STATS_TABLE_CSS = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
     .stats-info-glyph { cursor:help; opacity:0.7; }
@@ -311,7 +311,7 @@ CHECKLIST_STATS_TABLE_CSS = """
     """
 
 # Injected once by ``streamlit_app/checklist_stats_streamlit_html`` around checklist sub-tabs only.
-# Scoped under ``.streamlit-checklist-html-ab`` so Jupyter ``stats_html`` / notebook layout stay unchanged.
+# Scoped under ``.streamlit-checklist-html-ab`` so HTML layout stays unchanged.
 #
 # **Default:** green accents + zebra (``#1f6f54`` — aligns with ``.streamlit/config.toml`` primary).
 # **Alternate:** ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE`` (eBird-style blue); Streamlit enables
@@ -596,7 +596,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   font-weight: 600;
   background: rgba({acc}, 0.09);
 }}
-/* Scroll area: match notebook — top padding under scroll fade (refs #81). */
+/* Scroll area: top padding under scroll fade (refs #81). */
 .streamlit-checklist-html-ab .rankings-scroll-inner {{
   box-sizing: border-box;
   padding-top: 0.5rem;
@@ -824,7 +824,7 @@ _YEARLY_INFO_ICON_RE = re.compile(
     re.DOTALL,
 )
 
-# Order for traveling / stationary detail rows (same as notebook yearly expanders; refs #85).
+# Order for traveling / stationary detail rows (refs #85).
 _YEARLY_TRAVELING_ORDER = [
     "Total distance (km)",
     "Average distance (km)",
@@ -1050,7 +1050,7 @@ def build_yearly_summary_streamlit_tab_html_dict(
     """Build inner HTML for Streamlit Yearly Summary nested tabs (All / Travelling / Stationary; refs #85).
 
     When ``len(years_list) > recent_year_count`` and *show_full_history* is false, only the most
-    recent *recent_year_count* years are shown (columns), preserving notebook ordering.
+    recent *recent_year_count* years are shown (columns), preserving ordering.
 
     Returns ``None`` when there is no yearly grid. Icons are stripped from labels; incomplete-checklist
     guidance for protocol tabs is consolidated into the note below the Yearly Summary toggle in Streamlit.
@@ -1171,7 +1171,7 @@ def format_checklist_stats_bundle(
     visible_rows: int,
     country_sort: str = COUNTRY_TAB_SORT_ALPHABETICAL,
 ) -> Dict[str, Any]:
-    """Build the same dict the notebook expects: stats HTML, yearly HTML, rankings sections, incomplete map.
+    """Build the stats HTML, yearly HTML, rankings sections, and incomplete map.
 
     *payload* is ``None`` when the source DataFrame was empty.
     """

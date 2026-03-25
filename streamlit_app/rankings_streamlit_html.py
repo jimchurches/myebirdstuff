@@ -2,7 +2,7 @@
 **Rankings & lists** (Streamlit): nested tabs **Top Lists** / **Interesting Lists**, expanders per list.
 
 Uses HTML from :func:`personal_ebird_explorer.checklist_stats_display.format_checklist_stats_bundle`
-(``rankings_sections_top_n`` / ``rankings_sections_other``) — same tables as the Jupyter notebook,
+(``rankings_sections_top_n`` / ``rankings_sections_other``) — same tables as the explorer’s richly-linked HTML tables,
 rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matches **Checklist Statistics**:
 :func:`~streamlit_app.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
 ``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). Do not use ``st.dataframe``.
@@ -57,7 +57,7 @@ def render_rankings_streamlit_tab(
     country_sort: str,
     taxonomy_locale: str,
 ) -> None:
-    """Render Rankings & lists from the full export (notebook parity: ``df_full``)."""
+    """Render Rankings & lists from the full export (expects full export: ``df_full``)."""
 
     # Same injection pattern as ``checklist_stats_streamlit_html`` (table CSS + Streamlit tab-surface polish).
     inject_streamlit_checklist_css(

@@ -1,7 +1,7 @@
 """
 Framework-neutral map build pipeline for the species overlay map.
 
-Extracted from the notebook so Streamlit or other UIs can call
+Extracted so Streamlit or other UIs can call
 ``build_species_overlay_map`` with data + options and receive a Folium map
 (no ipywidgets). Notebook keeps display double-buffering and widget I/O (refs #67).
 """
@@ -134,7 +134,7 @@ def build_species_overlay_map(
     full-export location table (same scope as lifer prep).
 
     *popup_html_cache* and *filtered_by_loc_cache* are mutated by this function
-    (session caches; same contract as the notebook). Popup cache keys include
+    (session caches; same contract as the UI). Popup cache keys include
     *taxonomy_locale* so eBird species links refresh when the locale changes (Streamlit Settings).
 
     *date_filter_status* is shown in banners (e.g. ``Date filter: Off``); pass

@@ -1,5 +1,5 @@
 """
-CSV path resolution for the Personal eBird Explorer (Streamlit + legacy notebook stub).
+CSV path resolution for the Personal eBird Explorer (Streamlit app).
 
 Migration plan: issue #70 (https://github.com/jimchurches/myebirdstuff/issues/70).
 

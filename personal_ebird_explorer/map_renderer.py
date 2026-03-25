@@ -1,8 +1,8 @@
 """
 Map rendering helpers for Personal eBird Explorer.
 
-Pure helper functions used by the notebook's map overlay pipeline.
-Each function takes explicit inputs and returns a value — no notebook
+Pure helper functions used by the map overlay pipeline.
+Each function takes explicit inputs and returns a value — no UI
 globals, widget references, or side effects.
 
 Popup HTML is plain strings passed to ``folium.Popup``; typography and colours are **not** locked to

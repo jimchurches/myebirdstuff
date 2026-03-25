@@ -63,7 +63,7 @@ from streamlit_app.defaults import (
 
 
 def env_taxonomy_locale() -> str:
-    """Non-empty locale from env if set (notebook parity)."""
+    """Non-empty locale from env if set."""
     return (
         os.environ.get("STREAMLIT_EBIRD_TAXONOMY_LOCALE", "").strip()
         or os.environ.get("EBIRD_TAXONOMY_LOCALE", "").strip()

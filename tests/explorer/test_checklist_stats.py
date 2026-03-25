@@ -1,15 +1,12 @@
 import pandas as pd
 import pytest
+from personal_ebird_explorer.checklist_stats_compute import compute_checklist_stats_payload
+from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
 
-try:
-    from notebooks.personal_ebird_explorer import _compute_checklist_stats
-except (FileNotFoundError, ImportError):
-    _compute_checklist_stats = None
 
-pytestmark = pytest.mark.skipif(
-    _compute_checklist_stats is None,
-    reason="Notebook import requires local eBird data file",
-)
+def _compute_checklist_stats(df: pd.DataFrame):
+    payload = compute_checklist_stats_payload(df, top_n_limit=10)
+    return format_checklist_stats_bundle(payload, scroll_hint=0, visible_rows=200)
 
 
 def make_minimal_df():

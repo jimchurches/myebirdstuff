@@ -7,7 +7,7 @@
 venv/
 env/
 
-# Don't track secrets or local Streamlit/Jupyter config paths
+# Don't track secrets or local config paths
 config_secret.py
 scripts/config.py
 .streamlit/secrets.toml

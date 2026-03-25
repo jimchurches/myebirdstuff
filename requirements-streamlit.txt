@@ -1,10 +1,8 @@
-# Streamlit explorer prototype (refs https://github.com/jimchurches/myebirdstuff/issues/70)
+# Streamlit explorer app (refs https://github.com/jimchurches/myebirdstuff/issues/70)
 # pip install -r requirements-streamlit.txt
 # streamlit run streamlit_app/app.py
 #
-# Pandas: Streamlit currently declares pandas<3 (e.g. 1.55.x). The Jupyter explorer uses
-# pandas>=3 in requirements-explorer.txt — use a separate virtualenv for Streamlit if you
-# need both, or pip will downgrade pandas in a shared env.
+# Pandas: Streamlit currently requires pandas<3 — use a dedicated virtualenv for the app.
 
 # Python 3.10+ (streamlit-searchbox; refs #70)
 # 1.40+: ``st.dataframe(..., width="stretch")`` (``use_container_width`` deprecated / removed later).

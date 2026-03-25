@@ -1,7 +1,7 @@
 """
 Prepare kwargs for :func:`map_controller.build_species_overlay_map` in **all locations** mode.
 
-Used by the Streamlit prototype so map + popups match the notebook pipeline (refs #70).
+Used by Streamlit so map + popups match the shared pipeline (refs #70).
 When a date filter exists later, pass the **filtered** working frame as *df* and the
 **full** export as *full_df* for lifer / last-seen prep.
 """

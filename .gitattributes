@@ -1,11 +1,3 @@
 #
-# Git attributes for Jupyter notebooks
-# - Force Unix-style line endings
-# - Strip output on commit (via nbstripout)
-# - Use nbdime for diffs and merges
+# Git attributes
 #
-*.ipynb text eol=lf
-*.ipynb filter=nbstripout
-*.ipynb diff=jupyternotebook
-*.ipynb merge=jupyternotebook
-

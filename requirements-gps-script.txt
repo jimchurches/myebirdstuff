@@ -1,6 +1,6 @@
 # Dependencies for eBirdChecklistNameFromGPS.py (used by UI.Vision macros)
 # Install with: pip install -r requirements-gps-script.txt
-# Not needed for the notebook or Binder.
+# Not needed for the Streamlit app.
 
 requests
 pyperclip

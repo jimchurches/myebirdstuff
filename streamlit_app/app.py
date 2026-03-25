@@ -1,5 +1,5 @@
 """
-Personal eBird Explorer — Streamlit prototype (Folium map + notebook-style popups).
+Personal eBird Explorer — Streamlit app (Folium map + rich location popups).
 
 Planning and phased migration notes: https://github.com/jimchurches/myebirdstuff/issues/70 (refs #70).
 
@@ -811,7 +811,7 @@ def main() -> None:
                 file_name=MAP_EXPORT_HTML_FILENAME,
                 mime="text/html",
                 key=EXPORT_MAP_HTML_BTN_KEY,
-                help="Standalone HTML for the current map (notebook-style export).",
+                help="Standalone HTML for the current map.",
             )
 
     sidebar_footer_links()

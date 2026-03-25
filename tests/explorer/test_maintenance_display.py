@@ -12,7 +12,7 @@ from personal_ebird_explorer.maintenance_display import (
 
 
 def test_close_locations_one_table_per_pair():
-    """Close locations: separate tables + stack wrapper (refs Streamlit/Jupyter clarity)."""
+    """Close locations: separate tables + stack wrapper."""
     loc = pd.DataFrame(
         {
             "Location ID": ["L1", "L2", "L3", "L4"],

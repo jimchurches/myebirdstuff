@@ -1,9 +1,9 @@
 """
 Lightweight structured application state for Personal eBird Explorer.
 
-Replaces scattered notebook globals with a single inspectable object.
+Replaces scattered UI globals with a single inspectable object.
 Widget instances and read-only data (DataFrames, config) stay in the
-notebook — this module holds only shared mutable state that callbacks
+UI — this module holds only shared mutable state that callbacks
 read and write at runtime.
 """
 
@@ -13,7 +13,7 @@ from typing import Any
 
 @dataclass
 class ExplorerState:
-    """Core mutable application state shared across notebook callbacks.
+    """Core mutable application state shared across UI callbacks.
 
     Fields
     ------
@@ -22,7 +22,7 @@ class ExplorerState:
     selected_species_common : str
         Common name of the currently selected species (empty = all species).
     species_map : Any
-        The current ``folium.Map`` instance displayed in the notebook.
+        The current ``folium.Map`` instance displayed in the UI.
         Typed as ``Any`` to avoid a hard dependency on folium at import time.
 
     Re-entry guards

@@ -6,7 +6,7 @@ Notes for when you come back to this—perhaps on a cold Canberra winter weekend
 
 ## Decision
 
-Remain on the current Python + notebook-based front end for now.
+Use **Streamlit** as the primary front end moving forward.
 
 ## Rationale
 
@@ -24,24 +24,13 @@ The map remains the centre of the product and the recent refactor means the core
 
 ## Reassess when
 
-Revisit the front-end/platform decision if installation friction, user growth, or notebook UI limitations become a clear blocker.
+Revisit the front-end/platform decision if installation friction, user growth, or UI limitations become a clear blocker.
 
 ---
 
 ## Background and options (for when you revisit)
 
 The sections below capture earlier thinking and options that may be useful when revisiting the decision.
-
----
-
-## Is Python / Jupyter / Voila Still a Good Choice?
-
-**Yes.** For personal data exploration and a quick dashboard, the current stack (Jupyter + Voila + pandas + Folium + ipywidgets) is still a solid choice. Alternatives exist but aren’t clearly better:
-
-- **Streamlit** — Simpler for dashboards (no notebook format), single `.py` file, `streamlit run app.py`. Would be a viable alternative if starting fresh.
-- **Panel** — Similar to Voila; another way to turn notebooks into apps.
-
-If starting from scratch today, Streamlit might be considered, but Jupyter/Voila is still a good fit for the explore-then-dashboard workflow.
 
 ---
 
@@ -52,7 +41,7 @@ Somewhat. Sharing with others usually means either:
 - Hosting something somewhere, or
 - Creating a zero-install, in-browser experience.
 
-The tool (Jupyter vs Streamlit) matters less than how you distribute it. Hosted Streamlit and hosted Voila are roughly similar in effort.
+The tool (Streamlit vs alternatives) matters less than how you distribute it.
 
 ---
 
@@ -71,7 +60,7 @@ This is the most “just works” option for friends who don’t want to install
 
 ### Option 2: Hosted Web App
 
-- **What:** You host the app (Streamlit Cloud, Voila on a VPS, etc.). Users get a URL and upload their CSV in the browser.
+- **What:** You host the app (Streamlit Community Cloud, a VPS, etc.). Users get a URL and upload their CSV in the browser.
 - **Pros:** Zero install for them.
 - **Cons:** Privacy (data goes through your server), hosting cost and maintenance.
 
@@ -83,8 +72,8 @@ This is the most “just works” option for friends who don’t want to install
 
 ### Option 4: Installer Script (Python Does Everything After Step 1)
 
-- **What:** (1) Document for installing Python on Windows and macOS (already exists). (2) A Python script that installs everything else: pip packages, prompts for DATA_FOLDER, creates config_secret.py, sets up launcher scripts (`.command` on macOS, `.bat` on Windows) to run Jupyter or Voila.
-- **Feasibility:** Very realistic. Once Python is installed, a single cross-platform script can: run `pip install` via subprocess; create config files with pathlib; write launcher scripts that `cd` to the project and run `jupyter lab` or `voila`. No notebook re-engineering needed.
+- **What:** (1) Document for installing Python on Windows and macOS (already exists). (2) A Python script that installs everything else: pip packages, prompts for DATA_FOLDER, creates config_secret.py, sets up launcher scripts (`.command` on macOS, `.bat` on Windows) to run the app.
+- **Feasibility:** Very realistic. Once Python is installed, a single cross-platform script can: run `pip install` via subprocess; create config files with pathlib; write launcher scripts that `cd` to the project and run the app.
 - **What the script can’t do:** Install Python itself, or fix antivirus blocking pip. On macOS, avoid system Python; script should assume user has installed Python (python.org or pyenv).
 - **When to do it:** If you get more requests from friends to help them install this, it’s worth the time to build and test the installer on Windows.
 
@@ -94,8 +83,8 @@ This is the most “just works” option for friends who don’t want to install
 
 | Goal | Approach |
 |------|----------|
-| Personal use | Jupyter/Voila is fine; no need to change. |
+| Personal use | Streamlit app is fine; no need to change. |
 | Share with non-technical friends | Self-contained HTML file = no install, works everywhere. |
-| Share as a public web page | Hosted app (Streamlit or Voila); consider privacy and hosting. |
+| Share as a public web page | Hosted app; consider privacy and hosting. |
 
 For “friend on Windows, no fuss”: single HTML file with a CSV file picker is the most friction-free option. The trade-off is reimplementing the app in JavaScript, but the core features (search, filters, map) are all achievable.

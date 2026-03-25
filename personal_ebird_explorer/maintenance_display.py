@@ -1,7 +1,7 @@
 """
 HTML builders for the Maintenance tab (map duplicates, incomplete checklists, sex notation).
 
-Extracted from the notebook UI layer for reuse (e.g. Streamlit); refs #69, #79.
+Extracted from the UI layer for reuse (e.g. Streamlit); refs #69, #79.
 """
 
 from __future__ import annotations
@@ -16,12 +16,12 @@ from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
 # eBird location edit URL (merge/delete personal locations), not lifelist.
 EBIRD_LOCATION_EDIT_BASE = "https://ebird.org/mylocations/edit/"
 
-# Shared with notebook; Streamlit ``stats-tbl`` / ``stats-tbl-maint`` rules live in
+# Shared; Streamlit ``stats-tbl`` / ``stats-tbl-maint`` rules live in
 # ``checklist_stats_display._streamlit_checklist_html_tab_css`` (refs #79).
 MAINTENANCE_TABLE_CLASSES = "maint-tbl stats-tbl stats-tbl-maint"
 MAINTENANCE_PAIR_TABLE_CLASSES = "maint-tbl stats-tbl stats-tbl-maint maint-pair-tbl"
 
-# --- CSS (notebook accordions + Streamlit can inject once) ---
+# --- CSS (accordions + Streamlit can inject once) ---
 
 _MAINT_TEXT_CSS = """
     .maint-html-blurb {
@@ -101,7 +101,7 @@ MAP_MAINTENANCE_CSS = (
 """
 )
 
-# Used by incomplete + sex notation notebook wrappers (details/summary).
+# Used by incomplete + sex notation wrappers (details/summary).
 MAINTENANCE_YEAR_SECTION_CSS = (
     _MAINT_TEXT_CSS
     + """
@@ -204,7 +204,7 @@ def map_maintenance_table_sections_html(loc_df: pd.DataFrame, threshold_m: int) 
 
 
 def format_map_maintenance_html(loc_df: pd.DataFrame, threshold_m: int) -> str:
-    """Build HTML for Map maintenance: exact duplicates and close-location pairs (notebook accordion)."""
+    """Build HTML for Map maintenance: exact duplicates and close-location pairs (accordion)."""
     intro, exact_dup_content, close_loc_content = map_maintenance_table_sections_html(loc_df, threshold_m)
     return f"""
 <style>{MAP_MAINTENANCE_CSS}</style>
@@ -334,7 +334,7 @@ def iter_incomplete_checklists_years_desc(
 
 
 def format_incomplete_checklists_maintenance_html(incomplete_by_year: Dict[Any, List[Tuple[Any, ...]]]) -> str:
-    """HTML for incomplete travelling/stationary checklists by year (notebook accordion)."""
+    """HTML for incomplete travelling/stationary checklists by year (accordion)."""
     if not incomplete_by_year:
         return ""
     explanation = incomplete_checklists_intro_html()

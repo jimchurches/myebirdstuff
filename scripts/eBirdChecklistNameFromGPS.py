@@ -7,7 +7,7 @@ Resolves GPS coordinates into an eBird-friendly location name. Output is
 printed to the console and copied to the clipboard (for UI.Vision macros).
 
 Used by UI.Vision macros (e.g. incidental checklist creation, location rename).
-Does not run on Binder — run locally with Python.
+Run locally with Python.
 
 Requirements (install before use):
     pip install requests pyperclip

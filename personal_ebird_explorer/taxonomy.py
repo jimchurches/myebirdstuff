@@ -3,7 +3,7 @@ eBird taxonomy lookup for species links (refs #56).
 
 Fetches the eBird taxonomy once and provides COMMON_NAME -> SPECIES_CODE
 for CATEGORY == "species" only. Used to build eBird species and lifelist URLs.
-No API key required. Offline or API failure: lookup returns None; notebook continues.
+No API key required. Offline or API failure: lookup returns None; the UI continues.
 
 Locale: pass locale to load_taxonomy() so common names match your eBird export
 (e.g. "en_AU" for Australian English: Grey Teal, Willie Wagtail, Common Starling).
@@ -24,9 +24,9 @@ _common_to_code: dict[str, str] | None = None
 def load_taxonomy(locale: str | None = None) -> bool:
     """Fetch eBird taxonomy and build common name -> species_code lookup (species only).
 
-    Call once at startup (e.g. notebook data prep). On success returns True and
+    Call once at startup. On success returns True and
     get_species_url / get_species_lifelist_url will return URLs for species.
-    On failure returns False; lookups return None and the notebook does not break.
+    On failure returns False; lookups return None and the UI does not break.
 
     Args:
         locale: Optional locale code so common names match your eBird export.

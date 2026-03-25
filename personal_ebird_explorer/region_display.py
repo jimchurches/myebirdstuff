@@ -2,7 +2,7 @@
 Display helpers: convert region codes to human-readable names at render time.
 
 Uses pycountry for ISO country and subdivision (state/province) names.
-Used by the notebook when building rankings table HTML. (refs #43)
+Used when building rankings table HTML. (refs #43)
 """
 
 import pandas as pd

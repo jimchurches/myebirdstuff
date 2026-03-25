@@ -46,7 +46,7 @@ explorer/
 ### Phase 3 — deprecations and deletion
 
 8. ~~Remove legacy session-state bridges~~ (done: #93).
-9. Delete notebook-specific references/docs and retire `notebooks/`.
+9. Delete legacy UI references/docs and retire legacy UI code.
 10. Remove compatibility shims and old module paths when grep confirms no references.
 
 ## Checklist per move PR

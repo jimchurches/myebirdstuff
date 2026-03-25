@@ -1,7 +1,7 @@
 """
 Rebuild the explorer's filtered working DataFrame and derived map/search structures.
 
-Extracted from the notebook UI layer for reuse (e.g. future Streamlit) and clearer
+Extracted from the UI layer for reuse and clearer
 separation of data-prep from widgets. See GitHub #66.
 """
 
@@ -48,7 +48,7 @@ def rebuild_working_set_from_date_filter(
     """
     Recompute the working ``df`` and derived structures from ``df_full``.
 
-    Mirrors the notebook's former ``_apply_date_filter_and_build_map_data`` behaviour:
+    Mirrors the former ``_apply_date_filter_and_build_map_data`` behaviour:
     invalid date range leaves everything unchanged (returns ``None``).
     On success, optionally clears map popup/filter caches and rebuilds the Whoosh
     species index when ``whoosh_index`` is provided.
@@ -58,9 +58,9 @@ def rebuild_working_set_from_date_filter(
     df_full
         Full export dataframe (not the working slice).
     location_ids_with_checklists
-        Location IDs that have at least one checklist (same as notebook load).
+        Location IDs that have at least one checklist.
     filter_by_date, filter_start_date, filter_end_date
-        Same semantics as notebook ``FILTER_*`` variables.
+        Same semantics as ``FILTER_*`` variables.
     whoosh_index
         If set, the Whoosh index is cleared and repopulated with ``species_list``.
     map_caches
@@ -80,7 +80,7 @@ def rebuild_working_set_from_date_filter(
         except Exception:
             return None
 
-    # Keep "full" groupings consistent with the notebook: only locations that
+    # Keep "full" groupings consistent: only locations that
     # have checklists are eligible for both working + full views.
     df_full_filtered = df_full[df_full["Location ID"].isin(location_ids_with_checklists)].copy()
 

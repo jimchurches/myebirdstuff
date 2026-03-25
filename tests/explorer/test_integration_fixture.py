@@ -252,7 +252,7 @@ def test_integration_full_pipeline_headline_numbers(fixture_df, fixture_checklis
     """End-to-end: load → checklist → rankings + yearly stats → headline numbers match notes."""
     dur_col = "Duration (Min)" if "Duration (Min)" in fixture_df.columns else None
     dist_col = "Distance Traveled (km)" if "Distance Traveled (km)" in fixture_df.columns else None
-    # Same flow as notebook: checklist-level df, then stats
+    # Same flow: checklist-level df, then stats
     assert len(fixture_checklists) == EXPECTED_CHECKLISTS
     countable = countable_species_vectorized(fixture_df)
     assert countable.dropna().nunique() == EXPECTED_COUNTABLE_LIFE_SPECIES

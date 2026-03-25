@@ -25,7 +25,7 @@ def cached_sex_notation_by_year(df: pd.DataFrame) -> dict:
 
 
 def full_location_data_for_maintenance(df: pd.DataFrame) -> pd.DataFrame:
-    """Unique locations for map maintenance (same columns as notebook ``full_location_data``)."""
+    """Unique locations for map maintenance (same columns as ``full_location_data``)."""
     cols = ["Location ID", "Location", "Latitude", "Longitude"]
     if not all(c in df.columns for c in cols):
         return pd.DataFrame(columns=cols)

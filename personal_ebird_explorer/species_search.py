@@ -1,7 +1,7 @@
 """
 Whoosh-backed species name suggestions for autocomplete-style search (refs #69, #70).
 
-Pure helper: no ipywidgets; notebook/Streamlit wire results to UI.
+Pure helper: no ipywidgets; UI wires results to display.
 
 Indexes store **common_name** and **scientific_name** so queries can match either field
 (eBird-like multi-token search).

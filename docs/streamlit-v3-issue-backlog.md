@@ -202,23 +202,25 @@ Added `tests/explorer/test_streamlit_ui_helpers.py` which runs UI helper logic (
 
 ---
 
-## 12. [Enhancement] Documentation pass for v3 (prototype wording, Settings paths, install)
+## 12. ~~[Enhancement] Documentation pass for v3 (prototype wording, Settings paths, install)~~ (done, #102)
 
 **Type:** Enhancement  
 **Optional:** No for release, but can trail code changes
 
 **Problem**
 
-Some docs still imply “prototype”, old tab names, or Binder-first flows.
+Some docs still imply “prototype” or old tab names.
 
 **Goal**
 
-- Align `streamlit_app/README.md`, `docs/explorer/*.md`, and `docs/AI_CONTEXT.md` with **Streamlit as primary** and notebook removal.
+- Align `streamlit_app/README.md`, `docs/explorer/*.md`, and `docs/AI_CONTEXT.md` with **Streamlit as primary**.
 - Single “run locally / Cloud” story.
 
 **Depends on**
 
 - Final folder layout and entrypoint (**§1–2**).
+
+Done: updated `streamlit_app/README.md`, `docs/explorer/*.md`, and `docs/AI_CONTEXT.md` to make Streamlit the primary UI, remove legacy wording, and align the run-local/Cloud narrative.
 
 ---
 

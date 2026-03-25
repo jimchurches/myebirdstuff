@@ -16,13 +16,13 @@ Prefer incremental improvements over large rewrites.
 
 Avoid introducing major architectural changes unless explicitly requested.
 
-### Keep logic out of the notebook
+### Keep logic out of the UI
 
-The Jupyter notebook acts as a **UI layer**.
+The Streamlit app acts as a **UI layer**.
 
 Core logic should live in Python modules inside the project package.
 
-Avoid placing complex logic directly in notebook cells.
+Avoid placing complex logic directly in UI code.
 
 ### Respect the data model
 
@@ -47,16 +47,16 @@ In particular avoid:
 
 The project is intentionally lightweight.
 
-**Roadmap note:** **Streamlit** is the **intended future** primary UI ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70): phased prototype → parallel dev → cutover; preserve notebook/Binder until then). A **prototype** lives in `streamlit_app/` (`requirements-streamlit.txt`); keep **shipping** `requirements.txt` / Binder focused on Jupyter unless `main` explicitly switches. Do not add **other** full UI frameworks without maintainer agreement.
+**Roadmap note:** **Streamlit** is the **primary** UI in this repo ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)). New UI work should target `streamlit_app/`. Do not add **other** full UI frameworks without maintainer agreement.
 
 ### Streamlit UI
 
-For work in **`streamlit_app/`** and any future Streamlit-first UI ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)). **Native widgets first**; **shared HTML formatters** for notebook-parity tables where `st.dataframe` is not enough:
+For work in **`streamlit_app/`** and any future Streamlit-first UI ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)). **Native widgets first**; **shared HTML formatters** for richly-linked tables where `st.dataframe` is not enough:
 
 - **Use Streamlit primitives first** when they are enough — `st.tabs`, `st.expander`, `st.columns`, `st.dataframe`, `st.metric`, sidebar, `.streamlit/config.toml` theme. Simple **metric / key–value** blocks and uniform **URL** columns (`LinkColumn`) fit here.
-- **Rankings, “Interesting lists”, and similar notebook tables** — The Jupyter UI uses **HTML tables** with **links in cells** (species, locations, datetimes), **mixed styling** (e.g. dotted vs solid underlines, bold counts), and **⧉** affordances. **`st.dataframe` cannot replicate that** in a maintainable way. **Approved approach:** emit the **same HTML** the notebook uses from **shared module formatters** (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, maintenance/ranking helpers, etc.) and render it with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`** (when available). **Do not duplicate** table markup inside `streamlit_app/` — extend or call the formatter. Treat this like **Folium popup HTML**: trusted formatter output; escape user-origin text **inside** the formatter.
+- **Rankings, “Interesting lists”, and similar richly-linked tables** — These use **HTML tables** with **links in cells** (species, locations, datetimes), **mixed styling** (e.g. dotted vs solid underlines, bold counts), and **⧉** affordances. **`st.dataframe` cannot replicate that** in a maintainable way. **Approved approach:** emit the HTML from **shared module formatters** (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, maintenance/ranking helpers, etc.) and render it with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`** (when available). **Do not duplicate** table markup inside `streamlit_app/` — extend or call the formatter. Treat this like **Folium popup HTML**: trusted formatter output; escape user-origin text **inside** the formatter.
 - **Keep eBird deep links** — Do **not** drop URLs from a ported view just to stay on a plain dataframe. Prefer shared HTML for rich tables; use **`LinkColumn`** or **layout + `st.markdown` links** only where that still matches UX.
-- **Ad-hoc HTML/CSS** — One-off `unsafe_allow_html` blobs **not** produced by a shared formatter are still a **conscious exception** (fragility, theming). Prefer routing table HTML through **`personal_ebird_explorer/`** helpers so notebook and Streamlit stay aligned.
+- **Ad-hoc HTML/CSS** — One-off `unsafe_allow_html` blobs **not** produced by a shared formatter are still a **conscious exception** (fragility, theming). Prefer routing table HTML through **`personal_ebird_explorer/`** helpers so formats stay aligned.
 - **When suggesting implementations**, note briefly if **`st.dataframe` would suffice** vs formatter HTML, so the choice stays explicit.
 - **Defaults live in one module** — Put new or changed **user-visible defaults** (limits, colours, labels, session seeds, export filenames, etc.) in **`streamlit_app/defaults.py`**, then wire them into **`app.py`** and, if the value is **persisted in settings YAML**, into **`personal_ebird_explorer/streamlit_settings_config.py`** (reuse the same constants for `Field(...)` defaults and allowlists). Streamlit-only HTML helpers (e.g. rankings layout) should import from **`defaults.py`** instead of inlining magic numbers. Extend **`tests/explorer/test_streamlit_defaults.py`** when the persisted schema or default payload changes so the builder and model stay aligned.
 
@@ -97,7 +97,7 @@ The tool allows exploration of:
 - visit statistics
 - first/last seen dates
 
-The primary interface is a Jupyter notebook that renders a Folium map.
+The primary interface is the Streamlit app that renders a Folium map.
 
 ---
 
@@ -116,28 +116,26 @@ derived statistics modules
     ↓
 map rendering
     ↓
-Folium map displayed in notebook UI
+Folium map displayed in Streamlit UI
 ```
 
-The notebook acts as a **thin UI layer**. All core logic should live in Python modules.
+The UI layer should stay **thin**. All core logic should live in Python modules.
 
 ---
 
 ## Roadmap: Streamlit (or similar UI)
 
-**Long-term intent:** move the primary user interface from **Jupyter + ipywidgets + Voila** toward **Streamlit**, following the plan in **[issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)** (prototype on a feature branch, notebook unchanged on `main` until cutover, optional legacy tag/branch).
+**Long-term intent:** keep Streamlit as the primary UI and continue improving the Streamlit experience over time.
 
 **Practical guidance for AI and contributors:**
 
-- **Not every feature or fix will be Streamlit-related yet.** The notebook remains the default full-featured UI until migration phases in #70 complete.
-- **Prototype:** `streamlit_app/app.py` — extend here for Streamlit experiments; reuse `personal_ebird_explorer` modules.
+- `streamlit_app/app.py` is where Streamlit UI work should land; reuse `personal_ebird_explorer` modules.
 - When working on **any** area of the explorer, **bias toward** patterns that make a future Streamlit app easier:
-  - Put **new or refactored logic** in `personal_ebird_explorer/` (or other testable modules) with **explicit inputs and return values**, not buried only in notebook cells.
-  - Treat the notebook as **glue**: widgets, observers, and display—not the home for large orchestration, HTML compilers, or data-prep pipelines.
-  - Be mindful of **state boundaries** (loaded data vs filters vs display options vs caches), even if the notebook still uses globals today; a future app will likely use something like session-scoped state instead.
+  - Put **new or refactored logic** in `personal_ebird_explorer/` (or other testable modules) with **explicit inputs and return values**, not buried only in UI code.
+  - Be mindful of **state boundaries** (loaded data vs filters vs display options vs caches); a future app will likely use something like session-scoped state.
 - Larger migration themes (e.g. date-filter + index rebuild, map build/caches, checklist stats / yearly HTML, lifer lookups, search/autocomplete) may be tracked as separate GitHub issues or epics; follow those when implementing related work.
 
-This section exists so assistants **remember the direction** when suggesting architecture, refactors, or where new code should live—even when the user’s immediate request is still notebook-centric.
+This section exists so assistants **remember the direction** when suggesting architecture, refactors, or where new code should live.
 
 ---
 
@@ -148,9 +146,9 @@ The dataset is **static during runtime**.
 The application assumes:
 
 - a CSV file is loaded once
-- data does not change while the notebook is running
+- data does not change while the app/session is running
 
-**External API (taxonomy):** The app fetches the eBird taxonomy once at startup (no API key) to resolve species common names to eBird species/lifelist URLs. Locale is controlled by the notebook user variable **EBIRD_TAXONOMY_LOCALE** (e.g. `"en_AU"`, `"en_GB"`, or empty for default). On network or API failure, the notebook continues without species links; do not break the run or add retries in the first version.
+**External API (taxonomy):** The app fetches the eBird taxonomy once at startup (no API key) to resolve species common names to eBird species/lifelist URLs. Locale is controlled by the UI setting (Streamlit env/config like `STREAMLIT_EBIRD_TAXONOMY_LOCALE` / **EBIRD_TAXONOMY_LOCALE**; e.g. `"en_AU"`, `"en_GB"`, or empty for default). On network or API failure, the UI continues without species links; do not break the run or add retries in the first version.
 
 This allows caching of derived structures such as:
 
@@ -164,7 +162,7 @@ Caching should remain simple and in-memory.
 
 ## UI design
 
-The notebook provides the user interface.
+Streamlit provides the user interface.
 
 Controls include:
 
@@ -173,7 +171,7 @@ Controls include:
 - map interactions
 - export controls
 
-The notebook should remain lightweight. Avoid placing heavy logic inside notebook cells.
+The UI should remain lightweight. Avoid placing heavy logic inside Streamlit callbacks.
 
 ---
 
@@ -198,9 +196,9 @@ When modifying the code:
 - Prefer small changes over large rewrites.
 - Avoid introducing new frameworks unless clearly justified.
 - Maintain separation between:
-  - **UI layer** (notebook)
+  - **UI layer** (Streamlit)
   - **core logic** (modules)
-- Do not move logic into the notebook.
+- Do not move logic into the UI layer.
 
 ---
 
@@ -219,7 +217,7 @@ Tests exist for:
 - taxonomy (species-link lookup, locale parameter, offline behaviour)
 
 New logic should ideally be placed in modules where tests can be written.  
-Avoid writing complex logic directly in notebook cells.
+Avoid writing complex logic directly in UI code.
 
 Run tests: `pytest tests/ -v`
 
@@ -261,13 +259,13 @@ Discuss before implementing major refactors.
 
 ## Future direction
 
-**Committed direction (roadmap):** migrate the explorer toward a **Streamlit**-style (or similar) app while keeping **core logic in modules** so the notebook is not the only place behaviour lives. See [Roadmap: Streamlit (or similar UI)](#roadmap-streamlit-or-similar-ui).
+**Committed direction (roadmap):** keep the explorer as a **Streamlit** app while keeping **core logic in modules** so behaviour is testable and reusable. See [Roadmap: Streamlit (or similar UI)](#roadmap-streamlit-or-similar-ui).
 
 Other possible improvements include:
 
-- improved UI controls (notebook and/or future app)
+- improved UI controls
 - better export options
-- optional web deployment (e.g. Voila) for the notebook-era UI
+- optional hosted deployment
 - richer species analysis tools
 - easier onboarding for non-technical users
 

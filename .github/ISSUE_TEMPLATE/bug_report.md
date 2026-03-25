@@ -29,8 +29,7 @@ If applicable, add screenshots to help explain your problem.
 **Environment (please complete the following information):**
 - OS: [e.g. macOS, Windows]
 - Python version: [e.g. 3.11]
-- Jupyter/Notebook version: [e.g. JupyterLab 4.0]
-- Browser (if using Voila): [e.g. Chrome, Safari]
+- Browser: [e.g. Chrome, Safari] (if applicable)
 
 **Additional context**
 Add any other context about the problem here.
