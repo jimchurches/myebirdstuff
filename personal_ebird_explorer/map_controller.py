@@ -125,6 +125,7 @@ def build_species_overlay_map(
     filtered_by_loc_cache_max: int = 60,
     map_view_mode: str = "all",
     full_location_data: Optional[pd.DataFrame] = None,
+    taxonomy_locale: str = "",
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -133,11 +134,13 @@ def build_species_overlay_map(
     full-export location table (same scope as lifer prep).
 
     *popup_html_cache* and *filtered_by_loc_cache* are mutated by this function
-    (session caches; same contract as the notebook).
+    (session caches; same contract as the notebook). Popup cache keys include
+    *taxonomy_locale* so eBird species links refresh when the locale changes (Streamlit Settings).
 
     *date_filter_status* is shown in banners (e.g. ``Date filter: Off``); pass
     ``""`` to omit the extra line.
     """
+    tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
     if mode not in _VALID_MAP_VIEWS:
         mode = "all"
@@ -181,7 +184,7 @@ def build_species_overlay_map(
         )
         for _, row in loc_rows.iterrows():
             lid = row["Location ID"]
-            popup_key = (lid, "__lifer_map__", effective_use_full)
+            popup_key = (lid, "__lifer_map__", effective_use_full, tax_loc_key)
             if popup_key not in popup_html_cache:
                 base_records = effective_records_by_loc.get(lid, pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
@@ -247,7 +250,7 @@ def build_species_overlay_map(
         )
 
         for _, row in effective_location_data.iterrows():
-            popup_key = (row["Location ID"], "", effective_use_full)
+            popup_key = (row["Location ID"], "", effective_use_full, tax_loc_key)
             if popup_key not in popup_html_cache:
                 base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
@@ -369,7 +372,7 @@ def build_species_overlay_map(
             if not row["has_species_match"] and hide_non_matching_locations:
                 continue
 
-            popup_key = (loc_id, selected_species)
+            popup_key = (loc_id, selected_species, tax_loc_key)
             if popup_key not in popup_html_cache:
                 base_records = records_by_loc.get(loc_id, pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(

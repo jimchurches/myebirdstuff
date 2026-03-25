@@ -25,7 +25,7 @@ Disk path takes precedence over a stale session upload when both exist.
 
 **Taxonomy:** After CSV load, the app fetches the eBird taxonomy once per session (cached) so species
 names in popups can link to eBird species pages. Default locale is **en_AU**; override with
-``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE`` or **Settings → Species links**.
+``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE`` or **Settings → Taxonomy**.
 Streamlit does not expose the browser language to Python.
 
 **Checklist Statistics:** Shared HTML sections (nested ``st.tabs`` + formatted tables from
@@ -58,6 +58,7 @@ contains map controls plus footer links (refs #70). Settings sliders use a keyed
 
 from __future__ import annotations
 
+import html
 import io
 import os
 import sys
@@ -207,6 +208,51 @@ div.st-key-ebird_settings_panel {{
 }}
 .ebird-settings-persistence-banner strong {{
     font-weight: 600;
+}}
+/* Settings → Data & path (read-only troubleshooting block). */
+.ebird-data-path-block {{
+    font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: {THEME_TEXT_HEX};
+    margin: 0.35rem 0 0.5rem 0;
+}}
+.ebird-data-path-block p {{
+    margin: 0.4rem 0;
+}}
+.ebird-data-path-block strong {{
+    color: {THEME_PRIMARY_HEX};
+    font-weight: 600;
+}}
+.ebird-data-path-block code {{
+    font-size: 0.8125rem;
+    font-weight: 400;
+    word-break: break-all;
+    background: {THEME_SECONDARY_BG_HEX};
+    padding: 0.12em 0.4em;
+    border-radius: 0.2rem;
+    color: {THEME_TEXT_HEX};
+}}
+/* Settings → Taxonomy (body copy; matches Data & path typography). */
+.ebird-settings-section-copy {{
+    font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: {THEME_TEXT_HEX};
+    margin: 0.35rem 0 0.75rem 0;
+}}
+.ebird-settings-section-copy a {{
+    color: {THEME_PRIMARY_HEX};
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}}
+.ebird-settings-section-copy code {{
+    font-size: 0.8125rem;
+    font-weight: 400;
+    background: {THEME_SECONDARY_BG_HEX};
+    padding: 0.12em 0.35em;
+    border-radius: 0.2rem;
+    color: {THEME_TEXT_HEX};
 }}
 </style>
 """
@@ -530,13 +576,15 @@ def _static_map_cache_key(
     date_filter_banner: str,
     map_style: str,
     render_opts_sig: tuple = (),
+    taxonomy_locale: str = "",
 ) -> tuple:
-    """Stable key for All / Lifer map reuse (same CSV + filter + basemap)."""
+    """Stable key for All / Lifer map reuse (same CSV + filter + basemap + taxonomy)."""
     n = len(work_df)
     sid0 = ""
     if n > 0 and "Submission ID" in work_df.columns:
         sid0 = str(work_df["Submission ID"].iloc[0])
-    return (map_view_mode, date_filter_banner, map_style, render_opts_sig, n, sid0)
+    tax = (taxonomy_locale or "").strip()
+    return (map_view_mode, date_filter_banner, map_style, render_opts_sig, n, sid0, tax)
 
 
 def _env_taxonomy_locale() -> str:
@@ -663,22 +711,22 @@ def _load_dataframe(
     *,
     uploaded: Any | None = None,
     upload_cache: tuple[bytes, str] | None = None,
-) -> tuple[pd.DataFrame | None, str | None, str | None]:
+) -> tuple[pd.DataFrame | None, str | None, str | None, str | None, str | None]:
     """
-    Return ``(df, provenance_html)`` or ``(None, None)`` if nothing loaded yet.
+    Return ``(df, provenance_html, source_label, data_abs_path, data_basename)``.
 
-    Precedence: *uploaded* (landing widget, new pick) → **disk** (config / path resolution) →
-    *upload_cache* (session bytes from a prior upload this session). ``load_dataset`` / path logic stay
-    here for later enhancements (refs #70).
+    *data_abs_path* is set only for on-disk resolution (``None`` for landing / session upload).
+    *data_basename* is the CSV file name for display.
     """
     if uploaded is not None:
         try:
             raw = uploaded.getvalue()
             df = load_dataset(io.BytesIO(raw))
-            return df, f"Upload: **{uploaded.name}**", None
+            name = uploaded.name
+            return df, f"Upload: **{name}**", None, None, name
         except Exception as e:
             st.error(f"Could not load CSV: {e}")
-            return None, None, None
+            return None, None, None, None, None
 
     try:
         folders, sources = build_explorer_candidate_dirs(
@@ -688,7 +736,8 @@ def _load_dataframe(
         path, _folder, src = resolve_ebird_data_file(DEFAULT_EBIRD_FILENAME, folders, sources)
         df = load_dataset(path)
         label = src.replace("_", " ").title()
-        return df, f"Disk: `{path}` (_{label}_)", src
+        base = os.path.basename(path)
+        return df, f"Disk: `{path}` (_{label}_)", src, path, base
     except FileNotFoundError:
         pass
 
@@ -696,12 +745,77 @@ def _load_dataframe(
         raw, name = upload_cache
         try:
             df = load_dataset(io.BytesIO(raw))
-            return df, f"Upload: **{name}**", None
+            return df, f"Upload: **{name}**", None, None, name
         except Exception as e:
             st.error(f"Could not load CSV: {e}")
-            return None, None, None
+            return None, None, None, None, None
 
-    return None, None, None
+    return None, None, None, None, None
+
+
+def _settings_data_path_html(
+    *,
+    data_basename: str | None,
+    data_abs_path: str | None,
+    source_label: str | None,
+    repo_root: str,
+) -> str:
+    """Read-only Settings block: file name, optional disk path, loaded-by category."""
+    if not data_basename:
+        return (
+            '<div class="ebird-data-path-block">'
+            "<p><em>No dataset loaded in this session.</em></p>"
+            "</div>"
+        )
+    esc_name = html.escape(data_basename, quote=False)
+    rows: list[str] = [
+        f'<p><strong>Data file name:</strong> <code>{esc_name}</code></p>',
+    ]
+    if data_abs_path:
+        esc_path = html.escape(data_abs_path, quote=False)
+        rows.append(f'<p><strong>Data file path:</strong> <code>{esc_path}</code></p>')
+
+    if not (source_label and str(source_label).strip()):
+        loaded_by = "Landing page"
+    elif settings_yaml_path_for_source(repo_root, source_label):
+        loaded_by = "Configuration file"
+    elif source_label == "cwd":
+        loaded_by = "Working directory"
+    else:
+        loaded_by = str(source_label).replace("_", " ").title()
+    rows.append(
+        f"<p><strong>Data file loaded by:</strong> {html.escape(loaded_by, quote=False)}</p>"
+    )
+
+    return f'<div class="ebird-data-path-block">{"".join(rows)}</div>'
+
+
+def _settings_taxonomy_help_html() -> str:
+    """Settings → Taxonomy: short copy + link to eBird help (locale codes; no API key)."""
+    p1 = html.escape(
+        "Used for species names in links, tables, popups and elsewhere. "
+        "Update based on the locale of input data.",
+        quote=False,
+    )
+    help_url = (
+        "https://support.ebird.org/en/support/solutions/articles/48000804865-bird-names-in-ebird"
+    )
+    p2 = (
+        "Match the language and region you use for common names in "
+        "<strong>My eBird → Preferences</strong> "
+        f"(e.g. English (Australia) → <code>en_AU</code>). "
+        "This field is the same eBird <strong>locale</strong> code the "
+        "taxonomy API accepts for common-name spellings. "
+        f'<a href="{help_url}" target="_blank" rel="noopener noreferrer">'
+        f"{html.escape('Bird names in eBird', quote=False)}</a>"
+        " — how regional names are chosen."
+    )
+    return (
+        '<div class="ebird-settings-section-copy">'
+        f"<p>{p1}</p>"
+        f'<p style="margin:0.65rem 0 0 0;">{p2}</p>'
+        "</div>"
+    )
 
 
 def main() -> None:
@@ -718,7 +832,9 @@ def main() -> None:
     ):
         upload_cache = None
 
-    df_full, provenance, source_label = _load_dataframe(uploaded=None, upload_cache=upload_cache)
+    df_full, provenance, source_label, data_abs_path, data_basename = _load_dataframe(
+        uploaded=None, upload_cache=upload_cache
+    )
 
     if df_full is not None and provenance and "Disk:" in provenance:
         # Drop stale session upload when disk resolution wins (local path after a prior Cloud upload).
@@ -738,7 +854,9 @@ def main() -> None:
                 help="Official eBird full data export (CSV).",
             )
             if uploaded is not None:
-                df_full, provenance, source_label = _load_dataframe(uploaded=uploaded, upload_cache=None)
+                df_full, provenance, source_label, data_abs_path, data_basename = _load_dataframe(
+                    uploaded=uploaded, upload_cache=None
+                )
                 if df_full is not None:
                     st.session_state[_SESSION_UPLOAD_CACHE_KEY] = (uploaded.getvalue(), uploaded.name)
                     # Landing widgets already ran above in this run; rerun loads from cache and skips this block.
@@ -757,7 +875,7 @@ def main() -> None:
                     """
                 )
                 st.caption(
-                    "Species links default to **en_AU**; change locale under **Settings → Species links** after load. "
+                    "Species links default to **en_AU**; change locale under **Settings → Taxonomy** after load. "
                     "Data still loads if names don’t match.\n\n"
                     "This page is skipped when a CSV is already found on disk (local config path). "
                     "Support for local files works when Streamlit is running locally; see the code repo for more information. "
@@ -1010,6 +1128,7 @@ def main() -> None:
                 "date_filter_status": date_filter_banner,
                 "species_url_fn": species_url_fn,
                 "base_species_fn": base_species_for_lifer,
+                "taxonomy_locale": tax_locale_effective,
                 "popup_html_cache": st.session_state.popup_html_cache,
                 "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
                 "map_view_mode": map_view_mode,
@@ -1035,6 +1154,7 @@ def main() -> None:
                 date_filter_banner,
                 map_style,
                 _render_opts_sig,
+                taxonomy_locale=tax_locale_effective,
             )
             _use_static_cache = map_view_mode in ("all", "lifers")
             _cached = (
@@ -1245,21 +1365,23 @@ def main() -> None:
                 ),
             )
             st.divider()
-            st.subheader("Data & path")
-            st.caption("Read-only runtime source details for this session.")
-            st.markdown(f"**Loaded source:** {provenance or '—'}")
-            st.code(f"Default file name: {DEFAULT_EBIRD_FILENAME}")
-            st.divider()
             st.subheader("Taxonomy")
             st.text_input(
-                "Taxonomy locale (species page URLs)",
+                "Taxonomy locale",
                 key="streamlit_taxonomy_locale",
-                help="eBird API locale for species names in taxonomy CSV (e.g. en_AU, en_GB). "
-                "Empty is treated as en_AU.",
             )
-            st.caption(
-                "Used for species links in map popups and elsewhere. First-visit default: "
-                "``STREAMLIT_EBIRD_TAXONOMY_LOCALE`` / ``EBIRD_TAXONOMY_LOCALE``, else en_AU."
+            st.markdown(_settings_taxonomy_help_html(), unsafe_allow_html=True)
+            st.divider()
+            st.subheader("Data & path")
+            st.caption("Read-only details for this session (useful when troubleshooting).")
+            st.markdown(
+                _settings_data_path_html(
+                    data_basename=data_basename,
+                    data_abs_path=data_abs_path,
+                    source_label=source_label,
+                    repo_root=_REPO_ROOT,
+                ),
+                unsafe_allow_html=True,
             )
 
     if st.session_state.get("_explorer_map_html_bytes"):
