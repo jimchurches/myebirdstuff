@@ -303,16 +303,12 @@ def main() -> None:
 
         st.markdown("**Date**")
         if is_lifer_view:
-            st.caption("Lifer locations is not date-filtered.")
+            st.caption("Lifer locations are not date-filtered.")
             if st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT):
                 st.caption("Your date filter is preserved for other map views.")
             st.toggle(
                 "Show subspecies lifers",
                 key=STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
-                help=(
-                    "When on, the lifer map distinguishes Species / Subspecies / Both. "
-                    "When off, lifers are consolidated to the base species."
-                ),
             )
             date_filter_on_effective = False
             date_range_sel: tuple | None = None
@@ -516,6 +512,9 @@ def main() -> None:
                 "mark_lifer": mark_lifer,
                 "mark_last_seen": mark_last_seen,
                 "date_filter_status": date_filter_banner,
+                # For lifer mode we already communicate the “not date-filtered” behaviour in the
+                # side panel. Avoid repeating "all-time data" text in the banner.
+                "date_filter_status": "" if is_lifer_view else date_filter_banner,
                 "species_url_fn": species_url_fn,
                 "base_species_fn": base_species_for_lifer,
                 "taxonomy_locale": tax_locale_effective,
@@ -594,11 +593,10 @@ def main() -> None:
                     result_map,
                     use_container_width=True,
                     height=map_height,
-                    key=(
-                        f"explorer_folium_map_{map_view_mode}"
-                        f"_sub{int(bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)))}"
-                        f"_h{map_height}"
-                    ),
+                    # Include the full map cache key in the component identity so switching views,
+                    # toggles, and even server restarts remount the iframe (prevents stale marker
+                    # styling like "white pins" persisting across sessions).
+                    key=f"explorer_folium_{abs(hash(_ck))}_h{map_height}",
                     returned_objects=[],
                     return_on_hover=False,
                 )
