@@ -10,3 +10,4 @@ pycountry
 
 # Testing
 pytest
+PyYAML>=6,<7
