@@ -117,6 +117,15 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   font-weight: 400;
   margin: 0;
 }}
+.pebird-map-banner__stats a {{
+  color: inherit;
+  text-decoration: none;
+  font-weight: inherit;
+}}
+.pebird-map-banner__stats a:hover {{
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}}
 .pebird-map-banner__sep {{
   color: {EXPLORER_UI_MUTED};
   font-weight: 400;
@@ -362,6 +371,9 @@ def build_species_banner_html(
     high_count_date="",
     date_filter_status=None,
     species_url=None,
+    first_seen_checklist_url: str | None = None,
+    last_seen_checklist_url: str | None = None,
+    high_count_checklist_url: str | None = None,
 ):
     """Return the HTML overlay banner for a species-filtered map view.
 
@@ -375,7 +387,17 @@ def build_species_banner_html(
         high_count_date: Formatted date string when high count was recorded (empty to omit).
         date_filter_status: Optional string (e.g. "Date filter: Off" or range) shown on last line, smaller and lighter.
         species_url: Optional eBird species page URL; if set, display_name is rendered as a clickable link (refs #56).
+        first_seen_checklist_url: Optional eBird checklist URL for the first-seen date (refs #XXX).
+        last_seen_checklist_url: Optional eBird checklist URL for the last-seen date (refs #XXX).
+        high_count_checklist_url: Optional eBird checklist URL for the high-count date (refs #XXX).
     """
+    def _maybe_link(label: str, url: str | None) -> str:
+        if not url:
+            return _html_module.escape(str(label), quote=False)
+        esc_url = _html_module.escape(str(url), quote=True)
+        esc_label = _html_module.escape(str(label), quote=False)
+        return f'<a href="{esc_url}" target="_blank" rel="noopener">{esc_label}</a>'
+
     title_esc = _html_module.escape(str(display_name), quote=False)
     title_html = (
         f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">'
@@ -390,11 +412,12 @@ def build_species_banner_html(
     )
     line3_parts = []
     if first_seen_date:
-        line3_parts.append(f"First seen: {first_seen_date}")
+        line3_parts.append(f"First seen: {_maybe_link(first_seen_date, first_seen_checklist_url)}")
     if last_seen_date:
-        line3_parts.append(f"Last seen: {last_seen_date}")
+        line3_parts.append(f"Last seen: {_maybe_link(last_seen_date, last_seen_checklist_url)}")
     line3 = sep_dot.join(line3_parts)
-    line4 = f"High count: {high_count_date} ({high_count})"
+    line4_date = _maybe_link(high_count_date, high_count_checklist_url) if high_count_date else ""
+    line4 = f"High count: {line4_date} ({high_count})"
     date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
     return (
         f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'

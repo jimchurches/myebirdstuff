@@ -469,6 +469,9 @@ def build_species_overlay_map(
         first_seen_date = ""
         last_seen_date = ""
         high_count_date = ""
+        first_seen_url: str | None = None
+        last_seen_url: str | None = None
+        high_count_url: str | None = None
         sci_parts_banner = (selected_species or "").strip().split()
         is_subspecies_banner = len(sci_parts_banner) >= 3
         taxon_key_banner = selected_species.strip().lower() if selected_species else None
@@ -482,10 +485,20 @@ def build_species_overlay_map(
             last_rec = subset.iloc[-1]
             first_seen_date = _banner_date(first_rec["Date"])
             last_seen_date = _banner_date(last_rec["Date"])
+            fcid = first_rec.get("Submission ID", "")
+            lcid = last_rec.get("Submission ID", "")
+            if pd.notna(fcid) and str(fcid).strip():
+                first_seen_url = f"https://ebird.org/checklist/{str(fcid).strip()}"
+            if pd.notna(lcid) and str(lcid).strip():
+                last_seen_url = f"https://ebird.org/checklist/{str(lcid).strip()}"
 
         high_count_rows = filtered[filtered["Count"].apply(safe_count) == high_count]
         if not high_count_rows.empty:
-            high_count_date = _banner_date(high_count_rows.iloc[0]["Date"])
+            hrow = high_count_rows.iloc[0]
+            high_count_date = _banner_date(hrow["Date"])
+            hcid = hrow.get("Submission ID", "")
+            if pd.notna(hcid) and str(hcid).strip():
+                high_count_url = f"https://ebird.org/checklist/{str(hcid).strip()}"
 
         display_name = selected_common_name or selected_species
         species_url = species_url_fn(display_name) if species_url_fn else None
@@ -502,6 +515,9 @@ def build_species_overlay_map(
                     high_count_date=high_count_date,
                     date_filter_status=dfs,
                     species_url=species_url,
+                    first_seen_checklist_url=first_seen_url,
+                    last_seen_checklist_url=last_seen_url,
+                    high_count_checklist_url=high_count_url,
                 )
             )
         )

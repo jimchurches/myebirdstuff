@@ -253,13 +253,19 @@ def test_build_species_banner_html_full():
         first_seen_date="10-Jan-2024",
         last_seen_date="20-Feb-2026",
         high_count_date="05-Mar-2025",
+        first_seen_checklist_url="https://ebird.org/checklist/S1",
+        last_seen_checklist_url="https://ebird.org/checklist/S2",
+        high_count_checklist_url="https://ebird.org/checklist/S3",
     )
     assert "Grey Teal" in html
     assert "15 checklists" in html
     assert "42 individuals" in html
-    assert "First seen: 10-Jan-2024" in html
-    assert "Last seen: 20-Feb-2026" in html
-    assert "High count: 05-Mar-2025 (8)" in html
+    assert 'First seen: <a href="https://ebird.org/checklist/S1"' in html
+    assert "10-Jan-2024</a>" in html
+    assert 'Last seen: <a href="https://ebird.org/checklist/S2"' in html
+    assert "20-Feb-2026</a>" in html
+    assert 'High count: <a href="https://ebird.org/checklist/S3"' in html
+    assert "05-Mar-2025</a> (8)" in html
 
 
 def test_build_species_banner_html_no_dates():
