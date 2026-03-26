@@ -311,7 +311,7 @@ def build_all_species_banner_html(
 
 
 def build_lifer_locations_banner_html(
-    n_lifer_species, n_locations, date_filter_status=None
+    n_lifer_species, n_locations, date_filter_status=None, include_subspecies: bool = False
 ):
     """Banner for lifer-only map mode (refs #71)."""
     sep = _banner_sep()
@@ -320,9 +320,12 @@ def build_lifer_locations_banner_html(
         f'{n_lifer_species} lifer{"s" if n_lifer_species != 1 else ""}'
         f'{sep}{n_locations} {loc_w}'
     )
-    note = _banner_muted_line("Sub-species included")
+    note = _banner_muted_line("Sub-species included") if include_subspecies else ""
     date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
-    muted_stack = f"{note}<br>{date_block}" if date_block else note
+    if note and date_block:
+        muted_stack = f"{note}<br>{date_block}"
+    else:
+        muted_stack = note or date_block
     return (
         f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
         f'<span class="pebird-map-banner__title">Lifer locations</span>'

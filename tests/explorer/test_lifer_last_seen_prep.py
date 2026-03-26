@@ -72,7 +72,7 @@ def test_aggregate_lifer_sites_invariants_dedupes_and_count_matches():
 
     global_sci: set[str] = set()
     for _lid, entries in by_loc.items():
-        sci_names = [sci for sci, _common in entries]
+        sci_names = [e["scientific_name"] for e in entries]
         assert len(sci_names) == len(set(sci_names))  # no duplicates per location
         global_sci.update(sci_names)
 

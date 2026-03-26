@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple, TypedDict
 
 import pandas as pd
 
@@ -74,23 +74,37 @@ def prepare_lifer_last_seen(
     )
 
 
+class LiferSiteEntry(TypedDict):
+    """One lifer entry as displayed on the lifer locations map (refs #103).
+
+    - base-level lifer: first record for the base species
+    - taxon-level lifer: first record for the specific taxon (subspecies)
+    - both: same underlying record satisfied both
+    """
+
+    scientific_name: str
+    common_name: str
+    is_base_lifer: bool
+    is_taxon_lifer: bool
+
+
 def aggregate_lifer_sites(
     lifer_lookup_df: pd.DataFrame,
     true_lifer_locations: Dict[str, Any],
     true_lifer_locations_taxon: Dict[str, Any],
-) -> Tuple[Dict[Any, List[Tuple[str, str]]], int]:
-    """Map each location ID to lifer species (scientific, common) and count unique lifer species.
+) -> Tuple[Dict[Any, List[LiferSiteEntry]], int]:
+    """Map each location ID to lifer species entries and count unique lifer taxa.
 
     Uses the same first-row-per-base and first-row-per-taxon rules as
     :func:`prepare_lifer_last_seen`. Each scientific name appears at most once per
     location; taxon-level entries dedupe with base-level when the first row matches.
 
     Returns:
-        ``(location_id -> [(scientific_name, common_name), ...], n_distinct_lifer_species)``
+        ``(location_id -> [entry, ...], n_distinct_lifer_taxa)``
     """
-    by_loc: Dict[Any, List[Tuple[str, str]]] = defaultdict(list)
-    seen_at_loc: Dict[Any, set] = defaultdict(set)
-    global_sci: set = set()
+    by_loc: Dict[Any, List[LiferSiteEntry]] = defaultdict(list)
+    entry_by_loc_sci: Dict[Any, Dict[str, LiferSiteEntry]] = defaultdict(dict)
+    global_sci: set[str] = set()
 
     def _valid_lid(lid: Any) -> bool:
         if lid is None:
@@ -102,13 +116,22 @@ def aggregate_lifer_sites(
             pass
         return True
 
-    def _add(lid: Any, sci: str, common: str) -> None:
+    def _add(lid: Any, sci: str, common: str, *, is_base: bool, is_taxon: bool) -> None:
         if not _valid_lid(lid) or not sci:
             return
-        if sci in seen_at_loc[lid]:
-            return
-        seen_at_loc[lid].add(sci)
-        by_loc[lid].append((sci, common))
+        existing = entry_by_loc_sci[lid].get(sci)
+        if existing is None:
+            entry: LiferSiteEntry = {
+                "scientific_name": sci,
+                "common_name": common,
+                "is_base_lifer": bool(is_base),
+                "is_taxon_lifer": bool(is_taxon),
+            }
+            entry_by_loc_sci[lid][sci] = entry
+            by_loc[lid].append(entry)
+        else:
+            existing["is_base_lifer"] = existing["is_base_lifer"] or bool(is_base)
+            existing["is_taxon_lifer"] = existing["is_taxon_lifer"] or bool(is_taxon)
         global_sci.add(sci)
 
     for _base, lid in true_lifer_locations.items():
@@ -118,7 +141,7 @@ def aggregate_lifer_sites(
         r = subset.iloc[0]
         sci = str(r["Scientific Name"])
         com = "" if pd.isna(r.get("Common Name")) else str(r["Common Name"])
-        _add(lid, sci, com)
+        _add(lid, sci, com, is_base=True, is_taxon=False)
 
     for _taxon, lid in true_lifer_locations_taxon.items():
         subset = lifer_lookup_df[lifer_lookup_df["_taxon"] == _taxon]
@@ -126,10 +149,22 @@ def aggregate_lifer_sites(
             continue
         r = subset.iloc[0]
         sci = str(r["Scientific Name"])
+        # Only treat taxon-level lifers as "subspecies lifers" when the scientific name has
+        # 3+ parts. The 2-part scientific name duplicates the base-species lifer and should
+        # not flip locations into the "Both" state (refs #103).
+        if len(sci.strip().split()) < 3:
+            continue
         com = "" if pd.isna(r.get("Common Name")) else str(r["Common Name"])
-        _add(lid, sci, com)
+        _add(lid, sci, com, is_base=False, is_taxon=True)
 
     sorted_by_loc = {
-        k: sorted(v, key=lambda t: ((t[1] or t[0]).lower(), t[0].lower())) for k, v in by_loc.items()
+        k: sorted(
+            v,
+            key=lambda e: (
+                ((e["common_name"] or e["scientific_name"]).lower()),
+                e["scientific_name"].lower(),
+            ),
+        )
+        for k, v in by_loc.items()
     }
     return sorted_by_loc, len(global_sci)

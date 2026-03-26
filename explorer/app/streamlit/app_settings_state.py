@@ -24,6 +24,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_LAST_SEEN_FILL_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MARK_LIFER_KEY,
+    STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
     STREAMLIT_POPUP_SORT_ORDER_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
@@ -140,6 +141,8 @@ def init_and_clamp_streamlit_table_settings() -> None:
         st.session_state.streamlit_mark_lifer = MAP_MARK_LIFER_DEFAULT
     if STREAMLIT_MARK_LAST_SEEN_KEY not in st.session_state:
         st.session_state.streamlit_mark_last_seen = MAP_MARK_LAST_SEEN_DEFAULT
+    if STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY not in st.session_state:
+        st.session_state.streamlit_lifer_show_subspecies = False
     for k, default in (
         (STREAMLIT_LIFER_COLOR_KEY, MAP_LIFER_COLOR_DEFAULT),
         (STREAMLIT_LIFER_FILL_KEY, MAP_LIFER_FILL_DEFAULT),

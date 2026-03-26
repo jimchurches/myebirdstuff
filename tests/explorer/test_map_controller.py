@@ -97,4 +97,16 @@ def test_lifer_map_mode_builds_banner():
     html = r.map._repr_html_()
     assert "Lifer locations" in html
     assert " lifer " in html or "1 lifer" in html
-    assert "Sub-species included" in html
+    assert "Sub-species included" not in html
+
+    r2 = build_species_overlay_map(
+        **kwargs,
+        selected_species="",
+        map_view_mode="lifers",
+        full_location_data=full_loc,
+        show_subspecies_lifers=True,
+    )
+    assert r2.warning is None
+    assert r2.map is not None
+    html2 = r2.map._repr_html_()
+    assert "Sub-species included" in html2

@@ -132,6 +132,7 @@ STREAMLIT_MAP_VIEW_LABEL_KEY = "streamlit_map_view_label"
 STREAMLIT_MAP_DATE_FILTER_KEY = "streamlit_map_date_filter"
 STREAMLIT_MAP_DATE_RANGE_KEY = "streamlit_map_date_range"
 STREAMLIT_SPECIES_HIDE_ONLY_KEY = "streamlit_species_hide_only"
+STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY = "streamlit_lifer_show_subspecies"
 STREAMLIT_MAP_BASEMAP_KEY = "streamlit_map_basemap"
 STREAMLIT_MAP_HEIGHT_PX_KEY = "streamlit_map_height_px"
 

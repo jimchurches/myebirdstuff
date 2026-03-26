@@ -127,6 +127,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     STREAMLIT_MAP_DATE_RANGE_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_VIEW_LABEL_KEY,
+    STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
@@ -305,6 +306,14 @@ def main() -> None:
             st.caption("Lifer locations is not date-filtered.")
             if st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT):
                 st.caption("Your date filter is preserved for other map views.")
+            st.toggle(
+                "Show subspecies lifers",
+                key=STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
+                help=(
+                    "When on, the lifer map distinguishes Species / Subspecies / Both. "
+                    "When off, lifers are consolidated to the base species."
+                ),
+            )
             date_filter_on_effective = False
             date_range_sel: tuple | None = None
         else:
@@ -514,6 +523,7 @@ def main() -> None:
                 "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
                 "map_view_mode": map_view_mode,
                 "hide_non_matching_locations": hide_nm,
+                "show_subspecies_lifers": bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
             }
             _render_opts_sig = (
                 popup_sort_order,
@@ -528,6 +538,7 @@ def main() -> None:
                 st.session_state.streamlit_default_fill,
                 mark_lifer,
                 mark_last_seen,
+                bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
             )
             _ck = static_map_cache_key(
                 work_df,
@@ -583,7 +594,11 @@ def main() -> None:
                     result_map,
                     use_container_width=True,
                     height=map_height,
-                    key=f"explorer_folium_map_h{map_height}",
+                    key=(
+                        f"explorer_folium_map_{map_view_mode}"
+                        f"_sub{int(bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)))}"
+                        f"_h{map_height}"
+                    ),
                     returned_objects=[],
                     return_on_hover=False,
                 )
