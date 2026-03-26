@@ -583,6 +583,63 @@ def rankings_by_visits(cl_sub, limit):
     return rows
 
 
+def rankings_not_seen_recently(df_obs, reference_date=None):
+    """Countable base species whose last global observation was before the past 12 months.
+
+    Rows are sorted by longest gap first (descending days since last seen). There is no row cap;
+    scroll/window height comes from Rankings **visible rows** settings.
+
+    Returns rows ``(common_name, last_seen_html, days_str)`` for
+    :func:`personal_ebird_explorer.rankings_display.rankings_not_seen_recently_table`.
+    *last_seen_html* is the visit date/time linking to the checklist of that observation.
+
+    *reference_date* defaults to local today (normalized); set for deterministic tests (refs #106).
+    """
+    if df_obs.empty:
+        return []
+    df_s = df_obs.copy()
+    df_s["_base"] = countable_species_vectorized(df_s)
+    df_s = df_s.dropna(subset=["_base"])
+    if df_s.empty:
+        return []
+    dt_col = "datetime" if "datetime" in df_s.columns else "Date"
+    if dt_col not in df_s.columns:
+        return []
+    dts = pd.to_datetime(df_s[dt_col], errors="coerce")
+    df_s = df_s.assign(_dt=dts).dropna(subset=["_dt"])
+    if df_s.empty:
+        return []
+    idx = df_s.groupby("_base")["_dt"].idxmax()
+    last_rows = df_s.loc[idx].copy()
+    if reference_date is None:
+        ref = pd.Timestamp.now(tz=None).normalize()
+    else:
+        ref = pd.Timestamp(reference_date).normalize()
+    cutoff = ref - pd.DateOffset(months=12)
+    last_rows = last_rows[last_rows["_dt"] < cutoff]
+    if last_rows.empty:
+        return []
+    last_rows["_days"] = (ref - last_rows["_dt"].dt.normalize()).dt.days
+    last_rows = last_rows.sort_values("_days", ascending=False)
+    rows = []
+    for _, r in last_rows.iterrows():
+        common = r.get("Common Name")
+        name = str(common) if pd.notna(common) else str(r["_base"])
+        sid = r.get("Submission ID")
+        dt_str = pd.Timestamp(r["_dt"]).strftime("%d %b %Y %H:%M") if pd.notna(r["_dt"]) else "—"
+        if sid:
+            last_link = (
+                f'<a href="https://ebird.org/checklist/{sid}" target="_blank" rel="noopener noreferrer">'
+                f"{dt_str}</a>"
+            )
+        else:
+            last_link = dt_str
+        d = int(r["_days"])
+        days_str = f"{d:,} days"
+        rows.append((name, last_link, days_str))
+    return rows
+
+
 # ---------------------------------------------------------------------------
 # Rankings orchestrator
 # ---------------------------------------------------------------------------
@@ -602,7 +659,7 @@ def compute_rankings(df, cl, limit, dur_col, dist_col):
         return {k: [] for k in ("time", "dist", "species", "individuals",
                                  "species_loc", "individuals_loc", "visited",
                                  "species_individuals", "species_checklists",
-                                 "seen_once", "subspecies")}
+                                 "seen_once", "subspecies", "not_seen_recently")}
     species_per_cl = df.groupby("Submission ID", group_keys=False).apply(
         lambda g: countable_species_vectorized(g).dropna().nunique(),
         include_groups=False,
@@ -626,6 +683,7 @@ def compute_rankings(df, cl, limit, dur_col, dist_col):
         "species_checklists": rankings_by_checklists(df, limit=None),
         "seen_once": rankings_seen_once(df, limit=None),
         "subspecies": rankings_subspecies_hierarchical(df, limit=None),
+        "not_seen_recently": rankings_not_seen_recently(df),
     }
 
 

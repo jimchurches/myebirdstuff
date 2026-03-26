@@ -65,6 +65,43 @@ def rankings_table(title, headers, rows, include_heading=True, scroll_hint="shad
     return content
 
 
+def rankings_not_seen_recently_table(
+    title,
+    headers,
+    rows,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    link_urls_fn=None,
+):
+    """3-column table: Species (linked) | Last seen (HTML) | Days since (refs #106)."""
+    if not rows:
+        no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
+        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+    rows_html = []
+    for r in rows:
+        species_esc = _html_module.escape(str(r[0]), quote=True)
+        species_url = link_urls_fn(r[0])[0] if link_urls_fn else None
+        species_cell = (
+            f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>'
+            if species_url
+            else species_esc
+        )
+        rows_html.append(
+            f"<tr><td>{species_cell}</td><td>{r[1]}</td>"
+            f"<td style='text-align:right;font-weight:600;'>{r[2]}</td></tr>"
+        )
+    body = "".join(rows_html)
+    tbl = (
+        f"<table class='stats-tbl rankings-tbl'>"
+        f"<thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead>"
+        f"<tbody>{body}</tbody></table>"
+    )
+    scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
+    content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+    return content
+
+
 def rankings_table_location_5col(title, headers_5, rows, include_heading=True, scroll_hint="shading", visible_rows=16):
     """5-column table: Location, State, Country, then two more (Top Lists tab; no Rank column, refs #81)."""
     if not rows:

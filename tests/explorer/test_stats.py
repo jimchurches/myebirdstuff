@@ -20,6 +20,7 @@ from personal_ebird_explorer.stats import (
     rankings_by_visits,
     rankings_by_value,
     rankings_by_location,
+    rankings_not_seen_recently,
 )
 
 
@@ -262,6 +263,58 @@ class TestRankingsByVisits:
 
 
 # ---------------------------------------------------------------------------
+# rankings_not_seen_recently
+# ---------------------------------------------------------------------------
+
+class TestRankingsNotSeenRecently:
+    def test_empty(self):
+        assert rankings_not_seen_recently(pd.DataFrame(), reference_date=pd.Timestamp("2025-01-01")) == []
+
+    def test_orders_longest_gap_first_among_eligible(self):
+        ref = pd.Timestamp("2025-06-01")
+        df = _obs_df([
+            {
+                "Scientific Name": "Anas gracilis",
+                "Common Name": "Grey Teal",
+                "Submission ID": "S1",
+                "Date": pd.Timestamp("2020-01-01"),
+            },
+            {
+                "Scientific Name": "Anas castanea",
+                "Common Name": "Chestnut Teal",
+                "Submission ID": "S2",
+                "Date": pd.Timestamp("2025-01-01"),
+            },
+        ])
+        rows = rankings_not_seen_recently(df, reference_date=ref)
+        # Chestnut Teal last seen within trailing 12 months — excluded
+        assert len(rows) == 1
+        assert rows[0][0] == "Grey Teal"
+        assert "S1" in rows[0][1]
+
+    def test_excludes_species_seen_within_past_year(self):
+        ref = pd.Timestamp("2025-06-01")
+        df = _obs_df([{"Date": pd.Timestamp("2024-08-01")}])
+        assert rankings_not_seen_recently(df, reference_date=ref) == []
+
+    def test_last_observation_row_for_checklist_link(self):
+        ref = pd.Timestamp("2025-06-01")
+        df = _obs_df([
+            {
+                "Submission ID": "S_old",
+                "Date": pd.Timestamp("2019-01-01"),
+            },
+            {
+                "Submission ID": "S_new",
+                "Date": pd.Timestamp("2024-01-01"),
+            },
+        ])
+        rows = rankings_not_seen_recently(df, reference_date=ref)
+        assert len(rows) == 1
+        assert "S_new" in rows[0][1]
+
+
+# ---------------------------------------------------------------------------
 # compute_rankings (integration)
 # ---------------------------------------------------------------------------
 
@@ -274,7 +327,8 @@ class TestComputeRankings:
         cl["Date"] = pd.to_datetime(cl["Date"])
         result = compute_rankings(df, cl, limit=10, dur_col=None, dist_col=None)
         expected_keys = {"time", "dist", "species", "individuals", "species_loc", "individuals_loc",
-                         "visited", "species_individuals", "species_checklists", "seen_once", "subspecies"}
+                         "visited", "species_individuals", "species_checklists", "seen_once", "subspecies",
+                         "not_seen_recently"}
         assert set(result.keys()) == expected_keys
 
     def test_empty_df(self):

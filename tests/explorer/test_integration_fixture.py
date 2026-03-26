@@ -316,11 +316,26 @@ def test_integration_compute_rankings_returns_expected_structure(fixture_df, fix
         fixture_df, fixture_checklists, limit=200, dur_col=dur_col, dist_col=dist_col
     )
     assert isinstance(rankings, dict)
-    expected_keys = {"time", "dist", "species", "individuals", "species_loc", "individuals_loc", "visited", "seen_once", "species_individuals", "species_checklists", "subspecies"}
+    expected_keys = {
+        "time",
+        "dist",
+        "species",
+        "individuals",
+        "species_loc",
+        "individuals_loc",
+        "visited",
+        "seen_once",
+        "species_individuals",
+        "species_checklists",
+        "subspecies",
+        "not_seen_recently",
+    }
     for k in expected_keys:
         assert k in rankings, f"missing key {k}"
     assert len(rankings["time"]) > 0
     assert len(rankings["species_loc"]) > 0
+    assert len(rankings["not_seen_recently"]) > 0
+    assert "ebird.org/checklist/" in rankings["not_seen_recently"][0][1]
 
 
 def test_integration_yearly_summary_stats_structure(fixture_df, fixture_checklists):

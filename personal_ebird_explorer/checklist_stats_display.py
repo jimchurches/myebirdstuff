@@ -14,6 +14,7 @@ from urllib.parse import quote as url_quote
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
 from personal_ebird_explorer.region_display import country_for_display
 from personal_ebird_explorer.rankings_display import (
+    rankings_not_seen_recently_table,
     rankings_seen_once_table,
     rankings_subspecies_hierarchical_table,
     rankings_table_location_5col,
@@ -1381,6 +1382,18 @@ def format_checklist_stats_bundle(
         ),
     ]
     rankings_sections_other = [
+        (
+            "Species: Not seen in the past year",
+            rankings_not_seen_recently_table(
+                "Species: Not seen in the past year",
+                ["Species", "Last seen", "Days since"],
+                rankings["not_seen_recently"],
+                include_heading=False,
+                scroll_hint=scroll_hint,
+                visible_rows=visible_rows,
+                link_urls_fn=link_urls_fn,
+            ),
+        ),
         (
             "Species: Most individuals",
             rankings_table_with_rank(
