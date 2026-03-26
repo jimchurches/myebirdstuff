@@ -98,6 +98,11 @@ def test_lifer_map_mode_builds_banner():
     assert "Lifer locations" in html
     assert " lifer " in html or "1 lifer" in html
     assert "Sub-species included" not in html
+    # refs #104: lifer popup should be simplified (no visit history noise).
+    assert "Visited:" not in html
+    assert "Lifers (first recorded here):" not in html
+    assert "Grey Teal : 2025-01-01" in html
+    assert "ebird.org/checklist/S1" in html
 
     r2 = build_species_overlay_map(
         **kwargs,
@@ -110,3 +115,4 @@ def test_lifer_map_mode_builds_banner():
     assert r2.map is not None
     html2 = r2.map._repr_html_()
     assert "Sub-species included" in html2
+    assert "Visited:" not in html2

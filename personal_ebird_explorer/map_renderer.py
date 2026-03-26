@@ -215,7 +215,14 @@ def build_visit_info_html(visit_records, format_time_fn):
 
 
 def build_location_popup_html(
-    loc_name, loc_id, visit_info_html, sightings_html="", lifer_species_html=""
+    loc_name,
+    loc_id,
+    visit_info_html,
+    sightings_html="",
+    lifer_species_html="",
+    show_visit_history: bool = True,
+    lifer_heading_html: str = "<b>Lifers (first recorded here):</b>",
+    location_heading_margin_px: int = 6,
 ):
     """Build the full popup HTML for a single map marker.
 
@@ -229,6 +236,10 @@ def build_location_popup_html(
         lifer_species_html: Optional HTML fragment listing lifer species first
             recorded at this location (refs #71). When non-empty, shown instead
             of the *sightings_html* "Seen:" block.
+        show_visit_history: When False, omit the "Visited:" section entirely
+            (used by the lifer-map popup simplification; refs #104).
+        lifer_heading_html: Optional heading HTML prepended when *lifer_species_html*
+            is provided. Pass ``""`` to omit the heading (used by lifer-map popups).
 
     Returns:
         Complete popup HTML string with scroll wrapper.
@@ -240,16 +251,22 @@ def build_location_popup_html(
         f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'
     )
     if lifer_species_html:
-        extra_section = f"<br><b>Lifers (first recorded here):</b>{lifer_species_html}"
+        extra_section = f"{lifer_heading_html}{lifer_species_html}" if lifer_heading_html else lifer_species_html
     elif sightings_html:
-        extra_section = f"<br><b>Seen:</b>{sightings_html}"
+        extra_section = f"<b>Seen:</b>{sightings_html}"
     else:
         extra_section = ""
+    visited_section = f"<b>Visited:</b><br>{visit_info_html}" if show_visit_history else ""
+    # If both sections are present, add a separator line break.
+    if visited_section and extra_section:
+        inner_html = visited_section + "<br>" + extra_section
+    else:
+        inner_html = visited_section + extra_section
     return (
         f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
-        f'<div style="margin-bottom:6px;">{loc_link}</div>'
+        f'<div style="margin-bottom:{int(location_heading_margin_px)}px;">{loc_link}</div>'
         f'<div style="max-height:300px;overflow-y:auto;">'
-        f'<b>Visited:</b><br>{visit_info_html}{extra_section}'
+        f"{inner_html}"
         f'</div></div>'
     )
 
