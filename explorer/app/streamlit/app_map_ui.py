@@ -82,7 +82,7 @@ def species_searchbox_fragment() -> None:
     except ImportError:
         st.error(
             "Missing **streamlit-searchbox**. Install with: "
-            "`pip install -r requirements-streamlit.txt` (refs #70)."
+            "`pip install -r requirements.txt` (refs #70)."
         )
         return
     ix = st.session_state.get(SESSION_SPECIES_IX_KEY)

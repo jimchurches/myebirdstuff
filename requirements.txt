@@ -1,13 +1,23 @@
-# Base dependencies (non-Streamlit).
 #
-# For the Streamlit app, use `requirements-streamlit.txt` or `streamlit_app/requirements.txt`
-# (those include Streamlit-specific dependencies like streamlit-folium).
-pandas>=3.0,<4
-folium
+# Single dependency set for:
+# - core library + tests
+# - Streamlit app runtime
+#
+# Note: Streamlit currently requires pandas<3, so this repo targets pandas 2.x.
+pandas>=2.0,<3
+
+# Core deps
+folium>=0.15
 whoosh
-scikit-learn
-pycountry
+scikit-learn>=1.3,<2
+pycountry>=23.12.11
+PyYAML>=6,<7
+
+# Streamlit app deps
+streamlit>=1.40
+streamlit-folium>=0.20.0
+streamlit-searchbox>=0.1.24
+pydantic>=2,<3
 
 # Testing
 pytest
-PyYAML>=6,<7

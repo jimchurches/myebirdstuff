@@ -16,14 +16,14 @@ Primary **Personal eBird Explorer** UI on Streamlit.
 - **One-off HTML** — Ad-hoc `unsafe_allow_html` not produced by a shared formatter is a last resort; prefer extending a module helper so formatting stays aligned.
 - **Contributors / AI assistants:** When choosing dataframe vs formatter HTML, **state the tradeoff** briefly so the decision is explicit.
 
-**Console noise:** If Streamlit warns about `use_container_width`, upgrade Streamlit (`requirements-streamlit.txt` pins a recent minimum) and prefer `width="stretch"` on dataframes. **streamlit-folium** may still use the old API internally for the map until that library updates.
+**Console noise:** If Streamlit warns about `use_container_width`, upgrade Streamlit (`requirements.txt` pins a recent minimum) and prefer `width="stretch"` on dataframes. **streamlit-folium** may still use the old API internally for the map until that library updates.
 
 ## Run locally
 
 From the **repository root** (after activating a Streamlit-only venv — see below). The app uses package imports (`streamlit_app.*`); running from the repo root keeps those resolvable.
 
 ```bash
-pip install -r requirements-streamlit.txt
+pip install -r requirements.txt
 streamlit run streamlit_app/app.py
 ```
 
@@ -31,7 +31,7 @@ streamlit run streamlit_app/app.py
 
 **Want your prompt back?** Run in the background: `streamlit run streamlit_app/app.py &` — or use a **second terminal tab**, **`tmux`/`screen`**, or **`nohup ... &`** (see your shell docs). Stop a background server with `pkill -f "streamlit run streamlit_app/app.py"` or find its PID and `kill`.
 
-If you see an error about **streamlit-folium**, your venv was created before that dependency was added — run `pip install -r requirements-streamlit.txt` again.
+If you see an error about **streamlit-folium**, your venv was created before that dependency was added — run `pip install -r requirements.txt` again.
 
 ### Where to put the virtualenv
 
@@ -43,9 +43,9 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 | **Next to the repo** | `cd .. && python -m venv myebirdstuff-streamlit && source myebirdstuff-streamlit/bin/activate && cd myebirdstuff` |
 | **Central tools dir** | `python -m venv ~/.venvs/myebirdstuff-streamlit` then activate before `cd` into the repo |
 
-**Pandas versions:** `requirements-streamlit.txt` uses **pandas 2.x** because current Streamlit releases require `pandas<3`.
+**Pandas versions:** `requirements.txt` uses **pandas 2.x** because current Streamlit releases require `pandas<3`.
 
-**Folium:** Required for the map (`folium`, `streamlit-folium` in `requirements-streamlit.txt`). **Whoosh** is still not required — the package `__init__` lazy-loads search so CSV load stays light.
+**Folium:** Required for the map (`folium`, `streamlit-folium` in `requirements.txt`). **Whoosh** is still not required — the package `__init__` lazy-loads search so CSV load stays light.
 
 **eBird taxonomy:** Fetched once per browser session after CSV load (cached by locale). Default locale is **en_AU**; set `STREAMLIT_EBIRD_TAXONOMY_LOCALE` or `EBIRD_TAXONOMY_LOCALE` for the first-visit default, or change **Settings → Taxonomy**. The value is an eBird **locale** code (e.g. `en_AU`) — same idea as **My eBird → Preferences** for common names; [Bird names in eBird](https://support.ebird.org/en/support/solutions/articles/48000804865-bird-names-in-ebird) explains regional naming. The **taxonomy** CSV endpoint is fetched without an API key; some other reference endpoints require a key. If the fetch fails (offline, etc.), species links are skipped. Streamlit does not expose the browser language to Python.
 
@@ -85,9 +85,7 @@ There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder ov
 
 1. Connect the repo and set **Main file path** to `streamlit_app/app.py`.
 2. **Python requirements file (required):** in app **Settings → Advanced settings**, set this to  
-   **`requirements-streamlit.txt`** (repo root) **or** **`streamlit_app/requirements.txt`**.  
-   If you leave the default **`requirements.txt`**, the build will not install Streamlit dependencies — you will get **Missing streamlit-folium** at runtime.  
-   **`requirements-streamlit.txt`** includes **scikit-learn** (Maintenance close-location BallTree) and **pycountry** (Country tab / ISO → names). Without them, Cloud can fail on `sklearn` or show raw codes like `AU` instead of `Australia`.
+   **`requirements.txt`** (repo root) **or** **`streamlit_app/requirements.txt`**.
 3. Users upload their CSV via the app (do not commit private exports).
 
 ## Scope of this Streamlit app

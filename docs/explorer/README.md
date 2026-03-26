@@ -48,5 +48,5 @@ Implementation detail: see `add_datetime_column()` in `personal_ebird_explorer/d
 
 See [`streamlit_app/README.md`](../../streamlit_app/README.md) for:
 
-- **Run locally**: venv + `pip install -r requirements-streamlit.txt` + `streamlit run streamlit_app/app.py`
+- **Run locally**: venv + `pip install -r requirements.txt` + `streamlit run streamlit_app/app.py`
 - **Streamlit Community Cloud**: set the main file path and the requirements file

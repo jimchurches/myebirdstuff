@@ -5,7 +5,7 @@ Planning and phased migration notes: https://github.com/jimchurches/myebirdstuff
 
 Run locally from repo root::
 
-    pip install -r requirements-streamlit.txt
+    pip install -r requirements.txt
     streamlit run streamlit_app/app.py
 
 Disk resolution when no file is uploaded: ``scripts/config_secret.py`` and
@@ -573,10 +573,10 @@ def main() -> None:
                 except ImportError:
                     st.error(
                         "Missing **streamlit-folium** (needed to embed the Folium map). "
-                        "Locally: `pip install -r requirements-streamlit.txt`. "
+                        "Locally: `pip install -r requirements.txt`. "
                         "**Streamlit Community Cloud:** set app **Python requirements** to "
-                        "`requirements-streamlit.txt` or `streamlit_app/requirements.txt` "
-                        "(not the repo root `requirements.txt`)."
+                        "`requirements.txt` or `streamlit_app/requirements.txt` "
+                        "."
                     )
                     st.stop()
                 st_folium(

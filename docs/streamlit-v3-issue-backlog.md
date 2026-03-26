@@ -196,13 +196,13 @@ Core explorer modules are tested; **`app.py` and tab `*_streamlit_html.py` files
 
 - **Smoke:** import `app` or `main` with Streamlit/mocks without full run (may be limited by Streamlit design).
 - **Unit:** pure helpers extracted from fragments (e.g. CSS builder, payload sync) with no `st` calls.
-- **CI:** ensure `requirements-streamlit.txt` installed so `test_streamlit_*` tests run.
+- **CI:** ensure Streamlit deps are installed so `test_streamlit_*` tests run (`requirements.txt` now includes Streamlit deps).
 
 **Acceptance**
 
 - At least one new test file or expanded tests targeting extracted helpers; CI documented.
 
-Added `tests/explorer/test_streamlit_ui_helpers.py` which runs UI helper logic (payload sync + key clamping) using a minimal `streamlit` stub, so tests work even when `requirements-streamlit.txt` is not installed.
+Added `tests/explorer/test_streamlit_ui_helpers.py` which runs UI helper logic (payload sync + key clamping) using a minimal `streamlit` stub.
 
 ---
 

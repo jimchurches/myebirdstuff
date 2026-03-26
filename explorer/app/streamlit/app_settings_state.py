@@ -262,7 +262,7 @@ def write_settings_yaml_via_module(path: str, payload: dict[str, Any]) -> tuple[
     try:
         from personal_ebird_explorer.streamlit_settings_config import write_sparse_settings_to_python_config
     except ImportError as e:
-        return False, f"Settings save unavailable ({e}). Install requirements-streamlit.txt."
+        return False, f"Settings save unavailable ({e}). Install requirements.txt."
     return write_sparse_settings_to_python_config(path, payload)
 
 

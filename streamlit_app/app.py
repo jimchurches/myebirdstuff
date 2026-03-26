@@ -3,7 +3,7 @@ Personal eBird Explorer — Streamlit entrypoint (compatibility shim, refs #70).
 
 Run from repo root::
 
-    pip install -r requirements-streamlit.txt
+    pip install -r requirements.txt
     streamlit run streamlit_app/app.py
 
 Implementation lives in :mod:`explorer.app.streamlit.app`.

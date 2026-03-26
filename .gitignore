@@ -3,6 +3,7 @@
 # Python virtual environments (create anywhere you like; these names are common locally)
 .venv/
 .venv-streamlit/
+.venv-reqcheck/
 .venv-streamlit 2/
 venv/
 env/

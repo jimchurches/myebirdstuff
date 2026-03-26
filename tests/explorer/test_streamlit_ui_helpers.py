@@ -23,7 +23,7 @@ class _StubSessionState(dict):
 def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     """Provide a minimal `streamlit` module so UI modules can import in unit tests.
 
-    This keeps tests runnable even when `requirements-streamlit.txt` is not installed.
+    This keeps tests runnable even when Streamlit deps are not installed.
     """
 
     stub = types.ModuleType("streamlit")
