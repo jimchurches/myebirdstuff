@@ -1,3 +1,9 @@
+"""Pytest bootstrap: repo root on ``sys.path``.
+
+Do **not** add ``tests/explorer/__init__.py``: with pytest's path handling that directory can be
+imported as top-level ``explorer`` and shadow :mod:`explorer` at the repo root (refs #70).
+"""
+
 import os
 import sys
 
@@ -12,4 +18,3 @@ def _add_repo_root_to_path():
 
 
 _add_repo_root_to_path()
-

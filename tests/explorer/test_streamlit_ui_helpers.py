@@ -49,11 +49,14 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture()
 def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
     _install_streamlit_stub(monkeypatch)
-    # Ensure we re-import UI modules under the stubbed `streamlit`.
+    # Ensure we re-import UI modules under the stubbed `streamlit` (shims + explorer targets).
     for name in [
         "streamlit_app.streamlit_theme",
         "streamlit_app.yearly_summary_streamlit_html",
         "streamlit_app.country_stats_streamlit_html",
+        "explorer.app.streamlit.streamlit_theme",
+        "explorer.app.streamlit.yearly_summary_streamlit_html",
+        "explorer.app.streamlit.country_stats_streamlit_html",
     ]:
         sys.modules.pop(name, None)
     return sys.modules["streamlit"]

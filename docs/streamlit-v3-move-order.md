@@ -63,5 +63,5 @@ explorer/
   - `explorer/core/`
   - `explorer/presentation/`
   - `explorer/app/streamlit/`
-- No runtime files moved yet.
+- Streamlit app modules live under `explorer/app/streamlit/`; `streamlit_app/*.py` are compatibility shims (`streamlit run streamlit_app/app.py` unchanged).
 

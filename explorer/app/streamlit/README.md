@@ -1,7 +1,3 @@
-# Streamlit Adapter (v3 target)
+# Streamlit adapter (v3)
 
-This package is the target home for Streamlit-specific application code.
-
-Current runtime code still lives in `streamlit_app/` and will be moved here
-incrementally issue-by-issue to keep changes reviewable and testable.
-
+Runtime modules live here. `streamlit_app/` holds **compatibility shims** that re-export this package so existing commands and tests keep working (`streamlit run streamlit_app/app.py`, `from streamlit_app…`).
