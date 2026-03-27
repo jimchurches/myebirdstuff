@@ -1383,18 +1383,6 @@ def format_checklist_stats_bundle(
     ]
     rankings_sections_other = [
         (
-            "Species: Not seen in the past year",
-            rankings_not_seen_recently_table(
-                "Species: Not seen in the past year",
-                ["Species", "Last seen", "Days since"],
-                rankings["not_seen_recently"],
-                include_heading=False,
-                scroll_hint=scroll_hint,
-                visible_rows=visible_rows,
-                link_urls_fn=link_urls_fn,
-            ),
-        ),
-        (
             "Species: Most individuals",
             rankings_table_with_rank(
                 "Species: Most individuals",
@@ -1436,6 +1424,18 @@ def format_checklist_stats_bundle(
             "Species: Seen only once",
             rankings_seen_once_table(
                 rankings["seen_once"],
+                include_heading=False,
+                scroll_hint=scroll_hint,
+                visible_rows=visible_rows,
+                link_urls_fn=link_urls_fn,
+            ),
+        ),
+        (
+            "Species: Not seen in the past year",
+            rankings_not_seen_recently_table(
+                "Species: Not seen in the past year",
+                ["Species", "Last seen", "Days since"],
+                rankings["not_seen_recently"],
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
