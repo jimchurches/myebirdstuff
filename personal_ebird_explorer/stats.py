@@ -537,6 +537,79 @@ def rankings_seen_once(df_obs, limit=None):
     return rows
 
 
+def rankings_high_counts(df_obs, tie_break="last", sort_mode="total_count"):
+    """Highest checklist count per countable species.
+
+    Returns rows ``(species, location_link, state, country, date_time_link, count)``.
+    For ties on ``Count``, *tie_break* chooses earliest (``"first"``) or latest
+    (``"last"``) checklist date/time.
+    """
+    if df_obs.empty:
+        return []
+    tie_mode = str(tie_break).strip().lower()
+    if tie_mode not in ("first", "last"):
+        tie_mode = "last"
+    sort_key_mode = str(sort_mode).strip().lower()
+    if sort_key_mode not in ("total_count", "alphabetical"):
+        sort_key_mode = "total_count"
+
+    df_s = df_obs.copy()
+    df_s["_base"] = countable_species_vectorized(df_s)
+    df_s = df_s.dropna(subset=["_base"])
+    if df_s.empty:
+        return []
+
+    dt_col = "datetime" if "datetime" in df_s.columns else "Date"
+    if dt_col in df_s.columns:
+        df_s["_dt"] = pd.to_datetime(df_s[dt_col], errors="coerce")
+    else:
+        df_s["_dt"] = pd.NaT
+    df_s["_count"] = df_s["Count"].apply(safe_count)
+    reg_col = region_column(df_s, prefer_country=True)
+
+    rows = []
+    for _base, grp in df_s.groupby("_base", sort=False):
+        max_count = int(grp["_count"].max())
+        top = grp[grp["_count"] == max_count].copy()
+        if top.empty:
+            continue
+        top["_dt_sort"] = pd.to_datetime(top["_dt"], errors="coerce")
+        top["_dt_sort"] = top["_dt_sort"].fillna(
+            pd.Timestamp.max if tie_mode == "first" else pd.Timestamp.min
+        )
+        top = top.sort_values(
+            by=["_dt_sort", "Submission ID"],
+            ascending=[tie_mode == "first", True],
+        )
+        r = top.iloc[0]
+        name = r["Common Name"] if pd.notna(r.get("Common Name")) else _base
+        lid = r.get("Location ID")
+        loc = r.get("Location", "")
+        sid = r.get("Submission ID")
+        dt = r.get("_dt")
+        dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
+        dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
+        state_str = ""
+        country_str = ""
+        if reg_col and reg_col in r.index:
+            country, state = format_region_parts(r.get(reg_col))
+            state_str = state if state else ""
+            country_str = country if country else ""
+        rows.append((str(name), loc_link, state_str, country_str, dt_link, f"{max_count:,}"))
+
+    if sort_key_mode == "alphabetical":
+        rows.sort(key=lambda x: str(x[0]).lower())
+    else:
+        rows.sort(
+            key=lambda x: (
+                -int(str(x[5]).replace(",", "")),
+                str(x[0]).lower(),
+            )
+        )
+    return rows
+
+
 def rankings_by_visits(cl_sub, limit):
     """Top N most visited locations; ties by oldest first.
 
@@ -644,7 +717,15 @@ def rankings_not_seen_recently(df_obs, reference_date=None):
 # Rankings orchestrator
 # ---------------------------------------------------------------------------
 
-def compute_rankings(df, cl, limit, dur_col, dist_col):
+def compute_rankings(
+    df,
+    cl,
+    limit,
+    dur_col,
+    dist_col,
+    high_count_tie_break="last",
+    high_count_sort="total_count",
+):
     """Compute all Top N rankings data.
 
     Returns dict of section key → list of row tuples.
@@ -659,7 +740,7 @@ def compute_rankings(df, cl, limit, dur_col, dist_col):
         return {k: [] for k in ("time", "dist", "species", "individuals",
                                  "species_loc", "individuals_loc", "visited",
                                  "species_individuals", "species_checklists",
-                                 "seen_once", "subspecies", "not_seen_recently")}
+                                 "species_high_counts", "seen_once", "subspecies", "not_seen_recently")}
     species_per_cl = df.groupby("Submission ID", group_keys=False).apply(
         lambda g: countable_species_vectorized(g).dropna().nunique(),
         include_groups=False,
@@ -681,6 +762,11 @@ def compute_rankings(df, cl, limit, dur_col, dist_col):
         "visited": rankings_by_visits(cl, limit),
         "species_individuals": rankings_by_individuals(df, limit=None),
         "species_checklists": rankings_by_checklists(df, limit=None),
+        "species_high_counts": rankings_high_counts(
+            df,
+            tie_break=high_count_tie_break,
+            sort_mode=high_count_sort,
+        ),
         "seen_once": rankings_seen_once(df, limit=None),
         "subspecies": rankings_subspecies_hierarchical(df, limit=None),
         "not_seen_recently": rankings_not_seen_recently(df),

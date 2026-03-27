@@ -21,6 +21,7 @@ from personal_ebird_explorer.stats import (
     rankings_by_value,
     rankings_by_location,
     rankings_not_seen_recently,
+    rankings_high_counts,
 )
 
 
@@ -262,6 +263,80 @@ class TestRankingsByVisits:
         assert rows[0][5] == "2"
 
 
+class TestRankingsHighCounts:
+    def test_picks_last_by_default_when_tied(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S_old",
+                    "Date": pd.Timestamp("2020-01-01"),
+                    "Count": 12,
+                    "Location": "Old Lake",
+                    "Location ID": "L_old",
+                },
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S_new",
+                    "Date": pd.Timestamp("2024-01-01"),
+                    "Count": 12,
+                    "Location": "New Lake",
+                    "Location ID": "L_new",
+                },
+            ]
+        )
+        rows = rankings_high_counts(df)
+        assert len(rows) == 1
+        assert "S_new" in rows[0][4]
+
+    def test_can_pick_first_when_tied(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S_old",
+                    "Date": pd.Timestamp("2020-01-01"),
+                    "Count": 12,
+                },
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S_new",
+                    "Date": pd.Timestamp("2024-01-01"),
+                    "Count": 12,
+                },
+            ]
+        )
+        rows = rankings_high_counts(df, tie_break="first")
+        assert len(rows) == 1
+        assert "S_old" in rows[0][4]
+
+    def test_can_sort_alphabetically(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Anas platyrhynchos",
+                    "Common Name": "Mallard",
+                    "Submission ID": "S1",
+                    "Date": pd.Timestamp("2024-01-01"),
+                    "Count": 50,
+                },
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S2",
+                    "Date": pd.Timestamp("2024-01-02"),
+                    "Count": 10,
+                },
+            ]
+        )
+        rows = rankings_high_counts(df, sort_mode="alphabetical")
+        assert [r[0] for r in rows] == ["Grey Teal", "Mallard"]
+
+
 # ---------------------------------------------------------------------------
 # rankings_not_seen_recently
 # ---------------------------------------------------------------------------
@@ -327,7 +402,7 @@ class TestComputeRankings:
         cl["Date"] = pd.to_datetime(cl["Date"])
         result = compute_rankings(df, cl, limit=10, dur_col=None, dist_col=None)
         expected_keys = {"time", "dist", "species", "individuals", "species_loc", "individuals_loc",
-                         "visited", "species_individuals", "species_checklists", "seen_once", "subspecies",
+                         "visited", "species_individuals", "species_checklists", "species_high_counts", "seen_once", "subspecies",
                          "not_seen_recently"}
         assert set(result.keys()) == expected_keys
 

@@ -250,6 +250,50 @@ def rankings_seen_once_table(
     return scroll_wrapper
 
 
+def rankings_high_counts_table(
+    rows,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    link_urls_fn=None,
+    sort_mode="total_count",
+    tie_break="last",
+):
+    """6-column table: Species | Location | State | Country | High-count checklist | Count."""
+    if not rows:
+        no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
+        return f"<h4 style='margin:0 0 8px;'>Species: High counts</h4>{no_data}" if include_heading else no_data
+    winner = "Most recent winner" if str(tie_break).strip().lower() == "last" else "Earliest winner"
+    order_label = "Sorted by count" if str(sort_mode).strip().lower() == "total_count" else "Sorted alphabetically"
+    rows_html = []
+    for r in rows:
+        species_esc = _html_module.escape(str(r[0]), quote=True)
+        species_url = link_urls_fn(r[0])[0] if link_urls_fn else None
+        species_cell = (
+            f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>'
+            if species_url
+            else species_esc
+        )
+        rows_html.append(
+            f"<tr><td>{species_cell}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
+        )
+    body = "".join(rows_html)
+    tbl = (
+        "<table class='stats-tbl rankings-tbl seen-once-tbl'>"
+        "<thead><tr>"
+        "<th>Species</th><th>Location</th><th>State</th><th>Country</th><th>High-count checklist</th><th>Count</th>"
+        "</tr></thead><tbody>"
+        f"{body}</tbody></table>"
+    )
+    caption = (
+        f"<p style='margin:4px 0;color:#6b7280;font-size:12px;'>{order_label}. "
+        f"{winner} when count ties.</p>"
+    )
+    scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
+    content = f"{caption}{scroll_wrapper}"
+    return f"<h4 style='margin:0 0 8px;'>Species: High counts</h4>{content}" if include_heading else content
+
+
 def rankings_subspecies_hierarchical_table(
     title,
     species_blocks,

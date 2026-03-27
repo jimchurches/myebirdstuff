@@ -39,17 +39,26 @@ def _cached_rankings_stats_bundle(
     visible_rows: int,
     country_sort: str,
     taxonomy_locale: str,
+    high_count_sort: str,
+    high_count_tie_break: str,
 ) -> dict[str, Any]:
     """Notebook-parity rankings bundle (full export + Top N + scroll + taxonomy links). refs #81."""
     loc = taxonomy_locale.strip() if taxonomy_locale else None
     link_urls_fn = get_species_and_lifelist_urls if load_taxonomy(locale=loc) else (lambda _: (None, None))
-    payload = compute_checklist_stats_payload(df, top_n)
+    payload = compute_checklist_stats_payload(
+        df,
+        top_n,
+        high_count_sort=high_count_sort,
+        high_count_tie_break=high_count_tie_break,
+    )
     return format_checklist_stats_bundle(
         payload,
         link_urls_fn=link_urls_fn,
         scroll_hint=RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT,
         visible_rows=visible_rows,
         country_sort=country_sort,
+        high_count_sort=high_count_sort,
+        high_count_tie_break=high_count_tie_break,
     )
 
 
@@ -58,6 +67,8 @@ def render_rankings_streamlit_tab(
     *,
     country_sort: str,
     taxonomy_locale: str,
+    high_count_sort: str,
+    high_count_tie_break: str,
 ) -> None:
     """Render Rankings & lists from the full export (expects full export: ``df_full``)."""
 
@@ -72,6 +83,8 @@ def render_rankings_streamlit_tab(
         int(st.session_state.streamlit_rankings_visible_rows),
         country_sort,
         taxonomy_locale,
+        high_count_sort,
+        high_count_tie_break,
     )
 
     tab_top, tab_int = st.tabs(["Top Lists", "Interesting Lists"])

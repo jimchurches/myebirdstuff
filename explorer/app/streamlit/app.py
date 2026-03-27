@@ -134,6 +134,8 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     STREAMLIT_POPUP_SORT_ORDER_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
     STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
+    STREAMLIT_HIGH_COUNT_SORT_KEY,
+    STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
     STREAMLIT_SAVE_SETTINGS_BTN_KEY,
     STREAMLIT_RESET_SETTINGS_BTN_KEY,
     STREAMLIT_SPECIES_COLOR_KEY,
@@ -615,6 +617,8 @@ def main() -> None:
                 df_full,
                 country_sort=st.session_state.streamlit_country_tab_sort,
                 taxonomy_locale=tax_locale_effective,
+                high_count_sort=st.session_state.streamlit_high_count_sort,
+                high_count_tie_break=st.session_state.streamlit_high_count_tie_break,
             )
 
     with tab_yearly:
@@ -773,6 +777,19 @@ def main() -> None:
                 ],
                 format_func=lambda k: COUNTRY_SORT_LABELS[k],
                 key=STREAMLIT_COUNTRY_TAB_SORT_KEY,
+            )
+            st.selectbox(
+                "High count ordering",
+                options=["total_count", "alphabetical"],
+                format_func=lambda x: "By total count (high to low)" if x == "total_count" else "Alphabetical (species)",
+                key=STREAMLIT_HIGH_COUNT_SORT_KEY,
+            )
+            st.selectbox(
+                "High count tie winner",
+                options=["last", "first"],
+                format_func=lambda x: "Most recent checklist" if x == "last" else "Earliest checklist",
+                key=STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
+                help="For species with multiple checklists at the same high count, choose which checklist row is shown.",
             )
             st.divider()
             st.subheader("Maintenance")

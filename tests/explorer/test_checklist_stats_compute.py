@@ -104,7 +104,7 @@ def test_compute_and_format_smoke():
     )
     assert "<table" in bundle["stats_html"]
     assert len(bundle["rankings_sections_top_n"]) == 7
-    assert len(bundle["rankings_sections_other"]) == 5
+    assert len(bundle["rankings_sections_other"]) == 6
 
 
 def test_slice_yearly_table_rows():

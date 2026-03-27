@@ -34,6 +34,9 @@ TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT = 16
 TABLES_RANKINGS_VISIBLE_ROWS_MIN = 10
 TABLES_RANKINGS_VISIBLE_ROWS_MAX = 50
 
+TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT = "last"
+TABLES_HIGH_COUNT_SORT_DEFAULT = "total_count"
+
 YEARLY_RECENT_COLUMN_COUNT_DEFAULT = 10
 YEARLY_RECENT_COLUMN_COUNT_MIN = 3
 YEARLY_RECENT_COLUMN_COUNT_MAX = 25
@@ -89,6 +92,8 @@ def build_persisted_settings_defaults_dict() -> dict[str, Any]:
         "tables_lists": {
             "rankings_top_n": TABLES_RANKINGS_TOP_N_DEFAULT,
             "rankings_visible_rows": TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
+            "high_count_sort": TABLES_HIGH_COUNT_SORT_DEFAULT,
+            "high_count_tie_break": TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT,
         },
         "yearly_summary": {
             "recent_column_count": YEARLY_RECENT_COLUMN_COUNT_DEFAULT,

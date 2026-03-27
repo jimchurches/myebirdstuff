@@ -56,6 +56,15 @@ def test_compute_checklist_stats_returns_expected_keys():
     assert "<tr><td>Kilometers traveled</td><td>1.50</td></tr>" in html
 
 
+def test_rankings_interesting_lists_includes_high_counts_before_seen_once():
+    df = make_minimal_df()
+    stats = _compute_checklist_stats(df)
+    titles = [t for t, _ in stats["rankings_sections_other"]]
+    assert "Species: High counts" in titles
+    assert "Species: Seen only once" in titles
+    assert titles.index("Species: High counts") < titles.index("Species: Seen only once")
+
+
 def test_compute_checklist_stats_repeated_species_and_multi_year():
     # Two rows for the same species on the same checklist (repeated species),
     # plus a second checklist in a different year.

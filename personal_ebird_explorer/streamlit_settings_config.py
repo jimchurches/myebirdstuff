@@ -35,6 +35,8 @@ from personal_ebird_explorer.settings_schema_defaults import (
     TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
     TABLES_RANKINGS_VISIBLE_ROWS_MAX,
     TABLES_RANKINGS_VISIBLE_ROWS_MIN,
+    TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT,
+    TABLES_HIGH_COUNT_SORT_DEFAULT,
     TAXONOMY_LOCALE_DEFAULT,
     YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
     YEARLY_RECENT_COLUMN_COUNT_MAX,
@@ -74,6 +76,14 @@ class TablesListsConfig(BaseModel):
         default=TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
         ge=TABLES_RANKINGS_VISIBLE_ROWS_MIN,
         le=TABLES_RANKINGS_VISIBLE_ROWS_MAX,
+    )
+    high_count_sort: str = Field(
+        default=TABLES_HIGH_COUNT_SORT_DEFAULT,
+        pattern="^(total_count|alphabetical)$",
+    )
+    high_count_tie_break: str = Field(
+        default=TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT,
+        pattern="^(first|last)$",
     )
 
 

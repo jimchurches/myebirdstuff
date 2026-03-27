@@ -14,6 +14,7 @@ from urllib.parse import quote as url_quote
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
 from personal_ebird_explorer.region_display import country_for_display
 from personal_ebird_explorer.rankings_display import (
+    rankings_high_counts_table,
     rankings_not_seen_recently_table,
     rankings_seen_once_table,
     rankings_subspecies_hierarchical_table,
@@ -1171,6 +1172,8 @@ def format_checklist_stats_bundle(
     scroll_hint: int,
     visible_rows: int,
     country_sort: str = COUNTRY_TAB_SORT_ALPHABETICAL,
+    high_count_sort: str = "total_count",
+    high_count_tie_break: str = "last",
 ) -> Dict[str, Any]:
     """Build the stats HTML, yearly HTML, rankings sections, and incomplete map.
 
@@ -1418,6 +1421,18 @@ def format_checklist_stats_bundle(
                 visible_rows=visible_rows,
                 lifelist_url_fn=(lambda name: link_urls_fn(name)[1] if link_urls_fn else None),
                 species_url_fn=(lambda name: link_urls_fn(name)[0] if link_urls_fn else None),
+            ),
+        ),
+        (
+            "Species: High counts",
+            rankings_high_counts_table(
+                rankings["species_high_counts"],
+                include_heading=False,
+                scroll_hint=scroll_hint,
+                visible_rows=visible_rows,
+                link_urls_fn=link_urls_fn,
+                sort_mode=high_count_sort,
+                tie_break=high_count_tie_break,
             ),
         ),
         (

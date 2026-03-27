@@ -15,6 +15,8 @@ def test_load_yaml_settings_defaults_when_missing(tmp_path):
     assert warn is None
     assert cfg["version"] == 1
     assert cfg["tables_lists"]["rankings_top_n"] == 200
+    assert cfg["tables_lists"]["high_count_sort"] == "total_count"
+    assert cfg["tables_lists"]["high_count_tie_break"] == "last"
 
 
 def test_load_yaml_settings_rejects_invalid_type(tmp_path):

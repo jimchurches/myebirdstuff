@@ -99,7 +99,13 @@ class ChecklistStatsPayload:
     country_sections: List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]]
 
 
-def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optional[ChecklistStatsPayload]:
+def compute_checklist_stats_payload(
+    df: pd.DataFrame,
+    top_n_limit: int,
+    *,
+    high_count_sort: str = "total_count",
+    high_count_tie_break: str = "last",
+) -> Optional[ChecklistStatsPayload]:
     """Build structured checklist statistics from a sighting-level DataFrame.
 
     Returns ``None`` when *df* is empty. *top_n_limit* caps ranking list lengths
@@ -203,7 +209,15 @@ def compute_checklist_stats_payload(df: pd.DataFrame, top_n_limit: int) -> Optio
         streak_end_lid,
     ) = longest_streak(unique_dates, cl)
 
-    rankings = compute_rankings(df, cl, top_n_limit, dur_col, dist_col)
+    rankings = compute_rankings(
+        df,
+        cl,
+        top_n_limit,
+        dur_col,
+        dist_col,
+        high_count_tie_break=high_count_tie_break,
+        high_count_sort=high_count_sort,
+    )
     years_list, yearly_rows, incomplete_by_year = yearly_summary_stats(df, cl, dur_col, dist_col)
     country_sections = country_summary_stats(df, cl)
 

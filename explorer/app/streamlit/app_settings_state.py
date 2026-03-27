@@ -29,6 +29,8 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_POPUP_SORT_ORDER_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
     STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
+    STREAMLIT_HIGH_COUNT_SORT_KEY,
+    STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
     STREAMLIT_SPECIES_COLOR_KEY,
     STREAMLIT_SPECIES_FILL_KEY,
     STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
@@ -56,6 +58,8 @@ from explorer.app.streamlit.defaults import (
     TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
     TABLES_RANKINGS_VISIBLE_ROWS_MAX,
     TABLES_RANKINGS_VISIBLE_ROWS_MIN,
+    TABLES_HIGH_COUNT_SORT_DEFAULT,
+    TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT,
     YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
     YEARLY_RECENT_COLUMN_COUNT_MAX,
     YEARLY_RECENT_COLUMN_COUNT_MIN,
@@ -109,6 +113,14 @@ def init_and_clamp_streamlit_table_settings() -> None:
                 int(st.session_state.streamlit_rankings_visible_rows),
             ),
         )
+    if STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY not in st.session_state:
+        st.session_state.streamlit_high_count_tie_break = TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT
+    elif st.session_state.streamlit_high_count_tie_break not in ("first", "last"):
+        st.session_state.streamlit_high_count_tie_break = TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT
+    if STREAMLIT_HIGH_COUNT_SORT_KEY not in st.session_state:
+        st.session_state.streamlit_high_count_sort = TABLES_HIGH_COUNT_SORT_DEFAULT
+    elif st.session_state.streamlit_high_count_sort not in ("total_count", "alphabetical"):
+        st.session_state.streamlit_high_count_sort = TABLES_HIGH_COUNT_SORT_DEFAULT
     if STREAMLIT_CLOSE_LOCATION_METERS_KEY not in st.session_state:
         st.session_state.streamlit_close_location_meters = DEFAULT_CLOSE_LOCATION_METERS
     else:
@@ -180,6 +192,8 @@ def settings_state_payload() -> dict[str, Any]:
         "tables_lists": {
             "rankings_top_n": int(st.session_state.streamlit_rankings_top_n),
             "rankings_visible_rows": int(st.session_state.streamlit_rankings_visible_rows),
+            "high_count_sort": st.session_state.streamlit_high_count_sort,
+            "high_count_tie_break": st.session_state.streamlit_high_count_tie_break,
         },
         "yearly_summary": {
             "recent_column_count": int(st.session_state.streamlit_yearly_recent_column_count),
@@ -233,6 +247,12 @@ def apply_settings_payload_to_state(cfg: dict[str, Any]) -> None:
         )
         st.session_state.streamlit_rankings_visible_rows = int(
             tl.get("rankings_visible_rows", TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT)
+        )
+        st.session_state.streamlit_high_count_sort = str(
+            tl.get("high_count_sort", TABLES_HIGH_COUNT_SORT_DEFAULT)
+        )
+        st.session_state.streamlit_high_count_tie_break = str(
+            tl.get("high_count_tie_break", TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT)
         )
     if isinstance(ys, dict):
         st.session_state.streamlit_yearly_recent_column_count = int(
