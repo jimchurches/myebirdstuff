@@ -641,8 +641,7 @@ def main() -> None:
                         "Missing **streamlit-folium** (needed to embed the Folium map). "
                         "Locally: `pip install -r requirements.txt`. "
                         "**Streamlit Community Cloud:** set app **Python requirements** to "
-                        "`requirements.txt` or `streamlit_app/requirements.txt` "
-                        "."
+                        "`requirements.txt` at the repo root."
                     )
                     st.stop()
                 st_folium(
