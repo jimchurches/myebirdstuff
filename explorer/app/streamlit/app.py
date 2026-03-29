@@ -29,31 +29,29 @@ names in popups can link to eBird species pages. Default locale is **en_AU**; ov
 Streamlit does not expose the browser language to Python.
 
 **Checklist Statistics:** Shared HTML sections (nested ``st.tabs`` + formatted tables from
-``checklist_stats_streamlit_tab_sections_html``). ``cached_checklist_stats_payload`` runs **once** immediately
-under the main tab bar (inside ``st.spinner("Doing interesting things with your eBird data...")``) so the loading message shows
-no matter which tab is selected (refs #70).
+``checklist_stats_streamlit_tab_sections_html``). ``cached_checklist_stats_payload(work_df)`` runs **once** in
+``st.spinner(...)``; ``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment`` match Country / Yearly (refs #70).
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
 (``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
 triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 
-**Maintenance:** Location duplicates / close locations, incomplete checklists, and sex-notation scan use
-``maintenance_streamlit_html`` (nested tabs + expanders + shared HTML builders). Incomplete lists and sex
-notation use the **full** export (``df_full``), not the date-filtered working set. **Close location (m)** is
-configurable under **Settings → Maintenance** (refs #79).
+**Maintenance:** Same fragment pattern; incomplete checklists use ``cached_full_export_checklist_stats_payload``
+(aligned with Rankings Top N + high-count settings). **Close location (m)** is set under **Settings → Tables & lists**
+(refs #79).
 
-**Rankings & lists:** ``rankings_streamlit_html`` — nested **Top Lists** / **Interesting Lists** tabs,
-expanders per list, HTML from ``format_checklist_stats_bundle`` on ``df_full``. **Top N** and **visible rows**
-are configured under **Settings → Tables & lists** (refs `#81`).
+**Rankings & lists:** ``cached_full_export_checklist_stats_payload`` + ``format_checklist_stats_bundle``;
+``build_rankings_tab_bundle`` runs in the main spinner pass; **Top N** / **visible rows** / table options are under
+**Settings → Tables & lists** (batch **Apply**; refs `#81`).
 
 **Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs inside
 ``@st.fragment``; ``st.toggle`` switches recent vs full year columns when count exceeds **Settings → Yearly tables:
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** All tab bodies run each rerun (instant tab switching), with one always-on sidebar that
-contains map controls plus footer links (refs #70). Settings sliders use a keyed container with
-``max-width: min(100%, 40rem)`` on wide viewports.
+**Main tabs + sidebar:** Map tab runs each full rerun; data tabs use ``@st.fragment`` where possible. One always-on
+sidebar for map controls plus footer links (refs #70). Settings use a keyed container with
+``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 """
 
 from __future__ import annotations
@@ -78,6 +76,7 @@ from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
 )
 from explorer.app.streamlit.app_caches import (  # noqa: E402
     cached_checklist_stats_payload,
+    cached_full_export_checklist_stats_payload,
     cached_sex_notation_by_year,
     cached_species_url_fn,
     full_location_data_for_maintenance,
@@ -164,7 +163,10 @@ from explorer.app.streamlit.app_settings_state import (  # noqa: E402
     settings_taxonomy_help_html,
     write_settings_yaml_via_module,
 )
-from explorer.app.streamlit.checklist_stats_streamlit_html import render_checklist_stats_streamlit_html  # noqa: E402
+from explorer.app.streamlit.checklist_stats_streamlit_html import (  # noqa: E402
+    run_checklist_stats_streamlit_fragment,
+    sync_checklist_stats_tab_session_inputs,
+)
 from explorer.app.streamlit.country_stats_streamlit_html import (  # noqa: E402
     run_country_tab_streamlit_fragment,
     sync_country_tab_session_inputs,
@@ -179,24 +181,37 @@ from explorer.app.streamlit.defaults import (  # noqa: E402
     MAP_HEIGHT_PX_STEP,
     MAP_VIEW_LABELS,
     MAP_PIN_COLOUR_ALLOWLIST,
-    NOTEBOOK_MAIN_TAB_LABELS,
-    SPECIES_SEARCH_CAPTION,
-    TABLES_RANKINGS_TOP_N_MAX,
-    TABLES_RANKINGS_TOP_N_MIN,
-    TABLES_RANKINGS_VISIBLE_ROWS_MAX,
-    TABLES_RANKINGS_VISIBLE_ROWS_MIN,
-    YEARLY_RECENT_COLUMN_COUNT_MAX,
-    YEARLY_RECENT_COLUMN_COUNT_MIN,
+    MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
+    NOTEBOOK_MAIN_TAB_LABELS,
+    SPECIES_SEARCH_CAPTION,
+    TABLES_HIGH_COUNT_SORT_DEFAULT,
+    TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT,
+    TABLES_RANKINGS_TOP_N_DEFAULT,
+    TABLES_RANKINGS_TOP_N_MAX,
+    TABLES_RANKINGS_TOP_N_MIN,
+    TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
+    TABLES_RANKINGS_VISIBLE_ROWS_MAX,
+    TABLES_RANKINGS_VISIBLE_ROWS_MIN,
+    YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
+    YEARLY_RECENT_COLUMN_COUNT_MAX,
+    YEARLY_RECENT_COLUMN_COUNT_MIN,
 )
-from explorer.app.streamlit.maintenance_streamlit_html import render_maintenance_streamlit_tab  # noqa: E402
+from explorer.app.streamlit.maintenance_streamlit_html import (  # noqa: E402
+    run_maintenance_streamlit_tab_fragment,
+    sync_maintenance_tab_session_inputs,
+)
 from explorer.app.streamlit.map_working import (  # noqa: E402
     date_inception_to_today_default,
     folium_map_to_html_bytes,
     streamlit_working_set_and_status,
 )
-from explorer.app.streamlit.rankings_streamlit_html import render_rankings_streamlit_tab  # noqa: E402
+from explorer.app.streamlit.rankings_streamlit_html import (  # noqa: E402
+    build_rankings_tab_bundle,
+    run_rankings_streamlit_tab_fragment,
+    sync_rankings_tab_session_inputs,
+)
 from explorer.app.streamlit.yearly_summary_streamlit_html import (  # noqa: E402
     run_yearly_summary_streamlit_fragment,
     sync_yearly_summary_session_inputs,
@@ -467,8 +482,39 @@ def main() -> None:
 
     with st.spinner(CHECKLIST_STATS_SPINNER_MESSAGE):
         checklist_payload = cached_checklist_stats_payload(work_df)
-        maint_full_payload = cached_checklist_stats_payload(df_full)
+        top_n = int(st.session_state.streamlit_rankings_top_n)
+        hc_sort = str(st.session_state.streamlit_high_count_sort)
+        hc_tb = str(st.session_state.streamlit_high_count_tie_break)
+        if df_full is not None and not df_full.empty:
+            maint_full_payload = cached_full_export_checklist_stats_payload(
+                df_full, top_n, hc_sort, hc_tb
+            )
+            rankings_bundle = build_rankings_tab_bundle(
+                df_full,
+                country_sort=st.session_state.streamlit_country_tab_sort,
+                taxonomy_locale=tax_locale_effective,
+                high_count_sort=hc_sort,
+                high_count_tie_break=hc_tb,
+            )
+        else:
+            maint_full_payload = None
+            rankings_bundle = {}
         sex_notation_by_year = cached_sex_notation_by_year(df_full)
+
+    sync_checklist_stats_tab_session_inputs(checklist_payload)
+    sync_rankings_tab_session_inputs(rankings_bundle)
+    loc_maint = full_location_data_for_maintenance(df_full)
+    incomplete_maint: dict = {}
+    if maint_full_payload is not None:
+        incomplete_maint = maint_full_payload.incomplete_by_year or {}
+    sync_maintenance_tab_session_inputs(
+        loc_maint,
+        close_location_meters=int(st.session_state.streamlit_close_location_meters),
+        incomplete_by_year=incomplete_maint,
+        sex_notation_by_year=sex_notation_by_year,
+    )
+    sync_yearly_summary_session_inputs(checklist_payload)
+    sync_country_tab_session_inputs(checklist_payload)
 
     with tab_map:
         prov_plain = provenance or ""
@@ -513,7 +559,6 @@ def main() -> None:
                 "default_fill": st.session_state.streamlit_default_fill,
                 "mark_lifer": mark_lifer,
                 "mark_last_seen": mark_last_seen,
-                "date_filter_status": date_filter_banner,
                 # For lifer mode we already communicate the “not date-filtered” behaviour in the
                 # side panel. Avoid repeating "all-time data" text in the banner.
                 "date_filter_status": "" if is_lifer_view else date_filter_banner,
@@ -541,21 +586,30 @@ def main() -> None:
                 mark_last_seen,
                 bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
             )
+            # ``build_species_overlay_map`` treats **Species** with no species picked as the same
+            # geometry as **All locations** (``map_controller`` coerces mode to ``all``). Match that here
+            # so static Folium reuse applies when switching Map view All ↔ Species before a selection.
+            _species_selected = bool(overlay_sci)
+            _cache_map_view_mode = map_view_mode
+            if map_view_mode == "species" and not _species_selected:
+                _cache_map_view_mode = "all"
             _ck = static_map_cache_key(
                 work_df,
-                map_view_mode,
+                _cache_map_view_mode,
                 date_filter_banner,
                 map_style,
                 _render_opts_sig,
                 taxonomy_locale=tax_locale_effective,
+                species_selected_sci=overlay_sci if _species_selected else "",
+                species_selected_common=overlay_common if _species_selected else "",
+                hide_non_matching_locations=bool(hide_nm),
             )
-            _use_static_cache = map_view_mode in ("all", "lifers")
-            _cached = (
-                st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY) if _use_static_cache else None
-            )
+            # One Folium map in session; key includes species + hide toggle so Selected species
+            # maps reuse on identical full reruns (e.g. switching tabs) without a multi-species LRU.
+            _use_static_cache = True
+            _cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
             if (
-                _use_static_cache
-                and isinstance(_cached, dict)
+                isinstance(_cached, dict)
                 and _cached.get("key") == _ck
                 and _cached.get("map") is not None
             ):
@@ -604,46 +658,19 @@ def main() -> None:
                 )
 
     with tab_checklist:
-        if checklist_payload is not None:
-            render_checklist_stats_streamlit_html(checklist_payload)
-        else:
-            st.warning("No checklist data to show.")
+        run_checklist_stats_streamlit_fragment()
 
     with tab_rankings:
-        if df_full is None or df_full.empty:
-            st.info("Load checklist data to use Rankings & lists.")
-        else:
-            render_rankings_streamlit_tab(
-                df_full,
-                country_sort=st.session_state.streamlit_country_tab_sort,
-                taxonomy_locale=tax_locale_effective,
-                high_count_sort=st.session_state.streamlit_high_count_sort,
-                high_count_tie_break=st.session_state.streamlit_high_count_tie_break,
-            )
+        run_rankings_streamlit_tab_fragment()
 
     with tab_yearly:
-        sync_yearly_summary_session_inputs(checklist_payload)
         run_yearly_summary_streamlit_fragment()
 
     with tab_country:
-        if checklist_payload is not None:
-            sync_country_tab_session_inputs(checklist_payload)
-            run_country_tab_streamlit_fragment()
-        else:
-            st.warning("No checklist data to show.")
+        run_country_tab_streamlit_fragment()
 
     with tab_maint:
-        loc_maint = full_location_data_for_maintenance(df_full)
-        incomplete_maint: dict = {}
-        if maint_full_payload is not None:
-            incomplete_maint = maint_full_payload.incomplete_by_year or {}
-        render_maintenance_streamlit_tab(
-            loc_maint,
-            close_location_meters=int(st.session_state.streamlit_close_location_meters),
-            incomplete_by_year=incomplete_maint,
-            sex_notation_by_year=sex_notation_by_year,
-            species_url_fn=species_url_fn,
-        )
+        run_maintenance_streamlit_tab_fragment()
 
     with tab_settings:
         st.markdown(SETTINGS_PANEL_CSS, unsafe_allow_html=True)
@@ -680,8 +707,8 @@ def main() -> None:
 
                 settings_persistence_flash_banners()
                 st.caption(
-                    "Settings apply immediately in-session. Save writes your preferences to your "
-                    "configuration file."
+                    "Map and taxonomy settings apply immediately in-session. **Tables & lists** uses **Apply table "
+                    "settings** (one rerun). Save writes your preferences to your configuration file."
                 )
                 st.caption(f"Configuration file: {settings_yaml_path}")
 
@@ -746,64 +773,121 @@ def main() -> None:
 
             st.divider()
             st.subheader("Tables & lists")
-            # Sliders feed Rankings & lists / Yearly Summary / Country sparse-year UI (shared formatters).
-            st.slider(
-                "Ranking tables: number of results",
-                min_value=TABLES_RANKINGS_TOP_N_MIN,
-                max_value=TABLES_RANKINGS_TOP_N_MAX,
-                step=1,
-                key=STREAMLIT_RANKINGS_TOP_N_KEY,
+            st.caption(
+                "Rankings, yearly column window, country ordering, high-count behaviour, and maintenance search radius — "
+                "click **Apply table settings** for one rerun."
             )
-            st.slider(
-                "Ranking tables: visible rows",
-                min_value=TABLES_RANKINGS_VISIBLE_ROWS_MIN,
-                max_value=TABLES_RANKINGS_VISIBLE_ROWS_MAX,
-                step=1,
-                key=STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
+            _country_sort_opts = [
+                COUNTRY_TAB_SORT_ALPHABETICAL,
+                COUNTRY_TAB_SORT_LIFERS_WORLD,
+                COUNTRY_TAB_SORT_TOTAL_SPECIES,
+            ]
+            _cur_country = st.session_state.get(
+                STREAMLIT_COUNTRY_TAB_SORT_KEY, COUNTRY_TAB_SORT_ALPHABETICAL
             )
-            st.slider(
-                "Yearly tables: recent year columns",
-                min_value=YEARLY_RECENT_COLUMN_COUNT_MIN,
-                max_value=YEARLY_RECENT_COLUMN_COUNT_MAX,
-                step=1,
-                key=STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
+            _idx_country = (
+                _country_sort_opts.index(_cur_country)
+                if _cur_country in _country_sort_opts
+                else 0
             )
-            st.selectbox(
-                "Country ordering",
-                options=[
-                    COUNTRY_TAB_SORT_ALPHABETICAL,
-                    COUNTRY_TAB_SORT_LIFERS_WORLD,
-                    COUNTRY_TAB_SORT_TOTAL_SPECIES,
-                ],
-                format_func=lambda k: COUNTRY_SORT_LABELS[k],
-                key=STREAMLIT_COUNTRY_TAB_SORT_KEY,
+            _hc_sort_opts = ["total_count", "alphabetical"]
+            _cur_hc = st.session_state.get(STREAMLIT_HIGH_COUNT_SORT_KEY, TABLES_HIGH_COUNT_SORT_DEFAULT)
+            if _cur_hc not in _hc_sort_opts:
+                _cur_hc = TABLES_HIGH_COUNT_SORT_DEFAULT
+            _idx_hc = _hc_sort_opts.index(_cur_hc)
+            _hc_tb_opts = ["last", "first"]
+            _cur_tb = st.session_state.get(
+                STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY, TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT
             )
-            st.selectbox(
-                "High count ordering",
-                options=["total_count", "alphabetical"],
-                format_func=lambda x: "By total count (high to low)" if x == "total_count" else "Alphabetical (species)",
-                key=STREAMLIT_HIGH_COUNT_SORT_KEY,
-            )
-            st.selectbox(
-                "High count tie winner",
-                options=["last", "first"],
-                format_func=lambda x: "Most recent checklist" if x == "last" else "Earliest checklist",
-                key=STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
-                help="For species with multiple checklists at the same high count, choose which checklist row is shown.",
-            )
-            st.divider()
-            st.subheader("Maintenance")
-            st.slider(
-                "Close location (m)",
-                min_value=MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
-                max_value=MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
-                step=1,
-                key=STREAMLIT_CLOSE_LOCATION_METERS_KEY,
-                help=(
-                    "Locations within this distance (metres), excluding exact duplicate coordinates, "
-                    "are listed under **Maintenance → Location Maintenance → Close locations**."
-                ),
-            )
+            if _cur_tb not in _hc_tb_opts:
+                _cur_tb = TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT
+            _idx_tb = _hc_tb_opts.index(_cur_tb)
+
+            with st.form("ebird_table_settings_batch"):
+                rn = st.slider(
+                    "Ranking tables: number of results",
+                    min_value=TABLES_RANKINGS_TOP_N_MIN,
+                    max_value=TABLES_RANKINGS_TOP_N_MAX,
+                    value=int(
+                        st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY, TABLES_RANKINGS_TOP_N_DEFAULT)
+                    ),
+                    step=1,
+                )
+                vr = st.slider(
+                    "Ranking tables: visible rows",
+                    min_value=TABLES_RANKINGS_VISIBLE_ROWS_MIN,
+                    max_value=TABLES_RANKINGS_VISIBLE_ROWS_MAX,
+                    value=int(
+                        st.session_state.get(
+                            STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY, TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT
+                        )
+                    ),
+                    step=1,
+                )
+                yc = st.slider(
+                    "Yearly tables: recent year columns",
+                    min_value=YEARLY_RECENT_COLUMN_COUNT_MIN,
+                    max_value=YEARLY_RECENT_COLUMN_COUNT_MAX,
+                    value=int(
+                        st.session_state.get(
+                            STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY, YEARLY_RECENT_COLUMN_COUNT_DEFAULT
+                        )
+                    ),
+                    step=1,
+                )
+                co = st.selectbox(
+                    "Country ordering",
+                    options=_country_sort_opts,
+                    format_func=lambda k: COUNTRY_SORT_LABELS[k],
+                    index=_idx_country,
+                )
+                hc_sort_w = st.selectbox(
+                    "High count ordering",
+                    options=_hc_sort_opts,
+                    format_func=lambda x: (
+                        "By total count (high to low)" if x == "total_count" else "Alphabetical (species)"
+                    ),
+                    index=_idx_hc,
+                )
+                hc_tb_w = st.selectbox(
+                    "High count tie winner",
+                    options=_hc_tb_opts,
+                    format_func=lambda x: (
+                        "Most recent checklist" if x == "last" else "Earliest checklist"
+                    ),
+                    index=_idx_tb,
+                    help=(
+                        "For species with multiple checklists at the same high count, choose which checklist row is shown."
+                    ),
+                )
+                cl = st.slider(
+                    "Close location (m)",
+                    min_value=MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
+                    max_value=MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
+                    value=int(
+                        st.session_state.get(
+                            STREAMLIT_CLOSE_LOCATION_METERS_KEY, MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT
+                        )
+                    ),
+                    step=1,
+                    help=(
+                        "Locations within this distance (metres), excluding exact duplicate coordinates, "
+                        "are listed under **Maintenance → Location Maintenance → Close locations**."
+                    ),
+                )
+                apply_tables = st.form_submit_button("Apply table settings", use_container_width=True)
+
+            if apply_tables:
+                st.session_state[STREAMLIT_RANKINGS_TOP_N_KEY] = rn
+                st.session_state[STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY] = vr
+                st.session_state[STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY] = yc
+                st.session_state[STREAMLIT_COUNTRY_TAB_SORT_KEY] = co
+                st.session_state[STREAMLIT_HIGH_COUNT_SORT_KEY] = hc_sort_w
+                st.session_state[STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY] = hc_tb_w
+                st.session_state[STREAMLIT_CLOSE_LOCATION_METERS_KEY] = cl
+                init_and_clamp_streamlit_table_settings()
+                st.rerun()
+
             st.divider()
             st.subheader("Taxonomy")
             st.text_input(

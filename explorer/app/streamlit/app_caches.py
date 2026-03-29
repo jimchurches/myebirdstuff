@@ -17,6 +17,25 @@ def cached_checklist_stats_payload(df: pd.DataFrame) -> ChecklistStatsPayload | 
 
 
 @st.cache_data(show_spinner=False)
+def cached_full_export_checklist_stats_payload(
+    df: pd.DataFrame,
+    top_n_limit: int,
+    high_count_sort: str,
+    high_count_tie_break: str,
+) -> ChecklistStatsPayload | None:
+    """Full-export stats payload shared by Maintenance + Rankings (one compute per cache key).
+
+    *top_n_limit* and high-count options match **Settings → Tables & lists** and Rankings.
+    """
+    return compute_checklist_stats_payload(
+        df,
+        top_n_limit,
+        high_count_sort=high_count_sort,
+        high_count_tie_break=high_count_tie_break,
+    )
+
+
+@st.cache_data(show_spinner=False)
 def cached_sex_notation_by_year(df: pd.DataFrame) -> dict:
     """Sex-notation maintenance scan on full export (refs #79)."""
     from personal_ebird_explorer.stats import get_sex_notation_by_year
@@ -50,11 +69,32 @@ def static_map_cache_key(
     map_style: str,
     render_opts_sig: tuple = (),
     taxonomy_locale: str = "",
+    *,
+    species_selected_sci: str = "",
+    species_selected_common: str = "",
+    hide_non_matching_locations: bool = False,
 ) -> tuple:
-    """Stable key for All / Lifer map reuse (same CSV + filter + basemap + taxonomy)."""
+    """Stable key for Folium map reuse (session holds one cached map; same key → skip rebuild).
+
+    *species_* / *hide_non_matching* matter for **Selected species** view; pass empty / False for
+    All / Lifers or Species with no selection (aligned with ``map_controller`` coercion).
+    """
     n = len(work_df)
     sid0 = ""
     if n > 0 and "Submission ID" in work_df.columns:
         sid0 = str(work_df["Submission ID"].iloc[0])
     tax = (taxonomy_locale or "").strip()
-    return (map_view_mode, date_filter_banner, map_style, render_opts_sig, n, sid0, tax)
+    sci = (species_selected_sci or "").strip()
+    common = (species_selected_common or "").strip()
+    return (
+        map_view_mode,
+        date_filter_banner,
+        map_style,
+        render_opts_sig,
+        n,
+        sid0,
+        tax,
+        sci,
+        common,
+        bool(hide_non_matching_locations),
+    )

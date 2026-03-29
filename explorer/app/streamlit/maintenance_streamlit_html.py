@@ -21,6 +21,12 @@ from personal_ebird_explorer.maintenance_display import (
     sex_notation_intro_html,
     sex_notation_year_table_html,
 )
+from explorer.app.streamlit.app_caches import cached_species_url_fn
+from explorer.app.streamlit.app_constants import (
+    DEFAULT_TAXONOMY_LOCALE,
+    MAINTENANCE_TAB_SYNC_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
+)
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 
 # Same wrapper class as Checklist Statistics + Country HTML tabs (typography, tables, links).
@@ -30,6 +36,39 @@ _WRAPPER_CLOSE = "</div>"
 
 def _md(html: str) -> None:
     st.markdown(html, unsafe_allow_html=True)
+
+
+def sync_maintenance_tab_session_inputs(
+    loc_df: pd.DataFrame,
+    *,
+    close_location_meters: int,
+    incomplete_by_year: Dict[Any, List[Tuple[Any, ...]]],
+    sex_notation_by_year: Dict[Any, List[Tuple[Any, ...]]],
+) -> None:
+    """Store maintenance inputs for :func:`run_maintenance_streamlit_tab_fragment` (full script runs)."""
+    st.session_state[MAINTENANCE_TAB_SYNC_KEY] = {
+        "loc_df": loc_df,
+        "close_location_meters": close_location_meters,
+        "incomplete_by_year": incomplete_by_year,
+        "sex_notation_by_year": sex_notation_by_year,
+    }
+
+
+@st.fragment
+def run_maintenance_streamlit_tab_fragment() -> None:
+    """Maintenance tab; expander interactions avoid full-app reruns where possible."""
+    data = st.session_state.get(MAINTENANCE_TAB_SYNC_KEY)
+    if not data:
+        return
+    tax = (st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY) or "").strip() or DEFAULT_TAXONOMY_LOCALE
+    species_url_fn = cached_species_url_fn(tax)
+    render_maintenance_streamlit_tab(
+        data["loc_df"],
+        close_location_meters=int(data["close_location_meters"]),
+        incomplete_by_year=data["incomplete_by_year"],
+        sex_notation_by_year=data["sex_notation_by_year"],
+        species_url_fn=species_url_fn,
+    )
 
 
 def render_maintenance_streamlit_tab(

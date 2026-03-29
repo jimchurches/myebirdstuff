@@ -14,7 +14,23 @@ import streamlit as st
 
 from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
 from personal_ebird_explorer.checklist_stats_display import checklist_stats_streamlit_tab_sections_html
+from explorer.app.streamlit.app_constants import CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
+
+
+def sync_checklist_stats_tab_session_inputs(payload: ChecklistStatsPayload | None) -> None:
+    """Store working-set payload for :func:`run_checklist_stats_streamlit_fragment` (full script runs)."""
+    st.session_state[CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY] = payload
+
+
+@st.fragment
+def run_checklist_stats_streamlit_fragment() -> None:
+    """Checklist Statistics UI; widget interactions here avoid full-app reruns where possible."""
+    payload = st.session_state.get(CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY)
+    if payload is None:
+        st.warning("No checklist data to show.")
+        return
+    render_checklist_stats_streamlit_html(payload)
 
 
 def render_checklist_stats_streamlit_html(
