@@ -70,7 +70,13 @@ CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
 # Map UI (session-only; not persisted in embedded YAML)
 # ---------------------------------------------------------------------------
 
-MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "satellite", "google", "carto")
+# ``carto`` = Folium/xyzservices ``CartoDB Positron``. No API keys.
+MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "google", "carto")
+MAP_BASEMAP_LABELS: dict[str, str] = {
+    "default": "Default",
+    "google": "Google (hybrid)",
+    "carto": "CartoDB Positron",
+}
 MAP_BASEMAP_DEFAULT = "default"
 
 MAP_HEIGHT_PX_DEFAULT = 720

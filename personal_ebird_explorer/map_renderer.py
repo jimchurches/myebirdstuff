@@ -635,15 +635,12 @@ def classify_locations(location_data, seen_location_ids, lifer_location, last_se
 def create_map(map_center, map_style="default"):
     """Create a folium Map centred on *map_center* with the given tile style.
 
-    Supported *map_style* values: ``"default"``, ``"satellite"``,
-    ``"google"``, ``"carto"``.  Unknown values fall back to the default
-    OpenStreetMap tiles.
+    Supported *map_style* values: ``"default"``, ``"google"``, ``"carto"``.
+    Unknown values fall back to the default OpenStreetMap tiles.
     """
     # Default initial zoom for first render. Lower = more zoomed out.
     zoom_start = 5
-    if map_style == "satellite":
-        return folium.Map(location=map_center, zoom_start=zoom_start, tiles="Esri WorldImagery", attr="Esri")
-    elif map_style == "google":
+    if map_style == "google":
         return folium.Map(
             location=map_center,
             zoom_start=zoom_start,

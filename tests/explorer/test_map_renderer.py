@@ -151,11 +151,6 @@ def test_create_map_default_explicit():
     assert isinstance(m, folium.Map)
 
 
-def test_create_map_satellite():
-    m = create_map([-33.8, 151.2], "satellite")
-    assert isinstance(m, folium.Map)
-
-
 def test_create_map_google():
     m = create_map([-33.8, 151.2], "google")
     assert isinstance(m, folium.Map)

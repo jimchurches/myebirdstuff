@@ -173,6 +173,7 @@ from explorer.app.streamlit.country_stats_streamlit_html import (  # noqa: E402
 )
 from explorer.app.streamlit.defaults import (  # noqa: E402
     CHECKLIST_STATS_SPINNER_MESSAGE,
+    MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
     MAP_DATE_FILTER_DEFAULT,
     MAP_EXPORT_HTML_FILENAME,
@@ -443,6 +444,7 @@ def main() -> None:
         map_style = st.selectbox(
             "Basemap",
             options=list(MAP_BASEMAP_OPTIONS),
+            format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
             key=STREAMLIT_MAP_BASEMAP_KEY,
         )
         st.markdown(
