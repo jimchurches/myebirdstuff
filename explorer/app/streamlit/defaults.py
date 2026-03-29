@@ -108,8 +108,8 @@ THEME_TEXT_HEX = "#1A2E22"
 THEME_PRIMARY_HEX = "#1F6F54"
 THEME_SECONDARY_BG_HEX = "#EEF4F0"
 
-# Bump suffix in ``app.py`` when spinner CSS changes.
-SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v3"
+# Bump suffix in ``app_map_ui.inject_spinner_theme_css`` when spinner CSS changes.
+SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v4"
 
 # ---------------------------------------------------------------------------
 # Rankings & lists HTML (``rankings_streamlit_html``)
@@ -132,8 +132,11 @@ NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Settings",
 )
 
+# Bird emoji (Unicode order in message: legacy sequence first, then missing taxa; Dodo last — refs #74).
 CHECKLIST_STATS_SPINNER_MESSAGE = (
-    "Doing interesting things with your eBird data  🐣  🐥  🐧  🦆  🦉  🦢  🦅  …"
+    "Doing interesting things with your eBird data  "
+    "🐣 🐥 🐧 🦆 🦉 🦢 🦅 "
+    "🦃 🐔 🐓 🐤 🐦 🕊️ 🪶 🦩 🦚 🦜 🐦‍⬛ 🪿 🦤"
 )
 
 GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"

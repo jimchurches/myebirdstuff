@@ -235,11 +235,11 @@ SPINNER_THEME_CSS_INJECTED_KEY = f"_ebird_spinner_theme_css_injected_{SPINNER_TH
 
 SPINNER_THEME_CSS = f"""
 <style>
-/* Hoisted ``st.spinner`` — align with [theme] in .streamlit/config.toml */
+/* Hoisted ``st.spinner`` — theme greens (refs #74); bump SPINNER_THEME_CSS_CACHE_KEY_SUFFIX when CSS changes. */
 /* Modern Streamlit uses an icon spinner (``iconValue: spinner``), not a CSS border ring. */
 div[data-testid="stSpinner"],
 div[data-testid="stSpinner"].stSpinner {{
-  color: {THEME_TEXT_HEX};
+  color: {THEME_PRIMARY_HEX};
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }}
 /* Graphic: ``currentColor`` on the SVG so the arc tracks primary (not default grey). */
@@ -251,16 +251,19 @@ div[data-testid="stSpinner"] svg circle {{
   fill: currentColor !important;
   stroke: currentColor !important;
 }}
-/* Spinner message is rendered as Streamlit markdown — target container + descendants. */
+/* Spinner message: markdown — slightly smaller type, primary green (matches palette). */
 div[data-testid="stSpinner"] [data-testid="stMarkdownContainer"],
 div[data-testid="stSpinner"] [data-testid="stMarkdownContainer"] * {{
-  color: {THEME_TEXT_HEX} !important;
+  color: {THEME_PRIMARY_HEX} !important;
+  font-size: 0.875rem !important;
+  line-height: 1.45 !important;
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
 }}
 div[data-testid="stSpinner"] p,
 div[data-testid="stSpinner"] span,
 div[data-testid="stSpinner"] label {{
-  color: {THEME_TEXT_HEX} !important;
+  color: {THEME_PRIMARY_HEX} !important;
+  font-size: 0.875rem !important;
 }}
 /* Older border-based spinner (harmless if unused) */
 div[data-testid="stSpinner"] div[class*="Spinner"] {{
