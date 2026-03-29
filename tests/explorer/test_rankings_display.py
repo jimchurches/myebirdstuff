@@ -54,7 +54,7 @@ def test_rankings_table_location_5col_empty_no_data():
 
 
 def test_rankings_table_location_5col_one_row_structure():
-    """One row produces table with Location, State, Country columns (no Rank on Top Lists, refs #81)."""
+    """One row produces five data columns when leading_rank_column is off (refs #81)."""
     row = ("Place One", "NSW", "AU", "3", "12")
     out = rankings_table_location_5col("Title", ["Location", "State", "Country", "Checklists", "Species"], [row])
     assert "<th>Rank</th>" not in out
@@ -62,6 +62,21 @@ def test_rankings_table_location_5col_one_row_structure():
     assert "3</td>" in out
     assert "12</td>" in out
     assert "location-cols-tbl" in out
+
+
+def test_rankings_table_location_5col_leading_rank_column():
+    """Optional leading Rank column for Top Lists (refs #83)."""
+    row = ("Place One", "NSW", "AU", "3", "12")
+    out = rankings_table_location_5col(
+        "Title",
+        ["Location", "State", "Country", "Checklists", "Species"],
+        [row],
+        leading_rank_column=True,
+    )
+    assert "<th>Rank</th>" in out
+    assert "rank-col-soft-accent" in out
+    assert ">1</td>" in out
+    assert "Place One" in out
 
 
 def test_rankings_table_with_rank_empty_no_data():
@@ -100,12 +115,22 @@ def test_rankings_visited_table_empty_no_data():
 
 
 def test_rankings_visited_table_one_row_no_rank_column():
-    """Visited table has six data columns; no Rank on Top Lists (refs #81)."""
+    """Default: six data columns, no Rank (refs #81)."""
     row = ("Loc A", "NSW", "AU", "2020-01-01", "2024-06-01", "9")
     out = rankings_visited_table([row], include_heading=False)
     assert "<th>Rank</th>" not in out
     assert "Loc A" in out
     assert ">9</td>" in out
+
+
+def test_rankings_visited_table_leading_rank_column():
+    """Optional leading Rank for Top Lists (refs #83)."""
+    row = ("Loc A", "NSW", "AU", "2020-01-01", "2024-06-01", "9")
+    out = rankings_visited_table([row], include_heading=False, leading_rank_column=True)
+    assert "<th>Rank</th>" in out
+    assert "rank-col-soft-accent" in out
+    assert ">1</td>" in out
+    assert "Loc A" in out
 
 
 def test_rankings_seen_once_table_empty_no_data():

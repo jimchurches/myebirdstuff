@@ -8,7 +8,8 @@ rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matche
 ``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). Do not use ``st.dataframe``.
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
-``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Species: Not seen in
+``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
+include a narrow leading **Rank** column with soft accent styling (refs `#83`). **Species: Not seen in
 the past year** is the last expander under Interesting Lists; it lists countable species with no
 observation in the trailing twelve months and is not Top-N–capped (refs `#106`; geographic filters are `#108`).
 """

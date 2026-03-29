@@ -102,19 +102,42 @@ def rankings_not_seen_recently_table(
     return content
 
 
-def rankings_table_location_5col(title, headers_5, rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-    """5-column table: Location, State, Country, then two more (Top Lists tab; no Rank column, refs #81)."""
+def rankings_table_location_5col(
+    title,
+    headers_5,
+    rows,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    *,
+    leading_rank_column=False,
+):
+    """5-column table: Location, State, Country, then two more (Top Lists tab).
+
+    *leading_rank_column*: prepend Rank (1..n) with soft accent styling (refs #83).
+    """
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
-    body = "".join(
-        f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
-        f"<td>{r[3]}</td><td style='text-align:right;font-weight:600;'>{r[4]}</td></tr>"
-        for r in rows
-    )
-    head_cells = "".join(f"<th>{hdr}</th>" for hdr in headers_5)
+    tbl_classes = "stats-tbl rankings-tbl location-cols-tbl"
+    if leading_rank_column:
+        tbl_classes += " rank-col-soft-accent"
+    if leading_rank_column:
+        body = "".join(
+            f"<tr><td>{i}</td><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
+            f"<td>{r[3]}</td><td style='text-align:right;font-weight:600;'>{r[4]}</td></tr>"
+            for i, r in enumerate(rows, start=1)
+        )
+        head_cells = "".join(f"<th>{hdr}</th>" for hdr in ("Rank", *headers_5))
+    else:
+        body = "".join(
+            f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
+            f"<td>{r[3]}</td><td style='text-align:right;font-weight:600;'>{r[4]}</td></tr>"
+            for r in rows
+        )
+        head_cells = "".join(f"<th>{hdr}</th>" for hdr in headers_5)
     tbl = (
-        f"<table class='stats-tbl rankings-tbl location-cols-tbl'>"
+        f"<table class='{tbl_classes}'>"
         f"<thead><tr>{head_cells}</tr></thead><tbody>{body}</tbody></table>"
     )
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
@@ -133,6 +156,8 @@ def rankings_table_with_rank(
     lifelist_url_fn=None,
     link_urls_fn=None,
     add_lifelist_link=False,
+    *,
+    rank_column_soft_accent=False,
 ):
     """Build a rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3).
 
@@ -142,6 +167,8 @@ def rankings_table_with_rank(
     Optional link helpers (refs #56). Prefer link_urls_fn(common_name) -> (species_url, lifelist_url)
     so one lookup per row; when provided, add_lifelist_link controls whether the last column gets the
     lifelist link. Fallback: species_url_fn and lifelist_url_fn (two lookups per row when both used).
+
+    *rank_column_soft_accent*: add a class so scoped CSS can style the rank column (mock-up, refs #83).
     """
     if not rows_3col:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
@@ -183,27 +210,53 @@ def rankings_table_with_rank(
             f"<thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th>"
             f"<th>{headers_3col[2]}</th></tr></thead>"
         )
-    tbl = f"<table class='stats-tbl rankings-tbl rank-tbl'>{thead}<tbody>{body}</tbody></table>"
+    tbl_classes = "stats-tbl rankings-tbl rank-tbl"
+    if rank_column_soft_accent:
+        tbl_classes += " rank-col-soft-accent"
+    tbl = f"<table class='{tbl_classes}'>{thead}<tbody>{body}</tbody></table>"
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
     content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
     return content
 
 
-def rankings_visited_table(rows, include_heading=True, scroll_hint="shading", visible_rows=16):
-    """6-column table: Location | State | Country | First visit | Last visit | Visits (Top Lists; no Rank)."""
+def rankings_visited_table(
+    rows,
+    include_heading=True,
+    scroll_hint="shading",
+    visible_rows=16,
+    *,
+    leading_rank_column=False,
+):
+    """Location | State | Country | First visit | Last visit | Visits; optional leading Rank (refs #83)."""
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
-    body = "".join(
-        f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
-        f"<td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
-        for r in rows
-    )
+    tbl_classes = "stats-tbl rankings-tbl location-cols-tbl"
+    if leading_rank_column:
+        tbl_classes += " rank-col-soft-accent"
+    if leading_rank_column:
+        body = "".join(
+            f"<tr><td>{i}</td><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
+            f"<td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
+            for i, r in enumerate(rows, start=1)
+        )
+        thead = (
+            "<thead><tr><th>Rank</th><th>Location</th><th>State</th><th>Country</th>"
+            "<th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead>"
+        )
+    else:
+        body = "".join(
+            f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
+            f"<td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
+            for r in rows
+        )
+        thead = (
+            "<thead><tr><th>Location</th><th>State</th><th>Country</th>"
+            "<th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead>"
+        )
     tbl = (
-        "<table class='stats-tbl rankings-tbl location-cols-tbl'>"
-        "<thead><tr><th>Location</th><th>State</th><th>Country</th>"
-        "<th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead><tbody>"
-        f"{body}</tbody></table>"
+        f"<table class='{tbl_classes}'>"
+        f"{thead}<tbody>{body}</tbody></table>"
     )
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
     return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{scroll_wrapper}" if include_heading else scroll_wrapper

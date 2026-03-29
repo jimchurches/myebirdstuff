@@ -622,7 +622,10 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   font-variant-numeric: normal;
   font-weight: 400;
 }}
-.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl td:nth-child(n + 4) {{
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl:not(.rank-col-soft-accent) td:nth-child(n + 4) {{
+  font-variant-numeric: tabular-nums;
+}}
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl.rank-col-soft-accent td:nth-child(n + 5) {{
   font-variant-numeric: tabular-nums;
 }}
 .streamlit-checklist-html-ab .stats-tbl.location-cols-tbl td:last-child {{
@@ -658,6 +661,24 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   max-width: 11rem;
   text-align: right;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}}
+/* #83: soft accent + smaller type for leading Rank (Top Lists location tables + species rank-tbl). */
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl.rank-col-soft-accent th:nth-child(1),
+.streamlit-checklist-html-ab .stats-tbl.rank-tbl.rank-col-soft-accent td:nth-child(1),
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl.rank-col-soft-accent th:nth-child(1),
+.streamlit-checklist-html-ab .stats-tbl.location-cols-tbl.rank-col-soft-accent td:nth-child(1) {{
+  font-size: 0.78em;
+  color: rgba({acc}, 0.72);
+  font-weight: 500;
+  width: 3.25rem;
+  max-width: 4rem;
+  min-width: 2.5rem;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+  box-sizing: border-box;
+  white-space: nowrap;
+  text-align: right !important;
   font-variant-numeric: tabular-nums;
 }}
 .streamlit-checklist-html-ab .stats-tbl.seen-once-tbl td:last-child {{
@@ -1317,6 +1338,7 @@ def format_checklist_stats_bundle(
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
+                leading_rank_column=True,
             ),
         ),
         (
@@ -1328,6 +1350,7 @@ def format_checklist_stats_bundle(
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
+                leading_rank_column=True,
             ),
         ),
         (
@@ -1339,6 +1362,7 @@ def format_checklist_stats_bundle(
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
+                leading_rank_column=True,
             ),
         ),
         (
@@ -1350,6 +1374,7 @@ def format_checklist_stats_bundle(
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
+                leading_rank_column=True,
             ),
         ),
         (
@@ -1361,6 +1386,7 @@ def format_checklist_stats_bundle(
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
+                leading_rank_column=True,
             ),
         ),
         (
@@ -1372,6 +1398,7 @@ def format_checklist_stats_bundle(
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
+                leading_rank_column=True,
             ),
         ),
         (
@@ -1381,6 +1408,7 @@ def format_checklist_stats_bundle(
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
+                leading_rank_column=True,
             ),
         ),
     ]
@@ -1396,6 +1424,7 @@ def format_checklist_stats_bundle(
                 visible_rows=visible_rows,
                 link_urls_fn=link_urls_fn,
                 add_lifelist_link=False,
+                rank_column_soft_accent=True,
             ),
         ),
         (
@@ -1409,6 +1438,7 @@ def format_checklist_stats_bundle(
                 visible_rows=visible_rows,
                 link_urls_fn=link_urls_fn,
                 add_lifelist_link=True,
+                rank_column_soft_accent=True,
             ),
         ),
         (
