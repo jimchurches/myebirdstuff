@@ -1,5 +1,11 @@
 .DS_Store
 
+# Python virtual environments (any name)
+.venv/
+.venv-*/
+venv/
+env/
+
 # Don't track secrets
 config_secret.py
 *.ipynb_checkpoints
