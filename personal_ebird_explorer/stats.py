@@ -595,7 +595,9 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     *rows* is a list of (label, [val_per_year, ...]).
     *incomplete_by_year* is dict year → list of (sid, date_str, location).
     """
-    cl = cl.dropna(subset=["Date"])
+    # Ensure we have a standalone DataFrame before adding derived columns; avoids
+    # pandas `SettingWithCopyWarning` when `cl` is itself a slice upstream.
+    cl = cl.dropna(subset=["Date"]).copy()
     if cl.empty:
         return [], [], {}
     cl["_year"] = cl["Date"].dt.year
