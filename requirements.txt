@@ -2,7 +2,8 @@
 jupyter
 jupyterlab
 voila
-pandas>=3.0,<4
+# Pandas 3 is not available on all Binder/Python combos; 2.x matches Streamlit and installs everywhere.
+pandas>=2.0,<3
 folium
 ipywidgets>=8
 whoosh
