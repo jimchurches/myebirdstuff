@@ -1,10 +1,8 @@
 .DS_Store
 
-# Python virtual environments (create anywhere you like; these names are common locally)
+# Python virtual environments (any name)
 .venv/
-.venv-streamlit/
-.venv-reqcheck/
-.venv-streamlit 2/
+.venv-*/
 venv/
 env/
 
@@ -12,7 +10,4 @@ env/
 config_secret.py
 scripts/config.py
 .streamlit/secrets.toml
-*.ipynb_checkpoints
 __pycache__/
-voila_debug.log
-
