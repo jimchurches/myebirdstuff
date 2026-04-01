@@ -1,12 +1,12 @@
 """
-**Ranking & Lists** (Streamlit): nested tabs **Top Lists** / **Interesting Lists** / **Families**
+**Ranking & Lists** (Streamlit): nested tabs **Top Lists** / **Interesting Lists** / **Family Lists**
 (eBird species groups under the hood; refs `#73`), expanders per list on the first two tabs.
 
 Uses HTML from :func:`personal_ebird_explorer.checklist_stats_display.format_checklist_stats_bundle`
 (``rankings_sections_top_n`` / ``rankings_sections_other``) — same tables as the explorer’s richly-linked HTML tables,
 rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matches **Checklist Statistics**:
 :func:`~streamlit_app.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
-``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). The **Families** tab uses
+``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). The **Family Lists** tab uses
 ``st.dataframe`` for row selection plus HTML detail tables.
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
@@ -44,7 +44,7 @@ _RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"
 _TAXONOMY_BASE_URL = "https://api.ebird.org/v2/ref/taxonomy/ebird"
 _GROUPS_BASE_URL = "https://api.ebird.org/v2/ref/sppgroup/ebird"
 
-# Bundle keys and widget/session keys: eBird "group" in code; UI labels say "Family" / "Families" (refs #73).
+# Bundle keys and widget/session keys: eBird "group" in code; nested tab label Family Lists (refs #73).
 _GROUP_COVERAGE_SUMMARY_KEY = "group_coverage_summary"
 _GROUP_COVERAGE_DETAIL_KEY = "group_coverage_detail"
 _GROUP_COVERAGE_ERROR_KEY = "group_coverage_error"
@@ -280,7 +280,8 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
         f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:{RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX}px;width:100%; }}"
     )
 
-    tab_top, tab_int, tab_group = st.tabs(["Top Lists", "Interesting Lists", "Families"])
+    # Third tab: species-group coverage (Family Lists label; refs #73).
+    tab_top, tab_int, tab_group = st.tabs(["Top Lists", "Interesting Lists", "Family Lists"])
 
     with tab_top:
         for title, inner_html in bundle.get("rankings_sections_top_n") or []:
