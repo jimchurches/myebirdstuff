@@ -138,12 +138,38 @@ NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Settings",
 )
 
-# Bird emoji (Unicode order in message: legacy sequence first, then missing taxa; Dodo last — refs #74).
-CHECKLIST_STATS_SPINNER_MESSAGE = (
-    "Doing interesting things with your eBird data  "
-    "🐣 🐥 🐧 🦆 🦉 🦢 🦅 "
-    "🦃 🐔 🐓 🐤 🐦 🕊️ 🪶 🦩 🦚 🦜 🐦‍⬛ 🪿 🦤"
+# Spinner + animated emoji strip (refs #74): ``st.spinner`` shows text only; emoji run in a
+# ``streamlit.components.v1.html`` iframe (JS ``setInterval``) — see ``inject_spinner_emoji_animation``.
+CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
+
+# Bird emoji (same Unicode order as before: legacy sequence, then missing taxa; Dodo last — refs #74).
+CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
+    "🐣",
+    "🐥",
+    "🐧",
+    "🦆",
+    "🦉",
+    "🦢",
+    "🦅",
+    "🦃",
+    "🐔",
+    "🐓",
+    "🐤",
+    "🐦",
+    "🕊️",
+    "🪶",
+    "🦩",
+    "🦚",
+    "🦜",
+    "🐦‍⬛",
+    "🪿",
+    "🦤",
 )
+
+CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE = 5
+CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS = 750
+# Align emoji strip with spinner label text (past the leading icon) in ``st.spinner``.
+CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM = 2.75
 
 GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
 EBIRD_PROFILE_URL = "https://ebird.org/profile/MjkxNDYyNQ"

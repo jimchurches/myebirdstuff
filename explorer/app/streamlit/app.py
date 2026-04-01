@@ -148,6 +148,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
 from explorer.app.streamlit.app_data_loading import load_dataframe  # noqa: E402
 from explorer.app.streamlit.app_map_ui import (  # noqa: E402
     ensure_streamlit_map_basemap_height_keys,
+    inject_spinner_emoji_animation,
     inject_spinner_theme_css,
     sidebar_footer_links,
     species_searchbox_fragment,
@@ -174,7 +175,7 @@ from explorer.app.streamlit.country_stats_streamlit_html import (  # noqa: E402
     sync_country_tab_session_inputs,
 )
 from explorer.app.streamlit.defaults import (  # noqa: E402
-    CHECKLIST_STATS_SPINNER_MESSAGE,
+    CHECKLIST_STATS_SPINNER_TEXT,
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
     MAP_DATE_FILTER_DEFAULT,
@@ -484,7 +485,11 @@ def main() -> None:
         tab_settings,
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
-    with st.spinner(CHECKLIST_STATS_SPINNER_MESSAGE):
+    # Emoji strip: first nodes inside ``st.spinner`` so it sits under the status row (refs #74).
+    with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
+        _spinner_emoji_placeholder = st.empty()
+        with _spinner_emoji_placeholder.container():
+            inject_spinner_emoji_animation()
         checklist_payload = cached_checklist_stats_payload(work_df)
         top_n = int(st.session_state.streamlit_rankings_top_n)
         hc_sort = str(st.session_state.streamlit_high_count_sort)
@@ -661,6 +666,8 @@ def main() -> None:
                         returned_objects=[],
                         return_on_hover=False,
                     )
+
+        _spinner_emoji_placeholder.empty()  # Drop emoji iframe once load finishes (refs #74).
 
     with tab_checklist:
         run_checklist_stats_streamlit_fragment()

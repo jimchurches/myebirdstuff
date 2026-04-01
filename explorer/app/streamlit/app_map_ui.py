@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from personal_ebird_explorer.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
@@ -16,6 +18,10 @@ from explorer.app.streamlit.app_constants import (
     SPINNER_THEME_CSS_INJECTED_KEY,
 )
 from explorer.app.streamlit.defaults import (
+    CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS,
+    CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE,
+    CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM,
+    CHECKLIST_STATS_SPINNER_EMOJIS,
     EBIRD_PROFILE_URL,
     GITHUB_REPO_URL,
     INSTAGRAM_PROFILE_URL,
@@ -28,6 +34,7 @@ from explorer.app.streamlit.defaults import (
     SPECIES_SEARCH_MIN_QUERY_LEN,
     SPECIES_SEARCH_PLACEHOLDER,
     SPECIES_SEARCH_RERUN_SCOPE,
+    THEME_PRIMARY_HEX,
 )
 
 
@@ -42,6 +49,45 @@ def inject_spinner_theme_css() -> None:
         return
     st.html(SPINNER_THEME_CSS.strip())
     st.session_state[SPINNER_THEME_CSS_INJECTED_KEY] = True
+
+
+def inject_spinner_emoji_animation() -> None:
+    """Animate bird emoji in batches below the checklist-stats spinner (refs #74).
+
+    ``st.spinner`` cannot update its label mid-run; this uses a small ``components.html`` iframe and
+    client-side ``setInterval`` to advance non-overlapping batches while Python is blocked.
+    """
+    emojis = list(CHECKLIST_STATS_SPINNER_EMOJIS)
+    batch = max(1, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE))
+    ms = max(100, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS))
+    indent = float(CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM)
+    emojis_js = json.dumps(emojis, ensure_ascii=False)
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+html,body{{margin:0;padding:0;overflow:hidden;background:transparent;font-family:system-ui,sans-serif;}}
+#row{{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:0.35em 0.5em;
+box-sizing:border-box;width:100%;padding-left:{indent}rem;min-height:2.25rem;font-size:1.35rem;line-height:1.2;
+letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
+</style></head><body><div id="row" aria-hidden="true"></div>
+<script>
+(function() {{
+  const EMOJIS = {emojis_js};
+  const BATCH = {batch};
+  const MS = {ms};
+  const el = document.getElementById("row");
+  let start = 0;
+  function tick() {{
+    const out = [];
+    for (let i = 0; i < BATCH; i++) {{
+      out.push(EMOJIS[(start + i) % EMOJIS.length]);
+    }}
+    el.textContent = out.join(" ");
+    start = (start + BATCH) % EMOJIS.length;
+  }}
+  tick();
+  setInterval(tick, MS);
+}})();
+</script></body></html>"""
+    components.html(html, height=52, scrolling=False)
 
 
 def ensure_streamlit_map_basemap_height_keys() -> None:
