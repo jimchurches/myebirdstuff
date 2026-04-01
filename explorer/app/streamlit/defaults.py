@@ -118,7 +118,7 @@ THEME_SECONDARY_BG_HEX = "#EEF4F0"
 SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v4"
 
 # ---------------------------------------------------------------------------
-# Rankings & lists HTML (``rankings_streamlit_html``)
+# Ranking & Lists HTML (``rankings_streamlit_html``)
 # ---------------------------------------------------------------------------
 
 RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX = 1400
@@ -131,7 +131,7 @@ RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT = "shading"
 NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Map",
     "Checklist Statistics",
-    "Rankings & lists",
+    "Ranking & Lists",
     "Yearly Summary",
     "Country",
     "Maintenance",

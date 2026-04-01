@@ -29,8 +29,10 @@ names in popups can link to eBird species pages. Default locale is **en_AU**; ov
 Streamlit does not expose the browser language to Python.
 
 **Checklist Statistics:** Shared HTML sections (nested ``st.tabs`` + formatted tables from
-``checklist_stats_streamlit_tab_sections_html``). ``cached_checklist_stats_payload(work_df)`` runs **once** in
-``st.spinner(...)``; ``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment`` match Country / Yearly (refs #70).
+``checklist_stats_streamlit_tab_sections_html``). ``cached_checklist_stats_payload(work_df)``, full-export prep,
+sync helpers, and **Map** tab Folium build + ``st_folium`` run inside one ``st.spinner(...)`` so the themed
+spinner tracks the top “Running…” bar more closely; other main tabs render after the spinner exits.
+``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment`` match Country / Yearly (refs #70).
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
 (``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
@@ -40,7 +42,7 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 (aligned with Rankings Top N + high-count settings). **Close location (m)** is set under **Settings → Tables & lists**
 (refs #79).
 
-**Rankings & lists:** ``cached_full_export_checklist_stats_payload`` + ``format_checklist_stats_bundle``;
+**Ranking & Lists:** ``cached_full_export_checklist_stats_payload`` + ``format_checklist_stats_bundle``;
 ``build_rankings_tab_bundle`` runs in the main spinner pass; **Top N** / **visible rows** / table options are under
 **Settings → Tables & lists** (batch **Apply**; refs `#81`).
 
@@ -49,7 +51,7 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** Map tab runs each full rerun; data tabs use ``@st.fragment`` where possible. One always-on
+**Main tabs + sidebar:** Map tab body runs inside the main ``st.spinner`` block each full rerun; data tabs use ``@st.fragment`` where possible. One always-on
 sidebar for map controls plus footer links (refs #70). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 """
@@ -503,160 +505,162 @@ def main() -> None:
             rankings_bundle = {}
         sex_notation_by_year = cached_sex_notation_by_year(df_full)
 
-    sync_checklist_stats_tab_session_inputs(checklist_payload)
-    sync_rankings_tab_session_inputs(rankings_bundle)
-    loc_maint = full_location_data_for_maintenance(df_full)
-    incomplete_maint: dict = {}
-    if maint_full_payload is not None:
-        incomplete_maint = maint_full_payload.incomplete_by_year or {}
-    sync_maintenance_tab_session_inputs(
-        loc_maint,
-        close_location_meters=int(st.session_state.streamlit_close_location_meters),
-        incomplete_by_year=incomplete_maint,
-        sex_notation_by_year=sex_notation_by_year,
-    )
-    sync_yearly_summary_session_inputs(checklist_payload)
-    sync_country_tab_session_inputs(checklist_payload)
+        sync_checklist_stats_tab_session_inputs(checklist_payload)
+        sync_rankings_tab_session_inputs(rankings_bundle)
+        loc_maint = full_location_data_for_maintenance(df_full)
+        incomplete_maint: dict = {}
+        if maint_full_payload is not None:
+            incomplete_maint = maint_full_payload.incomplete_by_year or {}
+        sync_maintenance_tab_session_inputs(
+            loc_maint,
+            close_location_meters=int(st.session_state.streamlit_close_location_meters),
+            incomplete_by_year=incomplete_maint,
+            sex_notation_by_year=sex_notation_by_year,
+        )
+        sync_yearly_summary_session_inputs(checklist_payload)
+        sync_country_tab_session_inputs(checklist_payload)
 
-    with tab_map:
-        prov_plain = provenance or ""
-        sig = data_signature_for_caches(df_full, prov_plain)
-        if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
-            st.session_state.ebird_data_sig = sig
-            st.session_state.popup_html_cache = {}
-            st.session_state.filtered_by_loc_cache = OrderedDict()
-            st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+        # Keep spinner visible through Folium build + ``st_folium`` so it tracks the top “Running…” bar
+        # more closely (spinner ends when this block exits; other tabs render after).
+        with tab_map:
+            prov_plain = provenance or ""
+            sig = data_signature_for_caches(df_full, prov_plain)
+            if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
+                st.session_state.ebird_data_sig = sig
+                st.session_state.popup_html_cache = {}
+                st.session_state.filtered_by_loc_cache = OrderedDict()
+                st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
 
-        try:
-            ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
-        except ValueError as e:
-            st.warning(str(e))
-            st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-        else:
-            overlay_common = (
-                (species_pick_common or "").strip() if map_view_mode == "species" else ""
-            )
-            overlay_sci = (
-                (species_pick_sci or "").strip() if map_view_mode == "species" else ""
-            )
-            hide_nm = (
-                map_view_mode == "species"
-                and bool(overlay_sci)
-                and hide_non_matching_locations
-            )
-            _map_kw = {
-                **ctx,
-                "selected_species": overlay_sci,
-                "selected_common_name": overlay_common,
-                "map_style": map_style,
-                "popup_sort_order": popup_sort_order,
-                "popup_scroll_hint": popup_scroll_hint,
-                "lifer_color": st.session_state.streamlit_lifer_color,
-                "lifer_fill": st.session_state.streamlit_lifer_fill,
-                "last_seen_color": st.session_state.streamlit_last_seen_color,
-                "last_seen_fill": st.session_state.streamlit_last_seen_fill,
-                "species_color": st.session_state.streamlit_species_color,
-                "species_fill": st.session_state.streamlit_species_fill,
-                "default_color": st.session_state.streamlit_default_color,
-                "default_fill": st.session_state.streamlit_default_fill,
-                "mark_lifer": mark_lifer,
-                "mark_last_seen": mark_last_seen,
-                # For lifer mode we already communicate the “not date-filtered” behaviour in the
-                # side panel. Avoid repeating "all-time data" text in the banner.
-                "date_filter_status": "" if is_lifer_view else date_filter_banner,
-                "species_url_fn": species_url_fn,
-                "base_species_fn": base_species_for_lifer,
-                "taxonomy_locale": tax_locale_effective,
-                "popup_html_cache": st.session_state.popup_html_cache,
-                "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
-                "map_view_mode": map_view_mode,
-                "hide_non_matching_locations": hide_nm,
-                "show_subspecies_lifers": bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
-            }
-            _render_opts_sig = (
-                popup_sort_order,
-                popup_scroll_hint,
-                st.session_state.streamlit_lifer_color,
-                st.session_state.streamlit_lifer_fill,
-                st.session_state.streamlit_last_seen_color,
-                st.session_state.streamlit_last_seen_fill,
-                st.session_state.streamlit_species_color,
-                st.session_state.streamlit_species_fill,
-                st.session_state.streamlit_default_color,
-                st.session_state.streamlit_default_fill,
-                mark_lifer,
-                mark_last_seen,
-                bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
-            )
-            # ``build_species_overlay_map`` treats **Species** with no species picked as the same
-            # geometry as **All locations** (``map_controller`` coerces mode to ``all``). Match that here
-            # so static Folium reuse applies when switching Map view All ↔ Species before a selection.
-            _species_selected = bool(overlay_sci)
-            _cache_map_view_mode = map_view_mode
-            if map_view_mode == "species" and not _species_selected:
-                _cache_map_view_mode = "all"
-            _ck = static_map_cache_key(
-                work_df,
-                _cache_map_view_mode,
-                date_filter_banner,
-                map_style,
-                _render_opts_sig,
-                taxonomy_locale=tax_locale_effective,
-                species_selected_sci=overlay_sci if _species_selected else "",
-                species_selected_common=overlay_common if _species_selected else "",
-                hide_non_matching_locations=bool(hide_nm),
-            )
-            # One Folium map in session; key includes species + hide toggle so Selected species
-            # maps reuse on identical full reruns (e.g. switching tabs) without a multi-species LRU.
-            _use_static_cache = True
-            _cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
-            if (
-                isinstance(_cached, dict)
-                and _cached.get("key") == _ck
-                and _cached.get("map") is not None
-            ):
-                result_map = _cached["map"]
-                result_warning = _cached.get("warning")
-            else:
-                result = build_species_overlay_map(**_map_kw)
-                result_map = result.map
-                result_warning = result.warning
-                if _use_static_cache and result_map is not None:
-                    st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY] = {
-                        "key": _ck,
-                        "map": result_map,
-                        "warning": result_warning,
-                    }
-
-            if result_warning:
-                st.warning(result_warning)
-                st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-            elif result_map is None:
-                st.warning("Map could not be built.")
+            try:
+                ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
+            except ValueError as e:
+                st.warning(str(e))
                 st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
             else:
-                st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(result_map)
-                try:
-                    from streamlit_folium import st_folium
-                except ImportError:
-                    st.error(
-                        "Missing **streamlit-folium** (needed to embed the Folium map). "
-                        "Locally: `pip install -r requirements.txt`. "
-                        "**Streamlit Community Cloud:** set app **Python requirements** to "
-                        "`requirements.txt` at the repo root."
-                    )
-                    st.stop()
-                st_folium(
-                    result_map,
-                    use_container_width=True,
-                    height=map_height,
-                    # Include the full map cache key in the component identity so switching views,
-                    # toggles, and even server restarts remount the iframe (prevents stale marker
-                    # styling like "white pins" persisting across sessions).
-                    key=f"explorer_folium_{abs(hash(_ck))}_h{map_height}",
-                    returned_objects=[],
-                    return_on_hover=False,
+                overlay_common = (
+                    (species_pick_common or "").strip() if map_view_mode == "species" else ""
                 )
+                overlay_sci = (
+                    (species_pick_sci or "").strip() if map_view_mode == "species" else ""
+                )
+                hide_nm = (
+                    map_view_mode == "species"
+                    and bool(overlay_sci)
+                    and hide_non_matching_locations
+                )
+                _map_kw = {
+                    **ctx,
+                    "selected_species": overlay_sci,
+                    "selected_common_name": overlay_common,
+                    "map_style": map_style,
+                    "popup_sort_order": popup_sort_order,
+                    "popup_scroll_hint": popup_scroll_hint,
+                    "lifer_color": st.session_state.streamlit_lifer_color,
+                    "lifer_fill": st.session_state.streamlit_lifer_fill,
+                    "last_seen_color": st.session_state.streamlit_last_seen_color,
+                    "last_seen_fill": st.session_state.streamlit_last_seen_fill,
+                    "species_color": st.session_state.streamlit_species_color,
+                    "species_fill": st.session_state.streamlit_species_fill,
+                    "default_color": st.session_state.streamlit_default_color,
+                    "default_fill": st.session_state.streamlit_default_fill,
+                    "mark_lifer": mark_lifer,
+                    "mark_last_seen": mark_last_seen,
+                    # For lifer mode we already communicate the “not date-filtered” behaviour in the
+                    # side panel. Avoid repeating "all-time data" text in the banner.
+                    "date_filter_status": "" if is_lifer_view else date_filter_banner,
+                    "species_url_fn": species_url_fn,
+                    "base_species_fn": base_species_for_lifer,
+                    "taxonomy_locale": tax_locale_effective,
+                    "popup_html_cache": st.session_state.popup_html_cache,
+                    "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
+                    "map_view_mode": map_view_mode,
+                    "hide_non_matching_locations": hide_nm,
+                    "show_subspecies_lifers": bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
+                }
+                _render_opts_sig = (
+                    popup_sort_order,
+                    popup_scroll_hint,
+                    st.session_state.streamlit_lifer_color,
+                    st.session_state.streamlit_lifer_fill,
+                    st.session_state.streamlit_last_seen_color,
+                    st.session_state.streamlit_last_seen_fill,
+                    st.session_state.streamlit_species_color,
+                    st.session_state.streamlit_species_fill,
+                    st.session_state.streamlit_default_color,
+                    st.session_state.streamlit_default_fill,
+                    mark_lifer,
+                    mark_last_seen,
+                    bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
+                )
+                # ``build_species_overlay_map`` treats **Species** with no species picked as the same
+                # geometry as **All locations** (``map_controller`` coerces mode to ``all``). Match that here
+                # so static Folium reuse applies when switching Map view All ↔ Species before a selection.
+                _species_selected = bool(overlay_sci)
+                _cache_map_view_mode = map_view_mode
+                if map_view_mode == "species" and not _species_selected:
+                    _cache_map_view_mode = "all"
+                _ck = static_map_cache_key(
+                    work_df,
+                    _cache_map_view_mode,
+                    date_filter_banner,
+                    map_style,
+                    _render_opts_sig,
+                    taxonomy_locale=tax_locale_effective,
+                    species_selected_sci=overlay_sci if _species_selected else "",
+                    species_selected_common=overlay_common if _species_selected else "",
+                    hide_non_matching_locations=bool(hide_nm),
+                )
+                # One Folium map in session; key includes species + hide toggle so Selected species
+                # maps reuse on identical full reruns (e.g. switching tabs) without a multi-species LRU.
+                _use_static_cache = True
+                _cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
+                if (
+                    isinstance(_cached, dict)
+                    and _cached.get("key") == _ck
+                    and _cached.get("map") is not None
+                ):
+                    result_map = _cached["map"]
+                    result_warning = _cached.get("warning")
+                else:
+                    result = build_species_overlay_map(**_map_kw)
+                    result_map = result.map
+                    result_warning = result.warning
+                    if _use_static_cache and result_map is not None:
+                        st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY] = {
+                            "key": _ck,
+                            "map": result_map,
+                            "warning": result_warning,
+                        }
+
+                if result_warning:
+                    st.warning(result_warning)
+                    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+                elif result_map is None:
+                    st.warning("Map could not be built.")
+                    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+                else:
+                    st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(result_map)
+                    try:
+                        from streamlit_folium import st_folium
+                    except ImportError:
+                        st.error(
+                            "Missing **streamlit-folium** (needed to embed the Folium map). "
+                            "Locally: `pip install -r requirements.txt`. "
+                            "**Streamlit Community Cloud:** set app **Python requirements** to "
+                            "`requirements.txt` at the repo root."
+                        )
+                        st.stop()
+                    st_folium(
+                        result_map,
+                        use_container_width=True,
+                        height=map_height,
+                        # Include the full map cache key in the component identity so switching views,
+                        # toggles, and even server restarts remount the iframe (prevents stale marker
+                        # styling like "white pins" persisting across sessions).
+                        key=f"explorer_folium_{abs(hash(_ck))}_h{map_height}",
+                        returned_objects=[],
+                        return_on_hover=False,
+                    )
 
     with tab_checklist:
         run_checklist_stats_streamlit_fragment()
@@ -686,7 +690,7 @@ def main() -> None:
                     if st.button(
                         "Save settings",
                         key=STREAMLIT_SAVE_SETTINGS_BTN_KEY,
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         ok, err = write_settings_yaml_via_module(
                             settings_yaml_path, settings_state_payload()
@@ -700,7 +704,7 @@ def main() -> None:
                     if st.button(
                         "Reset to defaults",
                         key=STREAMLIT_RESET_SETTINGS_BTN_KEY,
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         apply_settings_payload_to_state(settings_defaults_payload())
                         init_and_clamp_streamlit_table_settings()
@@ -876,7 +880,7 @@ def main() -> None:
                         "are listed under **Maintenance → Location Maintenance → Close locations**."
                     ),
                 )
-                apply_tables = st.form_submit_button("Apply table settings", use_container_width=True)
+                apply_tables = st.form_submit_button("Apply table settings", width="stretch")
 
             if apply_tables:
                 st.session_state[STREAMLIT_RANKINGS_TOP_N_KEY] = rn
