@@ -17,7 +17,7 @@ streamlit run explorer/app/streamlit/app.py
 ## UI guidelines
 
 - **Layouts and simple data** — Prefer Streamlit primitives: tabs, sidebar, `st.expander`, nested `st.tabs`, `st.dataframe` / `st.table`, `st.metric`, `st.columns`, `.streamlit/config.toml` theme (eBird-adjacent greens in `[theme]`). **Checklist Statistics** uses nested `st.tabs` plus **shared HTML** tables from `checklist_stats_streamlit_tab_sections_html`. **Rankings & lists** (`rankings_streamlit_html.py`) adds another level: **Top Lists** / **Interesting Lists** nested tabs, expanders per list, HTML from `format_checklist_stats_bundle` on the full export; **Top N** / **visible rows** sliders live under **Settings → Tables & lists**. Streamlit expanders can’t act as a single-open accordion for mutually exclusive panels — nested tabs are the pattern.
-- **Rich tables (rankings, “Interesting lists”, richly-linked lists)** — These are produced as **HTML** (linked species/locations/dates, bold counts, ⧉, dotted/solid link styling). **`st.dataframe` is the wrong tool** for that UX. **Use HTML from shared formatters** in `personal_ebird_explorer/` (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, etc.) and render with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`**. **Do not fork** duplicate table HTML in this package; extend the shared formatters instead.
+- **Rich tables (rankings, “Interesting lists”, richly-linked lists)** — These are produced as **HTML** (linked species/locations/dates, bold counts, ⧉, dotted/solid link styling). **`st.dataframe` is the wrong tool** for that UX. **Use HTML from shared formatters** in `explorer/personal_ebird_explorer/` (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, etc.) and render with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`**. **Do not fork** duplicate table HTML in this package; extend the shared formatters instead.
 - **eBird links** — Never drop deep links just to avoid HTML. See [AI_CONTEXT.md — Streamlit UI](../../../docs/AI_CONTEXT.md#streamlit-ui).
 - **One-off HTML** — Ad-hoc `unsafe_allow_html` not produced by a shared formatter is a last resort; prefer extending a module helper so formatting stays aligned.
 - **Contributors / AI assistants:** When choosing dataframe vs formatter HTML, **state the tradeoff** briefly so the decision is explicit.
@@ -26,7 +26,7 @@ streamlit run explorer/app/streamlit/app.py
 
 ## Run locally
 
-From the **repository root** (after activating a Streamlit-only venv — see below). The app uses package imports (`explorer.app.streamlit.*`, `personal_ebird_explorer.*`). ``app.py`` prepends the repo root to ``sys.path`` so imports resolve when Streamlit runs the script from ``explorer/app/streamlit/``.
+From the **repository root** (after activating a Streamlit-only venv — see below). The app uses package imports (`explorer.app.streamlit.*`, `personal_ebird_explorer.*`). ``app.py`` prepends the **repo root** and the **``explorer/``** directory to ``sys.path`` so imports resolve when Streamlit runs the script from ``explorer/app/streamlit/``.
 
 ```bash
 pip install -r requirements.txt
@@ -59,7 +59,7 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 **Performance (refs #70):** **All locations** and **Lifer locations** Folium maps are **cached** in session for the same dataset + date filter + basemap so switching between those views reuses the built map (changing the date filter or CSV invalidates the cache). **Selected species** uses the **streamlit-searchbox** component inside a **`@st.fragment`** with **fragment-scoped reruns** and **debounced** input so typing in the species search does not grey out the whole app. The **Show only selected species** toggle lives **outside** the fragment so the map updates immediately when you change it.
 
-**Map banners / legend:** Fixed overlays use the same **theme tokens** as the Streamlit app (primary green titles, panel gradient, borders) via injected CSS in ``map_overlay_theme_stylesheet`` (`personal_ebird_explorer/map_renderer.py`; refs #70).
+**Map banners / legend:** Fixed overlays use the same **theme tokens** as the Streamlit app (primary green titles, panel gradient, borders) via injected CSS in ``map_overlay_theme_stylesheet`` (`explorer/personal_ebird_explorer/map_renderer.py`; refs #70).
 
 **Map height:** The Folium iframe uses a **fixed pixel height** (streamlit-folium). Use the sidebar slider **Map height (px)** (default 720). The app passes a `key` that includes the height so the component **remounts** when you change the slider (streamlit-folium otherwise keeps the same internal identity and ignores the new height). Changing height may reset pan/zoom on the map.
 

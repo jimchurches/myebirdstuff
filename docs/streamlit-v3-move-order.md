@@ -10,7 +10,7 @@ This document defined a safe, incremental move path toward the agreed v3 structu
 
 - product branding: **Personal eBird Explorer**
 - code package root: **`explorer/`** (app + Streamlit modules live here)
-- keep UI/runtime adapter separate from framework-agnostic logic (`personal_ebird_explorer/` remains the shared library for now)
+- keep UI/runtime adapter separate from framework-agnostic logic (`explorer/personal_ebird_explorer/` remains the shared library for now)
 
 ## Target structure
 
@@ -41,7 +41,7 @@ explorer/
 
 ### Phase 2 — package move — **done**
 
-5. **Deferred / optional:** Copy/move non-UI shared modules from `personal_ebird_explorer/` into `explorer/core/` and `explorer/presentation/`. Today those directories exist as **skeleton packages**; framework-agnostic logic still lives primarily in `personal_ebird_explorer/`. Doing this move is **not required** for v3 merge; treat as future tidy-up if you want a stricter tree.
+5. **Deferred / optional:** Copy/move non-UI shared modules from `explorer/personal_ebird_explorer/` into `explorer/core/` and `explorer/presentation/`. Today those directories exist as **skeleton packages**; framework-agnostic logic still lives primarily in `explorer/personal_ebird_explorer/`. Doing this move is **not required** for v3 merge; treat as future tidy-up if you want a stricter tree.
 6. ~~Move Streamlit modules from `streamlit_app/` to `explorer/app/streamlit/`.~~ **Done.** ~~Compatibility shims~~ removed; use `streamlit run explorer/app/streamlit/app.py`.
 7. **Partial:** Tests remain under `tests/explorer/` with `test_streamlit_*` naming; a physical split to `tests/streamlit/` is optional.
 
@@ -62,6 +62,6 @@ explorer/
 
 - **Canonical Streamlit implementation:** `explorer/app/streamlit/*.py`
 - **Entry:** `streamlit run explorer/app/streamlit/app.py` (from repo root)
-- **Library:** `personal_ebird_explorer/` — shared map/settings/stats logic (not yet split into `explorer/core/` beyond placeholders)
+- **Library:** `explorer/personal_ebird_explorer/` — shared map/settings/stats logic (not yet split into `explorer/core/` beyond placeholders)
 - **Skeleton:** `explorer/core/`, `explorer/presentation/` — reserved for optional future moves
 

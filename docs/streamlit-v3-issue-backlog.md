@@ -185,7 +185,7 @@ Implemented by centralising `streamlit_*` / `_streamlit_*` session keys in `stre
 
 - No silent failures for “save settings” without user-visible feedback.
 
-Implemented by narrowing the broad exception handlers in `personal_ebird_explorer/streamlit_settings_config.py`
+Implemented by narrowing the broad exception handlers in `explorer/personal_ebird_explorer/streamlit_settings_config.py`
 (YAML parse vs file I/O errors) and in `streamlit_app/app_settings_state.py` (import availability). Added
 test coverage indirectly via existing `tests/explorer/test_streamlit_settings_config.py`.
 
@@ -255,7 +255,7 @@ If you want **fewer** child issues under #70, merge as follows:
 
 ## Open questions (resolve in #70 or per-issue)
 
-1. ~~Target package name after move: keep `streamlit_app` under `personal_ebird_explorer/` or rename?~~ **Resolved:** Implementation is `explorer.app.streamlit` under `explorer/app/streamlit/`; shared library code remains in `personal_ebird_explorer/` (see `streamlit-v3-move-order.md`).
+1. ~~Target package name after move: keep `streamlit_app` under `personal_ebird_explorer/` or rename?~~ **Resolved:** Implementation is `explorer.app.streamlit` under `explorer/app/streamlit/`; shared library code is `explorer/personal_ebird_explorer/` (import name `personal_ebird_explorer`; see `streamlit-v3-move-order.md`).
 
 ## Decisions already made
 

@@ -62,10 +62,13 @@ import os
 import sys
 
 # ``streamlit run explorer/app/streamlit/app.py`` puts the script directory on ``sys.path``, not the
-# repo root. Top-level packages ``explorer`` and ``personal_ebird_explorer`` live at repo root (refs #70).
+# repo root. Need repo root for ``import explorer`` and ``explorer/`` for ``import personal_ebird_explorer``
+# (library package lives at ``explorer/personal_ebird_explorer/``; refs #70).
 _REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-if _REPO_ROOT not in sys.path:
-    sys.path.insert(0, _REPO_ROOT)
+_EXPLORER_DIR = os.path.join(_REPO_ROOT, "explorer")
+for _p in (_REPO_ROOT, _EXPLORER_DIR):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from collections import OrderedDict
 

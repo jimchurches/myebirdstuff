@@ -32,7 +32,7 @@ The explorer builds a single **`datetime`** column for sorting visits (map popup
 
 **Important:** **23:59** in the app is often a **placeholder**, not proof that you birded at one minute to midnight. Treat it as “time unknown for this row.”
 
-Implementation detail: see `add_datetime_column()` in `personal_ebird_explorer/data_loader.py`. A fuller testing narrative (fixture counts) is in [`tests/fixtures/ebird_integration_fixture_notes.md`](../../tests/fixtures/ebird_integration_fixture_notes.md).
+Implementation detail: see `add_datetime_column()` in `explorer/personal_ebird_explorer/data_loader.py`. A fuller testing narrative (fixture counts) is in [`tests/fixtures/ebird_integration_fixture_notes.md`](../../tests/fixtures/ebird_integration_fixture_notes.md).
 
 **You need:** Your eBird data export (CSV). Download from [eBird.org](https://ebird.org) → My eBird → Manage My Data → Download My Data.
 
