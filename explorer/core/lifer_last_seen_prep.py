@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict, List, Tuple, TypedDict
 
 import pandas as pd
 
-from personal_ebird_explorer.species_logic import (
+from explorer.core.species_logic import (
     base_species_for_lifer as _default_base_species_for_lifer,
     countable_species_vectorized,
 )

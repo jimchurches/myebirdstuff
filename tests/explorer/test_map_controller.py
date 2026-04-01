@@ -4,9 +4,9 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from personal_ebird_explorer.lifer_last_seen_prep import prepare_lifer_last_seen
-from personal_ebird_explorer.map_controller import MapOverlayResult, build_species_overlay_map
-from personal_ebird_explorer.species_logic import base_species_for_lifer
+from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
+from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
+from explorer.core.species_logic import base_species_for_lifer
 
 
 def _minimal_map_df():

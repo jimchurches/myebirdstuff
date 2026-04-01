@@ -1,8 +1,8 @@
-"""Unit tests for personal_ebird_explorer.rankings_display (rankings table HTML builders)."""
+"""Unit tests for explorer.presentation.rankings_display (rankings table HTML builders)."""
 
 import pytest
 
-from personal_ebird_explorer.rankings_display import (
+from explorer.presentation.rankings_display import (
     rankings_scroll_wrapper,
     rankings_table,
     rankings_table_location_5col,

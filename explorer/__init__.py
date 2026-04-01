@@ -1,6 +1,7 @@
 """Explorer package root for the v3 structure.
 
-Streamlit UI lives under :mod:`explorer.app.streamlit`. Shared library code lives in
-:mod:`personal_ebird_explorer` (directory ``explorer/personal_ebird_explorer/``).
+- **Domain & paths:** :mod:`explorer.core`
+- **HTML / map rendering helpers:** :mod:`explorer.presentation`
+- **Streamlit UI:** :mod:`explorer.app.streamlit`
 """
 

@@ -17,8 +17,8 @@ import folium
 import pandas as pd
 from branca.element import Element
 
-from personal_ebird_explorer.lifer_last_seen_prep import aggregate_lifer_sites
-from personal_ebird_explorer.map_renderer import (
+from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites
+from explorer.presentation.map_renderer import (
     build_all_species_banner_html,
     build_legend_html,
     build_lifer_locations_banner_html,
@@ -33,15 +33,15 @@ from personal_ebird_explorer.map_renderer import (
     popup_scroll_script,
     resolve_lifer_last_seen,
 )
-from personal_ebird_explorer.map_ui_constants import (
+from explorer.presentation.map_ui_constants import (
     MAP_CIRCLE_MARKER_RADIUS_PX,
     MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
     MAP_PIN_FILL_OPACITY_EMPHASIS,
     MAP_POPUP_MAX_WIDTH_PX,
 )
-from personal_ebird_explorer.species_logic import base_species_for_lifer, filter_species
-from personal_ebird_explorer.stats import safe_count
+from explorer.core.species_logic import base_species_for_lifer, filter_species
+from explorer.core.stats import safe_count
 
 SpeciesUrlFn = Optional[Callable[[str], Optional[str]]]
 BaseSpeciesFn = Callable[[str], Optional[str]]

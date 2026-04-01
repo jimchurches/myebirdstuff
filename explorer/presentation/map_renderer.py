@@ -16,7 +16,7 @@ import html as _html_module
 import folium
 import pandas as pd
 
-from personal_ebird_explorer.map_ui_constants import MAP_LEGEND_PIN_BORDER_PX, MAP_LEGEND_PIN_DOT_PX
+from explorer.presentation.map_ui_constants import MAP_LEGEND_PIN_BORDER_PX, MAP_LEGEND_PIN_DOT_PX
 
 # ---------------------------------------------------------------------------
 # UI theme (aligned with Streamlit Checklist Statistics HTML + ``.streamlit/config.toml``; refs #70)

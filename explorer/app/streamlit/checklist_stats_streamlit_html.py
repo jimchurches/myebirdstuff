@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
-from personal_ebird_explorer.checklist_stats_display import checklist_stats_streamlit_tab_sections_html
+from explorer.core.checklist_stats_compute import ChecklistStatsPayload
+from explorer.presentation.checklist_stats_display import checklist_stats_streamlit_tab_sections_html
 from explorer.app.streamlit.app_constants import CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 

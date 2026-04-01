@@ -7,7 +7,7 @@ import pytest
 
 
 def test_build_explorer_candidate_dirs_config_then_cwd(tmp_path):
-    from personal_ebird_explorer.explorer_paths import build_explorer_candidate_dirs
+    from explorer.core.explorer_paths import build_explorer_candidate_dirs
 
     repo = tmp_path / "repo"
     (repo / "config").mkdir(parents=True)
@@ -20,7 +20,7 @@ def test_build_explorer_candidate_dirs_config_then_cwd(tmp_path):
 
 
 def test_resolve_ebird_data_file_finds_in_cwd_when_no_config(tmp_path):
-    from personal_ebird_explorer.explorer_paths import (
+    from explorer.core.explorer_paths import (
         build_explorer_candidate_dirs,
         resolve_ebird_data_file,
     )
@@ -39,7 +39,7 @@ def test_resolve_ebird_data_file_finds_in_cwd_when_no_config(tmp_path):
 
 
 def test_resolve_prefers_config_secret_over_cwd(tmp_path):
-    from personal_ebird_explorer.explorer_paths import (
+    from explorer.core.explorer_paths import (
         build_explorer_candidate_dirs,
         resolve_ebird_data_file,
     )
@@ -66,7 +66,7 @@ def test_resolve_prefers_config_secret_over_cwd(tmp_path):
 
 
 def test_resolve_raises_file_not_found():
-    from personal_ebird_explorer.explorer_paths import resolve_ebird_data_file
+    from explorer.core.explorer_paths import resolve_ebird_data_file
 
     with pytest.raises(FileNotFoundError) as exc:
         resolve_ebird_data_file("nope.csv", ["/nonexistent"], ["x"])
@@ -74,7 +74,7 @@ def test_resolve_raises_file_not_found():
 
 
 def test_settings_yaml_path_for_source(tmp_path):
-    from personal_ebird_explorer.explorer_paths import settings_yaml_path_for_source
+    from explorer.core.explorer_paths import settings_yaml_path_for_source
 
     repo = tmp_path / "repo"
     (repo / "config").mkdir(parents=True)
@@ -89,7 +89,7 @@ def test_settings_yaml_path_for_source(tmp_path):
 
 
 def test_config_yaml_wins_over_cwd_when_both_have_csv(tmp_path):
-    from personal_ebird_explorer.explorer_paths import (
+    from explorer.core.explorer_paths import (
         build_explorer_candidate_dirs,
         resolve_ebird_data_file,
     )

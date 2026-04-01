@@ -17,18 +17,18 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from personal_ebird_explorer.data_loader import load_dataset, REQUIRED_COLUMNS
-from personal_ebird_explorer.lifer_last_seen_prep import aggregate_lifer_sites, prepare_lifer_last_seen
-from personal_ebird_explorer.species_logic import base_species_for_lifer, countable_species_vectorized, filter_species
-from personal_ebird_explorer.stats import (
+from explorer.core.data_loader import load_dataset, REQUIRED_COLUMNS
+from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites, prepare_lifer_last_seen
+from explorer.core.species_logic import base_species_for_lifer, countable_species_vectorized, filter_species
+from explorer.core.stats import (
     checklist_country_keys,
     compute_rankings,
     country_summary_stats,
     safe_count,
     yearly_summary_stats,
 )
-from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
-from personal_ebird_explorer.working_set import rebuild_working_set_from_date_filter
+from explorer.core.duplicate_checks import get_map_maintenance_data
+from explorer.core.working_set import rebuild_working_set_from_date_filter
 
 
 # ---------------------------------------------------------------------------

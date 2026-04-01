@@ -1,7 +1,7 @@
 """
 **Maintenance** tab (Streamlit): top-level ``st.tabs`` + ``st.expander`` + HTML tables.
 
-Reuses builders from ``personal_ebird_explorer.maintenance_display`` (refs #69, #79).
+Reuses builders from ``explorer.presentation.maintenance_display`` (refs #69, #79).
 Uses the same scoped CSS as Checklist Statistics / Country (``CHECKLIST_STATS_*`` + ``.streamlit-checklist-html-ab``).
 """
 
@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
 
-from personal_ebird_explorer.maintenance_display import (
+from explorer.presentation.maintenance_display import (
     incomplete_checklists_intro_html,
     incomplete_checklists_year_table_html,
     iter_incomplete_checklists_years_desc,

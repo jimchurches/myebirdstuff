@@ -1,9 +1,9 @@
-"""Tests for personal_ebird_explorer.lifer_last_seen_prep (refs #68)."""
+"""Tests for explorer.core.lifer_last_seen_prep (refs #68)."""
 
 import pandas as pd
 
-from personal_ebird_explorer.lifer_last_seen_prep import aggregate_lifer_sites, prepare_lifer_last_seen
-from personal_ebird_explorer.species_logic import base_species_for_lifer
+from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites, prepare_lifer_last_seen
+from explorer.core.species_logic import base_species_for_lifer
 
 
 def _tiny_df():

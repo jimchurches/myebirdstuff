@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 import pandas as pd
 
-from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
+from explorer.core.duplicate_checks import get_map_maintenance_data
 
 # eBird location edit URL (merge/delete personal locations), not lifelist.
 EBIRD_LOCATION_EDIT_BASE = "https://ebird.org/mylocations/edit/"

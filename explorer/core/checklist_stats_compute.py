@@ -11,8 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from personal_ebird_explorer.species_logic import countable_species_vectorized
-from personal_ebird_explorer.stats import (
+from explorer.core.species_logic import countable_species_vectorized
+from explorer.core.stats import (
     compute_rankings,
     country_summary_stats,
     longest_streak,

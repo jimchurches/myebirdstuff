@@ -1,9 +1,9 @@
-"""Tests for personal_ebird_explorer.region_display (country/state name display, refs #43)."""
+"""Tests for explorer.core.region_display (country/state name display, refs #43)."""
 
 import pandas as pd
 import pytest
 
-from personal_ebird_explorer.region_display import country_for_display, state_for_display
+from explorer.core.region_display import country_for_display, state_for_display
 
 
 def test_country_for_display_empty_and_none():

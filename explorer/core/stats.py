@@ -13,7 +13,7 @@ import html as _html
 import numpy as np
 import pandas as pd
 
-from personal_ebird_explorer.species_logic import countable_species_vectorized
+from explorer.core.species_logic import countable_species_vectorized
 
 
 # ---------------------------------------------------------------------------
@@ -663,7 +663,7 @@ def rankings_not_seen_recently(df_obs, reference_date=None):
     scroll/window height comes from Rankings **visible rows** settings.
 
     Returns rows ``(common_name, last_seen_html, days_str)`` for
-    :func:`personal_ebird_explorer.rankings_display.rankings_not_seen_recently_table`.
+    :func:`explorer.presentation.rankings_display.rankings_not_seen_recently_table`.
     *last_seen_html* is the visit date/time linking to the checklist of that observation.
 
     *reference_date* defaults to local today (normalized); set for deterministic tests (refs #106).

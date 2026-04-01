@@ -1,12 +1,12 @@
-"""Tests for personal_ebird_explorer.working_set (refs #66)."""
+"""Tests for explorer.core.working_set (refs #66)."""
 
 import tempfile
 
 import pandas as pd
 from whoosh.index import create_in
 
-from personal_ebird_explorer.species_search import species_whoosh_schema
-from personal_ebird_explorer.working_set import WorkingSet, rebuild_working_set_from_date_filter
+from explorer.core.species_search import species_whoosh_schema
+from explorer.core.working_set import WorkingSet, rebuild_working_set_from_date_filter
 
 
 def _minimal_df():

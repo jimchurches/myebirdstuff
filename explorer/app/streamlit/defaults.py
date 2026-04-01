@@ -1,15 +1,15 @@
 """
 Developer reference: default values for the Streamlit explorer (refs #70).
 
-Embedded settings schema and map geometry live under ``personal_ebird_explorer`` so the
-core package does not depend on this module (refs #89). This file re-exports those
+Embedded settings schema and map geometry live under ``explorer.core`` so the
+Streamlit adapter does not own those definitions (refs #89). This file re-exports those
 symbols for the Streamlit app and keeps UI-only literals here.
 """
 
 from __future__ import annotations
 
-# Re-export schema + map UI constants (single source in ``personal_ebird_explorer``).
-from personal_ebird_explorer.map_ui_constants import (  # noqa: F401
+# Re-export schema + map UI constants (single source in ``explorer.core``).
+from explorer.presentation.map_ui_constants import (  # noqa: F401
     MAP_CIRCLE_MARKER_RADIUS_PX,
     MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     MAP_LEGEND_PIN_BORDER_PX,
@@ -18,7 +18,7 @@ from personal_ebird_explorer.map_ui_constants import (  # noqa: F401
     MAP_PIN_FILL_OPACITY_EMPHASIS,
     MAP_POPUP_MAX_WIDTH_PX,
 )
-from personal_ebird_explorer.settings_schema_defaults import (  # noqa: F401
+from explorer.core.settings_schema_defaults import (  # noqa: F401
     MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,

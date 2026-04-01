@@ -13,8 +13,8 @@ from typing import AbstractSet, Any, Dict, List, MutableMapping, Optional, Tuple
 
 import pandas as pd
 
-from personal_ebird_explorer.species_logic import countable_species_vectorized
-from personal_ebird_explorer.stats import safe_count
+from explorer.core.species_logic import countable_species_vectorized
+from explorer.core.stats import safe_count
 
 
 @dataclass

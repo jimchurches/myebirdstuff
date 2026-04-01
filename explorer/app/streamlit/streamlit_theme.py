@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_display import (
+from explorer.presentation.checklist_stats_display import (
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS,
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE,
     CHECKLIST_STATS_TABLE_CSS,

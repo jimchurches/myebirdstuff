@@ -9,7 +9,7 @@ pytest.importorskip("pydantic")
 
 
 def test_load_yaml_settings_defaults_when_missing(tmp_path):
-    from personal_ebird_explorer.streamlit_settings_config import load_yaml_settings
+    from explorer.core.settings_config import load_yaml_settings
 
     cfg, warn = load_yaml_settings(str(tmp_path / "missing.yaml"))
     assert warn is None
@@ -20,7 +20,7 @@ def test_load_yaml_settings_defaults_when_missing(tmp_path):
 
 
 def test_load_yaml_settings_rejects_invalid_type(tmp_path):
-    from personal_ebird_explorer.streamlit_settings_config import load_yaml_settings
+    from explorer.core.settings_config import load_yaml_settings
 
     p = tmp_path / "bad.yaml"
     p.write_text("tables_lists:\n  rankings_top_n: nope\n", encoding="utf-8")
@@ -30,7 +30,7 @@ def test_load_yaml_settings_rejects_invalid_type(tmp_path):
 
 
 def test_write_sparse_preserves_unknown_keys(tmp_path):
-    from personal_ebird_explorer.streamlit_settings_config import write_sparse_yaml_settings
+    from explorer.core.settings_config import write_sparse_yaml_settings
 
     p = tmp_path / "config_secret.streamlit.yaml"
     p.write_text("custom:\n  keep: true\n", encoding="utf-8")
@@ -65,7 +65,7 @@ def test_write_sparse_preserves_unknown_keys(tmp_path):
 
 
 def test_config_path_yaml_roundtrip(tmp_path):
-    from personal_ebird_explorer.streamlit_settings_config import (
+    from explorer.core.settings_config import (
         load_settings_from_config_path,
         write_sparse_settings_to_config_path,
     )

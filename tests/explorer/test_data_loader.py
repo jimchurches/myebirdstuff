@@ -1,10 +1,10 @@
-"""Direct tests for personal_ebird_explorer.data_loader.load_dataset."""
+"""Direct tests for explorer.core.data_loader.load_dataset."""
 
 import pandas as pd
 import pytest
 from io import StringIO
 
-from personal_ebird_explorer.data_loader import load_dataset, REQUIRED_COLUMNS
+from explorer.core.data_loader import load_dataset, REQUIRED_COLUMNS
 
 
 # Minimal CSV with all required columns (one row) for valid-structure tests.

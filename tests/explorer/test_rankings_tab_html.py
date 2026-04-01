@@ -1,6 +1,6 @@
 """Tests for Rankings tab HTML shell (refs #69)."""
 
-from personal_ebird_explorer.checklist_stats_display import format_rankings_tab_html
+from explorer.presentation.checklist_stats_display import format_rankings_tab_html
 
 
 def test_format_rankings_tab_html_structure_and_top_n_heading():

@@ -14,7 +14,7 @@ that control with spacing—redundant per-tab footnotes were removed. Reruns are
 duplicate keys (the same widget cannot be declared inside each nested tab).
 
 Call :func:`sync_yearly_summary_session_inputs` from the main script on every full run so the fragment
-can read the current :class:`~personal_ebird_explorer.checklist_stats_compute.ChecklistStatsPayload`.
+can read the current :class:`~explorer.core.checklist_stats_compute.ChecklistStatsPayload`.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ from typing import Optional
 
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
-from personal_ebird_explorer.checklist_stats_display import (
+from explorer.core.checklist_stats_compute import ChecklistStatsPayload
+from explorer.presentation.checklist_stats_display import (
     build_yearly_summary_streamlit_tab_html_dict,
     format_yearly_streamlit_all_tab_protocol_note_html,
 )

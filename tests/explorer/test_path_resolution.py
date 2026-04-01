@@ -1,10 +1,10 @@
-"""Tests for personal_ebird_explorer.path_resolution.find_data_file."""
+"""Tests for explorer.core.path_resolution.find_data_file."""
 
 import os
 import pytest
 import tempfile
 
-from personal_ebird_explorer.path_resolution import find_data_file
+from explorer.core.path_resolution import find_data_file
 
 
 def test_find_data_file_returns_first_candidate_where_file_exists():

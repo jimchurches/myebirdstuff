@@ -11,9 +11,9 @@ import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import quote as url_quote
 
-from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
-from personal_ebird_explorer.region_display import country_for_display
-from personal_ebird_explorer.rankings_display import (
+from explorer.core.checklist_stats_compute import ChecklistStatsPayload
+from explorer.core.region_display import country_for_display
+from explorer.presentation.rankings_display import (
     rankings_high_counts_table,
     rankings_not_seen_recently_table,
     rankings_seen_once_table,
@@ -22,13 +22,13 @@ from personal_ebird_explorer.rankings_display import (
     rankings_table_with_rank,
     rankings_visited_table,
 )
+from explorer.core.constants import (
+    COUNTRY_TAB_SORT_ALPHABETICAL,
+    COUNTRY_TAB_SORT_LIFERS_WORLD,
+    COUNTRY_TAB_SORT_TOTAL_SPECIES,
+)
 
 LinkUrlsFn = Optional[Callable[[str], Tuple[Optional[str], Optional[str]]]]
-
-# Country tab accordion order (Settings → Tables & lists)
-COUNTRY_TAB_SORT_ALPHABETICAL = "alphabetical"
-COUNTRY_TAB_SORT_LIFERS_WORLD = "lifers_world"
-COUNTRY_TAB_SORT_TOTAL_SPECIES = "total_species"
 
 
 def _ebird_country_region_iso2(country_key: str) -> Optional[str]:
@@ -155,7 +155,7 @@ def sort_country_sections_for_display(
     """Order country sections for Country tab / HTML (refs #91).
 
     *country_sort*: ``alphabetical`` | ``lifers_world`` | ``total_species`` — same keys as
-    :data:`COUNTRY_TAB_SORT_*` in :mod:`personal_ebird_explorer.checklist_stats_display`.
+    :data:`COUNTRY_TAB_SORT_*` in :mod:`explorer.core.constants`.
     Unknown region (``_UNKNOWN``) is sorted last when using alphabetical display order.
     """
     if country_sort == COUNTRY_TAB_SORT_LIFERS_WORLD:

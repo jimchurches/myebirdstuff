@@ -1,4 +1,4 @@
-"""Tests for personal_ebird_explorer.species_search (refs #69, #70)."""
+"""Tests for explorer.core.species_search (refs #69, #70)."""
 
 import tempfile
 
@@ -6,7 +6,7 @@ from whoosh.analysis import StemmingAnalyzer
 from whoosh.fields import TEXT, Schema
 from whoosh.index import create_in
 
-from personal_ebird_explorer.species_search import (
+from explorer.core.species_search import (
     build_ram_species_whoosh_index,
     whoosh_common_name_suggestions,
     whoosh_species_suggestions,

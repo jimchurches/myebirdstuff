@@ -1,9 +1,9 @@
-"""Tests for personal_ebird_explorer.maintenance_display (refs #69)."""
+"""Tests for explorer.presentation.maintenance_display (refs #69)."""
 
 import pandas as pd
 
-from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
-from personal_ebird_explorer.maintenance_display import (
+from explorer.core.duplicate_checks import get_map_maintenance_data
+from explorer.presentation.maintenance_display import (
     format_incomplete_checklists_maintenance_html,
     format_map_maintenance_html,
     map_maintenance_close_locations_body_html,

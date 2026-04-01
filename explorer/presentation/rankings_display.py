@@ -7,7 +7,7 @@ rankings sections. Uses region_display for country/state names.
 
 import html as _html_module
 
-from personal_ebird_explorer.region_display import country_for_display, state_for_display
+from explorer.core.region_display import country_for_display, state_for_display
 
 # Middle column in ``rankings_table_with_rank`` was historically unused (stats emit "—"); omit when safe.
 _PLACEHOLDER_MIDDLE_VALUES = frozenset({"", "—", "–", "-"})

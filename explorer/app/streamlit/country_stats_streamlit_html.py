@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload
-from personal_ebird_explorer.checklist_stats_display import (
+from explorer.core.checklist_stats_compute import ChecklistStatsPayload
+from explorer.presentation.checklist_stats_display import (
     sort_country_sections_for_display,
     country_display_name_plain,
     country_yearly_links_bar_html,

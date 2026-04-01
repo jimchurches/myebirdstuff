@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from personal_ebird_explorer.checklist_stats_display import (
+from explorer.presentation.checklist_stats_display import (
     COUNTRY_TAB_SORT_ALPHABETICAL,
     COUNTRY_TAB_SORT_LIFERS_WORLD,
     COUNTRY_TAB_SORT_TOTAL_SPECIES,

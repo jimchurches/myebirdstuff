@@ -2,7 +2,7 @@
 **Ranking & Lists** (Streamlit): nested tabs **Top Lists** / **Interesting Lists** / **Family Lists**
 (eBird species groups under the hood; refs `#73`), expanders per list on the first two tabs.
 
-Uses HTML from :func:`personal_ebird_explorer.checklist_stats_display.format_checklist_stats_bundle`
+Uses HTML from :func:`explorer.presentation.checklist_stats_display.format_checklist_stats_bundle`
 (``rankings_sections_top_n`` / ``rankings_sections_other``) — same tables as the explorer’s richly-linked HTML tables,
 rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matches **Checklist Statistics**:
 :func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
@@ -28,10 +28,10 @@ from urllib.request import Request, urlopen
 import pandas as pd
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
-from personal_ebird_explorer.species_logic import countable_species_vectorized
-from personal_ebird_explorer.stats import safe_count
-from personal_ebird_explorer.taxonomy import get_species_and_lifelist_urls, load_taxonomy
+from explorer.presentation.checklist_stats_display import format_checklist_stats_bundle
+from explorer.core.species_logic import countable_species_vectorized
+from explorer.core.stats import safe_count
+from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 
 from explorer.app.streamlit.app_caches import cached_full_export_checklist_stats_payload
 from explorer.app.streamlit.app_constants import RANKINGS_TAB_BUNDLE_KEY

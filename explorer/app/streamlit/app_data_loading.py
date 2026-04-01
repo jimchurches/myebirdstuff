@@ -9,8 +9,8 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from personal_ebird_explorer.data_loader import load_dataset
-from personal_ebird_explorer.explorer_paths import build_explorer_candidate_dirs, resolve_ebird_data_file
+from explorer.core.data_loader import load_dataset
+from explorer.core.explorer_paths import build_explorer_candidate_dirs, resolve_ebird_data_file
 
 from explorer.app.streamlit.app_constants import DEFAULT_EBIRD_FILENAME, REPO_ROOT
 

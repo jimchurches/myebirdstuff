@@ -12,9 +12,9 @@ from typing import Any, Dict, Hashable, Tuple
 
 import pandas as pd
 
-from personal_ebird_explorer.lifer_last_seen_prep import prepare_lifer_last_seen
-from personal_ebird_explorer.species_logic import base_species_for_lifer, countable_species_vectorized
-from personal_ebird_explorer.stats import safe_count
+from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
+from explorer.core.species_logic import base_species_for_lifer, countable_species_vectorized
+from explorer.core.stats import safe_count
 
 
 def prepare_all_locations_map_context(

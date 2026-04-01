@@ -8,7 +8,7 @@ from typing import Any
 import streamlit as st
 import streamlit.components.v1 as components
 
-from personal_ebird_explorer.species_search import whoosh_species_suggestions
+from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
     PERSIST_SPECIES_COMMON_KEY,
     SESSION_SPECIES_IX_KEY,

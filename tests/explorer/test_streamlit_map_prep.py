@@ -5,9 +5,9 @@ from collections import OrderedDict
 import pandas as pd
 import pytest
 
-from personal_ebird_explorer.map_controller import build_species_overlay_map
-from personal_ebird_explorer.species_logic import base_species_for_lifer
-from personal_ebird_explorer.streamlit_map_prep import (
+from explorer.core.map_controller import build_species_overlay_map
+from explorer.core.species_logic import base_species_for_lifer
+from explorer.core.map_prep import (
     data_signature_for_caches,
     prepare_all_locations_map_context,
 )

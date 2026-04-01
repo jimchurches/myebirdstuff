@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 from typing import List, Optional, Tuple
 
-from personal_ebird_explorer.path_resolution import find_data_file
+from explorer.core.path_resolution import find_data_file
 
 
 def _safe_load_yaml_mapping(path: str) -> dict:

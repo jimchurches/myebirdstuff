@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
-from personal_ebird_explorer.checklist_stats_compute import compute_checklist_stats_payload
-from personal_ebird_explorer.checklist_stats_display import format_checklist_stats_bundle
+from explorer.core.checklist_stats_compute import compute_checklist_stats_payload
+from explorer.presentation.checklist_stats_display import format_checklist_stats_bundle
 
 
 def _compute_checklist_stats(df: pd.DataFrame):
@@ -121,7 +121,7 @@ def test_country_tab_html_sort_by_metric_changes_accordion_order():
     """Country accordions order by Lifers (world) or Total species when requested."""
     import re
 
-    from personal_ebird_explorer.checklist_stats_display import (
+    from explorer.presentation.checklist_stats_display import (
         COUNTRY_TAB_SORT_ALPHABETICAL,
         COUNTRY_TAB_SORT_LIFERS_WORLD,
         COUNTRY_TAB_SORT_TOTAL_SPECIES,
@@ -172,7 +172,7 @@ def test_country_tab_html_sort_by_metric_changes_accordion_order():
 def test_country_sections_sort_alphabetically_by_display_name():
     """Country accordions follow alphabetical order of resolved country names (refs display sort)."""
     pytest.importorskip("pycountry")
-    from personal_ebird_explorer.checklist_stats_display import _country_heading_sort_key
+    from explorer.presentation.checklist_stats_display import _country_heading_sort_key
 
     assert _country_heading_sort_key("AU") < _country_heading_sort_key("US")
     assert _country_heading_sort_key("US") < _country_heading_sort_key("_UNKNOWN")
@@ -218,7 +218,7 @@ def test_country_summary_html_present_with_state_province():
 
 def test_country_iso_rows_have_ebird_region_links():
     """Lifers (country) and Total checklists rows get ⧉ links when key is ISO alpha-2."""
-    from personal_ebird_explorer.checklist_stats_display import _format_country_summary_html
+    from explorer.presentation.checklist_stats_display import _format_country_summary_html
 
     rows = [
         ("Lifers (world)", ["1"]),
@@ -245,7 +245,7 @@ def test_country_iso_rows_have_ebird_region_links():
 
 def test_format_country_yearly_table_html_matches_accordion_markup():
     """Extracted yearly table HTML matches Country-tab accordion table structure (refs #75)."""
-    from personal_ebird_explorer.checklist_stats_display import (
+    from explorer.presentation.checklist_stats_display import (
         format_country_yearly_table_html,
         _format_country_summary_html,
     )
@@ -269,7 +269,7 @@ def test_format_country_yearly_table_html_matches_accordion_markup():
 
 
 def test_country_yearly_links_bar_html_for_iso():
-    from personal_ebird_explorer.checklist_stats_display import country_yearly_links_bar_html
+    from explorer.presentation.checklist_stats_display import country_yearly_links_bar_html
 
     h = country_yearly_links_bar_html("NZ")
     assert "Country page" in h
@@ -284,7 +284,7 @@ def test_country_yearly_links_bar_html_for_iso():
 
 
 def test_format_country_yearly_table_html_inline_links_optional():
-    from personal_ebird_explorer.checklist_stats_display import format_country_yearly_table_html
+    from explorer.presentation.checklist_stats_display import format_country_yearly_table_html
 
     rows = [
         ("Lifers (country)", ["1"]),

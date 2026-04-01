@@ -1,4 +1,4 @@
-"""Tests for personal_ebird_explorer.map_renderer helpers."""
+"""Tests for explorer.presentation.map_renderer helpers."""
 
 import math
 from datetime import datetime
@@ -6,7 +6,7 @@ from datetime import datetime
 import folium
 import pandas as pd
 
-from personal_ebird_explorer.map_renderer import (
+from explorer.presentation.map_renderer import (
     create_map,
     format_visit_time,
     format_sighting_row,

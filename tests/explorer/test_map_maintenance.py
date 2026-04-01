@@ -1,9 +1,9 @@
-"""Tests for personal_ebird_explorer.duplicate_checks module."""
+"""Tests for explorer.core.duplicate_checks module."""
 
 import pandas as pd
 import pytest
 
-from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
+from explorer.core.duplicate_checks import get_map_maintenance_data
 
 
 # ---------------------------------------------------------------------------

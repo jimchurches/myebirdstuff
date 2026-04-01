@@ -1,7 +1,7 @@
 """
 Default values for the embedded Streamlit settings schema (YAML in ``config_*.py``).
 
-Framework-neutral: no Streamlit imports. Used by :mod:`personal_ebird_explorer.streamlit_settings_config`
+Framework-neutral: no Streamlit imports. Used by :mod:`explorer.core.settings_config`
 and re-exported from ``explorer.app.streamlit.defaults`` for the Streamlit UI (refs #89).
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from personal_ebird_explorer.checklist_stats_display import COUNTRY_TAB_SORT_ALPHABETICAL
+from explorer.core.constants import COUNTRY_TAB_SORT_ALPHABETICAL
 
 SETTINGS_SCHEMA_VERSION = 1
 

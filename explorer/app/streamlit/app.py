@@ -62,29 +62,26 @@ import os
 import sys
 
 # ``streamlit run explorer/app/streamlit/app.py`` puts the script directory on ``sys.path``, not the
-# repo root. Need repo root for ``import explorer`` and ``explorer/`` for ``import personal_ebird_explorer``
-# (library package lives at ``explorer/personal_ebird_explorer/``; refs #70).
+# repo root. Prepend repo root so ``import explorer.*`` resolves (refs #70).
 _REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-_EXPLORER_DIR = os.path.join(_REPO_ROOT, "explorer")
-for _p in (_REPO_ROOT, _EXPLORER_DIR):
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 from collections import OrderedDict
 
 import pandas as pd
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_display import (  # noqa: E402
+from explorer.presentation.checklist_stats_display import (  # noqa: E402
     COUNTRY_TAB_SORT_ALPHABETICAL,
     COUNTRY_TAB_SORT_LIFERS_WORLD,
     COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
-from personal_ebird_explorer.explorer_paths import settings_yaml_path_for_source  # noqa: E402
-from personal_ebird_explorer.map_controller import build_species_overlay_map  # noqa: E402
-from personal_ebird_explorer.species_search import build_ram_species_whoosh_index  # noqa: E402
-from personal_ebird_explorer.species_logic import base_species_for_lifer  # noqa: E402
-from personal_ebird_explorer.streamlit_map_prep import (  # noqa: E402
+from explorer.core.explorer_paths import settings_yaml_path_for_source  # noqa: E402
+from explorer.core.map_controller import build_species_overlay_map  # noqa: E402
+from explorer.core.species_search import build_ram_species_whoosh_index  # noqa: E402
+from explorer.core.species_logic import base_species_for_lifer  # noqa: E402
+from explorer.core.map_prep import (  # noqa: E402
     data_signature_for_caches,
     prepare_all_locations_map_context,
 )

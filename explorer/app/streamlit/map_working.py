@@ -1,7 +1,7 @@
 """
 Working DataFrame + date filter for the Streamlit map (refs #70).
 
-Wraps :func:`personal_ebird_explorer.working_set.rebuild_working_set_from_date_filter`
+Wraps :func:`explorer.core.working_set.rebuild_working_set_from_date_filter`
 with Streamlit-friendly semantics: *All locations* vs *Lifer locations*, optional **Date filter** (range) vs all-time.
 """
 
@@ -12,7 +12,7 @@ from typing import Any, MutableMapping, Optional, Set, Tuple
 
 import pandas as pd
 
-from personal_ebird_explorer.working_set import WorkingSet, rebuild_working_set_from_date_filter
+from explorer.core.working_set import WorkingSet, rebuild_working_set_from_date_filter
 
 MapCaches = Tuple[dict, MutableMapping[Any, Any]]
 

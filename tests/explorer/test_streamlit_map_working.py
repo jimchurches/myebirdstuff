@@ -14,7 +14,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 pytest.importorskip("streamlit", reason="explorer.app.streamlit.map_working is for Streamlit UI")
 
-from personal_ebird_explorer.data_loader import load_dataset  # noqa: E402
+from explorer.core.data_loader import load_dataset  # noqa: E402
 
 from explorer.app.streamlit.map_working import (
     date_bounds_from_df,

@@ -8,11 +8,11 @@ pytest.importorskip("pydantic")
 
 
 def test_persisted_defaults_match_streamlit_settings_model():
-    from personal_ebird_explorer.settings_schema_defaults import (
+    from explorer.core.settings_schema_defaults import (
         SETTINGS_SCHEMA_VERSION,
         build_persisted_settings_defaults_dict,
     )
-    from personal_ebird_explorer.streamlit_settings_config import StreamlitSettingsConfig, defaults_dict
+    from explorer.core.settings_config import StreamlitSettingsConfig, defaults_dict
 
     raw = build_persisted_settings_defaults_dict()
     cfg = StreamlitSettingsConfig.model_validate(raw)

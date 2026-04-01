@@ -1,10 +1,10 @@
-"""Tests for personal_ebird_explorer.stats module."""
+"""Tests for explorer.core.stats module."""
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from personal_ebird_explorer.stats import (
+from explorer.core.stats import (
     checklist_country_keys,
     country_summary_stats,
     safe_count,
@@ -481,12 +481,12 @@ class TestYearlySummaryStats:
 
     def test_get_sex_notation_by_year_empty_no_column(self):
         df = pd.DataFrame({"Date": [pd.Timestamp("2024-01-01")], "Submission ID": ["S1"]})
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         result = get_sex_notation_by_year(df)
         assert result == {}
 
     def test_get_sex_notation_by_year_matches_standalone_strings(self):
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [pd.Timestamp("2024-06-01"), pd.Timestamp("2024-06-02"), pd.Timestamp("2023-01-15")],
             "Submission ID": ["S1", "S2", "S3"],
@@ -508,7 +508,7 @@ class TestYearlySummaryStats:
         assert result[2023][0][5] == "MFFJ?"
 
     def test_get_sex_notation_by_year_ignores_non_matching(self):
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [pd.Timestamp("2024-06-01")],
             "Submission ID": ["S1"],
@@ -522,7 +522,7 @@ class TestYearlySummaryStats:
 
     def test_get_sex_notation_by_year_spaced_and_count_tokens_refs_58(self):
         """Issue #58: 1M 1F, M + F, 2M2F2?, MFMM?? (last already legacy)."""
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [
                 pd.Timestamp("2024-01-01"),
@@ -544,7 +544,7 @@ class TestYearlySummaryStats:
 
     def test_get_sex_notation_by_year_rejects_prose_and_partial_refs_58(self):
         """Conservative: whole field must match; no substring matches in sentences."""
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [
                 pd.Timestamp("2024-06-01"),

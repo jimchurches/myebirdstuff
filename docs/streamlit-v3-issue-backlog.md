@@ -2,7 +2,7 @@
 
 **Document status — closed.** This file was a working backlog for opening child issues under **#70**. Items **§1–§11** are implemented (see issue numbers in each section). **§12** reflected an initial docs alignment (#102); a **final editorial read-through** of user-facing docs is intentionally **outside** this backlog and can be done manually before release.
 
-**Resolved (former open question):** Layout for v3 — Streamlit UI modules live under `explorer/app/streamlit/`. Run with `streamlit run explorer/app/streamlit/app.py`; import as `explorer.app.streamlit`. The old `streamlit_app/` shim package has been **removed** (see `streamlit-v3-move-order.md`).
+**Resolved (former open question):** Layout for v3 — **`explorer.app.streamlit`** (UI), **`explorer.core`** (domain + settings + map pipeline), **`explorer.presentation`** (HTML/Folium). Run: `streamlit run explorer/app/streamlit/app.py`. The old `streamlit_app/` and `personal_ebird_explorer` packages are **removed** (see `streamlit-v3-move-order.md`).
 
 You can **delete this file** when you no longer want it in the tree; history remains in Git.
 
@@ -185,7 +185,7 @@ Implemented by centralising `streamlit_*` / `_streamlit_*` session keys in `stre
 
 - No silent failures for “save settings” without user-visible feedback.
 
-Implemented by narrowing the broad exception handlers in `explorer/personal_ebird_explorer/streamlit_settings_config.py`
+Implemented by narrowing the broad exception handlers in `explorer/core/settings_config.py`
 (YAML parse vs file I/O errors) and in `streamlit_app/app_settings_state.py` (import availability). Added
 test coverage indirectly via existing `tests/explorer/test_streamlit_settings_config.py`.
 
@@ -255,7 +255,7 @@ If you want **fewer** child issues under #70, merge as follows:
 
 ## Open questions (resolve in #70 or per-issue)
 
-1. ~~Target package name after move: keep `streamlit_app` under `personal_ebird_explorer/` or rename?~~ **Resolved:** Implementation is `explorer.app.streamlit` under `explorer/app/streamlit/`; shared library code is `explorer/personal_ebird_explorer/` (import name `personal_ebird_explorer`; see `streamlit-v3-move-order.md`).
+1. ~~Target package name after move: keep `streamlit_app` under `personal_ebird_explorer/` or rename?~~ **Resolved:** `explorer.app.streamlit`, `explorer.core`, `explorer.presentation` (see `streamlit-v3-move-order.md`).
 
 ## Decisions already made
 

@@ -5,12 +5,12 @@ Single entry point: load_dataset(path_or_file)
 - Loads CSV (expected encoding: UTF-8), validates required columns and that the
   dataset is non-empty, creates canonical datetime column, returns DataFrame.
 - Normalizes ``Protocol`` values to short labels (e.g. ``eBird - Traveling Count`` → ``Traveling``)
-  when that column is present (see :func:`personal_ebird_explorer.checklist_stats_compute.protocol_display_name`).
+  when that column is present (see :func:`explorer.core.checklist_stats_compute.protocol_display_name`).
 """
 
 import pandas as pd
 
-from personal_ebird_explorer.checklist_stats_compute import protocol_display_name
+from explorer.core.checklist_stats_compute import protocol_display_name
 
 
 # Columns required for the explorer to work; missing any of these raises a clear ValueError at load time.

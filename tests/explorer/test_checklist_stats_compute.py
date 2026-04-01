@@ -2,11 +2,11 @@
 
 import pandas as pd
 
-from personal_ebird_explorer.checklist_stats_compute import (
+from explorer.core.checklist_stats_compute import (
     compute_checklist_stats_payload,
     protocol_display_name,
 )
-from personal_ebird_explorer.checklist_stats_display import (
+from explorer.presentation.checklist_stats_display import (
     YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
     build_yearly_summary_streamlit_tab_html_dict,
     format_checklist_stats_bundle,

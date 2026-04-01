@@ -8,8 +8,8 @@ from typing import Any
 
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_display import COUNTRY_TAB_SORT_ALPHABETICAL
-from personal_ebird_explorer.explorer_paths import settings_yaml_path_for_source
+from explorer.presentation.checklist_stats_display import COUNTRY_TAB_SORT_ALPHABETICAL
+from explorer.core.explorer_paths import settings_yaml_path_for_source
 from explorer.app.streamlit.app_constants import (
     DEFAULT_CLOSE_LOCATION_METERS,
     DEFAULT_TAXONOMY_LOCALE,
@@ -275,7 +275,7 @@ def settings_defaults_payload() -> dict[str, Any]:
 
 def load_settings_yaml_via_module(path: str) -> tuple[dict[str, Any], str | None]:
     try:
-        from personal_ebird_explorer.streamlit_settings_config import load_settings_from_config_path
+        from explorer.core.settings_config import load_settings_from_config_path
     except ImportError as e:
         return settings_defaults_payload(), f"Settings validation unavailable ({e}); using defaults."
     return load_settings_from_config_path(path)
@@ -283,7 +283,7 @@ def load_settings_yaml_via_module(path: str) -> tuple[dict[str, Any], str | None
 
 def write_settings_yaml_via_module(path: str, payload: dict[str, Any]) -> tuple[bool, str | None]:
     try:
-        from personal_ebird_explorer.streamlit_settings_config import write_sparse_settings_to_config_path
+        from explorer.core.settings_config import write_sparse_settings_to_config_path
     except ImportError as e:
         return False, f"Settings save unavailable ({e}). Install requirements.txt."
     return write_sparse_settings_to_config_path(path, payload)
@@ -291,7 +291,7 @@ def write_settings_yaml_via_module(path: str, payload: dict[str, Any]) -> tuple[
 
 def settings_config_module_available() -> bool:
     try:
-        import personal_ebird_explorer.streamlit_settings_config  # noqa: F401
+        import explorer.core.settings_config  # noqa: F401
     except ImportError:
         return False
     return True

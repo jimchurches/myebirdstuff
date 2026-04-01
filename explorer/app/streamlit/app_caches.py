@@ -6,7 +6,7 @@ from collections.abc import Callable
 import pandas as pd
 import streamlit as st
 
-from personal_ebird_explorer.checklist_stats_compute import ChecklistStatsPayload, compute_checklist_stats_payload
+from explorer.core.checklist_stats_compute import ChecklistStatsPayload, compute_checklist_stats_payload
 from explorer.app.streamlit.defaults import CHECKLIST_STATS_TOP_N_TABLE_LIMIT
 
 
@@ -38,7 +38,7 @@ def cached_full_export_checklist_stats_payload(
 @st.cache_data(show_spinner=False)
 def cached_sex_notation_by_year(df: pd.DataFrame) -> dict:
     """Sex-notation maintenance scan on full export (refs #79)."""
-    from personal_ebird_explorer.stats import get_sex_notation_by_year
+    from explorer.core.stats import get_sex_notation_by_year
 
     return get_sex_notation_by_year(df)
 
@@ -54,7 +54,7 @@ def full_location_data_for_maintenance(df: pd.DataFrame) -> pd.DataFrame:
 @st.cache_resource(show_spinner="Loading eBird taxonomy…")
 def cached_species_url_fn(locale_key: str) -> Callable[[str], str | None]:
     """One taxonomy fetch per session per locale; used for species links in map UI."""
-    from personal_ebird_explorer.taxonomy import get_species_url, load_taxonomy
+    from explorer.core.taxonomy import get_species_url, load_taxonomy
 
     loc = locale_key.strip() if locale_key and locale_key.strip() else None
     if load_taxonomy(locale=loc):
