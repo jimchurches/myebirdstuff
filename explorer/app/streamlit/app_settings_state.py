@@ -1,4 +1,4 @@
-"""YAML-backed Settings tab: session payload, save/load, clamping, helper HTML (refs #98)."""
+"""YAML-backed Settings tab: session payload, save/load, clamping, helpers (refs #98)."""
 
 from __future__ import annotations
 
@@ -334,29 +334,18 @@ def settings_data_path_html(
     return f'<div class="ebird-data-path-block">{"".join(rows)}</div>'
 
 
-def settings_taxonomy_help_html() -> str:
-    """Settings → Taxonomy: short copy + link to eBird help (locale codes; no API key)."""
-    p1 = html.escape(
-        "Used for species names in links, tables, popups and elsewhere. "
-        "Update based on the locale of input data.",
-        quote=False,
-    )
+def settings_taxonomy_help_markdown() -> str:
+    """Settings → Taxonomy: short copy + link; for ``st.caption`` (same typography as Tables & Lists intro)."""
     help_url = (
         "https://support.ebird.org/en/support/solutions/articles/48000804865-bird-names-in-ebird"
     )
-    p2 = (
-        "Match the language and region you use for common names in "
-        "<strong>My eBird → Preferences</strong> "
-        f"(e.g. English (Australia) → <code>en_AU</code>). "
-        "This field is the same eBird <strong>locale</strong> code the "
-        "taxonomy API accepts for common-name spellings. "
-        f'<a href="{help_url}" target="_blank" rel="noopener noreferrer">'
-        f"{html.escape('Bird names in eBird', quote=False)}</a>"
-        " — how regional names are chosen."
-    )
     return (
-        '<div class="ebird-settings-section-copy">'
-        f"<p>{p1}</p>"
-        f'<p style="margin:0.65rem 0 0 0;">{p2}</p>'
-        "</div>"
+        "Used for species names in links, tables, popups and elsewhere. "
+        "Update based on the locale of input data.\n\n"
+        "Match the language and region you use for common names in "
+        "**My eBird → Preferences** "
+        "(e.g. English (Australia) → `en_AU`). "
+        "This field is the same eBird **locale** code the "
+        "taxonomy API accepts for common-name spellings. "
+        f"[Bird names in eBird]({help_url}) — how regional names are chosen."
     )

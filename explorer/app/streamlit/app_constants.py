@@ -84,27 +84,6 @@ div.st-key-ebird_settings_panel {{
     border-radius: 0.2rem;
     color: {THEME_TEXT_HEX};
 }}
-/* Settings → Taxonomy (body copy; matches Data & path typography). */
-.ebird-settings-section-copy {{
-    font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: {THEME_TEXT_HEX};
-    margin: 0.35rem 0 0.75rem 0;
-}}
-.ebird-settings-section-copy a {{
-    color: {THEME_PRIMARY_HEX};
-    text-decoration: underline;
-    text-underline-offset: 2px;
-}}
-.ebird-settings-section-copy code {{
-    font-size: 0.8125rem;
-    font-weight: 400;
-    background: {THEME_SECONDARY_BG_HEX};
-    padding: 0.12em 0.35em;
-    border-radius: 0.2rem;
-    color: {THEME_TEXT_HEX};
-}}
 </style>
 """
 

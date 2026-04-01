@@ -163,7 +163,7 @@ from explorer.app.streamlit.app_settings_state import (  # noqa: E402
     settings_defaults_payload,
     settings_persistence_flash_banners,
     settings_state_payload,
-    settings_taxonomy_help_html,
+    settings_taxonomy_help_markdown,
     write_settings_yaml_via_module,
 )
 from explorer.app.streamlit.checklist_stats_streamlit_html import (  # noqa: E402
@@ -248,7 +248,9 @@ def main() -> None:
         # can drop the whole landing subtree instead of leaving orphan markdown under tabs.
         with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
             st.title("Personal eBird Explorer")
-            st.subheader("Streamlit app")
+            st.markdown(
+                "Your eBird data, made visible, navigable, and ready to explore"
+            )
             st.markdown("Upload your **My eBird Data** CSV to open the map and tabs.")
             uploaded = st.file_uploader(
                 "eBird export (CSV)",
@@ -474,6 +476,7 @@ def main() -> None:
     inject_spinner_theme_css()
 
     st.title("Personal eBird Explorer")
+    st.markdown("Your eBird data, made visible, navigable, and ready to explore")
 
     (
         tab_map,
@@ -784,7 +787,7 @@ def main() -> None:
                 )
 
             st.divider()
-            st.subheader("Tables & lists")
+            st.subheader("Tables & Lists")
             st.caption(
                 "Rankings, yearly column window, country ordering, high-count behaviour, and maintenance search radius — "
                 "click **Apply table settings** for one rerun."
@@ -906,7 +909,8 @@ def main() -> None:
                 "Taxonomy locale",
                 key=STREAMLIT_TAXONOMY_LOCALE_KEY,
             )
-            st.markdown(settings_taxonomy_help_html(), unsafe_allow_html=True)
+            # Same ``st.caption`` + Markdown pattern as the Tables & Lists intro (no custom SETTINGS_PANEL_CSS block).
+            st.caption(settings_taxonomy_help_markdown())
             st.divider()
             st.subheader("Data & path")
             st.caption("Read-only details for this session (useful when troubleshooting).")
