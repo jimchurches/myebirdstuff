@@ -1,5 +1,13 @@
 # Streamlit v3 — issue backlog (from #70 code review)
 
+**Document status — closed.** This file was a working backlog for opening child issues under **#70**. Items **§1–§11** are implemented (see issue numbers in each section). **§12** reflected an initial docs alignment (#102); a **final editorial read-through** of user-facing docs is intentionally **outside** this backlog and can be done manually before release.
+
+**Resolved (former open question):** Layout for v3 — Streamlit UI modules live under `explorer/app/streamlit/`. The `streamlit_app/` package is a **thin compatibility shim** (re-exports) so `streamlit run streamlit_app/app.py` and `from streamlit_app…` keep working. Removing those shims is **Phase 3** in `streamlit-v3-move-order.md`, not a blocker for merging the feature branch.
+
+You can **delete this file** when you no longer want it in the tree; history remains in Git.
+
+---
+
 Parent: **#70** (Personal eBird Explorer — Streamlit / migration).
 
 Use this document to open **child issues** under #70. Each section below is written so you can **copy the block** into a new GitHub issue (title + body). Labels are suggestions: **Enhancement** (default), **Bug** only where behaviour is wrong today.
@@ -206,7 +214,7 @@ Added `tests/explorer/test_streamlit_ui_helpers.py` which runs UI helper logic (
 
 ---
 
-## 12. ~~[Enhancement] Documentation pass for v3 (prototype wording, Settings paths, install)~~ (done, #102)
+## 12. ~~[Enhancement] Documentation pass for v3 (prototype wording, Settings paths, install)~~ (initial pass done, #102)
 
 **Type:** Enhancement  
 **Optional:** No for release, but can trail code changes
@@ -224,7 +232,9 @@ Some docs still imply “prototype” or old tab names.
 
 - Final folder layout and entrypoint (**§1–2**).
 
-Done: updated `streamlit_app/README.md`, `docs/explorer/*.md`, and `docs/AI_CONTEXT.md` to make Streamlit the primary UI, remove legacy wording, and align the run-local/Cloud narrative.
+**Initial pass (done):** `streamlit_app/README.md`, `docs/explorer/*.md`, and `docs/AI_CONTEXT.md` were updated for Streamlit-primary wording and run-local/Cloud narrative (#102).
+
+**Follow-up (not tracked here):** Full read-through, cross-links, and any post-YAML-config edits are a **manual release task**, not part of this backlog.
 
 ---
 
@@ -245,7 +255,7 @@ If you want **fewer** child issues under #70, merge as follows:
 
 ## Open questions (resolve in #70 or per-issue)
 
-1. Target package name after move: keep `streamlit_app` under `personal_ebird_explorer/` or rename?
+1. ~~Target package name after move: keep `streamlit_app` under `personal_ebird_explorer/` or rename?~~ **Resolved:** `streamlit_app` stays at repo root as a **shim**; implementation is `explorer.app.streamlit`. Shared library code remains in `personal_ebird_explorer/` (see `streamlit-v3-move-order.md`).
 
 ## Decisions already made
 
