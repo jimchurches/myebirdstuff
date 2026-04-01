@@ -58,6 +58,15 @@ sidebar for map controls plus footer links (refs #70). Settings use a keyed cont
 
 from __future__ import annotations
 
+import os
+import sys
+
+# ``streamlit run explorer/app/streamlit/app.py`` puts the script directory on ``sys.path``, not the
+# repo root. Top-level packages ``explorer`` and ``personal_ebird_explorer`` live at repo root (refs #70).
+_REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 from collections import OrderedDict
 
 import pandas as pd

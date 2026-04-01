@@ -26,7 +26,7 @@ streamlit run explorer/app/streamlit/app.py
 
 ## Run locally
 
-From the **repository root** (after activating a Streamlit-only venv — see below). The app uses package imports (`explorer.app.streamlit.*`); running from the repo root keeps those resolvable.
+From the **repository root** (after activating a Streamlit-only venv — see below). The app uses package imports (`explorer.app.streamlit.*`, `personal_ebird_explorer.*`). ``app.py`` prepends the repo root to ``sys.path`` so imports resolve when Streamlit runs the script from ``explorer/app/streamlit/``.
 
 ```bash
 pip install -r requirements.txt
