@@ -8,8 +8,8 @@ Run locally from repo root::
     pip install -r requirements.txt
     streamlit run streamlit_app/app.py
 
-Disk resolution when no file is uploaded: ``scripts/config_secret.py`` and
-``scripts/config.py`` (``DATA_FOLDER``), then the **process working directory**
+Disk resolution when no file is uploaded: ``config/config_secret.yaml`` and
+``config/config.yaml`` (``data_folder``), then the **process working directory**
 (where you ran ``streamlit run``). See ``streamlit_app/README.md`` — *Data loading*.
 
 Streamlit Cloud: CSV upload on the **landing** main area when disk resolution finds no file; session
@@ -722,69 +722,111 @@ def main() -> None:
 
                 settings_persistence_flash_banners()
                 st.caption(
-                    "Map and taxonomy settings apply immediately in-session. **Tables & lists** uses **Apply table "
-                    "settings** (one rerun). Save writes your preferences to your configuration file."
+                    "Use **Apply map settings** and **Apply table settings** before **Save settings**. "
+                    "Taxonomy still applies immediately in-session. Save writes your current applied preferences "
+                    "to your configuration file."
                 )
                 st.caption(f"Configuration file: {settings_yaml_path}")
 
             st.divider()
             st.subheader("Map display")
-            st.toggle("Mark lifer", key=STREAMLIT_MARK_LIFER_KEY)
-            st.toggle("Mark last-seen", key=STREAMLIT_MARK_LAST_SEEN_KEY)
-            st.selectbox(
-                "Popup sort order",
-                options=["ascending", "descending"],
-                key=STREAMLIT_POPUP_SORT_ORDER_KEY,
+            st.caption(
+                "Popup behaviour, mark toggles, and pin colours are batched here; "
+                "click **Apply map settings** for one rerun."
             )
-            st.selectbox(
-                "Popup scroll hint",
-                options=["shading", "chevron", "both"],
-                key=STREAMLIT_POPUP_SCROLL_HINT_KEY,
-            )
-            st.caption("Pin colors")
-            c1, c2 = st.columns(2)
-            with c1:
-                st.selectbox(
-                    "Default edge",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    key=STREAMLIT_DEFAULT_COLOR_KEY,
+            _popup_sort_opts = ["ascending", "descending"]
+            _popup_scroll_opts = ["shading", "chevron", "both"]
+            _popup_sort_cur = str(st.session_state.get(STREAMLIT_POPUP_SORT_ORDER_KEY, "ascending"))
+            if _popup_sort_cur not in _popup_sort_opts:
+                _popup_sort_cur = "ascending"
+            _popup_scroll_cur = str(st.session_state.get(STREAMLIT_POPUP_SCROLL_HINT_KEY, "shading"))
+            if _popup_scroll_cur not in _popup_scroll_opts:
+                _popup_scroll_cur = "shading"
+
+            def _pin_idx(key: str) -> int:
+                cur = st.session_state.get(key, MAP_PIN_COLOUR_ALLOWLIST[0])
+                return MAP_PIN_COLOUR_ALLOWLIST.index(cur) if cur in MAP_PIN_COLOUR_ALLOWLIST else 0
+
+            with st.form("ebird_map_settings_batch"):
+                mark_lifer_w = st.toggle(
+                    "Mark lifer",
+                    value=bool(st.session_state.get(STREAMLIT_MARK_LIFER_KEY, True)),
                 )
-                st.selectbox(
-                    "Species edge",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    key=STREAMLIT_SPECIES_COLOR_KEY,
+                mark_last_seen_w = st.toggle(
+                    "Mark last-seen",
+                    value=bool(st.session_state.get(STREAMLIT_MARK_LAST_SEEN_KEY, True)),
                 )
-                st.selectbox(
-                    "Lifer edge",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    key=STREAMLIT_LIFER_COLOR_KEY,
+                popup_sort_w = st.selectbox(
+                    "Popup sort order",
+                    options=_popup_sort_opts,
+                    index=_popup_sort_opts.index(_popup_sort_cur),
                 )
-                st.selectbox(
-                    "Last-seen edge",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    key=STREAMLIT_LAST_SEEN_COLOR_KEY,
+                popup_scroll_w = st.selectbox(
+                    "Popup scroll hint",
+                    options=_popup_scroll_opts,
+                    index=_popup_scroll_opts.index(_popup_scroll_cur),
                 )
-            with c2:
-                st.selectbox(
-                    "Default fill",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    key=STREAMLIT_DEFAULT_FILL_KEY,
-                )
-                st.selectbox(
-                    "Species fill",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    key=STREAMLIT_SPECIES_FILL_KEY,
-                )
-                st.selectbox(
-                    "Lifer fill",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    key=STREAMLIT_LIFER_FILL_KEY,
-                )
-                st.selectbox(
-                    "Last-seen fill",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    key=STREAMLIT_LAST_SEEN_FILL_KEY,
-                )
+                st.caption("Pin colors")
+                c1, c2 = st.columns(2)
+                with c1:
+                    default_edge_w = st.selectbox(
+                        "Default edge",
+                        MAP_PIN_COLOUR_ALLOWLIST,
+                        index=_pin_idx(STREAMLIT_DEFAULT_COLOR_KEY),
+                    )
+                    species_edge_w = st.selectbox(
+                        "Species edge",
+                        MAP_PIN_COLOUR_ALLOWLIST,
+                        index=_pin_idx(STREAMLIT_SPECIES_COLOR_KEY),
+                    )
+                    lifer_edge_w = st.selectbox(
+                        "Lifer edge",
+                        MAP_PIN_COLOUR_ALLOWLIST,
+                        index=_pin_idx(STREAMLIT_LIFER_COLOR_KEY),
+                    )
+                    last_seen_edge_w = st.selectbox(
+                        "Last-seen edge",
+                        MAP_PIN_COLOUR_ALLOWLIST,
+                        index=_pin_idx(STREAMLIT_LAST_SEEN_COLOR_KEY),
+                    )
+                with c2:
+                    default_fill_w = st.selectbox(
+                        "Default fill",
+                        MAP_PIN_COLOUR_ALLOWLIST,
+                        index=_pin_idx(STREAMLIT_DEFAULT_FILL_KEY),
+                    )
+                    species_fill_w = st.selectbox(
+                        "Species fill",
+                        MAP_PIN_COLOUR_ALLOWLIST,
+                        index=_pin_idx(STREAMLIT_SPECIES_FILL_KEY),
+                    )
+                    lifer_fill_w = st.selectbox(
+                        "Lifer fill",
+                        MAP_PIN_COLOUR_ALLOWLIST,
+                        index=_pin_idx(STREAMLIT_LIFER_FILL_KEY),
+                    )
+                    last_seen_fill_w = st.selectbox(
+                        "Last-seen fill",
+                        MAP_PIN_COLOUR_ALLOWLIST,
+                        index=_pin_idx(STREAMLIT_LAST_SEEN_FILL_KEY),
+                    )
+                apply_map = st.form_submit_button("Apply map settings", width="stretch")
+
+            if apply_map:
+                st.session_state[STREAMLIT_MARK_LIFER_KEY] = bool(mark_lifer_w)
+                st.session_state[STREAMLIT_MARK_LAST_SEEN_KEY] = bool(mark_last_seen_w)
+                st.session_state[STREAMLIT_POPUP_SORT_ORDER_KEY] = popup_sort_w
+                st.session_state[STREAMLIT_POPUP_SCROLL_HINT_KEY] = popup_scroll_w
+                st.session_state[STREAMLIT_DEFAULT_COLOR_KEY] = default_edge_w
+                st.session_state[STREAMLIT_SPECIES_COLOR_KEY] = species_edge_w
+                st.session_state[STREAMLIT_LIFER_COLOR_KEY] = lifer_edge_w
+                st.session_state[STREAMLIT_LAST_SEEN_COLOR_KEY] = last_seen_edge_w
+                st.session_state[STREAMLIT_DEFAULT_FILL_KEY] = default_fill_w
+                st.session_state[STREAMLIT_SPECIES_FILL_KEY] = species_fill_w
+                st.session_state[STREAMLIT_LIFER_FILL_KEY] = lifer_fill_w
+                st.session_state[STREAMLIT_LAST_SEEN_FILL_KEY] = last_seen_fill_w
+                init_and_clamp_streamlit_table_settings()
+                st.rerun()
 
             st.divider()
             st.subheader("Tables & Lists")

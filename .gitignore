@@ -6,7 +6,10 @@ venv/
 env/
 
 # Don't track secrets or local config paths
-config_secret.py
 scripts/config.py
+scripts/config_secret.py
+config_secret.py
+config/config.yaml
+config/config_secret.yaml
 .streamlit/secrets.toml
 __pycache__/

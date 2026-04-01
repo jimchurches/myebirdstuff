@@ -28,7 +28,7 @@
     },
     {
       "Command": "store",
-      "Target": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py\"",
+      "Target": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/script/eBirdChecklistNameFromGPS.py\"",
       "Value": "scriptPath",
       "Description": "Store 'macOS' relevent script path into variable 'scriptPath'. Update as required"
     },

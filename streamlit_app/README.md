@@ -63,18 +63,19 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 ## Data loading
 
-**`scripts/config_template.py` is not used at runtime** — it is a **tracked template** to copy into `config_secret.py` or `config.py`. The app only reads those two filenames (plus working-directory search).
+**`config/config_template.yaml` is not used at runtime** — it is a **tracked template** to copy into
+`config/config_secret.yaml` or `config/config.yaml` (both gitignored).
 
 Disk search is **first folder that contains the CSV**, in this order:
 
-1. **`scripts/config_secret.py`** — if it exists and defines non-empty `DATA_FOLDER`, that directory is searched first. **Settings** (embedded YAML) save here when this source wins. Typical for developers using git (file is gitignored).
-2. **`scripts/config.py`** — same fields as the template (create by copying the template file); gitignored. Use when you want `DATA_FOLDER` without `config_secret.py`. **Settings** save here when this source wins.
+1. **`config/config_secret.yaml`** — if it exists and defines non-empty `data_folder`, that directory is searched first. **Settings** save back into this same file under `explorer_settings` when this source wins. Typical for developers using git (file is gitignored).
+2. **`config/config.yaml`** — same keys as the template; gitignored. **Settings** save back into this same file under `explorer_settings` when this source wins.
 3. **Current working directory** — the directory you were in when you ran `streamlit run ...` (often the repo root). CSV can live next to your clone; **no** settings file is associated, so **Save settings** stays disabled for persistence (session-only).
 
 | Method | When |
 |--------|------|
 | **File uploader** | **Landing** page (main area). Cached in session. Primary path for **Streamlit Community Cloud**. |
-| **Config `DATA_FOLDER`** | As above (`config_secret` → `config.py`). |
+| **Config `data_folder`** | As above (`config_secret.yaml` → `config.yaml`). |
 | **Working directory** | Put `MyEBirdData.csv` (or override basename with env **`STREAMLIT_EBIRD_DATA_FILE`**) in the directory you start Streamlit from. |
 
 There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder override; use config files, CWD, or upload.

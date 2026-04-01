@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
-import os
-import re
 from typing import Any
 
 import yaml
@@ -138,18 +135,8 @@ def defaults_dict() -> dict[str, Any]:
     return StreamlitSettingsConfig.model_validate(build_persisted_settings_defaults_dict()).model_dump()
 
 
-def load_yaml_settings(path: str) -> tuple[dict[str, Any], str | None]:
-    """Load and validate settings YAML; return defaults + warning on errors."""
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            raw = yaml.safe_load(f) or {}
-    except FileNotFoundError:
-        return defaults_dict(), None
-    except OSError as e:
-        return defaults_dict(), f"Could not read settings YAML: {e}"
-    except yaml.YAMLError as e:
-        return defaults_dict(), f"Could not parse settings YAML: {e}"
-
+def _validate_settings_mapping(raw: Any) -> tuple[dict[str, Any], str | None]:
+    """Validate one Streamlit settings mapping; return defaults + warning on errors."""
     if not isinstance(raw, dict):
         return defaults_dict(), "Settings YAML must be a mapping; using defaults."
     try:
@@ -172,6 +159,20 @@ def load_yaml_settings(path: str) -> tuple[dict[str, Any], str | None]:
         if data["map_display"][key] not in MAP_PIN_COLOUR_ALLOWLIST:
             data["map_display"][key] = defaults_dict()["map_display"][key]
     return data, None
+
+
+def load_yaml_settings(path: str) -> tuple[dict[str, Any], str | None]:
+    """Load and validate settings YAML; return defaults + warning on errors."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        return defaults_dict(), None
+    except OSError as e:
+        return defaults_dict(), f"Could not read settings YAML: {e}"
+    except yaml.YAMLError as e:
+        return defaults_dict(), f"Could not parse settings YAML: {e}"
+    return _validate_settings_mapping(raw)
 
 
 def _sparse_diff(current: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
@@ -232,105 +233,55 @@ def write_sparse_yaml_settings(
     return True, None
 
 
-_PY_SETTINGS_START = "# --- STREAMLIT_SETTINGS_YAML_START ---"
-_PY_SETTINGS_END = "# --- STREAMLIT_SETTINGS_YAML_END ---"
-_PY_SETTINGS_VAR = "STREAMLIT_SETTINGS_YAML"
-
-
-def _load_yaml_text(yaml_text: str) -> tuple[dict[str, Any], str | None]:
+def load_settings_from_config_path(path: str) -> tuple[dict[str, Any], str | None]:
+    """Load explorer settings from ``explorer_settings`` section of one YAML config file."""
+    p = (path or "").strip()
+    if not p:
+        return defaults_dict(), None
     try:
-        raw = yaml.safe_load(yaml_text) or {}
-    except yaml.YAMLError as e:
-        return defaults_dict(), f"Could not parse settings YAML: {e}"
-    if not isinstance(raw, dict):
-        return defaults_dict(), "Settings YAML must be a mapping; using defaults."
-    try:
-        cfg = StreamlitSettingsConfig.model_validate(raw)
-    except ValidationError as e:
-        return defaults_dict(), f"Invalid settings YAML; using defaults. {e.errors()[0].get('msg', '')}"
-    data = cfg.model_dump()
-    for key in (
-        "default_color",
-        "default_fill",
-        "species_color",
-        "species_fill",
-        "lifer_color",
-        "lifer_fill",
-        "last_seen_color",
-        "last_seen_fill",
-    ):
-        if data["map_display"][key] not in MAP_PIN_COLOUR_ALLOWLIST:
-            data["map_display"][key] = defaults_dict()["map_display"][key]
-    return data, None
-
-
-def _extract_embedded_yaml_from_py(path: str) -> str | None:
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            text = f.read()
+        with open(p, "r", encoding="utf-8") as f:
+            root = yaml.safe_load(f) or {}
     except FileNotFoundError:
-        return None
-    except OSError:
-        text = ""
-    if text:
-        pat = re.compile(
-            rf"{re.escape(_PY_SETTINGS_START)}.*?{_PY_SETTINGS_VAR}\s*=\s*r?'''(.*?)'''.*?{re.escape(_PY_SETTINGS_END)}",
-            re.DOTALL,
-        )
-        m = pat.search(text)
-        if m:
-            return m.group(1).strip()
-    # Backward/alternate style: read variable by importing module.
-    try:
-        spec = importlib.util.spec_from_file_location("streamlit_cfg_mod", path)
-        if spec is None or spec.loader is None:
-            return None
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        val = getattr(mod, _PY_SETTINGS_VAR, None)
-        if isinstance(val, str) and val.strip():
-            return val.strip()
-    except (ImportError, SyntaxError, AttributeError, OSError):
-        return None
-    return None
+        return defaults_dict(), None
+    except OSError as e:
+        return defaults_dict(), f"Could not read config YAML: {e}"
+    except yaml.YAMLError as e:
+        return defaults_dict(), f"Could not parse config YAML: {e}"
+    if not isinstance(root, dict):
+        return defaults_dict(), "Config YAML must be a mapping; using defaults."
+    section = root.get("explorer_settings", None)
+    if section is None:
+        return defaults_dict(), None
+    return _validate_settings_mapping(section)
 
 
-def load_settings_from_python_config(config_py_path: str) -> tuple[dict[str, Any], str | None]:
-    """Load embedded STREAMLIT_SETTINGS_YAML from ``config_secret.py`` or ``config.py`` (never from ``config_template.py``)."""
-    yaml_text = _extract_embedded_yaml_from_py(config_py_path)
-    if yaml_text:
-        return _load_yaml_text(yaml_text)
-
-    # Legacy migration fallback from sidecar YAML (one-time read).
-    sidecar = config_py_path[:-3] + ".streamlit.yaml" if config_py_path.endswith(".py") else ""
-    if sidecar and os.path.exists(sidecar):
-        cfg, warn = load_yaml_settings(sidecar)
-        if warn:
-            return cfg, warn
-        return cfg, f"Loaded legacy settings from `{os.path.basename(sidecar)}`; save to migrate into config .py."
-    return defaults_dict(), None
-
-
-def write_sparse_settings_to_python_config(
-    config_py_path: str,
+def write_sparse_settings_to_config_path(
+    path: str,
     current: dict[str, Any],
 ) -> tuple[bool, str | None]:
-    """Write sparse YAML into STREAMLIT_SETTINGS_YAML block in config .py."""
+    """Write explorer settings to ``explorer_settings`` section in one YAML config file."""
+    p = (path or "").strip()
+    if not p:
+        return False, "Missing settings path."
     defaults = defaults_dict()
     sparse = _sparse_diff(current, defaults)
     sparse["version"] = SETTINGS_SCHEMA_VERSION
 
-    existing_yaml = _extract_embedded_yaml_from_py(config_py_path)
-    existing: dict[str, Any] = {}
-    if existing_yaml:
-        try:
-            raw = yaml.safe_load(existing_yaml) or {}
-            if isinstance(raw, dict):
-                existing = raw
-        except yaml.YAMLError:
-            existing = {}
+    root: dict[str, Any] = {}
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            raw = yaml.safe_load(f) or {}
+        if isinstance(raw, dict):
+            root = raw
+    except FileNotFoundError:
+        root = {}
+    except (OSError, yaml.YAMLError):
+        root = {}
 
-    out = dict(existing)
+    existing_section = root.get("explorer_settings", {})
+    if not isinstance(existing_section, dict):
+        existing_section = {}
+    out_section = dict(existing_section)
     for sect in (
         "version",
         "map_display",
@@ -341,39 +292,16 @@ def write_sparse_settings_to_python_config(
         "taxonomy",
     ):
         if sect in sparse:
-            out[sect] = sparse[sect]
-        elif sect in out:
-            del out[sect]
-    out["version"] = SETTINGS_SCHEMA_VERSION
-    yaml_text = yaml.safe_dump(out, sort_keys=False, allow_unicode=False).strip() + "\n"
-    block = (
-        f"{_PY_SETTINGS_START}\n"
-        f"{_PY_SETTINGS_VAR} = r'''\n"
-        f"{yaml_text}"
-        f"'''\n"
-        f"{_PY_SETTINGS_END}\n"
-    )
-    try:
-        with open(config_py_path, "r", encoding="utf-8") as f:
-            text = f.read()
-    except FileNotFoundError:
-        return False, f"Config file not found: {config_py_path}"
-    except OSError as e:
-        return False, f"Could not read config file: {e}"
-
-    pat = re.compile(
-        rf"{re.escape(_PY_SETTINGS_START)}.*?{re.escape(_PY_SETTINGS_END)}\n?",
-        re.DOTALL,
-    )
-    if pat.search(text):
-        new_text = pat.sub(block, text)
-    else:
-        new_text = text.rstrip() + "\n\n" + block
+            out_section[sect] = sparse[sect]
+        elif sect in out_section:
+            del out_section[sect]
+    out_section["version"] = SETTINGS_SCHEMA_VERSION
+    root["explorer_settings"] = out_section
 
     try:
-        with open(config_py_path, "w", encoding="utf-8") as f:
-            f.write(new_text)
+        with open(p, "w", encoding="utf-8") as f:
+            yaml.safe_dump(root, f, sort_keys=False, allow_unicode=False)
     except OSError as e:
-        return False, f"Could not write config file: {e}"
+        return False, f"Could not write config YAML: {e}"
     return True, None
 

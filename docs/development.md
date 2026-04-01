@@ -30,7 +30,7 @@ The Streamlit app is a thin UI layer: it wires UI inputs to state and calls modu
 |--------|------|
 | **data_loader** | Load CSV, validate columns, add `datetime` column (missing times → synthetic 23:59 for sort order; see explorer README). Single entry point: `load_dataset(path)`. |
 | **path_resolution** | Low-level helper: ``find_data_file(filename, candidate_dirs)``. |
-| **explorer_paths** | ``config_secret`` → ``config.py`` → process CWD; ``find_data_file`` picks the first folder that contains the CSV. Settings persist only when the winning source is ``config_secret`` or ``config.py``. Used by ``streamlit_app/app.py``. |
+| **explorer_paths** | ``config/config_secret.yaml`` → ``config/config.yaml`` → process CWD; ``find_data_file`` picks the first folder that contains the CSV. Settings persist only when the winning source is YAML config (sidecar ``*.streamlit.yaml``). Used by ``streamlit_app/app.py``. |
 | **streamlit_map_prep** | Builds kwargs for ``build_species_overlay_map`` in all-locations mode (Streamlit; refs #70). |
 | **species_logic** | Species filtering (`filter_species`), countable-species logic, base-species for lifer/last-seen. |
 | **stats** | Rankings, yearly summary, **country summary** (`country_summary_stats` / `checklist_country_keys`), streak calculation, safe count parsing. Pure functions on DataFrame. |
@@ -58,7 +58,7 @@ The Streamlit app owns: UI wiring, session state, and per-session caches. Filter
 - **Caching strategy** — In-memory, simple. Location groupbys and popup HTML are cached to avoid recomputation on redraw. Cache keys include enough context (e.g. location ID, species, date-filter view) to avoid stale data.
 - **Separation of UI and logic** — Streamlit: UI wiring and orchestration. Modules: data loading, statistics, map rendering. Do not move business logic into the UI layer.
 - **Streamlit UI** — Use **native Streamlit** for layouts and simple tables. For **rankings / list tables** with linked cells and styling, **`st.dataframe` is not sufficient** — use **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`** with HTML from **`checklist_stats_display`**, **`rankings_display`**, and related formatters in `personal_ebird_explorer/`; avoid parallel HTML in `streamlit_app/`. See [AI_CONTEXT.md — Streamlit UI](AI_CONTEXT.md#streamlit-ui) and `streamlit_app/README.md` — *UI guidelines*.
-- **Streamlit defaults (single place)** — Behaviour defaults for the Streamlit explorer (persisted settings, slider min/max, map/basemap/session-only values, copy strings, theme-related literals, etc.) belong in **`streamlit_app/defaults.py`**. Import from there in **`streamlit_app/app.py`**, in **`personal_ebird_explorer/streamlit_settings_config.py`** for anything saved in embedded YAML, and in Streamlit HTML helpers when they need the same numbers. That keeps discovery easy and avoids silent drift; **`tests/explorer/test_streamlit_defaults.py`** checks the persisted payload against the Pydantic model. (refs #70)
+- **Streamlit defaults (single place)** — Behaviour defaults for the Streamlit explorer (persisted settings, slider min/max, map/basemap/session-only values, copy strings, theme-related literals, etc.) belong in **`streamlit_app/defaults.py`**. Import from there in **`streamlit_app/app.py`**, in **`personal_ebird_explorer/streamlit_settings_config.py`** for anything saved in YAML settings files, and in Streamlit HTML helpers when they need the same numbers. That keeps discovery easy and avoids silent drift; **`tests/explorer/test_streamlit_defaults.py`** checks the persisted payload against the Pydantic model. (refs #70)
 
 ---
 
@@ -77,7 +77,7 @@ The Streamlit app owns: UI wiring, session state, and per-session caches. Filter
 - **Incremental changes** — Prefer small, reviewable edits over large rewrites.
 - **Preserve boundaries** — Keep data loading, stats, and map rendering in modules; keep the UI thin.
 - **Caching** — If you change what drives the map (e.g. date filter, new grouping), ensure cache keys and invalidation stay consistent. Document any new cache in comments.
-- **Config and paths** — `scripts/config_secret.py` / `config.py` (`DATA_FOLDER`) and CWD resolution are documented in `streamlit_app/README.md` and `docs/explorer/install.md`; `config_template.py` is the copy-paste template only.
+- **Config and paths** — `config/config_secret.yaml` / `config/config.yaml` (`data_folder`) and CWD resolution are documented in `streamlit_app/README.md` and `docs/explorer/install.md`; `config/config_template.yaml` is the copy-paste template only.
 - **Dependencies** — Avoid new dependencies unless clearly necessary. Current stack: pandas, folium, ipywidgets, Whoosh, scikit-learn (for TF–IDF in search, if used), pycountry (country/state names in rankings tables).
 
 ---

@@ -26,7 +26,7 @@ From the repo root, follow the Streamlit app README:
 - **Option A (simplest)**: download a ZIP from GitHub and unzip it somewhere
 - **Option B (developer)**: clone with Git if you already use Git
 
-If you downloaded a ZIP and want to update later, the simplest approach is to download a new ZIP and replace your old folder (keeping your `scripts/config_secret.py`).
+If you downloaded a ZIP and want to update later, the simplest approach is to download a new ZIP and replace your old folder (keeping your `config/config_secret.yaml`).
 
 ## Data loading and config files
 
@@ -34,11 +34,11 @@ The app loads your CSV in this order:
 
 1. **Upload in the app** (best for Streamlit Community Cloud)
 2. **Disk discovery** (local runs): it searches for the CSV in:
-   - `scripts/config_secret.py` (`DATA_FOLDER`)
-   - `scripts/config.py` (`DATA_FOLDER`)
+   - `config/config_secret.yaml` or `config/config.yaml` (`data_folder`)
    - the **working directory** where you ran `streamlit run ...`
 
-### Why `config_secret.py`?
+### Why `config_secret.yaml`?
 
-If you use Git, `scripts/config_secret.py` is the place for **your local paths and settings** because it is **gitignored** (so you don’t accidentally commit private filesystem paths).
+If you use Git, `config/config_secret.yaml` is the place for **your local paths and keys** because it is **gitignored**
+(so you don’t accidentally commit private filesystem paths or API keys).
 

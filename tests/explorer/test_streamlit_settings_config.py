@@ -64,14 +64,19 @@ def test_write_sparse_preserves_unknown_keys(tmp_path):
     assert "tables_lists" not in raw  # defaults omitted
 
 
-def test_write_settings_embedded_in_python_config(tmp_path):
+def test_config_path_yaml_roundtrip(tmp_path):
     from personal_ebird_explorer.streamlit_settings_config import (
-        load_settings_from_python_config,
-        write_sparse_settings_to_python_config,
+        load_settings_from_config_path,
+        write_sparse_settings_to_config_path,
     )
 
-    p = tmp_path / "config_secret.py"
-    p.write_text('DATA_FOLDER = "/tmp/data"\n', encoding="utf-8")
+    p = tmp_path / "config_secret.yaml"
+    p.write_text(
+        "google_api_key: abc123\n"
+        "data_folder: /tmp/ebird\n"
+        "deploy_destination: /tmp/deploy.py\n",
+        encoding="utf-8",
+    )
     current = {
         "version": 1,
         "map_display": {
@@ -94,12 +99,15 @@ def test_write_settings_embedded_in_python_config(tmp_path):
         "maintenance": {"close_location_meters": 10},
         "taxonomy": {"locale": "en_AU"},
     }
-    ok, err = write_sparse_settings_to_python_config(str(p), current)
+    ok, err = write_sparse_settings_to_config_path(str(p), current)
     assert ok and err is None
-    text = p.read_text(encoding="utf-8")
-    assert "STREAMLIT_SETTINGS_YAML" in text
+    raw = yaml.safe_load(p.read_text(encoding="utf-8"))
+    assert raw["google_api_key"] == "abc123"
+    assert raw["data_folder"] == "/tmp/ebird"
+    assert raw["deploy_destination"] == "/tmp/deploy.py"
+    assert "explorer_settings" in raw
 
-    cfg, warn = load_settings_from_python_config(str(p))
+    cfg, warn = load_settings_from_config_path(str(p))
     assert warn is None
     assert cfg["map_display"]["popup_sort_order"] == "descending"
 

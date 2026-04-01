@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import os
-import textwrap
-
 import pytest
 
 
@@ -12,8 +10,7 @@ def test_build_explorer_candidate_dirs_config_then_cwd(tmp_path):
     from personal_ebird_explorer.explorer_paths import build_explorer_candidate_dirs
 
     repo = tmp_path / "repo"
-    scripts = repo / "scripts"
-    scripts.mkdir(parents=True)
+    (repo / "config").mkdir(parents=True)
     cwd_dir = tmp_path / "cwd_here"
     cwd_dir.mkdir()
 
@@ -29,7 +26,7 @@ def test_resolve_ebird_data_file_finds_in_cwd_when_no_config(tmp_path):
     )
 
     repo = tmp_path / "repo"
-    (repo / "scripts").mkdir(parents=True)
+    (repo / "config").mkdir(parents=True)
     cwd_dir = tmp_path / "run_from_here"
     cwd_dir.mkdir()
     csv_path = cwd_dir / "MyEBirdData.csv"
@@ -48,8 +45,8 @@ def test_resolve_prefers_config_secret_over_cwd(tmp_path):
     )
 
     repo = tmp_path / "repo"
-    scripts = repo / "scripts"
-    scripts.mkdir(parents=True)
+    config = repo / "config"
+    config.mkdir(parents=True)
     data_secret = tmp_path / "secret_data"
     data_secret.mkdir()
     cwd_dir = tmp_path / "cwd_here"
@@ -57,12 +54,8 @@ def test_resolve_prefers_config_secret_over_cwd(tmp_path):
     (data_secret / "MyEBirdData.csv").write_text("Date,Time\n", encoding="utf-8")
     (cwd_dir / "MyEBirdData.csv").write_text("wrong\n", encoding="utf-8")
 
-    (scripts / "config_secret.py").write_text(
-        textwrap.dedent(
-            f'''
-            DATA_FOLDER = r"{data_secret}"
-            '''
-        ).strip(),
+    (config / "config_secret.yaml").write_text(
+        f"data_folder: {data_secret.as_posix()}\n",
         encoding="utf-8",
     )
 
@@ -70,23 +63,6 @@ def test_resolve_prefers_config_secret_over_cwd(tmp_path):
     path, folder, src = resolve_ebird_data_file("MyEBirdData.csv", folders, sources)
     assert os.path.normpath(folder) == os.path.normpath(str(data_secret))
     assert src == "config_secret"
-
-
-def test_data_folder_from_config_file_reads_data_folder(tmp_path):
-    from personal_ebird_explorer.explorer_paths import data_folder_from_config_file
-
-    cfg = tmp_path / "config_secret.py"
-    target = tmp_path / "ebird_data"
-    target.mkdir()
-    cfg.write_text(
-        textwrap.dedent(
-            f'''
-            DATA_FOLDER = r"{target}"
-            '''
-        ).strip(),
-        encoding="utf-8",
-    )
-    assert data_folder_from_config_file(str(cfg)) == os.path.normpath(str(target))
 
 
 def test_resolve_raises_file_not_found():
@@ -101,27 +77,26 @@ def test_settings_yaml_path_for_source(tmp_path):
     from personal_ebird_explorer.explorer_paths import settings_yaml_path_for_source
 
     repo = tmp_path / "repo"
-    scripts = repo / "scripts"
-    scripts.mkdir(parents=True)
+    (repo / "config").mkdir(parents=True)
 
     p1 = settings_yaml_path_for_source(str(repo), "config_secret")
     p2 = settings_yaml_path_for_source(str(repo), "config")
     p3 = settings_yaml_path_for_source(str(repo), "cwd")
 
-    assert p1 and p1.endswith("scripts/config_secret.py")
-    assert p2 and p2.endswith("scripts/config.py")
+    assert p1 and p1.endswith("config/config_secret.yaml")
+    assert p2 and p2.endswith("config/config.yaml")
     assert p3 is None
 
 
-def test_config_py_wins_over_cwd_when_both_have_csv(tmp_path):
+def test_config_yaml_wins_over_cwd_when_both_have_csv(tmp_path):
     from personal_ebird_explorer.explorer_paths import (
         build_explorer_candidate_dirs,
         resolve_ebird_data_file,
     )
 
     repo = tmp_path / "repo"
-    scripts = repo / "scripts"
-    scripts.mkdir(parents=True)
+    config = repo / "config"
+    config.mkdir(parents=True)
     data_from_config = tmp_path / "from_config"
     data_from_config.mkdir()
     cwd_dir = tmp_path / "cwd_here"
@@ -129,12 +104,8 @@ def test_config_py_wins_over_cwd_when_both_have_csv(tmp_path):
     (data_from_config / "MyEBirdData.csv").write_text("Date,Time\n", encoding="utf-8")
     (cwd_dir / "MyEBirdData.csv").write_text("wrong\n", encoding="utf-8")
 
-    (scripts / "config.py").write_text(
-        textwrap.dedent(
-            f'''
-            DATA_FOLDER = r"{data_from_config}"
-            '''
-        ).strip(),
+    (config / "config.yaml").write_text(
+        f"data_folder: {data_from_config.as_posix()}\n",
         encoding="utf-8",
     )
 

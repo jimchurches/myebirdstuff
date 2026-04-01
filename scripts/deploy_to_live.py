@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Copy eBirdChecklistNameFromGPS.py from the repo to the live install location.
-Run on demand when you want to deploy changes. Path is in config_secret.py (or config_template.py).
+Run on demand when you want to deploy changes. Path is in `config/config_secret.yaml` (recommended).
 Creates a timestamped backup of the existing script before overwriting; keeps 12 backups, prunes older ones.
 """
 import shutil
@@ -13,17 +13,33 @@ SOURCE = SCRIPT_DIR / "eBirdChecklistNameFromGPS.py"
 MAX_BACKUPS = 12
 
 
-def _load_destination():
-    """Load DEPLOY_DESTINATION from config_secret or config_template."""
-    try:
+def _load_destination() -> Path:
+    """Load deploy destination from YAML config."""
+    repo_root = SCRIPT_DIR.parent
+    config_dir = repo_root / "config"
+    for cfg in (config_dir / "config_secret.yaml", config_dir / "config.yaml"):
+        if not cfg.exists():
+            continue
         try:
-            from config_secret import DEPLOY_DESTINATION
-        except ImportError:
-            from config_template import DEPLOY_DESTINATION
-        return Path(DEPLOY_DESTINATION)
-    except ImportError as e:
-        print(f"ERROR: Add DEPLOY_DESTINATION to config_secret.py (or config_template.py): {e}")
-        raise SystemExit(1)
+            import yaml  # type: ignore
+        except Exception:
+            break
+        raw = {}
+        try:
+            raw = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+        except Exception:
+            raw = {}
+        if isinstance(raw, dict):
+            val = raw.get("deploy_destination", "")
+            if isinstance(val, str) and val.strip():
+                return Path(val.strip())
+
+    print(
+        "ERROR: Missing deploy destination.\n\n"
+        "Set `deploy_destination` in `config/config_secret.yaml` "
+        "(copy from `config/config_template.yaml`)."
+    )
+    raise SystemExit(1)
 
 
 def main():
