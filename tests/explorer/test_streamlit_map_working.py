@@ -1,4 +1,4 @@
-"""Tests for ``streamlit_app/map_working`` helpers."""
+"""Tests for ``explorer.app.streamlit.map_working`` helpers."""
 
 from __future__ import annotations
 
@@ -12,11 +12,11 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-pytest.importorskip("streamlit", reason="streamlit_app/map_working is for Streamlit UI")
+pytest.importorskip("streamlit", reason="explorer.app.streamlit.map_working is for Streamlit UI")
 
 from personal_ebird_explorer.data_loader import load_dataset  # noqa: E402
 
-from streamlit_app.map_working import (
+from explorer.app.streamlit.map_working import (
     date_bounds_from_df,
     date_inception_to_today_default,
     folium_map_to_html_bytes,

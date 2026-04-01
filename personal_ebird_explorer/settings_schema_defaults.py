@@ -2,7 +2,7 @@
 Default values for the embedded Streamlit settings schema (YAML in ``config_*.py``).
 
 Framework-neutral: no Streamlit imports. Used by :mod:`personal_ebird_explorer.streamlit_settings_config`
-and re-exported from ``streamlit_app.defaults`` for the Streamlit UI (refs #89).
+and re-exported from ``explorer.app.streamlit.defaults`` for the Streamlit UI (refs #89).
 """
 
 from __future__ import annotations

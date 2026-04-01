@@ -96,7 +96,7 @@ DEFAULT_TAXONOMY_LOCALE = TAXONOMY_LOCALE_DEFAULT
 # Keep session-state keys (especially ``streamlit_*`` and internal ``_streamlit_*``)
 # in one place to avoid typos and hard-to-find mismatches during refactors.
 
-# App-wide misc/internal session keys used in ``streamlit_app/app.py``.
+# App-wide misc/internal session keys used in ``explorer.app.streamlit.app``.
 EBIRD_DATA_SIG_KEY = "ebird_data_sig"
 EXPLORER_MAP_HTML_BYTES_KEY = "_explorer_map_html_bytes"
 POPUP_HTML_CACHE_KEY = "popup_html_cache"

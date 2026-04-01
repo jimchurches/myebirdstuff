@@ -50,14 +50,8 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture()
 def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
     _install_streamlit_stub(monkeypatch)
-    # Ensure we re-import UI modules under the stubbed `streamlit` (shims + explorer targets).
+    # Ensure we re-import UI modules under the stubbed `streamlit`.
     for name in [
-        "streamlit_app.streamlit_theme",
-        "streamlit_app.yearly_summary_streamlit_html",
-        "streamlit_app.country_stats_streamlit_html",
-        "streamlit_app.checklist_stats_streamlit_html",
-        "streamlit_app.rankings_streamlit_html",
-        "streamlit_app.maintenance_streamlit_html",
         "explorer.app.streamlit.streamlit_theme",
         "explorer.app.streamlit.yearly_summary_streamlit_html",
         "explorer.app.streamlit.country_stats_streamlit_html",
@@ -70,8 +64,8 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_yearly_recent_column_count_clamps(streamlit_stub) -> None:
-    yearly = importlib.import_module("streamlit_app.yearly_summary_streamlit_html")
-    from streamlit_app.app_constants import STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY
+    yearly = importlib.import_module("explorer.app.streamlit.yearly_summary_streamlit_html")
+    from explorer.app.streamlit.app_constants import STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY
 
     st = streamlit_stub
     st.session_state[STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY] = 2
@@ -85,8 +79,8 @@ def test_yearly_recent_column_count_clamps(streamlit_stub) -> None:
 
 
 def test_sync_yearly_summary_session_inputs_sets_payload(streamlit_stub) -> None:
-    yearly = importlib.import_module("streamlit_app.yearly_summary_streamlit_html")
-    from streamlit_app.app_constants import YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY
+    yearly = importlib.import_module("explorer.app.streamlit.yearly_summary_streamlit_html")
+    from explorer.app.streamlit.app_constants import YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY
 
     sentinel = object()
     yearly.sync_yearly_summary_session_inputs(sentinel)
@@ -96,8 +90,8 @@ def test_sync_yearly_summary_session_inputs_sets_payload(streamlit_stub) -> None
 
 
 def test_sync_country_tab_session_inputs_sets_payload(streamlit_stub) -> None:
-    country = importlib.import_module("streamlit_app.country_stats_streamlit_html")
-    from streamlit_app.app_constants import COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY
+    country = importlib.import_module("explorer.app.streamlit.country_stats_streamlit_html")
+    from explorer.app.streamlit.app_constants import COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY
 
     sentinel = object()
     country.sync_country_tab_session_inputs(sentinel)
@@ -107,8 +101,8 @@ def test_sync_country_tab_session_inputs_sets_payload(streamlit_stub) -> None:
 
 
 def test_sync_checklist_stats_tab_session_inputs_sets_payload(streamlit_stub) -> None:
-    checklist = importlib.import_module("streamlit_app.checklist_stats_streamlit_html")
-    from streamlit_app.app_constants import CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY
+    checklist = importlib.import_module("explorer.app.streamlit.checklist_stats_streamlit_html")
+    from explorer.app.streamlit.app_constants import CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY
 
     sentinel = object()
     checklist.sync_checklist_stats_tab_session_inputs(sentinel)
@@ -118,8 +112,8 @@ def test_sync_checklist_stats_tab_session_inputs_sets_payload(streamlit_stub) ->
 
 
 def test_sync_rankings_tab_session_inputs_sets_bundle(streamlit_stub) -> None:
-    rankings = importlib.import_module("streamlit_app.rankings_streamlit_html")
-    from streamlit_app.app_constants import RANKINGS_TAB_BUNDLE_KEY
+    rankings = importlib.import_module("explorer.app.streamlit.rankings_streamlit_html")
+    from explorer.app.streamlit.app_constants import RANKINGS_TAB_BUNDLE_KEY
 
     sentinel = {"rankings_sections_top_n": [("t", "<p>x</p>")], "rankings_sections_other": []}
     rankings.sync_rankings_tab_session_inputs(sentinel)
@@ -129,8 +123,8 @@ def test_sync_rankings_tab_session_inputs_sets_bundle(streamlit_stub) -> None:
 
 
 def test_sync_maintenance_tab_session_inputs_sets_sync_dict(streamlit_stub) -> None:
-    maint = importlib.import_module("streamlit_app.maintenance_streamlit_html")
-    from streamlit_app.app_constants import MAINTENANCE_TAB_SYNC_KEY
+    maint = importlib.import_module("explorer.app.streamlit.maintenance_streamlit_html")
+    from explorer.app.streamlit.app_constants import MAINTENANCE_TAB_SYNC_KEY
 
     loc_df = pd.DataFrame(columns=["Location ID", "Location", "Latitude", "Longitude"])
     inc: dict = {2024: []}
@@ -151,11 +145,11 @@ def test_sync_maintenance_tab_session_inputs_sets_sync_dict(streamlit_stub) -> N
     assert blob["sex_notation_by_year"] is sex
 
 
-def test_streamlit_tab_shims_import_without_runtime(streamlit_stub) -> None:
+def test_streamlit_tab_modules_import_without_runtime(streamlit_stub) -> None:
     """Catch regressions like missing constants or bad imports (refs fragment sync wiring)."""
-    importlib.import_module("streamlit_app.checklist_stats_streamlit_html")
-    importlib.import_module("streamlit_app.rankings_streamlit_html")
-    importlib.import_module("streamlit_app.maintenance_streamlit_html")
+    importlib.import_module("explorer.app.streamlit.checklist_stats_streamlit_html")
+    importlib.import_module("explorer.app.streamlit.rankings_streamlit_html")
+    importlib.import_module("explorer.app.streamlit.maintenance_streamlit_html")
 
 
 def test_static_map_cache_key_includes_species_overlay() -> None:
@@ -188,4 +182,3 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
     )
     assert no_species != with_species
     assert with_species != hide_on
-

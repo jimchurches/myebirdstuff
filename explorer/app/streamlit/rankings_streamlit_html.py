@@ -5,7 +5,7 @@
 Uses HTML from :func:`personal_ebird_explorer.checklist_stats_display.format_checklist_stats_bundle`
 (``rankings_sections_top_n`` / ``rankings_sections_other``) — same tables as the explorer’s richly-linked HTML tables,
 rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matches **Checklist Statistics**:
-:func:`~streamlit_app.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
+:func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
 ``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). The **Family Lists** tab uses
 ``st.dataframe`` for row selection plus HTML detail tables.
 

@@ -2,7 +2,7 @@
 
 **Document status — closed.** This file was a working backlog for opening child issues under **#70**. Items **§1–§11** are implemented (see issue numbers in each section). **§12** reflected an initial docs alignment (#102); a **final editorial read-through** of user-facing docs is intentionally **outside** this backlog and can be done manually before release.
 
-**Resolved (former open question):** Layout for v3 — Streamlit UI modules live under `explorer/app/streamlit/`. The `streamlit_app/` package is a **thin compatibility shim** (re-exports) so `streamlit run streamlit_app/app.py` and `from streamlit_app…` keep working. Removing those shims is **Phase 3** in `streamlit-v3-move-order.md`, not a blocker for merging the feature branch.
+**Resolved (former open question):** Layout for v3 — Streamlit UI modules live under `explorer/app/streamlit/`. Run with `streamlit run explorer/app/streamlit/app.py`; import as `explorer.app.streamlit`. The old `streamlit_app/` shim package has been **removed** (see `streamlit-v3-move-order.md`).
 
 You can **delete this file** when you no longer want it in the tree; history remains in Git.
 
@@ -255,7 +255,7 @@ If you want **fewer** child issues under #70, merge as follows:
 
 ## Open questions (resolve in #70 or per-issue)
 
-1. ~~Target package name after move: keep `streamlit_app` under `personal_ebird_explorer/` or rename?~~ **Resolved:** `streamlit_app` stays at repo root as a **shim**; implementation is `explorer.app.streamlit`. Shared library code remains in `personal_ebird_explorer/` (see `streamlit-v3-move-order.md`).
+1. ~~Target package name after move: keep `streamlit_app` under `personal_ebird_explorer/` or rename?~~ **Resolved:** Implementation is `explorer.app.streamlit` under `explorer/app/streamlit/`; shared library code remains in `personal_ebird_explorer/` (see `streamlit-v3-move-order.md`).
 
 ## Decisions already made
 

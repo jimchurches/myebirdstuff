@@ -5,7 +5,7 @@ Primary UI: **Streamlit** (map + tabs).
 Start here:
 
 - **Getting started**: [`docs/explorer/getting-started.md`](getting-started.md)
-- **Streamlit app README** (details): [`streamlit_app/README.md`](../../streamlit_app/README.md)
+- **Streamlit app README** (details): [`explorer/app/streamlit/README.md`](../../explorer/app/streamlit/README.md)
 
 ## What it does
 
@@ -46,7 +46,7 @@ Implementation detail: see `add_datetime_column()` in `personal_ebird_explorer/d
 
 ## Install / run
 
-See [`streamlit_app/README.md`](../../streamlit_app/README.md) for:
+See [`explorer/app/streamlit/README.md`](../../explorer/app/streamlit/README.md) for:
 
-- **Run locally**: venv + `pip install -r requirements.txt` + `streamlit run streamlit_app/app.py`
+- **Run locally**: venv + `pip install -r requirements.txt` + `streamlit run explorer/app/streamlit/app.py`
 - **Streamlit Community Cloud**: set the main file path and the requirements file

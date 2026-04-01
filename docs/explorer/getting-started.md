@@ -19,7 +19,7 @@ You need **Python** installed. We assume you already have it (install via your O
 
 From the repo root, follow the Streamlit app README:
 
-- [`streamlit_app/README.md`](../../streamlit_app/README.md)
+- [`explorer/app/streamlit/README.md`](../../explorer/app/streamlit/README.md)
 
 ## Download / update the app code
 

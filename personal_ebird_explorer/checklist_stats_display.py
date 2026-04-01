@@ -312,12 +312,12 @@ CHECKLIST_STATS_TABLE_CSS = """
     .subspecies-sci-secondary { color: #6b7280; font-size: inherit; line-height: inherit; font-weight: inherit; }
     """
 
-# Injected once by ``streamlit_app/checklist_stats_streamlit_html`` around checklist sub-tabs only.
+# Injected once by ``explorer.app.streamlit.checklist_stats_streamlit_html`` around checklist sub-tabs only.
 # Scoped under ``.streamlit-checklist-html-ab`` so HTML layout stays unchanged.
 #
 # **Default:** green accents + zebra (``#1f6f54`` — aligns with ``.streamlit/config.toml`` primary).
 # **Alternate:** ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE`` (eBird-style blue); Streamlit enables
-# it via ``USE_EBIRD_BLUE_HTML_TAB_THEME`` in ``streamlit_app/streamlit_theme.py`` (refs #95).
+# it via ``USE_EBIRD_BLUE_HTML_TAB_THEME`` in ``explorer/app/streamlit/streamlit_theme.py`` (refs #95).
 #
 # Typography aligned with Streamlit nested ``st.tabs`` labels (~13px / normal weight in default theme).
 def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:

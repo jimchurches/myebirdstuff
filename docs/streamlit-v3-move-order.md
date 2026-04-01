@@ -1,6 +1,6 @@
 # Streamlit v3 move order (end-state prep)
 
-**Document status — closed as a planning guide.** Phases **1** and **2** (Streamlit code under `explorer/app/streamlit/`, shims in `streamlit_app/`) are **done**. **Phase 3** is optional **hardening** (remove shims, optional package reshaping); track as its own small PRs or issues when you want a tidier repo, not as a blocker for merging the v3 branch to `main`.
+**Document status — closed as a planning guide.** Phases **1–2** and **Phase 3 shim removal** are **done** (canonical entry: `streamlit run explorer/app/streamlit/app.py`; the old `streamlit_app/` package was removed). Remaining **Phase 3** items are optional **docs polish** and **optional** `personal_ebird_explorer` → `explorer/core` reshaping.
 
 You can **delete this file** when you no longer need it in the working tree; Git history keeps prior versions.
 
@@ -35,21 +35,21 @@ explorer/
 ### Phase 1 — boundary cleanup (no runtime move yet) — **done**
 
 1. ~~Decouple `personal_ebird_explorer` from `streamlit_app.defaults`.~~
-2. ~~Standardize Streamlit imports (`streamlit_app.<module>` consistently).~~ (canonical code imports `explorer.app.streamlit`; shims re-export.)
+2. ~~Standardize Streamlit imports (`streamlit_app.<module>` consistently).~~ (canonical: `explorer.app.streamlit`.)
 3. ~~Replace private helper dependency in Country tab (`_sort_country_sections`).~~ (public `sort_country_sections_for_display` API)
 4. ~~Remove dead Checklist Statistics `species_url_fn` wiring.~~
 
-### Phase 2 — package move with compatibility shims — **done** (shims intentionally remain)
+### Phase 2 — package move — **done**
 
 5. **Deferred / optional:** Copy/move non-UI shared modules from `personal_ebird_explorer/` into `explorer/core/` and `explorer/presentation/`. Today those directories exist as **skeleton packages**; framework-agnostic logic still lives primarily in `personal_ebird_explorer/`. Doing this move is **not required** for v3 merge; treat as future tidy-up if you want a stricter tree.
-6. ~~Move Streamlit modules from `streamlit_app/` to `explorer/app/streamlit/`.~~ **Done.** Keep a thin compatibility entrypoint in `streamlit_app/app.py` (and sibling shim modules) until Phase 3.
+6. ~~Move Streamlit modules from `streamlit_app/` to `explorer/app/streamlit/`.~~ **Done.** ~~Compatibility shims~~ removed; use `streamlit run explorer/app/streamlit/app.py`.
 7. **Partial:** Tests remain under `tests/explorer/` with `test_streamlit_*` naming; a physical split to `tests/streamlit/` is optional.
 
-### Phase 3 — deprecations and deletion — **hardening (optional)**
+### Phase 3 — deprecations and deletion — **partially done**
 
 8. ~~Remove legacy session-state bridges~~ (done: #93).
 9. **Docs / narrative:** Remove remaining legacy UI references (Jupyter-first wording, etc.) in a **manual doc pass**; there is no notebook UI in-repo today.
-10. **Mechanical:** Remove `streamlit_app/*.py` shims (except possibly one bootstrap), switch docs/CI to **`streamlit run`** on the canonical module under `explorer/`, update imports/tests to `explorer.app.streamlit` only, then delete empty shim files when `grep` is clean.
+10. ~~**Mechanical:** Remove `streamlit_app/*.py` shims, switch docs/CI to **`streamlit run explorer/app/streamlit/app.py`**, imports/tests use `explorer.app.streamlit` only.~~ **Done.**
 
 ## Checklist per move PR (use on future hardening PRs)
 
@@ -61,8 +61,7 @@ explorer/
 ## Current status (snapshot)
 
 - **Canonical Streamlit implementation:** `explorer/app/streamlit/*.py`
-- **Entry:** `streamlit run streamlit_app/app.py` (shim imports `explorer.app.streamlit.app:main`)
-- **Shims:** `streamlit_app/*.py` re-export `explorer.app.streamlit.*` for compatibility
+- **Entry:** `streamlit run explorer/app/streamlit/app.py` (from repo root)
 - **Library:** `personal_ebird_explorer/` — shared map/settings/stats logic (not yet split into `explorer/core/` beyond placeholders)
 - **Skeleton:** `explorer/core/`, `explorer/presentation/` — reserved for optional future moves
 

@@ -8,7 +8,7 @@ globals, widget references, or side effects.
 Popup HTML is plain strings passed to ``folium.Popup``; typography and colours are **not** locked to
 Leaflet defaults: ``map_overlay_theme_stylesheet`` (popups + top/bottom map chrome, injected once per map
 in ``map_controller``) and ``EXPLORER_UI_*`` constants align with the Streamlit app and
-``streamlit_app/.streamlit/config.toml`` (refs #70).
+repo-root ``.streamlit/config.toml`` (refs #70).
 """
 
 import html as _html_module

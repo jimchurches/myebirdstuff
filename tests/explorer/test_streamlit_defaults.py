@@ -1,4 +1,4 @@
-"""Ensure :mod:`streamlit_app.defaults` stays aligned with persisted settings (refs #70)."""
+"""Ensure :mod:`explorer.app.streamlit.defaults` stays aligned with persisted settings (refs #70)."""
 
 from __future__ import annotations
 

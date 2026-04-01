@@ -2,7 +2,7 @@
 Folium / map chrome geometry used by ``map_controller`` and ``map_renderer``.
 
 Framework-neutral: no Streamlit imports. Aligned with the Streamlit app theme in practice
-but owned here so ``personal_ebird_explorer`` does not depend on ``streamlit_app`` (refs #89).
+but owned here so ``personal_ebird_explorer`` does not depend on ``explorer.app.streamlit`` (refs #89).
 """
 
 from __future__ import annotations

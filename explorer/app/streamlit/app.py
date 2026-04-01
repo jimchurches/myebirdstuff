@@ -6,11 +6,11 @@ Planning and phased migration notes: https://github.com/jimchurches/myebirdstuff
 Run locally from repo root::
 
     pip install -r requirements.txt
-    streamlit run streamlit_app/app.py
+    streamlit run explorer/app/streamlit/app.py
 
 Disk resolution when no file is uploaded: ``config/config_secret.yaml`` and
 ``config/config.yaml`` (``data_folder``), then the **process working directory**
-(where you ran ``streamlit run``). See ``streamlit_app/README.md`` — *Data loading*.
+(where you ran ``streamlit run``). See ``explorer/app/streamlit/README.md`` — *Data loading*.
 
 Streamlit Cloud: CSV upload on the **landing** main area when disk resolution finds no file; session
 state keeps upload bytes for reruns (no data picker on the dashboard). After a successful pick we

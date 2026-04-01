@@ -2,9 +2,9 @@
 **Checklist Statistics** (Streamlit): six sections as nested ``st.tabs``, one pane per table.
 
 Uses ``checklist_stats_streamlit_tab_sections_html`` (shared with ``format_checklist_stats_bundle`` column blocks).
-Styles: :func:`~streamlit_app.streamlit_theme.inject_streamlit_checklist_css` — injected **once** per page; all rules scoped under ``.streamlit-checklist-html-ab``.
+Styles: :func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` — injected **once** per page; all rules scoped under ``.streamlit-checklist-html-ab``.
 
-**Style:** green striping/accents (default); eBird-blue via ``streamlit_app.streamlit_theme`` (refs #95).
+**Style:** green striping/accents (default); eBird-blue via ``explorer.app.streamlit.streamlit_theme`` (refs #95).
 Refs #70.
 """
 

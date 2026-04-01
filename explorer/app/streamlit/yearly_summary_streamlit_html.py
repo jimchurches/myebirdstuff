@@ -2,7 +2,7 @@
 **Yearly Summary** (Streamlit): nested **All** / **Travelling** / **Stationary** tabs (refs #85).
 
 HTML from :func:`build_yearly_summary_streamlit_tab_html_dict`; styles match Checklist Statistics
-(:func:`~streamlit_app.streamlit_theme.inject_streamlit_checklist_css` under ``.streamlit-checklist-html-ab``).
+(:func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` under ``.streamlit-checklist-html-ab``).
 
 When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**
 (3–25, default 10), a **Show full history** ``st.toggle`` below the nested tabs switches between the

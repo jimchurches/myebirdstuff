@@ -47,18 +47,18 @@ In particular avoid:
 
 The project is intentionally lightweight.
 
-**Roadmap note:** **Streamlit** is the **primary** UI in this repo ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)). New UI work should target `streamlit_app/`. Do not add **other** full UI frameworks without maintainer agreement.
+**Roadmap note:** **Streamlit** is the **primary** UI in this repo ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)). New UI work should target `explorer/app/streamlit/`. Do not add **other** full UI frameworks without maintainer agreement.
 
 ### Streamlit UI
 
-For work in **`streamlit_app/`** and any future Streamlit-first UI ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)). **Native widgets first**; **shared HTML formatters** for richly-linked tables where `st.dataframe` is not enough:
+For work in **`explorer/app/streamlit/`** and any future Streamlit-first UI ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)). **Native widgets first**; **shared HTML formatters** for richly-linked tables where `st.dataframe` is not enough:
 
 - **Use Streamlit primitives first** when they are enough — `st.tabs`, `st.expander`, `st.columns`, `st.dataframe`, `st.metric`, sidebar, `.streamlit/config.toml` theme. Simple **metric / key–value** blocks and uniform **URL** columns (`LinkColumn`) fit here.
-- **Rankings, “Interesting lists”, and similar richly-linked tables** — These use **HTML tables** with **links in cells** (species, locations, datetimes), **mixed styling** (e.g. dotted vs solid underlines, bold counts), and **⧉** affordances. **`st.dataframe` cannot replicate that** in a maintainable way. **Approved approach:** emit the HTML from **shared module formatters** (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, maintenance/ranking helpers, etc.) and render it with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`** (when available). **Do not duplicate** table markup inside `streamlit_app/` — extend or call the formatter. Treat this like **Folium popup HTML**: trusted formatter output; escape user-origin text **inside** the formatter.
+- **Rankings, “Interesting lists”, and similar richly-linked tables** — These use **HTML tables** with **links in cells** (species, locations, datetimes), **mixed styling** (e.g. dotted vs solid underlines, bold counts), and **⧉** affordances. **`st.dataframe` cannot replicate that** in a maintainable way. **Approved approach:** emit the HTML from **shared module formatters** (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, maintenance/ranking helpers, etc.) and render it with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`** (when available). **Do not duplicate** table markup inside the Streamlit adapter — extend or call the formatter. Treat this like **Folium popup HTML**: trusted formatter output; escape user-origin text **inside** the formatter.
 - **Keep eBird deep links** — Do **not** drop URLs from a ported view just to stay on a plain dataframe. Prefer shared HTML for rich tables; use **`LinkColumn`** or **layout + `st.markdown` links** only where that still matches UX.
 - **Ad-hoc HTML/CSS** — One-off `unsafe_allow_html` blobs **not** produced by a shared formatter are still a **conscious exception** (fragility, theming). Prefer routing table HTML through **`personal_ebird_explorer/`** helpers so formats stay aligned.
 - **When suggesting implementations**, note briefly if **`st.dataframe` would suffice** vs formatter HTML, so the choice stays explicit.
-- **Defaults live in one module** — Put new or changed **user-visible defaults** (limits, colours, labels, session seeds, export filenames, etc.) in **`streamlit_app/defaults.py`**, then wire them into **`app.py`** and, if the value is **persisted in settings YAML**, into **`personal_ebird_explorer/streamlit_settings_config.py`** (reuse the same constants for `Field(...)` defaults and allowlists). Streamlit-only HTML helpers (e.g. rankings layout) should import from **`defaults.py`** instead of inlining magic numbers. Extend **`tests/explorer/test_streamlit_defaults.py`** when the persisted schema or default payload changes so the builder and model stay aligned.
+- **Defaults live in one module** — Put new or changed **user-visible defaults** (limits, colours, labels, session seeds, export filenames, etc.) in **`explorer/app/streamlit/defaults.py`**, then wire them into **`explorer/app/streamlit/app.py`** and, if the value is **persisted in settings YAML**, into **`personal_ebird_explorer/streamlit_settings_config.py`** (reuse the same constants for `Field(...)` defaults and allowlists). Streamlit-only HTML helpers (e.g. rankings layout) should import from **`defaults.py`** instead of inlining magic numbers. Extend **`tests/explorer/test_streamlit_defaults.py`** when the persisted schema or default payload changes so the builder and model stay aligned.
 
 ### Prefer readability over cleverness
 
@@ -129,7 +129,7 @@ The UI layer should stay **thin**. All core logic should live in Python modules.
 
 **Practical guidance for AI and contributors:**
 
-- `streamlit_app/app.py` is where Streamlit UI work should land; reuse `personal_ebird_explorer` modules.
+- `explorer/app/streamlit/app.py` is where Streamlit UI work should land; reuse `personal_ebird_explorer` modules.
 - When working on **any** area of the explorer, **bias toward** patterns that make a future Streamlit app easier:
   - Put **new or refactored logic** in `personal_ebird_explorer/` (or other testable modules) with **explicit inputs and return values**, not buried only in UI code.
   - Be mindful of **state boundaries** (loaded data vs filters vs display options vs caches); a future app will likely use something like session-scoped state.

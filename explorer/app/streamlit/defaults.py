@@ -59,7 +59,7 @@ from personal_ebird_explorer.settings_schema_defaults import (  # noqa: F401
 DEFAULT_EBIRD_DATA_FILENAME = "MyEBirdData.csv"
 # Env overrides (see ``app.py``): ``STREAMLIT_EBIRD_DATA_FILE`` (CSV basename),
 # ``STREAMLIT_EBIRD_TAXONOMY_LOCALE``, ``EBIRD_TAXONOMY_LOCALE``. Data folder: ``scripts/config_*.py``
-# or process working directory — not an env var (see ``explorer_paths`` / ``streamlit_app/README.md``).
+# or process working directory — not an env var (see ``explorer_paths`` / ``explorer/app/streamlit/README.md``).
 
 MAP_EXPORT_HTML_FILENAME = "ebird_map.html"
 

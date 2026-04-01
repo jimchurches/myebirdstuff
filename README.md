@@ -32,12 +32,12 @@ Various tools and utilities I've written to help me with eBird.
 This repo currently has three related pieces that work together:
 
 - **eBird Data Visualisation Tool (personal eBird explorer)**  
-  Primary UI: the **Streamlit app** (`streamlit_app/`) for local runs + Streamlit Community Cloud ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)).  
+  Primary UI: the **Streamlit app** (`explorer/app/streamlit/`) for local runs + Streamlit Community Cloud ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)).  
   Documentation:  
   - Overview & quick-start: [`docs/explorer/README.md`](docs/explorer/README.md)  
   - Getting started (Cloud + local): [`docs/explorer/getting-started.md`](docs/explorer/getting-started.md)  
-  - Streamlit app: [`streamlit_app/README.md`](streamlit_app/README.md)  
-  - Installation guide: [`streamlit_app/README.md#run-locally`](streamlit_app/README.md#run-locally) and [`streamlit_app/README.md#streamlit-community-cloud`](streamlit_app/README.md#streamlit-community-cloud)  
+  - Streamlit app: [`explorer/app/streamlit/README.md`](explorer/app/streamlit/README.md)  
+  - Installation guide: [`explorer/app/streamlit/README.md#run-locally`](explorer/app/streamlit/README.md#run-locally) and [`explorer/app/streamlit/README.md#streamlit-community-cloud`](explorer/app/streamlit/README.md#streamlit-community-cloud)  
   - Developer guide: [`docs/development.md`](docs/development.md)  
   - For AI-assisted development: [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md)  
   - Future ideas: [`docs/explorer/future-ideas.md`](docs/explorer/future-ideas.md)  
@@ -57,14 +57,14 @@ This repo currently has three related pieces that work together:
 
 ## eBird Data Visualisation Tool
 
-This repository includes a Streamlit app (`streamlit_app/app.py`) that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
+This repository includes a Streamlit app (`explorer/app/streamlit/app.py`) that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
 
 Legacy note: the explorer was originally developed as a Jupyter Notebook based solution and outgrew the original intent. The notebook code is still available at tag `<TBA>` or in the legacy branch `notebook-legacy`. It remains there largely as a curiosity, but should still be in working order (and may be useful to someone using Jupyter in a parallel universe).
 
 **Times in the explorer:** If you see **23:59** next to a visit, it may be a **synthetic placeholder** when your export has no real time for that row (not necessarily midnight birding). See [Missing checklist times (synthetic 23:59)](docs/explorer/README.md#missing-checklist-times-synthetic-2359) in the explorer README.
 
 > 📘 **User guide and run options:** [docs/explorer/README.md](docs/explorer/README.md)  
-> 📗 **Install / run:** [streamlit_app/README.md](streamlit_app/README.md)  
+> 📗 **Install / run:** [explorer/app/streamlit/README.md](explorer/app/streamlit/README.md)  
 > 📙 **Developers:** [docs/development.md](docs/development.md) · **AI-assisted work:** [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)
 
 

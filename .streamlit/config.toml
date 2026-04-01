@@ -1,9 +1,9 @@
-# Shared defaults for `streamlit run streamlit_app/app.py` from repo root.
+# Shared defaults for `streamlit run explorer/app/streamlit/app.py` from repo root.
 # Streamlit Cloud reads app settings from the dashboard; this file is optional locally.
 #
 # Theme: approximate eBird-style greens (forest / teal used on ebird.org and My eBird).
 # Not official brand tokens — only Streamlit [theme] keys, no custom CSS.
-# Hoisted ``st.spinner`` tweaks in ``streamlit_app/app.py`` (_THEME_*) mirror these hex values.
+# Hoisted ``st.spinner`` tweaks in ``explorer/app/streamlit/app.py`` (_THEME_*) mirror these hex values.
 
 [theme]
 base = "light"
