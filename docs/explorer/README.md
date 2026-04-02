@@ -68,4 +68,12 @@ To keep sorting consistent, the explorer assigns these checklists a synthetic ti
 
 This has minimal impact on most cases, but may occasionally affect time-based ordering within a day.
 
+### More lifers reported than eBird
+
+eBird excludes some species (for example, escaped or introduced birds) from its official lifer totals.
+
+These exclusions are not flagged in the personal data export, so the explorer cannot apply the same rules.
+
+As a result, lifer counts and occationaly other counts in the explorer may be slightly higher than those shown in eBird.
+
 ---
