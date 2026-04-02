@@ -7,7 +7,7 @@ Various tools and utilities I've written to help me with eBird.
 - [myebirdstuff](#myebirdstuff)
   - [Table of Contents](#table-of-contents)
   - [Projects in this repo](#projects-in-this-repo)
-  - [eBird Data Visualisation Tool](#ebird-data-visualisation-tool)
+  - [Personal eBird Explorer](#personal-ebird-explorer)
   - [Bird Data Logging with Apple Shortcut](#bird-data-logging-with-apple-shortcut)
     - [What It Does](#what-it-does)
     - [Output Format](#output-format)
@@ -31,7 +31,7 @@ Various tools and utilities I've written to help me with eBird.
 
 This repo currently has three related pieces that work together:
 
-- **eBird Data Visualisation Tool (personal eBird explorer)**  
+- **Personal eBird Explorer**  
   Primary UI: the **Streamlit app** (`explorer/app/streamlit/`) for local runs + Streamlit Community Cloud ([issue #70](https://github.com/jimchurches/myebirdstuff/issues/70)).  
   Documentation:  
   - Overview & quick-start: [`docs/explorer/README.md`](docs/explorer/README.md)  
@@ -55,7 +55,7 @@ This repo currently has three related pieces that work together:
   - `docs/shortcut/` (shortcut/macros integration and workflow)  
 
 
-## eBird Data Visualisation Tool
+## Personal eBird Explorer
 
 This repository includes a Streamlit app (`explorer/app/streamlit/app.py`) that lets you explore your personal eBird data with an interactive map. You can search for species, filter by date, mark lifers, and view detailed popups for every checklist location.
 
