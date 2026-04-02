@@ -47,9 +47,6 @@ A simple workflow for capturing bird sightings while driving or otherwise occupi
 👉 Download:  
 https://www.icloud.com/shortcuts/4ec8448e19fc4d49b937ac392e1050b2  
 
-👉 Documentation:  
-- See `docs/shortcut/` (planned)  
-
 ---
 
 ## UI.Vision Macros
@@ -63,7 +60,7 @@ Browser automation tools for working with eBird.
 ⚠️ These tools interact with the live eBird system — use responsibly.
 
 👉 Documentation:  
-- See [`docs/ui-vision/README.md`](readme.md)
+- See [`docs/ui-vision/README.md`](docs/ui-vision/README.md`)
 
 ---
 
