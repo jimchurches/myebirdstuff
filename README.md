@@ -87,5 +87,6 @@ Location:
 
 ## License
 
-MIT License  
-Copyright (c) 2026 James Churches
+This repository is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 James Churches.
