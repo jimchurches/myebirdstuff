@@ -1,44 +1,71 @@
 # Getting started — Personal eBird Explorer
 
-The Personal eBird Explorer is a **Streamlit app** for exploring your personal eBird export (CSV) on an interactive map with summary tabs.
+#### Documentation
+
+- *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
+- *Install*: [`docs/explorer/install.md`](install.md)
+- *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
+
+## Getting Started
+
+The Personal eBird Explorer is a *Streamlit app* for exploring your personal eBird export (CSV) with interactive maps and a rich summarised table views of various statistics.
+
+---
 
 ## Try it first (recommended): Streamlit Community Cloud
 
 If you just want to try it without installing anything locally, use the hosted app:
 
-- **Streamlit Community Cloud app**: `<TBA>`
+- **Streamlit Community Cloud app**: https://personal-ebird-explorer.streamlit.app/
 
-**Trade-offs vs local run**
+### Trade-offs vs local run
 
-- **Pros**: no local install, easy “try before installing”
-- **Cons**: slower than local for large exports; no offline use; you’ll need to re-upload the CSV when the session resets
+**Pros**
+- No local install required  
+- Quick way to explore the app  
 
-## Run locally
+**Cons**
+- Slower for large datasets  
+- You must upload your CSV each session (no saved state)
 
-You need **Python** installed. We assume you already have it (install via your OS app store / package manager / python.org — any of those are fine).
+---
 
-From the repo root, follow the Streamlit app README:
+### Run locally
 
-- [`explorer/app/streamlit/README.md`](../../explorer/app/streamlit/README.md)
+For local installation and setup, follow:
+
+👉 [`docs/explorer/install.md`](install.md)
+
+Running locally provides:
+
+- Automatic dataset loading (via config file)  
+- Saved application state between runs  
+- No need to re-upload your CSV each session  
+- Better performance for large datasets (depending on local hardware)
+
+---
 
 ## Download / update the app code
 
-- **Option A (simplest)**: download a ZIP from GitHub and unzip it somewhere
-- **Option B (developer)**: clone with Git if you already use Git
+### Option A — Download ZIP (simplest)
 
-If you downloaded a ZIP and want to update later, the simplest approach is to download a new ZIP and replace your old folder (keeping your `config/config_secret.yaml`).
+- Download a `.zip` from GitHub
+- Extract it to a folder of your choice
 
-## Data loading and config files
+👉 [`docs/explorer/install.md`](install.md)
 
-The app loads your CSV in this order:
+### Option B — Git (developers)
 
-1. **Upload in the app** (best for Streamlit Community Cloud)
-2. **Disk discovery** (local runs): it searches for the CSV in:
-   - `config/config_secret.yaml` or `config/config.yaml` (`data_folder`)
-   - the **working directory** where you ran `streamlit run ...`
+- Clone the repository
+- Use your normal Git workflow
 
-### Why `config_secret.yaml`?
+If using ZIP downloads, update by replacing the folder with a newer version  
+(keep your `config/config.yaml` or `config/config_secret.yaml`).
 
-If you use Git, `config/config_secret.yaml` is the place for **your local paths and keys** because it is **gitignored**
-(so you don’t accidentally commit private filesystem paths or API keys).
+---
+
+## Summary
+
+- Streamlit Cloud → quick demo, no install, casual and occational use  
+- Local install → faster, persistent, better experience  (depending on local hardware)
 

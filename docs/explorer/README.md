@@ -1,52 +1,70 @@
 # Personal eBird Explorer
 
-Primary UI: **Streamlit** (map + tabs).
+#### Documentation
 
-Start here:
-
-- **Getting started**: [`docs/explorer/getting-started.md`](getting-started.md)
-- **Streamlit app README** (details): [`explorer/app/streamlit/README.md`](../../explorer/app/streamlit/README.md)
+- *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
+- *Install*: [`docs/explorer/install.md`](install.md)
+- *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
 
 ## What it does
 
-- **Map** — All checklist locations (green pins); optional species filter (red pins, lifer/last-seen highlights).
-- **Search** — Type-ahead species search; “show only selected species” to hide other locations.
-- **Tabs** — Map, Checklist Statistics, **Rankings & lists**, Yearly Summary, **Country**, Maintenance, **Settings** (duplicates / close locations, incomplete checklists, sex notation in comments; table limits and Country tab sort order).
-- **Country** — Per-country yearly-style stats (sparse year columns). When the export resolves to a **2-letter country code** (from `Country` or `State/Province`), **Lifers (country)** has an **⧉** link to that region’s eBird life list (e.g. [Australia](https://ebird.org/lifelist?r=AU)) and **Total checklists** has **⧉** to [my checklists for that country](https://ebird.org/mychecklists/FR) (example: France). Unknown or non-ISO keys have no links.
-- **Export** — “Export Map HTML” saves the current map view.
-- **Date filter** — Optional date range.
-- **Species links** — Species names in the map banner, rankings tables, and maintenance tab link to eBird species and lifelist pages. Names are resolved using the eBird taxonomy API (fetched once at startup; no API key). Set `STREAMLIT_EBIRD_TAXONOMY_LOCALE` / `EBIRD_TAXONOMY_LOCALE` for the first-visit default, or change **Settings → Taxonomy**.
+Personal eBird Explorer helps you explore your own eBird data.
 
-## Missing checklist times (synthetic 23:59)
+While eBird excels at surfacing community data, tools for analysing your personal dataset are limited. This application focuses on filling that gap.
 
-Some checklist rows in an eBird export have **no time** (blank time, or eBird uses `00:00` when no time was recorded). That can happen for example when:
+### Maps
 
-- observations were entered via **Merlin** rather than the eBird app  
-- a checklist was **generalised** to protect a sensitive location  
-- occasional **data entry quirks** or older exports with incomplete times  
+  * All checklist locations
+  * Species location map
+  * Type-ahead species search
+  * Lifer location map
+  * Rich linking back to eBird
+  * Optional date filters
+  * Optional sub-species views
+  * Ability to export maps to HTML
 
-The explorer builds a single **`datetime`** column for sorting visits (map popups, banners, etc.). For rows with **no meaningful time**, the loader assigns a **synthetic time of 23:59** on that date so that:
+### Data tables
 
-- sorting stays stable and predictable  
-- those rows sort **after** other observations on the **same calendar day**
+  * Checklist statistics
+  * Top 200 listings of various data (configurable)
+  * Location summaries
+  * Species summaries
+  * Country summaries
+  * Yearly summaries
+  * Bird family/group summaires
+  * Rich linking back to eBird
 
-**Important:** **23:59** in the app is often a **placeholder**, not proof that you birded at one minute to midnight. Treat it as “time unknown for this row.”
 
-Implementation detail: see `add_datetime_column()` in `explorer/core/data_loader.py`. A fuller testing narrative (fixture counts) is in [`tests/fixtures/ebird_integration_fixture_notes.md`](../../tests/fixtures/ebird_integration_fixture_notes.md).
+>See the applicaton to fully appreaciate the different information summarised from your personal eBird data.
 
-**You need:** Your eBird data export (CSV). Download from [eBird.org](https://ebird.org) → My eBird → Manage My Data → Download My Data.
+### Maintenace Data
 
-## Screenshot
+Some simple detections that may help in keeping your eBird records and locations
+in good shape.
 
-<!-- Placeholder: add a screenshot of the map tab (e.g. map with search and pins) when available. -->
+  * Duplicate location detection
+  * Close locations detection (configurable)
+  * Age & sex notation detection
+  * Incomplete checklist detection
 
-*Screenshot placeholder — add an image of the map tab when available.*
+>See the applicaton the `Mainteance` tab more details.
+
+### Application Settings and State
+
+Map and data table behaviour can be customised within the application.
+
+For local use, settings can be saved between sessions. With a configuration file configured, your data file path is also retained, so no upload is required at startup.
+
+>See the `Settings` tab for details.
+
+## Notes
+
+### Missing checklist times (synthetic 23:59)
+
+Some checklists in your eBird export do not include a recorded time (for example, entries from Merlin or generalised locations).
+
+To keep sorting consistent, the explorer assigns these checklists a synthetic time of *23:59*.
+
+This has minimal impact on most cases, but may occasionally affect time-based ordering within a day.
 
 ---
-
-## Install / run
-
-See [`explorer/app/streamlit/README.md`](../../explorer/app/streamlit/README.md) for:
-
-- **Run locally**: venv + `pip install -r requirements.txt` + `streamlit run explorer/app/streamlit/app.py`
-- **Streamlit Community Cloud**: set the main file path and the requirements file

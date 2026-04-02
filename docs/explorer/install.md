@@ -1,5 +1,13 @@
 # Installing the Personal eBird Explorer (Local)
 
+#### Documentation
+
+- *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
+- *Install*: [`docs/explorer/install.md`](install.md)
+- *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
+
+## Install
+
 This guide covers a **local installation** of the Streamlit app on:
 
 - macOS  
@@ -7,9 +15,7 @@ This guide covers a **local installation** of the Streamlit app on:
 
 It focuses only on getting the app running locally.
 
----
-
-## Overview
+### Overview
 
 You will:
 
@@ -22,7 +28,7 @@ You will:
 
 ---
 
-## 1. Install Python
+### 1. Install Python
 
 Python installation is outside the scope of this project.
 
@@ -31,21 +37,21 @@ Follow the official documentation:
 - macOS: https://docs.python.org/3/using/mac.html#using-python-for-macos-from-python-org  
 - Windows: https://docs.python.org/3/using/windows.html#python-install-manager  
 
-### Notes
+#### Notes
 
 - Install a recent Python 3 version (3.11+ recommended)
 - More advanced users may prefer tools like Homebrew (macOS) or package managers on Windows
 
 ---
 
-## 2. (Optional but Recommended) Virtual Environment
+### 2. (Optional but Recommended) Virtual Environment
 
 A virtual environment keeps project dependencies isolated from your system Python.
 
 Official documentation:
 https://docs.python.org/3/library/venv.html
 
-### Create and activate
+#### Create and activate
 
 **macOS / Linux:**
 ```bash
@@ -61,23 +67,23 @@ python -m venv .venv
 
 ---
 
-## 3. Download the Application
+### 3. Download the Application
 
 You can obtain the code from GitHub:
 
-### Option A — Download a release (recommended)
+#### Option A — Download a release (recommended)
 - Download the `.zip` from the Releases page
 
-### Option B — Download from a branch
+#### Option B — Download from a branch
 - Use the "Code → Download ZIP" option
 
-### Option C — Git (developers)
+#### Option C — Git (developers)
 - Clone the repository
 - Assumes you already understand Git workflows
 
 ---
 
-## 4. Extract the Files
+### 4. Extract the Files
 
 Unzip the downloaded archive to any folder.
 
@@ -85,9 +91,10 @@ The application does **not** need to be installed system-wide.
 
 ---
 
-## 5. Install Python Requirements
+### 5. Install Python Requirements
 
-From the project root directory:
+Using your local command line console, `terminal` or `powershell`, install requirements from
+the root of the new application directory:
 
 ```bash
 pip install -r requirements.txt
@@ -97,7 +104,7 @@ This installs all required dependencies for the Streamlit app.
 
 ---
 
-## 6. Configure Your Data (Optional but Recommended)
+### 6. Configure Your Data (Optional but Recommended)
 
 The app can run without configuration, but you will need to upload your eBird CSV each time.
 
@@ -105,7 +112,7 @@ To enable automatic loading and saved settings, create a config file.
 
 ---
 
-### Option A — Standard users (recommended)
+#### Option A — Standard users (recommended)
 
 1. Copy:
 ```
@@ -128,7 +135,7 @@ data_folder: /path/to/your/ebird/data
 
 ---
 
-### Option B — Git users / developers
+#### Option B — Git users / developers
 
 Use:
 ```
@@ -143,9 +150,9 @@ Note:
 
 ---
 
-## 7. Run the Application
+### 7. Run the Application
 
-From the project root:
+From the downloaded application root:
 
 ```bash
 streamlit run explorer/app/streamlit/app.py
@@ -158,7 +165,7 @@ This will:
 
 ---
 
-## Notes
+### Notes
 
 - If no config file is present:
   - you must upload your eBird CSV manually each time
@@ -170,7 +177,3 @@ This will:
 
 ---
 
-## Next Steps
-
-- See the main README for usage guidance
-- See Streamlit Cloud documentation (separate doc) for hosted deployment
