@@ -2,9 +2,10 @@
 
 #### Documentation
 
+- *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
 - *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
 - *Install*: [`docs/explorer/install.md`](install.md)
-- *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
+- *Feedback*:[`docs/explorer/install.md`](feedback.md)
 
 ## Getting Started
 
