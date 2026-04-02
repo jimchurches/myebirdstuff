@@ -13,6 +13,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Ensure gitignored config files are not tracked
+        run: |
+          set -euo pipefail
+          # Must stay local only (see .gitignore); accidental -f add would bypass ignore rules.
+          tracked=$(git ls-files -- config/config.yaml config/config_secret.yaml || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::Local config files must not be tracked by git. Remove from the index and use config_template.yaml / local files only."
+            echo "$tracked"
+            exit 1
+          fi
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
