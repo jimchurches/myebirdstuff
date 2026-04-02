@@ -1,129 +1,284 @@
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-
-doc = SimpleDocTemplate("/mnt/data/AI_Context_Personal_eBird_Explorer.pdf")
-styles = getSampleStyleSheet()
-
-content = []
-
-text = """
-AI Context for Personal eBird Explorer
+# AI Context for Personal eBird Explorer
 
 This document provides context and guardrails for AI coding assistants (Cursor, Copilot, ChatGPT) working in this repository.
 
-Read this before suggesting architectural or structural changes.
+**Read this before suggesting architectural or structural changes.**
 
-Project Purpose
+---
+
+## Project Purpose
 
 Personal eBird Explorer visualises a user's personal eBird data.
 
 It supports exploration of:
+
 - checklist locations (map-based)
 - species-specific observations
 - visit statistics
 - first/last seen data
 
-Primary interface: Streamlit app + Folium map
+Primary interface: **Streamlit app + Folium map**
 
-Core Principles (Follow These First)
+---
 
-1. Prefer small changes
+## Repository Scope (IMPORTANT)
+
+This repository contains more than just the Streamlit app.
+
+### Streamlit App (Primary UI)
+- Main application for exploring eBird data
+- Located under `explorer/`
+
+### GPS Location Script
+- Standalone Python script used to convert GPS coordinates into human-readable location names
+- Uses Google Maps API
+- Includes:
+  - internal test function
+  - separate test file
+- This script is also used by automation workflows
+
+### UI.Vision Macros
+- Browser automation macros for eBird workflows
+- Used for:
+  - creating/editing checklists
+  - applying formatted location names
+- These depend on the GPS script for location naming
+
+---
+
+## Core Principles (Follow These First)
+
+### 1. Prefer small changes
+
 - Make incremental improvements
 - Avoid large rewrites unless explicitly requested
 
-2. Keep logic out of the UI
+---
+
+### 2. Keep logic out of the UI
+
 - Streamlit = UI layer only
 - Core logic belongs in modules
 - Do not embed complex logic in UI code
 
-3. Respect the data model
+---
+
+### 3. Respect the data model
+
 - CSV is loaded once
-- Data is static during runtime
+- Data is **static during runtime**
 - Do not mutate the main dataframe
 
-4. Do not break caching
-- Preserve cache correctness when modifying grouping, filtering, or popups
+Caching relies on this assumption.
 
-5. Prefer readability over cleverness
+---
+
+### 4. Do not break caching
+
+Caching is simple and in-memory.
+
+Be careful when modifying:
+- grouping logic
+- filtering
+- popup generation
+
+Preserve cache correctness.
+
+---
+
+### 5. Prefer readability over cleverness
+
 - Code should be easy to understand later
+- Avoid unnecessary abstraction or optimisation
 
-6. Avoid unnecessary dependencies
-- Do not introduce new frameworks or heavy libraries
+---
 
-7. Git discipline (IMPORTANT)
+### 6. Avoid unnecessary dependencies
+
+Do not introduce:
+- new frameworks
+- databases
+- heavy UI libraries
+
+The project is intentionally lightweight.
+
+---
+
+### 7. Git discipline (IMPORTANT)
+
 - Do not commit or push code without explicit user direction
 - Always write clear commit messages
 - Reference GitHub issues in commits when applicable
 
-Architecture Overview
+---
 
-CSV (eBird export) -> data_loader -> canonical dataframe -> core logic -> map rendering -> Streamlit UI
+## Architecture Overview (Streamlit App)
 
-Key rule: UI stays thin, logic stays in modules.
+```
+CSV (eBird export)
+    ↓
+data_loader.py
+    ↓
+canonical dataframe
+    ↓
+core logic modules
+    ↓
+map rendering
+    ↓
+Streamlit UI
+```
 
-Streamlit Guidelines
+**Key rule:** UI stays thin, logic stays in modules.
 
-- Use native components first
-- Use shared HTML formatters when needed
-- Do not duplicate HTML in UI code
-- Keep eBird links intact
+---
 
-Defaults
+## Streamlit Guidelines
 
-All defaults must live in defaults.py. Do not hardcode values in UI files.
+Streamlit is the **primary UI**.
 
-Data & External API
+### Use native components first
 
-- Dataset is static
-- Taxonomy fetched once
-- App must not fail if taxonomy fails
+- `st.dataframe`, `st.tabs`, `st.columns`, etc.
+- simple metrics and key/value views
 
-Performance Approach
+---
+
+### Use shared HTML formatters when needed
+
+Use formatter modules when tables require:
+
+- embedded links (species, locations)
+- mixed styling
+- richer layout than `st.dataframe`
+
+Render using:
+
+- `st.markdown(..., unsafe_allow_html=True)`
+- or `st.html`
+
+Do not duplicate HTML in UI code — use shared formatters.
+
+---
+
+### Keep links
+
+- Do not remove eBird links just to fit `st.dataframe`
+- Prefer formatter-based tables when needed
+
+---
+
+### Defaults
+
+All user-visible defaults must live in:
+
+```
+explorer/app/streamlit/defaults.py
+```
+
+Do not hardcode values in UI files.
+
+---
+
+## Data & External API
+
+- Dataset is static during runtime
+- eBird taxonomy is fetched once at startup
+- No API key required
+
+If taxonomy fails:
+
+- continue without links
+- do not break the app
+
+---
+
+## Performance Approach
 
 - Use simple in-memory caching
-- Avoid recomputing heavy operations
+- Avoid recomputing:
+  - groupbys
+  - popup HTML
+  - summaries
 
-Testing
+Optimise incrementally — do not redesign architecture.
 
-- Place logic in testable modules
-- Avoid logic in UI
-- Run pytest tests/
+---
 
-Safe Changes
+## Testing
 
-- Documentation
-- Comments
-- Tests
-- Minor improvements
+### Streamlit / Core Logic
+- data loading and parsing
+- filtering and normalisation
+- stats and rankings
+- taxonomy lookup
 
-Use Caution With
+### GPS Script
+- has its own internal test function
+- also includes standalone test file
 
-- Data loading pipeline
-- Caching model
-- Map rendering structure
+Guidelines:
 
-When Unsure
+- new logic → put in testable modules
+- avoid logic in UI
 
-- Describe approach before implementing
+Run:
 
-Development Direction
+```
+pytest tests/ -v
+```
 
-- Streamlit remains primary UI
-- Keep logic modular
+---
 
-Summary
+## Safe Changes
+
+AI may safely:
+
+- improve documentation
+- improve comments
+- add tests
+- make small performance improvements
+- add minor features
+
+---
+
+## Use Caution With
+
+Do not change without discussion:
+
+- data loading pipeline
+- caching model
+- map rendering structure
+- GPS script behaviour (used by automation)
+- UI.Vision macros (external workflow dependencies)
+
+---
+
+## When Unsure
+
+If a change might affect:
+
+- architecture
+- caching
+- data flow
+- automation workflows
+
+→ describe the approach before implementing
+
+---
+
+## Development Direction
+
+- Streamlit remains the primary UI
+- Core logic should remain modular and testable
+- Supporting tools (GPS + macros) must remain compatible
+
+---
+
+## Summary (Mental Model)
 
 - Data is static
 - UI is thin
-- Logic is modular
-- Caching is simple
-- Clarity over cleverness
-"""
-
-for line in text.split("\n"):
-    content.append(Paragraph(line, styles["Normal"]))
-    content.append(Spacer(1, 6))
-
-doc.build(content)
-
-"/mnt/data/AI_Context_Personal_eBird_Explorer.pdf"
+- Logic lives in modules
+- Caching must remain simple
+- Supporting scripts are part of the system
+- Prefer clarity over cleverness
