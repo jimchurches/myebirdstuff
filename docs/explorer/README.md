@@ -5,7 +5,7 @@
 - *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
 - *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
 - *Install*: [`docs/explorer/install.md`](install.md)
-- *Feedback*:[`docs/explorer/install.md`](feedback.md)
+- *Feedback*: [`docs/explorer/feedback.md`](feedback.md)
 
 ## What it does
 
@@ -32,13 +32,13 @@ While eBird excels at surfacing community data, tools for analysing your persona
   * Species summaries
   * Country summaries
   * Yearly summaries
-  * Bird family/group summaires
+  * Bird family/group summaries
   * Rich linking back to eBird
 
 
->See the applicaton to fully appreaciate the different information summarised from your personal eBird data.
+>See the application to fully appreciate the different information summarised from your personal eBird data.
 
-### Maintenace Data
+### Maintenance data
 
 Some simple detections that may help in keeping your eBird records and locations
 in good shape.
@@ -48,7 +48,7 @@ in good shape.
   * Age & sex notation detection
   * Incomplete checklist detection
 
->See the applicaton the `Mainteance` tab more details.
+>See the **Maintenance** tab for more details.
 
 ### Application Settings and State
 

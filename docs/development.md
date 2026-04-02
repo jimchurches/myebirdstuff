@@ -2,7 +2,9 @@
 
 Guidance for developers and contributors.
 
-For AI-assisted coding, see **AI_CONTEXT.md** and follow those rules first.
+For AI-assisted coding, see **[AI_CONTEXT.md](AI_CONTEXT.md)** and follow those rules first.
+
+**Detailed Streamlit UI notes** (guidelines, run behaviour, HTML/table patterns): [explorer/app/streamlit/README.md](../explorer/app/streamlit/README.md)
 
 ---
 
@@ -77,7 +79,7 @@ Streamlit UI
 ## GPS Script
 
 - Converts GPS → readable names
-- Uses Google Maps API
+- Uses Google **Geocoding** API (reverse geocode)
 - Has:
   - internal test function
   - standalone test file
@@ -128,6 +130,8 @@ Streamlit UI
 ---
 
 ## Streamlit Guidelines
+
+The full write-up lives in **[explorer/app/streamlit/README.md](../explorer/app/streamlit/README.md)** (UI guidelines, local run, defaults, and formatter rules). The bullets below stay high level.
 
 - Use native components where possible
 - Use HTML formatters for rich tables

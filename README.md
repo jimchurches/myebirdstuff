@@ -73,17 +73,14 @@ Python helper script used by the UI.Vision macros.
 - Can be used independently for geolocation workflows  
 - Maybe a useful example of Google Maps API usage for other developers
 
-Location:  
-`scripts/eBirdChecklistNameFromGPS.py`
+**Location:** `scripts/eBirdChecklistNameFromGPS.py`  
+**Dependencies:** [`requirements-gps-script.txt`](requirements-gps-script.txt) — `pip install -r requirements-gps-script.txt`. The script docstring covers API key config (`config/config_secret.yaml`), `--testfile` offline tests, and CLI usage.
 
 ---
 
 ## Notes
 
-- These tools are designed for personal workflows and may require adaptation  
-- The repository is evolving; documentation for some components is still being expanded  
-
----
+- These tools are designed for personal workflows and may require adaptation.
 
 ## License
 

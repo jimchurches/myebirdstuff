@@ -5,7 +5,7 @@
 - *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
 - *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
 - *Install*: [`docs/explorer/install.md`](install.md)
-- *Feedback*:[`docs/explorer/install.md`](feedback.md)
+- *Feedback*: [`docs/explorer/feedback.md`](feedback.md)
 
 ## Install
 
@@ -40,7 +40,7 @@ Follow the official documentation:
 
 #### Notes
 
-- Install a recent Python 3 version (3.11+ recommended)
+- Install **Python 3.12** if possible (matches [CI](../../.github/workflows/tests.yml)); **3.11+** is usually fine
 - More advanced users may prefer tools like Homebrew (macOS) or package managers on Windows
 
 ---

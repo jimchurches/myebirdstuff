@@ -5,11 +5,11 @@
 - *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
 - *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
 - *Install*: [`docs/explorer/install.md`](install.md)
-- *Feedback*:[`docs/explorer/install.md`](feedback.md)
+- *Feedback*: [`docs/explorer/feedback.md`](feedback.md)
 
 ## Getting Started
 
-The Personal eBird Explorer is a *Streamlit app* for exploring your personal eBird export (CSV) with interactive maps and a rich summarised table views of various statistics.
+The Personal eBird Explorer is a *Streamlit app* for exploring your personal eBird export (CSV) with interactive maps and rich summarised views of various statistics.
 
 ---
 
@@ -67,6 +67,6 @@ If using ZIP downloads, update by replacing the folder with a newer version
 
 ## Summary
 
-- Streamlit Cloud → quick demo, no install, casual and occational use  
+- Streamlit Cloud → quick demo, no install, casual and occasional use  
 - Local install → faster, persistent, better experience  (depending on local hardware)
 

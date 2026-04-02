@@ -28,7 +28,9 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
 
 - **Python:** Use a version consistent with CI (currently **3.12**; see [.github/workflows/tests.yml](.github/workflows/tests.yml)).
 - **Dependencies:**  
-  `pip install -r requirements.txt`
+  `pip install -r requirements.txt`  
+  For the **GPS script** (`scripts/eBirdChecklistNameFromGPS.py`): also `pip install -r requirements-gps-script.txt`. Offline tests (no API key):  
+  `python scripts/eBirdChecklistNameFromGPS.py --testfile tests/fixtures/gps_checklistName_testing.json` (see the script docstring).
 - **Tests:**  
   `pytest tests/ -v`  
   Optional coverage (matches CI’s package scope):  
@@ -40,7 +42,7 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
 ## Project conventions
 
 - **Design and modules** — See [docs/development.md](docs/development.md) (architecture, separation of UI vs core logic, Streamlit notes).
-- **AI-assisted work** — If you use AI tools, follow **[AI_CONTEXT.md](AI_CONTEXT.md)** (AI Coding Rules and related sections).
+- **AI-assisted work** — If you use AI tools, follow **[docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)** (AI Coding Rules and related sections).
 - **Secrets** — Do not commit API keys, tokens, or personal paths. Use local config patterns described in the explorer docs (e.g. `config/config_template.yaml` and gitignored secret files). When in doubt, ask before adding something that could leak private data.
 
 ---

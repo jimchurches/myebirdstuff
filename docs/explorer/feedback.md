@@ -5,7 +5,7 @@
 - *Personal eBird Explorer*: [`docs/explorer/README.md`](README.md)
 - *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
 - *Install*: [`docs/explorer/install.md`](install.md)
-- *Feedback*:[`docs/explorer/install.md`](feedback.md)
+- *Feedback*: [`docs/explorer/feedback.md`](feedback.md)
 
 ---
 
