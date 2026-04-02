@@ -60,7 +60,7 @@ Browser automation tools for working with eBird.
 ⚠️ These tools interact with the live eBird system — use responsibly.
 
 👉 Documentation:  
-- See [`docs/ui-vision/README.md`](docs/ui-vision/README.md`)
+- See [`docs/ui-vision/README.md`](docs/ui-vision/README.md)
 
 ---
 
