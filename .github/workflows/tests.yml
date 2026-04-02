@@ -21,14 +21,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-gps-script.txt
 
       - name: Audit Python dependencies (pip-audit)
         run: |
           python -m pip install --upgrade pip-audit
           # Temporary allowlist: CVE-2026-4539 has no fix version yet (pip-audit reports none).
           # Keep failing on any other vulnerability.
-          pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539 --cache-dir .pip-audit-cache
+          pip-audit -r requirements.txt -r requirements-gps-script.txt --ignore-vuln CVE-2026-4539 --cache-dir .pip-audit-cache
 
       - name: Run tests with coverage
         run: |
@@ -36,3 +36,6 @@ jobs:
             --cov=explorer \
             --cov-report=term-missing \
             --cov-fail-under=65
+
+      - name: Run GPS script offline tests
+        run: python scripts/eBirdChecklistNameFromGPS.py --testfile tests/fixtures/gps_checklistName_testing.json

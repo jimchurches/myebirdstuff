@@ -936,7 +936,11 @@ def main() -> None:
 
     args, extras = parser.parse_known_args()
 
-    api_key = load_api_key()
+    # Offline --testfile uses embedded geocode_json only; no API key or config required.
+    if args.testfile and not args.live:
+        api_key = ""
+    else:
+        api_key = load_api_key()
 
     if args.testfile:
         raise SystemExit(
