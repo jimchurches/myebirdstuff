@@ -30,5 +30,9 @@ jobs:
           # Keep failing on any other vulnerability.
           pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539 --cache-dir .pip-audit-cache
 
-      - name: Run tests
-        run: pytest tests/ -v
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ -v \
+            --cov=explorer \
+            --cov-report=term-missing \
+            --cov-fail-under=65

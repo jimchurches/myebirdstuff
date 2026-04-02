@@ -13,3 +13,7 @@ config/config.yaml
 config/config_secret.yaml
 .streamlit/secrets.toml
 __pycache__/
+
+# pytest-cov / coverage.py
+.coverage
+htmlcov/
