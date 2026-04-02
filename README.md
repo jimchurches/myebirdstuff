@@ -31,9 +31,9 @@ A Streamlit application for exploring your personal eBird data.
 - Export map views  
 
 👉 Start here:  
-- Overview and usage: [`docs/explorer/README.md`](README.md)  
-- Getting started: [`docs/explorer/getting-started.md`](getting-started.md)  
-- Installation: [`docs/explorer/install.md`](install.md)  
+- Overview and usage: [`docs/explorer/README.md`](docs/explorer/README.md)  
+- Getting started: [`docs/explorer/getting-started.md`](docs/explorer/getting-started.md)  
+- Installation: [`docs/explorer/install.md`](docs/explorer/install.md)
 ---
 
 ## Apple Shortcut (Bird Logging)
