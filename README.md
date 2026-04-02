@@ -7,7 +7,7 @@ Various tools and utilities I've written to help me with eBird.
 - [myebirdstuff](#myebirdstuff)
   - [Table of Contents](#table-of-contents)
   - [Projects in this repo](#projects-in-this-repo)
-  - [eBird Data Visualisation Tool](#ebird-data-visualisation-tool)
+  - [Personal eBird Explorer](#personal-ebird-explorer)
   - [Bird Data Logging with Apple Shortcut](#bird-data-logging-with-apple-shortcut)
     - [What It Does](#what-it-does)
     - [Output Format](#output-format)
