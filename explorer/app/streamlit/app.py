@@ -58,6 +58,7 @@ sidebar for map controls plus footer links (refs #70). Settings use a keyed cont
 
 from __future__ import annotations
 
+import base64
 import os
 import sys
 
@@ -68,6 +69,7 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 from collections import OrderedDict
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -230,6 +232,30 @@ from explorer.app.streamlit.yearly_summary_streamlit_html import (  # noqa: E402
     sync_yearly_summary_session_inputs,
 )
 
+# Same asset as docs/explorer/README.md (repo-relative).
+_APP_LOGO_SVG = Path(REPO_ROOT) / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
+
+
+def _title_with_logo() -> None:
+    """App heading: title + logo in one compact row (flex), logo beside text—not full-width columns."""
+    if _APP_LOGO_SVG.is_file():
+        b64 = base64.b64encode(_APP_LOGO_SVG.read_bytes()).decode("ascii")
+        # ``st.html`` avoids extra block height from ``st.image`` + wide ``st.columns``; flex keeps
+        # the mark next to the title on large screens and wraps on narrow viewports.
+        st.html(
+            "<div style='display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;"
+            "gap:0.75rem;margin:0;padding:0 0 0.2rem 0;'>"
+            "<h1 style='margin:0;padding:0;font-size:clamp(1.35rem,3.5vw,2.25rem);"
+            "line-height:1.15;font-weight:600;'>Personal eBird Explorer</h1>"
+            f"<img src='data:image/svg+xml;base64,{b64}' alt='' width='77' "
+            "style='width:77px;max-width:min(77px,18vw);height:auto;display:block;"
+            "margin:0 0 0 77px;flex-shrink:0;'/>"
+            "</div>"
+        )
+    else:
+        st.title("Personal eBird Explorer")
+
+
 def main() -> None:
     st.set_page_config(page_title="Personal eBird Explorer (Streamlit)", layout="wide")
 
@@ -256,7 +282,7 @@ def main() -> None:
         # Keyed container: on the post-upload rerun this block is skipped entirely, so Cloud/Streamlit
         # can drop the whole landing subtree instead of leaving orphan markdown under tabs.
         with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
-            st.title("Personal eBird Explorer")
+            _title_with_logo()
             st.markdown(
                 "Your eBird data, made visible, navigable, and ready to explore"
             )
@@ -484,7 +510,7 @@ def main() -> None:
 
     inject_spinner_theme_css()
 
-    st.title("Personal eBird Explorer")
+    _title_with_logo()
     st.markdown("Your eBird data, made visible, navigable, and ready to explore")
 
     (

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/personal-ebird-explorer-logo.svg" alt="Personal eBird Explorer logo" width="96" />
+</p>
+
 # Personal eBird Explorer
 
 #### Documentation
