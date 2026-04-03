@@ -54,10 +54,6 @@ from explorer.core.checklist_stats_compute import (
     compute_checklist_stats_payload,
     protocol_display_name,
 )
-from explorer.presentation.checklist_stats_display import (
-    format_checklist_stats_bundle,
-    format_rankings_tab_html,
-)
 from explorer.presentation.maintenance_display import (
     EBIRD_LOCATION_EDIT_BASE,
     format_map_maintenance_html,
@@ -92,6 +88,14 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "build_location_popup_html": ("explorer.presentation.map_renderer", "build_location_popup_html"),
     "resolve_lifer_last_seen": ("explorer.presentation.map_renderer", "resolve_lifer_last_seen"),
     "classify_locations": ("explorer.presentation.map_renderer", "classify_locations"),
+    "format_checklist_stats_bundle": (
+        "explorer.presentation.checklist_stats_display",
+        "format_checklist_stats_bundle",
+    ),
+    "format_rankings_tab_html": (
+        "explorer.presentation.checklist_stats_display",
+        "format_rankings_tab_html",
+    ),
 }
 
 
