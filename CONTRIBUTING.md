@@ -26,7 +26,7 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
 
 ## Development setup
 
-- **Python:** Use a version consistent with CI (currently **3.12**; see [.github/workflows/tests.yml](.github/workflows/tests.yml)).
+- **Python:** Use a version consistent with CI (currently **3.12**; see [.github/workflows/tests.yml](.github/workflows/tests.yml)). Why we align with CI instead of bumping to every new Python release: [docs/development.md — Python version](docs/development.md#python-version).
 - **Dependencies:**  
   `pip install -r requirements.txt`  
   For the **GPS script** (`scripts/eBirdChecklistNameFromGPS.py`): also `pip install -r requirements-gps-script.txt`. Offline tests (no API key):  

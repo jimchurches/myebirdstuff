@@ -23,6 +23,21 @@ This repository contains:
 
 ---
 
+# Python version
+
+CI runs **Python 3.12** (see `.github/workflows/tests.yml`). Contributors should use **3.12** locally so behaviour matches automated tests.
+
+We **do not** bump the documented interpreter just to stay on the newest Python release. Reasons:
+
+- **Stack compatibility** — Scientific and UI dependencies (pandas, Streamlit, Folium, binary wheels) often trail the latest Python; upgrading adds churn and risk for limited benefit if the project already runs cleanly on 3.12.
+- **Alignment** — Local installs, CI, and docs should stay in step. Changing the version is a deliberate, coordinated update (CI workflow, install docs, and smoke-testing the app), not a silent assumption.
+
+**When upgrading** (for example to 3.13 or later) makes sense: a dependency requires it, you need a language or standard-library feature not available on 3.12, or you have time to run the full test suite and verify Streamlit on a branch before merging.
+
+Patch releases within the same minor line (for example 3.12.3 vs 3.12.7) are fine and do not require doc changes.
+
+---
+
 # Architecture Overview (Streamlit App)
 
 ```
