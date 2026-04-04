@@ -100,6 +100,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     EBIRD_DATA_SIG_KEY,
     EBIRD_LANDING_CSV_UPLOADER_KEY,
     EBIRD_LANDING_MAIN_CONTAINER_KEY,
+    EXPLORER_MAIN_TABS_STATE_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     DEFAULT_TAXONOMY_LOCALE,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
@@ -113,6 +114,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     SESSION_PREV_MAP_VIEW_KEY,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_IX_SIG_KEY,
+    SESSION_PREV_MAIN_TAB_FOR_FAMILY_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
     SESSION_SPECIES_WS_KEY,
@@ -554,7 +556,12 @@ def main() -> None:
         tab_country,
         tab_maint,
         tab_settings,
-    ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
+    ) = st.tabs(
+        NOTEBOOK_MAIN_TAB_LABELS,
+        # Active label in session_state (required for Family Lists session “last family” vs main-tab transitions).
+        key=EXPLORER_MAIN_TABS_STATE_KEY,
+        on_change="rerun",
+    )
 
     # Emoji strip: first nodes inside ``st.spinner`` so it sits under the status row (refs #74).
     with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
@@ -1085,6 +1092,11 @@ def main() -> None:
             )
 
     sidebar_footer_links()
+
+    # Compared at start of next run to detect entering Ranking & Lists from another main tab (rankings_streamlit_html).
+    st.session_state[SESSION_PREV_MAIN_TAB_FOR_FAMILY_KEY] = str(
+        st.session_state.get(EXPLORER_MAIN_TABS_STATE_KEY) or NOTEBOOK_MAIN_TAB_LABELS[0]
+    ).strip()
 
 
 if __name__ == "__main__":

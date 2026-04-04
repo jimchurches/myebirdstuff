@@ -8,7 +8,10 @@ rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matche
 :func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
 ``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). The **Family Lists** tab uses
 ``st.dataframe`` with **single-row selection** and a **bounded height** so the summary scrolls inside the grid
-(compact layout; species detail stays below). The species detail table remains HTML (``stats-tbl`` / ``rankings-tbl``).
+(compact layout). With **no family selected**, the lower panel shows **family-level coverage** metrics and an
+eBird taxonomy link; selecting a row shows species detail (HTML ``stats-tbl`` / ``rankings-tbl``). Session-only
+**last family** restores detail when you leave **Ranking & Lists** for another main tab and return (or use
+**Resume last family** after **Back to family summary** on the same tab).
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
 ``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
@@ -35,8 +38,13 @@ from explorer.core.stats import safe_count
 from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 
 from explorer.app.streamlit.app_caches import cached_full_export_checklist_stats_payload
-from explorer.app.streamlit.app_constants import RANKINGS_TAB_BUNDLE_KEY
+from explorer.app.streamlit.app_constants import (
+    EXPLORER_MAIN_TABS_STATE_KEY,
+    RANKINGS_TAB_BUNDLE_KEY,
+    SESSION_PREV_MAIN_TAB_FOR_FAMILY_KEY,
+)
 from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
+from explorer.app.streamlit.streamlit_ui_constants import NOTEBOOK_MAIN_TAB_LABELS
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 
 # Must include ``streamlit-checklist-html-ab`` — ``CHECKLIST_STATS_*`` rules are scoped to it (same as Checklist Statistics).
@@ -52,9 +60,54 @@ _GROUP_COVERAGE_ERROR_KEY = "group_coverage_error"
 _STREAMLIT_GROUP_COVERAGE_SELECTED_KEY = "streamlit_group_coverage_selected_group"
 _STREAMLIT_GROUP_COVERAGE_TABLE_KEY = "streamlit_group_coverage_summary_table"
 _STREAMLIT_GROUP_COVERAGE_FALLBACK_KEY = "streamlit_group_coverage_selected_group_fallback"
+_STREAMLIT_FAMILY_SUMMARY_BACK_BTN_KEY = "streamlit_family_summary_back_btn"
+# Session-only “last family” (not persisted across browser sessions):
+# last_* = last opened family; pin_* = user chose overview via Back (blocks auto-restore until tab change or Resume).
+_STREAMLIT_FAMILY_COVERAGE_RESUME_BTN_KEY = "streamlit_family_coverage_resume_last_btn"
+_STREAMLIT_LAST_FAMILY_COVERAGE_KEY = "streamlit_last_family_coverage"
+_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY = "streamlit_family_coverage_pin_overview"
+# One-shot: set when main tab becomes Ranking & Lists from elsewhere; consumed when Family Lists runs (fallback path).
+_STREAMLIT_FAMILY_COVERAGE_ENTERED_FROM_OTHER_MAIN_TAB_KEY = (
+    "_family_coverage_entered_rankings_from_other_main_tab"
+)
+_FAMILY_COVERAGE_RESET_NONCE_KEY = "_family_coverage_summary_reset_nonce"
+
+_EBIRD_TAXONOMY_URL = "https://science.ebird.org/en/use-ebird-data/the-ebird-taxonomy"
 
 # Summary grid height (px): scroll inside the dataframe so long family lists do not push the detail table down.
 _FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX = 280
+
+
+def _family_coverage_summary_metrics_df(summary: pd.DataFrame) -> pd.DataFrame:
+    """Two-column overview when no family row is selected (counts + percentages)."""
+    if summary.empty:
+        return pd.DataFrame({"Metric": [], "Value": []})
+    n_total = len(summary)
+    seen = summary["seen_species"].astype(int)
+    total_sp = summary["total_species"].astype(int)
+    n_with_any = int((seen > 0).sum())
+    complete = (seen >= total_sp) & (total_sp > 0)
+    n_complete = int(complete.sum())
+    pct_any = (n_with_any / n_total * 100.0) if n_total else 0.0
+    pct_complete = (n_complete / n_total * 100.0) if n_total else 0.0
+    return pd.DataFrame(
+        {
+            "Metric": [
+                "Total families",
+                "Families with ≥1 species recorded",
+                "Families fully recorded (all species in family)",
+                "% of families with ≥1 species recorded",
+                "% of families fully recorded",
+            ],
+            "Value": [
+                f"{n_total:,}",
+                f"{n_with_any:,}",
+                f"{n_complete:,}",
+                f"{pct_any:.1f}%",
+                f"{pct_complete:.1f}%",
+            ],
+        }
+    )
 
 
 def _rankings_family_coverage_inject_css() -> str:
@@ -289,6 +342,17 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
     """Render Rankings HTML from a precomputed bundle (fragment-safe)."""
     inject_streamlit_checklist_css(_rankings_family_coverage_inject_css())
 
+    # Family Lists “last family”: compare current main tab to end-of-previous-run snapshot (app.py).
+    # Entering Ranking & Lists from another main tab clears the overview pin so auto-restore may run;
+    # staying on this tab after Back keeps the pin until Resume or a new selection.
+    _rankings_main_tab_label = NOTEBOOK_MAIN_TAB_LABELS[2]
+    _default_main_tab = NOTEBOOK_MAIN_TAB_LABELS[0]
+    _now_main = str(st.session_state.get(EXPLORER_MAIN_TABS_STATE_KEY) or _default_main_tab).strip()
+    _prev_main = str(st.session_state.get(SESSION_PREV_MAIN_TAB_FOR_FAMILY_KEY) or "").strip()
+    if _now_main == _rankings_main_tab_label and _prev_main and _prev_main != _rankings_main_tab_label:
+        st.session_state[_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY] = False
+        st.session_state[_STREAMLIT_FAMILY_COVERAGE_ENTERED_FROM_OTHER_MAIN_TAB_KEY] = True
+
     # Third tab: species-group coverage (Family Lists label; refs #73).
     tab_top, tab_int, tab_group = st.tabs(["Top Lists", "Interesting Lists", "Family Lists"])
 
@@ -328,14 +392,21 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
             }
         )[["Family", "Seen species", "Total species", "% seen"]]
 
-        selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
         fam_values = set(display_summary["Family"].astype(str))
-        if not selected_group or selected_group not in fam_values:
-            selected_group = str(display_summary.iloc[0]["Family"])
-            st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+
+        # Without this, the fallback “overview” option would re-set pin on the same run we cleared it for tab return.
+        _skip_pin_for_summary_on_fallback = st.session_state.pop(
+            _STREAMLIT_FAMILY_COVERAGE_ENTERED_FROM_OTHER_MAIN_TAB_KEY, False
+        )
+
+        _reset_nonce = int(st.session_state.get(_FAMILY_COVERAGE_RESET_NONCE_KEY, 0))
+        _table_key = f"{_STREAMLIT_GROUP_COVERAGE_TABLE_KEY}_{_reset_nonce}"
 
         st.caption(
-            "Scroll inside the summary grid if needed, then **select one row** to filter the species list below."
+            "Scroll the family list above **if needed**, then **select one row** to see species for that family. "
+            "With no row selected, the panel below shows family-level coverage. "
+            "A **fully recorded** family is one where you have recorded every species in that family "
+            "for your data under the eBird taxonomy."
         )
         selection_supported = True
         try:
@@ -352,7 +423,7 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
                 },
                 on_select="rerun",
                 selection_mode="single-row",
-                key=_STREAMLIT_GROUP_COVERAGE_TABLE_KEY,
+                key=_table_key,
             )
             selected_rows: list = []
             if isinstance(event, dict):
@@ -362,6 +433,8 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
                 if 0 <= idx < len(display_summary):
                     selected_group = str(display_summary.iloc[idx]["Family"])
                     st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+                    st.session_state[_STREAMLIT_LAST_FAMILY_COVERAGE_KEY] = selected_group
+                    st.session_state[_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY] = False
         except TypeError:
             selection_supported = False
             st.dataframe(
@@ -371,25 +444,81 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
                 height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
             )
 
-        if not selected_group:
-            selected_group = str(display_summary.iloc[0]["Family"])
-            st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+        selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
+        if selected_group not in fam_values:
+            selected_group = ""
+            st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = ""
 
         if not selection_supported:
+            _summary_label = "— Family summary (overview) —"
             group_options = sorted(summary["group_name"].tolist(), key=lambda s: str(s).lower())
-            selected_group = st.selectbox(
+            opts = [_summary_label] + group_options
+            if selected_group and selected_group in group_options:
+                _pick = selected_group
+            else:
+                _pick = _summary_label
+            pick = st.selectbox(
                 "Select family",
-                options=group_options,
-                index=group_options.index(selected_group) if selected_group in group_options else 0,
+                options=opts,
+                index=opts.index(_pick) if _pick in opts else 0,
                 key=_STREAMLIT_GROUP_COVERAGE_FALLBACK_KEY,
             )
-            st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+            if pick == _summary_label:
+                selected_group = ""
+                st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = ""
+                # Pin overview when user explicitly picks summary (mirrors Back); skipped once after returning from another main tab.
+                if not _skip_pin_for_summary_on_fallback:
+                    st.session_state[_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY] = True
+            else:
+                selected_group = pick
+                st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+                st.session_state[_STREAMLIT_LAST_FAMILY_COVERAGE_KEY] = selected_group
+                st.session_state[_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY] = False
+
+        # Auto-restore last family when selection is empty, pin is off, and name still valid (e.g. after leaving Ranking & Lists).
+        if not selected_group:
+            _last_fam = str(st.session_state.get(_STREAMLIT_LAST_FAMILY_COVERAGE_KEY) or "").strip()
+            _pin = bool(st.session_state.get(_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY, False))
+            if _last_fam and not _pin and _last_fam in fam_values:
+                selected_group = _last_fam
+                st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+
+        if selected_group:
+            if st.button("Back to family summary", key=_STREAMLIT_FAMILY_SUMMARY_BACK_BTN_KEY):
+                st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = ""
+                st.session_state[_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY] = True  # suppress auto-restore until Resume or other main tab
+                st.session_state[_FAMILY_COVERAGE_RESET_NONCE_KEY] = _reset_nonce + 1
+
+        selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
+        if selected_group not in fam_values:
+            selected_group = ""
 
         st.divider()
 
         if not isinstance(detail, pd.DataFrame) or detail.empty:
             st.info("No family detail available yet.")
             return
+
+        if not selected_group:
+            overview = _family_coverage_summary_metrics_df(summary)
+            st.markdown("**Family coverage overview**")
+            # When still on Ranking & Lists after Back, pin blocks auto-restore; button is the escape hatch.
+            _resume_last = str(st.session_state.get(_STREAMLIT_LAST_FAMILY_COVERAGE_KEY) or "").strip()
+            _pin_overview = bool(st.session_state.get(_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY, False))
+            if _pin_overview and _resume_last and _resume_last in fam_values:
+                if st.button(
+                    f"Resume last family ({_resume_last})",
+                    key=_STREAMLIT_FAMILY_COVERAGE_RESUME_BTN_KEY,
+                ):
+                    st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = _resume_last
+                    st.session_state[_STREAMLIT_FAMILY_COVERAGE_PIN_OVERVIEW_KEY] = False
+                    st.rerun()
+            st.dataframe(overview, width="stretch", hide_index=True, height=260)
+            st.markdown(
+                f"**Taxonomy:** [eBird]({_EBIRD_TAXONOMY_URL}) — species and family groups follow the eBird taxonomy."
+            )
+            return
+
         selected = detail[detail["group_name"] == selected_group].copy()
         if selected.empty:
             st.info("No species found for selected family.")
