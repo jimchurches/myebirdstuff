@@ -140,6 +140,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_VIEW_LABEL_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
@@ -185,22 +186,12 @@ from explorer.app.streamlit.country_stats_streamlit_html import (  # noqa: E402
     run_country_tab_streamlit_fragment,
     sync_country_tab_session_inputs,
 )
-from explorer.app.streamlit.defaults import (  # noqa: E402
-    CHECKLIST_STATS_SPINNER_TEXT,
-    MAP_BASEMAP_LABELS,
-    MAP_BASEMAP_OPTIONS,
-    MAP_DATE_FILTER_DEFAULT,
-    MAP_EXPORT_HTML_FILENAME,
-    MAP_HEIGHT_PX_MAX,
-    MAP_HEIGHT_PX_MIN,
-    MAP_HEIGHT_PX_STEP,
-    MAP_VIEW_LABELS,
+from explorer.core.settings_schema_defaults import (  # noqa: E402
+    MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
     MAP_PIN_COLOUR_ALLOWLIST,
     MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
-    NOTEBOOK_MAIN_TAB_LABELS,
-    SPECIES_SEARCH_CAPTION,
     TABLES_HIGH_COUNT_SORT_DEFAULT,
     TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT,
     TABLES_RANKINGS_TOP_N_DEFAULT,
@@ -212,6 +203,21 @@ from explorer.app.streamlit.defaults import (  # noqa: E402
     YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
     YEARLY_RECENT_COLUMN_COUNT_MAX,
     YEARLY_RECENT_COLUMN_COUNT_MIN,
+)
+from explorer.app.streamlit.defaults import (  # noqa: E402
+    MAP_BASEMAP_LABELS,
+    MAP_BASEMAP_OPTIONS,
+    MAP_DATE_FILTER_DEFAULT,
+    MAP_HEIGHT_PX_MAX,
+    MAP_HEIGHT_PX_MIN,
+    MAP_HEIGHT_PX_STEP,
+    MAP_VIEW_LABELS,
+)
+from explorer.app.streamlit.streamlit_ui_constants import (  # noqa: E402
+    CHECKLIST_STATS_SPINNER_TEXT,
+    MAP_EXPORT_HTML_FILENAME,
+    NOTEBOOK_MAIN_TAB_LABELS,
+    SPECIES_SEARCH_CAPTION,
 )
 from explorer.app.streamlit.maintenance_streamlit_html import (  # noqa: E402
     run_maintenance_streamlit_tab_fragment,
@@ -608,6 +614,12 @@ def main() -> None:
                     "default_fill": st.session_state.streamlit_default_fill,
                     "mark_lifer": mark_lifer,
                     "mark_last_seen": mark_last_seen,
+                    "cluster_all_locations": bool(
+                        st.session_state.get(
+                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                            MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                        )
+                    ),
                     # For lifer mode we already communicate the “not date-filtered” behaviour in the
                     # side panel. Avoid repeating "all-time data" text in the banner.
                     "date_filter_status": "" if is_lifer_view else date_filter_banner,
@@ -633,6 +645,12 @@ def main() -> None:
                     st.session_state.streamlit_default_fill,
                     mark_lifer,
                     mark_last_seen,
+                    bool(
+                        st.session_state.get(
+                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                            MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                        )
+                    ),
                     bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
                 )
                 # ``build_species_overlay_map`` treats **Species** with no species picked as the same
@@ -766,8 +784,8 @@ def main() -> None:
             st.divider()
             st.subheader("Map display")
             st.caption(
-                "Popup behaviour, mark toggles, and pin colours are batched here; "
-                "click **Apply map settings** for one rerun."
+                "Popup behaviour, mark toggles, clustering for the All locations map, and pin colours "
+                "are batched here; click **Apply map settings** for one rerun."
             )
             _popup_sort_opts = ["ascending", "descending"]
             _popup_scroll_opts = ["shading", "chevron", "both"]
@@ -790,6 +808,20 @@ def main() -> None:
                 mark_last_seen_w = st.toggle(
                     "Mark last-seen",
                     value=bool(st.session_state.get(STREAMLIT_MARK_LAST_SEEN_KEY, True)),
+                )
+                cluster_all_locations_w = st.toggle(
+                    "Group nearby pins (All locations map)",
+                    value=bool(
+                        st.session_state.get(
+                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                            MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                        )
+                    ),
+                    help=(
+                        "When on, nearby checklist locations are combined into clusters at low zoom; "
+                        "zoom in or click a cluster to see individual pins. "
+                        "Species and lifer maps always show one pin per location."
+                    ),
                 )
                 popup_sort_w = st.selectbox(
                     "Popup sort order",
@@ -850,6 +882,7 @@ def main() -> None:
             if apply_map:
                 st.session_state[STREAMLIT_MARK_LIFER_KEY] = bool(mark_lifer_w)
                 st.session_state[STREAMLIT_MARK_LAST_SEEN_KEY] = bool(mark_last_seen_w)
+                st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY] = bool(cluster_all_locations_w)
                 st.session_state[STREAMLIT_POPUP_SORT_ORDER_KEY] = popup_sort_w
                 st.session_state[STREAMLIT_POPUP_SCROLL_HINT_KEY] = popup_scroll_w
                 st.session_state[STREAMLIT_DEFAULT_COLOR_KEY] = default_edge_w

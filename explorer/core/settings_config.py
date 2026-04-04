@@ -18,6 +18,7 @@ from explorer.core.settings_schema_defaults import (
     MAP_LAST_SEEN_FILL_DEFAULT,
     MAP_LIFER_COLOR_DEFAULT,
     MAP_LIFER_FILL_DEFAULT,
+    MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
     MAP_MARK_LAST_SEEN_DEFAULT,
     MAP_MARK_LIFER_DEFAULT,
     MAP_PIN_COLOUR_ALLOWLIST,
@@ -53,6 +54,7 @@ class MapDisplayConfig(BaseModel):
     )
     mark_lifer: bool = MAP_MARK_LIFER_DEFAULT
     mark_last_seen: bool = MAP_MARK_LAST_SEEN_DEFAULT
+    cluster_all_locations: bool = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
     default_color: str = Field(default=MAP_DEFAULT_COLOR_DEFAULT)
     default_fill: str = Field(default=MAP_DEFAULT_FILL_DEFAULT)
     species_color: str = Field(default=MAP_SPECIES_COLOR_DEFAULT)

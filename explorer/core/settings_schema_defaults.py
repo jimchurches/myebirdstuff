@@ -17,6 +17,8 @@ MAP_POPUP_SORT_ORDER_DEFAULT = "ascending"
 MAP_POPUP_SCROLL_HINT_DEFAULT = "shading"
 MAP_MARK_LIFER_DEFAULT = True
 MAP_MARK_LAST_SEEN_DEFAULT = True
+# All-locations map only: group nearby pins (Leaflet.markercluster). Species / lifer maps never cluster.
+MAP_CLUSTER_ALL_LOCATIONS_DEFAULT = True
 MAP_DEFAULT_COLOR_DEFAULT = "green"
 MAP_DEFAULT_FILL_DEFAULT = "lightgray"
 MAP_SPECIES_COLOR_DEFAULT = "purple"
@@ -80,6 +82,7 @@ def build_persisted_settings_defaults_dict() -> dict[str, Any]:
             "popup_scroll_hint": MAP_POPUP_SCROLL_HINT_DEFAULT,
             "mark_lifer": MAP_MARK_LIFER_DEFAULT,
             "mark_last_seen": MAP_MARK_LAST_SEEN_DEFAULT,
+            "cluster_all_locations": MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
             "default_color": MAP_DEFAULT_COLOR_DEFAULT,
             "default_fill": MAP_DEFAULT_FILL_DEFAULT,
             "species_color": MAP_SPECIES_COLOR_DEFAULT,

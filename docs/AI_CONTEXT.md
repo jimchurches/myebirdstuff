@@ -169,13 +169,13 @@ Do not duplicate HTML in UI code — use shared formatters.
 
 ### Defaults
 
-All user-visible defaults must live in:
+- **`explorer/app/streamlit/defaults.py`** — **Developer tweakables**: map cluster options, pin **size / stroke / opacity**, legend dot sizes, theme hex, basemap list, map height slider bounds, layout widths, temporary map debug (live zoom). Edit here to change look/behaviour without hunting core modules.
 
-```
-explorer/app/streamlit/defaults.py
-```
+- **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner text and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
 
-Do not hardcode values in UI files.
+- **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings).
+
+Do not hardcode tunable numbers in UI files; use `defaults.py` for those.
 
 ---
 

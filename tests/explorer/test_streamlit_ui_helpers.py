@@ -385,7 +385,8 @@ def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit
     import streamlit.components.v1 as components
 
     from explorer.app.streamlit.app_map_ui import inject_spinner_emoji_animation
-    from explorer.app.streamlit.defaults import CHECKLIST_STATS_SPINNER_EMOJIS, THEME_PRIMARY_HEX
+    from explorer.app.streamlit.defaults import THEME_PRIMARY_HEX
+    from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_SPINNER_EMOJIS
 
     inject_spinner_emoji_animation()
     assert len(components.html_calls) == 1
@@ -431,7 +432,11 @@ def test_inject_streamlit_checklist_css_appends_extra_css(streamlit_stub) -> Non
 
 def test_sidebar_footer_links_include_profile_urls(streamlit_stub) -> None:
     from explorer.app.streamlit.app_map_ui import sidebar_footer_links
-    from explorer.app.streamlit.defaults import EBIRD_PROFILE_URL, GITHUB_REPO_URL, INSTAGRAM_PROFILE_URL
+    from explorer.app.streamlit.streamlit_ui_constants import (
+        EBIRD_PROFILE_URL,
+        GITHUB_REPO_URL,
+        INSTAGRAM_PROFILE_URL,
+    )
 
     streamlit_stub.sidebar.markdown_calls.clear()
     sidebar_footer_links()

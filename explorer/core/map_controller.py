@@ -16,9 +16,23 @@ from typing import Any, Callable, Dict, Hashable, List, MutableMapping, Optional
 import folium
 import pandas as pd
 from branca.element import Element
+from folium.plugins import MarkerCluster
 
+# Cluster / map debug: edit ``MAP_DEFAULT_LOCATION_CLUSTER_*`` and ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` in
+# ``explorer/app/streamlit/defaults.py``.
+from explorer.app.streamlit.defaults import (
+    MAP_CIRCLE_MARKER_RADIUS_PX,
+    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+    MAP_DEBUG_SHOW_ZOOM_LEVEL,
+    MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+    MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+    MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+    MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+    MAP_PIN_FILL_OPACITY_EMPHASIS,
+)
 from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites
 from explorer.presentation.map_renderer import (
+    add_zoom_level_debug_overlay,
     build_all_species_banner_html,
     build_legend_html,
     build_lifer_locations_banner_html,
@@ -33,13 +47,7 @@ from explorer.presentation.map_renderer import (
     popup_scroll_script,
     resolve_lifer_last_seen,
 )
-from explorer.presentation.map_ui_constants import (
-    MAP_CIRCLE_MARKER_RADIUS_PX,
-    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-    MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
-    MAP_PIN_FILL_OPACITY_EMPHASIS,
-    MAP_POPUP_MAX_WIDTH_PX,
-)
+from explorer.presentation.map_ui_constants import MAP_POPUP_MAX_WIDTH_PX
 from explorer.core.species_logic import base_species_for_lifer, filter_species
 from explorer.core.stats import safe_count
 
@@ -195,6 +203,7 @@ def build_species_overlay_map(
     default_fill: str = "lightgreen",
     mark_lifer: bool = True,
     mark_last_seen: bool = True,
+    cluster_all_locations: bool = True,
     hide_non_matching_locations: bool = False,
     date_filter_status: str = "",
     species_url_fn: SpeciesUrlFn = None,
@@ -219,6 +228,9 @@ def build_species_overlay_map(
 
     *date_filter_status* is shown in banners (e.g. ``Date filter: Off``); pass
     ``""`` to omit the extra line.
+
+    *cluster_all_locations*: when there is no species filter (All locations view),
+    group nearby pins with Leaflet.markercluster. Ignored for species and lifer maps.
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
@@ -258,6 +270,7 @@ def build_species_overlay_map(
         map_center = [loc_rows["Latitude"].mean(), loc_rows["Longitude"].mean()]
         species_map = create_map(map_center, map_style)
         _inject_map_popup_theme(species_map)
+        add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
         popup_asc = popup_sort_order == "ascending"
         dfs = date_filter_status or None
         n_locations = int(loc_rows["Location ID"].nunique())
@@ -413,6 +426,7 @@ def build_species_overlay_map(
 
     species_map = create_map(map_center, map_style)
     _inject_map_popup_theme(species_map)
+    add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
     popup_asc = popup_sort_order == "ascending"
     dfs = date_filter_status or None
 
@@ -424,6 +438,20 @@ def build_species_overlay_map(
         species_map.get_root().html.add_child(
             Element(build_legend_html([(default_color, default_fill, "All locations")]))
         )
+
+        # Cluster only the “all locations” layer when requested (tune in ``defaults.py``).
+        marker_cluster: Optional[MarkerCluster] = None
+        if cluster_all_locations:
+            marker_cluster = MarkerCluster(
+                name="All locations",
+                options={
+                    "maxClusterRadius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+                    "disableClusteringAtZoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+                    "spiderfyOnMaxZoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+                    "zoomToBoundsOnClick": True,
+                },
+            )
+        pin_parent: folium.Map | MarkerCluster = marker_cluster if marker_cluster is not None else species_map
 
         for _, row in effective_location_data.iterrows():
             popup_key = (row["Location ID"], "", effective_use_full, tax_loc_key)
@@ -446,7 +474,10 @@ def build_species_overlay_map(
                 fill_color=default_fill,
                 fill_opacity=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
                 popup=folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX),
-            ).add_to(species_map)
+            ).add_to(pin_parent)
+
+        if marker_cluster is not None:
+            marker_cluster.add_to(species_map)
 
     else:
         if selected_species not in filtered_by_loc_cache:

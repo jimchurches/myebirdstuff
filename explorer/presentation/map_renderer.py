@@ -15,8 +15,10 @@ import html as _html_module
 
 import folium
 import pandas as pd
+from branca.element import MacroElement
+from folium.template import Template
 
-from explorer.presentation.map_ui_constants import MAP_LEGEND_PIN_BORDER_PX, MAP_LEGEND_PIN_DOT_PX
+from explorer.app.streamlit.defaults import MAP_LEGEND_PIN_BORDER_PX, MAP_LEGEND_PIN_DOT_PX
 
 # ---------------------------------------------------------------------------
 # UI theme (aligned with Streamlit Checklist Statistics HTML + ``.streamlit/config.toml``; refs #70)
@@ -631,6 +633,57 @@ def classify_locations(location_data, seen_location_ids, lifer_location, last_se
 # ---------------------------------------------------------------------------
 # Map factory
 # ---------------------------------------------------------------------------
+
+
+class _ZoomLevelDebugOverlay(MacroElement):
+    """Leaflet control showing live zoom (debug; toggle via ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` in defaults).
+
+    Uses **bottom-right** so it stays clear of the fixed **bottom-left** legend
+    (``_LEGEND_POSITION`` / ``pebird-map-legend``), which would cover a ``bottomleft`` control.
+    """
+
+    _template = Template(
+        """
+        {% macro script(this, kwargs) %}
+        (function() {
+            var map = {{ this._parent.get_name() }};
+            var div = L.DomUtil.create('div', 'ebird-zoom-debug-overlay');
+            div.style.cssText = [
+                'background:rgba(255,255,255,0.92)',
+                'border:1px solid #1f6f54',
+                'padding:4px 8px',
+                'font:12px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace',
+                'border-radius:4px',
+                'box-shadow:0 1px 3px rgba(0,0,0,0.2)',
+                'min-width:7ch',
+                'text-align:right',
+                'z-index:1001'
+            ].join(';');
+            var ctrl = L.control({position: 'bottomright'});
+            ctrl.onAdd = function() { return div; };
+            ctrl.addTo(map);
+            function update() {
+                div.textContent = 'zoom: ' + map.getZoom();
+            }
+            map.on('zoomend', update);
+            map.on('zoom', update);
+            update();
+        })();
+        {% endmacro %}
+        """
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._name = "ZoomLevelDebugOverlay"
+
+
+def add_zoom_level_debug_overlay(map_obj: folium.Map, *, enabled: bool) -> None:
+    """If *enabled*, add a small live zoom readout (for tuning clustering). No-op when *enabled* is False."""
+    if not enabled:
+        return
+    _ZoomLevelDebugOverlay().add_to(map_obj)
+
 
 def create_map(map_center, map_style="default"):
     """Create a folium Map centred on *map_center* with the given tile style.

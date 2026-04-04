@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from explorer.core.checklist_stats_compute import ChecklistStatsPayload, compute_checklist_stats_payload
-from explorer.app.streamlit.defaults import CHECKLIST_STATS_TOP_N_TABLE_LIMIT
+from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_TOP_N_TABLE_LIMIT
 
 
 @st.cache_data(show_spinner=False)

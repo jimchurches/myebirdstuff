@@ -1,76 +1,49 @@
 """
-Developer reference: default values for the Streamlit explorer (refs #70).
+Developer tweakables for the Streamlit explorer: **sizes, colours, layout bounds, and map behaviour**
+you may edit in one place without hunting through core modules.
 
-Embedded settings schema and map geometry live under ``explorer.core`` so the
-Streamlit adapter does not own those definitions (refs #89). This file re-exports those
-symbols for the Streamlit app and keeps UI-only literals here.
+**What belongs here**
+
+- Marker cluster options, pin **radius / stroke / opacities**, legend dot sizes, popup width
+- Map UI: basemap list/labels, height slider bounds, view labels, date-filter default
+- Theme hex values aligned with ``.streamlit/config.toml``, settings panel width cap
+- Rankings HTML layout width / scroll hint default; spinner CSS cache key suffix when theme CSS changes
+
+**What does *not* belong here** (see other modules)
+
+- **Fixed copy, URLs, emoji lists, tab names** → :mod:`explorer.app.streamlit.streamlit_ui_constants`
+- **Persisted YAML settings schema defaults** (tables, taxonomy locale ranges, pin colour *names* for schema) →
+  :mod:`explorer.core.settings_schema_defaults`
+
+Map code under ``explorer/`` imports cluster/pin/theme values from this module where noted in code.
 """
 
 from __future__ import annotations
 
-# Re-export schema + map UI constants (single source in ``explorer.core``).
-from explorer.presentation.map_ui_constants import (  # noqa: F401
-    MAP_CIRCLE_MARKER_RADIUS_PX,
-    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-    MAP_LEGEND_PIN_BORDER_PX,
-    MAP_LEGEND_PIN_DOT_PX,
-    MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
-    MAP_PIN_FILL_OPACITY_EMPHASIS,
-    MAP_POPUP_MAX_WIDTH_PX,
-)
-from explorer.core.settings_schema_defaults import (  # noqa: F401
-    MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
-    MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
-    MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
-    MAP_DEFAULT_COLOR_DEFAULT,
-    MAP_DEFAULT_FILL_DEFAULT,
-    MAP_LAST_SEEN_COLOR_DEFAULT,
-    MAP_LAST_SEEN_FILL_DEFAULT,
-    MAP_LIFER_COLOR_DEFAULT,
-    MAP_LIFER_FILL_DEFAULT,
-    MAP_MARK_LAST_SEEN_DEFAULT,
-    MAP_MARK_LIFER_DEFAULT,
-    MAP_PIN_COLOUR_ALLOWLIST,
-    MAP_POPUP_SCROLL_HINT_DEFAULT,
-    MAP_POPUP_SORT_ORDER_DEFAULT,
-    MAP_SPECIES_COLOR_DEFAULT,
-    MAP_SPECIES_FILL_DEFAULT,
-    SETTINGS_SCHEMA_VERSION,
-    TABLES_RANKINGS_TOP_N_DEFAULT,
-    TABLES_RANKINGS_TOP_N_MAX,
-    TABLES_RANKINGS_TOP_N_MIN,
-    TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
-    TABLES_RANKINGS_VISIBLE_ROWS_MAX,
-    TABLES_RANKINGS_VISIBLE_ROWS_MIN,
-    TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT,
-    TABLES_HIGH_COUNT_SORT_DEFAULT,
-    TAXONOMY_LOCALE_DEFAULT,
-    YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
-    YEARLY_RECENT_COLUMN_COUNT_MAX,
-    YEARLY_RECENT_COLUMN_COUNT_MIN,
-    build_persisted_settings_defaults_dict,
-)
+# ---------------------------------------------------------------------------
+# Marker cluster — default “all locations” map (Leaflet.markercluster via Folium)
+# ---------------------------------------------------------------------------
+MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX = 40
+MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 10
+MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
 
+MAP_DEBUG_SHOW_ZOOM_LEVEL = False
 
 # ---------------------------------------------------------------------------
-# Data resolution & exports
+# Pin geometry — Folium ``CircleMarker`` + legend sample dots; popup width
 # ---------------------------------------------------------------------------
-
-DEFAULT_EBIRD_DATA_FILENAME = "MyEBirdData.csv"
-# Env overrides (see ``app.py``): ``STREAMLIT_EBIRD_DATA_FILE`` (CSV basename),
-# ``STREAMLIT_EBIRD_TAXONOMY_LOCALE``, ``EBIRD_TAXONOMY_LOCALE``. Data folder: ``scripts/config_*.py``
-# or process working directory — not an env var (see ``explorer_paths`` / ``explorer/app/streamlit/README.md``).
-
-MAP_EXPORT_HTML_FILENAME = "ebird_map.html"
-
-# Checklist Statistics tab payload (not the same slider as Rankings Top N).
-CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
+MAP_CIRCLE_MARKER_RADIUS_PX = 4
+MAP_CIRCLE_MARKER_STROKE_WEIGHT = 3
+MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 1.0
+MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
+MAP_LEGEND_PIN_DOT_PX = 8
+MAP_LEGEND_PIN_BORDER_PX = 2
+MAP_POPUP_MAX_WIDTH_PX = 800
 
 # ---------------------------------------------------------------------------
 # Map UI (session-only; not persisted in embedded YAML)
 # ---------------------------------------------------------------------------
 
-# ``carto`` = Folium/xyzservices ``CartoDB Positron``. No API keys.
 MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "google", "carto")
 MAP_BASEMAP_LABELS: dict[str, str] = {
     "default": "Default",
@@ -84,24 +57,9 @@ MAP_HEIGHT_PX_MIN = 440
 MAP_HEIGHT_PX_MAX = 1200
 MAP_HEIGHT_PX_STEP = 20
 
-# First-run date filter: off unless restored from Lifer view (see ``app.py``).
 MAP_DATE_FILTER_DEFAULT = False
 
 MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer locations")
-
-# ---------------------------------------------------------------------------
-# Species search (``streamlit-searchbox`` fragment)
-# ---------------------------------------------------------------------------
-
-SPECIES_SEARCH_MAX_OPTIONS = 12
-SPECIES_SEARCH_MIN_QUERY_LEN = 3
-SPECIES_SEARCH_DEBOUNCE_MS = 400
-SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
-SPECIES_SEARCH_CAPTION = (
-    "Type at least three letters. Searches common and scientific names."
-)
-SPECIES_SEARCH_EDIT_AFTER_SUBMIT = "option"
-SPECIES_SEARCH_RERUN_SCOPE = "fragment"
 
 # ---------------------------------------------------------------------------
 # Layout / theme (Streamlit-only)
@@ -109,12 +67,10 @@ SPECIES_SEARCH_RERUN_SCOPE = "fragment"
 
 SETTINGS_PANEL_MAX_WIDTH_REM = 40
 
-# Match ``.streamlit/config.toml`` [theme] (forest / eBird-adjacent greens).
 THEME_TEXT_HEX = "#1A2E22"
 THEME_PRIMARY_HEX = "#1F6F54"
 THEME_SECONDARY_BG_HEX = "#EEF4F0"
 
-# Bump suffix in ``app_map_ui.inject_spinner_theme_css`` when spinner CSS changes.
 SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v4"
 
 # ---------------------------------------------------------------------------
@@ -123,54 +79,3 @@ SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v4"
 
 RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX = 1400
 RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT = "shading"
-
-# ---------------------------------------------------------------------------
-# Main chrome
-# ---------------------------------------------------------------------------
-
-NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
-    "Map",
-    "Checklist Statistics",
-    "Ranking & Lists",
-    "Yearly Summary",
-    "Country",
-    "Maintenance",
-    "Settings",
-)
-
-# Spinner + animated emoji strip (refs #74): ``st.spinner`` shows text only; emoji run in a
-# ``streamlit.components.v1.html`` iframe (JS ``setInterval``) — see ``inject_spinner_emoji_animation``.
-CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
-
-# Bird emoji (same Unicode order as before: legacy sequence, then missing taxa; Dodo last — refs #74).
-CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
-    "🐣",
-    "🐥",
-    "🐧",
-    "🦆",
-    "🦉",
-    "🦢",
-    "🦅",
-    "🦃",
-    "🐔",
-    "🐓",
-    "🐤",
-    "🐦",
-    "🕊️",
-    "🪶",
-    "🦩",
-    "🦚",
-    "🦜",
-    "🐦‍⬛",
-    "🪿",
-    "🦤",
-)
-
-CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE = 5
-CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS = 750
-# Align emoji strip with spinner label text (past the leading icon) in ``st.spinner``.
-CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM = 2.75
-
-GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
-EBIRD_PROFILE_URL = "https://ebird.org/profile/MjkxNDYyNQ"
-INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"

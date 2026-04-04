@@ -1,20 +1,12 @@
 """
-Folium / map chrome geometry used by ``map_controller`` and ``map_renderer``.
+Folium / map chrome used by ``map_controller`` and ``map_renderer``.
 
-Framework-neutral: no Streamlit imports. Aligned with the Streamlit app theme in practice
-but owned here so ``explorer.presentation`` does not depend on ``explorer.app.streamlit`` (refs #89).
+**Popup width** is defined in :mod:`explorer.app.streamlit.defaults` (``MAP_POPUP_MAX_WIDTH_PX``);
+re-exported here so call sites can keep importing from this module.
 """
 
 from __future__ import annotations
 
-# Folium ``CircleMarker`` geometry (``map_controller``). ``weight`` matches Leaflet/Folium default when
-# previously omitted (explicit for discovery).
-MAP_CIRCLE_MARKER_RADIUS_PX = 4
-MAP_CIRCLE_MARKER_STROKE_WEIGHT = 3
-MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 0.6
-MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
-MAP_POPUP_MAX_WIDTH_PX = 800
+from explorer.app.streamlit.defaults import MAP_POPUP_MAX_WIDTH_PX
 
-# Legend sample dots (``map_renderer.pin_legend_item`` HTML).
-MAP_LEGEND_PIN_DOT_PX = 8
-MAP_LEGEND_PIN_BORDER_PX = 2
+__all__ = ["MAP_POPUP_MAX_WIDTH_PX"]

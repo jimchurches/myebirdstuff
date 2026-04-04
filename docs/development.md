@@ -138,11 +138,13 @@ The full write-up lives in **[explorer/app/streamlit/README.md](../explorer/app/
 - Do not duplicate HTML in UI
 - Keep eBird links
 
-Defaults must live in:
+**Map/theme tweakables** (clustering, pin geometry, colours, layout) live in:
 
 ```
 explorer/app/streamlit/defaults.py
 ```
+
+**Fixed UI strings and URLs** (tab names, spinner emoji strip, footer links) live in `explorer/app/streamlit/streamlit_ui_constants.py`. **Persisted settings schema defaults** (YAML-backed) live in `explorer/core/settings_schema_defaults.py`.
 
 ---
 
@@ -210,7 +212,7 @@ Avoid adding new dependencies unless necessary.
 # Configuration
 
 - YAML configs for data paths
-- Defaults centralised in Streamlit defaults module
+- Streamlit: `defaults.py` (map/theme tweakables), `streamlit_ui_constants.py` (fixed UI strings/URLs), `settings_schema_defaults.py` (persisted settings schema) — see Streamlit Guidelines above
 
 ---
 

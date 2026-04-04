@@ -14,16 +14,18 @@ from explorer.presentation.checklist_stats_display import (
     COUNTRY_TAB_SORT_LIFERS_WORLD,
     COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
-from explorer.app.streamlit.defaults import (
-    DEFAULT_EBIRD_DATA_FILENAME,
+from explorer.core.settings_schema_defaults import (
     MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
+    TAXONOMY_LOCALE_DEFAULT,
+)
+from explorer.app.streamlit.defaults import (
     SETTINGS_PANEL_MAX_WIDTH_REM,
     SPINNER_THEME_CSS_CACHE_KEY_SUFFIX,
-    TAXONOMY_LOCALE_DEFAULT,
     THEME_PRIMARY_HEX,
     THEME_SECONDARY_BG_HEX,
     THEME_TEXT_HEX,
 )
+from explorer.app.streamlit.streamlit_ui_constants import DEFAULT_EBIRD_DATA_FILENAME
 
 STREAMLIT_APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = str(STREAMLIT_APP_DIR.parent.parent.parent)
@@ -141,6 +143,8 @@ STREAMLIT_POPUP_SORT_ORDER_KEY = "streamlit_popup_sort_order"
 STREAMLIT_POPUP_SCROLL_HINT_KEY = "streamlit_popup_scroll_hint"
 STREAMLIT_MARK_LIFER_KEY = "streamlit_mark_lifer"
 STREAMLIT_MARK_LAST_SEEN_KEY = "streamlit_mark_last_seen"
+# All-locations map only (species / lifer maps never cluster).
+STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
 
 STREAMLIT_DEFAULT_COLOR_KEY = "streamlit_default_color"
 STREAMLIT_SPECIES_COLOR_KEY = "streamlit_species_color"
@@ -192,6 +196,7 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_DEFAULT_COLOR_KEY,
     STREAMLIT_DEFAULT_FILL_KEY,
     STREAMLIT_SPECIES_COLOR_KEY,
