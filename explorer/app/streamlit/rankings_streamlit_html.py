@@ -7,7 +7,8 @@ Uses HTML from :func:`explorer.presentation.checklist_stats_display.format_check
 rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matches **Checklist Statistics**:
 :func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
 ``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). The **Family Lists** tab uses
-``st.dataframe`` for row selection plus HTML detail tables.
+``st.dataframe`` with **single-row selection** and a **bounded height** so the summary scrolls inside the grid
+(compact layout; species detail stays below). The species detail table remains HTML (``stats-tbl`` / ``rankings-tbl``).
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
 ``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
@@ -51,6 +52,16 @@ _GROUP_COVERAGE_ERROR_KEY = "group_coverage_error"
 _STREAMLIT_GROUP_COVERAGE_SELECTED_KEY = "streamlit_group_coverage_selected_group"
 _STREAMLIT_GROUP_COVERAGE_TABLE_KEY = "streamlit_group_coverage_summary_table"
 _STREAMLIT_GROUP_COVERAGE_FALLBACK_KEY = "streamlit_group_coverage_selected_group_fallback"
+
+# Summary grid height (px): scroll inside the dataframe so long family lists do not push the detail table down.
+_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX = 280
+
+
+def _rankings_family_coverage_inject_css() -> str:
+    """Rankings max-width only (refs #73, #81)."""
+    return (
+        f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:{RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX}px;width:100%; }}"
+    )
 
 
 @st.cache_data(show_spinner=False)
@@ -276,9 +287,7 @@ def _build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) ->
 
 def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
     """Render Rankings HTML from a precomputed bundle (fragment-safe)."""
-    inject_streamlit_checklist_css(
-        f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:{RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX}px;width:100%; }}"
-    )
+    inject_streamlit_checklist_css(_rankings_family_coverage_inject_css())
 
     # Third tab: species-group coverage (Family Lists label; refs #73).
     tab_top, tab_int, tab_group = st.tabs(["Top Lists", "Interesting Lists", "Family Lists"])
@@ -319,17 +328,24 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
             }
         )[["Family", "Seen species", "Total species", "% seen"]]
 
-        selected_group = st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY, "")
+        selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
+        fam_values = set(display_summary["Family"].astype(str))
+        if not selected_group or selected_group not in fam_values:
+            selected_group = str(display_summary.iloc[0]["Family"])
+            st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+
+        st.caption(
+            "Scroll inside the summary grid if needed, then **select one row** to filter the species list below."
+        )
         selection_supported = True
         try:
             event = st.dataframe(
                 display_summary,
                 width="stretch",
                 hide_index=True,
-                height=420,
+                height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
                 column_config={
-                    # "medium" leaves more room for numeric columns than "large" on wide layouts.
-                    "Family": st.column_config.TextColumn("Family", width="medium"),
+                    "Family": st.column_config.TextColumn("Family", width="large"),
                     "Seen species": st.column_config.NumberColumn("Seen", width="small"),
                     "Total species": st.column_config.NumberColumn("Total", width="small"),
                     "% seen": st.column_config.TextColumn("% seen", width="small"),
@@ -338,7 +354,7 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
                 selection_mode="single-row",
                 key=_STREAMLIT_GROUP_COVERAGE_TABLE_KEY,
             )
-            selected_rows = []
+            selected_rows: list = []
             if isinstance(event, dict):
                 selected_rows = event.get("selection", {}).get("rows", []) or []
             if selected_rows:
@@ -347,9 +363,13 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
                     selected_group = str(display_summary.iloc[idx]["Family"])
                     st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
         except TypeError:
-            # Older Streamlit versions may not support row-selection API.
             selection_supported = False
-            st.dataframe(display_summary, width="stretch", hide_index=True)
+            st.dataframe(
+                display_summary,
+                width="stretch",
+                hide_index=True,
+                height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
+            )
 
         if not selected_group:
             selected_group = str(display_summary.iloc[0]["Family"])
@@ -364,6 +384,9 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
                 key=_STREAMLIT_GROUP_COVERAGE_FALLBACK_KEY,
             )
             st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+
+        st.divider()
+
         if not isinstance(detail, pd.DataFrame) or detail.empty:
             st.info("No family detail available yet.")
             return
