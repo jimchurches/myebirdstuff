@@ -180,6 +180,8 @@ SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
+# Bumped when toggling Map view All locations <-> Selected species so streamlit-folium remounts cleanly.
+FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
 SETTINGS_CONFIG_PATH_KEY = "_streamlit_settings_yaml_path"
 SETTINGS_CONFIG_SOURCE_KEY = "_streamlit_settings_source_label"
 SETTINGS_LOADED_FROM_KEY = "_streamlit_settings_loaded_from_path"

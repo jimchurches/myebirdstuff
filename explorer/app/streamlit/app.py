@@ -102,6 +102,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     EBIRD_LANDING_MAIN_CONTAINER_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     DEFAULT_TAXONOMY_LOCALE,
+    FOLIUM_MAP_MOUNT_NONCE_KEY,
     FOLIUM_STATIC_MAP_CACHE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
     EXPORT_MAP_HTML_BTN_KEY,
@@ -516,6 +517,21 @@ def main() -> None:
             key=STREAMLIT_MAP_HEIGHT_PX_KEY,
         )
 
+    # All locations and Selected species (before a pick) share the same static Folium cache key, but the
+    # sidebar gains/loses the species search fragment — layout can leave streamlit-folium with a
+    # letterbox/sliver iframe until a full remount. Lifer view always misses that cache, which is why
+    # All→Lifer→Species looked fine. Invalidate cache + bump nonce on All↔Species transitions only.
+    if (
+        _prev_mv is not None
+        and _prev_mv != map_view_mode
+        and {_prev_mv, map_view_mode} == {"all", "species"}
+    ):
+        st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        ) + 1
+
     st.session_state[SESSION_PREV_MAP_VIEW_KEY] = map_view_mode
 
     tax_locale_effective = (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE)
@@ -642,6 +658,7 @@ def main() -> None:
                     "map_view_mode": map_view_mode,
                     "hide_non_matching_locations": hide_nm,
                     "show_subspecies_lifers": bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
+                    "map_height_px": int(map_height),
                 }
                 _render_opts_sig = (
                     popup_sort_order,
@@ -663,6 +680,7 @@ def main() -> None:
                         )
                     ),
                     bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
+                    int(map_height),
                 )
                 # ``build_species_overlay_map`` treats **Species** with no species picked as the same
                 # geometry as **All locations** (``map_controller`` coerces mode to ``all``). Match that here
@@ -726,10 +744,14 @@ def main() -> None:
                         result_map,
                         use_container_width=True,
                         height=map_height,
-                        # Include the full map cache key in the component identity so switching views,
-                        # toggles, and even server restarts remount the iframe (prevents stale marker
-                        # styling like "white pins" persisting across sessions).
-                        key=f"explorer_folium_{abs(hash(_ck))}_h{map_height}",
+                        # ``_ck`` coerces **Species** with no pick to ``all`` so we reuse one Folium build
+                        # when the cache is valid. *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
+                        # distinct streamlit-folium component identity when the sidebar layout changes
+                        # (All↔Species); see invalidation block above.
+                        key=(
+                            f"explorer_folium_{abs(hash(_ck))}_h{map_height}_mv{map_view_mode}_n"
+                            f"{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
+                        ),
                         returned_objects=[],
                         return_on_hover=False,
                     )

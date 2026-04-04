@@ -27,6 +27,7 @@ from explorer.app.streamlit.defaults import (
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
     MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+    MAP_HEIGHT_PX_DEFAULT,
     MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
     MAP_PIN_FILL_OPACITY_EMPHASIS,
 )
@@ -215,6 +216,7 @@ def build_species_overlay_map(
     full_location_data: Optional[pd.DataFrame] = None,
     taxonomy_locale: str = "",
     show_subspecies_lifers: bool = False,
+    map_height_px: int = MAP_HEIGHT_PX_DEFAULT,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -231,6 +233,8 @@ def build_species_overlay_map(
 
     *cluster_all_locations*: when there is no species filter (All locations view),
     group nearby pins with Leaflet.markercluster. Ignored for species and lifer maps.
+
+    *map_height_px*: pixel height for the Folium map pane (match Streamlit **Map height** slider).
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
@@ -268,7 +272,7 @@ def build_species_overlay_map(
                 warning="⚠️ No lifer locations match your location table.",
             )
         map_center = [loc_rows["Latitude"].mean(), loc_rows["Longitude"].mean()]
-        species_map = create_map(map_center, map_style)
+        species_map = create_map(map_center, map_style, height_px=map_height_px)
         _inject_map_popup_theme(species_map)
         add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
         popup_asc = popup_sort_order == "ascending"
@@ -424,7 +428,7 @@ def build_species_overlay_map(
             effective_location_data["Longitude"].mean(),
         ]
 
-    species_map = create_map(map_center, map_style)
+    species_map = create_map(map_center, map_style, height_px=map_height_px)
     _inject_map_popup_theme(species_map)
     add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
     popup_asc = popup_sort_order == "ascending"

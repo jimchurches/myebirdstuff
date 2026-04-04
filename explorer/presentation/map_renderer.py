@@ -18,7 +18,13 @@ import pandas as pd
 from branca.element import MacroElement
 from folium.template import Template
 
-from explorer.app.streamlit.defaults import MAP_LEGEND_PIN_BORDER_PX, MAP_LEGEND_PIN_DOT_PX
+from explorer.app.streamlit.defaults import (
+    MAP_HEIGHT_PX_DEFAULT,
+    MAP_HEIGHT_PX_MAX,
+    MAP_HEIGHT_PX_MIN,
+    MAP_LEGEND_PIN_BORDER_PX,
+    MAP_LEGEND_PIN_DOT_PX,
+)
 
 # ---------------------------------------------------------------------------
 # UI theme (aligned with Streamlit Checklist Statistics HTML + ``.streamlit/config.toml``; refs #70)
@@ -685,24 +691,33 @@ def add_zoom_level_debug_overlay(map_obj: folium.Map, *, enabled: bool) -> None:
     _ZoomLevelDebugOverlay().add_to(map_obj)
 
 
-def create_map(map_center, map_style="default"):
+def create_map(
+    map_center,
+    map_style="default",
+    *,
+    height_px: int | float | None = None,
+):
     """Create a folium Map centred on *map_center* with the given tile style.
 
     Supported *map_style* values: ``"default"``, ``"google"``, ``"carto"``.
     Unknown values fall back to the default OpenStreetMap tiles.
+
+    *height_px*: pixel height for the map pane. Folium defaults to ``100%``, which
+    depends on parent layout; inside ``streamlit-folium`` that can collapse to a thin
+    strip. Pass the same value as the Streamlit **Map height** slider when embedding.
     """
     # Default initial zoom for first render. Lower = more zoomed out.
     zoom_start = 5
+    h = float(height_px if height_px is not None else MAP_HEIGHT_PX_DEFAULT)
+    h = max(float(MAP_HEIGHT_PX_MIN), min(float(MAP_HEIGHT_PX_MAX), h))
+    common = {"location": map_center, "zoom_start": zoom_start, "height": h, "width": "100%"}
     if map_style == "google":
         return folium.Map(
-            location=map_center,
-            zoom_start=zoom_start,
             tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
             attr="Google",
+            **common,
         )
     elif map_style == "carto":
-        return folium.Map(
-            location=map_center, zoom_start=zoom_start, tiles="CartoDB Positron", attr="CartoDB"
-        )
+        return folium.Map(tiles="CartoDB Positron", attr="CartoDB", **common)
     else:
-        return folium.Map(location=map_center, zoom_start=zoom_start)
+        return folium.Map(**common)
