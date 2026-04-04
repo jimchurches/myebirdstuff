@@ -23,6 +23,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_LAST_SEEN_COLOR_KEY,
     STREAMLIT_LAST_SEEN_FILL_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
@@ -157,6 +158,10 @@ def init_and_clamp_streamlit_table_settings() -> None:
         st.session_state.streamlit_mark_last_seen = MAP_MARK_LAST_SEEN_DEFAULT
     if STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY not in st.session_state:
         st.session_state.streamlit_map_cluster_all_locations = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
+    if STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY not in st.session_state:
+        st.session_state.streamlit_map_cluster_all_locations_saved = st.session_state[
+            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY
+        ]
     if STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY not in st.session_state:
         st.session_state.streamlit_lifer_show_subspecies = False
     for k, default in (
@@ -184,7 +189,7 @@ def settings_state_payload() -> dict[str, Any]:
             "popup_scroll_hint": st.session_state.streamlit_popup_scroll_hint,
             "mark_lifer": bool(st.session_state.streamlit_mark_lifer),
             "mark_last_seen": bool(st.session_state.streamlit_mark_last_seen),
-            "cluster_all_locations": bool(st.session_state.streamlit_map_cluster_all_locations),
+            "cluster_all_locations": bool(st.session_state.streamlit_map_cluster_all_locations_saved),
             "default_color": st.session_state.streamlit_default_color,
             "default_fill": st.session_state.streamlit_default_fill,
             "species_color": st.session_state.streamlit_species_color,
@@ -234,9 +239,9 @@ def apply_settings_payload_to_state(cfg: dict[str, Any]) -> None:
         st.session_state.streamlit_mark_last_seen = bool(
             mp.get("mark_last_seen", MAP_MARK_LAST_SEEN_DEFAULT)
         )
-        st.session_state.streamlit_map_cluster_all_locations = bool(
-            mp.get("cluster_all_locations", MAP_CLUSTER_ALL_LOCATIONS_DEFAULT)
-        )
+        _cluster = bool(mp.get("cluster_all_locations", MAP_CLUSTER_ALL_LOCATIONS_DEFAULT))
+        st.session_state.streamlit_map_cluster_all_locations = _cluster
+        st.session_state.streamlit_map_cluster_all_locations_saved = _cluster
         st.session_state.streamlit_default_color = mp.get("default_color", MAP_DEFAULT_COLOR_DEFAULT)
         st.session_state.streamlit_default_fill = mp.get("default_fill", MAP_DEFAULT_FILL_DEFAULT)
         st.session_state.streamlit_species_color = mp.get("species_color", MAP_SPECIES_COLOR_DEFAULT)

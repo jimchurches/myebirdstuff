@@ -141,6 +141,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     STREAMLIT_MAP_VIEW_LABEL_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
@@ -364,6 +365,16 @@ def main() -> None:
         )
         map_view_mode = MAP_VIEW_LABEL_TO_MODE[map_view_label]
         is_lifer_view = map_view_mode == "lifers"
+
+        st.toggle(
+            "Group nearby pins",
+            key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+            help=(
+                "All locations map only—clusters nearby pins at low zoom. "
+                "This changes the map for this browser session. "
+                "To save your default for the next session, use **Settings → Map display** and **Save settings**."
+            ),
+        )
 
         st.markdown("**Date**")
         if is_lifer_view:
@@ -784,8 +795,9 @@ def main() -> None:
             st.divider()
             st.subheader("Map display")
             st.caption(
-                "Popup behaviour, mark toggles, clustering for the All locations map, and pin colours "
-                "are batched here; click **Apply map settings** for one rerun."
+                "Popup behaviour, mark toggles, default clustering for the All locations map (saved when you "
+                "**Save settings**), and pin colours are batched here; click **Apply map settings** for one rerun. "
+                "For a quick on/off without changing your saved default, use the **Map** sidebar toggle."
             )
             _popup_sort_opts = ["ascending", "descending"]
             _popup_scroll_opts = ["shading", "chevron", "both"]
@@ -810,17 +822,19 @@ def main() -> None:
                     value=bool(st.session_state.get(STREAMLIT_MARK_LAST_SEEN_KEY, True)),
                 )
                 cluster_all_locations_w = st.toggle(
-                    "Group nearby pins (All locations map)",
+                    "Group nearby pins — default (All locations map)",
                     value=bool(
                         st.session_state.get(
-                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
                             MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
                         )
                     ),
                     help=(
                         "When on, nearby checklist locations are combined into clusters at low zoom; "
                         "zoom in or click a cluster to see individual pins. "
-                        "Species and lifer maps always show one pin per location."
+                        "Species and lifer maps always show one pin per location. "
+                        "This value is written to your config when you **Save settings** and used on the next load. "
+                        "**Apply map settings** also updates the map now. Use the **Map** sidebar for a session-only toggle."
                     ),
                 )
                 popup_sort_w = st.selectbox(
@@ -882,7 +896,9 @@ def main() -> None:
             if apply_map:
                 st.session_state[STREAMLIT_MARK_LIFER_KEY] = bool(mark_lifer_w)
                 st.session_state[STREAMLIT_MARK_LAST_SEEN_KEY] = bool(mark_last_seen_w)
-                st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY] = bool(cluster_all_locations_w)
+                _cl = bool(cluster_all_locations_w)
+                st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY] = _cl
+                st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY] = _cl
                 st.session_state[STREAMLIT_POPUP_SORT_ORDER_KEY] = popup_sort_w
                 st.session_state[STREAMLIT_POPUP_SCROLL_HINT_KEY] = popup_scroll_w
                 st.session_state[STREAMLIT_DEFAULT_COLOR_KEY] = default_edge_w

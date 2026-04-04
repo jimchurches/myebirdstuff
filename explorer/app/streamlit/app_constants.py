@@ -144,7 +144,10 @@ STREAMLIT_POPUP_SCROLL_HINT_KEY = "streamlit_popup_scroll_hint"
 STREAMLIT_MARK_LIFER_KEY = "streamlit_mark_lifer"
 STREAMLIT_MARK_LAST_SEEN_KEY = "streamlit_mark_last_seen"
 # All-locations map only (species / lifer maps never cluster).
+# Runtime: sidebar toggle; map build + cache signature.
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
+# Persisted default: Settings form + Save settings / YAML (may differ from runtime after sidebar).
+STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY = "streamlit_map_cluster_all_locations_saved"
 
 STREAMLIT_DEFAULT_COLOR_KEY = "streamlit_default_color"
 STREAMLIT_SPECIES_COLOR_KEY = "streamlit_species_color"
@@ -197,6 +200,7 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_DEFAULT_COLOR_KEY,
     STREAMLIT_DEFAULT_FILL_KEY,
     STREAMLIT_SPECIES_COLOR_KEY,
