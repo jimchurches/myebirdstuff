@@ -576,7 +576,11 @@ def main() -> None:
         else:
             maint_full_payload = None
             rankings_bundle = {}
-        sex_notation_by_year = cached_sex_notation_by_year(df_full)
+        # Sex notation is scanned from the raw export (not from maint payload). Same empty path as no
+        # ``maint_full_payload`` — skip cache call; ``get_sex_notation_by_year`` would return {} anyway.
+        sex_notation_by_year: dict = (
+            {} if df_full.empty else cached_sex_notation_by_year(df_full)
+        )
 
         sync_checklist_stats_tab_session_inputs(checklist_payload)
         sync_rankings_tab_session_inputs(rankings_bundle)
