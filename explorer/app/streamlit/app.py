@@ -75,7 +75,6 @@ if _REPO_ROOT not in sys.path:
 from collections import OrderedDict
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 from explorer.presentation.checklist_stats_display import (  # noqa: E402
@@ -134,7 +133,6 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     STREAMLIT_COUNTRY_TAB_SORT_KEY,
     STREAMLIT_DEFAULT_COLOR_KEY,
     STREAMLIT_DEFAULT_FILL_KEY,
-    STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
     STREAMLIT_LIFER_COLOR_KEY,
     STREAMLIT_LIFER_FILL_KEY,
     STREAMLIT_LAST_SEEN_COLOR_KEY,

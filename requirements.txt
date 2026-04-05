@@ -23,3 +23,6 @@ pydantic>=2,<3
 # Testing
 pytest
 pytest-cov>=4,<7
+
+# Linting (CI + local; fast checks on Streamlit package — see ruff.toml)
+ruff>=0.8,<1

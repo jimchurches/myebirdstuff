@@ -1,0 +1,14 @@
+# Ruff — https://docs.astral.sh/ruff/
+# CI runs: ruff check explorer/app/streamlit/
+
+target-version = "py312"
+
+[lint]
+# Pyflakes + pycodestyle (no isort in CI yet — import order varies across modules).
+select = ["E", "F", "W"]
+# Long lines are common in docstrings and Streamlit markup; a stricter wrap pass can be a follow-up.
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+# Entrypoint prepends repo root to sys.path before package imports (refs #70).
+"explorer/app/streamlit/app.py" = ["E402"]
