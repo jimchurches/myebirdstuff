@@ -13,6 +13,8 @@ import html as _html
 import numpy as np
 import pandas as pd
 
+from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
+from explorer.core.species_family import build_base_species_to_family_map
 from explorer.core.species_logic import countable_species_vectorized
 
 
@@ -777,13 +779,16 @@ def compute_rankings(
 # Yearly summary
 # ---------------------------------------------------------------------------
 
-def yearly_summary_stats(df, cl, dur_col, dist_col):
+def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | None = None):
     """Compute per-year stats.
 
     Returns (years_sorted, rows, incomplete_by_year).
 
     *rows* is a list of (label, [val_per_year, ...]).
     *incomplete_by_year* is dict year → list of (sid, date_str, location).
+
+    *taxonomy_locale* selects the eBird taxonomy locale for **Total bird families**
+    (species-group names); defaults to the app default (e.g. ``en_AU``).
     """
     cl = cl.dropna(subset=["Date"])
     if cl.empty:
@@ -825,19 +830,32 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     vals = [int(by_yr_sp.get(y, 0)) for y in years_sorted]
     rows.append(("Total species", [f"{v:,}" for v in vals]))
 
-    # 2. Total individuals
+    # 2. Total bird families (eBird species groups; same mapping as Rankings → Families)
+    loc = (taxonomy_locale or "").strip() or TAXONOMY_LOCALE_DEFAULT
+    base_to_family = build_base_species_to_family_map(loc)
+    if base_to_family:
+        dfb = df_with_yr.dropna(subset=["_base"]).copy()
+        dfb["_family"] = dfb["_base"].astype(str).str.strip().map(base_to_family)
+        fam = dfb.dropna(subset=["_family"])
+        by_yr_fam = fam.groupby("_year")["_family"].nunique()
+        vals_f = [int(by_yr_fam.get(y, 0)) for y in years_sorted]
+        rows.append(("Total bird families", [f"{v:,}" for v in vals_f]))
+    else:
+        rows.append(("Total bird families", ["—"] * len(years_sorted)))
+
+    # 3. Total individuals
     by_yr_ind = df_with_yr.groupby("_year")["_count"].sum()
     vals = [int(by_yr_ind.get(y, 0)) for y in years_sorted]
     rows.append(("Total individuals", [f"{v:,}" for v in vals]))
 
-    # 3. Lifers
+    # 4. Lifers
     first_seen = df_with_yr.dropna(subset=["_base"]).groupby("_base")["Date"].min()
     first_seen_year = first_seen.dt.year
     lifers_per_year = first_seen_year.value_counts()
     vals = [int(lifers_per_year.get(y, 0)) for y in years_sorted]
     rows.append(("Lifers", [f"{v:,}" for v in vals]))
 
-    # 4. Traveling checklists (complete only)
+    # 5. Traveling checklists (complete only)
     if has_protocol:
         trav_count = cl[traveling_complete].groupby("_year").size()
         vals = [int(trav_count.get(y, 0)) for y in years_sorted]
@@ -845,7 +863,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     else:
         rows.append(("Traveling checklists", ["—"] * len(years_sorted)))
 
-    # 5. Stationary checklists (complete only)
+    # 6. Stationary checklists (complete only)
     if has_protocol:
         stat_count = cl[stationary_complete].groupby("_year").size()
         vals = [int(stat_count.get(y, 0)) for y in years_sorted]
@@ -853,7 +871,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     else:
         rows.append(("Stationary checklists", ["—"] * len(years_sorted)))
 
-    # 6. Incidental checklists
+    # 7. Incidental checklists
     if has_protocol:
         inc_count = cl[incidental_mask].groupby("_year").size()
         vals = [int(inc_count.get(y, 0)) for y in years_sorted]
@@ -861,12 +879,12 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     else:
         rows.append(("Incidental checklists", ["—"] * len(years_sorted)))
 
-    # 7. Total checklists
+    # 8. Total checklists
     by_yr_cl = cl.groupby("_year").size()
     vals = [int(by_yr_cl.get(y, 0)) for y in years_sorted]
     rows.append(("Total checklists", [f"{v:,}" for v in vals]))
 
-    # 8. Completed checklists
+    # 9. Completed checklists
     if has_all_obs:
         completed = cl[completed_mask]
         by_yr = completed.groupby("_year").size()
@@ -875,7 +893,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     else:
         rows.append(("Completed checklists", ["—"] * len(years_sorted)))
 
-    # 9. Incomplete checklists (not incidental)
+    # 10. Incomplete checklists (not incidental)
     if has_all_obs and has_protocol:
         inc_count = cl[incomplete_not_incidental].groupby("_year").size()
         vals = [int(inc_count.get(y, 0)) for y in years_sorted]
@@ -883,17 +901,17 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     else:
         rows.append(("Incomplete checklists", ["—"] * len(years_sorted)))
 
-    # 10. Days with checklist
+    # 11. Days with checklist
     by_yr_dates = cl.groupby("_year")["Date"].apply(lambda s: s.dt.normalize().nunique())
     vals = [int(by_yr_dates.get(y, 0)) for y in years_sorted]
     rows.append(("Days with checklist", [f"{v:,}" for v in vals]))
 
-    # 11. Cumulative days eBird on
+    # 12. Cumulative days eBird on
     all_dates = cl["Date"].dt.normalize()
     cum = [int(all_dates[all_dates.dt.year <= y].nunique()) for y in years_sorted]
     rows.append(("Cumulative days eBird on", [f"{v:,}" for v in cum]))
 
-    # 12. Total birding hours
+    # 13. Total birding hours
     if dur_col:
         timed = cl.dropna(subset=[dur_col]).copy()
         timed["_dur"] = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0)
@@ -907,12 +925,12 @@ def yearly_summary_stats(df, cl, dur_col, dist_col):
     else:
         rows.append(("Total birding hours", ["—"] * len(years_sorted)))
 
-    # 13. Unique locations
+    # 14. Unique locations
     by_yr_loc = cl.groupby("_year")["Location ID"].nunique()
     vals = [int(by_yr_loc.get(y, 0)) for y in years_sorted]
     rows.append(("Unique locations", [f"{v:,}" for v in vals]))
 
-    # 14–15. Shared checklists / Days birding with others
+    # 15–16. Shared checklists / Days birding with others
     if "Number of Observers" in cl.columns:
         shared_cl = cl.dropna(subset=["Number of Observers"]).copy()
         shared_cl["_nobs"] = pd.to_numeric(shared_cl["Number of Observers"], errors="coerce").fillna(0)

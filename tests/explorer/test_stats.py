@@ -450,7 +450,23 @@ class TestYearlySummaryStats:
         assert len(rows) > 0
         labels = [r[0] for r in rows]
         assert "Total species" in labels
+        assert "Total bird families" in labels
         assert "Total checklists" in labels
+
+    def test_total_bird_families_uses_taxonomy_map(self, monkeypatch):
+        """Per-year distinct family names match a stub base_species → family map (no network)."""
+        df, cl = self._minimal_data()
+
+        def _stub_map(locale: str) -> dict[str, str]:
+            return {
+                "anas gracilis": "Ducks, Geese, Waterfowl",
+                "anas castanea": "Ducks, Geese, Waterfowl",
+            }
+
+        monkeypatch.setattr("explorer.core.stats.build_base_species_to_family_map", _stub_map)
+        years, rows, _ = yearly_summary_stats(df, cl, "Duration (Min)", "Distance Traveled (km)")
+        fam_row = next(r for r in rows if r[0] == "Total bird families")
+        assert fam_row[1] == [f"{1:,}", f"{1:,}"]
 
     def test_empty_cl(self):
         df = pd.DataFrame(columns=["Submission ID", "Date"])

@@ -32,7 +32,7 @@ Streamlit does not expose the browser language to Python.
 ``checklist_stats_streamlit_tab_sections_html``). ``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment``
 match Country / Yearly (refs #70).
 
-**Prep vs Map spinners:** Each full rerun, ``cached_checklist_stats_payload(work_df)``, full-export prep
+**Prep vs Map spinners:** Each full rerun, ``cached_checklist_stats_payload(work_df, taxonomy_locale)``, full-export prep
 (Maintenance / Rankings as needed), and sync helpers run in one **prep** ``st.spinner(...)`` **above** the main
 tab row (with the same bird-emoji strip as the Map tab). The **Map** tab Folium build + ``st_folium`` use a
 **second** ``st.spinner`` inside the Map panel so loading stays visible while that tab’s content runs; other main
@@ -553,13 +553,13 @@ def main() -> None:
     # Same emoji strip as Map tab: prep used to omit it, so first paint showed spinner-only until Map ran.
     with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
         _prep_spinner_emoji_placeholder = place_spinner_emoji_strip()
-        checklist_payload = cached_checklist_stats_payload(work_df)
+        checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
         top_n = int(st.session_state.streamlit_rankings_top_n)
         hc_sort = str(st.session_state.streamlit_high_count_sort)
         hc_tb = str(st.session_state.streamlit_high_count_tie_break)
         if df_full is not None and not df_full.empty:
             maint_full_payload = cached_full_export_checklist_stats_payload(
-                df_full, top_n, hc_sort, hc_tb
+                df_full, top_n, hc_sort, hc_tb, tax_locale_effective
             )
             rankings_bundle = build_rankings_tab_bundle(
                 df_full,

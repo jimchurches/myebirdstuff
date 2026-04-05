@@ -11,9 +11,16 @@ from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_TOP_N_
 
 
 @st.cache_data(show_spinner=False)
-def cached_checklist_stats_payload(df: pd.DataFrame) -> ChecklistStatsPayload | None:
+def cached_checklist_stats_payload(
+    df: pd.DataFrame,
+    taxonomy_locale: str,
+) -> ChecklistStatsPayload | None:
     """Structured checklist stats for the Checklist Statistics tab (refs #68)."""
-    return compute_checklist_stats_payload(df, CHECKLIST_STATS_TOP_N_TABLE_LIMIT)
+    return compute_checklist_stats_payload(
+        df,
+        CHECKLIST_STATS_TOP_N_TABLE_LIMIT,
+        taxonomy_locale=taxonomy_locale,
+    )
 
 
 @st.cache_data(show_spinner=False)
@@ -22,6 +29,7 @@ def cached_full_export_checklist_stats_payload(
     top_n_limit: int,
     high_count_sort: str,
     high_count_tie_break: str,
+    taxonomy_locale: str,
 ) -> ChecklistStatsPayload | None:
     """Full-export stats payload shared by Maintenance + Rankings (one compute per cache key).
 
@@ -32,6 +40,7 @@ def cached_full_export_checklist_stats_payload(
         top_n_limit,
         high_count_sort=high_count_sort,
         high_count_tie_break=high_count_tie_break,
+        taxonomy_locale=taxonomy_locale,
     )
 
 

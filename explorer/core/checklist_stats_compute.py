@@ -105,6 +105,7 @@ def compute_checklist_stats_payload(
     *,
     high_count_sort: str = "total_count",
     high_count_tie_break: str = "last",
+    taxonomy_locale: str | None = None,
 ) -> Optional[ChecklistStatsPayload]:
     """Build structured checklist statistics from a sighting-level DataFrame.
 
@@ -218,7 +219,9 @@ def compute_checklist_stats_payload(
         high_count_tie_break=high_count_tie_break,
         high_count_sort=high_count_sort,
     )
-    years_list, yearly_rows, incomplete_by_year = yearly_summary_stats(df, cl, dur_col, dist_col)
+    years_list, yearly_rows, incomplete_by_year = yearly_summary_stats(
+        df, cl, dur_col, dist_col, taxonomy_locale=taxonomy_locale
+    )
     country_sections = country_summary_stats(df, cl)
 
     return ChecklistStatsPayload(

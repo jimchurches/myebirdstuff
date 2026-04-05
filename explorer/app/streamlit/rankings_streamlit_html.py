@@ -21,13 +21,8 @@ observation in the trailing twelve months and is not Top-N–capped (refs `#106`
 
 from __future__ import annotations
 
-import csv
 import html
-import io
-import json
 from typing import Any
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 
 import pandas as pd
 import streamlit as st
@@ -35,6 +30,11 @@ import streamlit as st
 from explorer.presentation.checklist_stats_display import (
     _YEARLY_STREAMLIT_CAPTION_STYLE,
     format_checklist_stats_bundle,
+)
+from explorer.core.species_family import (
+    assign_group_for_taxon_order,
+    load_taxonomy_groups,
+    load_taxonomy_species_rows,
 )
 from explorer.core.species_logic import countable_species_vectorized
 from explorer.core.stats import safe_count
@@ -48,8 +48,6 @@ from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_cs
 # Must include ``streamlit-checklist-html-ab`` — ``CHECKLIST_STATS_*`` rules are scoped to it (same as Checklist Statistics).
 _STREAMLIT_TABLE_SCOPE = "streamlit-checklist-html-ab"
 _RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"
-_TAXONOMY_BASE_URL = "https://api.ebird.org/v2/ref/taxonomy/ebird"
-_GROUPS_BASE_URL = "https://api.ebird.org/v2/ref/sppgroup/ebird"
 
 # Bundle keys and widget/session keys: eBird "group" in code; nested tab label Families (refs #73).
 _GROUP_COVERAGE_SUMMARY_KEY = "group_coverage_summary"
@@ -198,6 +196,7 @@ def _cached_rankings_stats_bundle(
         top_n,
         high_count_sort,
         high_count_tie_break,
+        taxonomy_locale,
     )
     return format_checklist_stats_bundle(
         payload,
@@ -217,94 +216,14 @@ def sync_rankings_tab_session_inputs(bundle: dict[str, Any]) -> None:
 
 @st.cache_data(show_spinner=False)
 def _load_taxonomy_species_rows(locale: str) -> pd.DataFrame:
-    """Load eBird taxonomy rows (species only) with taxon order and link code."""
-    loc = (locale or "").strip()
-    url = _TAXONOMY_BASE_URL
-    if loc:
-        url = f"{url}?{urlencode({'locale': loc})}"
-    req = Request(url, headers={"Accept": "text/csv"})
-    with urlopen(req, timeout=30) as resp:
-        raw = resp.read().decode("utf-8", errors="replace")
-    reader = csv.DictReader(io.StringIO(raw))
-    rows: list[dict[str, Any]] = []
-    for row in reader:
-        cat = str(row.get("CATEGORY", row.get("category", ""))).strip().lower()
-        if cat != "species":
-            continue
-        sci = str(
-            row.get("SCIENTIFIC_NAME")
-            or row.get("SCI_NAME")
-            or row.get("scientific_name")
-            or row.get("sci_name")
-            or ""
-        ).strip()
-        common = str(
-            row.get("COMMON_NAME")
-            or row.get("PRIMARY_COM_NAME")
-            or row.get("common_name")
-            or ""
-        ).strip()
-        code = str(row.get("SPECIES_CODE") or row.get("species_code") or "").strip()
-        tax_raw = row.get("TAXON_ORDER") or row.get("taxon_order") or ""
-        try:
-            taxon_order = float(str(tax_raw).strip())
-        except Exception:
-            continue
-        if not sci or not common:
-            continue
-        rows.append(
-            {
-                "scientific_name": sci,
-                "common_name": common,
-                "species_code": code,
-                "taxon_order": taxon_order,
-                "base_species": " ".join(sci.lower().split()[:2]).strip(),
-            }
-        )
-    return pd.DataFrame(rows)
+    """Streamlit-cached wrapper; delegates to :func:`explorer.core.species_family.load_taxonomy_species_rows`."""
+    return load_taxonomy_species_rows(locale)
 
 
 @st.cache_data(show_spinner=False)
 def _load_taxonomy_groups(locale: str) -> list[dict[str, Any]]:
-    """Load eBird species-group ranges."""
-    loc = (locale or "").strip()
-    url = _GROUPS_BASE_URL
-    if loc:
-        url = f"{url}?{urlencode({'locale': loc})}"
-    req = Request(url, headers={"Accept": "application/json"})
-    with urlopen(req, timeout=30) as resp:
-        raw = resp.read().decode("utf-8", errors="replace")
-    data = json.loads(raw)
-    out: list[dict[str, Any]] = []
-    for item in data:
-        bounds_in = item.get("taxonOrderBounds", []) or []
-        bounds: list[tuple[float, float]] = []
-        for pair in bounds_in:
-            if not isinstance(pair, list) or len(pair) != 2:
-                continue
-            try:
-                lo = float(pair[0])
-                hi = float(pair[1])
-            except Exception:
-                continue
-            bounds.append((lo, hi))
-        out.append(
-            {
-                "group_name": str(item.get("groupName", "")).strip(),
-                "group_order": int(item.get("groupOrder", 0) or 0),
-                "bounds": bounds,
-            }
-        )
-    return out
-
-
-def _assign_group_for_taxon_order(taxon_order: float, groups: list[dict[str, Any]]) -> tuple[str, int]:
-    """Map one taxon order to (group_name, group_order) by bounds."""
-    for g in groups:
-        for lo, hi in g["bounds"]:
-            if lo <= taxon_order <= hi:
-                return g["group_name"], g["group_order"]
-    return "Unmapped", 999999
+    """Streamlit-cached wrapper; delegates to :func:`explorer.core.species_family.load_taxonomy_groups`."""
+    return load_taxonomy_groups(locale)
 
 
 @st.cache_data(show_spinner=False)
@@ -317,7 +236,7 @@ def _build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) ->
 
     tax = tax.copy()
     tax[["group_name", "group_order"]] = tax["taxon_order"].apply(
-        lambda x: pd.Series(_assign_group_for_taxon_order(float(x), groups))
+        lambda x: pd.Series(assign_group_for_taxon_order(float(x), groups))
     )
 
     work = df_full.copy()
