@@ -29,11 +29,14 @@ names in popups can link to eBird species pages. Default locale is **en_AU**; ov
 Streamlit does not expose the browser language to Python.
 
 **Checklist Statistics:** Shared HTML sections (nested ``st.tabs`` + formatted tables from
-``checklist_stats_streamlit_tab_sections_html``). ``cached_checklist_stats_payload(work_df)``, full-export prep,
-and sync helpers run in a **prep** ``st.spinner(...)`` **above** the main tab row (with the same bird-emoji strip
-as the Map tab). **Map** tab Folium build + ``st_folium`` use a second ``st.spinner`` inside the Map panel so
-loading stays visible while that tab’s content runs; other main tabs render after the prep spinner exits.
-``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment`` match Country / Yearly (refs #70).
+``checklist_stats_streamlit_tab_sections_html``). ``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment``
+match Country / Yearly (refs #70).
+
+**Prep vs Map spinners:** Each full rerun, ``cached_checklist_stats_payload(work_df)``, full-export prep
+(Maintenance / Rankings as needed), and sync helpers run in one **prep** ``st.spinner(...)`` **above** the main
+tab row (with the same bird-emoji strip as the Map tab). The **Map** tab Folium build + ``st_folium`` use a
+**second** ``st.spinner`` inside the Map panel so loading stays visible while that tab’s content runs; other main
+tab bodies render after the prep spinner exits.
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
 (``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
@@ -44,8 +47,8 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 (refs #79).
 
 **Ranking & Lists:** ``cached_full_export_checklist_stats_payload`` + ``format_checklist_stats_bundle``;
-``build_rankings_tab_bundle`` runs in the main spinner pass; **Top N** / **visible rows** / table options are under
-**Settings → Tables & lists** (batch **Apply**; refs `#81`).
+``build_rankings_tab_bundle`` runs in the **prep** spinner pass (above the tab row, with other full-export prep);
+**Top N** / **visible rows** / table options are under **Settings → Tables & lists** (batch **Apply**; refs `#81`).
 
 **Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs inside
 ``@st.fragment``; ``st.toggle`` switches recent vs full year columns when count exceeds **Settings → Yearly tables:
