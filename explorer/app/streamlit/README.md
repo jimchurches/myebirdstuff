@@ -10,9 +10,9 @@ Primary **Personal eBird Explorer** UI. Implementation modules live in this dire
 streamlit run explorer/app/streamlit/app.py
 ```
 
-**Landing (no CSV yet):** If disk resolution finds no file and this browser session has no cached upload yet, the app shows title + copy + **file uploader in the main column**. The **sidebar** still shows a small text footer: **GitHub** · **eBird** · **Instagram** (no icons — reads better in a narrow sidebar). After CSV load, the **Map** sidebar fills in above that footer — there is no control to swap CSV without a new session / refresh (loading APIs stay in `_load_dataframe` for future work).
+**Landing (no CSV yet):** If disk resolution finds no file and this browser session has no cached upload yet, the app shows title + copy + **file uploader in the main column**. The **sidebar** still shows a small text footer: **GitHub** · **eBird** · **Instagram**, and a line below with **Explorer docs** (link to `docs/explorer/README.md` on GitHub; no icons — reads better in a narrow sidebar). After CSV load, the **Map** sidebar fills in above that footer — there is no control to swap CSV without a new session / refresh (loading APIs stay in `_load_dataframe` for future work).
 
-**Sidebar footer:** `app.py` sets `GITHUB_REPO_URL`, `EBIRD_PROFILE_URL`, and `INSTAGRAM_PROFILE_URL`; `_sidebar_footer_links()` renders those as plain text links separated by middots. *Other common patterns* if you want to change it: put links only on **Settings → About**; use a **shields.io** badge in markdown; add **“Fork me on GitHub”** ribbon (CSS, more prominent); or a **footer line** in the main area with `st.caption` under specific tabs (repeats unless hoisted).
+**Sidebar footer:** `streamlit_ui_constants` defines `GITHUB_REPO_URL`, `EXPLORER_README_GITHUB_URL`, `EBIRD_PROFILE_URL`, and `INSTAGRAM_PROFILE_URL`; `sidebar_footer_links()` renders the first three as middot-separated links and **Explorer docs** on a second line. *Other common patterns* if you want to change it: put links only on **Settings → About**; use a **shields.io** badge in markdown; add **“Fork me on GitHub”** ribbon (CSS, more prominent); or a **footer line** in the main area with `st.caption` under specific tabs (repeats unless hoisted).
 
 ## UI guidelines
 

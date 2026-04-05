@@ -29,6 +29,7 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM,
     CHECKLIST_STATS_SPINNER_EMOJIS,
     EBIRD_PROFILE_URL,
+    EXPLORER_README_GITHUB_URL,
     GITHUB_REPO_URL,
     INSTAGRAM_PROFILE_URL,
     SPECIES_SEARCH_DEBOUNCE_MS,
@@ -115,7 +116,7 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
 
 
 def sidebar_footer_links() -> None:
-    """Small centred sidebar footer: GitHub, eBird, Instagram — text links only (icons dropped; narrow sidebar)."""
+    """Small centred sidebar footer: GitHub, eBird, Instagram + Explorer README on GitHub (text links)."""
     st.sidebar.divider()
     link_style = "color:#868e96;text-decoration:none;"
     sep = '<span style="opacity:0.45;margin:0 0.55em;" aria-hidden="true">·</span>'
@@ -129,6 +130,11 @@ def sidebar_footer_links() -> None:
         f"{sep}"
         f'<a href="{INSTAGRAM_PROFILE_URL}" target="_blank" rel="noopener noreferrer" '
         f'style="{link_style}" title="Instagram">Instagram</a>'
+        "</div>"
+        f'<div style="text-align:center;font-size:0.8rem;margin-top:0.4em;">'
+        f'<a href="{EXPLORER_README_GITHUB_URL}" target="_blank" rel="noopener noreferrer" '
+        f'style="{link_style}" title="Personal eBird Explorer — documentation (README on GitHub)">'
+        f"Explorer docs</a>"
         "</div>",
         unsafe_allow_html=True,
     )

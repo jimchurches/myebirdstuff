@@ -434,6 +434,7 @@ def test_sidebar_footer_links_include_profile_urls(streamlit_stub) -> None:
     from explorer.app.streamlit.app_map_ui import sidebar_footer_links
     from explorer.app.streamlit.streamlit_ui_constants import (
         EBIRD_PROFILE_URL,
+        EXPLORER_README_GITHUB_URL,
         GITHUB_REPO_URL,
         INSTAGRAM_PROFILE_URL,
     )
@@ -444,3 +445,4 @@ def test_sidebar_footer_links_include_profile_urls(streamlit_stub) -> None:
     assert GITHUB_REPO_URL in combined
     assert EBIRD_PROFILE_URL in combined
     assert INSTAGRAM_PROFILE_URL in combined
+    assert EXPLORER_README_GITHUB_URL in combined

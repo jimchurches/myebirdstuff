@@ -85,5 +85,7 @@ CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM = 2.75
 # ---------------------------------------------------------------------------
 
 GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
+# Rendered on GitHub (main); same path as docs/explorer/README.md in the repo.
+EXPLORER_README_GITHUB_URL = f"{GITHUB_REPO_URL}/blob/main/docs/explorer/README.md"
 EBIRD_PROFILE_URL = "https://ebird.org/profile/MjkxNDYyNQ"
 INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
