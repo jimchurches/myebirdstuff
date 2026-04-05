@@ -24,7 +24,7 @@ from __future__ import annotations
 # Marker cluster — default “all locations” map (Leaflet.markercluster via Folium)
 # ---------------------------------------------------------------------------
 MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX = 40
-MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 10
+MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 9
 MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
 
 # Debug-only map overlay (live zoom readout). Listed in :func:`debug_defaults_enabled` for CI warnings.
