@@ -171,6 +171,7 @@ from explorer.app.streamlit.app_map_ui import (  # noqa: E402
     species_searchbox_fragment,
 )
 from explorer.app.streamlit.app_settings_state import (  # noqa: E402
+    apply_pending_map_cluster_toggle,
     apply_settings_payload_to_state,
     env_taxonomy_locale,
     init_and_clamp_streamlit_table_settings,
@@ -361,9 +362,7 @@ def main() -> None:
 
     # Apply map settings cannot set STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY in the same run as the Map
     # sidebar toggle (same key); stash and apply here before the sidebar instantiates that widget.
-    _pending_cluster = st.session_state.pop(STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY, None)
-    if _pending_cluster is not None:
-        st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY] = bool(_pending_cluster)
+    apply_pending_map_cluster_toggle(st.session_state)
 
     with st.sidebar:
         st.header("Map")

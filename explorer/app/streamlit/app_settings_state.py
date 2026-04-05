@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import os
+from collections.abc import MutableMapping
 from typing import Any
 
 import streamlit as st
@@ -27,6 +28,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY,
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
     STREAMLIT_POPUP_SORT_ORDER_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
@@ -362,3 +364,16 @@ def settings_taxonomy_help_markdown() -> str:
         "taxonomy API accepts for common-name spellings. "
         f"[Bird names in eBird]({help_url}) — how regional names are chosen."
     )
+
+
+def apply_pending_map_cluster_toggle(session_state: MutableMapping[str, Any]) -> None:
+    """Apply **Settings → Apply map settings** deferred cluster value before the sidebar builds the toggle.
+
+    Streamlit cannot set ``STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY`` in the same run as the form that
+    shares that key with the Map sidebar; the form stores into
+    ``STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY`` instead. Call this at the start of the
+    next script run (before ``with st.sidebar:``). refs #98.
+    """
+    pending = session_state.pop(STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY, None)
+    if pending is not None:
+        session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY] = bool(pending)
