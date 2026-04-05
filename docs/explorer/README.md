@@ -64,6 +64,16 @@ For local use, settings can be saved between sessions. With a configuration file
 
 ## Notes
 
+### Mobile support
+
+The explorer can be accessed on a mobile device via Streamlit Cloud and is generally usable on modern phones.
+
+However, the application is designed primarily for desktop and laptop use. Tables and layouts assume a larger screen, and no specific testing or optimisation has been done for mobile devices. As a result, some views may feel cramped or require scrolling.
+
+Local installation is not supported on mobile devices.
+
+For the best experience, use a desktop or laptop with a modern browser.
+
 ### Missing checklist times (synthetic 23:59)
 
 Some checklists in your eBird export do not include a recorded time (for example, entries from Merlin or generalised locations).
