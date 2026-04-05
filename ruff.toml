@@ -1,5 +1,5 @@
 # Ruff — https://docs.astral.sh/ruff/
-# CI runs: ruff check explorer/app/streamlit/
+# CI runs: ruff check explorer/
 
 target-version = "py312"
 

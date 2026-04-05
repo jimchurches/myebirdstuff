@@ -10,6 +10,7 @@
 - *Getting started*: [`docs/explorer/getting-started.md`](getting-started.md)
 - *Install*: [`docs/explorer/install.md`](install.md)
 - *Feedback*: [`docs/explorer/feedback.md`](feedback.md)
+- *Live app (Streamlit Community Cloud)*: https://personal-ebird-explorer.streamlit.app
 
 ## What it does
 
@@ -40,7 +41,7 @@ While eBird excels at surfacing community data, tools for analysing your persona
   * Rich linking back to eBird
 
 
->See the application to fully appreciate the different information summarised from your personal eBird data.
+>See the [live app](https://personal-ebird-explorer.streamlit.app) to fully appreciate the different information summarised from your personal eBird data.
 
 ### Maintenance data
 

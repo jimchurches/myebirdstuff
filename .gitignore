@@ -14,6 +14,10 @@ config/config_secret.yaml
 .streamlit/secrets.toml
 __pycache__/
 
+# Ruff (local cache + ad-hoc pip --target installs, e.g. agent/sandbox tooling)
+.ruff_cache/
+_ruff_local/
+
 # pytest-cov / coverage.py
 .coverage
 htmlcov/

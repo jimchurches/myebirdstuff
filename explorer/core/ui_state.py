@@ -7,7 +7,7 @@ UI — this module holds only shared mutable state that callbacks
 read and write at runtime.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 

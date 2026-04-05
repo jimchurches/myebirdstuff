@@ -228,7 +228,7 @@ def sex_notation_intro_html() -> str:
     """Intro HTML for sex-notation maintenance."""
     return """
   <div class="maint-html-blurb">
-    Some checklists contain shorthand sex or age notation (for example <code>MF</code>, <code>MFFF</code>, or <code>MMF??F</code>) entered in the 
+    Some checklists contain shorthand sex or age notation (for example <code>MF</code>, <code>MFFF</code>, or <code>MMF??F</code>) entered in the
     field notes. These should ideally be converted into the structured Age/Sex table on the eBird website. The following lists identify
     checklists where this shorthand was detected.  The detection is delberately conservative and may miss some cases.
   </div>"""

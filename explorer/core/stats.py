@@ -367,7 +367,6 @@ def rankings_subspecies_hierarchical(df_obs, limit=None):
     hybrid = sci.str.contains(" x ", na=False) | common.str.lower().str.contains(r"\(hybrid\)", na=False)
     domestic = common.str.contains("Domestic", na=False) | common.str.contains(r"\(Domestic type\)", na=False)
     parts = sci.str.split()
-    is_subspecies = parts.apply(lambda p: len(p) >= 3 if isinstance(p, list) else False)
     species_level_slash = parts.apply(lambda p: len(p) > 1 and "/" in str(p[1]) if isinstance(p, list) else False)
 
     keep_valid = ~spuh & ~hybrid & ~domestic & ~species_level_slash

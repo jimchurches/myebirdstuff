@@ -1,6 +1,8 @@
 """
 Map rendering helpers for Personal eBird Explorer.
 
+**Live app:** https://personal-ebird-explorer.streamlit.app
+
 Pure helper functions used by the map overlay pipeline.
 Each function takes explicit inputs and returns a value — no UI
 globals, widget references, or side effects.
@@ -395,9 +397,9 @@ def build_species_banner_html(
         high_count_date: Formatted date string when high count was recorded (empty to omit).
         date_filter_status: Optional string (e.g. "Date filter: Off" or range) shown on last line, smaller and lighter.
         species_url: Optional eBird species page URL; if set, display_name is rendered as a clickable link (refs #56).
-        first_seen_checklist_url: Optional eBird checklist URL for the first-seen date (refs #XXX).
-        last_seen_checklist_url: Optional eBird checklist URL for the last-seen date (refs #XXX).
-        high_count_checklist_url: Optional eBird checklist URL for the high-count date (refs #XXX).
+        first_seen_checklist_url: Optional eBird checklist URL for the first-seen date (refs #56).
+        last_seen_checklist_url: Optional eBird checklist URL for the last-seen date (refs #56).
+        high_count_checklist_url: Optional eBird checklist URL for the high-count date (refs #56).
     """
     def _maybe_link(label: str, url: str | None) -> str:
         if not url:
@@ -441,7 +443,7 @@ def build_legend_html(items):
 
     Each tuple is rendered via ``pin_legend_item``.
     """
-    parts = "".join(pin_legend_item(c, f, l) for c, f, l in items)
+    parts = "".join(pin_legend_item(c, f, label) for c, f, label in items)
     return f'<div class="pebird-map-legend" style="{_LEGEND_POSITION}">{parts}</div>'
 
 

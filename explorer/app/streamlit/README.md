@@ -90,6 +90,8 @@ There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder ov
 
 ## Streamlit Community Cloud
 
+**Deployed instance:** https://personal-ebird-explorer.streamlit.app
+
 1. Connect the repo and set **Main file path** to `explorer/app/streamlit/app.py`.
 2. **Python requirements file (required):** in app **Settings → Advanced settings**, set this to **`requirements.txt`** at the **repo root**.
 3. Users upload their CSV via the app (do not commit private exports).

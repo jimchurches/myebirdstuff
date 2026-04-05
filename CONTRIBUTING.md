@@ -37,7 +37,7 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
   `pytest tests/ -v --cov=explorer --cov-report=term-missing`  
   More detail: [docs/development.md — Testing workflow](docs/development.md#testing-workflow).
 - **Lint:**  
-  `ruff check explorer/app/streamlit/`  
+  `ruff check explorer/`  
   (same as CI; `ruff` is in `requirements.txt`, rules in `ruff.toml` — currently Pyflakes + pycodestyle, with line-length and import-order left for a later pass).
 
 ---

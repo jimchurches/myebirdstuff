@@ -25,6 +25,8 @@ This repository focuses on:
 
 A Streamlit application for exploring your personal eBird data.
 
+**Live app (Streamlit Community Cloud):** https://personal-ebird-explorer.streamlit.app
+
 - Interactive map of checklist locations  
 - Species search and filtering  
 - Summary tables and rankings  
