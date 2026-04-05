@@ -30,8 +30,9 @@ Streamlit does not expose the browser language to Python.
 
 **Checklist Statistics:** Shared HTML sections (nested ``st.tabs`` + formatted tables from
 ``checklist_stats_streamlit_tab_sections_html``). ``cached_checklist_stats_payload(work_df)``, full-export prep,
-sync helpers, and **Map** tab Folium build + ``st_folium`` run inside one ``st.spinner(...)`` so the themed
-spinner tracks the top “Running…” bar more closely; other main tabs render after the spinner exits.
+and sync helpers run in a **prep** ``st.spinner(...)`` **above** the main tab row (with the same bird-emoji strip
+as the Map tab). **Map** tab Folium build + ``st_folium`` use a second ``st.spinner`` inside the Map panel so
+loading stays visible while that tab’s content runs; other main tabs render after the prep spinner exits.
 ``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment`` match Country / Yearly (refs #70).
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
@@ -51,7 +52,7 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** Map tab body runs inside the main ``st.spinner`` block each full rerun; data tabs use ``@st.fragment`` where possible. One always-on
+**Main tabs + sidebar:** Prep work runs in a spinner above the tab row; the Map tab body uses an inner ``st.spinner`` each full rerun. Data tabs use ``@st.fragment`` where possible. One always-on
 sidebar for map controls plus footer links (refs #70). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 """
@@ -100,7 +101,6 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     EBIRD_DATA_SIG_KEY,
     EBIRD_LANDING_CSV_UPLOADER_KEY,
     EBIRD_LANDING_MAIN_CONTAINER_KEY,
-    EXPLORER_MAIN_TABS_STATE_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     DEFAULT_TAXONOMY_LOCALE,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
@@ -114,7 +114,6 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     SESSION_PREV_MAP_VIEW_KEY,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_IX_SIG_KEY,
-    SESSION_PREV_MAIN_TAB_FOR_FAMILY_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
     SESSION_SPECIES_WS_KEY,
@@ -143,6 +142,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_VIEW_LABEL_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
@@ -358,6 +358,12 @@ def main() -> None:
 
     ensure_streamlit_map_basemap_height_keys()
 
+    # Apply map settings cannot set STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY in the same run as the Map
+    # sidebar toggle (same key); stash and apply here before the sidebar instantiates that widget.
+    _pending_cluster = st.session_state.pop(STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY, None)
+    if _pending_cluster is not None:
+        st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY] = bool(_pending_cluster)
+
     with st.sidebar:
         st.header("Map")
 
@@ -369,17 +375,6 @@ def main() -> None:
         map_view_mode = MAP_VIEW_LABEL_TO_MODE[map_view_label]
         is_lifer_view = map_view_mode == "lifers"
 
-        st.toggle(
-            "Group nearby pins",
-            key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-            help=(
-                "All locations map only—clusters nearby pins at low zoom. "
-                "This changes the map for this browser session. "
-                "To save your default for the next session, use **Settings → Map display** and **Save settings**."
-            ),
-        )
-
-        st.markdown("**Date**")
         if is_lifer_view:
             st.caption("Lifer locations are not date-filtered.")
             if st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT):
@@ -439,6 +434,12 @@ def main() -> None:
             st.session_state[PERSIST_MAP_DATE_FILTER_KEY] = date_filter_on_effective
             if date_filter_on_effective and date_range_sel is not None:
                 st.session_state[PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
+
+        st.toggle(
+            "Group nearby pins",
+            key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+            help="Clusters nearby pins at low zoom. Session-only (save in Settings to persist).",
+        )
 
     ws, date_filter_banner = streamlit_working_set_and_status(
         df_full,
@@ -548,25 +549,11 @@ def main() -> None:
     _title_with_logo()
     st.markdown("Your eBird data, made visible, navigable, and ready to explore")
 
-    (
-        tab_map,
-        tab_checklist,
-        tab_rankings,
-        tab_yearly,
-        tab_country,
-        tab_maint,
-        tab_settings,
-    ) = st.tabs(
-        NOTEBOOK_MAIN_TAB_LABELS,
-        # Active label in session_state (required for Family Lists session “last family” vs main-tab transitions).
-        key=EXPLORER_MAIN_TABS_STATE_KEY,
-        on_change="rerun",
-    )
-
-    # Emoji strip: first nodes inside ``st.spinner`` so it sits under the status row (refs #74).
+    # Spinner before tabs so loading shows above tab content (not below the tab panel; refs #74).
+    # Same emoji strip as Map tab: prep used to omit it, so first paint showed spinner-only until Map ran.
     with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
-        _spinner_emoji_placeholder = st.empty()
-        with _spinner_emoji_placeholder.container():
+        _prep_spinner_emoji_placeholder = st.empty()
+        with _prep_spinner_emoji_placeholder.container():
             inject_spinner_emoji_animation()
         checklist_payload = cached_checklist_stats_payload(work_df)
         top_n = int(st.session_state.streamlit_rankings_top_n)
@@ -603,9 +590,25 @@ def main() -> None:
         sync_yearly_summary_session_inputs(checklist_payload)
         sync_country_tab_session_inputs(checklist_payload)
 
-        # Keep spinner visible through Folium build + ``st_folium`` so it tracks the top “Running…” bar
-        # more closely (spinner ends when this block exits; other tabs render after).
-        with tab_map:
+    _prep_spinner_emoji_placeholder.empty()
+
+    # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``). Keyed lazy tabs existed only for Family Lists
+    # “main tab” session bookkeeping; the Families flow now relies on dataframe selection only (refs #73).
+    (
+        tab_map,
+        tab_checklist,
+        tab_rankings,
+        tab_yearly,
+        tab_country,
+        tab_maint,
+        tab_settings,
+    ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
+
+    with tab_map:
+        with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
+            _spinner_emoji_placeholder = st.empty()
+            with _spinner_emoji_placeholder.container():
+                inject_spinner_emoji_animation()
             prov_plain = provenance or ""
             sig = data_signature_for_caches(df_full, prov_plain)
             if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
@@ -763,7 +766,7 @@ def main() -> None:
                         return_on_hover=False,
                     )
 
-        _spinner_emoji_placeholder.empty()  # Drop emoji iframe once load finishes (refs #74).
+            _spinner_emoji_placeholder.empty()  # Drop emoji iframe once load finishes (refs #74).
 
     with tab_checklist:
         run_checklist_stats_streamlit_fragment()
@@ -927,7 +930,7 @@ def main() -> None:
                 st.session_state[STREAMLIT_MARK_LAST_SEEN_KEY] = bool(mark_last_seen_w)
                 _cl = bool(cluster_all_locations_w)
                 st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY] = _cl
-                st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY] = _cl
+                st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY] = _cl
                 st.session_state[STREAMLIT_POPUP_SORT_ORDER_KEY] = popup_sort_w
                 st.session_state[STREAMLIT_POPUP_SCROLL_HINT_KEY] = popup_scroll_w
                 st.session_state[STREAMLIT_DEFAULT_COLOR_KEY] = default_edge_w
@@ -1092,11 +1095,6 @@ def main() -> None:
             )
 
     sidebar_footer_links()
-
-    # Compared at start of next run to detect entering Ranking & Lists from another main tab (rankings_streamlit_html).
-    st.session_state[SESSION_PREV_MAIN_TAB_FOR_FAMILY_KEY] = str(
-        st.session_state.get(EXPLORER_MAIN_TABS_STATE_KEY) or NOTEBOOK_MAIN_TAB_LABELS[0]
-    ).strip()
 
 
 if __name__ == "__main__":

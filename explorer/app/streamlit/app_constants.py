@@ -146,6 +146,8 @@ STREAMLIT_MARK_LAST_SEEN_KEY = "streamlit_mark_last_seen"
 # All-locations map only (species / lifer maps never cluster).
 # Runtime: sidebar toggle; map build + cache signature.
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
+# Settings → Apply map settings: defer syncing this key until next run (before sidebar widget; refs Streamlit widget rules).
+STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY = "_streamlit_map_cluster_apply_from_settings_pending"
 # Persisted default: Settings form + Save settings / YAML (may differ from runtime after sidebar).
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY = "streamlit_map_cluster_all_locations_saved"
 
@@ -179,10 +181,6 @@ SESSION_SPECIES_WS_KEY = "_ws_for_species_search_fragment"
 SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
-# Main tab strip (``st.tabs``): active label lives in session when ``key`` + ``on_change`` are set.
-EXPLORER_MAIN_TABS_STATE_KEY = "explorer_main_tabs"
-# End-of-run snapshot of the main tab label (for Family Lists “last family” restore after navigating away).
-SESSION_PREV_MAIN_TAB_FOR_FAMILY_KEY = "_streamlit_prev_main_tab_for_family"
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
 # Bumped when toggling Map view All locations <-> Selected species so streamlit-folium remounts cleanly.
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
