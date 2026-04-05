@@ -401,6 +401,16 @@ def _build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) ->
     return summary, merged
 
 
+def _rankings_expander_sections(sections: list[tuple[str, str]]) -> None:
+    """One expander per (title, inner_html) with rankings-scoped table wrapper (refs #81)."""
+    for title, inner_html in sections:
+        with st.expander(title, expanded=False):
+            st.markdown(
+                f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">{inner_html}</div>',
+                unsafe_allow_html=True,
+            )
+
+
 def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
     """Render Rankings HTML from a precomputed bundle (fragment-safe)."""
     inject_streamlit_checklist_css(_rankings_family_coverage_inject_css())
@@ -409,20 +419,10 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
     tab_top, tab_int, tab_group = st.tabs(["Top Lists", "Interesting Lists", "Families"])
 
     with tab_top:
-        for title, inner_html in bundle.get("rankings_sections_top_n") or []:
-            with st.expander(title, expanded=False):
-                st.markdown(
-                    f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">{inner_html}</div>',
-                    unsafe_allow_html=True,
-                )
+        _rankings_expander_sections(list(bundle.get("rankings_sections_top_n") or []))
 
     with tab_int:
-        for title, inner_html in bundle.get("rankings_sections_other") or []:
-            with st.expander(title, expanded=False):
-                st.markdown(
-                    f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">{inner_html}</div>',
-                    unsafe_allow_html=True,
-                )
+        _rankings_expander_sections(list(bundle.get("rankings_sections_other") or []))
 
     with tab_group:
         summary = bundle.get(_GROUP_COVERAGE_SUMMARY_KEY)
