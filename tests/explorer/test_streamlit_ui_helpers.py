@@ -430,13 +430,18 @@ def test_inject_streamlit_checklist_css_appends_extra_css(streamlit_stub) -> Non
     assert "/*extra-tab*/" in style_blob
 
 
-def test_sidebar_footer_links_include_profile_urls(streamlit_stub) -> None:
+def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) -> None:
     from explorer.app.streamlit.app_map_ui import sidebar_footer_links
     from explorer.app.streamlit.streamlit_ui_constants import (
         EBIRD_PROFILE_URL,
-        EXPLORER_README_GITHUB_URL,
         GITHUB_REPO_URL,
         INSTAGRAM_PROFILE_URL,
+    )
+
+    fixed_docs = f"{GITHUB_REPO_URL}/blob/main/docs/explorer/README.md"
+    monkeypatch.setattr(
+        "explorer.app.streamlit.app_map_ui.explorer_readme_github_url",
+        lambda: fixed_docs,
     )
 
     streamlit_stub.sidebar.markdown_calls.clear()
@@ -445,4 +450,4 @@ def test_sidebar_footer_links_include_profile_urls(streamlit_stub) -> None:
     assert GITHUB_REPO_URL in combined
     assert EBIRD_PROFILE_URL in combined
     assert INSTAGRAM_PROFILE_URL in combined
-    assert EXPLORER_README_GITHUB_URL in combined
+    assert fixed_docs in combined

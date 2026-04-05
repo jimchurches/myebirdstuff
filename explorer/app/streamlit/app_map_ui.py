@@ -29,8 +29,8 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM,
     CHECKLIST_STATS_SPINNER_EMOJIS,
     EBIRD_PROFILE_URL,
-    EXPLORER_README_GITHUB_URL,
     GITHUB_REPO_URL,
+    explorer_readme_github_url,
     INSTAGRAM_PROFILE_URL,
     SPECIES_SEARCH_DEBOUNCE_MS,
     SPECIES_SEARCH_EDIT_AFTER_SUBMIT,
@@ -132,7 +132,7 @@ def sidebar_footer_links() -> None:
         f'style="{link_style}" title="Instagram">Instagram</a>'
         "</div>"
         f'<div style="text-align:center;font-size:0.8rem;margin-top:0.4em;">'
-        f'<a href="{EXPLORER_README_GITHUB_URL}" target="_blank" rel="noopener noreferrer" '
+        f'<a href="{explorer_readme_github_url()}" target="_blank" rel="noopener noreferrer" '
         f'style="{link_style}" title="Personal eBird Explorer — documentation (README on GitHub)">'
         f"Explorer docs</a>"
         "</div>",
