@@ -48,5 +48,9 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=65
 
+      - name: Warn if Streamlit debug defaults (defaults.py) are enabled
+        if: success()
+        run: python scripts/warn_streamlit_debug_defaults.py
+
       - name: Run GPS script offline tests
         run: python scripts/eBirdChecklistNameFromGPS.py --testfile tests/fixtures/gps_checklistName_testing.json

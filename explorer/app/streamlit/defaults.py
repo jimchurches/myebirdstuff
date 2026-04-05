@@ -5,7 +5,7 @@ you may edit in one place without hunting through core modules.
 **What belongs here**
 
 - Marker cluster options, pin **radius / stroke / opacities**, legend dot sizes, popup width
-- Map UI: basemap list/labels, height slider bounds, view labels, date-filter default
+- Map UI: basemap list/labels, height slider bounds, view labels, date-filter default; **debug-only map toggles** registered in :func:`debug_defaults_enabled` for CI
 - Theme hex values aligned with ``.streamlit/config.toml``, settings panel width cap
 - Rankings HTML layout width / scroll hint default; spinner CSS cache key suffix when theme CSS changes
 
@@ -27,7 +27,8 @@ MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX = 40
 MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 10
 MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
 
-MAP_DEBUG_SHOW_ZOOM_LEVEL = False
+# Debug-only map overlay (live zoom readout). Listed in :func:`debug_defaults_enabled` for CI warnings.
+MAP_DEBUG_SHOW_ZOOM_LEVEL = True
 
 # ---------------------------------------------------------------------------
 # Pin geometry — Folium ``CircleMarker`` + legend sample dots; popup width
@@ -79,3 +80,15 @@ SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v4"
 
 RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX = 1400
 RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT = "shading"
+
+
+def debug_defaults_enabled() -> list[str]:
+    """Return names of debug toggles in this module that are currently ``True``.
+
+    Used by CI (pytest + ``scripts/warn_streamlit_debug_defaults.py``) to emit non-failing warnings
+    when a debug default is left on. Add new ``MAP_*``/``*_DEBUG_*`` style toggles here when introduced.
+    """
+    names: list[str] = []
+    if MAP_DEBUG_SHOW_ZOOM_LEVEL:
+        names.append("MAP_DEBUG_SHOW_ZOOM_LEVEL")
+    return names
