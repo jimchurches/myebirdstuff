@@ -1,4 +1,4 @@
-"""Sidebar map chrome, spinner CSS, and species search fragment (refs #98)."""
+"""Map sidebar chrome, spinner theme/emoji helpers, and species search fragment (refs #98)."""
 
 from __future__ import annotations
 
@@ -90,6 +90,18 @@ letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
 }})();
 </script></body></html>"""
     components.html(html, height=52, scrolling=False)
+
+
+def place_spinner_emoji_strip() -> Any:
+    """Show the animated bird-emoji strip under the current ``st.spinner`` (refs #74).
+
+    Uses ``st.empty()`` + ``container()`` + :func:`inject_spinner_emoji_animation`. Returns the
+    placeholder; call ``.empty()`` on it when the spinner phase ends so the iframe is dropped.
+    """
+    placeholder = st.empty()
+    with placeholder.container():
+        inject_spinner_emoji_animation()
+    return placeholder
 
 
 def ensure_streamlit_map_basemap_height_keys() -> None:

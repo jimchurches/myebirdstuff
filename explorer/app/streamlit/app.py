@@ -167,8 +167,8 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
 from explorer.app.streamlit.app_data_loading import load_dataframe  # noqa: E402
 from explorer.app.streamlit.app_map_ui import (  # noqa: E402
     ensure_streamlit_map_basemap_height_keys,
-    inject_spinner_emoji_animation,
     inject_spinner_theme_css,
+    place_spinner_emoji_strip,
     sidebar_footer_links,
     species_searchbox_fragment,
 )
@@ -555,9 +555,7 @@ def main() -> None:
     # Spinner before tabs so loading shows above tab content (not below the tab panel; refs #74).
     # Same emoji strip as Map tab: prep used to omit it, so first paint showed spinner-only until Map ran.
     with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
-        _prep_spinner_emoji_placeholder = st.empty()
-        with _prep_spinner_emoji_placeholder.container():
-            inject_spinner_emoji_animation()
+        _prep_spinner_emoji_placeholder = place_spinner_emoji_strip()
         checklist_payload = cached_checklist_stats_payload(work_df)
         top_n = int(st.session_state.streamlit_rankings_top_n)
         hc_sort = str(st.session_state.streamlit_high_count_sort)
@@ -613,9 +611,7 @@ def main() -> None:
 
     with tab_map:
         with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
-            _spinner_emoji_placeholder = st.empty()
-            with _spinner_emoji_placeholder.container():
-                inject_spinner_emoji_animation()
+            _spinner_emoji_placeholder = place_spinner_emoji_strip()
             prov_plain = provenance or ""
             sig = data_signature_for_caches(df_full, prov_plain)
             if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
