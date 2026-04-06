@@ -32,11 +32,10 @@ Streamlit does not expose the browser language to Python.
 ``checklist_stats_streamlit_tab_sections_html``). ``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment``
 match Country / Yearly (refs #70).
 
-**Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** (reserved height + same styling as the
-footer band) wraps the full synchronous dashboard load for each full rerun: checklist prep, tab sync helpers, **and**
-Folium build (bird-emoji strip under the spinner). The Map tab embeds ``st_folium`` from that pass. Export HTML + footer
-links render in that same bottom region after the spinner phase. Partial ``@st.fragment`` reruns do not use this spinner
-(refs #124).
+**Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** wraps prep (checklist, tab syncs,
+Folium **build**, bird-emoji strip, export + footer) **and** ``st_folium`` in the Map tab in the **same** spinner context
+so the loading indicator stays up until the map iframe is shown. The Map tab body is **not** nested under ``st.sidebar``
+(letterboxing). Partial ``@st.fragment`` reruns do not use this spinner (refs #124).
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
 (``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
@@ -162,6 +161,7 @@ from explorer.app.streamlit.app_data_loading import load_dataframe  # noqa: E402
 from explorer.app.streamlit.app_settings_ui import render_settings_tab  # noqa: E402
 from explorer.app.streamlit.app_map_ui import (  # noqa: E402
     ensure_streamlit_map_basemap_height_keys,
+    inject_map_folium_iframe_min_height_css,
     inject_sidebar_control_label_css,
     inject_spinner_theme_css,
     place_spinner_emoji_strip,
@@ -223,6 +223,15 @@ from explorer.app.streamlit.yearly_summary_streamlit_html import (  # noqa: E402
 
 # Same asset as docs/explorer/README.md (repo-relative).
 _APP_LOGO_SVG = Path(REPO_ROOT) / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
+
+
+def _on_basemap_changed() -> None:
+    """Invalidate Folium cache + remount iframe when the basemap **value** changes (refs #124)."""
+    st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
+        st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+    ) + 1
+    st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
 
 
 def _title_with_logo() -> None:
@@ -377,6 +386,7 @@ def main() -> None:
             options=list(MAP_BASEMAP_OPTIONS),
             format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
             key=STREAMLIT_MAP_BASEMAP_KEY,
+            on_change=_on_basemap_changed,
         )
         st.markdown(
             '<div style="height:0.65rem" aria-hidden="true"></div>',
@@ -569,12 +579,14 @@ def main() -> None:
         tab_settings,
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
-    # Sidebar bottom slot: spinner + emoji; prep work here. **Do not** nest ``with tab_map`` under the
-    # sidebar — streamlit-folium can render a letterbox/sliver iframe until remount (same class of bug as
-    # All↔Species layout changes; map body belongs in the main column only).
+    # Spinner wraps sidebar prep **and** ``st_folium`` so loading feedback lasts until the map iframe is
+    # mounted (same run). ``with tab_map`` stays in the **main** column — never nest it under
+    # ``st.sidebar`` (letterbox/sliver iframe).
     with st.sidebar:
         sidebar_bottom_slot_start()
-        with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
+
+    with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
+        with st.sidebar:
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
             checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
             top_n = int(st.session_state.streamlit_rankings_top_n)
@@ -743,50 +755,51 @@ def main() -> None:
                         f"{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
                     )
 
-        _spinner_emoji_placeholder.empty()
-        _has_map_export = bool(st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY))
-        if _has_map_export:
-            st.divider()
-            _ex1, _ex2, _ex3 = st.columns([1, 3, 1])
-            with _ex2:
-                st.download_button(
-                    "Export map HTML",
-                    data=st.session_state[EXPLORER_MAP_HTML_BYTES_KEY],
-                    file_name=MAP_EXPORT_HTML_FILENAME,
-                    mime="text/html",
-                    key=EXPORT_MAP_HTML_BTN_KEY,
-                    help="Standalone HTML for the current map.",
-                    use_container_width=True,
-                )
-        sidebar_footer_links(leading_divider=not _has_map_export)
-        sidebar_bottom_slot_end()
+            _spinner_emoji_placeholder.empty()
+            _has_map_export = bool(st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY))
+            if _has_map_export:
+                st.divider()
+                _ex1, _ex2, _ex3 = st.columns([1, 3, 1])
+                with _ex2:
+                    st.download_button(
+                        "Export map HTML",
+                        data=st.session_state[EXPLORER_MAP_HTML_BYTES_KEY],
+                        file_name=MAP_EXPORT_HTML_FILENAME,
+                        mime="text/html",
+                        key=EXPORT_MAP_HTML_BTN_KEY,
+                        help="Standalone HTML for the current map.",
+                        use_container_width=True,
+                    )
+            sidebar_footer_links(leading_divider=not _has_map_export)
+            sidebar_bottom_slot_end()
 
-    with tab_map:
-        if map_warning_text is not None:
-            st.warning(map_warning_text)
-        elif map_for_folium is not None and folium_st_key is not None:
-            try:
-                from streamlit_folium import st_folium
-            except ImportError:
-                st.error(
-                    "Missing **streamlit-folium** (needed to embed the Folium map). "
-                    "Locally: `pip install -r requirements.txt`. "
-                    "**Streamlit Community Cloud:** set app **Python requirements** to "
-                    "`requirements.txt` at the repo root."
+        with tab_map:
+            if map_warning_text is not None:
+                st.warning(map_warning_text)
+            elif map_for_folium is not None and folium_st_key is not None:
+                inject_map_folium_iframe_min_height_css(map_height)
+                try:
+                    from streamlit_folium import st_folium
+                except ImportError:
+                    st.error(
+                        "Missing **streamlit-folium** (needed to embed the Folium map). "
+                        "Locally: `pip install -r requirements.txt`. "
+                        "**Streamlit Community Cloud:** set app **Python requirements** to "
+                        "`requirements.txt` at the repo root."
+                    )
+                    st.stop()
+                st_folium(
+                    map_for_folium,
+                    use_container_width=True,
+                    height=map_height,
+                    # ``_ck`` coerces **Species** with no pick to ``all`` so we reuse one Folium build
+                    # when the cache is valid. *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
+                    # distinct streamlit-folium component identity when the sidebar layout changes
+                    # (All↔Species); see invalidation block above.
+                    key=folium_st_key,
+                    returned_objects=[],
+                    return_on_hover=False,
                 )
-                st.stop()
-            st_folium(
-                map_for_folium,
-                use_container_width=True,
-                height=map_height,
-                # ``_ck`` coerces **Species** with no pick to ``all`` so we reuse one Folium build
-                # when the cache is valid. *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
-                # distinct streamlit-folium component identity when the sidebar layout changes
-                # (All↔Species); see invalidation block above.
-                key=folium_st_key,
-                returned_objects=[],
-                return_on_hover=False,
-            )
 
     _run_non_map_data_tab_fragments(
         tab_checklist,
