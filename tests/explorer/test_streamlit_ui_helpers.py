@@ -366,8 +366,8 @@ def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_st
     assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
 
 
-def test_inject_spinner_theme_css_idempotent(streamlit_stub) -> None:
-    from explorer.app.streamlit.app_constants import SPINNER_THEME_CSS, SPINNER_THEME_CSS_INJECTED_KEY
+def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
+    from explorer.app.streamlit.app_constants import SPINNER_THEME_CSS
     from explorer.app.streamlit.app_map_ui import inject_spinner_theme_css
 
     st = streamlit_stub
@@ -375,10 +375,10 @@ def test_inject_spinner_theme_css_idempotent(streamlit_stub) -> None:
     inject_spinner_theme_css()
     assert len(st.html_calls) == 1
     assert st.html_calls[0] == SPINNER_THEME_CSS.strip()
-    assert st.session_state[SPINNER_THEME_CSS_INJECTED_KEY] is True
     st.html_calls.clear()
     inject_spinner_theme_css()
-    assert st.html_calls == []
+    assert len(st.html_calls) == 1
+    assert st.html_calls[0] == SPINNER_THEME_CSS.strip()
 
 
 def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit_stub) -> None:

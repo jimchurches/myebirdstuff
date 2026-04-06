@@ -20,7 +20,6 @@ from explorer.core.settings_schema_defaults import (
 )
 from explorer.app.streamlit.defaults import (
     SETTINGS_PANEL_MAX_WIDTH_REM,
-    SPINNER_THEME_CSS_CACHE_KEY_SUFFIX,
     THEME_PRIMARY_HEX,
     THEME_SECONDARY_BG_HEX,
     THEME_TEXT_HEX,
@@ -223,16 +222,25 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
 )
 
-SPINNER_THEME_CSS_INJECTED_KEY = f"_ebird_spinner_theme_css_injected_{SPINNER_THEME_CSS_CACHE_KEY_SUFFIX}"
-
 SPINNER_THEME_CSS = f"""
 <style>
-/* Hoisted ``st.spinner`` — theme greens (refs #74); bump SPINNER_THEME_CSS_CACHE_KEY_SUFFIX when CSS changes. */
+/* ``st.spinner`` — text-style (no pill): theme greens on icon + label only (refs #74). */
 /* Modern Streamlit uses an icon spinner (``iconValue: spinner``), not a CSS border ring. */
 div[data-testid="stSpinner"],
 div[data-testid="stSpinner"].stSpinner {{
   color: {THEME_PRIMARY_HEX};
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: inline-flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0 !important;
+  margin: 0.15rem 0 0.25rem 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  max-width: min(96vw, 42rem);
 }}
 /* Graphic: ``currentColor`` on the SVG so the arc tracks primary (not default grey). */
 div[data-testid="stSpinner"] svg {{
@@ -261,6 +269,77 @@ div[data-testid="stSpinner"] label {{
 div[data-testid="stSpinner"] div[class*="Spinner"] {{
   border-color: {THEME_SECONDARY_BG_HEX} !important;
   border-top-color: {THEME_PRIMARY_HEX} !important;
+}}
+
+/* Bird-emoji strip (only ``components.html`` in Explorer uses height 52): tuck under spinner, centered. */
+[data-testid="stAppViewContainer"] main iframe[height="52"],
+[data-testid="stSidebar"] iframe[height="52"] {{
+  display: block !important;
+  margin: 0.1rem auto 0.4rem auto !important;
+  border: none !important;
+  max-width: 100%;
+}}
+[data-testid="stSidebar"] div[data-testid="stSpinner"],
+[data-testid="stSidebar"] div[data-testid="stSpinner"].stSpinner {{
+  max-width: 100%;
+  box-sizing: border-box;
+  /* In-flow only (no fixed positioning). */
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  display: flex !important;
+  width: 100%;
+}}
+/* Bottom region (spinner, export, footer): sticky within the sidebar scroll area only — no separate
+   “panel” colour or min-height (those read as an empty box when idle; refs #124). */
+[data-testid="stSidebar"] .ebird-sidebar-bottom-slot {{
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 0.25rem;
+  padding-bottom: 0.15rem;
+  margin-top: 0.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: transparent;
+}}
+</style>
+"""
+
+# Sidebar **control** labels only (selectbox, slider, toggles) — not the loading spinner. Injected separately
+# and early so typography matches on first paint; bump SPINNER_THEME_CSS_CACHE_KEY_SUFFIX when this changes.
+SIDEBAR_CONTROL_LABEL_CSS = f"""
+<style>
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] span,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {{
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  letter-spacing: normal !important;
+  color: {THEME_TEXT_HEX};
+  color: color-mix(in srgb, {THEME_PRIMARY_HEX} 22%, {THEME_TEXT_HEX}) !important;
+}}
+[data-testid="stSidebar"] label[data-baseweb="checkbox"] > div:first-of-type {{
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  letter-spacing: normal !important;
+  color: {THEME_TEXT_HEX};
+  color: color-mix(in srgb, {THEME_PRIMARY_HEX} 22%, {THEME_TEXT_HEX}) !important;
+}}
+[data-testid="stSidebar"] label[data-baseweb="checkbox"] > div:first-of-type span {{
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
 }}
 </style>
 """

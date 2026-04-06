@@ -14,8 +14,8 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
+    SIDEBAR_CONTROL_LABEL_CSS,
     SPINNER_THEME_CSS,
-    SPINNER_THEME_CSS_INJECTED_KEY,
 )
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_DEFAULT,
@@ -26,7 +26,6 @@ from explorer.app.streamlit.defaults import (
 from explorer.app.streamlit.streamlit_ui_constants import (
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS,
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE,
-    CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM,
     CHECKLIST_STATS_SPINNER_EMOJIS,
     EBIRD_PROFILE_URL,
     GITHUB_REPO_URL,
@@ -42,33 +41,46 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 
 
 def inject_spinner_theme_css() -> None:
-    """Tweak hoisted checklist-stats spinner to match our theme (refs #70).
+    """Tweak ``st.spinner`` (text-style, theme greens, emoji iframe layout) to match our theme (refs #70, #124).
 
     Use :func:`streamlit.html` for **style-only** blocks: ``st.markdown(..., unsafe_allow_html)``
     sanitizes or scopes HTML so global ``<style>`` may not affect the spinner; style-only
     ``st.html`` is applied via Streamlit’s event container (see Streamlit ``HtmlMixin.html``).
+
+    **Must run on every rerun:** if injection is skipped after the first run, the ``<style>`` node is
+    omitted from Streamlit output and spinners revert to default styling (same issue as sidebar
+    control labels — see :func:`inject_sidebar_control_label_css`).
     """
-    if st.session_state.get(SPINNER_THEME_CSS_INJECTED_KEY):
-        return
     st.html(SPINNER_THEME_CSS.strip())
-    st.session_state[SPINNER_THEME_CSS_INJECTED_KEY] = True
+
+
+def inject_sidebar_control_label_css() -> None:
+    """Unify Map sidebar **control** label typography (selectbox, slider, ``st.toggle``), not spinners (refs #124).
+
+    Separate from :func:`inject_spinner_theme_css` so loading-spinner styling stays clearly scoped.
+    Call before ``with st.sidebar``.
+
+    **Must run on every rerun:** if we skip ``st.html`` after the first run, Streamlit omits that node from the
+    new output and the global ``<style>`` block disappears — controls then revert to default Streamlit fonts.
+    """
+    st.html(SIDEBAR_CONTROL_LABEL_CSS.strip())
 
 
 def inject_spinner_emoji_animation() -> None:
-    """Animate bird emoji in batches below the checklist-stats spinner (refs #74).
+    """Animate bird emoji in batches under the checklist-stats spinner text (refs #74).
 
     ``st.spinner`` cannot update its label mid-run; this uses a small ``components.html`` iframe and
     client-side ``setInterval`` to advance non-overlapping batches while Python is blocked.
+    Theme CSS centers this iframe under the spinner row in normal document flow (refs #124).
     """
     emojis = list(CHECKLIST_STATS_SPINNER_EMOJIS)
     batch = max(1, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE))
     ms = max(100, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS))
-    indent = float(CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM)
     emojis_js = json.dumps(emojis, ensure_ascii=False)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 html,body{{margin:0;padding:0;overflow:hidden;background:transparent;font-family:system-ui,sans-serif;}}
-#row{{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:0.35em 0.5em;
-box-sizing:border-box;width:100%;padding-left:{indent}rem;min-height:2.25rem;font-size:1.35rem;line-height:1.2;
+#row{{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0.35em 0.5em;
+box-sizing:border-box;width:100%;padding:0 0.35rem;min-height:2.25rem;font-size:1.35rem;line-height:1.2;
 letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
 </style></head><body><div id="row" aria-hidden="true"></div>
 <script>
@@ -94,7 +106,7 @@ letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
 
 
 def place_spinner_emoji_strip() -> Any:
-    """Show the animated bird-emoji strip under the current ``st.spinner`` (refs #74).
+    """Show the animated bird-emoji strip for the current ``st.spinner`` (refs #74, #124).
 
     Uses ``st.empty()`` + ``container()`` + :func:`inject_spinner_emoji_animation`. Returns the
     placeholder; call ``.empty()`` on it when the spinner phase ends so the iframe is dropped.
@@ -103,6 +115,22 @@ def place_spinner_emoji_strip() -> Any:
     with placeholder.container():
         inject_spinner_emoji_animation()
     return placeholder
+
+
+def sidebar_bottom_slot_start() -> None:
+    """Open the bottom sidebar region (spinner + emoji, export, footer).
+
+    Wrapper is ``position: sticky`` with a transparent background so it does not look like a separate
+    empty panel when idle (refs #124).
+    """
+    st.markdown(
+        '<div class="ebird-sidebar-bottom-slot" aria-live="polite">',
+        unsafe_allow_html=True,
+    )
+
+
+def sidebar_bottom_slot_end() -> None:
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def ensure_streamlit_map_basemap_height_keys() -> None:
@@ -115,9 +143,10 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
         st.session_state.streamlit_map_height_px = MAP_HEIGHT_PX_DEFAULT
 
 
-def sidebar_footer_links() -> None:
+def sidebar_footer_links(*, leading_divider: bool = True) -> None:
     """Small centred sidebar footer: GitHub, eBird, Instagram + Explorer README on GitHub (text links)."""
-    st.sidebar.divider()
+    if leading_divider:
+        st.sidebar.divider()
     link_style = "color:#868e96;text-decoration:none;"
     sep = '<span style="opacity:0.45;margin:0 0.55em;" aria-hidden="true">·</span>'
     st.sidebar.markdown(
