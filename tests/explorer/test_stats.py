@@ -453,6 +453,37 @@ class TestYearlySummaryStats:
         assert "Total bird families" in labels
         assert "Total checklists" in labels
 
+    def test_yearly_summary_static_row_order(self):
+        """Main yearly table row order (refs #128); protocol detail rows follow separately."""
+        expected_static = [
+            "Lifers",
+            "Total bird families",
+            "Total species",
+            "Total individuals",
+            "Total checklists",
+            "Completed checklists",
+            "Incomplete checklists",
+            "Traveling checklists",
+            "Stationary checklists",
+            "Incidental checklists",
+            "Shared checklists",
+            "Days with checklist",
+            "Days birding with others",
+            "Cumulative days eBird on",
+            "Total birding hours",
+            "Total distance (km)",
+            "Unique locations",
+        ]
+        df, cl = self._minimal_data()
+        _, rows, _ = yearly_summary_stats(df, cl, "Duration (Min)", "Distance Traveled (km)")
+        static = []
+        for label, _ in rows:
+            ls = label.strip()
+            if ls.startswith("Traveling checklist:") or ls.startswith("Stationary checklist:"):
+                break
+            static.append(ls.split(" <span")[0].strip())
+        assert static == expected_static
+
     def test_total_bird_families_uses_taxonomy_map(self, monkeypatch):
         """Per-year distinct family names match a stub base_species → family map (no network)."""
         df, cl = self._minimal_data()
