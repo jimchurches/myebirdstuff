@@ -32,11 +32,11 @@ Streamlit does not expose the browser language to Python.
 ``checklist_stats_streamlit_tab_sections_html``). ``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment``
 match Country / Yearly (refs #70).
 
-**Prep vs Map spinners:** Each full rerun, ``cached_checklist_stats_payload(work_df, taxonomy_locale)``, full-export prep
-(Maintenance / Rankings as needed), and sync helpers run in one **prep** ``st.spinner(...)`` **above** the main
-tab row (with the same bird-emoji strip as the Map tab). The **Map** tab Folium build + ``st_folium`` use a
-**second** ``st.spinner`` inside the Map panel so loading stays visible while that tab’s content runs; other main
-tab bodies render after the prep spinner exits.
+**Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** (reserved height + same styling as the
+footer band) wraps the full synchronous dashboard load for each full rerun: checklist prep, tab sync helpers, **and**
+Folium build (bird-emoji strip under the spinner). The Map tab embeds ``st_folium`` from that pass. Export HTML + footer
+links render in that same bottom region after the spinner phase. Partial ``@st.fragment`` reruns do not use this spinner
+(refs #124).
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
 (``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
@@ -55,8 +55,9 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** Prep work runs in a spinner above the tab row; the Map tab body uses an inner ``st.spinner`` each full rerun. Data tabs use ``@st.fragment`` where possible. One always-on
-sidebar for map controls plus footer links (refs #70). Settings use a keyed container with
+**Main tabs + sidebar:** Primary ``st.tabs`` first (empty panels until filled). Prep + ``st_folium`` run inside a sidebar
+bottom ``st.spinner`` so the main column is not displaced. Data tabs use ``@st.fragment`` where possible. One sidebar
+for map controls, export, and footer links (refs #70). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 """
 
@@ -167,6 +168,8 @@ from explorer.app.streamlit.app_map_ui import (  # noqa: E402
     ensure_streamlit_map_basemap_height_keys,
     inject_spinner_theme_css,
     place_spinner_emoji_strip,
+    sidebar_bottom_slot_end,
+    sidebar_bottom_slot_start,
     sidebar_footer_links,
     species_searchbox_fragment,
 )
@@ -367,6 +370,17 @@ def main() -> None:
     with st.sidebar:
         st.header("Map")
 
+        map_style = st.selectbox(
+            "Basemap",
+            options=list(MAP_BASEMAP_OPTIONS),
+            format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
+            key=STREAMLIT_MAP_BASEMAP_KEY,
+        )
+        st.markdown(
+            '<div style="height:0.65rem" aria-hidden="true"></div>',
+            unsafe_allow_html=True,
+        )
+
         map_view_label = st.selectbox(
             "Map view",
             list(MAP_VIEW_LABELS),
@@ -502,16 +516,6 @@ def main() -> None:
 
     with st.sidebar:
         st.divider()
-        map_style = st.selectbox(
-            "Basemap",
-            options=list(MAP_BASEMAP_OPTIONS),
-            format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
-            key=STREAMLIT_MAP_BASEMAP_KEY,
-        )
-        st.markdown(
-            '<div style="height:0.65rem" aria-hidden="true"></div>',
-            unsafe_allow_html=True,
-        )
         map_height = st.slider(
             "Map height (px)",
             min_value=MAP_HEIGHT_PX_MIN,
@@ -549,50 +553,9 @@ def main() -> None:
     _title_with_logo()
     st.markdown("Your eBird data, made visible, navigable, and ready to explore")
 
-    # Spinner before tabs so loading shows above tab content (not below the tab panel; refs #74).
-    # Same emoji strip as Map tab: prep used to omit it, so first paint showed spinner-only until Map ran.
-    with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
-        _prep_spinner_emoji_placeholder = place_spinner_emoji_strip()
-        checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
-        top_n = int(st.session_state.streamlit_rankings_top_n)
-        hc_sort = str(st.session_state.streamlit_high_count_sort)
-        hc_tb = str(st.session_state.streamlit_high_count_tie_break)
-        if df_full is not None and not df_full.empty:
-            maint_full_payload = cached_full_export_checklist_stats_payload(
-                df_full, top_n, hc_sort, hc_tb, tax_locale_effective
-            )
-            rankings_bundle = build_rankings_tab_bundle(
-                df_full,
-                country_sort=st.session_state.streamlit_country_tab_sort,
-                taxonomy_locale=tax_locale_effective,
-                high_count_sort=hc_sort,
-                high_count_tie_break=hc_tb,
-            )
-        else:
-            maint_full_payload = None
-            rankings_bundle = {}
-        # Sex notation is scanned from the raw export (not from maint payload). Same empty path as no
-        # ``maint_full_payload`` — skip cache call; ``get_sex_notation_by_year`` would return {} anyway.
-        sex_notation_by_year: dict = (
-            {} if df_full.empty else cached_sex_notation_by_year(df_full)
-        )
-
-        sync_checklist_stats_tab_session_inputs(checklist_payload)
-        sync_rankings_tab_session_inputs(rankings_bundle)
-        loc_maint = full_location_data_for_maintenance(df_full)
-        incomplete_maint: dict = {}
-        if maint_full_payload is not None:
-            incomplete_maint = maint_full_payload.incomplete_by_year or {}
-        sync_maintenance_tab_session_inputs(
-            loc_maint,
-            close_location_meters=int(st.session_state.streamlit_close_location_meters),
-            incomplete_by_year=incomplete_maint,
-            sex_notation_by_year=sex_notation_by_year,
-        )
-        sync_yearly_summary_session_inputs(checklist_payload)
-        sync_country_tab_session_inputs(checklist_payload)
-
-    _prep_spinner_emoji_placeholder.empty()
+    map_warning_text: str | None = None
+    map_for_folium = None
+    folium_st_key: str | None = None
 
     # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``). Keyed lazy tabs existed only for Family Lists
     # “main tab” session bookkeeping; the Families flow now relies on dataframe selection only (refs #73).
@@ -606,9 +569,48 @@ def main() -> None:
         tab_settings,
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
-    with tab_map:
+    # Sidebar bottom slot: spinner + emoji; prep + Folium through ``st_folium`` (refs #124).
+    with st.sidebar:
+        sidebar_bottom_slot_start()
         with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
+            checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
+            top_n = int(st.session_state.streamlit_rankings_top_n)
+            hc_sort = str(st.session_state.streamlit_high_count_sort)
+            hc_tb = str(st.session_state.streamlit_high_count_tie_break)
+            if df_full is not None and not df_full.empty:
+                maint_full_payload = cached_full_export_checklist_stats_payload(
+                    df_full, top_n, hc_sort, hc_tb, tax_locale_effective
+                )
+                rankings_bundle = build_rankings_tab_bundle(
+                    df_full,
+                    country_sort=st.session_state.streamlit_country_tab_sort,
+                    taxonomy_locale=tax_locale_effective,
+                    high_count_sort=hc_sort,
+                    high_count_tie_break=hc_tb,
+                )
+            else:
+                maint_full_payload = None
+                rankings_bundle = {}
+            sex_notation_by_year: dict = (
+                {} if df_full.empty else cached_sex_notation_by_year(df_full)
+            )
+
+            sync_checklist_stats_tab_session_inputs(checklist_payload)
+            sync_rankings_tab_session_inputs(rankings_bundle)
+            loc_maint = full_location_data_for_maintenance(df_full)
+            incomplete_maint: dict = {}
+            if maint_full_payload is not None:
+                incomplete_maint = maint_full_payload.incomplete_by_year or {}
+            sync_maintenance_tab_session_inputs(
+                loc_maint,
+                close_location_meters=int(st.session_state.streamlit_close_location_meters),
+                incomplete_by_year=incomplete_maint,
+                sex_notation_by_year=sex_notation_by_year,
+            )
+            sync_yearly_summary_session_inputs(checklist_payload)
+            sync_country_tab_session_inputs(checklist_payload)
+
             prov_plain = provenance or ""
             sig = data_signature_for_caches(df_full, prov_plain)
             if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
@@ -620,7 +622,7 @@ def main() -> None:
             try:
                 ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
             except ValueError as e:
-                st.warning(str(e))
+                map_warning_text = str(e)
                 st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
             else:
                 overlay_common = (
@@ -657,8 +659,6 @@ def main() -> None:
                             MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
                         )
                     ),
-                    # For lifer mode we already communicate the “not date-filtered” behaviour in the
-                    # side panel. Avoid repeating "all-time data" text in the banner.
                     "date_filter_status": "" if is_lifer_view else date_filter_banner,
                     "species_url_fn": species_url_fn,
                     "base_species_fn": base_species_for_lifer,
@@ -692,9 +692,6 @@ def main() -> None:
                     bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
                     int(map_height),
                 )
-                # ``build_species_overlay_map`` treats **Species** with no species picked as the same
-                # geometry as **All locations** (``map_controller`` coerces mode to ``all``). Match that here
-                # so static Folium reuse applies when switching Map view All ↔ Species before a selection.
                 _species_selected = bool(overlay_sci)
                 _cache_map_view_mode = map_view_mode
                 if map_view_mode == "species" and not _species_selected:
@@ -710,8 +707,6 @@ def main() -> None:
                     species_selected_common=overlay_common if _species_selected else "",
                     hide_non_matching_locations=bool(hide_nm),
                 )
-                # One Folium map in session; key includes species + hide toggle so Selected species
-                # maps reuse on identical full reruns (e.g. switching tabs) without a multi-species LRU.
                 _use_static_cache = True
                 _cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
                 if (
@@ -733,13 +728,23 @@ def main() -> None:
                         }
 
                 if result_warning:
-                    st.warning(result_warning)
+                    map_warning_text = result_warning
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                 elif result_map is None:
-                    st.warning("Map could not be built.")
+                    map_warning_text = "Map could not be built."
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                 else:
                     st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(result_map)
+                    map_for_folium = result_map
+                    folium_st_key = (
+                        f"explorer_folium_{abs(hash(_ck))}_h{map_height}_mv{map_view_mode}_n"
+                        f"{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
+                    )
+
+            with tab_map:
+                if map_warning_text is not None:
+                    st.warning(map_warning_text)
+                elif map_for_folium is not None and folium_st_key is not None:
                     try:
                         from streamlit_folium import st_folium
                     except ImportError:
@@ -751,22 +756,35 @@ def main() -> None:
                         )
                         st.stop()
                     st_folium(
-                        result_map,
+                        map_for_folium,
                         use_container_width=True,
                         height=map_height,
                         # ``_ck`` coerces **Species** with no pick to ``all`` so we reuse one Folium build
                         # when the cache is valid. *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
                         # distinct streamlit-folium component identity when the sidebar layout changes
                         # (All↔Species); see invalidation block above.
-                        key=(
-                            f"explorer_folium_{abs(hash(_ck))}_h{map_height}_mv{map_view_mode}_n"
-                            f"{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
-                        ),
+                        key=folium_st_key,
                         returned_objects=[],
                         return_on_hover=False,
                     )
 
-            _spinner_emoji_placeholder.empty()  # Drop emoji iframe once load finishes (refs #74).
+        _spinner_emoji_placeholder.empty()
+        _has_map_export = bool(st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY))
+        if _has_map_export:
+            st.divider()
+            _ex1, _ex2, _ex3 = st.columns([1, 3, 1])
+            with _ex2:
+                st.download_button(
+                    "Export map HTML",
+                    data=st.session_state[EXPLORER_MAP_HTML_BYTES_KEY],
+                    file_name=MAP_EXPORT_HTML_FILENAME,
+                    mime="text/html",
+                    key=EXPORT_MAP_HTML_BTN_KEY,
+                    help="Standalone HTML for the current map.",
+                    use_container_width=True,
+                )
+        sidebar_footer_links(leading_divider=not _has_map_export)
+        sidebar_bottom_slot_end()
 
     with tab_checklist:
         run_checklist_stats_streamlit_fragment()
@@ -1081,21 +1099,6 @@ def main() -> None:
                 ),
                 unsafe_allow_html=True,
             )
-
-    if st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY):
-        with st.sidebar:
-            st.divider()
-            st.download_button(
-                "Export map HTML",
-                data=st.session_state[EXPLORER_MAP_HTML_BYTES_KEY],
-                file_name=MAP_EXPORT_HTML_FILENAME,
-                mime="text/html",
-                key=EXPORT_MAP_HTML_BTN_KEY,
-                help="Standalone HTML for the current map.",
-            )
-
-    sidebar_footer_links()
-
 
 if __name__ == "__main__":
     main()

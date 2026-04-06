@@ -78,7 +78,6 @@ CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
 
 CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE = 5
 CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS = 750
-CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM = 2.75
 
 # ---------------------------------------------------------------------------
 # Sidebar footer

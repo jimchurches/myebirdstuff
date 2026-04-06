@@ -228,11 +228,23 @@ SPINNER_THEME_CSS_INJECTED_KEY = f"_ebird_spinner_theme_css_injected_{SPINNER_TH
 SPINNER_THEME_CSS = f"""
 <style>
 /* Hoisted ``st.spinner`` — theme greens (refs #74); bump SPINNER_THEME_CSS_CACHE_KEY_SUFFIX when CSS changes. */
+/* In-flow pill (no position:fixed): avoids covering the title; spinner sits in script order after the subtitle. */
 /* Modern Streamlit uses an icon spinner (``iconValue: spinner``), not a CSS border ring. */
 div[data-testid="stSpinner"],
 div[data-testid="stSpinner"].stSpinner {{
   color: {THEME_PRIMARY_HEX};
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: inline-flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.4rem 0.95rem !important;
+  margin: 0.15rem 0 0.35rem 0 !important;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  border: 1px solid rgba(31, 111, 84, 0.14);
+  max-width: min(96vw, 42rem);
 }}
 /* Graphic: ``currentColor`` on the SVG so the arc tracks primary (not default grey). */
 div[data-testid="stSpinner"] svg {{
@@ -261,6 +273,35 @@ div[data-testid="stSpinner"] label {{
 div[data-testid="stSpinner"] div[class*="Spinner"] {{
   border-color: {THEME_SECONDARY_BG_HEX} !important;
   border-top-color: {THEME_PRIMARY_HEX} !important;
+}}
+
+/* Bird-emoji strip (only ``components.html`` in Explorer uses height 52): tuck under spinner, centered. */
+[data-testid="stAppViewContainer"] main iframe[height="52"],
+[data-testid="stSidebar"] iframe[height="52"] {{
+  display: block !important;
+  margin: 0.1rem auto 0.4rem auto !important;
+  border: none !important;
+  max-width: 100%;
+}}
+[data-testid="stSidebar"] div[data-testid="stSpinner"],
+[data-testid="stSidebar"] div[data-testid="stSpinner"].stSpinner {{
+  max-width: 100%;
+  box-sizing: border-box;
+  /* Keep spinner in normal sidebar flow (no viewport-fixed “floating pill” glitches). */
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  display: flex !important;
+  width: 100%;
+}}
+/* Reserve a stable bottom band: spinner + emoji share the same footprint as the footer links. */
+[data-testid="stSidebar"] .ebird-sidebar-bottom-slot {{
+  min-height: 7.5rem;
+  padding-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }}
 </style>
 """
