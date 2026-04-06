@@ -21,7 +21,8 @@ separate delta/orphan issue (e.g. container boundaries, Streamlit version); same
 for a worse duplicate layout locally.
 
 **No-data landing:** No disk file and no cached upload → title, copy, uploader in the main column.
-Disk path takes precedence over a stale session upload when both exist.
+Disk path takes precedence over a stale session upload when both exist. Implementation:
+:mod:`explorer.app.streamlit.app_landing_ui` (refs #131).
 
 **Taxonomy:** After CSV load, the app fetches the eBird taxonomy once per session (cached) so species
 names in popups can link to eBird species pages. Default locale is **en_AU**; override with
@@ -58,14 +59,14 @@ match the Country tab fragment pattern (refs #85).
 **Main tabs + sidebar:** Primary ``st.tabs`` first (empty panels until filled). Prep + Folium embed run in a sidebar
 bottom ``st.spinner`` (Map tab content is nested in script order so loading indicators stay aligned). Data tabs use
 ``@st.fragment`` where possible. One sidebar
-for map controls, export, and footer links (refs #70). **Settings** tab body lives in :mod:`explorer.app.streamlit.app_settings_ui`
+for map controls, export, and footer links (refs #70). Map sidebar + working set: :mod:`explorer.app.streamlit.app_map_working_ui`
+(refs #131). **Settings** tab body lives in :mod:`explorer.app.streamlit.app_settings_ui`
 (refs #118). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 """
 
 from __future__ import annotations
 
-import base64
 import os
 import sys
 
@@ -76,7 +77,6 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 from collections import OrderedDict
-from pathlib import Path
 
 import streamlit as st
 
@@ -84,57 +84,27 @@ from explorer.presentation.checklist_stats_display import (  # noqa: E402
     COUNTRY_TAB_SORT_ALPHABETICAL,
 )
 from explorer.core.explorer_paths import settings_yaml_path_for_source  # noqa: E402
-from explorer.core.species_search import build_ram_species_whoosh_index  # noqa: E402
 from explorer.app.streamlit.app_caches import (  # noqa: E402
     cached_species_url_fn,
 )
 from explorer.app.streamlit.app_constants import (  # noqa: E402
-    EBIRD_DATA_SIG_KEY,
-    EBIRD_LANDING_CSV_UPLOADER_KEY,
-    EBIRD_LANDING_MAIN_CONTAINER_KEY,
-    EXPLORER_MAP_HTML_BYTES_KEY,
     DEFAULT_TAXONOMY_LOCALE,
-    FOLIUM_MAP_MOUNT_NONCE_KEY,
-    FOLIUM_STATIC_MAP_CACHE_KEY,
-    MAP_VIEW_LABEL_TO_MODE,
-    PERSIST_MAP_DATE_FILTER_KEY,
-    PERSIST_MAP_DATE_RANGE_KEY,
-    PERSIST_SPECIES_COMMON_KEY,
-    PERSIST_SPECIES_SCI_KEY,
-    SESSION_PREV_MAP_VIEW_KEY,
-    SESSION_SPECIES_IX_KEY,
-    SESSION_SPECIES_IX_SIG_KEY,
-    SESSION_SPECIES_PICK_KEY,
-    SESSION_SPECIES_SEARCH_KEY,
-    SESSION_SPECIES_WS_KEY,
-    SESSION_UPLOAD_CACHE_KEY,
+    REPO_ROOT,
     SETTINGS_BASELINE_KEY,
     SETTINGS_CONFIG_PATH_KEY,
     SETTINGS_CONFIG_SOURCE_KEY,
     SETTINGS_LOADED_FROM_KEY,
     SETTINGS_WARNED_KEY,
-    REPO_ROOT,
-    STREAMLIT_MAP_BASEMAP_KEY,
-    STREAMLIT_MAP_DATE_FILTER_KEY,
-    STREAMLIT_MAP_DATE_RANGE_KEY,
-    STREAMLIT_MAP_HEIGHT_PX_KEY,
-    STREAMLIT_MAP_VIEW_LABEL_KEY,
-    STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
-    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-    STREAMLIT_SPECIES_HIDE_ONLY_KEY,
+    SESSION_UPLOAD_CACHE_KEY,
 )
-from explorer.app.streamlit.app_data_loading import load_dataframe  # noqa: E402
+from explorer.app.streamlit.app_landing_ui import (  # noqa: E402
+    load_dataframe_after_landing,
+    title_with_logo,
+)
+from explorer.app.streamlit.app_map_working_ui import render_map_sidebar_and_working_set  # noqa: E402
 from explorer.app.streamlit.app_prep_map_ui import render_prep_spinner_and_map_tab  # noqa: E402
 from explorer.app.streamlit.app_settings_ui import render_settings_tab  # noqa: E402
-from explorer.app.streamlit.app_map_ui import (  # noqa: E402
-    ensure_streamlit_map_basemap_height_keys,
-    inject_sidebar_control_label_css,
-    inject_spinner_theme_css,
-    sidebar_footer_links,
-    species_searchbox_fragment,
-)
 from explorer.app.streamlit.app_settings_state import (  # noqa: E402
-    apply_pending_map_cluster_toggle,
     apply_settings_payload_to_state,
     env_taxonomy_locale,
     init_and_clamp_streamlit_table_settings,
@@ -147,64 +117,18 @@ from explorer.app.streamlit.checklist_stats_streamlit_html import (  # noqa: E40
 from explorer.app.streamlit.country_stats_streamlit_html import (  # noqa: E402
     run_country_tab_streamlit_fragment,
 )
-from explorer.app.streamlit.defaults import (  # noqa: E402
-    MAP_BASEMAP_LABELS,
-    MAP_BASEMAP_OPTIONS,
-    MAP_DATE_FILTER_DEFAULT,
-    MAP_HEIGHT_PX_MAX,
-    MAP_HEIGHT_PX_MIN,
-    MAP_HEIGHT_PX_STEP,
-    MAP_VIEW_LABELS,
-)
-from explorer.app.streamlit.streamlit_ui_constants import (  # noqa: E402
-    NOTEBOOK_MAIN_TAB_LABELS,
-    SPECIES_SEARCH_CAPTION,
-)
 from explorer.app.streamlit.maintenance_streamlit_html import (  # noqa: E402
     run_maintenance_streamlit_tab_fragment,
-)
-from explorer.app.streamlit.map_working import (  # noqa: E402
-    date_inception_to_today_default,
-    streamlit_working_set_and_status,
 )
 from explorer.app.streamlit.rankings_streamlit_html import (  # noqa: E402
     run_rankings_streamlit_tab_fragment,
 )
+from explorer.app.streamlit.streamlit_ui_constants import (  # noqa: E402
+    NOTEBOOK_MAIN_TAB_LABELS,
+)
 from explorer.app.streamlit.yearly_summary_streamlit_html import (  # noqa: E402
     run_yearly_summary_streamlit_fragment,
 )
-
-# Same asset as docs/explorer/README.md (repo-relative).
-_APP_LOGO_SVG = Path(REPO_ROOT) / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
-
-
-def _on_basemap_changed() -> None:
-    """Invalidate Folium cache + remount iframe when the basemap **value** changes (refs #124)."""
-    st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-        st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
-    ) + 1
-    st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
-    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-
-
-def _title_with_logo() -> None:
-    """App heading: title + logo in one compact row (flex), logo beside text—not full-width columns."""
-    if _APP_LOGO_SVG.is_file():
-        b64 = base64.b64encode(_APP_LOGO_SVG.read_bytes()).decode("ascii")
-        # ``st.html`` avoids extra block height from ``st.image`` + wide ``st.columns``; flex keeps
-        # the mark next to the title on large screens and wraps on narrow viewports.
-        st.html(
-            "<div style='display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;"
-            "gap:0.75rem;margin:0;padding:0 0 0.2rem 0;'>"
-            "<h1 style='margin:0;padding:0;font-size:clamp(1.35rem,3.5vw,2.25rem);"
-            "line-height:1.15;font-weight:600;'>Personal eBird Explorer</h1>"
-            f"<img src='data:image/svg+xml;base64,{b64}' alt='' width='77' "
-            "style='width:77px;max-width:min(77px,18vw);height:auto;display:block;"
-            "margin:0 0 0 77px;flex-shrink:0;'/>"
-            "</div>"
-        )
-    else:
-        st.title("Personal eBird Explorer")
 
 
 def _run_non_map_data_tab_fragments(
@@ -245,60 +169,10 @@ def main() -> None:
     ):
         upload_cache = None
 
-    df_full, provenance, source_label, data_abs_path, data_basename = load_dataframe(
-        uploaded=None, upload_cache=upload_cache
-    )
-
-    if df_full is not None and provenance and "Disk:" in provenance:
-        # Drop stale session upload when disk resolution wins (local path after a prior Cloud upload).
-        st.session_state.pop(SESSION_UPLOAD_CACHE_KEY, None)
-
-    if df_full is None:
-        # Keyed container: on the post-upload rerun this block is skipped entirely, so Cloud/Streamlit
-        # can drop the whole landing subtree instead of leaving orphan markdown under tabs.
-        with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
-            _title_with_logo()
-            st.markdown(
-                "Your eBird data, made visible, navigable, and ready to explore"
-            )
-            st.markdown("Upload your **My eBird Data** CSV to open the map and tabs.")
-            uploaded = st.file_uploader(
-                "eBird export (CSV)",
-                type=["csv"],
-                key=EBIRD_LANDING_CSV_UPLOADER_KEY,
-                help="Official eBird full data export (CSV).",
-            )
-            if uploaded is not None:
-                df_full, provenance, source_label, data_abs_path, data_basename = load_dataframe(
-                    uploaded=uploaded, upload_cache=None
-                )
-                if df_full is not None:
-                    st.session_state[SESSION_UPLOAD_CACHE_KEY] = (uploaded.getvalue(), uploaded.name)
-                    # Landing widgets already ran above in this run; rerun loads from cache and skips this block.
-                    st.rerun()
-
-            if df_full is None:
-                st.markdown(
-                    """
-**From eBird**
-
-1. Sign in: [Download My Data](https://ebird.org/downloadMyData)
-2. Under **My eBird Observations**, use **Request My Observations**.
-3. A link to your data will be sent to your email address (often a few minutes; sometimes longer).
-4. Open the email, download the **.zip** and unzip it.
-5. Upload the CSV here (in English the file name should be **MyEBirdData.csv**).
-                    """
-                )
-                st.caption(
-                    "Species links default to **en_AU**; change locale under **Settings → Taxonomy** after load. "
-                    "Data still loads if names don’t match.\n\n"
-                    "This page is skipped when a CSV is already found on disk (local config path). "
-                    "Support for local files works when Streamlit is running locally; see the code repo for more information. "
-                    "Proper instructions will appear here in future releases."
-                )
-        sidebar_footer_links()
-        if df_full is None:
-            return
+    loaded = load_dataframe_after_landing(upload_cache)
+    if loaded is None:
+        return
+    df_full, provenance, source_label, data_abs_path, data_basename = loaded
 
     st.session_state[SETTINGS_CONFIG_SOURCE_KEY] = source_label or ""
     settings_yaml_path = settings_yaml_path_for_source(REPO_ROOT, source_label or "")
@@ -321,190 +195,7 @@ def main() -> None:
     if "filtered_by_loc_cache" not in st.session_state:
         st.session_state.filtered_by_loc_cache = OrderedDict()
 
-    ensure_streamlit_map_basemap_height_keys()
-
-    # Apply map settings cannot set STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY in the same run as the Map
-    # sidebar toggle (same key); stash and apply here before the sidebar instantiates that widget.
-    apply_pending_map_cluster_toggle(st.session_state)
-
-    # Spinner + sidebar **control** label CSS before Map sidebar so first paint matches later reruns (refs #124).
-    inject_spinner_theme_css()
-    inject_sidebar_control_label_css()
-
-    with st.sidebar:
-        st.header("Map")
-
-        map_style = st.selectbox(
-            "Basemap",
-            options=list(MAP_BASEMAP_OPTIONS),
-            format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
-            key=STREAMLIT_MAP_BASEMAP_KEY,
-            on_change=_on_basemap_changed,
-        )
-        st.markdown(
-            '<div style="height:0.65rem" aria-hidden="true"></div>',
-            unsafe_allow_html=True,
-        )
-
-        map_view_label = st.selectbox(
-            "Map view",
-            list(MAP_VIEW_LABELS),
-            key=STREAMLIT_MAP_VIEW_LABEL_KEY,
-        )
-        map_view_mode = MAP_VIEW_LABEL_TO_MODE[map_view_label]
-        is_lifer_view = map_view_mode == "lifers"
-
-        if is_lifer_view:
-            st.caption("Lifer locations are not date-filtered.")
-            if st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT):
-                st.caption("Your date filter is preserved for other map views.")
-            st.toggle(
-                "Show subspecies lifers",
-                key=STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
-            )
-            date_filter_on_effective = False
-            date_range_sel: tuple | None = None
-        else:
-            # Restore widget keys after Lifer view (those widgets were not rendered, keys may be missing).
-            if STREAMLIT_MAP_DATE_FILTER_KEY not in st.session_state:
-                st.session_state.streamlit_map_date_filter = bool(
-                    st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT)
-                )
-            if st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False):
-                if STREAMLIT_MAP_DATE_RANGE_KEY not in st.session_state:
-                    pr = st.session_state.get(PERSIST_MAP_DATE_RANGE_KEY)
-                    if isinstance(pr, tuple) and len(pr) == 2:
-                        st.session_state.streamlit_map_date_range = pr
-                    else:
-                        a, b = date_inception_to_today_default(df_full)
-                        st.session_state.streamlit_map_date_range = (a, b)
-
-            date_filter_on_effective = st.toggle(
-                "Date filter",
-                key=STREAMLIT_MAP_DATE_FILTER_KEY,
-                help="Turn on to limit the map and checklist stats to a date range.",
-            )
-            if not date_filter_on_effective:
-                date_range_sel = None
-            else:
-                d_inception, today = date_inception_to_today_default(df_full)
-                if STREAMLIT_MAP_DATE_RANGE_KEY not in st.session_state:
-                    st.session_state.streamlit_map_date_range = (d_inception, today)
-                rng = st.session_state["streamlit_map_date_range"]
-                if not isinstance(rng, tuple) or len(rng) != 2:
-                    st.session_state.streamlit_map_date_range = (d_inception, today)
-                else:
-                    r0 = max(min(rng[0], today), d_inception)
-                    r1 = max(min(rng[1], today), d_inception)
-                    rng_val = (r0, r1) if r0 <= r1 else (r1, r0)
-                    if rng_val != rng:
-                        st.session_state.streamlit_map_date_range = rng_val
-                dr = st.date_input(
-                    "Date range",
-                    min_value=d_inception,
-                    max_value=today,
-                    key=STREAMLIT_MAP_DATE_RANGE_KEY,
-                )
-                if isinstance(dr, tuple) and len(dr) == 2:
-                    date_range_sel = (dr[0], dr[1])
-                else:
-                    date_range_sel = (d_inception, today)
-
-            st.session_state[PERSIST_MAP_DATE_FILTER_KEY] = date_filter_on_effective
-            if date_filter_on_effective and date_range_sel is not None:
-                st.session_state[PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
-
-        st.toggle(
-            "Group nearby pins",
-            key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-            help="Clusters nearby pins at low zoom. Session-only (save in Settings to persist).",
-        )
-
-    ws, date_filter_banner = streamlit_working_set_and_status(
-        df_full,
-        map_view_mode=map_view_mode,
-        date_filter_on=date_filter_on_effective,
-        date_range=date_range_sel,
-        map_caches=(st.session_state.popup_html_cache, st.session_state.filtered_by_loc_cache),
-    )
-    if ws is None:
-        st.error("Invalid date range. Using all-time data for this run.")
-        ws, date_filter_banner = streamlit_working_set_and_status(
-            df_full,
-            map_view_mode=map_view_mode,
-            date_filter_on=False,
-            date_range=None,
-            map_caches=(st.session_state.popup_html_cache, st.session_state.filtered_by_loc_cache),
-        )
-    work_df = ws.df
-
-    hide_non_matching_locations = False
-    species_pick_common: str | None = None
-    species_pick_sci = ""
-
-    _prev_mv = st.session_state.get(SESSION_PREV_MAP_VIEW_KEY)
-    if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
-        st.session_state.pop(SESSION_SPECIES_SEARCH_KEY, None)
-
-    if map_view_mode == "species":
-        _ix_sig = (len(ws.species_list), st.session_state.get(EBIRD_DATA_SIG_KEY))
-        if st.session_state.get(SESSION_SPECIES_IX_SIG_KEY) != _ix_sig:
-            st.session_state[SESSION_SPECIES_IX_KEY] = build_ram_species_whoosh_index(
-                ws.species_list, ws.name_map
-            )
-            st.session_state[SESSION_SPECIES_IX_SIG_KEY] = _ix_sig
-        st.session_state[SESSION_SPECIES_WS_KEY] = ws
-
-        with st.sidebar:
-            st.markdown("**Species**")
-            st.caption(SPECIES_SEARCH_CAPTION)
-            species_searchbox_fragment()
-            hide_non_matching_locations = st.toggle(
-                "Show only selected species",
-                key=STREAMLIT_SPECIES_HIDE_ONLY_KEY,
-                help=(
-                    "When off, all locations are shown with your species highlighted. "
-                    "When on, only locations where you recorded the species."
-                ),
-            )
-
-        species_pick_common = st.session_state.get(SESSION_SPECIES_PICK_KEY)
-        if species_pick_common:
-            species_pick_sci = str(ws.name_map.get(species_pick_common, "") or "")
-            st.session_state[PERSIST_SPECIES_COMMON_KEY] = species_pick_common
-            st.session_state[PERSIST_SPECIES_SCI_KEY] = species_pick_sci
-        else:
-            st.session_state.pop(PERSIST_SPECIES_COMMON_KEY, None)
-            st.session_state.pop(PERSIST_SPECIES_SCI_KEY, None)
-    else:
-        st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
-
-    with st.sidebar:
-        st.divider()
-        map_height = st.slider(
-            "Map height (px)",
-            min_value=MAP_HEIGHT_PX_MIN,
-            max_value=MAP_HEIGHT_PX_MAX,
-            step=MAP_HEIGHT_PX_STEP,
-            key=STREAMLIT_MAP_HEIGHT_PX_KEY,
-        )
-
-    # All locations and Selected species (before a pick) share the same static Folium cache key, but the
-    # sidebar gains/loses the species search fragment — layout can leave streamlit-folium with a
-    # letterbox/sliver iframe until a full remount. Lifer view always misses that cache, which is why
-    # All→Lifer→Species looked fine. Invalidate cache + bump nonce on All↔Species transitions only.
-    if (
-        _prev_mv is not None
-        and _prev_mv != map_view_mode
-        and {_prev_mv, map_view_mode} == {"all", "species"}
-    ):
-        st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
-        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
-        ) + 1
-
-    st.session_state[SESSION_PREV_MAP_VIEW_KEY] = map_view_mode
+    mw = render_map_sidebar_and_working_set(df_full)
 
     tax_locale_effective = (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE)
     species_url_fn = cached_species_url_fn(tax_locale_effective)
@@ -513,7 +204,7 @@ def main() -> None:
     mark_lifer = bool(st.session_state.streamlit_mark_lifer)
     mark_last_seen = bool(st.session_state.streamlit_mark_last_seen)
 
-    _title_with_logo()
+    title_with_logo()
     st.markdown("Your eBird data, made visible, navigable, and ready to explore")
 
     # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``). Keyed lazy tabs existed only for Family Lists
@@ -530,18 +221,18 @@ def main() -> None:
 
     render_prep_spinner_and_map_tab(
         tab_map=tab_map,
-        work_df=work_df,
+        work_df=mw.work_df,
         df_full=df_full,
         provenance=provenance,
         tax_locale_effective=tax_locale_effective,
-        map_height=map_height,
-        map_style=map_style,
-        map_view_mode=map_view_mode,
-        is_lifer_view=is_lifer_view,
-        date_filter_banner=date_filter_banner,
-        species_pick_common=species_pick_common,
-        species_pick_sci=species_pick_sci,
-        hide_non_matching_locations=hide_non_matching_locations,
+        map_height=mw.map_height,
+        map_style=mw.map_style,
+        map_view_mode=mw.map_view_mode,
+        is_lifer_view=mw.is_lifer_view,
+        date_filter_banner=mw.date_filter_banner,
+        species_pick_common=mw.species_pick_common,
+        species_pick_sci=mw.species_pick_sci,
+        hide_non_matching_locations=mw.hide_non_matching_locations,
         popup_sort_order=popup_sort_order,
         popup_scroll_hint=popup_scroll_hint,
         mark_lifer=mark_lifer,
