@@ -120,8 +120,8 @@ def place_spinner_emoji_strip() -> Any:
 def sidebar_bottom_slot_start() -> None:
     """Open the bottom sidebar region (spinner + emoji, export, footer).
 
-    CSS (``ebird-sidebar-bottom-slot``) makes this band ``position: sticky; bottom: 0`` so it stays in the
-    visible sidebar while controls above scroll (refs #124).
+    Wrapper is ``position: sticky`` with a transparent background so it does not look like a separate
+    empty panel when idle (refs #124).
     """
     st.markdown(
         '<div class="ebird-sidebar-bottom-slot" aria-live="polite">',
