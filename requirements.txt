@@ -22,7 +22,7 @@ pydantic>=2,<3
 
 # Testing
 pytest
-pytest-cov>=4,<7
+pytest-cov>=4,<8
 # Transitive (e.g. rich, pytest); Pygments <2.20 affected by CVE-2026-4539 (ReDoS).
 Pygments>=2.20.0
 
