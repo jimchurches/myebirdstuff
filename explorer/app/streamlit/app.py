@@ -32,11 +32,10 @@ Streamlit does not expose the browser language to Python.
 ``checklist_stats_streamlit_tab_sections_html``). ``sync_checklist_stats_tab_session_inputs`` + ``@st.fragment``
 match Country / Yearly (refs #70).
 
-**Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** (reserved height + same styling as the
-footer band) wraps the full synchronous dashboard load for each full rerun: checklist prep, tab sync helpers, **and**
-Folium build (bird-emoji strip under the spinner). The Map tab embeds ``st_folium`` from that pass. Export HTML + footer
-links render in that same bottom region after the spinner phase. Partial ``@st.fragment`` reruns do not use this spinner
-(refs #124).
+**Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** wraps checklist prep, tab syncs,
+Folium **build**, ``st_folium`` in the Map tab, then clears the bird-emoji strip (refs #124) so the explorer spinner
+tracks the built-in Streamlit spinner. Iframe min-height CSS reduces streamlit-folium letterboxing. Partial
+``@st.fragment`` reruns do not use this spinner.
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
 (``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
@@ -55,9 +54,11 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** Primary ``st.tabs`` first (empty panels until filled). Prep + ``st_folium`` run inside a sidebar
-bottom ``st.spinner`` so the main column is not displaced. Data tabs use ``@st.fragment`` where possible. One sidebar
-for map controls, export, and footer links (refs #70). Settings use a keyed container with
+**Main tabs + sidebar:** Primary ``st.tabs`` first (empty panels until filled). Prep + Folium embed run in a sidebar
+bottom ``st.spinner`` (Map tab content is nested in script order so loading indicators stay aligned). Data tabs use
+``@st.fragment`` where possible. One sidebar
+for map controls, export, and footer links (refs #70). **Settings** tab body lives in :mod:`explorer.app.streamlit.app_settings_ui`
+(refs #118). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 """
 
@@ -80,8 +81,6 @@ import streamlit as st
 
 from explorer.presentation.checklist_stats_display import (  # noqa: E402
     COUNTRY_TAB_SORT_ALPHABETICAL,
-    COUNTRY_TAB_SORT_LIFERS_WORLD,
-    COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
 from explorer.core.explorer_paths import settings_yaml_path_for_source  # noqa: E402
 from explorer.core.map_controller import build_species_overlay_map  # noqa: E402
@@ -100,7 +99,6 @@ from explorer.app.streamlit.app_caches import (  # noqa: E402
     static_map_cache_key,
 )
 from explorer.app.streamlit.app_constants import (  # noqa: E402
-    COUNTRY_SORT_LABELS,
     EBIRD_DATA_SIG_KEY,
     EBIRD_LANDING_CSV_UPLOADER_KEY,
     EBIRD_LANDING_MAIN_CONTAINER_KEY,
@@ -124,48 +122,23 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     SETTINGS_BASELINE_KEY,
     SETTINGS_CONFIG_PATH_KEY,
     SETTINGS_CONFIG_SOURCE_KEY,
-    SETTINGS_FLASH_RESET_KEY,
-    SETTINGS_FLASH_SAVE_KEY,
     SETTINGS_LOADED_FROM_KEY,
-    SETTINGS_PANEL_CSS,
     SETTINGS_WARNED_KEY,
     REPO_ROOT,
-    STREAMLIT_CLOSE_LOCATION_METERS_KEY,
-    STREAMLIT_COUNTRY_TAB_SORT_KEY,
-    STREAMLIT_DEFAULT_COLOR_KEY,
-    STREAMLIT_DEFAULT_FILL_KEY,
-    STREAMLIT_LIFER_COLOR_KEY,
-    STREAMLIT_LIFER_FILL_KEY,
-    STREAMLIT_LAST_SEEN_COLOR_KEY,
-    STREAMLIT_LAST_SEEN_FILL_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_DATE_FILTER_KEY,
     STREAMLIT_MAP_DATE_RANGE_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_VIEW_LABEL_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
-    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
-    STREAMLIT_MARK_LAST_SEEN_KEY,
-    STREAMLIT_MARK_LIFER_KEY,
-    STREAMLIT_POPUP_SCROLL_HINT_KEY,
-    STREAMLIT_POPUP_SORT_ORDER_KEY,
-    STREAMLIT_RANKINGS_TOP_N_KEY,
-    STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
-    STREAMLIT_HIGH_COUNT_SORT_KEY,
-    STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
-    STREAMLIT_SAVE_SETTINGS_BTN_KEY,
-    STREAMLIT_RESET_SETTINGS_BTN_KEY,
-    STREAMLIT_SPECIES_COLOR_KEY,
-    STREAMLIT_SPECIES_FILL_KEY,
     STREAMLIT_SPECIES_HIDE_ONLY_KEY,
-    STREAMLIT_TAXONOMY_LOCALE_KEY,
-    STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
 )
 from explorer.app.streamlit.app_data_loading import load_dataframe  # noqa: E402
+from explorer.app.streamlit.app_settings_ui import render_settings_tab  # noqa: E402
 from explorer.app.streamlit.app_map_ui import (  # noqa: E402
     ensure_streamlit_map_basemap_height_keys,
+    inject_map_folium_iframe_min_height_css,
     inject_sidebar_control_label_css,
     inject_spinner_theme_css,
     place_spinner_emoji_strip,
@@ -180,13 +153,7 @@ from explorer.app.streamlit.app_settings_state import (  # noqa: E402
     env_taxonomy_locale,
     init_and_clamp_streamlit_table_settings,
     load_settings_yaml_via_module,
-    settings_config_module_available,
-    settings_data_path_html,
-    settings_defaults_payload,
-    settings_persistence_flash_banners,
     settings_state_payload,
-    settings_taxonomy_help_markdown,
-    write_settings_yaml_via_module,
 )
 from explorer.app.streamlit.checklist_stats_streamlit_html import (  # noqa: E402
     run_checklist_stats_streamlit_fragment,
@@ -196,24 +163,7 @@ from explorer.app.streamlit.country_stats_streamlit_html import (  # noqa: E402
     run_country_tab_streamlit_fragment,
     sync_country_tab_session_inputs,
 )
-from explorer.core.settings_schema_defaults import (  # noqa: E402
-    MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-    MAP_PIN_COLOUR_ALLOWLIST,
-    MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
-    MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
-    MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
-    TABLES_HIGH_COUNT_SORT_DEFAULT,
-    TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT,
-    TABLES_RANKINGS_TOP_N_DEFAULT,
-    TABLES_RANKINGS_TOP_N_MAX,
-    TABLES_RANKINGS_TOP_N_MIN,
-    TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
-    TABLES_RANKINGS_VISIBLE_ROWS_MAX,
-    TABLES_RANKINGS_VISIBLE_ROWS_MIN,
-    YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
-    YEARLY_RECENT_COLUMN_COUNT_MAX,
-    YEARLY_RECENT_COLUMN_COUNT_MIN,
-)
+from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT  # noqa: E402
 from explorer.app.streamlit.defaults import (  # noqa: E402
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
@@ -252,6 +202,15 @@ from explorer.app.streamlit.yearly_summary_streamlit_html import (  # noqa: E402
 _APP_LOGO_SVG = Path(REPO_ROOT) / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
 
 
+def _on_basemap_changed() -> None:
+    """Invalidate Folium cache + remount iframe when the basemap **value** changes (refs #124)."""
+    st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
+        st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+    ) + 1
+    st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+
+
 def _title_with_logo() -> None:
     """App heading: title + logo in one compact row (flex), logo beside text—not full-width columns."""
     if _APP_LOGO_SVG.is_file():
@@ -270,6 +229,30 @@ def _title_with_logo() -> None:
         )
     else:
         st.title("Personal eBird Explorer")
+
+
+def _run_non_map_data_tab_fragments(
+    tab_checklist,
+    tab_rankings,
+    tab_yearly,
+    tab_country,
+    tab_maint,
+) -> None:
+    """Checklist, Rankings, Yearly, Country, Maintenance tabs (refs #118)."""
+    with tab_checklist:
+        run_checklist_stats_streamlit_fragment()
+
+    with tab_rankings:
+        run_rankings_streamlit_tab_fragment()
+
+    with tab_yearly:
+        run_yearly_summary_streamlit_fragment()
+
+    with tab_country:
+        run_country_tab_streamlit_fragment()
+
+    with tab_maint:
+        run_maintenance_streamlit_tab_fragment()
 
 
 def main() -> None:
@@ -380,6 +363,7 @@ def main() -> None:
             options=list(MAP_BASEMAP_OPTIONS),
             format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
             key=STREAMLIT_MAP_BASEMAP_KEY,
+            on_change=_on_basemap_changed,
         )
         st.markdown(
             '<div style="height:0.65rem" aria-hidden="true"></div>',
@@ -572,7 +556,9 @@ def main() -> None:
         tab_settings,
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
-    # Sidebar bottom slot: spinner + emoji; prep + Folium through ``st_folium`` (refs #124).
+    # Sidebar bottom slot (refs #124): ``with tab_map`` / ``st_folium`` stay inside ``st.spinner`` so the explorer
+    # spinner and the default Streamlit spinner end together; ``inject_map_folium_iframe_min_height_css`` mitigates
+    # streamlit-folium letterboxing when the Map tab is reached from this nested context.
     with st.sidebar:
         sidebar_bottom_slot_start()
         with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
@@ -748,6 +734,7 @@ def main() -> None:
                 if map_warning_text is not None:
                     st.warning(map_warning_text)
                 elif map_for_folium is not None and folium_st_key is not None:
+                    inject_map_folium_iframe_min_height_css(map_height)
                     try:
                         from streamlit_folium import st_folium
                     except ImportError:
@@ -789,319 +776,21 @@ def main() -> None:
         sidebar_footer_links(leading_divider=not _has_map_export)
         sidebar_bottom_slot_end()
 
-    with tab_checklist:
-        run_checklist_stats_streamlit_fragment()
-
-    with tab_rankings:
-        run_rankings_streamlit_tab_fragment()
-
-    with tab_yearly:
-        run_yearly_summary_streamlit_fragment()
-
-    with tab_country:
-        run_country_tab_streamlit_fragment()
-
-    with tab_maint:
-        run_maintenance_streamlit_tab_fragment()
+    _run_non_map_data_tab_fragments(
+        tab_checklist,
+        tab_rankings,
+        tab_yearly,
+        tab_country,
+        tab_maint,
+    )
 
     with tab_settings:
-        st.markdown(SETTINGS_PANEL_CSS, unsafe_allow_html=True)
-        with st.container(key="ebird_settings_panel"):
-            settings_yaml_path = st.session_state.get(SETTINGS_CONFIG_PATH_KEY, "") or ""
-            settings_module_ready = settings_config_module_available()
-            can_save_settings = bool(settings_yaml_path) and settings_module_ready
+        render_settings_tab(
+            data_basename=data_basename,
+            data_abs_path=data_abs_path,
+            source_label=source_label,
+        )
 
-            if can_save_settings:
-                b1, b2 = st.columns(2)
-                with b1:
-                    if st.button(
-                        "Save settings",
-                        key=STREAMLIT_SAVE_SETTINGS_BTN_KEY,
-                        width="stretch",
-                    ):
-                        ok, err = write_settings_yaml_via_module(
-                            settings_yaml_path, settings_state_payload()
-                        )
-                        if ok:
-                            st.session_state[SETTINGS_BASELINE_KEY] = settings_state_payload()
-                            st.session_state[SETTINGS_FLASH_SAVE_KEY] = True
-                        else:
-                            st.error(err or "Failed to save settings.")
-                with b2:
-                    if st.button(
-                        "Reset to defaults",
-                        key=STREAMLIT_RESET_SETTINGS_BTN_KEY,
-                        width="stretch",
-                    ):
-                        apply_settings_payload_to_state(settings_defaults_payload())
-                        init_and_clamp_streamlit_table_settings()
-                        st.session_state[SETTINGS_FLASH_RESET_KEY] = True
-
-                settings_persistence_flash_banners()
-                st.caption(
-                    "Use **Apply map settings** and **Apply table settings** before **Save settings**. "
-                    "Taxonomy still applies immediately in-session. Save writes your current applied preferences "
-                    "to your configuration file."
-                )
-                st.caption(f"Configuration file: {settings_yaml_path}")
-
-            st.divider()
-            st.subheader("Map display")
-            st.caption(
-                "Popup behaviour, mark toggles, default clustering for the All locations map (saved when you "
-                "**Save settings**), and pin colours are batched here; click **Apply map settings** for one rerun. "
-                "For a quick on/off without changing your saved default, use the **Map** sidebar toggle."
-            )
-            _popup_sort_opts = ["ascending", "descending"]
-            _popup_scroll_opts = ["shading", "chevron", "both"]
-            _popup_sort_cur = str(st.session_state.get(STREAMLIT_POPUP_SORT_ORDER_KEY, "ascending"))
-            if _popup_sort_cur not in _popup_sort_opts:
-                _popup_sort_cur = "ascending"
-            _popup_scroll_cur = str(st.session_state.get(STREAMLIT_POPUP_SCROLL_HINT_KEY, "shading"))
-            if _popup_scroll_cur not in _popup_scroll_opts:
-                _popup_scroll_cur = "shading"
-
-            def _pin_idx(key: str) -> int:
-                cur = st.session_state.get(key, MAP_PIN_COLOUR_ALLOWLIST[0])
-                return MAP_PIN_COLOUR_ALLOWLIST.index(cur) if cur in MAP_PIN_COLOUR_ALLOWLIST else 0
-
-            with st.form("ebird_map_settings_batch"):
-                mark_lifer_w = st.toggle(
-                    "Mark lifer",
-                    value=bool(st.session_state.get(STREAMLIT_MARK_LIFER_KEY, True)),
-                )
-                mark_last_seen_w = st.toggle(
-                    "Mark last-seen",
-                    value=bool(st.session_state.get(STREAMLIT_MARK_LAST_SEEN_KEY, True)),
-                )
-                cluster_all_locations_w = st.toggle(
-                    "Group nearby pins — default (All locations map)",
-                    value=bool(
-                        st.session_state.get(
-                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
-                            MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-                        )
-                    ),
-                    help=(
-                        "When on, nearby checklist locations are combined into clusters at low zoom; "
-                        "zoom in or click a cluster to see individual pins. "
-                        "Species and lifer maps always show one pin per location. "
-                        "This value is written to your config when you **Save settings** and used on the next load. "
-                        "**Apply map settings** also updates the map now. Use the **Map** sidebar for a session-only toggle."
-                    ),
-                )
-                popup_sort_w = st.selectbox(
-                    "Popup sort order",
-                    options=_popup_sort_opts,
-                    index=_popup_sort_opts.index(_popup_sort_cur),
-                )
-                popup_scroll_w = st.selectbox(
-                    "Popup scroll hint",
-                    options=_popup_scroll_opts,
-                    index=_popup_scroll_opts.index(_popup_scroll_cur),
-                )
-                st.caption("Pin colors")
-                c1, c2 = st.columns(2)
-                with c1:
-                    default_edge_w = st.selectbox(
-                        "Default edge",
-                        MAP_PIN_COLOUR_ALLOWLIST,
-                        index=_pin_idx(STREAMLIT_DEFAULT_COLOR_KEY),
-                    )
-                    species_edge_w = st.selectbox(
-                        "Species edge",
-                        MAP_PIN_COLOUR_ALLOWLIST,
-                        index=_pin_idx(STREAMLIT_SPECIES_COLOR_KEY),
-                    )
-                    lifer_edge_w = st.selectbox(
-                        "Lifer edge",
-                        MAP_PIN_COLOUR_ALLOWLIST,
-                        index=_pin_idx(STREAMLIT_LIFER_COLOR_KEY),
-                    )
-                    last_seen_edge_w = st.selectbox(
-                        "Last-seen edge",
-                        MAP_PIN_COLOUR_ALLOWLIST,
-                        index=_pin_idx(STREAMLIT_LAST_SEEN_COLOR_KEY),
-                    )
-                with c2:
-                    default_fill_w = st.selectbox(
-                        "Default fill",
-                        MAP_PIN_COLOUR_ALLOWLIST,
-                        index=_pin_idx(STREAMLIT_DEFAULT_FILL_KEY),
-                    )
-                    species_fill_w = st.selectbox(
-                        "Species fill",
-                        MAP_PIN_COLOUR_ALLOWLIST,
-                        index=_pin_idx(STREAMLIT_SPECIES_FILL_KEY),
-                    )
-                    lifer_fill_w = st.selectbox(
-                        "Lifer fill",
-                        MAP_PIN_COLOUR_ALLOWLIST,
-                        index=_pin_idx(STREAMLIT_LIFER_FILL_KEY),
-                    )
-                    last_seen_fill_w = st.selectbox(
-                        "Last-seen fill",
-                        MAP_PIN_COLOUR_ALLOWLIST,
-                        index=_pin_idx(STREAMLIT_LAST_SEEN_FILL_KEY),
-                    )
-                apply_map = st.form_submit_button("Apply map settings", width="stretch")
-
-            if apply_map:
-                st.session_state[STREAMLIT_MARK_LIFER_KEY] = bool(mark_lifer_w)
-                st.session_state[STREAMLIT_MARK_LAST_SEEN_KEY] = bool(mark_last_seen_w)
-                _cl = bool(cluster_all_locations_w)
-                st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY] = _cl
-                st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY] = _cl
-                st.session_state[STREAMLIT_POPUP_SORT_ORDER_KEY] = popup_sort_w
-                st.session_state[STREAMLIT_POPUP_SCROLL_HINT_KEY] = popup_scroll_w
-                st.session_state[STREAMLIT_DEFAULT_COLOR_KEY] = default_edge_w
-                st.session_state[STREAMLIT_SPECIES_COLOR_KEY] = species_edge_w
-                st.session_state[STREAMLIT_LIFER_COLOR_KEY] = lifer_edge_w
-                st.session_state[STREAMLIT_LAST_SEEN_COLOR_KEY] = last_seen_edge_w
-                st.session_state[STREAMLIT_DEFAULT_FILL_KEY] = default_fill_w
-                st.session_state[STREAMLIT_SPECIES_FILL_KEY] = species_fill_w
-                st.session_state[STREAMLIT_LIFER_FILL_KEY] = lifer_fill_w
-                st.session_state[STREAMLIT_LAST_SEEN_FILL_KEY] = last_seen_fill_w
-                init_and_clamp_streamlit_table_settings()
-                st.rerun()
-
-            st.divider()
-            st.subheader("Tables & Lists")
-            st.caption(
-                "Rankings, yearly column window, country ordering, high-count behaviour, and maintenance search radius — "
-                "click **Apply table settings** for one rerun."
-            )
-            _country_sort_opts = [
-                COUNTRY_TAB_SORT_ALPHABETICAL,
-                COUNTRY_TAB_SORT_LIFERS_WORLD,
-                COUNTRY_TAB_SORT_TOTAL_SPECIES,
-            ]
-            _cur_country = st.session_state.get(
-                STREAMLIT_COUNTRY_TAB_SORT_KEY, COUNTRY_TAB_SORT_ALPHABETICAL
-            )
-            _idx_country = (
-                _country_sort_opts.index(_cur_country)
-                if _cur_country in _country_sort_opts
-                else 0
-            )
-            _hc_sort_opts = ["total_count", "alphabetical"]
-            _cur_hc = st.session_state.get(STREAMLIT_HIGH_COUNT_SORT_KEY, TABLES_HIGH_COUNT_SORT_DEFAULT)
-            if _cur_hc not in _hc_sort_opts:
-                _cur_hc = TABLES_HIGH_COUNT_SORT_DEFAULT
-            _idx_hc = _hc_sort_opts.index(_cur_hc)
-            _hc_tb_opts = ["last", "first"]
-            _cur_tb = st.session_state.get(
-                STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY, TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT
-            )
-            if _cur_tb not in _hc_tb_opts:
-                _cur_tb = TABLES_HIGH_COUNT_TIE_BREAK_DEFAULT
-            _idx_tb = _hc_tb_opts.index(_cur_tb)
-
-            with st.form("ebird_table_settings_batch"):
-                rn = st.slider(
-                    "Ranking tables: number of results",
-                    min_value=TABLES_RANKINGS_TOP_N_MIN,
-                    max_value=TABLES_RANKINGS_TOP_N_MAX,
-                    value=int(
-                        st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY, TABLES_RANKINGS_TOP_N_DEFAULT)
-                    ),
-                    step=1,
-                )
-                vr = st.slider(
-                    "Ranking tables: visible rows",
-                    min_value=TABLES_RANKINGS_VISIBLE_ROWS_MIN,
-                    max_value=TABLES_RANKINGS_VISIBLE_ROWS_MAX,
-                    value=int(
-                        st.session_state.get(
-                            STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY, TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT
-                        )
-                    ),
-                    step=1,
-                )
-                yc = st.slider(
-                    "Yearly tables: recent year columns",
-                    min_value=YEARLY_RECENT_COLUMN_COUNT_MIN,
-                    max_value=YEARLY_RECENT_COLUMN_COUNT_MAX,
-                    value=int(
-                        st.session_state.get(
-                            STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY, YEARLY_RECENT_COLUMN_COUNT_DEFAULT
-                        )
-                    ),
-                    step=1,
-                )
-                co = st.selectbox(
-                    "Country ordering",
-                    options=_country_sort_opts,
-                    format_func=lambda k: COUNTRY_SORT_LABELS[k],
-                    index=_idx_country,
-                )
-                hc_sort_w = st.selectbox(
-                    "High count ordering",
-                    options=_hc_sort_opts,
-                    format_func=lambda x: (
-                        "By total count (high to low)" if x == "total_count" else "Alphabetical (species)"
-                    ),
-                    index=_idx_hc,
-                )
-                hc_tb_w = st.selectbox(
-                    "High count tie winner",
-                    options=_hc_tb_opts,
-                    format_func=lambda x: (
-                        "Most recent checklist" if x == "last" else "Earliest checklist"
-                    ),
-                    index=_idx_tb,
-                    help=(
-                        "For species with multiple checklists at the same high count, choose which checklist row is shown."
-                    ),
-                )
-                cl = st.slider(
-                    "Close location (m)",
-                    min_value=MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
-                    max_value=MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
-                    value=int(
-                        st.session_state.get(
-                            STREAMLIT_CLOSE_LOCATION_METERS_KEY, MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT
-                        )
-                    ),
-                    step=1,
-                    help=(
-                        "Locations within this distance (metres), excluding exact duplicate coordinates, "
-                        "are listed under **Maintenance → Location Maintenance → Close locations**."
-                    ),
-                )
-                apply_tables = st.form_submit_button("Apply table settings", width="stretch")
-
-            if apply_tables:
-                st.session_state[STREAMLIT_RANKINGS_TOP_N_KEY] = rn
-                st.session_state[STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY] = vr
-                st.session_state[STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY] = yc
-                st.session_state[STREAMLIT_COUNTRY_TAB_SORT_KEY] = co
-                st.session_state[STREAMLIT_HIGH_COUNT_SORT_KEY] = hc_sort_w
-                st.session_state[STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY] = hc_tb_w
-                st.session_state[STREAMLIT_CLOSE_LOCATION_METERS_KEY] = cl
-                init_and_clamp_streamlit_table_settings()
-                st.rerun()
-
-            st.divider()
-            st.subheader("Taxonomy")
-            st.text_input(
-                "Taxonomy locale",
-                key=STREAMLIT_TAXONOMY_LOCALE_KEY,
-            )
-            # Same ``st.caption`` + Markdown pattern as the Tables & Lists intro (no custom SETTINGS_PANEL_CSS block).
-            st.caption(settings_taxonomy_help_markdown())
-            st.divider()
-            st.subheader("Data & path")
-            st.caption("Read-only details for this session (useful when troubleshooting).")
-            st.markdown(
-                settings_data_path_html(
-                    data_basename=data_basename,
-                    data_abs_path=data_abs_path,
-                    source_label=source_label,
-                    repo_root=REPO_ROOT,
-                ),
-                unsafe_allow_html=True,
-            )
 
 if __name__ == "__main__":
     main()

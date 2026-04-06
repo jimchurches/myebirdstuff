@@ -40,6 +40,22 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 )
 
 
+def inject_map_folium_iframe_min_height_css(height_px: int) -> None:
+    """Reduce streamlit-folium letterboxing when the iframe gets a near-zero height on some reruns.
+
+    Targets iframes in the **main** column only (not the sidebar). Emit from the Map tab each full run
+    so height tracks the sidebar **Map height (px)** slider.
+    """
+    h = max(240, int(height_px))
+    st.html(
+        f"""<style>
+section[data-testid="stMain"] iframe {{
+  min-height: {h}px !important;
+}}
+</style>"""
+    )
+
+
 def inject_spinner_theme_css() -> None:
     """Tweak ``st.spinner`` (text-style, theme greens, emoji iframe layout) to match our theme (refs #70, #124).
 
