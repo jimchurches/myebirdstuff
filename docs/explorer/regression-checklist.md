@@ -3,8 +3,8 @@
 Run before merging refactor branches to `main`.
 
 ## Startup
-- Notebook launches locally
-- Notebook launches on Binder
+- Streamlit app launches locally
+- Streamlit app loads successfully
 - Dataset loads successfully
 - Seven tabs available and data displayed (`Map`, `Checklist Statistics`, `Rankings & lists`, `Yearly Summary`, `Country`, `Maintenance`, `Settings`)
 

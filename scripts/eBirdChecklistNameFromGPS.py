@@ -7,16 +7,15 @@ Resolves GPS coordinates into an eBird-friendly location name. Output is
 printed to the console and copied to the clipboard (for UI.Vision macros).
 
 Used by UI.Vision macros (e.g. incidental checklist creation, location rename).
-Does not run on Binder — run locally with Python.
+Run locally with Python.
 
 Requirements (install before use):
-    pip install requests pyperclip
+    pip install requests pyperclip pyyaml
 
 Output format:
     Location Name ( lat, lng )
 
-Requires a Google Geocoding API key in config_secret.py or config_template.py
-(as GOOGLE_API_KEY).
+Requires a Google Geocoding API key in `config/config_secret.yaml` (as `google_api_key`).
 
 Arguments / parameters
 ----------------------
@@ -59,15 +58,15 @@ Examples
   python eBirdChecklistNameFromGPS.py --clipboard
 
   # Run test file (embedded geocode data)
-  python eBirdChecklistNameFromGPS.py --testfile scripts/gps_checklistName_testing.json
+  python eBirdChecklistNameFromGPS.py --testfile tests/fixtures/gps_checklistName_testing.json
 
   # Run test file against live API
-  python eBirdChecklistNameFromGPS.py --testfile scripts/gps_checklistName_testing.json --live
+  python eBirdChecklistNameFromGPS.py --testfile tests/fixtures/gps_checklistName_testing.json --live
 
   # Debug: see why a name was chosen
   python eBirdChecklistNameFromGPS.py -35.327454 148.860410 --debug
 
-  # Export a new test case (paste into gps_checklistName_testing.json, set expected/notes)
+  # Export a new test case (paste into tests/fixtures/gps_checklistName_testing.json, set expected/notes)
   python eBirdChecklistNameFromGPS.py -35.362321 149.167076 --export-test
 
 ACT (Australian Capital Territory)
@@ -115,15 +114,33 @@ from typing import Tuple, List, Optional
 
 
 def load_api_key() -> str:
-    try:
-        from config_secret import GOOGLE_API_KEY
-    except ImportError:
-        from config_template import GOOGLE_API_KEY
+    from pathlib import Path
 
-    if not GOOGLE_API_KEY or GOOGLE_API_KEY == "YOUR_API_KEY_HERE":
-        raise RuntimeError("Google API key not configured.")
+    script_dir = Path(__file__).resolve().parent
+    repo_root = script_dir.parent
+    config_dir = repo_root / "config"
 
-    return GOOGLE_API_KEY
+    # Preferred: YAML config (pure YAML; gitignored).
+    for cfg in (config_dir / "config_secret.yaml", config_dir / "config.yaml"):
+        if not cfg.exists():
+            continue
+        try:
+            import yaml  # type: ignore
+        except Exception:
+            break
+        try:
+            raw = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+        except Exception:
+            raw = {}
+        if isinstance(raw, dict):
+            key = raw.get("google_api_key", "")
+            if isinstance(key, str) and key.strip() and "REPLACE_WITH" not in key:
+                return key.strip()
+
+    raise RuntimeError(
+        "Google API key not configured. Set `google_api_key` in `config/config_secret.yaml` "
+        "(copy from `config/config_template.yaml`)."
+    )
 
 
 # ------------------------------------------------------------
@@ -914,12 +931,16 @@ def main() -> None:
     parser.add_argument(
         "--export-test",
         action="store_true",
-        help="Output a JSON snippet for the test file (fetches API for given lat/lng). Paste into gps_checklistName_testing.json and fill expected/notes.",
+        help="Output a JSON snippet for the test file (fetches API for given lat/lng). Paste into tests/fixtures/gps_checklistName_testing.json and fill expected/notes.",
     )
 
     args, extras = parser.parse_known_args()
 
-    api_key = load_api_key()
+    # Offline --testfile uses embedded geocode_json only; no API key or config required.
+    if args.testfile and not args.live:
+        api_key = ""
+    else:
+        api_key = load_api_key()
 
     if args.testfile:
         raise SystemExit(

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from personal_ebird_explorer.data_loader import add_datetime_column
+from explorer.core.data_loader import add_datetime_column
 
 
 def test_add_datetime_column_basic():

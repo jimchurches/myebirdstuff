@@ -1,8 +1,8 @@
-"""Unit tests for personal_ebird_explorer.rankings_display (rankings table HTML builders)."""
+"""Unit tests for explorer.presentation.rankings_display (rankings table HTML builders)."""
 
 import pytest
 
-from personal_ebird_explorer.rankings_display import (
+from explorer.presentation.rankings_display import (
     rankings_scroll_wrapper,
     rankings_table,
     rankings_table_location_5col,
@@ -20,6 +20,8 @@ def test_rankings_scroll_wrapper_structure():
     assert "rankings-scroll-inner" in html
     assert "max-height:608px" in html  # 16 * 38
     assert "<table></table>" in html
+    assert "rankings-scroll-shade-bot" in html
+    assert "rankings-scroll-shade-top" in html
 
 
 def test_rankings_scroll_wrapper_max_height_scales():
@@ -52,13 +54,29 @@ def test_rankings_table_location_5col_empty_no_data():
 
 
 def test_rankings_table_location_5col_one_row_structure():
-    """One row produces table with Location, State, Country columns (region_display may resolve codes)."""
+    """One row produces five data columns when leading_rank_column is off (refs #81)."""
     row = ("Place One", "NSW", "AU", "3", "12")
     out = rankings_table_location_5col("Title", ["Location", "State", "Country", "Checklists", "Species"], [row])
+    assert "<th>Rank</th>" not in out
     assert "Place One" in out
     assert "3</td>" in out
     assert "12</td>" in out
     assert "location-cols-tbl" in out
+
+
+def test_rankings_table_location_5col_leading_rank_column():
+    """Optional leading Rank column for Top Lists (refs #83)."""
+    row = ("Place One", "NSW", "AU", "3", "12")
+    out = rankings_table_location_5col(
+        "Title",
+        ["Location", "State", "Country", "Checklists", "Species"],
+        [row],
+        leading_rank_column=True,
+    )
+    assert "<th>Rank</th>" in out
+    assert "rank-col-soft-accent" in out
+    assert ">1</td>" in out
+    assert "Place One" in out
 
 
 def test_rankings_table_with_rank_empty_no_data():
@@ -68,12 +86,25 @@ def test_rankings_table_with_rank_empty_no_data():
 
 
 def test_rankings_table_with_rank_one_row_has_rank_one():
-    """Single row gets Rank 1 and content in output."""
-    out = rankings_table_with_rank("Top", ["Name", "X", "Count"], [("Grey Teal", "—", "5")])
+    """Single row gets Rank 1 and content in output; placeholder middle column omitted (refs #81)."""
+    out = rankings_table_with_rank("Top", ["Name", "", "Count"], [("Grey Teal", "—", "5")])
     assert "1</td>" in out
     assert "Grey Teal" in out
     assert "5</td>" in out
     assert "rank-tbl" in out
+    assert "<th>X</th>" not in out
+    assert "<td>—</td>" not in out
+
+
+def test_rankings_table_with_rank_keeps_middle_when_not_placeholder():
+    """If middle header or middle cell has real content, four columns are kept."""
+    out = rankings_table_with_rank(
+        "Top",
+        ["Species", "Note", "N"],
+        [("Grey Teal", "extra", "5")],
+    )
+    assert "<th>Note</th>" in out
+    assert "extra</td>" in out
 
 
 def test_rankings_visited_table_empty_no_data():
@@ -81,6 +112,25 @@ def test_rankings_visited_table_empty_no_data():
     out = rankings_visited_table([], include_heading=True)
     assert "No data." in out
     assert "Most visited" in out
+
+
+def test_rankings_visited_table_one_row_no_rank_column():
+    """Default: six data columns, no Rank (refs #81)."""
+    row = ("Loc A", "NSW", "AU", "2020-01-01", "2024-06-01", "9")
+    out = rankings_visited_table([row], include_heading=False)
+    assert "<th>Rank</th>" not in out
+    assert "Loc A" in out
+    assert ">9</td>" in out
+
+
+def test_rankings_visited_table_leading_rank_column():
+    """Optional leading Rank for Top Lists (refs #83)."""
+    row = ("Loc A", "NSW", "AU", "2020-01-01", "2024-06-01", "9")
+    out = rankings_visited_table([row], include_heading=False, leading_rank_column=True)
+    assert "<th>Rank</th>" in out
+    assert "rank-col-soft-accent" in out
+    assert ">1</td>" in out
+    assert "Loc A" in out
 
 
 def test_rankings_seen_once_table_empty_no_data():

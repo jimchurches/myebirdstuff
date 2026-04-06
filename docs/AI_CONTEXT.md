@@ -1,262 +1,284 @@
 # AI Context for Personal eBird Explorer
 
-This document provides high-level context for AI coding assistants working in this repository.  
-**Important:** Read this before suggesting architectural changes. (refs #48)
+This document provides context and guardrails for AI coding assistants (Cursor, Copilot, ChatGPT) working in this repository.
+
+**Read this before suggesting architectural or structural changes.**
 
 ---
 
-## AI Coding Rules
+## Project Purpose
 
-This repository is frequently developed using AI coding assistants (Cursor, Copilot, ChatGPT).  
-The following rules help keep the codebase stable and understandable.
+Personal eBird Explorer visualises a user's personal eBird data.
 
-### Prefer small changes
+It supports exploration of:
 
-Prefer incremental improvements over large rewrites.
+- checklist locations (map-based)
+- species-specific observations
+- visit statistics
+- first/last seen data
 
-Avoid introducing major architectural changes unless explicitly requested.
+Primary interface: **Streamlit app + Folium map**
 
-### Keep logic out of the notebook
+---
 
-The Jupyter notebook acts as a **UI layer**.
+## Repository Scope (IMPORTANT)
 
-Core logic should live in Python modules inside the project package.
+This repository contains more than just the Streamlit app.
 
-Avoid placing complex logic directly in notebook cells.
+### Streamlit App (Primary UI)
+- Main application for exploring eBird data
+- Located under `explorer/`
 
-### Respect the data model
+### GPS Location Script
+- Standalone Python script used to convert GPS coordinates into human-readable location names
+- Uses Google Maps API
+- Includes:
+  - internal test function
+  - separate test file
+- This script is also used by automation workflows
 
-The application assumes:
+### UI.Vision Macros
+- Browser automation macros for eBird workflows
+- Used for:
+  - creating/editing checklists
+  - applying formatted location names
+- These depend on the GPS script for location naming
 
-- a CSV dataset is loaded once
-- the dataset is static during runtime
+---
 
-Caching strategies rely on this assumption.
+## Core Principles (Follow These First)
 
-Do not introduce logic that mutates the main dataframe during execution.
+### 1. Prefer small changes
 
-### Avoid unnecessary dependencies
+- Make incremental improvements
+- Avoid large rewrites unless explicitly requested
 
-Do not introduce new frameworks or heavy dependencies without clear benefit.
+---
 
-In particular avoid:
+### 2. Keep logic out of the UI
 
-- web frameworks
-- database layers
-- complex UI frameworks
+- Streamlit = UI layer only
+- Core logic belongs in modules
+- Do not embed complex logic in UI code
+
+---
+
+### 3. Respect the data model
+
+- CSV is loaded once
+- Data is **static during runtime**
+- Do not mutate the main dataframe
+
+Caching relies on this assumption.
+
+---
+
+### 4. Do not break caching
+
+Caching is simple and in-memory.
+
+Be careful when modifying:
+- grouping logic
+- filtering
+- popup generation
+
+Preserve cache correctness.
+
+---
+
+### 5. Prefer readability over cleverness
+
+- Code should be easy to understand later
+- Avoid unnecessary abstraction or optimisation
+
+---
+
+### 6. Avoid unnecessary dependencies
+
+Do not introduce:
+- new frameworks
+- databases
+- heavy UI libraries
 
 The project is intentionally lightweight.
 
-**Roadmap note:** **Streamlit** (or similar) is the **intended future** UI stack. Do **not** add Streamlit—or other full app frameworks—as a dependency **until** an explicit migration task or maintainer decision says so. Until then, keep the shipping stack minimal (Jupyter, Folium, ipywidgets, Voila as needed).
+---
 
-### Prefer readability over cleverness
+### 7. Git discipline (IMPORTANT)
 
-Code should be understandable to a human reader returning to the project months later.
-
-Avoid overly abstract patterns or unnecessary optimisation.
-
-### Do not break caching assumptions
-
-Performance improvements rely on simple in-memory caches.
-
-Changes to:
-
-- location grouping
-- species filtering
-- popup generation
-
-should preserve cache correctness.
-
-### When unsure
-
-If a change might affect architecture, caching, or data flow:
-
-ask or describe the proposed change before implementing it.
+- Do not commit or push code without explicit user direction
+- Always write clear commit messages
+- Reference GitHub issues in commits when applicable
 
 ---
 
-## Project purpose
-
-Personal eBird Explorer visualises a user's personal eBird data on an interactive map.
-
-The tool allows exploration of:
-
-- all checklist locations
-- species-specific observation locations
-- visit statistics
-- first/last seen dates
-
-The primary interface is a Jupyter notebook that renders a Folium map.
-
----
-
-## Architecture overview
-
-Data flow:
+## Architecture Overview (Streamlit App)
 
 ```
-CSV export from eBird
+CSV (eBird export)
     ↓
 data_loader.py
     ↓
-clean canonical dataframe
+canonical dataframe
     ↓
-derived statistics modules
+core logic modules
     ↓
 map rendering
     ↓
-Folium map displayed in notebook UI
+Streamlit UI
 ```
 
-The notebook acts as a **thin UI layer**. All core logic should live in Python modules.
+**Key rule:** UI stays thin, logic stays in modules.
 
 ---
 
-## Roadmap: Streamlit (or similar UI)
+## Streamlit Guidelines
 
-**Long-term intent:** move the primary user interface from **Jupyter + ipywidgets + Voila** toward **Streamlit** (or another lightweight app framework if requirements change). This is a **roadmap** goal, not a requirement on every change.
+Streamlit is the **primary UI**.
 
-**Practical guidance for AI and contributors:**
+### Use native components first
 
-- **Not every feature or fix will be Streamlit-related yet.** The notebook remains the shipping UI until a dedicated migration effort lands.
-- When working on **any** area of the explorer, **bias toward** patterns that make a future Streamlit app easier:
-  - Put **new or refactored logic** in `personal_ebird_explorer/` (or other testable modules) with **explicit inputs and return values**, not buried only in notebook cells.
-  - Treat the notebook as **glue**: widgets, observers, and display—not the home for large orchestration, HTML compilers, or data-prep pipelines.
-  - Be mindful of **state boundaries** (loaded data vs filters vs display options vs caches), even if the notebook still uses globals today; a future app will likely use something like session-scoped state instead.
-- Larger migration themes (e.g. date-filter + index rebuild, map build/caches, checklist stats / yearly HTML, lifer lookups, search/autocomplete) may be tracked as separate GitHub issues or epics; follow those when implementing related work.
-
-This section exists so assistants **remember the direction** when suggesting architecture, refactors, or where new code should live—even when the user’s immediate request is still notebook-centric.
+- `st.dataframe`, `st.tabs`, `st.columns`, etc.
+- simple metrics and key/value views
 
 ---
 
-## Key design principles
+### Use shared HTML formatters when needed
 
-The dataset is **static during runtime**.
+Use formatter modules when tables require:
 
-The application assumes:
+- embedded links (species, locations)
+- mixed styling
+- richer layout than `st.dataframe`
 
-- a CSV file is loaded once
-- data does not change while the notebook is running
+Render using:
 
-**External API (taxonomy):** The app fetches the eBird taxonomy once at startup (no API key) to resolve species common names to eBird species/lifelist URLs. Locale is controlled by the notebook user variable **EBIRD_TAXONOMY_LOCALE** (e.g. `"en_AU"`, `"en_GB"`, or empty for default). On network or API failure, the notebook continues without species links; do not break the run or add retries in the first version.
+- `st.markdown(..., unsafe_allow_html=True)`
+- or `st.html`
 
-This allows caching of derived structures such as:
-
-- grouped location data
-- species-filtered data
-- popup HTML
-
-Caching should remain simple and in-memory.
+Do not duplicate HTML in UI code — use shared formatters.
 
 ---
 
-## UI design
+### Keep links
 
-The notebook provides the user interface.
-
-Controls include:
-
-- species search
-- "show only selected species"
-- map interactions
-- export controls
-
-The notebook should remain lightweight. Avoid placing heavy logic inside notebook cells.
+- Do not remove eBird links just to fit `st.dataframe`
+- Prefer formatter-based tables when needed
 
 ---
 
-## Performance approach
+### Defaults
 
-Map redraw performance is improved using simple caching and double-buffered map output (draw into a hidden Output widget, then swap to show it so the visible map is never cleared).
+- **`explorer/app/streamlit/defaults.py`** — **Developer tweakables**: map cluster options, pin **size / stroke / opacity**, legend dot sizes, theme hex, basemap list, map height slider bounds, layout widths, temporary map debug (live zoom). Edit here to change look/behaviour without hunting core modules.
 
-Avoid recomputing expensive operations such as:
+- **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner text and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
 
-- dataframe groupby
-- popup HTML generation
-- location summaries
+- **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings).
 
-Prefer incremental optimisation over architectural changes.
+Do not hardcode tunable numbers in UI files; use `defaults.py` for those.
 
 ---
 
-## Development guidelines
+## Data & External API
 
-When modifying the code:
+- Dataset is static during runtime
+- eBird taxonomy is fetched once at startup
+- No API key required
 
-- Prefer small changes over large rewrites.
-- Avoid introducing new frameworks unless clearly justified.
-- Maintain separation between:
-  - **UI layer** (notebook)
-  - **core logic** (modules)
-- Do not move logic into the notebook.
+If taxonomy fails:
+
+- continue without links
+- do not break the app
+
+---
+
+## Performance Approach
+
+- Use simple in-memory caching
+- Avoid recomputing:
+  - groupbys
+  - popup HTML
+  - summaries
+
+Optimise incrementally — do not redesign architecture.
 
 ---
 
 ## Testing
 
-Tests exist for:
-
-- date parsing
-- data loading
-- canonicalisation logic
-- map renderer helpers
-- species filtering and normalisation
-- path resolution
+### Streamlit / Core Logic
+- data loading and parsing
+- filtering and normalisation
 - stats and rankings
-- region display (country/state names in rankings tables)
-- taxonomy (species-link lookup, locale parameter, offline behaviour)
+- taxonomy lookup
 
-New logic should ideally be placed in modules where tests can be written.  
-Avoid writing complex logic directly in notebook cells.
+### GPS Script
+- has its own internal test function
+- also includes standalone test file
 
-Run tests: `pytest tests/ -v`
+Guidelines:
 
----
+- new logic → put in testable modules
+- avoid logic in UI
 
-## Safe areas for improvement
+Run:
 
-AI assistants may safely improve:
-
-- documentation
-- comments
-- small performance improvements
-- test coverage
-- minor usability features
+```
+pytest tests/ -v
+```
 
 ---
 
-## Areas requiring caution
+## Safe Changes
 
-Avoid large changes to:
+AI may safely:
+
+- improve documentation
+- improve comments
+- add tests
+- make small performance improvements
+- add minor features
+
+---
+
+## Use Caution With
+
+Do not change without discussion:
 
 - data loading pipeline
-- caching architecture
+- caching model
 - map rendering structure
-
-Discuss before implementing major refactors.
-
----
-
-## Typical workflow
-
-1. Load CSV data
-2. Explore species via search
-3. Filter locations
-4. Inspect popup statistics
-5. Optionally export map
+- GPS script behaviour (used by automation)
+- UI.Vision macros (external workflow dependencies)
 
 ---
 
-## Future direction
+## When Unsure
 
-**Committed direction (roadmap):** migrate the explorer toward a **Streamlit**-style (or similar) app while keeping **core logic in modules** so the notebook is not the only place behaviour lives. See [Roadmap: Streamlit (or similar UI)](#roadmap-streamlit-or-similar-ui).
+If a change might affect:
 
-Other possible improvements include:
+- architecture
+- caching
+- data flow
+- automation workflows
 
-- improved UI controls (notebook and/or future app)
-- better export options
-- optional web deployment (e.g. Voila) for the notebook-era UI
-- richer species analysis tools
-- easier onboarding for non-technical users
+→ describe the approach before implementing
 
-Items beyond the Streamlit roadmap are exploratory unless tied to an issue or maintainer decision.
+---
+
+## Development Direction
+
+- Streamlit remains the primary UI
+- Core logic should remain modular and testable
+- Supporting tools (GPS + macros) must remain compatible
+
+---
+
+## Summary (Mental Model)
+
+- Data is static
+- UI is thin
+- Logic lives in modules
+- Caching must remain simple
+- Supporting scripts are part of the system
+- Prefer clarity over cleverness

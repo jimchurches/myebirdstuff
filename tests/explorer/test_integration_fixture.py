@@ -17,17 +17,18 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from personal_ebird_explorer.data_loader import load_dataset, REQUIRED_COLUMNS
-from personal_ebird_explorer.species_logic import countable_species_vectorized, filter_species
-from personal_ebird_explorer.stats import (
+from explorer.core.data_loader import load_dataset, REQUIRED_COLUMNS
+from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites, prepare_lifer_last_seen
+from explorer.core.species_logic import base_species_for_lifer, countable_species_vectorized, filter_species
+from explorer.core.stats import (
     checklist_country_keys,
     compute_rankings,
     country_summary_stats,
     safe_count,
     yearly_summary_stats,
 )
-from personal_ebird_explorer.duplicate_checks import get_map_maintenance_data
-from personal_ebird_explorer.working_set import rebuild_working_set_from_date_filter
+from explorer.core.duplicate_checks import get_map_maintenance_data
+from explorer.core.working_set import rebuild_working_set_from_date_filter
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +98,13 @@ EXPECTED_COUNTRY_TOTAL_SPECIES_ROW = {
     "IN": ["23"],
 }
 EXPECTED_YEARLY_TOTAL_CHECKLISTS_PER_YEAR = ["4", "1", "4", "3", "3"]  # sums to EXPECTED_CHECKLISTS
+
+# ---------------------------------------------------------------------------
+# #103: subspecies-first lifer representation invariants (fixture derived)
+# ---------------------------------------------------------------------------
+EXPECTED_TAXON_LIFER_ENTRIES = 5
+EXPECTED_BOTH_LIFER_ENTRIES = 5
+EXPECTED_TAXON_LIFER_ENTRIES_WITH_LT3_SCI_PARTS = 0
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +201,37 @@ def test_integration_lifer_count_by_year(fixture_df):
         assert lifers_per_year.get(year, 0) == expected, f"year {year} lifers"
 
 
+def test_integration_lifer_subspecies_representation_flags(fixture_df):
+    """#103: Fixture-derived expectations for subspecies-first lifer aggregation.
+
+    This ensures subspecies lifer detection is derived from scientific-name structure
+    (3+ parts) and correctly identifies 'both' lifer entries for subspecies-first cases.
+    """
+    prep = prepare_lifer_last_seen(fixture_df, base_species_fn=base_species_for_lifer)
+    by_loc, _ = aggregate_lifer_sites(
+        prep.lifer_lookup_df,
+        prep.true_lifer_locations,
+        prep.true_lifer_locations_taxon,
+    )
+
+    taxon_lifer_entries = 0
+    both_lifer_entries = 0
+    taxon_lifer_entries_with_lt3_parts = 0
+    for _lid, entries in by_loc.items():
+        for e in entries:
+            if e["is_taxon_lifer"]:
+                taxon_lifer_entries += 1
+                parts = str(e["scientific_name"]).strip().split()
+                if len(parts) < 3:
+                    taxon_lifer_entries_with_lt3_parts += 1
+                if e["is_base_lifer"] and e["is_taxon_lifer"]:
+                    both_lifer_entries += 1
+
+    assert taxon_lifer_entries == EXPECTED_TAXON_LIFER_ENTRIES
+    assert both_lifer_entries == EXPECTED_BOTH_LIFER_ENTRIES
+    assert taxon_lifer_entries_with_lt3_parts == EXPECTED_TAXON_LIFER_ENTRIES_WITH_LT3_SCI_PARTS
+
+
 # ---------------------------------------------------------------------------
 # 4. Duplicate and near-duplicate detection
 # ---------------------------------------------------------------------------
@@ -252,7 +291,7 @@ def test_integration_full_pipeline_headline_numbers(fixture_df, fixture_checklis
     """End-to-end: load → checklist → rankings + yearly stats → headline numbers match notes."""
     dur_col = "Duration (Min)" if "Duration (Min)" in fixture_df.columns else None
     dist_col = "Distance Traveled (km)" if "Distance Traveled (km)" in fixture_df.columns else None
-    # Same flow as notebook: checklist-level df, then stats
+    # Same flow: checklist-level df, then stats
     assert len(fixture_checklists) == EXPECTED_CHECKLISTS
     countable = countable_species_vectorized(fixture_df)
     assert countable.dropna().nunique() == EXPECTED_COUNTABLE_LIFE_SPECIES
@@ -277,11 +316,26 @@ def test_integration_compute_rankings_returns_expected_structure(fixture_df, fix
         fixture_df, fixture_checklists, limit=200, dur_col=dur_col, dist_col=dist_col
     )
     assert isinstance(rankings, dict)
-    expected_keys = {"time", "dist", "species", "individuals", "species_loc", "individuals_loc", "visited", "seen_once", "species_individuals", "species_checklists", "subspecies"}
+    expected_keys = {
+        "time",
+        "dist",
+        "species",
+        "individuals",
+        "species_loc",
+        "individuals_loc",
+        "visited",
+        "seen_once",
+        "species_individuals",
+        "species_checklists",
+        "subspecies",
+        "not_seen_recently",
+    }
     for k in expected_keys:
         assert k in rankings, f"missing key {k}"
     assert len(rankings["time"]) > 0
     assert len(rankings["species_loc"]) > 0
+    assert len(rankings["not_seen_recently"]) > 0
+    assert "ebird.org/checklist/" in rankings["not_seen_recently"][0][1]
 
 
 def test_integration_yearly_summary_stats_structure(fixture_df, fixture_checklists):

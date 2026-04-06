@@ -1,14 +1,30 @@
-# Dependencies for personal_ebird_explorer notebook (Binder + pip install -r)
-jupyter
-jupyterlab
-voila
-# Pandas 3 is not available on all Binder/Python combos; 2.x matches Streamlit and installs everywhere.
+#
+# Single dependency set for:
+# - core library + tests
+# - Streamlit app runtime
+#
+# Note: Streamlit currently requires pandas<3, so this repo targets pandas 2.x.
 pandas>=2.0,<3
-folium
-ipywidgets>=8
+
+# Core deps
+folium>=0.15
 whoosh
-scikit-learn
-pycountry
+scikit-learn>=1.3,<2
+pycountry>=23.12.11
+PyYAML>=6,<7
+
+# Streamlit app deps
+streamlit>=1.40
+watchdog>=4,<7  # efficient file watching on reload (Streamlit falls back to polling without it)
+streamlit-folium>=0.20.0
+streamlit-searchbox>=0.1.24
+pydantic>=2,<3
 
 # Testing
 pytest
+pytest-cov>=4,<7
+# Transitive (e.g. rich, pytest); Pygments <2.20 affected by CVE-2026-4539 (ReDoS).
+Pygments>=2.20.0
+
+# Linting (CI + local; ruff checks explorer/ — see ruff.toml)
+ruff>=0.8,<1

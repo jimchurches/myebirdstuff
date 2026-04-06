@@ -4,9 +4,9 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from personal_ebird_explorer.lifer_last_seen_prep import prepare_lifer_last_seen
-from personal_ebird_explorer.map_controller import MapOverlayResult, build_species_overlay_map
-from personal_ebird_explorer.species_logic import base_species_for_lifer
+from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
+from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
+from explorer.core.species_logic import base_species_for_lifer
 
 
 def _minimal_map_df():
@@ -97,4 +97,22 @@ def test_lifer_map_mode_builds_banner():
     html = r.map._repr_html_()
     assert "Lifer locations" in html
     assert " lifer " in html or "1 lifer" in html
-    assert "Sub-species included" in html
+    assert "Sub-species included" not in html
+    # refs #104: lifer popup should be simplified (no visit history noise).
+    assert "Visited:" not in html
+    assert "Lifers (first recorded here):" not in html
+    assert "Grey Teal : 2025-01-01" in html
+    assert "ebird.org/checklist/S1" in html
+
+    r2 = build_species_overlay_map(
+        **kwargs,
+        selected_species="",
+        map_view_mode="lifers",
+        full_location_data=full_loc,
+        show_subspecies_lifers=True,
+    )
+    assert r2.warning is None
+    assert r2.map is not None
+    html2 = r2.map._repr_html_()
+    assert "Sub-species included" in html2
+    assert "Visited:" not in html2

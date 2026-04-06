@@ -1,8 +1,8 @@
-"""Tests for species normalisation (personal_ebird_explorer.species_logic)."""
+"""Tests for species normalisation (explorer.core.species_logic)."""
 
 import pandas as pd
 
-from personal_ebird_explorer.species_logic import (
+from explorer.core.species_logic import (
     base_species_name,
     is_countable,
     countable_species_vectorized,

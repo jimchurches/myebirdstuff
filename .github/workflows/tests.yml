@@ -13,6 +13,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Ensure gitignored config files are not tracked
+        run: |
+          set -euo pipefail
+          # Must stay local only (see .gitignore); accidental -f add would bypass ignore rules.
+          tracked=$(git ls-files -- config/config.yaml config/config_secret.yaml || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::Local config files must not be tracked by git. Remove from the index and use config_template.yaml / local files only."
+            echo "$tracked"
+            exit 1
+          fi
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -21,7 +32,26 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-gps-script.txt
 
-      - name: Run tests
-        run: pytest tests/ -v
+      - name: Ruff (explorer package)
+        run: ruff check explorer/
+
+      - name: Audit Python dependencies (pip-audit)
+        run: |
+          python -m pip install --upgrade pip-audit
+          pip-audit -r requirements.txt -r requirements-gps-script.txt --cache-dir .pip-audit-cache
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ -v \
+            --cov=explorer \
+            --cov-report=term-missing \
+            --cov-fail-under=65
+
+      - name: Warn if Streamlit debug defaults (defaults.py) are enabled
+        if: success()
+        run: python scripts/warn_streamlit_debug_defaults.py
+
+      - name: Run GPS script offline tests
+        run: python scripts/eBirdChecklistNameFromGPS.py --testfile tests/fixtures/gps_checklistName_testing.json

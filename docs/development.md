@@ -1,88 +1,250 @@
-# Development guide: Personal eBird Explorer
+# Development Guide — Personal eBird Explorer
 
-Guidance for developers and contributors. For AI-assisted coding, see [AI_CONTEXT.md](AI_CONTEXT.md) and follow the **AI Coding Rules** there. (refs #48)
+Guidance for developers and contributors.
 
----
+For AI-assisted coding, see **[AI_CONTEXT.md](AI_CONTEXT.md)** and follow those rules first.
 
-## Architecture overview
-
-Data flow:
-
-1. **CSV** — User’s eBird export (`MyEBirdData.csv` or custom path).
-2. **data_loader** — Loads CSV, validates columns, adds canonical `datetime` column. Returns a single DataFrame. Missing/no-recorded times use synthetic **23:59** so same-day sorting is stable (user-facing explanation: [explorer README — Missing checklist times](explorer/README.md#missing-checklist-times-synthetic-2359); refs #44).
-3. **working_set** — After load, optional date filter rebuild: working DataFrame, `location_data`, `records_by_loc`, species list, totals, Whoosh repopulation, map-cache clears. Called from the notebook; same API usable from Streamlit (refs #66).
-4. **Statistics modules** — `stats`, `species_logic`, `duplicate_checks` provide rankings, species filtering, map-maintenance data. All operate on the DataFrame or derived structures.
-5. **map_renderer** — Folium map factory, popups, banners, legend HTML helpers. Receives data; no notebook globals.
-6. **map_controller** — Map pipeline: ``build_species_overlay_map(...)`` → :class:`MapOverlayResult` (all locations, selected species, or lifer-only mode; refs #67, #71). Framework-neutral; notebook handles widget display.
-7. **Notebook (UI)** — Widgets (map view mode, search, checkbox, buttons), event handlers, map tab output (double-buffer), and `draw_map_with_species_overlay()` calling **map_controller** with session caches and options.
-
-The notebook is a thin UI layer: it wires widgets to state and calls module APIs. Core logic lives in `personal_ebird_explorer/*.py`.
-
-**Country tab / Streamlit:** Per-country numbers are computed in **stats** (`country_summary_stats`) and exposed on **checklist_stats_compute**’s payload; **checklist_stats_display** renders HTML (including optional **Country** accordion sort via `country_sort`). A Streamlit app can call the same `compute_checklist_stats_payload` + `format_checklist_stats_bundle(..., country_sort=...)` without duplicating logic.
+**Detailed Streamlit UI notes** (guidelines, run behaviour, HTML/table patterns): [explorer/app/streamlit/README.md](../explorer/app/streamlit/README.md)
 
 ---
 
-## Module responsibilities
+# Overview
 
-| Module | Role |
-|--------|------|
-| **data_loader** | Load CSV, validate columns, add `datetime` column (missing times → synthetic 23:59 for sort order; see explorer README). Single entry point: `load_dataset(path)`. |
-| **path_resolution** | Resolve data file path (hardcoded, config, or fallbacks). Used by the notebook to find the CSV. |
-| **species_logic** | Species filtering (`filter_species`), countable-species logic, base-species for lifer/last-seen. |
-| **stats** | Rankings, yearly summary, **country summary** (`country_summary_stats` / `checklist_country_keys`), streak calculation, safe count parsing. Pure functions on DataFrame. |
-| **duplicate_checks** | Exact and near-duplicate location detection for the Map maintenance tab. |
-| **ui_state** | Lightweight app state (e.g. `ExplorerState` dataclass: selection, suppress flags). |
-| **map_renderer** | Folium map creation, popup/banner/legend HTML builders, lifer/last-seen resolution, location classification. No widget or notebook references. |
-| **map_controller** | ``build_species_overlay_map`` / ``MapOverlayResult``: all-species, species overlay, or lifer-only pins; uses ``aggregate_lifer_sites`` for lifer mode (refs #67, #71). |
-| **region_display** | Convert ISO country and subdivision (state/province) codes to human-readable names at display time. Used by rankings_display. |
-| **rankings_display** | HTML builders for rankings tables (scroll wrapper, location 5-col, visited, seen-once, rank tables). Used by the notebook when rendering Checklist Statistics rankings. |
-| **taxonomy** | eBird taxonomy lookup for species links (refs #56). Fetches taxonomy once from eBird API (no key); optional `locale` (e.g. `en_AU`) so common names match the user’s export. Provides `get_species_url(common_name)` and `get_species_lifelist_url(common_name)` for species only. Locale is set via notebook user variable **EBIRD_TAXONOMY_LOCALE**. On API failure, lookups return None and the notebook continues without links. |
-| **working_set** | Rebuild filtered working DataFrame and derived structures after date-filter changes: `rebuild_working_set_from_date_filter(...)` returns a `WorkingSet` or `None` on invalid range. Handles Whoosh repopulation and map popup/location caches when passed in (refs #66). |
-| **lifer_last_seen_prep** | Full-dataset lifer/last-seen prep: `prepare_lifer_last_seen(full_df)` → `LiferLastSeenPrep`; `aggregate_lifer_sites` groups lifer species by location for lifer-only map mode (refs #68, #71). |
-| **checklist_stats_compute** | Structured checklist stats / yearly / country / rankings inputs: `compute_checklist_stats_payload(df, top_n_limit)` → `ChecklistStatsPayload` or `None` if empty (refs #68). |
-| **checklist_stats_display** | HTML bundle for Checklist Statistics + Yearly + Country tabs and rankings sections: `format_checklist_stats_bundle(payload, ..., country_sort=...)` (`alphabetical` / `lifers_world` / `total_species`); Rankings tab shell: `format_rankings_tab_html(...)` (refs #68, #69). |
-| **maintenance_display** | Maintenance tab HTML: map duplicates/close locations, incomplete checklists, sex-notation sections (`format_*_maintenance_html`, refs #69). |
-| **species_search** | Whoosh species autocomplete helper: `whoosh_common_name_suggestions(index, query, ...)` (refs #69). |
+This repository contains:
 
-The notebook owns: widget creation, observers, initial Whoosh index creation (empty schema + first fill), session caches, and map tab display (double-buffered output); it calls **map_controller**’s `build_species_overlay_map()` for the Folium map. Filter-driven rebuild logic lives in **working_set**.
+| Component | Purpose |
+|----------|--------|
+| Streamlit app | Primary UI for exploring personal eBird data |
+| Core modules (`explorer/core`) | Data loading, stats, filtering, map logic |
+| Presentation (`explorer/presentation`) | HTML + Folium rendering helpers |
+| GPS script | Converts coordinates → location names (used by automation) |
+| UI.Vision macros | Browser automation for eBird workflows |
+| Tests | Validation of logic and data handling |
 
 ---
 
-## Design principles
+# Python version
 
-- **Dataset is static at runtime** — Load once; no live refresh. Caching (e.g. `records_by_loc`, popup HTML cache) is valid for the session.
-- **Caching strategy** — In-memory, simple. Location groupbys and popup HTML are cached to avoid recomputation on redraw. Cache keys include enough context (e.g. location ID, species, date-filter view) to avoid stale data.
-- **Separation of UI and logic** — Notebook: widgets, event handlers, and orchestration. Modules: data loading, statistics, map rendering. Do not move business logic into the notebook.
-- **Jupytext** — The notebook is paired with `personal_ebird_explorer.py` (percent format). Use `jupytext --sync` to keep them in sync.
+CI runs **Python 3.12** (see `.github/workflows/tests.yml`). Contributors should use **3.12** locally so behaviour matches automated tests.
 
----
+We **do not** bump the documented interpreter just to stay on the newest Python release. Reasons:
 
-## Testing workflow
+- **Stack compatibility** — Scientific and UI dependencies (pandas, Streamlit, Folium, binary wheels) often trail the latest Python; upgrading adds churn and risk for limited benefit if the project already runs cleanly on 3.12.
+- **Alignment** — Local installs, CI, and docs should stay in step. Changing the version is a deliberate, coordinated update (CI workflow, install docs, and smoke-testing the app), not a silent assumption.
 
-- **Location:** Tests live under `tests/`, with `tests/explorer/` for explorer-specific tests and `tests/conftest.py` for shared fixtures.
-- **Runner:** `pytest tests/ -v` (also used in CI).
-- **Scope:** Unit tests for data_loader, path_resolution, species_logic, stats, duplicate_checks, ui_state, map_renderer, map_controller, region_display, rankings_display, taxonomy, working_set, lifer_last_seen_prep, checklist_stats_compute, checklist_stats_display (rankings tab shell), maintenance_display, species_search. No notebook execution in the test suite.
-- **Adding tests:** Prefer testing logic in modules. For new behaviour, add tests in the appropriate `tests/explorer/test_*.py` file.
-- **Integration fixture:** Tests in `tests/explorer/test_integration_fixture.py` use `tests/fixtures/ebird_integration_fixture.csv`; expected values are documented in `tests/fixtures/ebird_integration_fixture_notes.md`. If you change the fixture, update the notes and the test constants in the test file together.
+**When upgrading** (for example to 3.13 or later) makes sense: a dependency requires it, you need a language or standard-library feature not available on 3.12, or you have time to run the full test suite and verify Streamlit on a branch before merging.
+
+Patch releases within the same minor line (for example 3.12.3 vs 3.12.7) are fine and do not require doc changes.
 
 ---
 
-## Refactor guidance
+# Architecture Overview (Streamlit App)
 
-- **Incremental changes** — Prefer small, reviewable edits over large rewrites.
-- **Preserve boundaries** — Keep data loading, stats, and map rendering in modules; keep the notebook thin.
-- **Caching** — If you change what drives the map (e.g. date filter, new grouping), ensure cache keys and invalidation stay consistent. Document any new cache in comments.
-- **Config and paths** — Path resolution and config (e.g. `config_secret.py`, `config_template.py`) are documented in the notebook and in docs/explorer; avoid duplicating logic.
-- **Dependencies** — Avoid new dependencies unless clearly necessary. Current stack: pandas, folium, ipywidgets, Whoosh, scikit-learn (for TF–IDF in search, if used), pycountry (country/state names in rankings tables).
+```
+CSV (eBird export)
+    ↓
+data_loader
+    ↓
+canonical dataframe
+    ↓
+core modules
+    ↓
+map rendering
+    ↓
+Streamlit UI
+```
+
+**Key rule:** UI is thin. Logic lives in modules.
 
 ---
 
-## AI guardrails
+# Data Flow (Simplified)
 
-**Important:** AI coding assistants should read [docs/AI_CONTEXT.md](AI_CONTEXT.md) before suggesting architectural changes. That file includes a **roadmap toward Streamlit** (or similar): not every task is migration work yet, but new logic should still favour **modules with clear APIs** so a future app can reuse it.
+| Step | Description |
+|------|------------|
+| Load | CSV loaded via `data_loader` |
+| Normalise | Datetime + protocol normalisation |
+| Working set | Optional filtered dataset rebuild |
+| Compute | Stats, rankings, species logic |
+| Render | Map + HTML tables |
+| Display | Streamlit UI |
 
-- **Avoid architectural rewrites** — Do not propose large restructures of the data pipeline or map rendering unless the user has asked for it.
-- **Prefer incremental changes** — Small, targeted edits over broad refactors.
-- **Maintain separation** — Keep the notebook as UI only; do not move logic from modules into the notebook.
-- **Avoid unnecessary dependencies** — Do not add libraries for something the current stack can do.
-- **Document uncertainty** — If something is unclear (e.g. behaviour, intent), say so rather than inventing behaviour.
+---
+
+# Core Modules (Responsibilities)
+
+| Module | Responsibility |
+|--------|---------------|
+| data_loader | Load CSV, validate, normalise datetime |
+| species_logic | Filtering + countable species rules |
+| stats | Rankings, summaries, country stats |
+| working_set | Rebuild filtered dataset |
+| map_controller | Map orchestration |
+| map_renderer | Folium + popup rendering |
+| taxonomy | eBird taxonomy lookup |
+| duplicate_checks | Maintenance checks |
+| checklist_stats_* | Stats + display formatting |
+| maintenance_display | Maintenance UI output |
+| species_search | Whoosh-based autocomplete |
+
+---
+
+# Supporting Components
+
+## GPS Script
+
+- Converts GPS → readable names
+- Uses Google **Geocoding** API (reverse geocode)
+- Has:
+  - internal test function
+  - standalone test file
+- Used by UI.Vision macros
+
+⚠️ Changes here affect automation workflows
+
+---
+
+## UI.Vision Macros
+
+- Automate eBird checklist workflows
+- Depend on GPS script output
+- External to Python app but tightly coupled
+
+⚠️ Treat as part of the system
+
+---
+
+# Design Principles
+
+## Data
+
+- Dataset is static during runtime
+- No mutation of main dataframe
+- Rebuild working sets when filtering
+
+---
+
+## Caching
+
+- Simple in-memory caching
+- Cache:
+  - groupbys
+  - popup HTML
+- Ensure cache invalidation remains correct
+
+---
+
+## Separation of Concerns
+
+| Layer | Responsibility |
+|------|---------------|
+| Streamlit | UI only |
+| Core modules | Logic + computation |
+| Presentation | HTML + map rendering |
+
+---
+
+## Streamlit Guidelines
+
+The full write-up lives in **[explorer/app/streamlit/README.md](../explorer/app/streamlit/README.md)** (UI guidelines, local run, defaults, and formatter rules). The bullets below stay high level.
+
+- Use native components where possible
+- Use HTML formatters for rich tables
+- Do not duplicate HTML in UI
+- Keep eBird links
+
+**Map/theme tweakables** (clustering, pin geometry, colours, layout) live in:
+
+```
+explorer/app/streamlit/defaults.py
+```
+
+**Fixed UI strings and URLs** (tab names, spinner emoji strip, footer links) live in `explorer/app/streamlit/streamlit_ui_constants.py`. **Persisted settings schema defaults** (YAML-backed) live in `explorer/core/settings_schema_defaults.py`.
+
+---
+
+# Testing
+
+## Running tests
+
+```
+pytest tests/ -v
+```
+
+Optional coverage:
+
+```
+pytest tests/ -v --cov=explorer
+```
+
+---
+
+## Scope
+
+- Unit tests for core modules
+- Integration fixture available
+
+---
+
+## GPS Script Testing
+
+- Internal test function
+- Separate test file
+
+---
+
+# Development Guidelines
+
+## Make small changes
+
+- Prefer incremental updates
+- Avoid large rewrites
+
+---
+
+## Preserve structure
+
+- Do not move logic into UI
+- Keep modules clean and testable
+
+---
+
+## Dependencies
+
+Avoid adding new dependencies unless necessary.
+
+---
+
+# Refactor Guidance
+
+- Maintain module boundaries
+- Keep caching correct
+- Document new behaviour
+- Keep config handling consistent
+
+---
+
+# Configuration
+
+- YAML configs for data paths
+- Streamlit: `defaults.py` (map/theme tweakables), `streamlit_ui_constants.py` (fixed UI strings/URLs), `settings_schema_defaults.py` (persisted settings schema) — see Streamlit Guidelines above
+
+---
+
+# AI Guardrails (Summary)
+
+- No architectural rewrites without instruction
+- Prefer incremental changes
+- Keep UI thin
+- Do not add dependencies unnecessarily
+- Ask when unsure
+
+---
+
+# Summary
+
+- Data is static
+- UI is thin
+- Logic is modular
+- Caching is simple
+- Supporting scripts are part of the system

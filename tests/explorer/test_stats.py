@@ -1,10 +1,10 @@
-"""Tests for personal_ebird_explorer.stats module."""
+"""Tests for explorer.core.stats module."""
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from personal_ebird_explorer.stats import (
+from explorer.core.stats import (
     checklist_country_keys,
     country_summary_stats,
     safe_count,
@@ -20,6 +20,8 @@ from personal_ebird_explorer.stats import (
     rankings_by_visits,
     rankings_by_value,
     rankings_by_location,
+    rankings_not_seen_recently,
+    rankings_high_counts,
 )
 
 
@@ -109,7 +111,7 @@ class TestLongestStreak:
     def test_single_day(self):
         dates = pd.to_datetime(["2025-01-01"])
         cl = _make_cl(["2025-01-01"])
-        streak, start, start_loc, _, end, end_loc, _ = longest_streak(dates, cl)
+        streak, start, start_loc, _, _, end, end_loc, _, _ = longest_streak(dates, cl)
         assert streak == 1
         assert start == end
 
@@ -128,12 +130,30 @@ class TestLongestStreak:
     def test_locations_populated(self):
         dates = pd.to_datetime(["2025-03-01", "2025-03-02"])
         cl = _make_cl(["2025-03-01", "2025-03-02"], locations=["Park A", "Park B"], sids=["S100", "S101"])
-        streak, start_date, start_loc, start_sid, end_date, end_loc, end_sid = longest_streak(dates, cl)
+        streak, start_date, start_loc, start_sid, start_lid, end_date, end_loc, end_sid, end_lid = longest_streak(
+            dates, cl
+        )
         assert streak == 2
         assert start_loc == "Park A"
         assert end_loc == "Park B"
         assert start_sid == "S100"
         assert end_sid == "S101"
+        assert start_lid == ""
+        assert end_lid == ""
+
+    def test_location_ids_populated(self):
+        dates = pd.to_datetime(["2025-03-01", "2025-03-02"])
+        cl = pd.DataFrame(
+            {
+                "Date": dates,
+                "Location": ["Park A", "Park B"],
+                "Location ID": ["L100", "L200"],
+                "Submission ID": ["S100", "S101"],
+            }
+        )
+        _, _, _, _, start_lid, _, _, _, end_lid = longest_streak(dates, cl)
+        assert start_lid == "L100"
+        assert end_lid == "L200"
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +263,132 @@ class TestRankingsByVisits:
         assert rows[0][5] == "2"
 
 
+class TestRankingsHighCounts:
+    def test_picks_last_by_default_when_tied(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S_old",
+                    "Date": pd.Timestamp("2020-01-01"),
+                    "Count": 12,
+                    "Location": "Old Lake",
+                    "Location ID": "L_old",
+                },
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S_new",
+                    "Date": pd.Timestamp("2024-01-01"),
+                    "Count": 12,
+                    "Location": "New Lake",
+                    "Location ID": "L_new",
+                },
+            ]
+        )
+        rows = rankings_high_counts(df)
+        assert len(rows) == 1
+        assert "S_new" in rows[0][4]
+
+    def test_can_pick_first_when_tied(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S_old",
+                    "Date": pd.Timestamp("2020-01-01"),
+                    "Count": 12,
+                },
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S_new",
+                    "Date": pd.Timestamp("2024-01-01"),
+                    "Count": 12,
+                },
+            ]
+        )
+        rows = rankings_high_counts(df, tie_break="first")
+        assert len(rows) == 1
+        assert "S_old" in rows[0][4]
+
+    def test_can_sort_alphabetically(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Anas platyrhynchos",
+                    "Common Name": "Mallard",
+                    "Submission ID": "S1",
+                    "Date": pd.Timestamp("2024-01-01"),
+                    "Count": 50,
+                },
+                {
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Submission ID": "S2",
+                    "Date": pd.Timestamp("2024-01-02"),
+                    "Count": 10,
+                },
+            ]
+        )
+        rows = rankings_high_counts(df, sort_mode="alphabetical")
+        assert [r[0] for r in rows] == ["Grey Teal", "Mallard"]
+
+
+# ---------------------------------------------------------------------------
+# rankings_not_seen_recently
+# ---------------------------------------------------------------------------
+
+class TestRankingsNotSeenRecently:
+    def test_empty(self):
+        assert rankings_not_seen_recently(pd.DataFrame(), reference_date=pd.Timestamp("2025-01-01")) == []
+
+    def test_orders_longest_gap_first_among_eligible(self):
+        ref = pd.Timestamp("2025-06-01")
+        df = _obs_df([
+            {
+                "Scientific Name": "Anas gracilis",
+                "Common Name": "Grey Teal",
+                "Submission ID": "S1",
+                "Date": pd.Timestamp("2020-01-01"),
+            },
+            {
+                "Scientific Name": "Anas castanea",
+                "Common Name": "Chestnut Teal",
+                "Submission ID": "S2",
+                "Date": pd.Timestamp("2025-01-01"),
+            },
+        ])
+        rows = rankings_not_seen_recently(df, reference_date=ref)
+        # Chestnut Teal last seen within trailing 12 months — excluded
+        assert len(rows) == 1
+        assert rows[0][0] == "Grey Teal"
+        assert "S1" in rows[0][1]
+
+    def test_excludes_species_seen_within_past_year(self):
+        ref = pd.Timestamp("2025-06-01")
+        df = _obs_df([{"Date": pd.Timestamp("2024-08-01")}])
+        assert rankings_not_seen_recently(df, reference_date=ref) == []
+
+    def test_last_observation_row_for_checklist_link(self):
+        ref = pd.Timestamp("2025-06-01")
+        df = _obs_df([
+            {
+                "Submission ID": "S_old",
+                "Date": pd.Timestamp("2019-01-01"),
+            },
+            {
+                "Submission ID": "S_new",
+                "Date": pd.Timestamp("2024-01-01"),
+            },
+        ])
+        rows = rankings_not_seen_recently(df, reference_date=ref)
+        assert len(rows) == 1
+        assert "S_new" in rows[0][1]
+
+
 # ---------------------------------------------------------------------------
 # compute_rankings (integration)
 # ---------------------------------------------------------------------------
@@ -256,7 +402,8 @@ class TestComputeRankings:
         cl["Date"] = pd.to_datetime(cl["Date"])
         result = compute_rankings(df, cl, limit=10, dur_col=None, dist_col=None)
         expected_keys = {"time", "dist", "species", "individuals", "species_loc", "individuals_loc",
-                         "visited", "species_individuals", "species_checklists", "seen_once", "subspecies"}
+                         "visited", "species_individuals", "species_checklists", "species_high_counts", "seen_once", "subspecies",
+                         "not_seen_recently"}
         assert set(result.keys()) == expected_keys
 
     def test_empty_df(self):
@@ -303,7 +450,23 @@ class TestYearlySummaryStats:
         assert len(rows) > 0
         labels = [r[0] for r in rows]
         assert "Total species" in labels
+        assert "Total bird families" in labels
         assert "Total checklists" in labels
+
+    def test_total_bird_families_uses_taxonomy_map(self, monkeypatch):
+        """Per-year distinct family names match a stub base_species → family map (no network)."""
+        df, cl = self._minimal_data()
+
+        def _stub_map(locale: str) -> dict[str, str]:
+            return {
+                "anas gracilis": "Ducks, Geese, Waterfowl",
+                "anas castanea": "Ducks, Geese, Waterfowl",
+            }
+
+        monkeypatch.setattr("explorer.core.stats.build_base_species_to_family_map", _stub_map)
+        years, rows, _ = yearly_summary_stats(df, cl, "Duration (Min)", "Distance Traveled (km)")
+        fam_row = next(r for r in rows if r[0] == "Total bird families")
+        assert fam_row[1] == [f"{1:,}", f"{1:,}"]
 
     def test_empty_cl(self):
         df = pd.DataFrame(columns=["Submission ID", "Date"])
@@ -334,12 +497,12 @@ class TestYearlySummaryStats:
 
     def test_get_sex_notation_by_year_empty_no_column(self):
         df = pd.DataFrame({"Date": [pd.Timestamp("2024-01-01")], "Submission ID": ["S1"]})
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         result = get_sex_notation_by_year(df)
         assert result == {}
 
     def test_get_sex_notation_by_year_matches_standalone_strings(self):
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [pd.Timestamp("2024-06-01"), pd.Timestamp("2024-06-02"), pd.Timestamp("2023-01-15")],
             "Submission ID": ["S1", "S2", "S3"],
@@ -361,7 +524,7 @@ class TestYearlySummaryStats:
         assert result[2023][0][5] == "MFFJ?"
 
     def test_get_sex_notation_by_year_ignores_non_matching(self):
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [pd.Timestamp("2024-06-01")],
             "Submission ID": ["S1"],
@@ -375,7 +538,7 @@ class TestYearlySummaryStats:
 
     def test_get_sex_notation_by_year_spaced_and_count_tokens_refs_58(self):
         """Issue #58: 1M 1F, M + F, 2M2F2?, MFMM?? (last already legacy)."""
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [
                 pd.Timestamp("2024-01-01"),
@@ -397,7 +560,7 @@ class TestYearlySummaryStats:
 
     def test_get_sex_notation_by_year_rejects_prose_and_partial_refs_58(self):
         """Conservative: whole field must match; no substring matches in sentences."""
-        from personal_ebird_explorer.stats import get_sex_notation_by_year
+        from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [
                 pd.Timestamp("2024-06-01"),

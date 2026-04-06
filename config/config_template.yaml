@@ -1,0 +1,30 @@
+## My eBird Stuff — configuration template
+##
+## Copy to `config/config_secret.yaml` (recommended) or `config/config.yaml` and fill values.
+## Do NOT commit your local config file (`config_secret.yaml` and `config.yaml` are gitignored).
+##
+## This config is used by:
+## - Streamlit Explorer (`data_folder`)
+## - `scripts/eBirdChecklistNameFromGPS.py` (Google reverse-geocode -> `google_api_key`)
+## - `scripts/deploy_to_live.py` (deploy target path -> `deploy_destination`)
+##
+## Streamlit UI settings are saved into this same file under `explorer_settings`
+## when you click **Save settings** in the Explorer.
+##
+
+# Google Geocoding API key (required for `scripts/eBirdChecklistNameFromGPS.py`).
+google_api_key: "REPLACE_WITH_YOUR_KEY"
+
+# Folder containing your "My eBird Data" CSV (used for auto-load when running locally).
+# Examples:
+# - macOS: "/Users/you/OneDrive/eBird"
+# - Windows: "C:/Users/you/OneDrive/eBird"
+data_folder: "/path/to/eBird/data/folder"
+
+# Destination path for the deploy helper script.
+deploy_destination: "/path/to/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py"
+
+# Optional. The Streamlit Explorer writes this section when you save settings in the UI.
+# explorer_settings:
+#   version: 1
+

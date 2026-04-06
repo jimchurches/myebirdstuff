@@ -1,8 +1,8 @@
-"""Tests for species filtering logic (personal_ebird_explorer.species_logic.filter_species)."""
+"""Tests for species filtering logic (explorer.core.species_logic.filter_species)."""
 
 import pandas as pd
 
-from personal_ebird_explorer.species_logic import filter_species
+from explorer.core.species_logic import filter_species
 
 
 def test_filter_species_prefix_and_subspecies_but_not_species_level_slash():

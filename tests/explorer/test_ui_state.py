@@ -1,6 +1,6 @@
-"""Tests for personal_ebird_explorer.ui_state.ExplorerState."""
+"""Tests for explorer.core.ui_state.ExplorerState."""
 
-from personal_ebird_explorer.ui_state import ExplorerState
+from explorer.core.ui_state import ExplorerState
 
 
 def test_default_state():

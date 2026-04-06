@@ -1,13 +1,23 @@
 .DS_Store
-
 # Python virtual environments (any name)
 .venv/
 .venv-*/
 venv/
 env/
 
-# Don't track secrets
+# Don't track secrets or local config paths
+scripts/config.py
+scripts/config_secret.py
 config_secret.py
-*.ipynb_checkpoints
+config/config.yaml
+config/config_secret.yaml
+.streamlit/secrets.toml
 __pycache__/
-voila_debug.log
+
+# Ruff (local cache + ad-hoc pip --target installs, e.g. agent/sandbox tooling)
+.ruff_cache/
+_ruff_local/
+
+# pytest-cov / coverage.py
+.coverage
+htmlcov/

@@ -1,15 +1,12 @@
 import pandas as pd
 import pytest
+from explorer.core.checklist_stats_compute import compute_checklist_stats_payload
+from explorer.presentation.checklist_stats_display import format_checklist_stats_bundle
 
-try:
-    from notebooks.personal_ebird_explorer import _compute_checklist_stats
-except (FileNotFoundError, ImportError):
-    _compute_checklist_stats = None
 
-pytestmark = pytest.mark.skipif(
-    _compute_checklist_stats is None,
-    reason="Notebook import requires local eBird data file",
-)
+def _compute_checklist_stats(df: pd.DataFrame):
+    payload = compute_checklist_stats_payload(df, top_n_limit=10)
+    return format_checklist_stats_bundle(payload, scroll_hint=0, visible_rows=200)
 
 
 def make_minimal_df():
@@ -57,6 +54,15 @@ def test_compute_checklist_stats_returns_expected_keys():
 
     # Total Distance table: single checklist with 1.5 km traveled
     assert "<tr><td>Kilometers traveled</td><td>1.50</td></tr>" in html
+
+
+def test_rankings_interesting_lists_includes_high_counts_before_seen_once():
+    df = make_minimal_df()
+    stats = _compute_checklist_stats(df)
+    titles = [t for t, _ in stats["rankings_sections_other"]]
+    assert "Species: High counts" in titles
+    assert "Species: Seen only once" in titles
+    assert titles.index("Species: High counts") < titles.index("Species: Seen only once")
 
 
 def test_compute_checklist_stats_repeated_species_and_multi_year():
@@ -115,7 +121,7 @@ def test_country_tab_html_sort_by_metric_changes_accordion_order():
     """Country accordions order by Lifers (world) or Total species when requested."""
     import re
 
-    from personal_ebird_explorer.checklist_stats_display import (
+    from explorer.presentation.checklist_stats_display import (
         COUNTRY_TAB_SORT_ALPHABETICAL,
         COUNTRY_TAB_SORT_LIFERS_WORLD,
         COUNTRY_TAB_SORT_TOTAL_SPECIES,
@@ -166,7 +172,7 @@ def test_country_tab_html_sort_by_metric_changes_accordion_order():
 def test_country_sections_sort_alphabetically_by_display_name():
     """Country accordions follow alphabetical order of resolved country names (refs display sort)."""
     pytest.importorskip("pycountry")
-    from personal_ebird_explorer.checklist_stats_display import _country_heading_sort_key
+    from explorer.presentation.checklist_stats_display import _country_heading_sort_key
 
     assert _country_heading_sort_key("AU") < _country_heading_sort_key("US")
     assert _country_heading_sort_key("US") < _country_heading_sort_key("_UNKNOWN")
@@ -212,7 +218,7 @@ def test_country_summary_html_present_with_state_province():
 
 def test_country_iso_rows_have_ebird_region_links():
     """Lifers (country) and Total checklists rows get ⧉ links when key is ISO alpha-2."""
-    from personal_ebird_explorer.checklist_stats_display import _format_country_summary_html
+    from explorer.presentation.checklist_stats_display import _format_country_summary_html
 
     rows = [
         ("Lifers (world)", ["1"]),
@@ -235,6 +241,62 @@ def test_country_iso_rows_have_ebird_region_links():
     assert "Lifers (country)" in html_unknown
     assert 'href="https://ebird.org/lifelist?r=' not in html_unknown
     assert 'href="https://ebird.org/mychecklists/' not in html_unknown
+
+
+def test_format_country_yearly_table_html_matches_accordion_markup():
+    """Extracted yearly table HTML matches Country-tab accordion table structure (refs #75)."""
+    from explorer.presentation.checklist_stats_display import (
+        format_country_yearly_table_html,
+        _format_country_summary_html,
+    )
+
+    rows = [
+        ("Lifers (world)", ["1", "2", "3"]),
+        ("Lifers (country)", ["0", "1", "1"]),
+        ("Total species", ["5", "6", "11"]),
+        ("Total individuals", ["10", "20", "30"]),
+        ("Total checklists", ["1", "1", "2"]),
+        ("Days with a checklist", ["1", "1", "2"]),
+        ("Cumulative days eBird on", ["1", "2", "2"]),
+    ]
+    inner = format_country_yearly_table_html("DE", [2024, 2025], rows)
+    full = _format_country_summary_html([("DE", [2024, 2025], rows)])
+    assert "<th style='text-align:right;'>Total</th>" in inner
+    assert inner in full
+    # Same eBird links in first column as full country HTML
+    assert 'href="https://ebird.org/lifelist?r=DE"' in inner
+    assert 'href="https://ebird.org/mychecklists/DE"' in inner
+
+
+def test_country_yearly_links_bar_html_for_iso():
+    from explorer.presentation.checklist_stats_display import country_yearly_links_bar_html
+
+    h = country_yearly_links_bar_html("NZ")
+    assert "Country page" in h
+    assert "Country lifers" in h
+    assert "Country checklists" in h
+    assert 'href="https://ebird.org/region/NZ"' in h
+    assert 'href="https://ebird.org/lifelist?r=NZ"' in h
+    assert 'href="https://ebird.org/mychecklists/NZ"' in h
+    assert h.index("Country page") < h.index("Country lifers") < h.index("Country checklists")
+
+    assert country_yearly_links_bar_html("_UNKNOWN") == ""
+
+
+def test_format_country_yearly_table_html_inline_links_optional():
+    from explorer.presentation.checklist_stats_display import format_country_yearly_table_html
+
+    rows = [
+        ("Lifers (country)", ["1"]),
+        ("Total checklists", ["1"]),
+    ]
+    with_links = format_country_yearly_table_html("FR", [2025], rows, inline_statistic_links=True)
+    without = format_country_yearly_table_html("FR", [2025], rows, inline_statistic_links=False)
+    assert "⧉" in with_links
+    assert 'href="https://ebird.org/lifelist?r=FR"' in with_links
+    assert "⧉" not in without
+    assert 'href="https://ebird.org/lifelist' not in without
+    assert 'href="https://ebird.org/mychecklists' not in without
 
 
 def test_compute_checklist_stats_country_displayed_as_name():

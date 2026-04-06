@@ -1,0 +1,100 @@
+"""
+Non-tunable Streamlit UI literals: tab labels, species-search widget params, spinner copy/emoji strip,
+export filenames, and footer links.
+
+**Developer tweakables** (map pin size, cluster options, theme hex, basemap list, layout widths) live in
+:mod:`explorer.app.streamlit.defaults`. **Persisted settings schema defaults** live in
+:mod:`explorer.core.settings_schema_defaults`.
+"""
+
+from __future__ import annotations
+
+# ---------------------------------------------------------------------------
+# Data / export
+# ---------------------------------------------------------------------------
+
+DEFAULT_EBIRD_DATA_FILENAME = "MyEBirdData.csv"
+MAP_EXPORT_HTML_FILENAME = "ebird_map.html"
+
+# Checklist Statistics tab payload (not the same slider as Rankings Top N).
+CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
+
+# ---------------------------------------------------------------------------
+# Species search (``streamlit-searchbox`` fragment)
+# ---------------------------------------------------------------------------
+
+SPECIES_SEARCH_MAX_OPTIONS = 12
+SPECIES_SEARCH_MIN_QUERY_LEN = 3
+SPECIES_SEARCH_DEBOUNCE_MS = 400
+SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
+SPECIES_SEARCH_CAPTION = (
+    "Type at least three letters. Searches common and scientific names."
+)
+SPECIES_SEARCH_EDIT_AFTER_SUBMIT = "option"
+SPECIES_SEARCH_RERUN_SCOPE = "fragment"
+
+# ---------------------------------------------------------------------------
+# Main tab strip (``st.tabs`` order)
+# ---------------------------------------------------------------------------
+
+NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
+    "Map",
+    "Checklist Statistics",
+    "Ranking & Lists",
+    "Yearly Summary",
+    "Country",
+    "Maintenance",
+    "Settings",
+)
+
+# ---------------------------------------------------------------------------
+# Checklist-stats spinner + emoji strip (refs #74)
+# ---------------------------------------------------------------------------
+
+CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
+
+CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
+    "🐣",
+    "🐥",
+    "🐧",
+    "🦆",
+    "🦉",
+    "🦢",
+    "🦅",
+    "🦃",
+    "🐔",
+    "🐓",
+    "🐤",
+    "🐦",
+    "🕊️",
+    "🪶",
+    "🦩",
+    "🦚",
+    "🦜",
+    "🐦‍⬛",
+    "🪿",
+    "🦤",
+)
+
+CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE = 5
+CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS = 750
+CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM = 2.75
+
+# ---------------------------------------------------------------------------
+# Sidebar footer
+# ---------------------------------------------------------------------------
+
+GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
+EBIRD_PROFILE_URL = "https://ebird.org/profile/MjkxNDYyNQ"
+
+
+def explorer_readme_github_url() -> str:
+    """``docs/explorer/README.md`` on GitHub for the current git branch (or ``main``).
+
+    See :func:`explorer.core.repo_git.explorer_readme_github_page_url` and
+    ``EXPLORER_README_GITHUB_BRANCH`` for overrides when ``.git`` is absent.
+    """
+    from explorer.core.repo_git import explorer_readme_github_page_url
+
+    return explorer_readme_github_page_url(GITHUB_REPO_URL)
+INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"

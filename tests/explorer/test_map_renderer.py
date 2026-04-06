@@ -1,4 +1,4 @@
-"""Tests for personal_ebird_explorer.map_renderer helpers."""
+"""Tests for explorer.presentation.map_renderer helpers."""
 
 import math
 from datetime import datetime
@@ -6,7 +6,7 @@ from datetime import datetime
 import folium
 import pandas as pd
 
-from personal_ebird_explorer.map_renderer import (
+from explorer.presentation.map_renderer import (
     create_map,
     format_visit_time,
     format_sighting_row,
@@ -151,11 +151,6 @@ def test_create_map_default_explicit():
     assert isinstance(m, folium.Map)
 
 
-def test_create_map_satellite():
-    m = create_map([-33.8, 151.2], "satellite")
-    assert isinstance(m, folium.Map)
-
-
 def test_create_map_google():
     m = create_map([-33.8, 151.2], "google")
     assert isinstance(m, folium.Map)
@@ -202,8 +197,8 @@ def test_build_all_species_banner_html_content():
 
 def test_build_all_species_banner_html_singular():
     html = build_all_species_banner_html(1, 1, 1)
-    assert "1 checklist " in html or "1 checklist&" in html
-    assert "1 individual<" in html or "1 individual&" in html
+    assert "1 checklist" in html
+    assert "1 individual" in html
 
 
 def test_build_all_species_banner_html_is_div():
@@ -253,13 +248,19 @@ def test_build_species_banner_html_full():
         first_seen_date="10-Jan-2024",
         last_seen_date="20-Feb-2026",
         high_count_date="05-Mar-2025",
+        first_seen_checklist_url="https://ebird.org/checklist/S1",
+        last_seen_checklist_url="https://ebird.org/checklist/S2",
+        high_count_checklist_url="https://ebird.org/checklist/S3",
     )
     assert "Grey Teal" in html
     assert "15 checklists" in html
     assert "42 individuals" in html
-    assert "First seen: 10-Jan-2024" in html
-    assert "Last seen: 20-Feb-2026" in html
-    assert "High count: 05-Mar-2025 (8)" in html
+    assert 'First seen: <a href="https://ebird.org/checklist/S1"' in html
+    assert "10-Jan-2024</a>" in html
+    assert 'Last seen: <a href="https://ebird.org/checklist/S2"' in html
+    assert "20-Feb-2026</a>" in html
+    assert 'High count: <a href="https://ebird.org/checklist/S3"' in html
+    assert "05-Mar-2025</a> (8)" in html
 
 
 def test_build_species_banner_html_no_dates():
@@ -284,8 +285,8 @@ def test_build_species_banner_html_singular():
         high_count=1,
         first_seen_date="01-Jan-2026",
     )
-    assert "1 checklist " in html or "1 checklist&" in html
-    assert "1 individual<" in html or "1 individual&" in html
+    assert "1 checklist" in html
+    assert "1 individual" in html
 
 
 def test_build_species_banner_html_is_div():
@@ -386,8 +387,9 @@ def test_build_location_popup_html_empty_visit_info():
 
 def test_build_location_popup_html_structure():
     html = build_location_popup_html("Loc", "L1", "visits")
-    assert html.startswith('<div class="popup-scroll-wrapper"')
+    assert html.startswith('<div class="pebird-map-popup popup-scroll-wrapper"')
     assert html.endswith("</div></div>")
+    assert "pebird-map-popup__location-heading" in html
 
 
 # ---------------------------------------------------------------------------

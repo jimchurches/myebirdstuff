@@ -1,4 +1,4 @@
-"""Unit tests for personal_ebird_explorer.taxonomy (eBird species links, refs #56)."""
+"""Unit tests for explorer.core.taxonomy (eBird species links, refs #56)."""
 
 import csv
 import io
@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from personal_ebird_explorer import taxonomy
+from explorer.core import taxonomy
 
 
 def _make_csv(rows, fieldnames=("common_name", "species_code", "category")):
@@ -37,7 +37,7 @@ def test_load_taxonomy_success_builds_lookup():
     cm = MagicMock()
     cm.__enter__ = MagicMock(return_value=resp)
     cm.__exit__ = MagicMock(return_value=False)
-    with patch("personal_ebird_explorer.taxonomy.urlopen", return_value=cm) as m_urlopen:
+    with patch("explorer.core.taxonomy.urlopen", return_value=cm) as m_urlopen:
         ok = taxonomy.load_taxonomy()
     assert ok is True
     m_urlopen.assert_called_once()
@@ -57,7 +57,7 @@ def test_load_taxonomy_with_locale_requests_url_with_param():
     cm = MagicMock()
     cm.__enter__ = MagicMock(return_value=resp)
     cm.__exit__ = MagicMock(return_value=False)
-    with patch("personal_ebird_explorer.taxonomy.urlopen", return_value=cm) as m_urlopen:
+    with patch("explorer.core.taxonomy.urlopen", return_value=cm) as m_urlopen:
         taxonomy.load_taxonomy(locale="en_AU")
     call_args = m_urlopen.call_args[0][0]
     assert "locale=en_AU" in call_args.full_url
@@ -67,7 +67,7 @@ def test_load_taxonomy_with_locale_requests_url_with_param():
 def test_load_taxonomy_network_failure_returns_false():
     """When the API is unavailable, load_taxonomy returns False and lookups return None."""
     from urllib.error import URLError
-    with patch("personal_ebird_explorer.taxonomy.urlopen", side_effect=URLError("offline")):
+    with patch("explorer.core.taxonomy.urlopen", side_effect=URLError("offline")):
         ok = taxonomy.load_taxonomy()
     assert ok is False
     assert taxonomy.get_species_url("Grey Teal") is None
