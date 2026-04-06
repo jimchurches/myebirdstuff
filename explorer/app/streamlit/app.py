@@ -35,7 +35,8 @@ match Country / Yearly (refs #70).
 **Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** wraps checklist prep, tab syncs,
 Folium **build**, ``st_folium`` in the Map tab, then clears the bird-emoji strip (refs #124) so the explorer spinner
 tracks the built-in Streamlit spinner. Iframe min-height CSS reduces streamlit-folium letterboxing. Partial
-``@st.fragment`` reruns do not use this spinner.
+``@st.fragment`` reruns do not use this spinner. Implementation: :mod:`explorer.app.streamlit.app_prep_map_ui`
+(refs #130).
 
 **Country:** Per-country yearly table uses the same ``CHECKLIST_STATS_*`` HTML/CSS as Checklist Statistics
 (``country_stats_streamlit_html``). The tab runs inside ``@st.fragment`` so changing the country selectbox
@@ -83,20 +84,9 @@ from explorer.presentation.checklist_stats_display import (  # noqa: E402
     COUNTRY_TAB_SORT_ALPHABETICAL,
 )
 from explorer.core.explorer_paths import settings_yaml_path_for_source  # noqa: E402
-from explorer.core.map_controller import build_species_overlay_map  # noqa: E402
 from explorer.core.species_search import build_ram_species_whoosh_index  # noqa: E402
-from explorer.core.species_logic import base_species_for_lifer  # noqa: E402
-from explorer.core.map_prep import (  # noqa: E402
-    data_signature_for_caches,
-    prepare_all_locations_map_context,
-)
 from explorer.app.streamlit.app_caches import (  # noqa: E402
-    cached_checklist_stats_payload,
-    cached_full_export_checklist_stats_payload,
-    cached_sex_notation_by_year,
     cached_species_url_fn,
-    full_location_data_for_maintenance,
-    static_map_cache_key,
 )
 from explorer.app.streamlit.app_constants import (  # noqa: E402
     EBIRD_DATA_SIG_KEY,
@@ -107,7 +97,6 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     FOLIUM_MAP_MOUNT_NONCE_KEY,
     FOLIUM_STATIC_MAP_CACHE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
-    EXPORT_MAP_HTML_BTN_KEY,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
@@ -135,15 +124,12 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     STREAMLIT_SPECIES_HIDE_ONLY_KEY,
 )
 from explorer.app.streamlit.app_data_loading import load_dataframe  # noqa: E402
+from explorer.app.streamlit.app_prep_map_ui import render_prep_spinner_and_map_tab  # noqa: E402
 from explorer.app.streamlit.app_settings_ui import render_settings_tab  # noqa: E402
 from explorer.app.streamlit.app_map_ui import (  # noqa: E402
     ensure_streamlit_map_basemap_height_keys,
-    inject_map_folium_iframe_min_height_css,
     inject_sidebar_control_label_css,
     inject_spinner_theme_css,
-    place_spinner_emoji_strip,
-    sidebar_bottom_slot_end,
-    sidebar_bottom_slot_start,
     sidebar_footer_links,
     species_searchbox_fragment,
 )
@@ -157,13 +143,10 @@ from explorer.app.streamlit.app_settings_state import (  # noqa: E402
 )
 from explorer.app.streamlit.checklist_stats_streamlit_html import (  # noqa: E402
     run_checklist_stats_streamlit_fragment,
-    sync_checklist_stats_tab_session_inputs,
 )
 from explorer.app.streamlit.country_stats_streamlit_html import (  # noqa: E402
     run_country_tab_streamlit_fragment,
-    sync_country_tab_session_inputs,
 )
-from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT  # noqa: E402
 from explorer.app.streamlit.defaults import (  # noqa: E402
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
@@ -174,28 +157,21 @@ from explorer.app.streamlit.defaults import (  # noqa: E402
     MAP_VIEW_LABELS,
 )
 from explorer.app.streamlit.streamlit_ui_constants import (  # noqa: E402
-    CHECKLIST_STATS_SPINNER_TEXT,
-    MAP_EXPORT_HTML_FILENAME,
     NOTEBOOK_MAIN_TAB_LABELS,
     SPECIES_SEARCH_CAPTION,
 )
 from explorer.app.streamlit.maintenance_streamlit_html import (  # noqa: E402
     run_maintenance_streamlit_tab_fragment,
-    sync_maintenance_tab_session_inputs,
 )
 from explorer.app.streamlit.map_working import (  # noqa: E402
     date_inception_to_today_default,
-    folium_map_to_html_bytes,
     streamlit_working_set_and_status,
 )
 from explorer.app.streamlit.rankings_streamlit_html import (  # noqa: E402
-    build_rankings_tab_bundle,
     run_rankings_streamlit_tab_fragment,
-    sync_rankings_tab_session_inputs,
 )
 from explorer.app.streamlit.yearly_summary_streamlit_html import (  # noqa: E402
     run_yearly_summary_streamlit_fragment,
-    sync_yearly_summary_session_inputs,
 )
 
 # Same asset as docs/explorer/README.md (repo-relative).
@@ -540,10 +516,6 @@ def main() -> None:
     _title_with_logo()
     st.markdown("Your eBird data, made visible, navigable, and ready to explore")
 
-    map_warning_text: str | None = None
-    map_for_folium = None
-    folium_st_key: str | None = None
-
     # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``). Keyed lazy tabs existed only for Family Lists
     # “main tab” session bookkeeping; the Families flow now relies on dataframe selection only (refs #73).
     (
@@ -556,225 +528,26 @@ def main() -> None:
         tab_settings,
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
 
-    # Sidebar bottom slot (refs #124): ``with tab_map`` / ``st_folium`` stay inside ``st.spinner`` so the explorer
-    # spinner and the default Streamlit spinner end together; ``inject_map_folium_iframe_min_height_css`` mitigates
-    # streamlit-folium letterboxing when the Map tab is reached from this nested context.
-    with st.sidebar:
-        sidebar_bottom_slot_start()
-        with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
-            _spinner_emoji_placeholder = place_spinner_emoji_strip()
-            checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
-            top_n = int(st.session_state.streamlit_rankings_top_n)
-            hc_sort = str(st.session_state.streamlit_high_count_sort)
-            hc_tb = str(st.session_state.streamlit_high_count_tie_break)
-            if df_full is not None and not df_full.empty:
-                maint_full_payload = cached_full_export_checklist_stats_payload(
-                    df_full, top_n, hc_sort, hc_tb, tax_locale_effective
-                )
-                rankings_bundle = build_rankings_tab_bundle(
-                    df_full,
-                    country_sort=st.session_state.streamlit_country_tab_sort,
-                    taxonomy_locale=tax_locale_effective,
-                    high_count_sort=hc_sort,
-                    high_count_tie_break=hc_tb,
-                )
-            else:
-                maint_full_payload = None
-                rankings_bundle = {}
-            sex_notation_by_year: dict = (
-                {} if df_full.empty else cached_sex_notation_by_year(df_full)
-            )
-
-            sync_checklist_stats_tab_session_inputs(checklist_payload)
-            sync_rankings_tab_session_inputs(rankings_bundle)
-            loc_maint = full_location_data_for_maintenance(df_full)
-            incomplete_maint: dict = {}
-            if maint_full_payload is not None:
-                incomplete_maint = maint_full_payload.incomplete_by_year or {}
-            sync_maintenance_tab_session_inputs(
-                loc_maint,
-                close_location_meters=int(st.session_state.streamlit_close_location_meters),
-                incomplete_by_year=incomplete_maint,
-                sex_notation_by_year=sex_notation_by_year,
-            )
-            sync_yearly_summary_session_inputs(checklist_payload)
-            sync_country_tab_session_inputs(checklist_payload)
-
-            prov_plain = provenance or ""
-            sig = data_signature_for_caches(df_full, prov_plain)
-            if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
-                st.session_state.ebird_data_sig = sig
-                st.session_state.popup_html_cache = {}
-                st.session_state.filtered_by_loc_cache = OrderedDict()
-                st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
-
-            try:
-                ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
-            except ValueError as e:
-                map_warning_text = str(e)
-                st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-            else:
-                overlay_common = (
-                    (species_pick_common or "").strip() if map_view_mode == "species" else ""
-                )
-                overlay_sci = (
-                    (species_pick_sci or "").strip() if map_view_mode == "species" else ""
-                )
-                hide_nm = (
-                    map_view_mode == "species"
-                    and bool(overlay_sci)
-                    and hide_non_matching_locations
-                )
-                _map_kw = {
-                    **ctx,
-                    "selected_species": overlay_sci,
-                    "selected_common_name": overlay_common,
-                    "map_style": map_style,
-                    "popup_sort_order": popup_sort_order,
-                    "popup_scroll_hint": popup_scroll_hint,
-                    "lifer_color": st.session_state.streamlit_lifer_color,
-                    "lifer_fill": st.session_state.streamlit_lifer_fill,
-                    "last_seen_color": st.session_state.streamlit_last_seen_color,
-                    "last_seen_fill": st.session_state.streamlit_last_seen_fill,
-                    "species_color": st.session_state.streamlit_species_color,
-                    "species_fill": st.session_state.streamlit_species_fill,
-                    "default_color": st.session_state.streamlit_default_color,
-                    "default_fill": st.session_state.streamlit_default_fill,
-                    "mark_lifer": mark_lifer,
-                    "mark_last_seen": mark_last_seen,
-                    "cluster_all_locations": bool(
-                        st.session_state.get(
-                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-                            MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-                        )
-                    ),
-                    "date_filter_status": "" if is_lifer_view else date_filter_banner,
-                    "species_url_fn": species_url_fn,
-                    "base_species_fn": base_species_for_lifer,
-                    "taxonomy_locale": tax_locale_effective,
-                    "popup_html_cache": st.session_state.popup_html_cache,
-                    "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
-                    "map_view_mode": map_view_mode,
-                    "hide_non_matching_locations": hide_nm,
-                    "show_subspecies_lifers": bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
-                    "map_height_px": int(map_height),
-                }
-                _render_opts_sig = (
-                    popup_sort_order,
-                    popup_scroll_hint,
-                    st.session_state.streamlit_lifer_color,
-                    st.session_state.streamlit_lifer_fill,
-                    st.session_state.streamlit_last_seen_color,
-                    st.session_state.streamlit_last_seen_fill,
-                    st.session_state.streamlit_species_color,
-                    st.session_state.streamlit_species_fill,
-                    st.session_state.streamlit_default_color,
-                    st.session_state.streamlit_default_fill,
-                    mark_lifer,
-                    mark_last_seen,
-                    bool(
-                        st.session_state.get(
-                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-                            MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-                        )
-                    ),
-                    bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
-                    int(map_height),
-                )
-                _species_selected = bool(overlay_sci)
-                _cache_map_view_mode = map_view_mode
-                if map_view_mode == "species" and not _species_selected:
-                    _cache_map_view_mode = "all"
-                _ck = static_map_cache_key(
-                    work_df,
-                    _cache_map_view_mode,
-                    date_filter_banner,
-                    map_style,
-                    _render_opts_sig,
-                    taxonomy_locale=tax_locale_effective,
-                    species_selected_sci=overlay_sci if _species_selected else "",
-                    species_selected_common=overlay_common if _species_selected else "",
-                    hide_non_matching_locations=bool(hide_nm),
-                )
-                _use_static_cache = True
-                _cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
-                if (
-                    isinstance(_cached, dict)
-                    and _cached.get("key") == _ck
-                    and _cached.get("map") is not None
-                ):
-                    result_map = _cached["map"]
-                    result_warning = _cached.get("warning")
-                else:
-                    result = build_species_overlay_map(**_map_kw)
-                    result_map = result.map
-                    result_warning = result.warning
-                    if _use_static_cache and result_map is not None:
-                        st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY] = {
-                            "key": _ck,
-                            "map": result_map,
-                            "warning": result_warning,
-                        }
-
-                if result_warning:
-                    map_warning_text = result_warning
-                    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-                elif result_map is None:
-                    map_warning_text = "Map could not be built."
-                    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-                else:
-                    st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(result_map)
-                    map_for_folium = result_map
-                    folium_st_key = (
-                        f"explorer_folium_{abs(hash(_ck))}_h{map_height}_mv{map_view_mode}_n"
-                        f"{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
-                    )
-
-            with tab_map:
-                if map_warning_text is not None:
-                    st.warning(map_warning_text)
-                elif map_for_folium is not None and folium_st_key is not None:
-                    inject_map_folium_iframe_min_height_css(map_height)
-                    try:
-                        from streamlit_folium import st_folium
-                    except ImportError:
-                        st.error(
-                            "Missing **streamlit-folium** (needed to embed the Folium map). "
-                            "Locally: `pip install -r requirements.txt`. "
-                            "**Streamlit Community Cloud:** set app **Python requirements** to "
-                            "`requirements.txt` at the repo root."
-                        )
-                        st.stop()
-                    st_folium(
-                        map_for_folium,
-                        use_container_width=True,
-                        height=map_height,
-                        # ``_ck`` coerces **Species** with no pick to ``all`` so we reuse one Folium build
-                        # when the cache is valid. *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
-                        # distinct streamlit-folium component identity when the sidebar layout changes
-                        # (All↔Species); see invalidation block above.
-                        key=folium_st_key,
-                        returned_objects=[],
-                        return_on_hover=False,
-                    )
-
-        _spinner_emoji_placeholder.empty()
-        _has_map_export = bool(st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY))
-        if _has_map_export:
-            st.divider()
-            _ex1, _ex2, _ex3 = st.columns([1, 3, 1])
-            with _ex2:
-                st.download_button(
-                    "Export map HTML",
-                    data=st.session_state[EXPLORER_MAP_HTML_BYTES_KEY],
-                    file_name=MAP_EXPORT_HTML_FILENAME,
-                    mime="text/html",
-                    key=EXPORT_MAP_HTML_BTN_KEY,
-                    help="Standalone HTML for the current map.",
-                    use_container_width=True,
-                )
-        sidebar_footer_links(leading_divider=not _has_map_export)
-        sidebar_bottom_slot_end()
+    render_prep_spinner_and_map_tab(
+        tab_map=tab_map,
+        work_df=work_df,
+        df_full=df_full,
+        provenance=provenance,
+        tax_locale_effective=tax_locale_effective,
+        map_height=map_height,
+        map_style=map_style,
+        map_view_mode=map_view_mode,
+        is_lifer_view=is_lifer_view,
+        date_filter_banner=date_filter_banner,
+        species_pick_common=species_pick_common,
+        species_pick_sci=species_pick_sci,
+        hide_non_matching_locations=hide_non_matching_locations,
+        popup_sort_order=popup_sort_order,
+        popup_scroll_hint=popup_scroll_hint,
+        mark_lifer=mark_lifer,
+        mark_last_seen=mark_last_seen,
+        species_url_fn=species_url_fn,
+    )
 
     _run_non_map_data_tab_fragments(
         tab_checklist,
