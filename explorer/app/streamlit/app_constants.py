@@ -292,13 +292,24 @@ div[data-testid="stSpinner"] div[class*="Spinner"] {{
   display: flex !important;
   width: 100%;
 }}
-/* Reserve a stable bottom band: spinner + emoji share the same footprint as the footer links. */
+/* Bottom band (spinner, export, footer): sticky to the visible sidebar so it stays on-screen while
+   map controls above scroll (refs #124). Solid bg + edge shadow so content does not show through. */
 [data-testid="stSidebar"] .ebird-sidebar-bottom-slot {{
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  width: 100%;
+  box-sizing: border-box;
   min-height: 7.5rem;
-  padding-top: 0.35rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
+  margin-top: 0.35rem;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  background: {THEME_SECONDARY_BG_HEX};
+  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.06);
+  border-top: 1px solid rgba(31, 111, 84, 0.12);
 }}
 </style>
 """
