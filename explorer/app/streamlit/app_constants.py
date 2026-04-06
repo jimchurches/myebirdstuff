@@ -20,7 +20,6 @@ from explorer.core.settings_schema_defaults import (
 )
 from explorer.app.streamlit.defaults import (
     SETTINGS_PANEL_MAX_WIDTH_REM,
-    SPINNER_THEME_CSS_CACHE_KEY_SUFFIX,
     THEME_PRIMARY_HEX,
     THEME_SECONDARY_BG_HEX,
     THEME_TEXT_HEX,
@@ -222,8 +221,6 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_COUNTRY_TAB_SORT_KEY,
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
 )
-
-SPINNER_THEME_CSS_INJECTED_KEY = f"_ebird_spinner_theme_css_injected_{SPINNER_THEME_CSS_CACHE_KEY_SUFFIX}"
 
 SPINNER_THEME_CSS = f"""
 <style>

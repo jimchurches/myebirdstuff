@@ -16,7 +16,6 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_SEARCH_KEY,
     SIDEBAR_CONTROL_LABEL_CSS,
     SPINNER_THEME_CSS,
-    SPINNER_THEME_CSS_INJECTED_KEY,
 )
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_DEFAULT,
@@ -42,16 +41,17 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 
 
 def inject_spinner_theme_css() -> None:
-    """Tweak hoisted checklist-stats spinner to match our theme (refs #70).
+    """Tweak ``st.spinner`` (pill, greens, emoji iframe) to match our theme (refs #70, #124).
 
     Use :func:`streamlit.html` for **style-only** blocks: ``st.markdown(..., unsafe_allow_html)``
     sanitizes or scopes HTML so global ``<style>`` may not affect the spinner; style-only
     ``st.html`` is applied via Streamlit’s event container (see Streamlit ``HtmlMixin.html``).
+
+    **Must run on every rerun:** if injection is skipped after the first run, the ``<style>`` node is
+    omitted from Streamlit output and spinners revert to default styling (same issue as sidebar
+    control labels — see :func:`inject_sidebar_control_label_css`).
     """
-    if st.session_state.get(SPINNER_THEME_CSS_INJECTED_KEY):
-        return
     st.html(SPINNER_THEME_CSS.strip())
-    st.session_state[SPINNER_THEME_CSS_INJECTED_KEY] = True
 
 
 def inject_sidebar_control_label_css() -> None:
