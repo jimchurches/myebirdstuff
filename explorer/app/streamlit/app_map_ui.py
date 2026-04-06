@@ -14,6 +14,7 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
+    SIDEBAR_CONTROL_LABEL_CSS,
     SPINNER_THEME_CSS,
     SPINNER_THEME_CSS_INJECTED_KEY,
 )
@@ -51,6 +52,18 @@ def inject_spinner_theme_css() -> None:
         return
     st.html(SPINNER_THEME_CSS.strip())
     st.session_state[SPINNER_THEME_CSS_INJECTED_KEY] = True
+
+
+def inject_sidebar_control_label_css() -> None:
+    """Unify Map sidebar **control** label typography (selectbox, slider, ``st.toggle``), not spinners (refs #124).
+
+    Separate from :func:`inject_spinner_theme_css` so loading-spinner styling stays clearly scoped.
+    Call before ``with st.sidebar``.
+
+    **Must run on every rerun:** if we skip ``st.html`` after the first run, Streamlit omits that node from the
+    new output and the global ``<style>`` block disappears — controls then revert to default Streamlit fonts.
+    """
+    st.html(SIDEBAR_CONTROL_LABEL_CSS.strip())
 
 
 def inject_spinner_emoji_animation() -> None:

@@ -305,3 +305,37 @@ div[data-testid="stSpinner"] div[class*="Spinner"] {{
 }}
 </style>
 """
+
+# Sidebar **control** labels only (selectbox, slider, toggles) — not the loading spinner. Injected separately
+# and early so typography matches on first paint; bump SPINNER_THEME_CSS_CACHE_KEY_SUFFIX when this changes.
+SIDEBAR_CONTROL_LABEL_CSS = f"""
+<style>
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] span,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {{
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  letter-spacing: normal !important;
+  color: {THEME_TEXT_HEX};
+  color: color-mix(in srgb, {THEME_PRIMARY_HEX} 22%, {THEME_TEXT_HEX}) !important;
+}}
+[data-testid="stSidebar"] label[data-baseweb="checkbox"] > div:first-of-type {{
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  letter-spacing: normal !important;
+  color: {THEME_TEXT_HEX};
+  color: color-mix(in srgb, {THEME_PRIMARY_HEX} 22%, {THEME_TEXT_HEX}) !important;
+}}
+[data-testid="stSidebar"] label[data-baseweb="checkbox"] > div:first-of-type span {{
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
+}}
+</style>
+"""

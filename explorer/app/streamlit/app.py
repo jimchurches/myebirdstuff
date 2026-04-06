@@ -166,6 +166,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
 from explorer.app.streamlit.app_data_loading import load_dataframe  # noqa: E402
 from explorer.app.streamlit.app_map_ui import (  # noqa: E402
     ensure_streamlit_map_basemap_height_keys,
+    inject_sidebar_control_label_css,
     inject_spinner_theme_css,
     place_spinner_emoji_strip,
     sidebar_bottom_slot_end,
@@ -367,6 +368,10 @@ def main() -> None:
     # sidebar toggle (same key); stash and apply here before the sidebar instantiates that widget.
     apply_pending_map_cluster_toggle(st.session_state)
 
+    # Spinner + sidebar **control** label CSS before Map sidebar so first paint matches later reruns (refs #124).
+    inject_spinner_theme_css()
+    inject_sidebar_control_label_css()
+
     with st.sidebar:
         st.header("Map")
 
@@ -547,8 +552,6 @@ def main() -> None:
     popup_scroll_hint = st.session_state.streamlit_popup_scroll_hint
     mark_lifer = bool(st.session_state.streamlit_mark_lifer)
     mark_last_seen = bool(st.session_state.streamlit_mark_last_seen)
-
-    inject_spinner_theme_css()
 
     _title_with_logo()
     st.markdown("Your eBird data, made visible, navigable, and ready to explore")
