@@ -41,7 +41,7 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 
 
 def inject_spinner_theme_css() -> None:
-    """Tweak ``st.spinner`` (pill, greens, emoji iframe) to match our theme (refs #70, #124).
+    """Tweak ``st.spinner`` (text-style, theme greens, emoji iframe layout) to match our theme (refs #70, #124).
 
     Use :func:`streamlit.html` for **style-only** blocks: ``st.markdown(..., unsafe_allow_html)``
     sanitizes or scopes HTML so global ``<style>`` may not affect the spinner; style-only
