@@ -224,8 +224,7 @@ SETTINGS_SESSION_KEYS = (
 
 SPINNER_THEME_CSS = f"""
 <style>
-/* Hoisted ``st.spinner`` — theme greens (refs #74); bump SPINNER_THEME_CSS_CACHE_KEY_SUFFIX when CSS changes. */
-/* In-flow pill (no position:fixed): avoids covering the title; spinner sits in script order after the subtitle. */
+/* ``st.spinner`` — text-style (no pill): theme greens on icon + label only (refs #74). */
 /* Modern Streamlit uses an icon spinner (``iconValue: spinner``), not a CSS border ring. */
 div[data-testid="stSpinner"],
 div[data-testid="stSpinner"].stSpinner {{
@@ -235,12 +234,12 @@ div[data-testid="stSpinner"].stSpinner {{
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 0.4rem 0.95rem !important;
-  margin: 0.15rem 0 0.35rem 0 !important;
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
-  border: 1px solid rgba(31, 111, 84, 0.14);
+  padding: 0 !important;
+  margin: 0.15rem 0 0.25rem 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
   max-width: min(96vw, 42rem);
 }}
 /* Graphic: ``currentColor`` on the SVG so the arc tracks primary (not default grey). */
@@ -284,7 +283,7 @@ div[data-testid="stSpinner"] div[class*="Spinner"] {{
 [data-testid="stSidebar"] div[data-testid="stSpinner"].stSpinner {{
   max-width: 100%;
   box-sizing: border-box;
-  /* Keep spinner in normal sidebar flow (no viewport-fixed “floating pill” glitches). */
+  /* In-flow only (no fixed positioning). */
   position: relative !important;
   left: auto !important;
   top: auto !important;

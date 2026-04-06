@@ -72,7 +72,7 @@ THEME_TEXT_HEX = "#1A2E22"
 THEME_PRIMARY_HEX = "#1F6F54"
 THEME_SECONDARY_BG_HEX = "#EEF4F0"
 
-SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v17"
+SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v18"
 
 # ---------------------------------------------------------------------------
 # Ranking & Lists HTML (``rankings_streamlit_html``)
