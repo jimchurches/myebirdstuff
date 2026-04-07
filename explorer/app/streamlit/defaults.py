@@ -63,6 +63,26 @@ MAP_DATE_FILTER_DEFAULT = False
 MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer locations", "Family map")
 
 # ---------------------------------------------------------------------------
+# Family map (Map view → **Family map**; refs #138)
+#
+# Folium ``CircleMarker`` + palette; tweak here without editing ``family_map_folium.py``.
+# ---------------------------------------------------------------------------
+FAMILY_MAP_CIRCLE_MARKER_RADIUS_PX = 7
+FAMILY_MAP_CIRCLE_MARKER_FILL_OPACITY = 0.88
+FAMILY_MAP_BASE_STROKE_WEIGHT = 2
+FAMILY_MAP_HIGHLIGHT_STROKE_HEX = "#FF7F11"
+FAMILY_MAP_HIGHLIGHT_STROKE_WEIGHT = 3
+# One fill + stroke per density band index (1 / 2–3 / 4–5 / 6+ species at location).
+FAMILY_MAP_DENSITY_FILL_HEX: tuple[str, ...] = ("#3A86FF", "#5E60CE", "#9D4EDD", "#C9184A")
+FAMILY_MAP_DENSITY_STROKE_HEX: tuple[str, ...] = ("#2F6FD1", "#4A4DA6", "#7E3EAF", "#A1143A")
+FAMILY_MAP_POPUP_MAX_WIDTH_PX = 320
+# Initial viewport: ``fit_bounds`` padding (px) and max zoom when fitting (never start closer than this).
+FAMILY_MAP_FIT_BOUNDS_PADDING_PX = 48
+FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM = 6
+# Legend “highlight” swatch uses this band’s fill next to the orange ring.
+FAMILY_MAP_LEGEND_HIGHLIGHT_SWATCH_FILL_INDEX = 0
+
+# ---------------------------------------------------------------------------
 # Layout / theme (Streamlit-only)
 # ---------------------------------------------------------------------------
 

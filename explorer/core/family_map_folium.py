@@ -8,7 +8,20 @@ from typing import Callable
 import folium
 from branca.element import Element
 
-from explorer.app.streamlit.defaults import MAP_HEIGHT_PX_DEFAULT
+from explorer.app.streamlit.defaults import (
+    FAMILY_MAP_BASE_STROKE_WEIGHT,
+    FAMILY_MAP_CIRCLE_MARKER_FILL_OPACITY,
+    FAMILY_MAP_CIRCLE_MARKER_RADIUS_PX,
+    FAMILY_MAP_DENSITY_FILL_HEX,
+    FAMILY_MAP_DENSITY_STROKE_HEX,
+    FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM,
+    FAMILY_MAP_FIT_BOUNDS_PADDING_PX,
+    FAMILY_MAP_HIGHLIGHT_STROKE_HEX,
+    FAMILY_MAP_HIGHLIGHT_STROKE_WEIGHT,
+    FAMILY_MAP_LEGEND_HIGHLIGHT_SWATCH_FILL_INDEX,
+    FAMILY_MAP_POPUP_MAX_WIDTH_PX,
+    MAP_HEIGHT_PX_DEFAULT,
+)
 from explorer.core.family_map_compute import (
     DENSITY_BAND_LABELS,
     FamilyLocationPin,
@@ -20,21 +33,15 @@ from explorer.presentation.map_renderer import build_legend_html, create_map, ma
 # Match species-map banner placement (``map_renderer``).
 _FAMILY_MAP_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
 
-# High-contrast sequential palette (user-tested for map visibility).
-FAMILY_MAP_DENSITY_FILL: tuple[str, ...] = ("#3A86FF", "#5E60CE", "#9D4EDD", "#C9184A")
-FAMILY_MAP_DENSITY_STROKE: tuple[str, ...] = ("#2F6FD1", "#4A4DA6", "#7E3EAF", "#A1143A")
-FAMILY_MAP_HIGHLIGHT_STROKE = "#FF7F11"
-FAMILY_MAP_HIGHLIGHT_STROKE_WEIGHT = 3
-FAMILY_MAP_BASE_STROKE_WEIGHT = 2
-
-
 def family_map_marker_style(pin: FamilyLocationPin) -> tuple[str, str, int]:
     """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin."""
-    idx = max(0, min(pin.density_band_index, len(FAMILY_MAP_DENSITY_FILL) - 1))
-    fill = FAMILY_MAP_DENSITY_FILL[idx]
-    stroke = FAMILY_MAP_DENSITY_STROKE[idx]
+    fills = FAMILY_MAP_DENSITY_FILL_HEX
+    strokes = FAMILY_MAP_DENSITY_STROKE_HEX
+    idx = max(0, min(pin.density_band_index, len(fills) - 1))
+    fill = fills[idx]
+    stroke = strokes[idx]
     if pin.highlight_match:
-        return fill, FAMILY_MAP_HIGHLIGHT_STROKE, FAMILY_MAP_HIGHLIGHT_STROKE_WEIGHT
+        return fill, FAMILY_MAP_HIGHLIGHT_STROKE_HEX, FAMILY_MAP_HIGHLIGHT_STROKE_WEIGHT
     return fill, stroke, FAMILY_MAP_BASE_STROKE_WEIGHT
 
 
@@ -79,14 +86,25 @@ def build_family_map_legend_overlay_html_for_pins(
         if 0 <= i < len(DENSITY_BAND_LABELS):
             lab = DENSITY_BAND_LABELS[i]
             items.append(
-                (FAMILY_MAP_DENSITY_STROKE[i], FAMILY_MAP_DENSITY_FILL[i], f"{lab} species at location")
+                (
+                    FAMILY_MAP_DENSITY_STROKE_HEX[i],
+                    FAMILY_MAP_DENSITY_FILL_HEX[i],
+                    f"{lab} species at location",
+                )
             )
     hl = (highlight_label or "").strip()
     if hl:
+        sw_i = max(
+            0,
+            min(
+                FAMILY_MAP_LEGEND_HIGHLIGHT_SWATCH_FILL_INDEX,
+                len(FAMILY_MAP_DENSITY_FILL_HEX) - 1,
+            ),
+        )
         items.append(
             (
-                FAMILY_MAP_HIGHLIGHT_STROKE,
-                FAMILY_MAP_DENSITY_FILL[0],
+                FAMILY_MAP_HIGHLIGHT_STROKE_HEX,
+                FAMILY_MAP_DENSITY_FILL_HEX[sw_i],
                 f"Highlight: {hl}",
             )
         )
@@ -145,17 +163,15 @@ def build_family_composition_folium_map(
             species_url_by_common=url_map or None,
         )
         popup_body = f'<div class="pebird-map-popup">{inner}</div>'
-        # Keep marker size consistent across density bands; colour/edge encodes information.
-        radius_px = 7
         folium.CircleMarker(
             location=(pin.latitude, pin.longitude),
-            radius=radius_px,
+            radius=FAMILY_MAP_CIRCLE_MARKER_RADIUS_PX,
             color=stroke,
             weight=sw,
             fill=True,
             fill_color=fill,
-            fill_opacity=0.88,
-            popup=folium.Popup(popup_body, max_width=320),
+            fill_opacity=FAMILY_MAP_CIRCLE_MARKER_FILL_OPACITY,
+            popup=folium.Popup(popup_body, max_width=FAMILY_MAP_POPUP_MAX_WIDTH_PX),
         ).add_to(m)
 
     # Family-map-only initial viewport:
@@ -163,7 +179,12 @@ def build_family_composition_folium_map(
     # - never start closer than zoom 6 (allow wider zoom-out when needed)
     if pin_list:
         bounds = [[p.latitude, p.longitude] for p in pin_list]
-        m.fit_bounds(bounds, padding=(48, 48), max_zoom=6)
+        pad = int(FAMILY_MAP_FIT_BOUNDS_PADDING_PX)
+        m.fit_bounds(
+            bounds,
+            padding=(pad, pad),
+            max_zoom=int(FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM),
+        )
 
     return m
 
