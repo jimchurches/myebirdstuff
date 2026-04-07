@@ -83,6 +83,9 @@ CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS = 750
 # Sidebar footer
 # ---------------------------------------------------------------------------
 
+# GitHub / eBird / Instagram / Explorer docs — outline pill + export button use the same (refs #127).
+SIDEBAR_FOOTER_LINK_HEX = "#868e96"
+
 GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
 EBIRD_PROFILE_URL = "https://ebird.org/profile/MjkxNDYyNQ"
 
@@ -97,3 +100,7 @@ def explorer_readme_github_url() -> str:
 
     return explorer_readme_github_page_url(GITHUB_REPO_URL)
 INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
+
+# Optional “Support this project” (Buy Me a Coffee). Override or hide with env ``STREAMLIT_BUYMEACOFFEE_URL``
+# (set to ``""`` in the environment to hide the block when the constant would otherwise show; refs #127).
+BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/jimchurches"

@@ -25,14 +25,28 @@ class _StubSessionState(dict):
 class _SidebarStub:
     """Capture ``st.sidebar`` divider/markdown used by map chrome tests."""
 
-    def __init__(self) -> None:
+    def __init__(self, stub_session) -> None:
+        self._stub_session = stub_session
         self.markdown_calls: list[tuple[tuple, dict]] = []
+        self.caption_calls: list[str] = []
+        self.radio_calls: list[tuple] = []
 
     def divider(self) -> None:
         return None
 
+    def caption(self, label: str) -> None:
+        self.caption_calls.append(label)
+
     def markdown(self, *args, **kwargs):
         self.markdown_calls.append((args, kwargs))
+
+    def radio(self, label: str, options, key=None, horizontal: bool = False, **kwargs):
+        self.radio_calls.append((label, tuple(options), key, horizontal, kwargs))
+        if key is not None and key in self._stub_session:
+            v = self._stub_session[key]
+            if v in options:
+                return v
+        return options[0] if options else None
 
 
 def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -64,7 +78,7 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         stub.error_calls.append(msg)
 
     stub.error = error
-    stub.sidebar = _SidebarStub()
+    stub.sidebar = _SidebarStub(stub.session_state)
 
     def fragment(fn):
         return fn
@@ -433,6 +447,7 @@ def test_inject_streamlit_checklist_css_appends_extra_css(streamlit_stub) -> Non
 def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) -> None:
     from explorer.app.streamlit.app_map_ui import sidebar_footer_links
     from explorer.app.streamlit.streamlit_ui_constants import (
+        BUY_ME_A_COFFEE_URL,
         EBIRD_PROFILE_URL,
         GITHUB_REPO_URL,
         INSTAGRAM_PROFILE_URL,
@@ -451,3 +466,5 @@ def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) 
     assert EBIRD_PROFILE_URL in combined
     assert INSTAGRAM_PROFILE_URL in combined
     assert fixed_docs in combined
+    assert BUY_ME_A_COFFEE_URL in combined
+    assert "Buy me a coffee</a>" in combined

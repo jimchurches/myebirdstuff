@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import html as html_module
 import json
+import os
 from typing import Any
 
 import streamlit as st
@@ -24,6 +26,7 @@ from explorer.app.streamlit.defaults import (
     THEME_PRIMARY_HEX,
 )
 from explorer.app.streamlit.streamlit_ui_constants import (
+    BUY_ME_A_COFFEE_URL,
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS,
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE,
     CHECKLIST_STATS_SPINNER_EMOJIS,
@@ -31,6 +34,7 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     GITHUB_REPO_URL,
     explorer_readme_github_url,
     INSTAGRAM_PROFILE_URL,
+    SIDEBAR_FOOTER_LINK_HEX,
     SPECIES_SEARCH_DEBOUNCE_MS,
     SPECIES_SEARCH_EDIT_AFTER_SUBMIT,
     SPECIES_SEARCH_MAX_OPTIONS,
@@ -149,6 +153,66 @@ def sidebar_bottom_slot_end() -> None:
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def inject_sidebar_outline_download_button_css(outline_hex: str) -> None:
+    """Style the map **Export HTML** ``st.download_button`` like the outline support link (refs #127).
+
+    Streamlit widgets are not plain ``<a>`` tags; we align them visually with scoped CSS on
+    ``.ebird-sidebar-bottom-slot`` (see :func:`sidebar_bottom_slot_start`).
+    Uses the same colour as the footer text links (see :data:`SIDEBAR_FOOTER_LINK_HEX`).
+    """
+    h = outline_hex.strip()
+    if not h.startswith("#") or len(h) not in (4, 7, 9):
+        h = SIDEBAR_FOOTER_LINK_HEX
+    st.html(
+        f"""<style>
+.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button {{
+  background: transparent !important;
+  color: {h} !important;
+  border: 1px solid {h} !important;
+  border-radius: 6px !important;
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}}
+.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover {{
+  background: color-mix(in srgb, {h} 14%, transparent) !important;
+}}
+@supports not (color: color-mix(in srgb, black 50%, transparent)) {{
+  .ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover {{
+    background: rgba(134, 142, 150, 0.12) !important;
+  }}
+}}
+</style>"""
+    )
+
+
+def _support_project_url() -> str | None:
+    """Buy Me a Coffee (or other) URL.
+
+    If env ``STREAMLIT_BUYMEACOFFEE_URL`` is **set** (including to empty), it wins: use the trimmed
+    value, or hide the block when empty. If unset, use :data:`~explorer.app.streamlit.streamlit_ui_constants.BUY_ME_A_COFFEE_URL`.
+    """
+    raw = os.environ.get("STREAMLIT_BUYMEACOFFEE_URL")
+    if raw is not None:
+        u = raw.strip()
+        return u or None
+    u2 = (BUY_ME_A_COFFEE_URL or "").strip()
+    return u2 or None
+
+
+def _support_buy_me_a_coffee_outline_html(url: str, *, outline_hex: str) -> str:
+    """Outline pill using the same colour as the footer text links (:data:`SIDEBAR_FOOTER_LINK_HEX`)."""
+    esc = html_module.escape(url, quote=True)
+    return (
+        '<div style="text-align:center;margin-top:0.45rem;">'
+        f'<a href="{esc}" target="_blank" rel="noopener noreferrer" '
+        f'style="display:inline-block;padding:0.26rem 0.6rem;background:transparent;'
+        f'color:{outline_hex};border:1px solid {outline_hex};border-radius:6px;'
+        f'font-size:0.78rem;text-decoration:none;font-weight:500;" '
+        'title="Optional — helps with hosting">Buy me a coffee</a></div>'
+    )
+
+
 def ensure_streamlit_map_basemap_height_keys() -> None:
     """Seed basemap + map height in session state (keyed widgets; refs #70)."""
     if "streamlit_map_basemap" not in st.session_state:
@@ -160,10 +224,10 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
 
 
 def sidebar_footer_links(*, leading_divider: bool = True) -> None:
-    """Small centred sidebar footer: GitHub, eBird, Instagram + Explorer README on GitHub (text links)."""
+    """Small centred sidebar footer: GitHub, eBird, Instagram + Explorer README + optional support (refs #127)."""
     if leading_divider:
         st.sidebar.divider()
-    link_style = "color:#868e96;text-decoration:none;"
+    link_style = f"color:{SIDEBAR_FOOTER_LINK_HEX};text-decoration:none;"
     sep = '<span style="opacity:0.45;margin:0 0.55em;" aria-hidden="true">·</span>'
     st.sidebar.markdown(
         f'<div style="text-align:center;font-size:0.8rem;">'
@@ -183,6 +247,12 @@ def sidebar_footer_links(*, leading_divider: bool = True) -> None:
         "</div>",
         unsafe_allow_html=True,
     )
+    support_url = _support_project_url()
+    if support_url:
+        st.sidebar.markdown(
+            _support_buy_me_a_coffee_outline_html(support_url, outline_hex=SIDEBAR_FOOTER_LINK_HEX),
+            unsafe_allow_html=True,
+        )
 
 
 @st.fragment
