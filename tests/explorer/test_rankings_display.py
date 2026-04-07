@@ -64,6 +64,22 @@ def test_rankings_table_location_5col_one_row_structure():
     assert "location-cols-tbl" in out
 
 
+def test_rankings_table_location_5col_preserves_link_html_in_cells():
+    """Stats formatters emit pre-built ``<a>`` HTML; cells must not be HTML-escaped (refs #117)."""
+    loc = '<a href="https://ebird.org/lifelist/L1" target="_blank">Pelagic</a>'
+    when = '<a href="https://ebird.org/checklist/S1" target="_blank">14 Dec 2024</a>'
+    row = (loc, "NSW", "AU", when, "523 min")
+    out = rankings_table_location_5col(
+        "Longest",
+        ["Location", "State", "Country", "Visited date/time", "Time"],
+        [row],
+        leading_rank_column=True,
+    )
+    assert 'href="https://ebird.org/lifelist/L1"' in out
+    assert 'href="https://ebird.org/checklist/S1"' in out
+    assert "&lt;a href" not in out
+
+
 def test_rankings_table_location_5col_leading_rank_column():
     """Optional leading Rank column for Top Lists (refs #83)."""
     row = ("Place One", "NSW", "AU", "3", "12")
