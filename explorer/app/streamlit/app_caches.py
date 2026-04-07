@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
+
 import pandas as pd
 import streamlit as st
 
@@ -58,6 +60,49 @@ def full_location_data_for_maintenance(df: pd.DataFrame) -> pd.DataFrame:
     if not all(c in df.columns for c in cols):
         return pd.DataFrame(columns=cols)
     return df[cols].drop_duplicates()
+
+
+@st.cache_data(show_spinner=False)
+def cached_family_map_bundle(df_full: pd.DataFrame, taxonomy_locale: str) -> dict[str, Any]:
+    """Taxonomy merge + countable work frame for the **Families** map tab (refs #138).
+
+    On fetch/parse failure returns empty structures so the UI can show a warning without crashing.
+    """
+    from explorer.core.family_map_compute import (
+        base_species_to_common_from_taxonomy,
+        families_recorded_alphabetically,
+        merge_taxonomy_detail_for_family_map,
+        prepare_family_map_work_frame,
+    )
+    from explorer.core.species_family import (
+        build_base_species_to_family_map,
+        load_taxonomy_groups,
+        load_taxonomy_species_rows,
+    )
+
+    loc = (taxonomy_locale or "").strip()
+    try:
+        base_to_family = build_base_species_to_family_map(loc)
+        tax = load_taxonomy_species_rows(loc)
+        groups = load_taxonomy_groups(loc)
+        tax_merged = merge_taxonomy_detail_for_family_map(tax, groups)
+    except Exception:
+        return {
+            "work": pd.DataFrame(),
+            "tax_merged": pd.DataFrame(),
+            "base_to_common": {},
+            "families": (),
+        }
+
+    work = prepare_family_map_work_frame(df_full, base_to_family)
+    base_to_common = base_species_to_common_from_taxonomy(tax_merged)
+    families = families_recorded_alphabetically(work)
+    return {
+        "work": work,
+        "tax_merged": tax_merged,
+        "base_to_common": base_to_common,
+        "families": families,
+    }
 
 
 @st.cache_resource(show_spinner="Loading eBird taxonomy…")

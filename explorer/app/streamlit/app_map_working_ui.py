@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import pandas as pd
 import streamlit as st
 
 from explorer.app.streamlit.app_constants import (
@@ -31,6 +32,9 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_VIEW_LABEL_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_SPECIES_HIDE_ONLY_KEY,
+    STREAMLIT_FAMILY_MAP_FAMILY_KEY,
+    STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+    DEFAULT_TAXONOMY_LOCALE,
 )
 from explorer.app.streamlit.app_map_ui import (
     ensure_streamlit_map_basemap_height_keys,
@@ -78,6 +82,8 @@ class MapWorkingContext:
     species_pick_common: str | None
     species_pick_sci: str
     map_height: int
+    family_name: str
+    family_highlight_base: str
 
 
 def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
@@ -111,6 +117,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         )
         map_view_mode = MAP_VIEW_LABEL_TO_MODE[map_view_label]
         is_lifer_view = map_view_mode == "lifers"
+        is_family_view = map_view_mode == "families"
 
         if is_lifer_view:
             st.caption("Lifer locations are not date-filtered.")
@@ -122,6 +129,11 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             )
             date_filter_on_effective = False
             date_range_sel: tuple | None = None
+        elif is_family_view:
+            # Family map view (v1): keep UI minimal; ignore date filter and clustering controls.
+            # We do **not** clear persisted date filter state; switching back restores prior picks.
+            date_filter_on_effective = False
+            date_range_sel = None
         else:
             if STREAMLIT_MAP_DATE_FILTER_KEY not in st.session_state:
                 st.session_state.streamlit_map_date_filter = bool(
@@ -171,15 +183,19 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             if date_filter_on_effective and date_range_sel is not None:
                 st.session_state[PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
 
-        st.toggle(
-            "Group nearby pins",
-            key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-            help="Clusters nearby pins at low zoom. Session-only (save in Settings to persist).",
-        )
+        if not is_family_view:
+            st.toggle(
+                "Group nearby pins",
+                key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                help="Clusters nearby pins at low zoom. Session-only (save in Settings to persist).",
+            )
 
+    # Working set is still date-filtered for checklist stats and other tabs.
+    # Family map ignores date filtering (v1), but we preserve the date filter controls and state.
+    _ws_mode = "all" if is_family_view else map_view_mode
     ws, date_filter_banner = streamlit_working_set_and_status(
         df_full,
-        map_view_mode=map_view_mode,
+        map_view_mode=_ws_mode,
         date_filter_on=date_filter_on_effective,
         date_range=date_range_sel,
         map_caches=(st.session_state.popup_html_cache, st.session_state.filtered_by_loc_cache),
@@ -198,6 +214,8 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     hide_non_matching_locations = False
     species_pick_common: str | None = None
     species_pick_sci = ""
+    family_name = ""
+    family_highlight_base = ""
 
     _prev_mv = st.session_state.get(SESSION_PREV_MAP_VIEW_KEY)
     if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
@@ -236,6 +254,50 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     else:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
 
+    if map_view_mode == "families":
+        from explorer.app.streamlit.app_caches import cached_family_map_bundle
+        from explorer.core.family_map_compute import (
+            filter_work_to_family,
+            highlight_species_choices_alphabetical,
+        )
+
+        with st.sidebar:
+
+            tax_loc = (
+                str(st.session_state.get("streamlit_taxonomy_locale", "")).strip()
+                or DEFAULT_TAXONOMY_LOCALE
+            )
+            bundle = cached_family_map_bundle(df_full, tax_loc)
+            fams = list(bundle.get("families") or ())
+            work = bundle.get("work")
+            base_to_common = bundle.get("base_to_common") or {}
+
+            family_name = st.selectbox(
+                "Family",
+                options=[""] + fams,
+                format_func=lambda x: "— Select a family —" if x == "" else x,
+                key=STREAMLIT_FAMILY_MAP_FAMILY_KEY,
+            )
+
+            if family_name and isinstance(work, pd.DataFrame) and not work.empty:
+                wf = filter_work_to_family(work, family_name)
+                pairs = highlight_species_choices_alphabetical(wf, base_to_common)
+                bases = [b for _lab, b in pairs]
+                family_highlight_base = st.selectbox(
+                    "Highlight species (optional)",
+                    options=[""] + bases,
+                    format_func=lambda b: "— None —" if b == "" else (base_to_common.get(b) or b),
+                    key=STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+                )
+            else:
+                st.selectbox(
+                    "Highlight species (optional)",
+                    options=["— None —"],
+                    disabled=True,
+                    key=f"{STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY}__disabled",
+                )
+                family_highlight_base = ""
+
     with st.sidebar:
         st.divider()
         map_height = st.slider(
@@ -246,11 +308,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             key=STREAMLIT_MAP_HEIGHT_PX_KEY,
         )
 
-    if (
-        _prev_mv is not None
-        and _prev_mv != map_view_mode
-        and {_prev_mv, map_view_mode} == {"all", "species"}
-    ):
+    if _prev_mv is not None and _prev_mv != map_view_mode:
         st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
         st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
@@ -269,4 +327,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         species_pick_common=species_pick_common,
         species_pick_sci=species_pick_sci,
         map_height=map_height,
+        family_name=str(family_name or ""),
+        family_highlight_base=str(family_highlight_base or ""),
     )

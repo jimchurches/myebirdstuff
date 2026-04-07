@@ -60,7 +60,7 @@ MAP_HEIGHT_PX_STEP = 20
 
 MAP_DATE_FILTER_DEFAULT = False
 
-MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer locations")
+MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer locations", "Family map")
 
 # ---------------------------------------------------------------------------
 # Layout / theme (Streamlit-only)
