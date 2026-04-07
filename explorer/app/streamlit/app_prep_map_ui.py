@@ -30,6 +30,7 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_map_ui import (
     inject_map_folium_iframe_min_height_css,
+    inject_sidebar_outline_download_button_css,
     place_spinner_emoji_strip,
     sidebar_bottom_slot_end,
     sidebar_bottom_slot_start,
@@ -48,6 +49,7 @@ from explorer.app.streamlit.rankings_streamlit_html import (
 from explorer.app.streamlit.streamlit_ui_constants import (
     CHECKLIST_STATS_SPINNER_TEXT,
     MAP_EXPORT_HTML_FILENAME,
+    SIDEBAR_FOOTER_LINK_HEX,
 )
 from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_summary_session_inputs
 from explorer.core.map_controller import build_species_overlay_map
@@ -286,6 +288,8 @@ def render_prep_spinner_and_map_tab(
             st.divider()
             _ex1, _ex2, _ex3 = st.columns([1, 3, 1])
             with _ex2:
+                # Match outline “Buy me a coffee” pill (``st.download_button`` is a real widget, not an ``<a>``).
+                inject_sidebar_outline_download_button_css(SIDEBAR_FOOTER_LINK_HEX)
                 st.download_button(
                     "Export map HTML",
                     data=st.session_state[EXPLORER_MAP_HTML_BYTES_KEY],
@@ -294,6 +298,7 @@ def render_prep_spinner_and_map_tab(
                     key=EXPORT_MAP_HTML_BTN_KEY,
                     help="Standalone HTML for the current map.",
                     use_container_width=True,
+                    type="secondary",
                 )
         sidebar_footer_links(leading_divider=not _has_map_export)
         sidebar_bottom_slot_end()
