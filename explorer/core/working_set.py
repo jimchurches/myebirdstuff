@@ -1,8 +1,8 @@
 """
 Rebuild the explorer's filtered working DataFrame and derived map/search structures.
 
-Extracted from the UI layer for reuse and clearer
-separation of data-prep from widgets. See GitHub #66.
+Lives outside the Streamlit layer so the same filtering and aggregates can be tested and reused
+without importing UI widgets.
 """
 
 from __future__ import annotations

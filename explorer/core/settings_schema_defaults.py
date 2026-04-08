@@ -1,8 +1,8 @@
 """
 Default values for the embedded Streamlit settings schema (YAML in ``config_*.py``).
 
-Framework-neutral: no Streamlit imports. Used by :mod:`explorer.core.settings_config`
-and re-exported from ``explorer.app.streamlit.defaults`` for the Streamlit UI (refs #89).
+Framework-neutral: no Streamlit imports. Single source of truth for validation defaults in
+:mod:`explorer.core.settings_config` and for UI initial values via ``explorer.app.streamlit.defaults``.
 """
 
 from __future__ import annotations

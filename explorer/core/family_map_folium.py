@@ -1,4 +1,8 @@
-"""Folium rendering for Family Map (refs #138) — distinct from species overlay styling."""
+"""Folium rendering for the taxonomy-family (“Family locations”) map.
+
+Kept separate from :mod:`explorer.core.map_controller` so family colours, banners, and
+legends can change without touching the all-species overlay pipeline.
+"""
 
 from __future__ import annotations
 
@@ -55,7 +59,10 @@ def _family_map_banner_recorded_clause(metrics: FamilyMapBannerMetrics) -> str:
 
 
 def build_family_map_banner_overlay_html(metrics: FamilyMapBannerMetrics) -> str:
-    """Full fixed banner div (``pebird-map-banner``) for family composition (refs #138)."""
+    """Return HTML for the fixed top-right banner: family title plus taxonomy / recording summary.
+
+    Reuses the shared ``pebird-map-banner`` layout used on other maps.
+    """
     title = html_module.escape(metrics.family_name, quote=False)
     stats = html_module.escape(
         f"{metrics.total_species_taxonomy} in taxonomy · "
@@ -85,10 +92,10 @@ def build_family_map_legend_overlay_html_for_pins(
     highlight_species_url: str | None = None,
     style: FamilyMapColourScheme | None = None,
 ) -> str:
-    """Dynamic legend: only include density bands present on the map (refs #138).
+    """Build the bottom-left legend: one row per richness band that appears on the map, plus highlight.
 
-    When *highlight_species_url* is set with a non-empty *highlight_label*, the label is shown as a
-    link to the eBird species page.
+    Empty bands are omitted so sparse regions get a compact legend. When *highlight_species_url*
+    is set together with *highlight_label*, the species name is linked to its eBird species page.
     """
     s = style or active_family_map_colour_scheme()
     pin_list = list(pins)
@@ -144,7 +151,7 @@ def build_family_composition_folium_map(
     fit_bounds_highlight_only: bool = False,
     colour_scheme_index: int | None = None,
 ) -> folium.Map:
-    """Render CircleMarkers for family composition; optional eBird links in popups.
+    """Draw the family-composition map: markers, injected banner/legend HTML, and initial ``fit_bounds``.
 
     *location_page_url_fn* maps ``Location ID`` → hotspot URL; *species_url_fn* maps common name
     (as shown in the export) to species page URL.

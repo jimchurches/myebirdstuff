@@ -1,9 +1,8 @@
 """
 Framework-neutral map build pipeline for the species overlay map.
 
-Extracted so Streamlit or other UIs can call
-``build_species_overlay_map`` with data + options and receive a Folium map
-(no ipywidgets). Notebook keeps display double-buffering and widget I/O (refs #67).
+Streamlit (or any host) calls :func:`build_species_overlay_map` with data and options and receives
+Folium HTML; the legacy Jupyter notebook keeps its own display and widget layer instead of this path.
 """
 
 from __future__ import annotations
@@ -59,7 +58,7 @@ _VALID_MAP_VIEWS = frozenset({"all", "species", "lifers"})
 
 
 def _inject_map_popup_theme(map_obj: folium.Map) -> None:
-    """Inject shared CSS: Leaflet popups + fixed banner/legend chrome (Streamlit theme; refs #70)."""
+    """Inject shared CSS for Leaflet popups and fixed banner/legend overlays (matches app theme)."""
     map_obj.get_root().html.add_child(Element(map_overlay_theme_stylesheet()))
 
 
@@ -92,9 +91,9 @@ def _format_lifer_popup_lines(
     location_id: Hashable,
     base_species_fn: BaseSpeciesFn,
 ) -> str:
-    """Build lifer popup list lines with first-record date + checklist link (refs #104).
+    """Build lifer popup list lines with first-record date and checklist links.
 
-    Each *entry* is a dict produced by ``aggregate_lifer_sites`` (refs #103), with:
+    Each *entry* is a dict produced by :func:`~explorer.core.lifer_last_seen_prep.aggregate_lifer_sites`, with:
     - scientific_name / common_name
     - is_base_lifer / is_taxon_lifer
     """
@@ -220,7 +219,7 @@ def build_species_overlay_map(
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
-    *map_view_mode*: ``"all"`` | ``"species"`` | ``"lifers"`` (refs #71). When
+    *map_view_mode*: ``"all"`` | ``"species"`` | ``"lifers"``. When
     ``"lifers"``, *selected_species* is ignored; *full_location_data* must be the
     full-export location table (same scope as lifer prep).
 
@@ -289,18 +288,14 @@ def build_species_overlay_map(
             )
         )
         if not show_subspecies_lifers:
-            # Consolidated lifers (refs #103):
-            # - Always render lifer pins with the configured lifer colours.
-            # - Popup list shows base-species lifers; if a base lifer was first recorded as a subspecies,
-            #   the subspecies scientific/common name is retained in the list.
+            # Default lifer map: one pin style; popup lists base-species lifers (subspecies names kept
+            # when the first record was a subspecies).
             species_map.get_root().html.add_child(
                 Element(build_legend_html([(lifer_color, lifer_fill, "Lifer")]))
             )
         else:
-            # Subspecies toggle ON (refs #103):
-            # - Lifer: standard lifer pin colours.
-            # - Subspecies lifer: standard species-map pin colours (species edge + fill).
-            # - Both: Option 2(c) — outer ring uses species edge colour; inner uses lifer colours.
+            # Subspecies toggle: distinct styling for base-only, subspecies-only, and “both” lifers
+            # at the same location (combined ring colours).
             def _loc_kind(entries: list[dict]) -> str:
                 # Priority: Both > Lifer > Subspecies
                 for e in entries:

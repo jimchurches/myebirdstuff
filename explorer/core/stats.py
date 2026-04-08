@@ -639,7 +639,7 @@ def rankings_by_visits(cl_sub, limit):
     rows = []
     for _, r in vc.iterrows():
         lid = r["Location ID"]
-        # For visit-focused tables, link to the user's checklists at that location (refs #59).
+        # Link location names to the user’s mychecklists view for that hotspot.
         loc_link = f'<a href="https://ebird.org/mychecklists/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
         state_str = ""
         country_str = ""
@@ -667,7 +667,7 @@ def rankings_not_seen_recently(df_obs, reference_date=None):
     :func:`explorer.presentation.rankings_display.rankings_not_seen_recently_table`.
     *last_seen_html* is the visit date/time linking to the checklist of that observation.
 
-    *reference_date* defaults to local today (normalized); set for deterministic tests (refs #106).
+    *reference_date* defaults to local today (normalized); pass a fixed date in tests for determinism.
     """
     if df_obs.empty:
         return []
@@ -789,7 +789,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     *taxonomy_locale* selects the eBird taxonomy locale for **Total bird families**
     (species-group names); defaults to the app default (e.g. ``en_AU``).
 
-    Static row order matches issue #128 (core outcomes → checklist activity → effort → coverage).
+    Row order is fixed for the UI: core outcomes first, then checklist activity, effort, coverage.
     """
     cl = cl.dropna(subset=["Date"])
     if cl.empty:
@@ -826,7 +826,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
 
     rows: list[tuple[str, list[str]]] = []
 
-    # --- Computations (order here is arbitrary; static table order is set below, refs #128) ---
+    # --- Computations (order here is arbitrary; the yearly table enforces display order below) ---
 
     # Total species
     by_yr_sp = df_with_yr.dropna(subset=["_base"]).groupby("_year")["_base"].nunique()
@@ -1278,7 +1278,7 @@ def country_summary_stats(df, cl):
 # ---------------------------------------------------------------------------
 
 def _observation_details_is_sex_notation(s: str) -> bool:
-    """True if the whole field looks like sex/age shorthand (conservative; refs #58).
+    """True if the whole field looks like sex/age shorthand (conservative heuristics).
 
     Matches:
     - Legacy: runs of M, F, J, ? only (e.g. ``MF``, ``MFFF``, ``MMF??``).

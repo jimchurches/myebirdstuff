@@ -1,10 +1,9 @@
 """
-Whoosh-backed species name suggestions for autocomplete-style search (refs #69, #70).
+Whoosh-backed species name suggestions for the map species picker (autocomplete-style).
 
-Pure helper: no ipywidgets; UI wires results to display.
-
-Indexes store **common_name** and **scientific_name** so queries can match either field
-(eBird-like multi-token search).
+Pure helper with no UI imports: the app feeds suggestions into Streamlit widgets. Indexes store
+**common_name** and **scientific_name** so queries can match either field (eBird-like multi-token
+search).
 """
 
 from __future__ import annotations
