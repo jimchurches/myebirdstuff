@@ -419,10 +419,10 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
 
     from explorer.app.streamlit import streamlit_theme
 
-    streamlit_stub.markdown_calls.clear()
+    streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css()
-    assert streamlit_stub.markdown_calls
-    style_blob = streamlit_stub.markdown_calls[-1][0][0]
+    assert streamlit_stub.html_calls
+    style_blob = streamlit_stub.html_calls[-1]
     assert "<style>" in style_blob
     assert CHECKLIST_STATS_TABLE_CSS in style_blob
     assert streamlit_theme.CHECKLIST_STATS_HTML_TAB_SURFACE_CSS in style_blob
@@ -440,9 +440,9 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
 def test_inject_streamlit_checklist_css_appends_extra_css(streamlit_stub) -> None:
     from explorer.app.streamlit import streamlit_theme
 
-    streamlit_stub.markdown_calls.clear()
+    streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css("/*extra-tab*/")
-    style_blob = streamlit_stub.markdown_calls[-1][0][0]
+    style_blob = streamlit_stub.html_calls[-1]
     assert "/*extra-tab*/" in style_blob
 
 

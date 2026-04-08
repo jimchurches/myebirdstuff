@@ -27,16 +27,18 @@ CHECKLIST_STATS_HTML_TAB_SURFACE_CSS = (
 
 
 def inject_streamlit_checklist_css(extra_css: str = "") -> None:
-    """Inject scoped checklist table + Streamlit tab-surface CSS via ``st.markdown`` (refs #96).
+    """Inject scoped checklist table + Streamlit tab-surface CSS via ``st.html`` (refs #96, #132).
+
+    Style-only blocks use ``st.html`` (not ``st.markdown``) so Streamlit does not reserve a tall
+    markdown block above tab content — reduces the gap under the main tab strip on Country / Yearly / etc.
 
     Uses :data:`CHECKLIST_STATS_HTML_TAB_SURFACE_CSS` (see ``USE_EBIRD_BLUE_HTML_TAB_THEME``). Append
     *extra_css* for tab-specific rules (e.g. Country link row, Rankings max-width).
     """
-    st.markdown(
+    st.html(
         "<style>"
         f"{CHECKLIST_STATS_TABLE_CSS}"
         f"{CHECKLIST_STATS_HTML_TAB_SURFACE_CSS}"
         f"{extra_css}"
-        "</style>",
-        unsafe_allow_html=True,
+        "</style>"
     )
