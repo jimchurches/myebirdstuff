@@ -66,7 +66,7 @@ def render_country_stats_streamlit_html(
         options=keys,
         format_func=country_display_name_plain,
         key=STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
-        label_visibility="hidden",
+        label_visibility="collapsed",
     )
 
     section_by_key = {ck: (ys, rs) for ck, ys, rs in valid}

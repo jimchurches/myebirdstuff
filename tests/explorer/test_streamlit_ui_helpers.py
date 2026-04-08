@@ -446,6 +446,19 @@ def test_inject_streamlit_checklist_css_appends_extra_css(streamlit_stub) -> Non
     assert "/*extra-tab*/" in style_blob
 
 
+def test_inject_main_tab_panel_top_compact_css_emits_selectors(streamlit_stub) -> None:
+    from explorer.app.streamlit import streamlit_theme
+
+    streamlit_stub.html_calls.clear()
+    streamlit_theme.inject_main_tab_panel_top_compact_css()
+    assert streamlit_stub.html_calls
+    blob = streamlit_stub.html_calls[-1]
+    assert "<style>" in blob and "</style>" in blob
+    assert '[data-baseweb="tab-panel"]' in blob
+    assert 'div[role="tabpanel"]' in blob
+    assert "padding-top:" in blob
+
+
 def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) -> None:
     from explorer.app.streamlit.app_map_ui import sidebar_footer_links
     from explorer.app.streamlit.streamlit_ui_constants import (
