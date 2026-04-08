@@ -17,6 +17,10 @@ MAP_POPUP_SORT_ORDER_DEFAULT = "ascending"
 MAP_POPUP_SCROLL_HINT_DEFAULT = "shading"
 MAP_MARK_LIFER_DEFAULT = True
 MAP_MARK_LAST_SEEN_DEFAULT = True
+# Basemap: stored in persisted settings as a simple key (not a Folium object).
+# Keep this list in sync with Streamlit UI options in ``explorer.app.streamlit.defaults``.
+MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "google", "carto")
+MAP_BASEMAP_DEFAULT = "default"
 # All-locations map only: group nearby pins (Leaflet.markercluster). Species / lifer maps never cluster.
 MAP_CLUSTER_ALL_LOCATIONS_DEFAULT = True
 MAP_DEFAULT_COLOR_DEFAULT = "green"
@@ -82,6 +86,7 @@ def build_persisted_settings_defaults_dict() -> dict[str, Any]:
             "popup_scroll_hint": MAP_POPUP_SCROLL_HINT_DEFAULT,
             "mark_lifer": MAP_MARK_LIFER_DEFAULT,
             "mark_last_seen": MAP_MARK_LAST_SEEN_DEFAULT,
+            "basemap": MAP_BASEMAP_DEFAULT,
             "cluster_all_locations": MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
             "default_color": MAP_DEFAULT_COLOR_DEFAULT,
             "default_fill": MAP_DEFAULT_FILL_DEFAULT,

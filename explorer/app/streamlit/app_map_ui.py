@@ -13,6 +13,7 @@ import streamlit.components.v1 as components
 from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_BASEMAP_KEY,
+    STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     SESSION_SPECIES_IX_KEY,
@@ -217,10 +218,19 @@ def _support_buy_me_a_coffee_outline_html(url: str, *, outline_hex: str) -> str:
 
 def ensure_streamlit_map_basemap_height_keys() -> None:
     """Seed basemap + map height in session state (keyed widgets; refs #70)."""
+    if STREAMLIT_MAP_BASEMAP_SAVED_KEY not in st.session_state:
+        st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
+    elif st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY) not in MAP_BASEMAP_OPTIONS:
+        st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
+
+    # Sidebar override (session-only): sentinel means "use default from Settings".
     if STREAMLIT_MAP_BASEMAP_KEY not in st.session_state:
-        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = MAP_BASEMAP_DEFAULT
-    elif st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) not in MAP_BASEMAP_OPTIONS:
-        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = MAP_BASEMAP_DEFAULT
+        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = "__default__"
+    elif (
+        st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) not in MAP_BASEMAP_OPTIONS
+        and st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) != "__default__"
+    ):
+        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = "__default__"
     if STREAMLIT_MAP_HEIGHT_PX_KEY not in st.session_state:
         st.session_state[STREAMLIT_MAP_HEIGHT_PX_KEY] = MAP_HEIGHT_PX_DEFAULT
 

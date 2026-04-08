@@ -12,6 +12,8 @@ from explorer.core.settings_schema_defaults import (
     MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
+    MAP_BASEMAP_DEFAULT,
+    MAP_BASEMAP_OPTIONS,
     MAP_DEFAULT_COLOR_DEFAULT,
     MAP_DEFAULT_FILL_DEFAULT,
     MAP_LAST_SEEN_COLOR_DEFAULT,
@@ -54,6 +56,7 @@ class MapDisplayConfig(BaseModel):
     )
     mark_lifer: bool = MAP_MARK_LIFER_DEFAULT
     mark_last_seen: bool = MAP_MARK_LAST_SEEN_DEFAULT
+    basemap: str = MAP_BASEMAP_DEFAULT
     cluster_all_locations: bool = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
     default_color: str = Field(default=MAP_DEFAULT_COLOR_DEFAULT)
     default_fill: str = Field(default=MAP_DEFAULT_FILL_DEFAULT)
@@ -147,6 +150,9 @@ def _validate_settings_mapping(raw: Any) -> tuple[dict[str, Any], str | None]:
         return defaults_dict(), f"Invalid settings YAML; using defaults. {e.errors()[0].get('msg', '')}"
 
     data = cfg.model_dump()
+    # Guard user-edited basemap with explicit allowlist (same keys as Streamlit defaults).
+    if data["map_display"].get("basemap") not in MAP_BASEMAP_OPTIONS:
+        data["map_display"]["basemap"] = MAP_BASEMAP_DEFAULT
     # Guard user-edited colors with explicit allowlist.
     for key in (
         "default_color",

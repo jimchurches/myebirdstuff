@@ -372,12 +372,13 @@ def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_st
     st = streamlit_stub
     st.session_state.clear()
     ensure_streamlit_map_basemap_height_keys()
-    assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
+    assert st.session_state["streamlit_map_basemap_saved"] == MAP_BASEMAP_DEFAULT
+    assert st.session_state["streamlit_map_basemap"] == "__default__"
     assert st.session_state["streamlit_map_height_px"] == MAP_HEIGHT_PX_DEFAULT
 
     st.session_state["streamlit_map_basemap"] = "__not_a_real_basemap__"
     ensure_streamlit_map_basemap_height_keys()
-    assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
+    assert st.session_state["streamlit_map_basemap"] == "__default__"
 
 
 def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:

@@ -156,6 +156,12 @@ STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY = "_streamlit_map_cluster_
 # Persisted default: Settings form + Save settings / YAML (may differ from runtime after sidebar).
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY = "streamlit_map_cluster_all_locations_saved"
 
+# Basemap: persisted default + sidebar session override (Option A for #139).
+STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY = "_streamlit_map_basemap_apply_from_settings_pending"
+STREAMLIT_MAP_BASEMAP_SAVED_KEY = "streamlit_map_basemap_saved"
+
+SESSION_PREV_EFFECTIVE_BASEMAP_KEY = "_streamlit_prev_effective_basemap"
+
 STREAMLIT_DEFAULT_COLOR_KEY = "streamlit_default_color"
 STREAMLIT_SPECIES_COLOR_KEY = "streamlit_species_color"
 STREAMLIT_LIFER_COLOR_KEY = "streamlit_lifer_color"
@@ -208,6 +214,7 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
+    STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_DEFAULT_COLOR_KEY,
