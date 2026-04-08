@@ -62,10 +62,10 @@ MAP_HEIGHT_PX_STEP = 20
 
 MAP_DATE_FILTER_DEFAULT = False
 
-MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer locations", "Family map")
+MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer locations", "Family locations")
 
 # ---------------------------------------------------------------------------
-# Family map (Map view → **Family map**; refs #138)
+# Family map (Map view → **Family locations**; refs #138)
 #
 # Two preset **colour schemes** (same structure); flip ``FAMILY_MAP_ACTIVE_COLOUR_SCHEME``
 # between ``1`` and ``2``. Not exposed in the UI yet — edit here and reload the app.

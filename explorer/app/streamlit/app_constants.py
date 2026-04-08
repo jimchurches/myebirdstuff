@@ -35,7 +35,7 @@ MAP_VIEW_LABEL_TO_MODE = {
     "All locations": "all",
     "Selected species": "species",
     "Lifer locations": "lifers",
-    "Family map": "families",
+    "Family locations": "families",
 }
 
 SETTINGS_PANEL_CSS = f"""
