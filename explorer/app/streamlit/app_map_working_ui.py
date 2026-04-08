@@ -329,7 +329,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
 
     with st.sidebar:
         st.divider()
-        with st.expander("Basemap (this session)", expanded=False):
+        with st.expander("Basemap", expanded=False):
             st.selectbox(
                 "Basemap",
                 options=["__default__"] + list(MAP_BASEMAP_OPTIONS),
