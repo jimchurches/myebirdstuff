@@ -37,6 +37,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
     STREAMLIT_SPECIES_COLOR_KEY,
     STREAMLIT_SPECIES_FILL_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
     STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
 )
 from explorer.core.settings_schema_defaults import (
@@ -217,7 +218,10 @@ def settings_state_payload() -> dict[str, Any]:
             "close_location_meters": int(st.session_state.streamlit_close_location_meters),
         },
         "taxonomy": {
-            "locale": (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE),
+            "locale": (
+                str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
+                or DEFAULT_TAXONOMY_LOCALE
+            ),
         },
     }
 
@@ -280,7 +284,9 @@ def apply_settings_payload_to_state(cfg: dict[str, Any]) -> None:
             mn.get("close_location_meters", DEFAULT_CLOSE_LOCATION_METERS)
         )
     if isinstance(tx, dict):
-        st.session_state.streamlit_taxonomy_locale = str(tx.get("locale", DEFAULT_TAXONOMY_LOCALE))
+        st.session_state[STREAMLIT_TAXONOMY_LOCALE_KEY] = str(
+            tx.get("locale", DEFAULT_TAXONOMY_LOCALE)
+        )
 
 
 def settings_defaults_payload() -> dict[str, Any]:
