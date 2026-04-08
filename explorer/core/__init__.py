@@ -1,4 +1,33 @@
-# Personal eBird Explorer — dataset loading and utilities (``explorer.core`` + ``explorer.presentation``).
+"""Compatibility façade for the ``explorer.core`` *package* (the ``explorer/core/`` directory).
+
+This file is **not** “core domain logic only.” It exports two different layers:
+
+**1. Domain / data (eager imports)** — Submodules alongside this file: loading and
+cleaning data, stats, working sets, taxonomy, species logic, checklist payloads, etc.
+Examples: ``load_dataset``, ``compute_rankings``, :class:`WorkingSet`.
+
+**2. Presentation (re-exported)** — HTML builders, rankings tables, map helpers, and
+maintenance formatters from :mod:`explorer.presentation`, plus several map-related
+names loaded lazily from :mod:`explorer.presentation.map_renderer` and
+:mod:`explorer.core.map_controller` (see ``_LAZY_IMPORTS``). Examples:
+``rankings_table``, ``create_map``, ``format_checklist_stats_bundle``.
+
+**Why both appear here** — Older scripts and notebooks used ``from explorer.core import …``
+for a single import surface. That convenience blurs layering for newcomers.
+
+**What to do in new code**
+
+- Import **domain** from the specific submodule, e.g.
+  ``from explorer.core.stats import compute_rankings``,
+  ``from explorer.core.map_prep import prepare_all_locations_map_context``,
+  ``from explorer.core.family_map_compute import build_family_location_pins``.
+- Import **HTML / Folium / table rendering** from :mod:`explorer.presentation` (or
+  ``explorer.presentation.<module>``) explicitly.
+- Treat this module as a **backward-compatible barrel**, not the definition of
+  “what core means.”
+
+Optional heavy stacks (Whoosh, Folium) load only when lazy names are accessed.
+"""
 
 from __future__ import annotations
 
