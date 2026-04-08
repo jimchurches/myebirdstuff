@@ -200,6 +200,7 @@ def render_prep_spinner_and_map_tab(
                             height_px=int(map_height),
                             location_page_url_fn=lambda lid: f"https://ebird.org/lifelist/{lid}" if lid else None,
                             species_url_fn=species_url_fn,
+                            fit_bounds_highlight_only=bool(hl),
                         )
                         result_warning = None
 

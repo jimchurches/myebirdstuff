@@ -79,6 +79,18 @@ def test_build_family_map_empty_pins_still_returns_map():
     assert "folium" in html.lower() or "map" in html.lower()
 
 
+def test_fit_bounds_highlight_only_uses_highlight_pins():
+    pins = _sample_pins()
+    m_all = build_family_composition_folium_map(pins, fit_bounds_highlight_only=False)
+    m_hl = build_family_composition_folium_map(pins, fit_bounds_highlight_only=True)
+    h_all = m_all._repr_html_()
+    h_hl = m_hl._repr_html_()
+    assert "fitBounds" in h_all and "fitBounds" in h_hl
+    assert "[[-35.0, 149.0], [-34.0, 150.0]]" in h_all
+    assert "[[-34.0, 150.0]]" in h_hl
+    assert "maxZoom" in h_hl and "6" in h_hl
+
+
 def test_build_family_map_banner_element_html_escapes():
     h = build_family_map_banner_element_html('Birds & more <script>')
     assert "&amp;" in h or "Birds" in h

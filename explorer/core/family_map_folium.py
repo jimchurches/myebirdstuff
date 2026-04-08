@@ -118,17 +118,27 @@ def build_family_composition_folium_map(
     height_px: int = MAP_HEIGHT_PX_DEFAULT,
     location_page_url_fn: Callable[[str], str | None] | None = None,
     species_url_fn: Callable[[str], str | None] | None = None,
+    fit_bounds_highlight_only: bool = False,
 ) -> folium.Map:
     """Render CircleMarkers for family composition; optional eBird links in popups.
 
     *location_page_url_fn* maps ``Location ID`` → hotspot URL; *species_url_fn* maps common name
     (as shown in the export) to species page URL.
+
+    When *fit_bounds_highlight_only* is true (highlight species selected), the initial ``fit_bounds``
+    uses only pins where ``highlight_match`` is true, with the same padding / ``max_zoom`` as the
+    full-family case. If none match, falls back to all pins.
     """
     pin_list = list(pins)
     if pin_list:
+        if fit_bounds_highlight_only:
+            hl_only = [p for p in pin_list if p.highlight_match]
+            _cent_src = hl_only if hl_only else pin_list
+        else:
+            _cent_src = pin_list
         center = (
-            sum(p.latitude for p in pin_list) / len(pin_list),
-            sum(p.longitude for p in pin_list) / len(pin_list),
+            sum(p.latitude for p in _cent_src) / len(_cent_src),
+            sum(p.longitude for p in _cent_src) / len(_cent_src),
         )
     else:
         center = _default_au_center()
@@ -174,10 +184,14 @@ def build_family_composition_folium_map(
         ).add_to(m)
 
     # Family-map-only initial viewport:
-    # - fit all pins with some edge padding
-    # - never start closer than zoom 6 (allow wider zoom-out when needed)
+    # - fit relevant pins with edge padding (all family pins, or highlight-only when requested)
+    # - never start closer than configured max zoom (allow wider zoom-out when needed)
     if pin_list:
-        bounds = [[p.latitude, p.longitude] for p in pin_list]
+        if fit_bounds_highlight_only:
+            _bounds_src = [p for p in pin_list if p.highlight_match] or pin_list
+        else:
+            _bounds_src = pin_list
+        bounds = [[p.latitude, p.longitude] for p in _bounds_src]
         pad = int(style.fit_bounds_padding_px)
         m.fit_bounds(
             bounds,
