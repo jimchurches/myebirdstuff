@@ -14,6 +14,7 @@ import streamlit as st
 
 from explorer.app.streamlit.app_caches import (
     cached_checklist_stats_payload,
+    cached_family_map_bundle,
     cached_full_export_checklist_stats_payload,
     cached_sex_notation_by_year,
     full_location_data_for_maintenance,
@@ -56,6 +57,17 @@ from explorer.core.map_controller import build_species_overlay_map
 from explorer.core.map_prep import data_signature_for_caches, prepare_all_locations_map_context
 from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
 from explorer.core.species_logic import base_species_for_lifer
+from explorer.core.family_map_compute import (
+    build_family_location_pins,
+    compute_family_map_banner_metrics,
+    filter_work_to_family,
+)
+from explorer.app.streamlit.defaults import active_family_map_colour_scheme
+from explorer.core.family_map_folium import (
+    build_family_composition_folium_map,
+    build_family_map_banner_overlay_html,
+    build_family_map_legend_overlay_html_for_pins,
+)
 
 
 def render_prep_spinner_and_map_tab(
@@ -72,6 +84,9 @@ def render_prep_spinner_and_map_tab(
     date_filter_banner: str,
     species_pick_common: str | None,
     species_pick_sci: str,
+    family_name: str,
+    family_highlight_base: str,
+    family_colour_scheme: int,
     hide_non_matching_locations: bool,
     popup_sort_order: Any,
     popup_scroll_hint: Any,
@@ -138,107 +153,184 @@ def render_prep_spinner_and_map_tab(
                 map_warning_text = str(e)
                 st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
             else:
-                overlay_common = (
-                    (species_pick_common or "").strip() if map_view_mode == "species" else ""
-                )
-                overlay_sci = (species_pick_sci or "").strip() if map_view_mode == "species" else ""
-                hide_nm = (
-                    map_view_mode == "species"
-                    and bool(overlay_sci)
-                    and hide_non_matching_locations
-                )
-                _map_kw = {
-                    **ctx,
-                    "selected_species": overlay_sci,
-                    "selected_common_name": overlay_common,
-                    "map_style": map_style,
-                    "popup_sort_order": popup_sort_order,
-                    "popup_scroll_hint": popup_scroll_hint,
-                    "lifer_color": st.session_state.streamlit_lifer_color,
-                    "lifer_fill": st.session_state.streamlit_lifer_fill,
-                    "last_seen_color": st.session_state.streamlit_last_seen_color,
-                    "last_seen_fill": st.session_state.streamlit_last_seen_fill,
-                    "species_color": st.session_state.streamlit_species_color,
-                    "species_fill": st.session_state.streamlit_species_fill,
-                    "default_color": st.session_state.streamlit_default_color,
-                    "default_fill": st.session_state.streamlit_default_fill,
-                    "mark_lifer": mark_lifer,
-                    "mark_last_seen": mark_last_seen,
-                    "cluster_all_locations": bool(
-                        st.session_state.get(
-                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-                            MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                if map_view_mode == "families":
+                    fam = (family_name or "").strip()
+                    hl = (family_highlight_base or "").strip().lower()
+
+                    bundle = cached_family_map_bundle(df_full, tax_locale_effective)
+                    fams = set(bundle.get("families") or ())
+                    work = bundle.get("work")
+                    tax_merged = bundle.get("tax_merged")
+
+                    if not fam:
+                        result_map = build_family_composition_folium_map(
+                            (),
+                            map_style=map_style,
+                            height_px=int(map_height),
+                            colour_scheme_index=int(family_colour_scheme),
                         )
-                    ),
-                    "date_filter_status": "" if is_lifer_view else date_filter_banner,
-                    "species_url_fn": species_url_fn,
-                    "base_species_fn": base_species_for_lifer,
-                    "taxonomy_locale": tax_locale_effective,
-                    "popup_html_cache": st.session_state.popup_html_cache,
-                    "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
-                    "map_view_mode": map_view_mode,
-                    "hide_non_matching_locations": hide_nm,
-                    "show_subspecies_lifers": bool(
-                        st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)
-                    ),
-                    "map_height_px": int(map_height),
-                }
-                _render_opts_sig = (
-                    popup_sort_order,
-                    popup_scroll_hint,
-                    st.session_state.streamlit_lifer_color,
-                    st.session_state.streamlit_lifer_fill,
-                    st.session_state.streamlit_last_seen_color,
-                    st.session_state.streamlit_last_seen_fill,
-                    st.session_state.streamlit_species_color,
-                    st.session_state.streamlit_species_fill,
-                    st.session_state.streamlit_default_color,
-                    st.session_state.streamlit_default_fill,
-                    mark_lifer,
-                    mark_last_seen,
-                    bool(
-                        st.session_state.get(
-                            STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-                            MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                        result_warning = "Select a family in the sidebar to load the map."
+                    elif fam not in fams or work is None or getattr(work, "empty", True):
+                        result_map = build_family_composition_folium_map(
+                            (),
+                            map_style=map_style,
+                            height_px=int(map_height),
+                            colour_scheme_index=int(family_colour_scheme),
                         )
-                    ),
-                    bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
-                    int(map_height),
-                )
-                _species_selected = bool(overlay_sci)
-                _cache_map_view_mode = map_view_mode
-                if map_view_mode == "species" and not _species_selected:
-                    _cache_map_view_mode = "all"
-                _ck = static_map_cache_key(
-                    work_df,
-                    _cache_map_view_mode,
-                    date_filter_banner,
-                    map_style,
-                    _render_opts_sig,
-                    taxonomy_locale=tax_locale_effective,
-                    species_selected_sci=overlay_sci if _species_selected else "",
-                    species_selected_common=overlay_common if _species_selected else "",
-                    hide_non_matching_locations=bool(hide_nm),
-                )
-                _use_static_cache = True
-                _cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
-                if (
-                    isinstance(_cached, dict)
-                    and _cached.get("key") == _ck
-                    and _cached.get("map") is not None
-                ):
-                    result_map = _cached["map"]
-                    result_warning = _cached.get("warning")
+                        result_warning = "No family data available (taxonomy may not have loaded)."
+                    else:
+                        wf = filter_work_to_family(work, fam)
+                        metrics = (
+                            compute_family_map_banner_metrics(work, fam, tax_merged)
+                            if tax_merged is not None
+                            else None
+                        )
+                        pins = build_family_location_pins(
+                            wf,
+                            highlight_base_species=hl or None,
+                        )
+                        banner = build_family_map_banner_overlay_html(metrics) if metrics else ""
+                        base_to_common = bundle.get("base_to_common") or {}
+                        hl_label = (base_to_common.get(hl) or hl) if hl else ""
+                        hl_species_url = None
+                        if hl and hl_label:
+                            _u = species_url_fn(hl_label)
+                            hl_species_url = _u if _u else None
+                        _sch = active_family_map_colour_scheme(int(family_colour_scheme))
+                        legend = build_family_map_legend_overlay_html_for_pins(
+                            pins,
+                            highlight_label=hl_label or None,
+                            highlight_species_url=hl_species_url,
+                            style=_sch,
+                        )
+                        result_map = build_family_composition_folium_map(
+                            pins,
+                            banner_html=banner,
+                            legend_html=legend,
+                            map_style=map_style,
+                            height_px=int(map_height),
+                            location_page_url_fn=lambda lid: f"https://ebird.org/lifelist/{lid}" if lid else None,
+                            species_url_fn=species_url_fn,
+                            fit_bounds_highlight_only=bool(hl),
+                            colour_scheme_index=int(family_colour_scheme),
+                        )
+                        result_warning = None
+
+                    _ck = static_map_cache_key(
+                        work_df,
+                        "families",
+                        date_filter_banner,
+                        map_style,
+                        (fam, hl, int(map_height), int(family_colour_scheme)),
+                        taxonomy_locale=tax_locale_effective,
+                    )
+                    st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY] = {
+                        "key": _ck,
+                        "map": result_map,
+                        "warning": result_warning,
+                    }
                 else:
-                    result = build_species_overlay_map(**_map_kw)
-                    result_map = result.map
-                    result_warning = result.warning
-                    if _use_static_cache and result_map is not None:
-                        st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY] = {
-                            "key": _ck,
-                            "map": result_map,
-                            "warning": result_warning,
-                        }
+                    overlay_common = (
+                        (species_pick_common or "").strip() if map_view_mode == "species" else ""
+                    )
+                    overlay_sci = (species_pick_sci or "").strip() if map_view_mode == "species" else ""
+                    hide_nm = (
+                        map_view_mode == "species"
+                        and bool(overlay_sci)
+                        and hide_non_matching_locations
+                    )
+                    _map_kw = {
+                        **ctx,
+                        "selected_species": overlay_sci,
+                        "selected_common_name": overlay_common,
+                        "map_style": map_style,
+                        "popup_sort_order": popup_sort_order,
+                        "popup_scroll_hint": popup_scroll_hint,
+                        "lifer_color": st.session_state.streamlit_lifer_color,
+                        "lifer_fill": st.session_state.streamlit_lifer_fill,
+                        "last_seen_color": st.session_state.streamlit_last_seen_color,
+                        "last_seen_fill": st.session_state.streamlit_last_seen_fill,
+                        "species_color": st.session_state.streamlit_species_color,
+                        "species_fill": st.session_state.streamlit_species_fill,
+                        "default_color": st.session_state.streamlit_default_color,
+                        "default_fill": st.session_state.streamlit_default_fill,
+                        "mark_lifer": mark_lifer,
+                        "mark_last_seen": mark_last_seen,
+                        "cluster_all_locations": bool(
+                            st.session_state.get(
+                                STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                                MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                            )
+                        ),
+                        "date_filter_status": "" if is_lifer_view else date_filter_banner,
+                        "species_url_fn": species_url_fn,
+                        "base_species_fn": base_species_for_lifer,
+                        "taxonomy_locale": tax_locale_effective,
+                        "popup_html_cache": st.session_state.popup_html_cache,
+                        "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
+                        "map_view_mode": map_view_mode,
+                        "hide_non_matching_locations": hide_nm,
+                        "show_subspecies_lifers": bool(
+                            st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)
+                        ),
+                        "map_height_px": int(map_height),
+                    }
+                    _render_opts_sig = (
+                        popup_sort_order,
+                        popup_scroll_hint,
+                        st.session_state.streamlit_lifer_color,
+                        st.session_state.streamlit_lifer_fill,
+                        st.session_state.streamlit_last_seen_color,
+                        st.session_state.streamlit_last_seen_fill,
+                        st.session_state.streamlit_species_color,
+                        st.session_state.streamlit_species_fill,
+                        st.session_state.streamlit_default_color,
+                        st.session_state.streamlit_default_fill,
+                        mark_lifer,
+                        mark_last_seen,
+                        bool(
+                            st.session_state.get(
+                                STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                                MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                            )
+                        ),
+                        bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
+                        int(map_height),
+                    )
+                    _species_selected = bool(overlay_sci)
+                    _cache_map_view_mode = map_view_mode
+                    if map_view_mode == "species" and not _species_selected:
+                        _cache_map_view_mode = "all"
+                    _ck = static_map_cache_key(
+                        work_df,
+                        _cache_map_view_mode,
+                        date_filter_banner,
+                        map_style,
+                        _render_opts_sig,
+                        taxonomy_locale=tax_locale_effective,
+                        species_selected_sci=overlay_sci if _species_selected else "",
+                        species_selected_common=overlay_common if _species_selected else "",
+                        hide_non_matching_locations=bool(hide_nm),
+                    )
+                    _use_static_cache = True
+                    _cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
+                    if (
+                        isinstance(_cached, dict)
+                        and _cached.get("key") == _ck
+                        and _cached.get("map") is not None
+                    ):
+                        result_map = _cached["map"]
+                        result_warning = _cached.get("warning")
+                    else:
+                        result = build_species_overlay_map(**_map_kw)
+                        result_map = result.map
+                        result_warning = result.warning
+                        if _use_static_cache and result_map is not None:
+                            st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY] = {
+                                "key": _ck,
+                                "map": result_map,
+                                "warning": result_warning,
+                            }
 
                 if result_warning:
                     map_warning_text = result_warning
