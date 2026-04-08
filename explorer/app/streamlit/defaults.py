@@ -67,8 +67,8 @@ MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer 
 # ---------------------------------------------------------------------------
 # Family map (Map view → **Family locations**; refs #138)
 #
-# Two preset **colour schemes** (same structure); flip ``FAMILY_MAP_ACTIVE_COLOUR_SCHEME``
-# between ``1`` and ``2``. Not exposed in the UI yet — edit here and reload the app.
+# Two preset **colour schemes** (same structure). Sidebar radio (session-only) selects the active
+# scheme; ``FAMILY_MAP_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
 # ---------------------------------------------------------------------------
 
 
@@ -76,6 +76,7 @@ MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer 
 class FamilyMapColourScheme:
     """All Folium family-map tunables (colours, sizes, strokes, viewport, legend)."""
 
+    display_name: str
     circle_marker_radius_px: int
     circle_marker_fill_opacity: float
     base_stroke_weight: int
@@ -91,37 +92,10 @@ class FamilyMapColourScheme:
     legend_highlight_swatch_fill_index: int
 
 
-# Scheme 1 — blue → purple density ramp, orange highlight ring (restored from the pre-dataclass
-# family map constants in git: ``c48caca`` centralise-family-map-style; lost when both schemes were
-# initialised to the red ramp in ``fff4ce6``).
+# Scheme 1 — default: red density ramp + teal highlight.
 _FAMILY_MAP_SCHEME_1_VALUES = dict(
-    circle_marker_radius_px=6,
-    circle_marker_fill_opacity=0.88,
-    base_stroke_weight=2,
-    highlight_stroke_hex="#FF7F11",
-    highlight_stroke_weight=2,
-    density_fill_hex=(
-        "#3A86FF", 
-        "#5E60CE", 
-        "#9D4EDD", 
-        "#C9184A"
-    ),
-    density_stroke_hex=(
-        "#2F6FD1", 
-        "#4A4DA6", 
-        "#7E3EAF", 
-        "#A1143A"
-    ),
-    popup_max_width_px=320,
-    fit_bounds_padding_px=48,
-    fit_bounds_max_zoom=6,
-    fit_bounds_max_zoom_highlight=8,
-    legend_highlight_swatch_fill_index=0,
-)
-
-# Scheme 2 — red density ramp + teal highlight (current preferred look).
-_FAMILY_MAP_SCHEME_2_VALUES = dict(
-    circle_marker_radius_px=6,
+    display_name="Reds",
+    circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
     highlight_stroke_hex="#2EC4B6",
@@ -145,16 +119,46 @@ _FAMILY_MAP_SCHEME_2_VALUES = dict(
     legend_highlight_swatch_fill_index=0,
 )
 
+# Scheme 2 — blue → purple density ramp, orange highlight (restored pre-dataclass palette; ``c48caca``).
+_FAMILY_MAP_SCHEME_2_VALUES = dict(
+    display_name="Blues & purples",
+    circle_marker_radius_px=4,
+    circle_marker_fill_opacity=0.88,
+    base_stroke_weight=3,
+    highlight_stroke_hex="#FF7F11",
+    highlight_stroke_weight=3,
+    density_fill_hex=(
+        "#3A86FF",
+        "#5E60CE",
+        "#9D4EDD",
+        "#C9184A",
+    ),
+    density_stroke_hex=(
+        "#2F6FD1",
+        "#4A4DA6",
+        "#7E3EAF",
+        "#A1143A",
+    ),
+    popup_max_width_px=320,
+    fit_bounds_padding_px=48,
+    fit_bounds_max_zoom=6,
+    fit_bounds_max_zoom_highlight=8,
+    legend_highlight_swatch_fill_index=0,
+)
+
 FAMILY_MAP_COLOUR_SCHEME_1 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_1_VALUES)
 FAMILY_MAP_COLOUR_SCHEME_2 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_2_VALUES)
 
-# Set to ``1`` or ``2`` to select ``FAMILY_MAP_COLOUR_SCHEME_1`` / ``FAMILY_MAP_COLOUR_SCHEME_2``.
+# Default scheme index when callers do not pass a UI selection (tests, non-Streamlit builders).
 FAMILY_MAP_ACTIVE_COLOUR_SCHEME: int = 1
 
 
-def active_family_map_colour_scheme() -> FamilyMapColourScheme:
-    """Return the active family-map style bundle (refs #138)."""
-    n = int(FAMILY_MAP_ACTIVE_COLOUR_SCHEME)
+def active_family_map_colour_scheme(scheme_index: int | None = None) -> FamilyMapColourScheme:
+    """Return the family-map style bundle for *scheme_index* ``1`` or ``2`` (refs #138).
+
+    When *scheme_index* is ``None``, uses :data:`FAMILY_MAP_ACTIVE_COLOUR_SCHEME` (Reds by default).
+    """
+    n = int(FAMILY_MAP_ACTIVE_COLOUR_SCHEME if scheme_index is None else scheme_index)
     if n == 2:
         return FAMILY_MAP_COLOUR_SCHEME_2
     return FAMILY_MAP_COLOUR_SCHEME_1

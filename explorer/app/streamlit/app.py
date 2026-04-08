@@ -234,6 +234,7 @@ def main() -> None:
         species_pick_sci=mw.species_pick_sci,
         family_name=mw.family_name,
         family_highlight_base=mw.family_highlight_base,
+        family_colour_scheme=mw.family_colour_scheme,
         hide_non_matching_locations=mw.hide_non_matching_locations,
         popup_sort_order=popup_sort_order,
         popup_scroll_hint=popup_scroll_hint,

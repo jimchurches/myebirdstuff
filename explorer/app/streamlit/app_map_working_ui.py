@@ -32,6 +32,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_VIEW_LABEL_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_SPECIES_HIDE_ONLY_KEY,
+    STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
     STREAMLIT_FAMILY_MAP_FAMILY_KEY,
     STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
     DEFAULT_TAXONOMY_LOCALE,
@@ -44,6 +45,8 @@ from explorer.app.streamlit.app_map_ui import (
 )
 from explorer.app.streamlit.app_settings_state import apply_pending_map_cluster_toggle
 from explorer.app.streamlit.defaults import (
+    FAMILY_MAP_COLOUR_SCHEME_1,
+    FAMILY_MAP_COLOUR_SCHEME_2,
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
     MAP_DATE_FILTER_DEFAULT,
@@ -60,13 +63,18 @@ from explorer.app.streamlit.streamlit_ui_constants import SPECIES_SEARCH_CAPTION
 from explorer.core.species_search import build_ram_species_whoosh_index
 
 
-def _on_basemap_changed() -> None:
-    """Invalidate Folium cache + remount iframe when the basemap **value** changes (refs #124)."""
+def invalidate_folium_map_embed_cache() -> None:
+    """Bump Folium mount nonce and drop cached map HTML (basemap, family colours, etc.)."""
     st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
         st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
     ) + 1
     st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+
+
+def _on_basemap_changed() -> None:
+    """Invalidate Folium cache + remount iframe when the basemap **value** changes (refs #124)."""
+    invalidate_folium_map_embed_cache()
 
 
 @dataclass(frozen=True)
@@ -84,6 +92,7 @@ class MapWorkingContext:
     map_height: int
     family_name: str
     family_highlight_base: str
+    family_colour_scheme: int
 
 
 def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
@@ -216,6 +225,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     species_pick_sci = ""
     family_name = ""
     family_highlight_base = ""
+    family_colour_scheme = 1
 
     _prev_mv = st.session_state.get(SESSION_PREV_MAP_VIEW_KEY)
     if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
@@ -298,6 +308,22 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 )
                 family_highlight_base = ""
 
+            family_colour_scheme = int(
+                st.radio(
+                    "Colour scheme",
+                    options=[1, 2],
+                    format_func=lambda n: (
+                        FAMILY_MAP_COLOUR_SCHEME_1.display_name
+                        if n == 1
+                        else FAMILY_MAP_COLOUR_SCHEME_2.display_name
+                    ),
+                    horizontal=True,
+                    key=STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
+                    index=0,
+                    on_change=invalidate_folium_map_embed_cache,
+                )
+            )
+
     with st.sidebar:
         st.divider()
         map_height = st.slider(
@@ -329,4 +355,5 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         map_height=map_height,
         family_name=str(family_name or ""),
         family_highlight_base=str(family_highlight_base or ""),
+        family_colour_scheme=int(family_colour_scheme),
     )

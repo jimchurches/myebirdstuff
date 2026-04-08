@@ -13,8 +13,15 @@ import streamlit as st
 
 from explorer.app.streamlit.app_caches import cached_family_map_bundle
 from explorer.app.streamlit.app_constants import (
+    STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
     STREAMLIT_FAMILY_MAP_FAMILY_KEY,
     STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+)
+from explorer.app.streamlit.app_map_working_ui import invalidate_folium_map_embed_cache
+from explorer.app.streamlit.defaults import (
+    FAMILY_MAP_COLOUR_SCHEME_1,
+    FAMILY_MAP_COLOUR_SCHEME_2,
+    active_family_map_colour_scheme,
 )
 from explorer.app.streamlit.app_map_ui import inject_map_folium_iframe_min_height_css
 from explorer.core.family_map_compute import (
@@ -26,7 +33,7 @@ from explorer.core.family_map_compute import (
 from explorer.core.family_map_folium import (
     build_family_composition_folium_map,
     build_family_map_banner_overlay_html,
-    build_family_map_legend_overlay_html,
+    build_family_map_legend_overlay_html_for_pins,
 )
 
 
@@ -68,7 +75,7 @@ def run_family_map_streamlit_fragment(
             "Check your network connection so eBird taxonomy and species groups can load, "
             "then refresh the page."
         )
-        m = build_family_composition_folium_map(())
+        m = build_family_composition_folium_map((), colour_scheme_index=1)
         _embed_family_map(m, map_height)
         return
 
@@ -87,28 +94,58 @@ def run_family_map_streamlit_fragment(
             disabled=True,
             key=f"{STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY}__none",
         )
-        m = build_family_composition_folium_map(())
+    else:
+        wf = filter_work_to_family(work, family)
+        choices = highlight_species_choices_alphabetical(wf, base_to_common)
+        label_to_base = {"— None —": None}
+        for lab, bs in choices:
+            label_to_base[lab] = bs
+        hl_labels = list(label_to_base.keys())
+        hl_key = f"{STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY}__{family}"
+        hl_label = st.selectbox(
+            "Highlight species (optional)",
+            options=hl_labels,
+            key=hl_key,
+        )
+        highlight_base = label_to_base.get(hl_label)
+
+    colour_scheme = int(
+        st.radio(
+            "Colour scheme",
+            options=[1, 2],
+            format_func=lambda n: (
+                FAMILY_MAP_COLOUR_SCHEME_1.display_name
+                if n == 1
+                else FAMILY_MAP_COLOUR_SCHEME_2.display_name
+            ),
+            horizontal=True,
+            key=STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
+            index=0,
+            on_change=invalidate_folium_map_embed_cache,
+        )
+    )
+
+    if not family:
+        m = build_family_composition_folium_map((), colour_scheme_index=colour_scheme)
         _embed_family_map(m, map_height)
         st.info("Select a family above to show where you recorded those species.")
         return
 
-    wf = filter_work_to_family(work, family)
-    choices = highlight_species_choices_alphabetical(wf, base_to_common)
-    label_to_base: dict[str, str | None] = {"— None —": None}
-    for lab, bs in choices:
-        label_to_base[lab] = bs
-    hl_labels = list(label_to_base.keys())
-    hl_key = f"{STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY}__{family}"
-    hl_label = st.selectbox(
-        "Highlight species (optional)",
-        options=hl_labels,
-        key=hl_key,
-    )
-    highlight_base = label_to_base.get(hl_label)
     metrics = compute_family_map_banner_metrics(wf, family, tax_merged)
     pins = build_family_location_pins(wf, highlight_base_species=highlight_base)
     banner = build_family_map_banner_overlay_html(metrics) if metrics else ""
-    legend = build_family_map_legend_overlay_html(include_highlight=bool(highlight_base))
+    _sch = active_family_map_colour_scheme(colour_scheme)
+    hl_label_common = (base_to_common.get(highlight_base) or highlight_base) if highlight_base else ""
+    hl_species_url = None
+    if highlight_base and hl_label_common:
+        _u = species_url_fn(hl_label_common)
+        hl_species_url = _u if _u else None
+    legend = build_family_map_legend_overlay_html_for_pins(
+        pins,
+        highlight_label=hl_label_common or None,
+        highlight_species_url=hl_species_url,
+        style=_sch,
+    )
 
     m = build_family_composition_folium_map(
         pins,
@@ -118,6 +155,8 @@ def run_family_map_streamlit_fragment(
         height_px=int(map_height),
         location_page_url_fn=_ebird_location_url,
         species_url_fn=species_url_fn,
+        fit_bounds_highlight_only=bool(highlight_base),
+        colour_scheme_index=colour_scheme,
     )
     _embed_family_map(m, map_height)
 

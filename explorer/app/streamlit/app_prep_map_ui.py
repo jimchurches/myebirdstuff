@@ -62,6 +62,7 @@ from explorer.core.family_map_compute import (
     compute_family_map_banner_metrics,
     filter_work_to_family,
 )
+from explorer.app.streamlit.defaults import active_family_map_colour_scheme
 from explorer.core.family_map_folium import (
     build_family_composition_folium_map,
     build_family_map_banner_overlay_html,
@@ -85,6 +86,7 @@ def render_prep_spinner_and_map_tab(
     species_pick_sci: str,
     family_name: str,
     family_highlight_base: str,
+    family_colour_scheme: int,
     hide_non_matching_locations: bool,
     popup_sort_order: Any,
     popup_scroll_hint: Any,
@@ -165,6 +167,7 @@ def render_prep_spinner_and_map_tab(
                             (),
                             map_style=map_style,
                             height_px=int(map_height),
+                            colour_scheme_index=int(family_colour_scheme),
                         )
                         result_warning = "Select a family in the sidebar to load the map."
                     elif fam not in fams or work is None or getattr(work, "empty", True):
@@ -172,6 +175,7 @@ def render_prep_spinner_and_map_tab(
                             (),
                             map_style=map_style,
                             height_px=int(map_height),
+                            colour_scheme_index=int(family_colour_scheme),
                         )
                         result_warning = "No family data available (taxonomy may not have loaded)."
                     else:
@@ -188,9 +192,16 @@ def render_prep_spinner_and_map_tab(
                         banner = build_family_map_banner_overlay_html(metrics) if metrics else ""
                         base_to_common = bundle.get("base_to_common") or {}
                         hl_label = (base_to_common.get(hl) or hl) if hl else ""
+                        hl_species_url = None
+                        if hl and hl_label:
+                            _u = species_url_fn(hl_label)
+                            hl_species_url = _u if _u else None
+                        _sch = active_family_map_colour_scheme(int(family_colour_scheme))
                         legend = build_family_map_legend_overlay_html_for_pins(
                             pins,
                             highlight_label=hl_label or None,
+                            highlight_species_url=hl_species_url,
+                            style=_sch,
                         )
                         result_map = build_family_composition_folium_map(
                             pins,
@@ -201,6 +212,7 @@ def render_prep_spinner_and_map_tab(
                             location_page_url_fn=lambda lid: f"https://ebird.org/lifelist/{lid}" if lid else None,
                             species_url_fn=species_url_fn,
                             fit_bounds_highlight_only=bool(hl),
+                            colour_scheme_index=int(family_colour_scheme),
                         )
                         result_warning = None
 
@@ -209,7 +221,7 @@ def render_prep_spinner_and_map_tab(
                         "families",
                         date_filter_banner,
                         map_style,
-                        (fam, hl, int(map_height)),
+                        (fam, hl, int(map_height), int(family_colour_scheme)),
                         taxonomy_locale=tax_locale_effective,
                     )
                     st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY] = {

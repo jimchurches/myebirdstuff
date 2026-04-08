@@ -45,12 +45,21 @@ def _default_au_center() -> tuple[float, float]:
     return -25.0, 134.0
 
 
+def _family_map_banner_recorded_clause(metrics: FamilyMapBannerMetrics) -> str:
+    u = int(metrics.species_recorded_user)
+    t = int(metrics.total_species_taxonomy)
+    if t > 0:
+        pct = round(100.0 * u / t)
+        return f"{u} recorded ({pct}%)"
+    return f"{u} recorded"
+
+
 def build_family_map_banner_overlay_html(metrics: FamilyMapBannerMetrics) -> str:
     """Full fixed banner div (``pebird-map-banner``) for family composition (refs #138)."""
     title = html_module.escape(metrics.family_name, quote=False)
     stats = html_module.escape(
         f"{metrics.total_species_taxonomy} in taxonomy · "
-        f"{metrics.species_recorded_user} recorded · "
+        f"{_family_map_banner_recorded_clause(metrics)} · "
         f"{metrics.locations_with_records} locations",
         quote=False,
     )
@@ -73,9 +82,14 @@ def build_family_map_legend_overlay_html_for_pins(
     pins: tuple[FamilyLocationPin, ...] | list[FamilyLocationPin],
     *,
     highlight_label: str | None,
+    highlight_species_url: str | None = None,
     style: FamilyMapColourScheme | None = None,
 ) -> str:
-    """Dynamic legend: only include density bands present on the map (refs #138)."""
+    """Dynamic legend: only include density bands present on the map (refs #138).
+
+    When *highlight_species_url* is set with a non-empty *highlight_label*, the label is shown as a
+    link to the eBird species page.
+    """
     s = style or active_family_map_colour_scheme()
     pin_list = list(pins)
     bands_present = sorted({int(p.density_band_index) for p in pin_list}) if pin_list else []
@@ -99,11 +113,20 @@ def build_family_map_legend_overlay_html_for_pins(
                 len(s.density_fill_hex) - 1,
             ),
         )
+        url = (highlight_species_url or "").strip()
+        if url:
+            href = html_module.escape(url, quote=True)
+            esc_name = html_module.escape(hl, quote=False)
+            hl_legend = (
+                f'Highlight: <a href="{href}" target="_blank" rel="noopener noreferrer">{esc_name}</a>'
+            )
+        else:
+            hl_legend = f"Highlight: {html_module.escape(hl, quote=False)}"
         items.append(
             (
                 s.highlight_stroke_hex,
                 s.density_fill_hex[sw_i],
-                f"Highlight: {hl}",
+                hl_legend,
             )
         )
     return build_legend_html(items) if items else ""
@@ -119,6 +142,7 @@ def build_family_composition_folium_map(
     location_page_url_fn: Callable[[str], str | None] | None = None,
     species_url_fn: Callable[[str], str | None] | None = None,
     fit_bounds_highlight_only: bool = False,
+    colour_scheme_index: int | None = None,
 ) -> folium.Map:
     """Render CircleMarkers for family composition; optional eBird links in popups.
 
@@ -129,6 +153,9 @@ def build_family_composition_folium_map(
     uses only pins where ``highlight_match`` is true, with the same padding as the full-family case
     and ``fit_bounds_max_zoom_highlight`` (closer zoom allowed than ``fit_bounds_max_zoom``).
     If none match, falls back to all pins.
+
+    *colour_scheme_index* ``1`` or ``2`` selects the sidebar palette; ``None`` uses
+    :func:`~explorer.app.streamlit.defaults.active_family_map_colour_scheme` defaults.
     """
     pin_list = list(pins)
     if pin_list:
@@ -155,7 +182,7 @@ def build_family_composition_folium_map(
 
     loc_fn = location_page_url_fn or (lambda _lid: None)
     sp_fn = species_url_fn or (lambda _c: None)
-    style = active_family_map_colour_scheme()
+    style = active_family_map_colour_scheme(colour_scheme_index)
 
     # Draw non-highlighted first, then highlighted so highlights sit on top.
     normal = [p for p in pin_list if not p.highlight_match]

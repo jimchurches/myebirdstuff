@@ -54,7 +54,11 @@ def test_build_family_composition_folium_map_html_contains_markers():
             locations_with_records=2,
         )
     )
-    legend = build_family_map_legend_overlay_html_for_pins(pins, highlight_label="Rufous Whistler")
+    legend = build_family_map_legend_overlay_html_for_pins(
+        pins,
+        highlight_label="Rufous Whistler",
+        highlight_species_url="https://ebird.org/species/goldenwhi1",
+    )
     m = build_family_composition_folium_map(
         pins,
         banner_html=banner,
@@ -68,7 +72,9 @@ def test_build_family_composition_folium_map_html_contains_markers():
     assert "CircleMarker" in html or "circle" in html.lower()
     assert "Whistlers" in html
     assert "12 in taxonomy" in html
-    assert "Highlight: Rufous Whistler" in html
+    assert "5 recorded (42%)" in html
+    # Legend is embedded in the Folium iframe; link href is HTML-entity encoded in ``_repr_html_``.
+    assert "goldenwhi1" in html and "Rufous Whistler" in html
     assert "fitBounds" in html
     assert "maxZoom" in html and "6" in html
 
