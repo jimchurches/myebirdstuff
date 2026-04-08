@@ -43,6 +43,18 @@ section[data-testid="stMain"] div.st-key-{STREAMLIT_COUNTRY_TAB_COUNTRY_KEY} {{
 """
 )
 
+# Inset below the tab strip for the first control (dropdown / info), similar to Settings tab rhythm (#132).
+_COUNTRY_TAB_TOP_SPACER_REM = 0.85
+
+
+def _country_tab_top_spacer() -> None:
+    """Thin vertical gap so the Country tab does not sit flush like Map/table tabs (refs #132)."""
+    h = f"{_COUNTRY_TAB_TOP_SPACER_REM}rem"
+    st.html(
+        f'<div style="height:{h};min-height:{h};flex-shrink:0" aria-hidden="true"></div>'
+    )
+
+
 # Set by ``app.py`` on every full script run so ``@st.fragment`` partial reruns still see the payload.
 
 
@@ -53,6 +65,7 @@ def render_country_stats_streamlit_html(
 ) -> None:
     """Per-country yearly statistics table; ordering from *country_sort*."""
     inject_streamlit_checklist_css(_COUNTRY_TAB_EXTRA_CSS)
+    _country_tab_top_spacer()
 
     if payload is None or not payload.country_sections:
         st.info("No country data to show. Add **Country** or **State/Province** to your eBird export.")
