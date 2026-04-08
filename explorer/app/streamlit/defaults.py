@@ -91,10 +91,38 @@ class FamilyMapColourScheme:
     legend_highlight_swatch_fill_index: int
 
 
-# Scheme 1 — current default look (edit freely).
-_FAMILY_MAP_SCHEME_VALUES = dict(
+# Scheme 1 — blue → purple density ramp, orange highlight ring (restored from the pre-dataclass
+# family map constants in git: ``c48caca`` centralise-family-map-style; lost when both schemes were
+# initialised to the red ramp in ``fff4ce6``).
+_FAMILY_MAP_SCHEME_1_VALUES = dict(
     circle_marker_radius_px=6,
-    circle_marker_fill_opacity=0.9,
+    circle_marker_fill_opacity=0.88,
+    base_stroke_weight=2,
+    highlight_stroke_hex="#FF7F11",
+    highlight_stroke_weight=2,
+    density_fill_hex=(
+        "#3A86FF", 
+        "#5E60CE", 
+        "#9D4EDD", 
+        "#C9184A"
+    ),
+    density_stroke_hex=(
+        "#2F6FD1", 
+        "#4A4DA6", 
+        "#7E3EAF", 
+        "#A1143A"
+    ),
+    popup_max_width_px=320,
+    fit_bounds_padding_px=48,
+    fit_bounds_max_zoom=6,
+    fit_bounds_max_zoom_highlight=8,
+    legend_highlight_swatch_fill_index=0,
+)
+
+# Scheme 2 — red density ramp + teal highlight (current preferred look).
+_FAMILY_MAP_SCHEME_2_VALUES = dict(
+    circle_marker_radius_px=6,
+    circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
     highlight_stroke_hex="#2EC4B6",
     highlight_stroke_weight=2,
@@ -117,12 +145,11 @@ _FAMILY_MAP_SCHEME_VALUES = dict(
     legend_highlight_swatch_fill_index=0,
 )
 
-FAMILY_MAP_COLOUR_SCHEME_1 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_VALUES)
-# Scheme 2 — duplicate of scheme 1 until you diverge it for experiments.
-FAMILY_MAP_COLOUR_SCHEME_2 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_VALUES)
+FAMILY_MAP_COLOUR_SCHEME_1 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_1_VALUES)
+FAMILY_MAP_COLOUR_SCHEME_2 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_2_VALUES)
 
 # Set to ``1`` or ``2`` to select ``FAMILY_MAP_COLOUR_SCHEME_1`` / ``FAMILY_MAP_COLOUR_SCHEME_2``.
-FAMILY_MAP_ACTIVE_COLOUR_SCHEME: int = 2
+FAMILY_MAP_ACTIVE_COLOUR_SCHEME: int = 1
 
 
 def active_family_map_colour_scheme() -> FamilyMapColourScheme:
