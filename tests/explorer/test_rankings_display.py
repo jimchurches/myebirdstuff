@@ -1,7 +1,5 @@
 """Unit tests for explorer.presentation.rankings_display (rankings table HTML builders)."""
 
-import pytest
-
 from explorer.presentation.rankings_display import (
     rankings_scroll_wrapper,
     rankings_table,

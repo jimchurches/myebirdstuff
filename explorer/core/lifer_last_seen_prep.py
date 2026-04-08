@@ -1,8 +1,11 @@
 """
 Lifer and last-seen lookup preparation from the full (unfiltered) dataset.
 
-Used for map pin highlighting and species-banner dates. Pure data prep — no
-widgets or HTML (refs #68, Streamlit migration prep).
+Feeds map pin highlighting and species-banner “first/last seen” dates. Pure data prep — no widgets
+or HTML — so the same logic works in Streamlit and tests.
+
+The sorted lookup frame uses internal columns ``_base`` and ``_taxon``; see the comment on the
+``.assign`` in :func:`prepare_lifer_last_seen`.
 """
 
 from __future__ import annotations
@@ -49,6 +52,7 @@ def prepare_lifer_last_seen(
         full_df.sort_values("datetime")
         .dropna(subset=["Scientific Name", "Location ID", "datetime"])
         .assign(
+            # Internal columns (not export): _base = genus+species lifer key; _taxon = full sci string lowercased (subspecies lifers).
             _base=lambda x: x["Scientific Name"].apply(fn),
             _taxon=lambda x: x["Scientific Name"].str.strip().str.lower(),
         )
@@ -75,7 +79,7 @@ def prepare_lifer_last_seen(
 
 
 class LiferSiteEntry(TypedDict):
-    """One lifer entry as displayed on the lifer locations map (refs #103).
+    """One species line in a lifer-location popup (base and/or subspecies lifer semantics).
 
     - base-level lifer: first record for the base species
     - taxon-level lifer: first record for the specific taxon (subspecies)
@@ -149,9 +153,8 @@ def aggregate_lifer_sites(
             continue
         r = subset.iloc[0]
         sci = str(r["Scientific Name"])
-        # Only treat taxon-level lifers as "subspecies lifers" when the scientific name has
-        # 3+ parts. The 2-part scientific name duplicates the base-species lifer and should
-        # not flip locations into the "Both" state (refs #103).
+        # Only treat taxon-level lifers as "subspecies lifers" when the scientific name has 3+ parts.
+        # A 2-part name duplicates the base-species lifer and must not create a spurious "Both" pin.
         if len(sci.strip().split()) < 3:
             continue
         com = "" if pd.isna(r.get("Common Name")) else str(r["Common Name"])

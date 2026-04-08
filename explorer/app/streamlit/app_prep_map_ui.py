@@ -24,10 +24,25 @@ from explorer.app.streamlit.app_constants import (
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     EXPORT_MAP_HTML_BTN_KEY,
+    FILTERED_BY_LOC_CACHE_KEY,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
     FOLIUM_STATIC_MAP_CACHE_KEY,
+    POPUP_HTML_CACHE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
+    STREAMLIT_CLOSE_LOCATION_METERS_KEY,
+    STREAMLIT_COUNTRY_TAB_SORT_KEY,
+    STREAMLIT_DEFAULT_COLOR_KEY,
+    STREAMLIT_DEFAULT_FILL_KEY,
+    STREAMLIT_HIGH_COUNT_SORT_KEY,
+    STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
+    STREAMLIT_LAST_SEEN_COLOR_KEY,
+    STREAMLIT_LAST_SEEN_FILL_KEY,
+    STREAMLIT_LIFER_COLOR_KEY,
+    STREAMLIT_LIFER_FILL_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_RANKINGS_TOP_N_KEY,
+    STREAMLIT_SPECIES_COLOR_KEY,
+    STREAMLIT_SPECIES_FILL_KEY,
 )
 from explorer.app.streamlit.app_map_ui import (
     inject_map_folium_iframe_min_height_css,
@@ -100,16 +115,16 @@ def render_prep_spinner_and_map_tab(
         with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
             checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
-            top_n = int(st.session_state.streamlit_rankings_top_n)
-            hc_sort = str(st.session_state.streamlit_high_count_sort)
-            hc_tb = str(st.session_state.streamlit_high_count_tie_break)
+            top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))
+            hc_sort = str(st.session_state.get(STREAMLIT_HIGH_COUNT_SORT_KEY))
+            hc_tb = str(st.session_state.get(STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY))
             if df_full is not None and not df_full.empty:
                 maint_full_payload = cached_full_export_checklist_stats_payload(
                     df_full, top_n, hc_sort, hc_tb, tax_locale_effective
                 )
                 rankings_bundle = build_rankings_tab_bundle(
                     df_full,
-                    country_sort=st.session_state.streamlit_country_tab_sort,
+                    country_sort=st.session_state.get(STREAMLIT_COUNTRY_TAB_SORT_KEY),
                     taxonomy_locale=tax_locale_effective,
                     high_count_sort=hc_sort,
                     high_count_tie_break=hc_tb,
@@ -129,7 +144,7 @@ def render_prep_spinner_and_map_tab(
                 incomplete_maint = maint_full_payload.incomplete_by_year or {}
             sync_maintenance_tab_session_inputs(
                 loc_maint,
-                close_location_meters=int(st.session_state.streamlit_close_location_meters),
+                close_location_meters=int(st.session_state.get(STREAMLIT_CLOSE_LOCATION_METERS_KEY)),
                 incomplete_by_year=incomplete_maint,
                 sex_notation_by_year=sex_notation_by_year,
             )
@@ -139,9 +154,9 @@ def render_prep_spinner_and_map_tab(
             prov_plain = provenance or ""
             sig = data_signature_for_caches(df_full, prov_plain)
             if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
-                st.session_state.ebird_data_sig = sig
-                st.session_state.popup_html_cache = {}
-                st.session_state.filtered_by_loc_cache = OrderedDict()
+                st.session_state[EBIRD_DATA_SIG_KEY] = sig
+                st.session_state[POPUP_HTML_CACHE_KEY] = {}
+                st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
                 st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
 
             map_warning_text: str | None = None
@@ -246,14 +261,14 @@ def render_prep_spinner_and_map_tab(
                         "map_style": map_style,
                         "popup_sort_order": popup_sort_order,
                         "popup_scroll_hint": popup_scroll_hint,
-                        "lifer_color": st.session_state.streamlit_lifer_color,
-                        "lifer_fill": st.session_state.streamlit_lifer_fill,
-                        "last_seen_color": st.session_state.streamlit_last_seen_color,
-                        "last_seen_fill": st.session_state.streamlit_last_seen_fill,
-                        "species_color": st.session_state.streamlit_species_color,
-                        "species_fill": st.session_state.streamlit_species_fill,
-                        "default_color": st.session_state.streamlit_default_color,
-                        "default_fill": st.session_state.streamlit_default_fill,
+                        "lifer_color": st.session_state.get(STREAMLIT_LIFER_COLOR_KEY),
+                        "lifer_fill": st.session_state.get(STREAMLIT_LIFER_FILL_KEY),
+                        "last_seen_color": st.session_state.get(STREAMLIT_LAST_SEEN_COLOR_KEY),
+                        "last_seen_fill": st.session_state.get(STREAMLIT_LAST_SEEN_FILL_KEY),
+                        "species_color": st.session_state.get(STREAMLIT_SPECIES_COLOR_KEY),
+                        "species_fill": st.session_state.get(STREAMLIT_SPECIES_FILL_KEY),
+                        "default_color": st.session_state.get(STREAMLIT_DEFAULT_COLOR_KEY),
+                        "default_fill": st.session_state.get(STREAMLIT_DEFAULT_FILL_KEY),
                         "mark_lifer": mark_lifer,
                         "mark_last_seen": mark_last_seen,
                         "cluster_all_locations": bool(
@@ -266,8 +281,8 @@ def render_prep_spinner_and_map_tab(
                         "species_url_fn": species_url_fn,
                         "base_species_fn": base_species_for_lifer,
                         "taxonomy_locale": tax_locale_effective,
-                        "popup_html_cache": st.session_state.popup_html_cache,
-                        "filtered_by_loc_cache": st.session_state.filtered_by_loc_cache,
+                        "popup_html_cache": st.session_state.get(POPUP_HTML_CACHE_KEY),
+                        "filtered_by_loc_cache": st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
                         "map_view_mode": map_view_mode,
                         "hide_non_matching_locations": hide_nm,
                         "show_subspecies_lifers": bool(
@@ -278,14 +293,14 @@ def render_prep_spinner_and_map_tab(
                     _render_opts_sig = (
                         popup_sort_order,
                         popup_scroll_hint,
-                        st.session_state.streamlit_lifer_color,
-                        st.session_state.streamlit_lifer_fill,
-                        st.session_state.streamlit_last_seen_color,
-                        st.session_state.streamlit_last_seen_fill,
-                        st.session_state.streamlit_species_color,
-                        st.session_state.streamlit_species_fill,
-                        st.session_state.streamlit_default_color,
-                        st.session_state.streamlit_default_fill,
+                        st.session_state.get(STREAMLIT_LIFER_COLOR_KEY),
+                        st.session_state.get(STREAMLIT_LIFER_FILL_KEY),
+                        st.session_state.get(STREAMLIT_LAST_SEEN_COLOR_KEY),
+                        st.session_state.get(STREAMLIT_LAST_SEEN_FILL_KEY),
+                        st.session_state.get(STREAMLIT_SPECIES_COLOR_KEY),
+                        st.session_state.get(STREAMLIT_SPECIES_FILL_KEY),
+                        st.session_state.get(STREAMLIT_DEFAULT_COLOR_KEY),
+                        st.session_state.get(STREAMLIT_DEFAULT_FILL_KEY),
                         mark_lifer,
                         mark_last_seen,
                         bool(

@@ -1,11 +1,15 @@
-"""Family Map (refs #138) — pure aggregation for taxonomy family × location composition.
+"""Pure aggregation for the taxonomy-family map: how rich each checklist location is for a chosen family.
 
-Density uses **distinct base species** per location (subspecies roll up). Popup lines use
-**distinct common names** as recorded (subspecies appear as separate lines). Highlight
-targets a **base species**; any subspecies row counts as a match.
+This module stays UI-free so the same numbers feed Folium and tests. Density uses **distinct base
+species** per location (subspecies roll up to base). Popup lines use **distinct common names** as
+recorded (subspecies can appear as separate lines). Highlight targets a **base species**; any
+subspecies row counts as a match.
 
-Callers supply :func:`~explorer.core.species_family.build_base_species_to_family_map` and
-taxonomy tables built the same way as Rankings **Families** (``group_name`` per species row).
+Callers supply :func:`~explorer.core.species_family.build_base_species_to_family_map` and taxonomy
+tables built the same way as Rankings **Families** (``group_name`` per species row).
+
+The **family-map work frame** adds internal columns ``_base`` and ``_family``; see the comment
+block immediately after :data:`UNMAPPED_FAMILY_LABEL`.
 """
 
 from __future__ import annotations
@@ -19,6 +23,11 @@ import pandas as pd
 from explorer.core.species_logic import countable_species_vectorized
 
 UNMAPPED_FAMILY_LABEL = "Unmapped"
+
+# Family-map work frame — internal columns (leading underscore; not from the eBird CSV):
+#   _base   — countable base scientific name per row (:func:`~explorer.core.species_logic.countable_species_vectorized`).
+#   _family — eBird species-group (family) name from *base_to_family*; rows with NaN or
+#             :data:`UNMAPPED_FAMILY_LABEL` are dropped so the map stays taxonomy-backed only.
 
 # Legend bands: 1 | 2–3 | 4–5 | 6+ distinct base species in the family at the location.
 DENSITY_BAND_LABELS: tuple[str, ...] = ("1", "2–3", "4–5", "6+")
@@ -46,7 +55,7 @@ def family_density_band_label(distinct_base_species_count: int) -> str:
 
 @dataclass(frozen=True)
 class FamilyMapBannerMetrics:
-    """Summary numbers for the family-map banner (refs #138)."""
+    """Summary stats for the family-map banner: taxonomy size, species you recorded, and location count."""
 
     family_name: str
     total_species_taxonomy: int
@@ -74,6 +83,7 @@ def prepare_family_map_work_frame(
 ) -> pd.DataFrame:
     """Attach ``_base`` and ``_family``; keep only countable rows with a mapped family.
 
+    Column meanings: see the “Family-map work frame” comment after :data:`UNMAPPED_FAMILY_LABEL`.
     *base_to_family* is typically from :func:`~explorer.core.species_family.build_base_species_to_family_map`.
     Rows with missing family or :data:`UNMAPPED_FAMILY_LABEL` are dropped (family map is taxonomy-backed).
     """
@@ -86,12 +96,14 @@ def prepare_family_map_work_frame(
     fam_series = work["_base"].map(lambda b: base_to_family.get(b))
     work["_family"] = fam_series
     work = work[work["_family"].notna()].copy()
+    # Treat empty/whitespace family names as missing (taxonomy-backed map only).
+    work = work[work["_family"].astype(str).str.strip() != ""].copy()
     work = work[work["_family"].astype(str).str.strip() != UNMAPPED_FAMILY_LABEL].copy()
     return work
 
 
 def families_recorded_alphabetically(work: pd.DataFrame) -> tuple[str, ...]:
-    """Distinct families present in *work*, sorted A→Z (refs #138 family dropdown)."""
+    """Distinct family names in *work*, sorted A→Z for the sidebar dropdown."""
     if work.empty or "_family" not in work.columns:
         return ()
     s = work["_family"].dropna().astype(str).str.strip()
@@ -151,8 +163,8 @@ def highlight_species_choices_alphabetical(
     """(display label, base species key) for the highlight dropdown, A→Z by display label.
 
     *base_to_common* maps lowercased base scientific key → preferred common name (e.g. from taxonomy).
-    Multiple bases fall back to the base string itself. Only **base species** appear (refs #138: no
-    subspecies rows in the highlight list).
+    Multiple bases fall back to the base string itself. Only **base species** are listed so the
+    dropdown stays one row per species (subspecies are covered via the parent base).
     """
     if work_family.empty or "_base" not in work_family.columns:
         return ()
@@ -274,7 +286,7 @@ def format_family_location_popup_html(
     location_page_url: str | None = None,
     species_url_by_common: dict[str, str] | None = None,
 ) -> str:
-    """HTML body for a family-map pin: location title + alphabetical species lines (refs #138).
+    """HTML for a map pin body: location heading (optional hotspot link) and species lines (optional links).
 
     *species_url_by_common* maps exact common-name strings (as in *pin.common_name_lines*) to
     eBird species URLs; missing keys render as plain text.

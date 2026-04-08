@@ -1,4 +1,4 @@
-"""YAML-backed settings model for Streamlit explorer UI (refs #70)."""
+"""Load, validate, and persist the explorer’s YAML settings (map, rankings, maintenance, etc.)."""
 
 from __future__ import annotations
 

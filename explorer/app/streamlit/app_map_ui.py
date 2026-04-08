@@ -12,6 +12,8 @@ import streamlit.components.v1 as components
 
 from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
+    STREAMLIT_MAP_BASEMAP_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
@@ -215,12 +217,12 @@ def _support_buy_me_a_coffee_outline_html(url: str, *, outline_hex: str) -> str:
 
 def ensure_streamlit_map_basemap_height_keys() -> None:
     """Seed basemap + map height in session state (keyed widgets; refs #70)."""
-    if "streamlit_map_basemap" not in st.session_state:
-        st.session_state.streamlit_map_basemap = MAP_BASEMAP_DEFAULT
-    elif st.session_state.streamlit_map_basemap not in MAP_BASEMAP_OPTIONS:
-        st.session_state.streamlit_map_basemap = MAP_BASEMAP_DEFAULT
-    if "streamlit_map_height_px" not in st.session_state:
-        st.session_state.streamlit_map_height_px = MAP_HEIGHT_PX_DEFAULT
+    if STREAMLIT_MAP_BASEMAP_KEY not in st.session_state:
+        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = MAP_BASEMAP_DEFAULT
+    elif st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) not in MAP_BASEMAP_OPTIONS:
+        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = MAP_BASEMAP_DEFAULT
+    if STREAMLIT_MAP_HEIGHT_PX_KEY not in st.session_state:
+        st.session_state[STREAMLIT_MAP_HEIGHT_PX_KEY] = MAP_HEIGHT_PX_DEFAULT
 
 
 def sidebar_footer_links(*, leading_divider: bool = True) -> None:

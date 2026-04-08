@@ -1,4 +1,4 @@
-"""Tests for map_controller (refs #67)."""
+"""Tests for :mod:`explorer.core.map_controller` / overlay map build."""
 
 from collections import OrderedDict
 

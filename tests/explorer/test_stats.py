@@ -1,8 +1,6 @@
 """Tests for explorer.core.stats module."""
 
-import numpy as np
 import pandas as pd
-import pytest
 
 from explorer.core.stats import (
     checklist_country_keys,
@@ -18,8 +16,6 @@ from explorer.core.stats import (
     rankings_subspecies_hierarchical,
     rankings_seen_once,
     rankings_by_visits,
-    rankings_by_value,
-    rankings_by_location,
     rankings_not_seen_recently,
     rankings_high_counts,
 )

@@ -639,7 +639,7 @@ def rankings_by_visits(cl_sub, limit):
     rows = []
     for _, r in vc.iterrows():
         lid = r["Location ID"]
-        # For visit-focused tables, link to the user's checklists at that location (refs #59).
+        # Link location names to the user’s mychecklists view for that hotspot.
         loc_link = f'<a href="https://ebird.org/mychecklists/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
         state_str = ""
         country_str = ""
@@ -667,7 +667,7 @@ def rankings_not_seen_recently(df_obs, reference_date=None):
     :func:`explorer.presentation.rankings_display.rankings_not_seen_recently_table`.
     *last_seen_html* is the visit date/time linking to the checklist of that observation.
 
-    *reference_date* defaults to local today (normalized); set for deterministic tests (refs #106).
+    *reference_date* defaults to local today (normalized); pass a fixed date in tests for determinism.
     """
     if df_obs.empty:
         return []
@@ -789,7 +789,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     *taxonomy_locale* selects the eBird taxonomy locale for **Total bird families**
     (species-group names); defaults to the app default (e.g. ``en_AU``).
 
-    Static row order matches issue #128 (core outcomes → checklist activity → effort → coverage).
+    Row order is fixed for the UI: core outcomes first, then checklist activity, effort, coverage.
     """
     cl = cl.dropna(subset=["Date"])
     if cl.empty:
@@ -820,13 +820,14 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     incomplete_hint = _html.escape("Incomplete checklists not counted.", quote=True)
     info_icon = f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{incomplete_hint}</span></span>' if has_all_obs else ""
 
+    # Working columns (not eBird export): _base = countable species key; _count = numeric Count; _family only on temporary copies below for the families row.
     sp_series = countable_species_vectorized(df_with_yr)
     df_with_yr["_base"] = sp_series
     df_with_yr["_count"] = df_with_yr["Count"].apply(safe_count)
 
     rows: list[tuple[str, list[str]]] = []
 
-    # --- Computations (order here is arbitrary; static table order is set below, refs #128) ---
+    # --- Computations (order here is arbitrary; the yearly table enforces display order below) ---
 
     # Total species
     by_yr_sp = df_with_yr.dropna(subset=["_base"]).groupby("_year")["_base"].nunique()
@@ -838,6 +839,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     base_to_family = build_base_species_to_family_map(loc)
     if base_to_family:
         dfb = df_with_yr.dropna(subset=["_base"]).copy()
+        # _family: species-group name (same convention as explorer.core.family_map_compute work frames).
         dfb["_family"] = dfb["_base"].astype(str).str.strip().map(base_to_family)
         fam = dfb.dropna(subset=["_family"])
         by_yr_fam = fam.groupby("_year")["_family"].nunique()
@@ -1278,7 +1280,7 @@ def country_summary_stats(df, cl):
 # ---------------------------------------------------------------------------
 
 def _observation_details_is_sex_notation(s: str) -> bool:
-    """True if the whole field looks like sex/age shorthand (conservative; refs #58).
+    """True if the whole field looks like sex/age shorthand (conservative heuristics).
 
     Matches:
     - Legacy: runs of M, F, J, ? only (e.g. ``MF``, ``MFFF``, ``MMF??``).

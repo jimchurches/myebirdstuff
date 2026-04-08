@@ -163,6 +163,32 @@ def test_build_family_location_pins_highlight():
     assert by_id["L2"].highlight_match is True
 
 
+def test_build_family_location_pins_highlight_matches_subspecies_rows():
+    """Highlight targets base species; subspecies rows should still count as a match."""
+    df = _tiny_export_rows()
+    work = prepare_family_map_work_frame(df, _base_to_family_stub())
+    wf = filter_work_to_family(work, "Whistlers and Allies")
+    pins = build_family_location_pins(
+        wf,
+        # L1 contains "Pachycephala pectoralis glaucura" → base is pachycephala pectoralis.
+        highlight_base_species="pachycephala pectoralis",
+    )
+    by_id = {p.location_id: p for p in pins}
+    assert by_id["L1"].highlight_match is True
+    assert by_id["L2"].highlight_match is False
+
+
+def test_prepare_family_map_work_frame_drops_unmapped_and_empty_family():
+    """Work frames keep only taxonomy-backed rows: missing/blank/unmapped families are removed."""
+    df = _tiny_export_rows()
+    base_to_family = _base_to_family_stub()
+    # Force one base species to be "unmapped" and one to be blank.
+    base_to_family["anas gracilis"] = "Unmapped"
+    base_to_family["pachycephala olivacea"] = ""
+    work = prepare_family_map_work_frame(df, base_to_family)
+    assert "Unmapped" not in set(work["_family"].astype(str))
+    assert "" not in set(work["_family"].astype(str).str.strip())
+
 def test_build_family_location_pins_missing_columns():
     wf = pd.DataFrame({"Location ID": ["x"]})
     with pytest.raises(ValueError, match="missing columns"):

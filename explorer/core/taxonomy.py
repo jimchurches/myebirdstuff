@@ -1,9 +1,9 @@
 """
-eBird taxonomy lookup for species links (refs #56).
+eBird taxonomy lookup for building species and lifelist URLs from common names.
 
-Fetches the eBird taxonomy once and provides COMMON_NAME -> SPECIES_CODE
-for CATEGORY == "species" only. Used to build eBird species and lifelist URLs.
-No API key required. Offline or API failure: lookup returns None; the UI continues.
+Fetches the taxonomy CSV once and provides COMMON_NAME -> SPECIES_CODE for CATEGORY == "species"
+only, so map and rankings links stay consistent with eBird’s site. No API key required.
+Offline or API failure: lookup returns None; callers continue without links.
 
 Locale: pass locale to load_taxonomy() so common names match your eBird export
 (e.g. "en_AU" for Australian English: Grey Teal, Willie Wagtail, Common Starling).

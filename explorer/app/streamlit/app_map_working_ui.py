@@ -11,11 +11,13 @@ import streamlit as st
 from explorer.app.streamlit.app_constants import (
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
+    FILTERED_BY_LOC_CACHE_KEY,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
     FOLIUM_STATIC_MAP_CACHE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
+    POPUP_HTML_CACHE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
     SESSION_PREV_MAP_VIEW_KEY,
@@ -30,6 +32,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_DATE_RANGE_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_VIEW_LABEL_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_SPECIES_HIDE_ONLY_KEY,
     STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
@@ -152,10 +155,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 if STREAMLIT_MAP_DATE_RANGE_KEY not in st.session_state:
                     pr = st.session_state.get(PERSIST_MAP_DATE_RANGE_KEY)
                     if isinstance(pr, tuple) and len(pr) == 2:
-                        st.session_state.streamlit_map_date_range = pr
+                        st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = pr
                     else:
                         a, b = date_inception_to_today_default(df_full)
-                        st.session_state.streamlit_map_date_range = (a, b)
+                        st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = (a, b)
 
             date_filter_on_effective = st.toggle(
                 "Date filter",
@@ -167,16 +170,16 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             else:
                 d_inception, today = date_inception_to_today_default(df_full)
                 if STREAMLIT_MAP_DATE_RANGE_KEY not in st.session_state:
-                    st.session_state.streamlit_map_date_range = (d_inception, today)
-                rng = st.session_state["streamlit_map_date_range"]
+                    st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = (d_inception, today)
+                rng = st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY]
                 if not isinstance(rng, tuple) or len(rng) != 2:
-                    st.session_state.streamlit_map_date_range = (d_inception, today)
+                    st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = (d_inception, today)
                 else:
                     r0 = max(min(rng[0], today), d_inception)
                     r1 = max(min(rng[1], today), d_inception)
                     rng_val = (r0, r1) if r0 <= r1 else (r1, r0)
                     if rng_val != rng:
-                        st.session_state.streamlit_map_date_range = rng_val
+                        st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = rng_val
                 dr = st.date_input(
                     "Date range",
                     min_value=d_inception,
@@ -207,7 +210,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         map_view_mode=_ws_mode,
         date_filter_on=date_filter_on_effective,
         date_range=date_range_sel,
-        map_caches=(st.session_state.popup_html_cache, st.session_state.filtered_by_loc_cache),
+        map_caches=(
+            st.session_state.get(POPUP_HTML_CACHE_KEY),
+            st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
+        ),
     )
     if ws is None:
         st.error("Invalid date range. Using all-time data for this run.")
@@ -216,7 +222,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             map_view_mode=map_view_mode,
             date_filter_on=False,
             date_range=None,
-            map_caches=(st.session_state.popup_html_cache, st.session_state.filtered_by_loc_cache),
+            map_caches=(
+                st.session_state.get(POPUP_HTML_CACHE_KEY),
+                st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
+            ),
         )
     work_df = ws.df
 
@@ -274,7 +283,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         with st.sidebar:
 
             tax_loc = (
-                str(st.session_state.get("streamlit_taxonomy_locale", "")).strip()
+                str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
                 or DEFAULT_TAXONOMY_LOCALE
             )
             bundle = cached_family_map_bundle(df_full, tax_loc)

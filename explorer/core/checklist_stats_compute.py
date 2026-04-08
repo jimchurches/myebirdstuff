@@ -1,7 +1,7 @@
 """
 Structured checklist / yearly / rankings prep for the Checklist Statistics UI.
 
-Computes numeric summaries and ranking inputs without HTML (refs #68).
+Computes numeric summaries and ranking inputs only; presentation layers build HTML from these payloads.
 """
 
 from __future__ import annotations

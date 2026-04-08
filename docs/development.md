@@ -79,7 +79,7 @@ Streamlit UI
 | species_logic | Filtering + countable species rules |
 | stats | Rankings, summaries, country stats |
 | working_set | Rebuild filtered dataset |
-| map_controller | Map orchestration |
+| map_controller | Map orchestration (entry point; see `map_overlay_*` under `explorer/core/`) |
 | map_renderer | Folium + popup rendering |
 | taxonomy | eBird taxonomy lookup |
 | duplicate_checks | Maintenance checks |
@@ -117,6 +117,15 @@ Streamlit UI
 # Design Principles
 
 ## Data
+
+## Imports and layering (discoverability)
+
+- **Prefer explicit submodule imports in new code**: e.g. `from explorer.core.stats import yearly_summary_stats`.
+- Treat `explorer.core` (the package entry module `explorer/core/__init__.py`) as a **compatibility barrel**.
+  It re-exports some presentation helpers and uses **lazy imports** for optional heavy stacks.
+- If your IDE can’t jump to definitions for lazy names, import from the defining module directly
+  (for example `explorer.presentation.map_renderer`) or search for the name in
+  `explorer/core/__init__.py` under `_LAZY_IMPORTS`.
 
 - Dataset is static during runtime
 - No mutation of main dataframe

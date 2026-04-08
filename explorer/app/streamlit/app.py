@@ -89,6 +89,8 @@ from explorer.app.streamlit.app_caches import (  # noqa: E402
 )
 from explorer.app.streamlit.app_constants import (  # noqa: E402
     DEFAULT_TAXONOMY_LOCALE,
+    FILTERED_BY_LOC_CACHE_KEY,
+    POPUP_HTML_CACHE_KEY,
     REPO_ROOT,
     SETTINGS_BASELINE_KEY,
     SETTINGS_CONFIG_PATH_KEY,
@@ -96,6 +98,7 @@ from explorer.app.streamlit.app_constants import (  # noqa: E402
     SETTINGS_LOADED_FROM_KEY,
     SETTINGS_WARNED_KEY,
     SESSION_UPLOAD_CACHE_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
 from explorer.app.streamlit.app_landing_ui import (  # noqa: E402
     load_dataframe_after_landing,
@@ -158,8 +161,10 @@ def _run_non_map_data_tab_fragments(
 def main() -> None:
     st.set_page_config(page_title="Personal eBird Explorer (Streamlit)", layout="wide")
 
-    if "streamlit_taxonomy_locale" not in st.session_state:
-        st.session_state.streamlit_taxonomy_locale = env_taxonomy_locale() or DEFAULT_TAXONOMY_LOCALE
+    if STREAMLIT_TAXONOMY_LOCALE_KEY not in st.session_state:
+        st.session_state[STREAMLIT_TAXONOMY_LOCALE_KEY] = (
+            env_taxonomy_locale() or DEFAULT_TAXONOMY_LOCALE
+        )
     if "streamlit_country_tab_sort" not in st.session_state:
         st.session_state.streamlit_country_tab_sort = COUNTRY_TAB_SORT_ALPHABETICAL
 
@@ -190,14 +195,17 @@ def main() -> None:
     if SETTINGS_BASELINE_KEY not in st.session_state:
         st.session_state[SETTINGS_BASELINE_KEY] = settings_state_payload()
 
-    if "popup_html_cache" not in st.session_state:
-        st.session_state.popup_html_cache = {}
-    if "filtered_by_loc_cache" not in st.session_state:
-        st.session_state.filtered_by_loc_cache = OrderedDict()
+    if POPUP_HTML_CACHE_KEY not in st.session_state:
+        st.session_state[POPUP_HTML_CACHE_KEY] = {}
+    if FILTERED_BY_LOC_CACHE_KEY not in st.session_state:
+        st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
 
     mw = render_map_sidebar_and_working_set(df_full)
 
-    tax_locale_effective = (st.session_state.streamlit_taxonomy_locale.strip() or DEFAULT_TAXONOMY_LOCALE)
+    tax_locale_effective = (
+        str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
+        or DEFAULT_TAXONOMY_LOCALE
+    )
     species_url_fn = cached_species_url_fn(tax_locale_effective)
     popup_sort_order = st.session_state.streamlit_popup_sort_order
     popup_scroll_hint = st.session_state.streamlit_popup_scroll_hint
