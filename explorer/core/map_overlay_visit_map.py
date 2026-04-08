@@ -106,13 +106,13 @@ def build_visit_overlay_map(
     species_map = create_map(map_center, map_style, height_px=map_height_px)
     inject_map_overlay_theme(species_map)
     add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
-    popup_asc = popup_sort_order == "ascending"
-    dfs = date_filter_status or None
+    popup_ascending = popup_sort_order == "ascending"
+    date_filter_status_line = date_filter_status or None
 
     if not selected_species:
         tc, ts, ti = effective_totals
         species_map.get_root().html.add_child(
-            Element(build_all_species_banner_html(tc, ts, ti, dfs))
+            Element(build_all_species_banner_html(tc, ts, ti, date_filter_status_line))
         )
         species_map.get_root().html.add_child(
             Element(build_legend_html([(default_color, default_fill, "All locations")]))
@@ -136,7 +136,7 @@ def build_visit_overlay_map(
             if popup_key not in popup_html_cache:
                 base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
-                    "datetime", ascending=popup_asc
+                    "datetime", ascending=popup_ascending
                 )
                 visit_info = build_visit_info_html(visit_records, format_visit_time)
                 popup_html_cache[popup_key] = build_location_popup_html(
@@ -203,11 +203,13 @@ def build_visit_overlay_map(
 
         high_count_rows = filtered[filtered["Count"].apply(safe_count) == high_count]
         if not high_count_rows.empty:
-            hrow = high_count_rows.iloc[0]
-            high_count_date = _banner_date(hrow["Date"])
-            hcid = hrow.get("Submission ID", "")
-            if pd.notna(hcid) and str(hcid).strip():
-                high_count_url = f"https://ebird.org/checklist/{str(hcid).strip()}"
+            high_count_row = high_count_rows.iloc[0]
+            high_count_date = _banner_date(high_count_row["Date"])
+            high_count_checklist_id = high_count_row.get("Submission ID", "")
+            if pd.notna(high_count_checklist_id) and str(high_count_checklist_id).strip():
+                high_count_url = (
+                    f"https://ebird.org/checklist/{str(high_count_checklist_id).strip()}"
+                )
 
         display_name = selected_common_name or selected_species
         species_url = species_url_fn(display_name) if species_url_fn else None
@@ -222,7 +224,7 @@ def build_visit_overlay_map(
                     first_seen_date=first_seen_date,
                     last_seen_date=last_seen_date,
                     high_count_date=high_count_date,
-                    date_filter_status=dfs,
+                    date_filter_status=date_filter_status_line,
                     species_url=species_url,
                     first_seen_checklist_url=first_seen_url,
                     last_seen_checklist_url=last_seen_url,
@@ -277,15 +279,17 @@ def build_visit_overlay_map(
             if popup_key not in popup_html_cache:
                 base_records = records_by_loc.get(loc_id, pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
-                    "datetime", ascending=popup_asc
+                    "datetime", ascending=popup_ascending
                 )
                 visit_info = build_visit_info_html(visit_records, format_visit_time)
                 sightings_html = ""
                 if row["has_species_match"]:
-                    sub = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(
-                        "datetime", ascending=popup_asc
+                    species_sightings = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(
+                        "datetime", ascending=popup_ascending
                     )
-                    sightings_html = "".join(format_sighting_row(r) for _, r in sub.iterrows())
+                    sightings_html = "".join(
+                        format_sighting_row(r) for _, r in species_sightings.iterrows()
+                    )
                 popup_html_cache[popup_key] = build_location_popup_html(
                     row["Location"], loc_id, visit_info, sightings_html
                 )

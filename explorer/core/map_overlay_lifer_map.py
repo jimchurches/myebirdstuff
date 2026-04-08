@@ -83,14 +83,14 @@ def build_lifer_overlay_map(
     inject_map_overlay_theme(species_map)
     add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
     popup_asc = popup_sort_order == "ascending"
-    dfs = date_filter_status or None
+    date_filter_status_line = date_filter_status or None
     n_locations = int(loc_rows["Location ID"].nunique())
     species_map.get_root().html.add_child(
         Element(
             build_lifer_locations_banner_html(
                 n_lifer_count,
                 n_locations,
-                dfs,
+                date_filter_status_line,
                 include_subspecies=bool(show_subspecies_lifers),
             )
         )
