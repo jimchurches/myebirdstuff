@@ -122,11 +122,11 @@ _FAMILY_MAP_SCHEME_1_VALUES = dict(
 # Scheme 2 — blue → purple density ramp, orange highlight (restored pre-dataclass palette; ``c48caca``).
 _FAMILY_MAP_SCHEME_2_VALUES = dict(
     display_name="Blues & purples",
-    circle_marker_radius_px=4,
+    circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
-    base_stroke_weight=3,
+    base_stroke_weight=2,
     highlight_stroke_hex="#FF7F11",
-    highlight_stroke_weight=3,
+    highlight_stroke_weight=2,
     density_fill_hex=(
         "#3A86FF",
         "#5E60CE",
