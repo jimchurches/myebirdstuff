@@ -3,6 +3,9 @@ Lifer and last-seen lookup preparation from the full (unfiltered) dataset.
 
 Feeds map pin highlighting and species-banner “first/last seen” dates. Pure data prep — no widgets
 or HTML — so the same logic works in Streamlit and tests.
+
+The sorted lookup frame uses internal columns ``_base`` and ``_taxon``; see the comment on the
+``.assign`` in :func:`prepare_lifer_last_seen`.
 """
 
 from __future__ import annotations
@@ -49,6 +52,7 @@ def prepare_lifer_last_seen(
         full_df.sort_values("datetime")
         .dropna(subset=["Scientific Name", "Location ID", "datetime"])
         .assign(
+            # Internal columns (not export): _base = genus+species lifer key; _taxon = full sci string lowercased (subspecies lifers).
             _base=lambda x: x["Scientific Name"].apply(fn),
             _taxon=lambda x: x["Scientific Name"].str.strip().str.lower(),
         )

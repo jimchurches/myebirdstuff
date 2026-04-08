@@ -820,6 +820,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     incomplete_hint = _html.escape("Incomplete checklists not counted.", quote=True)
     info_icon = f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{incomplete_hint}</span></span>' if has_all_obs else ""
 
+    # Working columns (not eBird export): _base = countable species key; _count = numeric Count; _family only on temporary copies below for the families row.
     sp_series = countable_species_vectorized(df_with_yr)
     df_with_yr["_base"] = sp_series
     df_with_yr["_count"] = df_with_yr["Count"].apply(safe_count)
@@ -838,6 +839,7 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     base_to_family = build_base_species_to_family_map(loc)
     if base_to_family:
         dfb = df_with_yr.dropna(subset=["_base"]).copy()
+        # _family: species-group name (same convention as explorer.core.family_map_compute work frames).
         dfb["_family"] = dfb["_base"].astype(str).str.strip().map(base_to_family)
         fam = dfb.dropna(subset=["_family"])
         by_yr_fam = fam.groupby("_year")["_family"].nunique()

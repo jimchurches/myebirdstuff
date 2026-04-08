@@ -7,6 +7,9 @@ subspecies row counts as a match.
 
 Callers supply :func:`~explorer.core.species_family.build_base_species_to_family_map` and taxonomy
 tables built the same way as Rankings **Families** (``group_name`` per species row).
+
+The **family-map work frame** adds internal columns ``_base`` and ``_family``; see the comment
+block immediately after :data:`UNMAPPED_FAMILY_LABEL`.
 """
 
 from __future__ import annotations
@@ -20,6 +23,11 @@ import pandas as pd
 from explorer.core.species_logic import countable_species_vectorized
 
 UNMAPPED_FAMILY_LABEL = "Unmapped"
+
+# Family-map work frame — internal columns (leading underscore; not from the eBird CSV):
+#   _base   — countable base scientific name per row (:func:`~explorer.core.species_logic.countable_species_vectorized`).
+#   _family — eBird species-group (family) name from *base_to_family*; rows with NaN or
+#             :data:`UNMAPPED_FAMILY_LABEL` are dropped so the map stays taxonomy-backed only.
 
 # Legend bands: 1 | 2–3 | 4–5 | 6+ distinct base species in the family at the location.
 DENSITY_BAND_LABELS: tuple[str, ...] = ("1", "2–3", "4–5", "6+")
@@ -75,6 +83,7 @@ def prepare_family_map_work_frame(
 ) -> pd.DataFrame:
     """Attach ``_base`` and ``_family``; keep only countable rows with a mapped family.
 
+    Column meanings: see the “Family-map work frame” comment after :data:`UNMAPPED_FAMILY_LABEL`.
     *base_to_family* is typically from :func:`~explorer.core.species_family.build_base_species_to_family_map`.
     Rows with missing family or :data:`UNMAPPED_FAMILY_LABEL` are dropped (family map is taxonomy-backed).
     """
