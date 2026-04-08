@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 
 from explorer.core.data_loader import add_datetime_column
 

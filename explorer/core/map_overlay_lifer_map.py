@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Hashable, MutableMapping, Optional, Tuple
+from typing import Any, MutableMapping, Optional, Tuple
 
 import folium
 import pandas as pd

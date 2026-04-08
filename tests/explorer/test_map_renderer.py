@@ -1,8 +1,5 @@
 """Tests for explorer.presentation.map_renderer helpers."""
 
-import math
-from datetime import datetime
-
 import folium
 import pandas as pd
 
@@ -524,14 +521,14 @@ def test_classify_locations_basic():
     result = classify_locations(loc_df, seen_location_ids={"L1", "L3"}, lifer_location="L1", last_seen_location="L3")
     assert {"has_species_match", "is_lifer", "is_last_seen"}.issubset(result.columns)
     l1 = result[result["Location ID"] == "L1"].iloc[0]
-    assert l1["has_species_match"] == True
-    assert l1["is_lifer"] == True
-    assert l1["is_last_seen"] == False
+    assert l1["has_species_match"]
+    assert l1["is_lifer"]
+    assert not l1["is_last_seen"]
     l2 = result[result["Location ID"] == "L2"].iloc[0]
-    assert l2["has_species_match"] == False
+    assert not l2["has_species_match"]
     l3 = result[result["Location ID"] == "L3"].iloc[0]
-    assert l3["has_species_match"] == True
-    assert l3["is_last_seen"] == True
+    assert l3["has_species_match"]
+    assert l3["is_last_seen"]
 
 
 def test_classify_locations_sort_order():

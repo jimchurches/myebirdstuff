@@ -631,7 +631,9 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
 
     # Decide ACT vs non-ACT by the "best" result (containment + specificity), not by "any result is ACT".
     # So a point in Uriarra NSW near the ACT border gets Uriarra (NSW) not Coree (ACT) when the API returns both.
-    neutral_key = lambda r: _result_sort_key(r, lat, lng, in_act=False, country_code=None)
+    def neutral_key(r):
+        return _result_sort_key(r, lat, lng, in_act=False, country_code=None)
+
     sorted_neutral = sorted(results, key=neutral_key)
     preliminary_best = None
     for r in sorted_neutral:
@@ -696,7 +698,6 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
             if not has_loc or loc_name is None or any(loc_name in nn for nn in neighborhood_names):
                 continue
             t = r.get("types", [])
-            plus_only = _result_is_plus_code_only(r)
             is_poi = "establishment" in t or "point_of_interest" in t
             route_result = "route" in t
             geom = r.get("geometry", {})
@@ -711,16 +712,20 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
                 break
 
     # Sort so the best-matching result is first. ACT and India: deprioritize plus_code-only results.
-    sort_key_fn = lambda r: _result_sort_key(
-        r, lat, lng,
-        in_act=in_act,
-        country_code=country_code,
-        act_has_containing_neighborhood=act_has_containing_neighborhood,
-        act_containing_neighborhood_names=act_containing_neighborhood_names,
-        act_has_containing_real_suburb=act_has_containing_real_suburb,
-        act_min_neighborhood_area=act_min_neighborhood_area,
-        act_any_wrong_locality_result=act_any_wrong_locality_result,
-    )
+    def sort_key_fn(r):
+        return _result_sort_key(
+            r,
+            lat,
+            lng,
+            in_act=in_act,
+            country_code=country_code,
+            act_has_containing_neighborhood=act_has_containing_neighborhood,
+            act_containing_neighborhood_names=act_containing_neighborhood_names,
+            act_has_containing_real_suburb=act_has_containing_real_suburb,
+            act_min_neighborhood_area=act_min_neighborhood_area,
+            act_any_wrong_locality_result=act_any_wrong_locality_result,
+        )
+
     sorted_results = sorted(results, key=sort_key_fn)
 
     chosen_name = None
