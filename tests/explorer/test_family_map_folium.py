@@ -88,7 +88,25 @@ def test_fit_bounds_highlight_only_uses_highlight_pins():
     assert "fitBounds" in h_all and "fitBounds" in h_hl
     assert "[[-35.0, 149.0], [-34.0, 150.0]]" in h_all
     assert "[[-34.0, 150.0]]" in h_hl
-    assert "maxZoom" in h_hl and "6" in h_hl
+    assert '&quot;maxZoom&quot;: 8' in h_hl
+    assert '&quot;maxZoom&quot;: 6' in h_all
+
+
+def test_fit_bounds_highlight_no_matches_uses_family_max_zoom():
+    """Species-highlight mode but no matching pins: frame all pins, cap zoom like family view."""
+    p = FamilyLocationPin(
+        location_id="L1",
+        location_name="Only",
+        latitude=-35.0,
+        longitude=149.0,
+        distinct_base_species_count=1,
+        density_band_index=0,
+        common_name_lines=("X",),
+        highlight_match=False,
+    )
+    m = build_family_composition_folium_map((p,), fit_bounds_highlight_only=True)
+    h = m._repr_html_()
+    assert '&quot;maxZoom&quot;: 6' in h
 
 
 def test_build_family_map_banner_element_html_escapes():

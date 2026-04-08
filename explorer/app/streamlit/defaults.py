@@ -85,7 +85,9 @@ class FamilyMapColourScheme:
     density_stroke_hex: tuple[str, ...]
     popup_max_width_px: int
     fit_bounds_padding_px: int
+    # Max zoom for fit_bounds: full family vs species-highlight framing (see values below).
     fit_bounds_max_zoom: int
+    fit_bounds_max_zoom_highlight: int
     legend_highlight_swatch_fill_index: int
 
 
@@ -111,6 +113,7 @@ _FAMILY_MAP_SCHEME_VALUES = dict(
     popup_max_width_px=320,
     fit_bounds_padding_px=48,
     fit_bounds_max_zoom=6,
+    fit_bounds_max_zoom_highlight=8,
     legend_highlight_swatch_fill_index=0,
 )
 

@@ -126,8 +126,9 @@ def build_family_composition_folium_map(
     (as shown in the export) to species page URL.
 
     When *fit_bounds_highlight_only* is true (highlight species selected), the initial ``fit_bounds``
-    uses only pins where ``highlight_match`` is true, with the same padding / ``max_zoom`` as the
-    full-family case. If none match, falls back to all pins.
+    uses only pins where ``highlight_match`` is true, with the same padding as the full-family case
+    and ``fit_bounds_max_zoom_highlight`` (closer zoom allowed than ``fit_bounds_max_zoom``).
+    If none match, falls back to all pins.
     """
     pin_list = list(pins)
     if pin_list:
@@ -185,18 +186,26 @@ def build_family_composition_folium_map(
 
     # Family-map-only initial viewport:
     # - fit relevant pins with edge padding (all family pins, or highlight-only when requested)
-    # - never start closer than configured max zoom (allow wider zoom-out when needed)
+    # - cap how far fitBounds may zoom in (family-wide vs species-highlight use different caps)
     if pin_list:
         if fit_bounds_highlight_only:
-            _bounds_src = [p for p in pin_list if p.highlight_match] or pin_list
+            hl_pins = [p for p in pin_list if p.highlight_match]
+            _bounds_src = hl_pins or pin_list
+            _species_framed = bool(hl_pins)
         else:
             _bounds_src = pin_list
+            _species_framed = False
         bounds = [[p.latitude, p.longitude] for p in _bounds_src]
         pad = int(style.fit_bounds_padding_px)
+        _mz = int(
+            style.fit_bounds_max_zoom_highlight
+            if _species_framed
+            else style.fit_bounds_max_zoom
+        )
         m.fit_bounds(
             bounds,
             padding=(pad, pad),
-            max_zoom=int(style.fit_bounds_max_zoom),
+            max_zoom=_mz,
         )
 
     return m
