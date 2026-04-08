@@ -41,11 +41,8 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_LIFER_FILL_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
-    STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
     STREAMLIT_SPECIES_COLOR_KEY,
     STREAMLIT_SPECIES_FILL_KEY,
-    STREAMLIT_POPUP_SCROLL_HINT_KEY,
-    STREAMLIT_POPUP_SORT_ORDER_KEY,
 )
 from explorer.app.streamlit.app_map_ui import (
     inject_map_folium_iframe_min_height_css,
