@@ -132,9 +132,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         is_family_view = map_view_mode == "families"
 
         if is_lifer_view:
-            st.caption("Lifer locations are not date-filtered.")
-            if st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT):
-                st.caption("Your date filter is preserved for other map views.")
             st.toggle(
                 "Show subspecies lifers",
                 key=STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
@@ -195,7 +192,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             if date_filter_on_effective and date_range_sel is not None:
                 st.session_state[PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
 
-        if not is_family_view:
+        if map_view_mode == "all":
             st.toggle(
                 "Group nearby pins",
                 key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
