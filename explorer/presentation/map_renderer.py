@@ -20,6 +20,7 @@ import pandas as pd
 from branca.element import MacroElement
 from folium.template import Template
 
+from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_DEFAULT,
     MAP_HEIGHT_PX_MAX,
@@ -195,17 +196,21 @@ def format_sighting_row(r):
         date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
         time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
     text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
-    cid = r.get("Submission ID", "")
+    cid = str(r.get("Submission ID", "") or "").strip()
     checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
     media_html = ""
     ml = r.get("ML Catalog Numbers")
     if pd.notna(ml) and str(ml).strip():
         first_ml = str(ml).strip().split()[0]
+        esc_asset = esc_attr(first_ml)
         media_html = (
-            f' <a href="https://macaulaylibrary.org/asset/{first_ml}"'
-            f' target="_blank" title="View media">📷</a>'
+            f' <a href="https://macaulaylibrary.org/asset/{esc_asset}"'
+            f' target="_blank" rel="noopener noreferrer" title="View media">📷</a>'
         )
-    return f'<br><a href="{checklist_url}" target="_blank">{text}</a>{media_html}'
+    return (
+        f'<br><a href="{esc_attr(checklist_url)}" target="_blank" rel="noopener noreferrer">'
+        f"{esc_text(text)}</a>{media_html}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -227,8 +232,8 @@ def build_visit_info_html(visit_records, format_time_fn):
     if visit_records.empty:
         return ""
     return "<br>".join(
-        f'<a href="https://ebird.org/checklist/{r["Submission ID"]}" target="_blank">'
-        f"{format_time_fn(r)}</a>"
+        f'<a href="https://ebird.org/checklist/{esc_attr(r["Submission ID"])}" '
+        f'target="_blank" rel="noopener noreferrer">{esc_text(format_time_fn(r))}</a>'
         for _, r in visit_records.iterrows()
     )
 
@@ -406,11 +411,11 @@ def build_species_banner_html(
             return _html_module.escape(str(label), quote=False)
         esc_url = _html_module.escape(str(url), quote=True)
         esc_label = _html_module.escape(str(label), quote=False)
-        return f'<a href="{esc_url}" target="_blank" rel="noopener">{esc_label}</a>'
+        return f'<a href="{esc_url}" target="_blank" rel="noopener noreferrer">{esc_label}</a>'
 
     title_esc = _html_module.escape(str(display_name), quote=False)
     title_html = (
-        f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">'
+        f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener noreferrer">'
         f'{title_esc}</a>'
         if species_url
         else title_esc
