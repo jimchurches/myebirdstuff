@@ -79,7 +79,7 @@ Streamlit UI
 | species_logic | Filtering + countable species rules |
 | stats | Rankings, summaries, country stats |
 | working_set | Rebuild filtered dataset |
-| map_controller | Map orchestration |
+| map_controller | Map orchestration (entry point; see `map_overlay_*` under `explorer/core/`) |
 | map_renderer | Folium + popup rendering |
 | taxonomy | eBird taxonomy lookup |
 | duplicate_checks | Maintenance checks |
