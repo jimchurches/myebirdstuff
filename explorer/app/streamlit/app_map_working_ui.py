@@ -50,6 +50,7 @@ from explorer.app.streamlit.app_map_ui import (
 )
 from explorer.app.streamlit.app_settings_state import apply_pending_map_cluster_toggle
 from explorer.app.streamlit.app_settings_state import apply_pending_map_basemap_override
+from explorer.app.streamlit.app_settings_state import apply_pending_map_height_override
 from explorer.app.streamlit.defaults import (
     FAMILY_MAP_COLOUR_SCHEME_1,
     FAMILY_MAP_COLOUR_SCHEME_2,
@@ -107,6 +108,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
 
     apply_pending_map_cluster_toggle(st.session_state)
     apply_pending_map_basemap_override(st.session_state)
+    apply_pending_map_height_override(st.session_state)
 
     inject_spinner_theme_css()
     inject_sidebar_control_label_css()
@@ -347,6 +349,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             max_value=MAP_HEIGHT_PX_MAX,
             step=MAP_HEIGHT_PX_STEP,
             key=STREAMLIT_MAP_HEIGHT_PX_KEY,
+            help="Session-only quick adjust. Set a saved default under Settings -> Map display.",
         )
 
     prev_effective = st.session_state.get(SESSION_PREV_EFFECTIVE_BASEMAP_KEY)

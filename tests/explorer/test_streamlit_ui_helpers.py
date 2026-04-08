@@ -374,6 +374,7 @@ def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_st
     ensure_streamlit_map_basemap_height_keys()
     assert st.session_state["streamlit_map_basemap_saved"] == MAP_BASEMAP_DEFAULT
     assert st.session_state["streamlit_map_basemap"] == "__default__"
+    assert st.session_state["streamlit_map_height_px_saved"] == MAP_HEIGHT_PX_DEFAULT
     assert st.session_state["streamlit_map_height_px"] == MAP_HEIGHT_PX_DEFAULT
 
     st.session_state["streamlit_map_basemap"] = "__not_a_real_basemap__"

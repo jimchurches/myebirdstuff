@@ -159,6 +159,8 @@ STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY = "streamlit_map_cluster_all_locat
 # Basemap: persisted default + sidebar session override (Option A for #139).
 STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY = "_streamlit_map_basemap_apply_from_settings_pending"
 STREAMLIT_MAP_BASEMAP_SAVED_KEY = "streamlit_map_basemap_saved"
+STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY = "_streamlit_map_height_apply_from_settings_pending"
+STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY = "streamlit_map_height_px_saved"
 
 SESSION_PREV_EFFECTIVE_BASEMAP_KEY = "_streamlit_prev_effective_basemap"
 
@@ -215,6 +217,7 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_DEFAULT_COLOR_KEY,

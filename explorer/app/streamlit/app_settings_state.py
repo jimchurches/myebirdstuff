@@ -32,6 +32,9 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
     STREAMLIT_POPUP_SORT_ORDER_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
@@ -45,6 +48,9 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.core.settings_schema_defaults import (
     MAP_BASEMAP_DEFAULT,
+    MAP_HEIGHT_PX_DEFAULT,
+    MAP_HEIGHT_PX_MIN,
+    MAP_HEIGHT_PX_MAX,
     MAP_BASEMAP_OPTIONS,
     MAP_DEFAULT_COLOR_DEFAULT,
     MAP_DEFAULT_FILL_DEFAULT,
@@ -168,6 +174,13 @@ def init_and_clamp_streamlit_table_settings() -> None:
         st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
     elif st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY) not in MAP_BASEMAP_OPTIONS:
         st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
+    if STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY not in st.session_state:
+        st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = MAP_HEIGHT_PX_DEFAULT
+    else:
+        st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = max(
+            MAP_HEIGHT_PX_MIN,
+            min(MAP_HEIGHT_PX_MAX, int(st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY])),
+        )
     if STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY not in st.session_state:
         st.session_state.streamlit_map_cluster_all_locations = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
     if STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY not in st.session_state:
@@ -202,6 +215,9 @@ def settings_state_payload() -> dict[str, Any]:
             "mark_lifer": bool(st.session_state.streamlit_mark_lifer),
             "mark_last_seen": bool(st.session_state.streamlit_mark_last_seen),
             "basemap": st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_DEFAULT),
+            "map_height_px": int(
+                st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY, MAP_HEIGHT_PX_DEFAULT)
+            ),
             "cluster_all_locations": bool(st.session_state.streamlit_map_cluster_all_locations_saved),
             "default_color": st.session_state.streamlit_default_color,
             "default_fill": st.session_state.streamlit_default_fill,
@@ -258,6 +274,10 @@ def apply_settings_payload_to_state(cfg: dict[str, Any]) -> None:
         _bm = mp.get("basemap", MAP_BASEMAP_DEFAULT)
         st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = (
             _bm if _bm in MAP_BASEMAP_OPTIONS else MAP_BASEMAP_DEFAULT
+        )
+        st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = max(
+            MAP_HEIGHT_PX_MIN,
+            min(MAP_HEIGHT_PX_MAX, int(mp.get("map_height_px", MAP_HEIGHT_PX_DEFAULT))),
         )
         _cluster = bool(mp.get("cluster_all_locations", MAP_CLUSTER_ALL_LOCATIONS_DEFAULT))
         st.session_state.streamlit_map_cluster_all_locations = _cluster
@@ -408,3 +428,10 @@ def apply_pending_map_basemap_override(session_state: MutableMapping[str, Any]) 
     pending = session_state.pop(STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY, None)
     if pending is not None:
         session_state[STREAMLIT_MAP_BASEMAP_KEY] = str(pending)
+
+
+def apply_pending_map_height_override(session_state: MutableMapping[str, Any]) -> None:
+    """Apply Settings → Apply map settings deferred map-height value before the sidebar slider builds."""
+    pending = session_state.pop(STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY, None)
+    if pending is not None:
+        session_state[STREAMLIT_MAP_HEIGHT_PX_KEY] = int(pending)

@@ -15,6 +15,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
@@ -25,6 +26,8 @@ from explorer.app.streamlit.app_constants import (
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_OPTIONS,
+    MAP_HEIGHT_PX_MAX,
+    MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_DEFAULT,
     THEME_PRIMARY_HEX,
 )
@@ -231,8 +234,17 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
         and st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) != "__default__"
     ):
         st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = "__default__"
+    if STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY not in st.session_state:
+        st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = MAP_HEIGHT_PX_DEFAULT
+    else:
+        st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = max(
+            MAP_HEIGHT_PX_MIN,
+            min(MAP_HEIGHT_PX_MAX, int(st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY])),
+        )
     if STREAMLIT_MAP_HEIGHT_PX_KEY not in st.session_state:
-        st.session_state[STREAMLIT_MAP_HEIGHT_PX_KEY] = MAP_HEIGHT_PX_DEFAULT
+        st.session_state[STREAMLIT_MAP_HEIGHT_PX_KEY] = int(
+            st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY]
+        )
 
 
 def sidebar_footer_links(*, leading_divider: bool = True) -> None:

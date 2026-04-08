@@ -13,6 +13,9 @@ from explorer.core.settings_schema_defaults import (
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
     MAP_BASEMAP_DEFAULT,
+    MAP_HEIGHT_PX_DEFAULT,
+    MAP_HEIGHT_PX_MIN,
+    MAP_HEIGHT_PX_MAX,
     MAP_BASEMAP_OPTIONS,
     MAP_DEFAULT_COLOR_DEFAULT,
     MAP_DEFAULT_FILL_DEFAULT,
@@ -57,6 +60,11 @@ class MapDisplayConfig(BaseModel):
     mark_lifer: bool = MAP_MARK_LIFER_DEFAULT
     mark_last_seen: bool = MAP_MARK_LAST_SEEN_DEFAULT
     basemap: str = MAP_BASEMAP_DEFAULT
+    map_height_px: int = Field(
+        default=MAP_HEIGHT_PX_DEFAULT,
+        ge=MAP_HEIGHT_PX_MIN,
+        le=MAP_HEIGHT_PX_MAX,
+    )
     cluster_all_locations: bool = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
     default_color: str = Field(default=MAP_DEFAULT_COLOR_DEFAULT)
     default_fill: str = Field(default=MAP_DEFAULT_FILL_DEFAULT)
