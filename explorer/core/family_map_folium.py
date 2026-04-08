@@ -9,18 +9,9 @@ import folium
 from branca.element import Element
 
 from explorer.app.streamlit.defaults import (
-    FAMILY_MAP_BASE_STROKE_WEIGHT,
-    FAMILY_MAP_CIRCLE_MARKER_FILL_OPACITY,
-    FAMILY_MAP_CIRCLE_MARKER_RADIUS_PX,
-    FAMILY_MAP_DENSITY_FILL_HEX,
-    FAMILY_MAP_DENSITY_STROKE_HEX,
-    FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM,
-    FAMILY_MAP_FIT_BOUNDS_PADDING_PX,
-    FAMILY_MAP_HIGHLIGHT_STROKE_HEX,
-    FAMILY_MAP_HIGHLIGHT_STROKE_WEIGHT,
-    FAMILY_MAP_LEGEND_HIGHLIGHT_SWATCH_FILL_INDEX,
-    FAMILY_MAP_POPUP_MAX_WIDTH_PX,
+    FamilyMapColourScheme,
     MAP_HEIGHT_PX_DEFAULT,
+    active_family_map_colour_scheme,
 )
 from explorer.core.family_map_compute import (
     DENSITY_BAND_LABELS,
@@ -33,16 +24,21 @@ from explorer.presentation.map_renderer import build_legend_html, create_map, ma
 # Match species-map banner placement (``map_renderer``).
 _FAMILY_MAP_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
 
-def family_map_marker_style(pin: FamilyLocationPin) -> tuple[str, str, int]:
+def family_map_marker_style(
+    pin: FamilyLocationPin,
+    *,
+    style: FamilyMapColourScheme | None = None,
+) -> tuple[str, str, int]:
     """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin."""
-    fills = FAMILY_MAP_DENSITY_FILL_HEX
-    strokes = FAMILY_MAP_DENSITY_STROKE_HEX
+    s = style or active_family_map_colour_scheme()
+    fills = s.density_fill_hex
+    strokes = s.density_stroke_hex
     idx = max(0, min(pin.density_band_index, len(fills) - 1))
     fill = fills[idx]
     stroke = strokes[idx]
     if pin.highlight_match:
-        return fill, FAMILY_MAP_HIGHLIGHT_STROKE_HEX, FAMILY_MAP_HIGHLIGHT_STROKE_WEIGHT
-    return fill, stroke, FAMILY_MAP_BASE_STROKE_WEIGHT
+        return fill, s.highlight_stroke_hex, s.highlight_stroke_weight
+    return fill, stroke, s.base_stroke_weight
 
 
 def _default_au_center() -> tuple[float, float]:
@@ -77,8 +73,10 @@ def build_family_map_legend_overlay_html_for_pins(
     pins: tuple[FamilyLocationPin, ...] | list[FamilyLocationPin],
     *,
     highlight_label: str | None,
+    style: FamilyMapColourScheme | None = None,
 ) -> str:
     """Dynamic legend: only include density bands present on the map (refs #138)."""
+    s = style or active_family_map_colour_scheme()
     pin_list = list(pins)
     bands_present = sorted({int(p.density_band_index) for p in pin_list}) if pin_list else []
     items: list[tuple[str, str, str]] = []
@@ -87,8 +85,8 @@ def build_family_map_legend_overlay_html_for_pins(
             lab = DENSITY_BAND_LABELS[i]
             items.append(
                 (
-                    FAMILY_MAP_DENSITY_STROKE_HEX[i],
-                    FAMILY_MAP_DENSITY_FILL_HEX[i],
+                    s.density_stroke_hex[i],
+                    s.density_fill_hex[i],
                     f"{lab} species at location",
                 )
             )
@@ -97,14 +95,14 @@ def build_family_map_legend_overlay_html_for_pins(
         sw_i = max(
             0,
             min(
-                FAMILY_MAP_LEGEND_HIGHLIGHT_SWATCH_FILL_INDEX,
-                len(FAMILY_MAP_DENSITY_FILL_HEX) - 1,
+                s.legend_highlight_swatch_fill_index,
+                len(s.density_fill_hex) - 1,
             ),
         )
         items.append(
             (
-                FAMILY_MAP_HIGHLIGHT_STROKE_HEX,
-                FAMILY_MAP_DENSITY_FILL_HEX[sw_i],
+                s.highlight_stroke_hex,
+                s.density_fill_hex[sw_i],
                 f"Highlight: {hl}",
             )
         )
@@ -146,12 +144,13 @@ def build_family_composition_folium_map(
 
     loc_fn = location_page_url_fn or (lambda _lid: None)
     sp_fn = species_url_fn or (lambda _c: None)
+    style = active_family_map_colour_scheme()
 
     # Draw non-highlighted first, then highlighted so highlights sit on top.
     normal = [p for p in pin_list if not p.highlight_match]
     highlighted = [p for p in pin_list if p.highlight_match]
     for pin in normal + highlighted:
-        fill, stroke, sw = family_map_marker_style(pin)
+        fill, stroke, sw = family_map_marker_style(pin, style=style)
         url_map: dict[str, str] = {}
         for line in pin.common_name_lines:
             u = sp_fn(line)
@@ -165,13 +164,13 @@ def build_family_composition_folium_map(
         popup_body = f'<div class="pebird-map-popup">{inner}</div>'
         folium.CircleMarker(
             location=(pin.latitude, pin.longitude),
-            radius=FAMILY_MAP_CIRCLE_MARKER_RADIUS_PX,
+            radius=style.circle_marker_radius_px,
             color=stroke,
             weight=sw,
             fill=True,
             fill_color=fill,
-            fill_opacity=FAMILY_MAP_CIRCLE_MARKER_FILL_OPACITY,
-            popup=folium.Popup(popup_body, max_width=FAMILY_MAP_POPUP_MAX_WIDTH_PX),
+            fill_opacity=style.circle_marker_fill_opacity,
+            popup=folium.Popup(popup_body, max_width=style.popup_max_width_px),
         ).add_to(m)
 
     # Family-map-only initial viewport:
@@ -179,11 +178,11 @@ def build_family_composition_folium_map(
     # - never start closer than zoom 6 (allow wider zoom-out when needed)
     if pin_list:
         bounds = [[p.latitude, p.longitude] for p in pin_list]
-        pad = int(FAMILY_MAP_FIT_BOUNDS_PADDING_PX)
+        pad = int(style.fit_bounds_padding_px)
         m.fit_bounds(
             bounds,
             padding=(pad, pad),
-            max_zoom=int(FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM),
+            max_zoom=int(style.fit_bounds_max_zoom),
         )
 
     return m

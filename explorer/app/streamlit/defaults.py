@@ -20,6 +20,8 @@ Map code under ``explorer/`` imports cluster/pin/theme values from this module w
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster via Folium)
 # ---------------------------------------------------------------------------
@@ -65,22 +67,68 @@ MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer 
 # ---------------------------------------------------------------------------
 # Family map (Map view → **Family map**; refs #138)
 #
-# Folium ``CircleMarker`` + palette; tweak here without editing ``family_map_folium.py``.
+# Two preset **colour schemes** (same structure); flip ``FAMILY_MAP_ACTIVE_COLOUR_SCHEME``
+# between ``1`` and ``2``. Not exposed in the UI yet — edit here and reload the app.
 # ---------------------------------------------------------------------------
-FAMILY_MAP_CIRCLE_MARKER_RADIUS_PX = 7
-FAMILY_MAP_CIRCLE_MARKER_FILL_OPACITY = 0.88
-FAMILY_MAP_BASE_STROKE_WEIGHT = 2
-FAMILY_MAP_HIGHLIGHT_STROKE_HEX = "#FF7F11"
-FAMILY_MAP_HIGHLIGHT_STROKE_WEIGHT = 3
-# One fill + stroke per density band index (1 / 2–3 / 4–5 / 6+ species at location).
-FAMILY_MAP_DENSITY_FILL_HEX: tuple[str, ...] = ("#3A86FF", "#5E60CE", "#9D4EDD", "#C9184A")
-FAMILY_MAP_DENSITY_STROKE_HEX: tuple[str, ...] = ("#2F6FD1", "#4A4DA6", "#7E3EAF", "#A1143A")
-FAMILY_MAP_POPUP_MAX_WIDTH_PX = 320
-# Initial viewport: ``fit_bounds`` padding (px) and max zoom when fitting (never start closer than this).
-FAMILY_MAP_FIT_BOUNDS_PADDING_PX = 48
-FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM = 6
-# Legend “highlight” swatch uses this band’s fill next to the orange ring.
-FAMILY_MAP_LEGEND_HIGHLIGHT_SWATCH_FILL_INDEX = 0
+
+
+@dataclass(frozen=True)
+class FamilyMapColourScheme:
+    """All Folium family-map tunables (colours, sizes, strokes, viewport, legend)."""
+
+    circle_marker_radius_px: int
+    circle_marker_fill_opacity: float
+    base_stroke_weight: int
+    highlight_stroke_hex: str
+    highlight_stroke_weight: int
+    density_fill_hex: tuple[str, ...]
+    density_stroke_hex: tuple[str, ...]
+    popup_max_width_px: int
+    fit_bounds_padding_px: int
+    fit_bounds_max_zoom: int
+    legend_highlight_swatch_fill_index: int
+
+
+# Scheme 1 — current default look (edit freely).
+_FAMILY_MAP_SCHEME_VALUES = dict(
+    circle_marker_radius_px=6,
+    circle_marker_fill_opacity=0.9,
+    base_stroke_weight=2,
+    highlight_stroke_hex="#2EC4B6",
+    highlight_stroke_weight=2,
+    density_fill_hex=(
+        "#E57373",
+        "#C62828",
+        "#8B0000",
+        "#4A0000",
+    ),
+    density_stroke_hex=(
+        "#B55252",
+        "#8E1B1B",
+        "#5A0000",
+        "#2A0000",
+    ),
+    popup_max_width_px=320,
+    fit_bounds_padding_px=48,
+    fit_bounds_max_zoom=6,
+    legend_highlight_swatch_fill_index=0,
+)
+
+FAMILY_MAP_COLOUR_SCHEME_1 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_VALUES)
+# Scheme 2 — duplicate of scheme 1 until you diverge it for experiments.
+FAMILY_MAP_COLOUR_SCHEME_2 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_VALUES)
+
+# Set to ``1`` or ``2`` to select ``FAMILY_MAP_COLOUR_SCHEME_1`` / ``FAMILY_MAP_COLOUR_SCHEME_2``.
+FAMILY_MAP_ACTIVE_COLOUR_SCHEME: int = 2
+
+
+def active_family_map_colour_scheme() -> FamilyMapColourScheme:
+    """Return the active family-map style bundle (refs #138)."""
+    n = int(FAMILY_MAP_ACTIVE_COLOUR_SCHEME)
+    if n == 2:
+        return FAMILY_MAP_COLOUR_SCHEME_2
+    return FAMILY_MAP_COLOUR_SCHEME_1
+
 
 # ---------------------------------------------------------------------------
 # Layout / theme (Streamlit-only)
