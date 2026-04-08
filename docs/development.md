@@ -118,6 +118,15 @@ Streamlit UI
 
 ## Data
 
+## Imports and layering (discoverability)
+
+- **Prefer explicit submodule imports in new code**: e.g. `from explorer.core.stats import yearly_summary_stats`.
+- Treat `explorer.core` (the package entry module `explorer/core/__init__.py`) as a **compatibility barrel**.
+  It re-exports some presentation helpers and uses **lazy imports** for optional heavy stacks.
+- If your IDE can’t jump to definitions for lazy names, import from the defining module directly
+  (for example `explorer.presentation.map_renderer`) or search for the name in
+  `explorer/core/__init__.py` under `_LAZY_IMPORTS`.
+
 - Dataset is static during runtime
 - No mutation of main dataframe
 - Rebuild working sets when filtering

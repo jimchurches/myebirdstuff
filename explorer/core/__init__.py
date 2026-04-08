@@ -32,7 +32,34 @@ Optional heavy stacks (Whoosh, Folium) load only when lazy names are accessed.
 from __future__ import annotations
 
 import importlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+# IDE / static-analysis friendliness:
+# ``explorer.core`` exposes some symbols lazily via ``__getattr__``. At runtime this keeps optional
+# stacks (Folium, Whoosh) from being imported unless needed, but some editors cannot “jump to
+# definition” for lazy names. The TYPE_CHECKING block below makes those names visible to type
+# checkers and many IDEs without changing runtime imports.
+if TYPE_CHECKING:  # pragma: no cover
+    from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
+    from explorer.core.species_search import whoosh_common_name_suggestions
+    from explorer.presentation.checklist_stats_display import (
+        format_checklist_stats_bundle,
+        format_rankings_tab_html,
+    )
+    from explorer.presentation.map_renderer import (
+        build_all_species_banner_html,
+        build_legend_html,
+        build_location_popup_html,
+        build_species_banner_html,
+        build_visit_info_html,
+        classify_locations,
+        create_map,
+        format_sighting_row,
+        format_visit_time,
+        pin_legend_item,
+        popup_scroll_script,
+        resolve_lifer_last_seen,
+    )
 
 from explorer.core.constants import (
     COUNTRY_TAB_SORT_ALPHABETICAL,
