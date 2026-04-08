@@ -28,12 +28,20 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY,
 )
 
-_COUNTRY_TAB_EXTRA_CSS = """
+_COUNTRY_TAB_EXTRA_CSS = (
+    """
 .streamlit-checklist-html-ab .stats-links-row { margin: 0 0 0.65rem; line-height: 1.45; }
 .streamlit-checklist-html-ab .stats-links-row a { font-weight: 500; }
 .streamlit-checklist-html-ab .stats-link-sep { opacity: 0.55; padding: 0 0.15em; }
 .streamlit-checklist-html-ab .stats-link-icon { opacity: 0.85; }
 """
+    + f"""
+/* Country picker: cap width on very wide viewports (table below uses ~min(68rem); refs #132). */
+section[data-testid="stMain"] div.st-key-{STREAMLIT_COUNTRY_TAB_COUNTRY_KEY} {{
+  max-width: min(36rem, 100%);
+}}
+"""
+)
 
 # Set by ``app.py`` on every full script run so ``@st.fragment`` partial reruns still see the payload.
 
@@ -61,13 +69,16 @@ def render_country_stats_streamlit_html(
     if cur not in keys:
         st.session_state[STREAMLIT_COUNTRY_TAB_COUNTRY_KEY] = keys[0]
 
-    selected = st.selectbox(
-        "Country for statistics",
-        options=keys,
-        format_func=country_display_name_plain,
-        key=STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
-        label_visibility="collapsed",
-    )
+    # Narrow column so the picker does not stretch full width; ratio keeps it responsive (refs #132).
+    _sel_col, _ = st.columns([2, 5], gap="small")
+    with _sel_col:
+        selected = st.selectbox(
+            "Country for statistics",
+            options=keys,
+            format_func=country_display_name_plain,
+            key=STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
+            label_visibility="collapsed",
+        )
 
     section_by_key = {ck: (ys, rs) for ck, ys, rs in valid}
     years_list, rows = section_by_key[selected]
