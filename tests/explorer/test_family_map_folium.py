@@ -79,6 +79,20 @@ def test_build_family_composition_folium_map_html_contains_markers():
     assert "maxZoom" in html and "6" in html
 
 
+def test_family_map_banner_percent_omits_when_taxonomy_total_is_zero():
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="X",
+            total_species_taxonomy=0,
+            species_recorded_user=3,
+            locations_with_records=1,
+        )
+    )
+    assert "0 in taxonomy" in banner
+    assert "3 recorded" in banner
+    assert "%" not in banner
+
+
 def test_build_family_map_empty_pins_still_returns_map():
     m = build_family_composition_folium_map(())
     html = m._repr_html_()

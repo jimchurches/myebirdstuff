@@ -96,6 +96,8 @@ def prepare_family_map_work_frame(
     fam_series = work["_base"].map(lambda b: base_to_family.get(b))
     work["_family"] = fam_series
     work = work[work["_family"].notna()].copy()
+    # Treat empty/whitespace family names as missing (taxonomy-backed map only).
+    work = work[work["_family"].astype(str).str.strip() != ""].copy()
     work = work[work["_family"].astype(str).str.strip() != UNMAPPED_FAMILY_LABEL].copy()
     return work
 
