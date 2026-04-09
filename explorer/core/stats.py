@@ -714,6 +714,38 @@ def rankings_not_seen_recently(df_obs, reference_date=None):
     return rows
 
 
+def rankings_not_seen_recently_in_country(df_obs, cl, country_key, reference_date=None):
+    """Countable species whose last observation *in this country* was before the past 12 months.
+
+    Uses the same checklist → country key mapping as :func:`country_summary_stats` /
+    :func:`checklist_country_keys` (``Country`` column, else ``State/Province``). Only
+    observation rows whose checklist falls in *country_key* are considered when finding
+    each species’ last seen date.
+
+    Returns the same row shape as :func:`rankings_not_seen_recently`. Empty when
+    *country_key* is missing or ``_UNKNOWN``.
+    """
+    if (
+        df_obs.empty
+        or cl.empty
+        or not country_key
+        or country_key == "_UNKNOWN"
+        or "Submission ID" not in df_obs.columns
+        or "Submission ID" not in cl.columns
+    ):
+        return []
+    cl2 = cl.dropna(subset=["Date"]).copy()
+    if cl2.empty:
+        return []
+    ck_series = checklist_country_keys(cl2)
+    cl2 = cl2.copy()
+    cl2["_country_key"] = ck_series
+    sid_map = cl2.drop_duplicates(subset=["Submission ID"]).set_index("Submission ID")["_country_key"]
+    obs_key = df_obs["Submission ID"].map(sid_map)
+    sub = df_obs[obs_key == country_key].copy()
+    return rankings_not_seen_recently(sub, reference_date=reference_date)
+
+
 # ---------------------------------------------------------------------------
 # Rankings orchestrator
 # ---------------------------------------------------------------------------

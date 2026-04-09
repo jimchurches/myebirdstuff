@@ -17,6 +17,7 @@ from explorer.core.stats import (
     rankings_seen_once,
     rankings_by_visits,
     rankings_not_seen_recently,
+    rankings_not_seen_recently_in_country,
     rankings_high_counts,
 )
 
@@ -383,6 +384,40 @@ class TestRankingsNotSeenRecently:
         rows = rankings_not_seen_recently(df, reference_date=ref)
         assert len(rows) == 1
         assert "S_new" in rows[0][1]
+
+
+class TestRankingsNotSeenRecentlyInCountry:
+    def test_empty_and_unknown_country(self):
+        df = _obs_df([{"Date": pd.Timestamp("2020-01-01")}])
+        cl = df.drop_duplicates(subset=["Submission ID"])
+        assert rankings_not_seen_recently_in_country(pd.DataFrame(), cl, "AU") == []
+        assert rankings_not_seen_recently_in_country(df, cl, "_UNKNOWN") == []
+
+    def test_uses_last_seen_in_country_not_global(self):
+        """Global list can exclude a species (recent abroad); country list uses in-country dates only."""
+        ref = pd.Timestamp("2025-06-01")
+        df = _obs_df([
+            {
+                "Common Name": "Grey Teal",
+                "Scientific Name": "Anas gracilis",
+                "Submission ID": "S_US",
+                "Date": pd.Timestamp("2025-01-01"),
+                "Country": "US",
+            },
+            {
+                "Common Name": "Grey Teal",
+                "Scientific Name": "Anas gracilis",
+                "Submission ID": "S_AU",
+                "Date": pd.Timestamp("2020-01-01"),
+                "Country": "AU",
+            },
+        ])
+        cl = df.drop_duplicates(subset=["Submission ID"])
+        assert rankings_not_seen_recently(df, reference_date=ref) == []
+        au_rows = rankings_not_seen_recently_in_country(df, cl, "AU", reference_date=ref)
+        assert len(au_rows) == 1
+        assert au_rows[0][0] == "Grey Teal"
+        assert "S_AU" in au_rows[0][1]
 
 
 # ---------------------------------------------------------------------------
