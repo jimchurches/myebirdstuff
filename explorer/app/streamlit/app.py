@@ -216,7 +216,6 @@ def main() -> None:
     mark_last_seen = bool(st.session_state.streamlit_mark_last_seen)
 
     title_with_logo()
-    st.markdown("Your eBird data, made visible, navigable, and ready to explore")
 
     # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``). Keyed lazy tabs existed only for Family Lists
     # “main tab” session bookkeeping; the Families flow now relies on dataframe selection only (refs #73).
