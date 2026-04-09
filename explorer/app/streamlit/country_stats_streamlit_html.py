@@ -28,12 +28,32 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY,
 )
 
-_COUNTRY_TAB_EXTRA_CSS = """
+_COUNTRY_TAB_EXTRA_CSS = (
+    """
 .streamlit-checklist-html-ab .stats-links-row { margin: 0 0 0.65rem; line-height: 1.45; }
 .streamlit-checklist-html-ab .stats-links-row a { font-weight: 500; }
 .streamlit-checklist-html-ab .stats-link-sep { opacity: 0.55; padding: 0 0.15em; }
 .streamlit-checklist-html-ab .stats-link-icon { opacity: 0.85; }
 """
+    + f"""
+/* Country picker: cap width on very wide viewports (table below uses ~min(68rem); refs #132). */
+section[data-testid="stMain"] div.st-key-{STREAMLIT_COUNTRY_TAB_COUNTRY_KEY} {{
+  max-width: min(36rem, 100%);
+}}
+"""
+)
+
+# Inset below the tab strip for the first control (dropdown / info), similar to Settings tab rhythm (#132).
+_COUNTRY_TAB_TOP_SPACER_REM = 0.85
+
+
+def _country_tab_top_spacer() -> None:
+    """Thin vertical gap so the Country tab does not sit flush like Map/table tabs (refs #132)."""
+    h = f"{_COUNTRY_TAB_TOP_SPACER_REM}rem"
+    st.html(
+        f'<div style="height:{h};min-height:{h};flex-shrink:0" aria-hidden="true"></div>'
+    )
+
 
 # Set by ``app.py`` on every full script run so ``@st.fragment`` partial reruns still see the payload.
 
@@ -45,6 +65,7 @@ def render_country_stats_streamlit_html(
 ) -> None:
     """Per-country yearly statistics table; ordering from *country_sort*."""
     inject_streamlit_checklist_css(_COUNTRY_TAB_EXTRA_CSS)
+    _country_tab_top_spacer()
 
     if payload is None or not payload.country_sections:
         st.info("No country data to show. Add **Country** or **State/Province** to your eBird export.")
@@ -61,13 +82,16 @@ def render_country_stats_streamlit_html(
     if cur not in keys:
         st.session_state[STREAMLIT_COUNTRY_TAB_COUNTRY_KEY] = keys[0]
 
-    selected = st.selectbox(
-        "Country for statistics",
-        options=keys,
-        format_func=country_display_name_plain,
-        key=STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
-        label_visibility="hidden",
-    )
+    # Narrow column so the picker does not stretch full width; ratio keeps it responsive (refs #132).
+    _sel_col, _ = st.columns([2, 5], gap="small")
+    with _sel_col:
+        selected = st.selectbox(
+            "Country for statistics",
+            options=keys,
+            format_func=country_display_name_plain,
+            key=STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
+            label_visibility="collapsed",
+        )
 
     section_by_key = {ck: (ys, rs) for ck, ys, rs in valid}
     years_list, rows = section_by_key[selected]

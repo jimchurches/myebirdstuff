@@ -19,23 +19,35 @@ from explorer.app.streamlit.app_map_ui import sidebar_footer_links
 
 _APP_LOGO_SVG = Path(REPO_ROOT) / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
 
+APP_TAGLINE = "Your eBird data, made visible, navigable, and ready to explore"
+
 
 def title_with_logo() -> None:
-    """App heading: title + logo in one compact row (flex), logo beside text—not full-width columns."""
+    """App heading: title + tagline stacked on the left, logo top-right—row height follows text, not the image."""
     if _APP_LOGO_SVG.is_file():
         b64 = base64.b64encode(_APP_LOGO_SVG.read_bytes()).decode("ascii")
+        tagline_esc = (
+            APP_TAGLINE.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
         st.html(
-            "<div style='display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;"
-            "gap:0.75rem;margin:0;padding:0 0 0.2rem 0;'>"
+            "<div style='display:flex;flex-direction:row;align-items:flex-start;justify-content:space-between;"
+            "flex-wrap:wrap;column-gap:0.75rem;row-gap:0.35rem;margin:0;padding:0 0 0.5rem 0;'>"
+            "<div style='flex:1;min-width:min(100%,12rem);margin:0;padding:0;'>"
             "<h1 style='margin:0;padding:0;font-size:clamp(1.35rem,3.5vw,2.25rem);"
             "line-height:1.15;font-weight:600;'>Personal eBird Explorer</h1>"
-            f"<img src='data:image/svg+xml;base64,{b64}' alt='' width='77' "
-            "style='width:77px;max-width:min(77px,18vw);height:auto;display:block;"
-            "margin:0 0 0 77px;flex-shrink:0;'/>"
+            "<p style='margin:0.25rem 0 0 0;padding:0;font-size:1rem;line-height:1.45;"
+            "color:rgb(49,51,63);'>"
+            f"{tagline_esc}</p></div>"
+            f"<img src='data:image/svg+xml;base64,{b64}' alt='' width='64' "
+            "style='width:64px;max-width:min(64px,16vw);height:auto;display:block;margin:0.15rem 0 0 0;"
+            "flex-shrink:0;'/>"
             "</div>"
         )
     else:
         st.title("Personal eBird Explorer")
+        st.markdown(APP_TAGLINE)
 
 
 def load_dataframe_after_landing(
@@ -56,7 +68,6 @@ def load_dataframe_after_landing(
     if df_full is None:
         with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
             title_with_logo()
-            st.markdown("Your eBird data, made visible, navigable, and ready to explore")
             st.markdown("Upload your **My eBird Data** CSV to open the map and tabs.")
             uploaded = st.file_uploader(
                 "eBird export (CSV)",

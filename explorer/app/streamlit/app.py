@@ -114,6 +114,9 @@ from explorer.app.streamlit.app_settings_state import (  # noqa: E402
     load_settings_yaml_via_module,
     settings_state_payload,
 )
+from explorer.app.streamlit.streamlit_theme import (  # noqa: E402
+    inject_main_tab_panel_top_compact_css,
+)
 from explorer.app.streamlit.checklist_stats_streamlit_html import (  # noqa: E402
     run_checklist_stats_streamlit_fragment,
 )
@@ -213,7 +216,6 @@ def main() -> None:
     mark_last_seen = bool(st.session_state.streamlit_mark_last_seen)
 
     title_with_logo()
-    st.markdown("Your eBird data, made visible, navigable, and ready to explore")
 
     # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``). Keyed lazy tabs existed only for Family Lists
     # “main tab” session bookkeeping; the Families flow now relies on dataframe selection only (refs #73).
@@ -226,6 +228,8 @@ def main() -> None:
         tab_maint,
         tab_settings,
     ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
+
+    inject_main_tab_panel_top_compact_css()
 
     render_prep_spinner_and_map_tab(
         tab_map=tab_map,

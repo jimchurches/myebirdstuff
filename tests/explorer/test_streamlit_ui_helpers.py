@@ -372,12 +372,14 @@ def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_st
     st = streamlit_stub
     st.session_state.clear()
     ensure_streamlit_map_basemap_height_keys()
-    assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
+    assert st.session_state["streamlit_map_basemap_saved"] == MAP_BASEMAP_DEFAULT
+    assert st.session_state["streamlit_map_basemap"] == "__default__"
+    assert st.session_state["streamlit_map_height_px_saved"] == MAP_HEIGHT_PX_DEFAULT
     assert st.session_state["streamlit_map_height_px"] == MAP_HEIGHT_PX_DEFAULT
 
     st.session_state["streamlit_map_basemap"] = "__not_a_real_basemap__"
     ensure_streamlit_map_basemap_height_keys()
-    assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
+    assert st.session_state["streamlit_map_basemap"] == "__default__"
 
 
 def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
@@ -417,10 +419,10 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
 
     from explorer.app.streamlit import streamlit_theme
 
-    streamlit_stub.markdown_calls.clear()
+    streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css()
-    assert streamlit_stub.markdown_calls
-    style_blob = streamlit_stub.markdown_calls[-1][0][0]
+    assert streamlit_stub.html_calls
+    style_blob = streamlit_stub.html_calls[-1]
     assert "<style>" in style_blob
     assert CHECKLIST_STATS_TABLE_CSS in style_blob
     assert streamlit_theme.CHECKLIST_STATS_HTML_TAB_SURFACE_CSS in style_blob
@@ -438,10 +440,23 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
 def test_inject_streamlit_checklist_css_appends_extra_css(streamlit_stub) -> None:
     from explorer.app.streamlit import streamlit_theme
 
-    streamlit_stub.markdown_calls.clear()
+    streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css("/*extra-tab*/")
-    style_blob = streamlit_stub.markdown_calls[-1][0][0]
+    style_blob = streamlit_stub.html_calls[-1]
     assert "/*extra-tab*/" in style_blob
+
+
+def test_inject_main_tab_panel_top_compact_css_emits_selectors(streamlit_stub) -> None:
+    from explorer.app.streamlit import streamlit_theme
+
+    streamlit_stub.html_calls.clear()
+    streamlit_theme.inject_main_tab_panel_top_compact_css()
+    assert streamlit_stub.html_calls
+    blob = streamlit_stub.html_calls[-1]
+    assert "<style>" in blob and "</style>" in blob
+    assert '[data-baseweb="tab-panel"]' in blob
+    assert 'div[role="tabpanel"]' in blob
+    assert "padding-top:" in blob
 
 
 def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) -> None:

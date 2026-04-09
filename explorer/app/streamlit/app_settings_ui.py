@@ -47,6 +47,12 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_LIFER_FILL_KEY,
     STREAMLIT_LAST_SEEN_COLOR_KEY,
     STREAMLIT_LAST_SEEN_FILL_KEY,
+    STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY,
+    STREAMLIT_MAP_BASEMAP_SAVED_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
@@ -75,6 +81,15 @@ from explorer.app.streamlit.app_settings_state import (
     settings_taxonomy_help_markdown,
     write_settings_yaml_via_module,
 )
+from explorer.app.streamlit.defaults import (
+    MAP_BASEMAP_DEFAULT,
+    MAP_BASEMAP_LABELS,
+    MAP_BASEMAP_OPTIONS,
+    MAP_HEIGHT_PX_DEFAULT,
+    MAP_HEIGHT_PX_MAX,
+    MAP_HEIGHT_PX_MIN,
+    MAP_HEIGHT_PX_STEP,
+)
 
 
 def render_settings_tab(
@@ -102,8 +117,23 @@ def render_settings_tab(
                         settings_yaml_path, settings_state_payload()
                     )
                     if ok:
+                        # Keep sidebar runtime controls in sync only after Save.
+                        st.session_state[STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY] = "__default__"
+                        st.session_state[STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY] = int(
+                            st.session_state.get(
+                                STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+                                st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_KEY, MAP_HEIGHT_PX_DEFAULT),
+                            )
+                        )
+                        st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY] = bool(
+                            st.session_state.get(
+                                STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
+                                st.session_state.get(STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY, True),
+                            )
+                        )
                         st.session_state[SETTINGS_BASELINE_KEY] = settings_state_payload()
                         st.session_state[SETTINGS_FLASH_SAVE_KEY] = True
+                        st.rerun()
                     else:
                         st.error(err or "Failed to save settings.")
             with b2:
@@ -145,6 +175,20 @@ def render_settings_tab(
             return MAP_PIN_COLOUR_ALLOWLIST.index(cur) if cur in MAP_PIN_COLOUR_ALLOWLIST else 0
 
         with st.form("ebird_map_settings_batch"):
+            basemap_default_w = st.selectbox(
+                "Basemap — default",
+                options=list(MAP_BASEMAP_OPTIONS),
+                format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
+                index=list(MAP_BASEMAP_OPTIONS).index(
+                    st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_DEFAULT)
+                    if st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_DEFAULT)
+                    in MAP_BASEMAP_OPTIONS
+                    else MAP_BASEMAP_DEFAULT
+                ),
+                help=(
+                    "Your default map background. The Map sidebar can temporarily override this for the current session."
+                ),
+            )
             mark_lifer_w = st.toggle(
                 "Mark lifer",
                 value=bool(st.session_state.get(STREAMLIT_MARK_LIFER_KEY, True)),
@@ -167,6 +211,18 @@ def render_settings_tab(
                     "Species and lifer maps always show one pin per location. "
                     "This value is written to your config when you **Save settings** and used on the next load. "
                     "**Apply map settings** also updates the map now. Use the **Map** sidebar for a session-only toggle."
+                ),
+            )
+            map_height_default_w = st.slider(
+                "Map height (px)",
+                min_value=MAP_HEIGHT_PX_MIN,
+                max_value=MAP_HEIGHT_PX_MAX,
+                value=int(
+                    st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY, MAP_HEIGHT_PX_DEFAULT)
+                ),
+                step=MAP_HEIGHT_PX_STEP,
+                help=(
+                    "Saved default map height. The Map sidebar slider remains a quick session-only override."
                 ),
             )
             popup_sort_w = st.selectbox(
@@ -226,6 +282,10 @@ def render_settings_tab(
             apply_map = st.form_submit_button("Apply map settings", width="stretch")
 
         if apply_map:
+            st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = str(basemap_default_w)
+            st.session_state[STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY] = "__default__"
+            st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = int(map_height_default_w)
+            st.session_state[STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY] = int(map_height_default_w)
             st.session_state[STREAMLIT_MARK_LIFER_KEY] = bool(mark_lifer_w)
             st.session_state[STREAMLIT_MARK_LAST_SEEN_KEY] = bool(mark_last_seen_w)
             _cl = bool(cluster_all_locations_w)

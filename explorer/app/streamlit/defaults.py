@@ -98,7 +98,7 @@ _FAMILY_MAP_SCHEME_1_VALUES = dict(
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
-    highlight_stroke_hex="#2EC4B6",
+    highlight_stroke_hex="#14667B",
     highlight_stroke_weight=2,
     density_fill_hex=(
         "#E57373",

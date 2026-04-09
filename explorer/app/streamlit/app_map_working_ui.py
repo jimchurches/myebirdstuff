@@ -27,11 +27,13 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_SEARCH_KEY,
     SESSION_SPECIES_WS_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
+    STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_DATE_FILTER_KEY,
     STREAMLIT_MAP_DATE_RANGE_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_VIEW_LABEL_KEY,
+    SESSION_PREV_EFFECTIVE_BASEMAP_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_SPECIES_HIDE_ONLY_KEY,
@@ -47,6 +49,8 @@ from explorer.app.streamlit.app_map_ui import (
     species_searchbox_fragment,
 )
 from explorer.app.streamlit.app_settings_state import apply_pending_map_cluster_toggle
+from explorer.app.streamlit.app_settings_state import apply_pending_map_basemap_override
+from explorer.app.streamlit.app_settings_state import apply_pending_map_height_override
 from explorer.app.streamlit.defaults import (
     FAMILY_MAP_COLOUR_SCHEME_1,
     FAMILY_MAP_COLOUR_SCHEME_2,
@@ -103,24 +107,19 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     ensure_streamlit_map_basemap_height_keys()
 
     apply_pending_map_cluster_toggle(st.session_state)
+    apply_pending_map_basemap_override(st.session_state)
+    apply_pending_map_height_override(st.session_state)
 
     inject_spinner_theme_css()
     inject_sidebar_control_label_css()
 
     with st.sidebar:
         st.header("Map")
-
-        map_style = st.selectbox(
-            "Basemap",
-            options=list(MAP_BASEMAP_OPTIONS),
-            format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
-            key=STREAMLIT_MAP_BASEMAP_KEY,
-            on_change=_on_basemap_changed,
-        )
-        st.markdown(
-            '<div style="height:0.65rem" aria-hidden="true"></div>',
-            unsafe_allow_html=True,
-        )
+        saved_basemap = st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_OPTIONS[0])
+        if saved_basemap not in MAP_BASEMAP_OPTIONS:
+            saved_basemap = MAP_BASEMAP_OPTIONS[0]
+        override = st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY, "__default__")
+        map_style = override if override in MAP_BASEMAP_OPTIONS else saved_basemap
 
         map_view_label = st.selectbox(
             "Map view",
@@ -132,9 +131,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         is_family_view = map_view_mode == "families"
 
         if is_lifer_view:
-            st.caption("Lifer locations are not date-filtered.")
-            if st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT):
-                st.caption("Your date filter is preserved for other map views.")
             st.toggle(
                 "Show subspecies lifers",
                 key=STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
@@ -195,7 +191,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             if date_filter_on_effective and date_range_sel is not None:
                 st.session_state[PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
 
-        if not is_family_view:
+        if map_view_mode == "all":
             st.toggle(
                 "Group nearby pins",
                 key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
@@ -335,13 +331,31 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
 
     with st.sidebar:
         st.divider()
+        with st.expander("Basemap", expanded=False):
+            st.selectbox(
+                "Basemap",
+                options=["__default__"] + list(MAP_BASEMAP_OPTIONS),
+                format_func=lambda k: (
+                    f"Use default ({MAP_BASEMAP_LABELS.get(saved_basemap, saved_basemap)})"
+                    if k == "__default__"
+                    else MAP_BASEMAP_LABELS.get(k, k)
+                ),
+                key=STREAMLIT_MAP_BASEMAP_KEY,
+                on_change=_on_basemap_changed,
+            )
         map_height = st.slider(
             "Map height (px)",
             min_value=MAP_HEIGHT_PX_MIN,
             max_value=MAP_HEIGHT_PX_MAX,
             step=MAP_HEIGHT_PX_STEP,
             key=STREAMLIT_MAP_HEIGHT_PX_KEY,
+            help="Session-only quick adjust. Set a saved default under Settings -> Map display.",
         )
+
+    prev_effective = st.session_state.get(SESSION_PREV_EFFECTIVE_BASEMAP_KEY)
+    if prev_effective != map_style:
+        st.session_state[SESSION_PREV_EFFECTIVE_BASEMAP_KEY] = map_style
+        invalidate_folium_map_embed_cache()
 
     if _prev_mv is not None and _prev_mv != map_view_mode:
         st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
