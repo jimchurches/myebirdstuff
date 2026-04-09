@@ -6,7 +6,7 @@ Computes numeric summaries and ranking inputs only; presentation layers build HT
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -16,6 +16,7 @@ from explorer.core.stats import (
     compute_rankings,
     country_summary_stats,
     longest_streak,
+    rankings_not_seen_recently_in_country,
     safe_count,
     yearly_summary_stats,
 )
@@ -97,6 +98,7 @@ class ChecklistStatsPayload:
     yearly_rows: List[Tuple[str, List[str]]]
     incomplete_by_year: Dict[Any, Any]
     country_sections: List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]]
+    country_not_seen_recently: Dict[str, List[Any]] = field(default_factory=dict)
 
 
 def compute_checklist_stats_payload(
@@ -224,6 +226,12 @@ def compute_checklist_stats_payload(
     )
     country_sections = country_summary_stats(df, cl)
 
+    country_not_seen_recently: Dict[str, List[Any]] = {}
+    for ck, ys, rs in country_sections:
+        if not ys or not rs or ck == "_UNKNOWN":
+            continue
+        country_not_seen_recently[ck] = rankings_not_seen_recently_in_country(df, cl, ck)
+
     return ChecklistStatsPayload(
         n_checklists=n_checklists,
         n_species=n_species,
@@ -259,4 +267,5 @@ def compute_checklist_stats_payload(
         yearly_rows=yearly_rows,
         incomplete_by_year=incomplete_by_year,
         country_sections=country_sections,
+        country_not_seen_recently=country_not_seen_recently,
     )

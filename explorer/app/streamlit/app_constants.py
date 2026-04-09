@@ -142,6 +142,9 @@ STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY = "streamlit_country_yearly_show_full"
 
 # Country selectbox key.
 STREAMLIT_COUNTRY_TAB_COUNTRY_KEY = "streamlit_country_tab_country"
+# Country tab: not-seen-recently block — wrapper constrains width; expander key is inner (refs #108).
+STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY = "streamlit_country_not_seen_wrap"
+STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY = "streamlit_country_not_seen_expander"
 
 # Settings/table/list/toggle keys (all used as ``key=...`` or ``st.session_state[...]``).
 STREAMLIT_POPUP_SORT_ORDER_KEY = "streamlit_popup_sort_order"
