@@ -48,7 +48,6 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_map_ui import (
     ensure_streamlit_map_basemap_height_keys,
-    inject_sidebar_control_label_css,
     inject_spinner_theme_css,
     species_searchbox_fragment,
 )
@@ -70,7 +69,10 @@ from explorer.app.streamlit.map_working import (
     date_inception_to_today_default,
     streamlit_working_set_and_status,
 )
-from explorer.app.streamlit.streamlit_ui_constants import SPECIES_SEARCH_CAPTION
+from explorer.app.streamlit.streamlit_ui_constants import (
+    SPECIES_SEARCH_CAPTION,
+    SPECIES_SEARCH_HELP_EXPANDER_LABEL,
+)
 from explorer.core.species_search import (
     build_ram_species_whoosh_index,
     taxonomy_group_names_in_working_set,
@@ -118,7 +120,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     apply_pending_map_height_override(st.session_state)
 
     inject_spinner_theme_css()
-    inject_sidebar_control_label_css()
 
     with st.sidebar:
         st.header("Map")
@@ -268,7 +269,11 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
 
         with st.sidebar:
             st.markdown("**Species**")
-            st.caption(SPECIES_SEARCH_CAPTION)
+            with st.expander(SPECIES_SEARCH_HELP_EXPANDER_LABEL, expanded=False):
+                # Match Yearly Summary helper line (``st.caption`` for “Showing results…”).
+                for _para in (p.strip() for p in SPECIES_SEARCH_CAPTION.split("\n\n")):
+                    if _para:
+                        st.caption(_para)
             species_searchbox_fragment()
             hide_non_matching_locations = st.toggle(
                 "Show only selected species",
