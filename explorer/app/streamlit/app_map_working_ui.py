@@ -24,9 +24,6 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_IX_SIG_KEY,
     SESSION_SPECIES_PICK_KEY,
-    SESSION_SPECIES_GROUP_PENDING_KEY,
-    SESSION_SPECIES_GROUP_SEL_COMMIT_KEY,
-    SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
     SESSION_SPECIES_SEARCH_KEY,
     SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY,
     SESSION_SPECIES_WS_KEY,
@@ -76,7 +73,6 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 from explorer.core.species_search import (
     SPECIES_WHOOSH_INDEX_VERSION,
     build_ram_species_whoosh_index,
-    taxonomy_group_names_in_working_set,
 )
 
 
@@ -257,7 +253,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
             or DEFAULT_TAXONOMY_LOCALE
         )
-        group_names = taxonomy_group_names_in_working_set(ws.species_list, ws.name_map, tax_loc)
         _ix_sig = (
             SPECIES_WHOOSH_INDEX_VERSION,
             len(ws.species_list),
@@ -268,7 +263,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             st.session_state[SESSION_SPECIES_IX_KEY] = build_ram_species_whoosh_index(
                 ws.species_list,
                 ws.name_map,
-                taxonomy_group_names=group_names,
                 taxonomy_locale=tax_loc,
             )
             st.session_state[SESSION_SPECIES_IX_SIG_KEY] = _ix_sig
@@ -301,9 +295,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             st.session_state.pop(PERSIST_SPECIES_SCI_KEY, None)
     else:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
-        st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
-        st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
-        st.session_state.pop(SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY, None)
 
     if map_view_mode == "families":
         from explorer.app.streamlit.app_caches import cached_family_map_bundle

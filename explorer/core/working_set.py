@@ -126,7 +126,7 @@ def rebuild_working_set_from_date_filter(
         w.delete_by_query(Every())
         for common in species_list:
             sci = str(name_map.get(common, "") or "")
-            w.add_document(common_name=common, scientific_name=sci, kind="species")
+            w.add_document(common_name=common, scientific_name=sci, taxonomy_group="")
         w.commit()
 
     return WorkingSet(

@@ -8,8 +8,6 @@ from whoosh.index import create_in
 
 from explorer.core.species_search import (
     build_ram_species_whoosh_index,
-    normalize_query_for_group_filtered_mode,
-    species_in_group_search_suggestions,
     species_whoosh_schema,
     whoosh_common_name_suggestions,
     whoosh_species_suggestions,
@@ -50,61 +48,130 @@ def test_whoosh_species_suggestions_matches_scientific_name():
     assert "Grey Teal" in out2
 
 
-def test_normalize_query_for_group_filtered_mode_strips_submitted_group_row():
-    g = "Australasian Robins"
-    assert normalize_query_for_group_filtered_mode(f"{g} (group)", g) == ""
-    assert normalize_query_for_group_filtered_mode(g, g) == ""
-    assert normalize_query_for_group_filtered_mode("Flame", g) == "Flame"
-
-
-def test_species_in_group_search_suggestions_empty_query_and_filter():
-    names = ["Scarlet Robin", "Flame Robin", "Pink Robin"]
-    assert species_in_group_search_suggestions(names, "", max_options=2) == ["Flame Robin", "Pink Robin"]
-    assert species_in_group_search_suggestions(names, "scar", max_options=6) == ["Scarlet Robin"]
-    assert species_in_group_search_suggestions(names, "rob", max_options=6) == [
-        "Flame Robin",
-        "Pink Robin",
-        "Scarlet Robin",
-    ]
-
-
-def test_whoosh_species_suggestions_includes_taxonomy_group_row():
-    ix = build_ram_species_whoosh_index(
-        ["Grey Teal"],
-        {"Grey Teal": "Anas gracilis"},
-        taxonomy_group_names=["Ducks"],
-    )
-    out = whoosh_species_suggestions(ix, "duc", min_query_len=3)
-    assert "Ducks (group)" in out
-
-
-def test_whoosh_species_suggestions_restrict_taxonomy_group_token_search():
-    """After picking a group, narrowing uses Whoosh tokens (common/sci), not raw substring (#73)."""
+def test_whoosh_species_suggestions_uses_taxonomy_group_helper_weight():
     ix = create_in(tempfile.mkdtemp(), species_whoosh_schema())
     w = ix.writer()
-    grp = "Australian Treecreepers"
+    w.add_document(
+        common_name="Scarlet Robin",
+        scientific_name="Petroica boodang",
+        taxonomy_group="Australian Robins",
+    )
+    w.add_document(
+        common_name="Australian Pipit",
+        scientific_name="Anthus australis",
+        taxonomy_group="Pipits and Wagtails",
+    )
+    w.commit()
+    out = whoosh_species_suggestions(ix, "aus", min_query_len=3)
+    assert out
+    assert "Scarlet Robin" in out
+
+
+def test_whoosh_species_suggestions_has_no_synthetic_group_rows():
+    ix = create_in(tempfile.mkdtemp(), species_whoosh_schema())
+    w = ix.writer()
     w.add_document(
         common_name="Brown Treecreeper",
         scientific_name="Climacteris picumnus",
-        taxonomy_group=grp,
-        taxonomy_group_key=grp,
-        kind="species",
+        taxonomy_group="Australian Treecreepers",
     )
     w.add_document(
-        common_name="Rufous Treecreeper",
-        scientific_name="Climacteris rufa",
-        taxonomy_group=grp,
-        taxonomy_group_key=grp,
-        kind="species",
+        common_name="Australian Pipit",
+        scientific_name="Anthus australis",
+        taxonomy_group="Pipits and Wagtails",
     )
     w.commit()
-    out = whoosh_species_suggestions(
-        ix, "pic", restrict_taxonomy_group=grp, min_query_len=3
-    )
+    out = whoosh_species_suggestions(ix, "aus tree", min_query_len=3)
     assert "Brown Treecreeper" in out
-    assert "Rufous Treecreeper" not in out
+    assert all(not s.endswith(" (group)") for s in out)
 
-    cleared = whoosh_species_suggestions(
-        ix, f"{grp} (group)", restrict_taxonomy_group=grp, min_query_len=3
+
+def test_whoosh_species_suggestions_prefers_multi_token_coverage():
+    ix = create_in(tempfile.mkdtemp(), species_whoosh_schema())
+    w = ix.writer()
+    w.add_document(
+        common_name="Eastern Yellow Robin",
+        scientific_name="Eopsaltria australis",
+        taxonomy_group="Australasian Robins",
     )
-    assert set(cleared) == {"Brown Treecreeper", "Rufous Treecreeper"}
+    w.add_document(
+        common_name="Australian Pipit",
+        scientific_name="Anthus australis",
+        taxonomy_group="Pipits and Wagtails",
+    )
+    w.commit()
+    out = whoosh_species_suggestions(ix, "aus rob", min_query_len=3)
+    assert out
+    assert out[0] == "Eastern Yellow Robin"
+
+
+def test_whoosh_species_suggestions_prefers_common_name_token_over_sci_only():
+    ix = create_in(tempfile.mkdtemp(), species_whoosh_schema())
+    w = ix.writer()
+    w.add_document(
+        common_name="Eastern Yellow Robin",
+        scientific_name="Eopsaltria australis",
+        taxonomy_group="Australasian Robins",
+    )
+    w.add_document(
+        common_name="Australian Pipit",
+        scientific_name="Anthus australis",
+        taxonomy_group="Pipits and Wagtails",
+    )
+    w.commit()
+    out = whoosh_species_suggestions(ix, "austr", min_query_len=3)
+    assert out
+    assert out[0] == "Australian Pipit"
+
+
+def test_whoosh_species_suggestions_deprioritizes_spuh_sp_suffix():
+    ix = create_in(tempfile.mkdtemp(), species_whoosh_schema())
+    w = ix.writer()
+    w.add_document(
+        common_name="Australian Treecreeper sp.",
+        scientific_name="Climacteris sp.",
+        taxonomy_group="Australian Treecreepers",
+    )
+    w.add_document(
+        common_name="Brown Treecreeper",
+        scientific_name="Climacteris picumnus",
+        taxonomy_group="Australian Treecreepers",
+    )
+    w.commit()
+    out = whoosh_species_suggestions(ix, "aus tree", min_query_len=3)
+    assert out
+    assert out[0] == "Brown Treecreeper"
+
+
+def test_whoosh_species_suggestions_deprioritizes_trailing_paren_subspecies_form():
+    ix = create_in(tempfile.mkdtemp(), species_whoosh_schema())
+    w = ix.writer()
+    w.add_document(
+        common_name="Eastern Yellow Robin (Southeastern)",
+        scientific_name="Eopsaltria australis chrysorrhos",
+        taxonomy_group="Australasian Robins",
+    )
+    w.add_document(
+        common_name="Eastern Yellow Robin",
+        scientific_name="Eopsaltria australis",
+        taxonomy_group="Australasian Robins",
+    )
+    w.commit()
+    out = whoosh_species_suggestions(ix, "east yell rob", min_query_len=3)
+    assert out
+    assert out[0] == "Eastern Yellow Robin"
+
+
+def test_whoosh_species_suggestions_hyphenated_query_matches_plain_text():
+    ix = create_in(tempfile.mkdtemp(), species_whoosh_schema())
+    w = ix.writer()
+    w.add_document(
+        common_name="Noisy Scrub-bird",
+        scientific_name="Atrichornis clamosus",
+        taxonomy_group="Scrub-birds and Bowerbirds",
+    )
+    w.commit()
+    out_plain = whoosh_species_suggestions(ix, "scrub", min_query_len=3)
+    out_hyphen = whoosh_species_suggestions(ix, "scrub-bird", min_query_len=3)
+    assert "Noisy Scrub-bird" in out_plain
+    assert "Noisy Scrub-bird" in out_hyphen

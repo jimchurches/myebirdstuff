@@ -1,101 +1,89 @@
-"""
-Whoosh-backed species name suggestions for the map species picker (autocomplete-style).
+"""Whoosh-backed species suggestions for the map species picker (autocomplete-style).
 
 Pure helper with no UI imports: the app feeds suggestions into Streamlit widgets. Indexes store
-**common_name**, **scientific_name**, and per-species **taxonomy_group** tokens so global search can
-surface groups the same way as names. **taxonomy_group_key** (ID) scopes constrained search after the
-user picks a ``… (group)`` row so suggestions use the same Whoosh token logic as unrestricted search
-(refs #73).
+**common_name**, **scientific_name**, and derived per-species **taxonomy_group** text so global
+search can behave as a weighted helper (refs #73).
 """
 
 from __future__ import annotations
 
+import re
 import tempfile
 from typing import Any, Dict, List, Sequence
 
 from whoosh.analysis import StemmingAnalyzer
-from whoosh.fields import ID, Schema, TEXT
+from whoosh.fields import Schema, TEXT
 from whoosh.index import create_in
 from whoosh.qparser import MultifieldParser, OrGroup, QueryParser
-from whoosh.query import And, Every, Term
-from whoosh.sorting import FieldFacet
 
 from explorer.core.species_family import build_base_species_to_family_map
 from explorer.core.species_logic import base_species_name
 
-GROUP_ROW_SUFFIX = " (group)"
-
 # Bump when the RAM index schema or document shape changes (Streamlit map sidebar).
-SPECIES_WHOOSH_INDEX_VERSION = 2
+SPECIES_WHOOSH_INDEX_VERSION = 3
+
+# --- Map species suggestion ranking (``whoosh_species_suggestions``) ---
+# Whoosh returns a BM25-ish *base* score per document. We then add hand-tuned bonuses so behavior
+# matches “helper” expectations: prefer multi-token coverage, then visible common-name matches, then
+# scientific / taxonomy-group hints. Rough magnitudes (same unit, summed):
+#   base score        — from Whoosh (field weights + term frequency; not a fixed scale).
+#   coverage          — reward rows that match more query tokens anywhere (+/- below).
+#   common name       — small extra when a token hits **common_name** (user-visible) vs only sci/group.
+#   field hints       — starts-with / substring boosts for common, sci, taxonomy_group.
+#   length            — tiny tie-break (shorter common name).
+#   spuh-style name   — penalty when common name looks like ``… sp.`` / ``… spp.`` (still shown).
+#   trailing (…)      — subtle penalty for ``Name (Qualifier)`` (subspecies / regional eBird forms)
+#                       so nominate ``Name`` ranks slightly ahead when both match the same query.
+# Tune constants below to shift behavior without changing query logic; add tests when fixing a
+# specific ranking regression.
+RANK_COVERAGE_PER_MATCHED_TOKEN = 20.0
+RANK_COVERAGE_PER_MISSING_TOKEN = 18.0
+RANK_COMMON_STARTSWITH_FIRST_TOKEN = 30.0
+RANK_SCI_PREFIX_OR_SUBTOKEN = 22.0
+# Slightly lower than common-name substring bonus so “Australian …” in the visible name wins over
+# “Australasian …” in taxonomy_group alone for prefixes like ``austr``.
+RANK_GROUP_STARTSWITH_FIRST_TOKEN = 10.0
+RANK_GROUP_ANY_TOKEN_SUBSTRING = 8.0
+# Prefer matches users see in the picker label (mitigates e.g. *australis* ranking without “Australian” in common).
+RANK_COMMON_PER_TOKEN_SUBSTRING = 18.0
+RANK_LENGTH_TIEBREAK_PER_CHAR = 0.001
+# Deprioritize eBird-style species spuhs in the picker; does not remove them from results.
+RANK_SPUH_STYLE_COMMON_NAME_PENALTY = 52.0
+# Subtle vs spuh: nominate vs ``Eastern Yellow Robin (Southeastern)`` when both hit the same tokens.
+RANK_TRAILING_PAREN_QUALIFIER_PENALTY = 10.0
 
 
 def species_whoosh_schema() -> Schema:
-    """Schema for species autocomplete (common + scientific + group tokens) and group picker rows."""
+    """Schema for weighted species autocomplete (common + scientific + taxonomy-group)."""
     ana = StemmingAnalyzer()
     return Schema(
         common_name=TEXT(stored=True, analyzer=ana),
         scientific_name=TEXT(stored=True, analyzer=ana),
-        # Indexed group label on **species** rows for global multifield search; same on group rows.
         taxonomy_group=TEXT(stored=True, analyzer=ana),
-        # Exact eBird species-group label for post-pick filtering (ID = single token, no stemming).
-        taxonomy_group_key=ID(stored=True),
-        kind=ID(stored=True),
     )
 
 
-def taxonomy_group_names_in_working_set(
-    species_list: Sequence[str],
-    name_map: Dict[str, str],
-    taxonomy_locale: str,
-) -> List[str]:
-    """Distinct eBird species-group names that have at least one species in *species_list*.
+def _common_name_is_species_spuh_style(common: str) -> bool:
+    """True for typical eBird species-level spuh labels (``… sp.``, ``… spp.``)."""
+    c = (common or "").strip().lower()
+    return c.endswith(" sp.") or c.endswith(" spp.")
 
-    Uses the same base-species → group mapping as Rankings **Families**. Returns sorted
-    display names (excludes *Unmapped*). Empty when taxonomy cannot be loaded.
-    """
-    base_to_f = build_base_species_to_family_map(taxonomy_locale)
-    if not base_to_f:
+
+def _common_name_has_trailing_parenthetical_qualifier(common: str) -> bool:
+    """True for common names ending with a parenthetical qualifier (subspecies, regional, etc.)."""
+    c = (common or "").strip()
+    if not c or "(" not in c:
+        return False
+    return bool(re.search(r".+\([^)]+\)\s*$", c))
+
+
+def _query_tokens(raw_query: str) -> List[str]:
+    """Normalize user query into prefix-search tokens (hyphen-safe)."""
+    q = (raw_query or "").strip().lower()
+    if not q:
         return []
-    seen: set[str] = set()
-    out: list[str] = []
-    for common in species_list:
-        sci = str(name_map.get(common, "") or "")
-        base = base_species_name(sci)
-        if not base:
-            continue
-        g = base_to_f.get(base)
-        if not g or str(g).strip() == "Unmapped":
-            continue
-        gn = str(g).strip()
-        if gn not in seen:
-            seen.add(gn)
-            out.append(gn)
-    out.sort(key=str.casefold)
-    return out
-
-
-def species_common_names_in_group(
-    species_list: Sequence[str],
-    name_map: Dict[str, str],
-    taxonomy_locale: str,
-    group_name: str,
-) -> List[str]:
-    """Common names in *species_list* whose taxonomy group equals *group_name*."""
-    base_to_f = build_base_species_to_family_map(taxonomy_locale)
-    if not base_to_f:
-        return []
-    want = str(group_name).strip()
-    out: list[str] = []
-    for common in species_list:
-        sci = str(name_map.get(common, "") or "")
-        base = base_species_name(sci)
-        if not base:
-            continue
-        g = base_to_f.get(base)
-        if g and str(g).strip() == want:
-            out.append(common)
-    out.sort(key=str.casefold)
-    return out
+    # Treat punctuation (e.g. scrub-bird) as separators, not query operators.
+    return [t for t in re.findall(r"[a-z0-9]+", q) if t]
 
 
 def _common_to_taxonomy_group_key(
@@ -127,18 +115,13 @@ def build_ram_species_whoosh_index(
     species_list: Sequence[str],
     name_map: Dict[str, str],
     *,
-    taxonomy_group_names: Sequence[str] | None = None,
     taxonomy_locale: str | None = None,
 ) -> Any:
     """
     Build a small Whoosh index from unique common names and common→scientific map.
 
     When *taxonomy_locale* is set, each species row stores its eBird species-group label on
-    **taxonomy_group** / **taxonomy_group_key** so global search can match group words and
-    constrained search can filter with Whoosh (refs #73).
-
-    When *taxonomy_group_names* is non-empty, each label is indexed as a synthetic row
-    ``"{label} (group)"`` so it appears in the same type-ahead as species.
+    **taxonomy_group** so global search can give helper-style weight to family/group words.
 
     Uses a temporary directory (cleaned up by the OS); fine for Streamlit session use
     per working-set rebuild. Notebook uses a persistent temp dir with the same schema.
@@ -157,20 +140,6 @@ def build_ram_species_whoosh_index(
             common_name=common,
             scientific_name=sci,
             taxonomy_group=gkey,
-            taxonomy_group_key=gkey,
-            kind="species",
-        )
-    for g in taxonomy_group_names or ():
-        label = str(g).strip()
-        if not label:
-            continue
-        display = f"{label}{GROUP_ROW_SUFFIX}"
-        w.add_document(
-            common_name=display,
-            scientific_name=label,
-            taxonomy_group=label,
-            taxonomy_group_key=label,
-            kind="group",
         )
     w.commit()
     return ix
@@ -194,7 +163,7 @@ def whoosh_common_name_suggestions(
     q = (raw_query or "").strip().lower()
     if len(q) < min_query_len:
         return []
-    tokens = q.split()
+    tokens = _query_tokens(q)
     if not tokens:
         return []
     with whoosh_index.searcher() as searcher:
@@ -216,156 +185,32 @@ def whoosh_common_name_suggestions(
         return [r[field_name] for r in ranked[:max_options]]
 
 
-def normalize_query_for_group_filtered_mode(
-    raw_query: str,
-    selected_group_label: str,
-    *,
-    group_row_suffix: str = GROUP_ROW_SUFFIX,
-) -> str:
-    """Map searchbox text to the query used for in-group species suggestions (refs #73 Prototype 2).
-
-    After the user picks a taxonomy group, the widget often keeps the submitted row
-    ``"{label} (group)"`` in the field. That string must not be used as a filter substring or
-    no species names match — treat it (and a bare *selected_group_label* match) as **no** filter
-    so the dropdown can show the alphabetical species list.
-    """
-    want = (selected_group_label or "").strip()
-    if not want:
-        return (raw_query or "").strip()
-    t = (raw_query or "").strip()
-    if not t:
-        return ""
-    if t.casefold() == want.casefold():
-        return ""
-    if t.endswith(group_row_suffix):
-        base = t[: -len(group_row_suffix)].strip()
-        if base.casefold() == want.casefold():
-            return ""
-    return t
-
-
-def species_in_group_search_suggestions(
-    species_common_names: Sequence[str],
-    raw_query: str,
-    *,
-    max_options: int = 12,
-) -> List[str]:
-    """Filter *species_common_names* for Prototype 2 group-filtered search (refs #73).
-
-    Sorted alphabetically. Empty query returns the first *max_options* names so the dropdown is
-    usable without typing. Non-empty query keeps names whose common name contains the query
-    (case-insensitive).
-    """
-    names = sorted({str(x).strip() for x in species_common_names if str(x).strip()}, key=str.casefold)
-    q = (raw_query or "").strip().lower()
-    if not q:
-        return names[:max_options]
-    matched = [n for n in names if q in n.lower()]
-    return matched[:max_options]
-
-
 def whoosh_species_suggestions(
     whoosh_index: Any,
     raw_query: str,
     *,
     max_options: int = 12,
     min_query_len: int = 3,
-    restrict_taxonomy_group: str | None = None,
 ) -> List[str]:
     """
     Return common names matching *raw_query* across **common** and **scientific** name fields.
 
-    Global mode also searches **taxonomy_group** so tokens from the eBird species-group label
-    match species rows (and the synthetic ``… (group)`` row) in one pass.
-
-    When *restrict_taxonomy_group* is set (after the user picks a group row), only **species**
-    documents in that group are considered; the same token/prefix rules apply to common and
-    scientific names. Short queries inside a group use ``min_query_len`` of 1 so typing can
-    narrow without the global 3-character gate.
+    Also searches **taxonomy_group** so family/group terms act as a weighted helper for species
+    suggestions in a single control.
 
     Token query uses prefix matching per token (``token*``), combined with OR across fields
-    via :class:`~whoosh.qparser.MultifieldParser`. Results are ranked to prefer:
+    via :class:`~whoosh.qparser.MultifieldParser`. Ranking is documented in module constants
+    ``RANK_*`` (see :mod:`explorer.core.species_search`): Whoosh base score plus coverage,
+    a small **common-name** preference, then scientific/taxonomy-group hints and a length tie-break.
 
-    - stronger Whoosh score
-    - common name starting with the first token
-    - shorter common names (slight tie-break)
+    **Reasoning about behavior:** compare relative constant sizes — e.g. raising
+    ``RANK_COMMON_PER_TOKEN_SUBSTRING`` pulls results whose **display name** contains query
+    fragments ahead of rows that only match *Eopsaltria australis*-style scientific names.
     """
-    rg = str(restrict_taxonomy_group or "").strip()
-    if rg:
-        raw_query = normalize_query_for_group_filtered_mode(raw_query, rg)
-        eff_min = 1
-    else:
-        eff_min = min_query_len
-
     q = (raw_query or "").strip().lower()
-    if rg:
-        species_filter = And([Term("kind", "species"), Term("taxonomy_group_key", rg)])
-        with whoosh_index.searcher() as searcher:
-            if not q:
-                try:
-                    q_all = And([Every(), species_filter])
-                    results = searcher.search(
-                        q_all,
-                        limit=max_options,
-                        sortedby=FieldFacet("common_name"),
-                    )
-                except Exception:
-                    return []
-                return [r["common_name"] for r in results if r.get("common_name")]
-
-            if len(q) < eff_min:
-                return []
-            tokens = q.split()
-            if not tokens:
-                return []
-            mp = MultifieldParser(
-                ["common_name", "scientific_name"],
-                whoosh_index.schema,
-                group=OrGroup,
-            )
-            try:
-                parsed = mp.parse(" ".join(f"{t}*" for t in tokens))
-            except Exception:
-                return []
-            try:
-                combined = And([parsed, species_filter])
-                results = searcher.search(combined, limit=None)
-            except Exception:
-                return []
-
-            def rank_key(r):
-                common = (r["common_name"] or "").lower()
-                sci = (r.get("scientific_name") or "").lower()
-                base = getattr(r, "score", None)
-                if base is None:
-                    base = 100.0 - float(r.rank)
-                else:
-                    base = float(base)
-                if common.startswith(tokens[0]):
-                    base += 50.0
-                elif sci.startswith(tokens[0]) or any(
-                    sci.startswith(t) or f" {t}" in sci for t in tokens
-                ):
-                    base += 35.0
-                base -= len(common) * 0.001
-                return base
-
-            ranked = sorted(results, key=rank_key, reverse=True)
-            out: List[str] = []
-            seen: set[str] = set()
-            for r in ranked:
-                cn = r["common_name"]
-                if cn and cn not in seen:
-                    seen.add(cn)
-                    out.append(cn)
-                if len(out) >= max_options:
-                    break
-            return out
-
-    # --- global (unrestricted) ---
-    if len(q) < eff_min:
+    if len(q) < min_query_len:
         return []
-    tokens = q.split()
+    tokens = _query_tokens(q)
     if not tokens:
         return []
     fields = ["common_name", "scientific_name", "taxonomy_group"]
@@ -380,24 +225,37 @@ def whoosh_species_suggestions(
         def rank_key(r):
             common = (r["common_name"] or "").lower()
             sci = (r.get("scientific_name") or "").lower()
-            kind = (r.get("kind") or "species").strip()
+            grp = (r.get("taxonomy_group") or "").lower()
+            combined = f"{common} {sci} {grp}"
             # Base: Whoosh relevance (higher is better for BM25F default scoring)
             base = getattr(r, "score", None)
             if base is None:
                 base = 100.0 - float(r.rank)
             else:
                 base = float(base)
+            matched_tokens = sum(1 for t in tokens if t in combined)
+            # Prefer suggestions that satisfy more typed tokens, not just the first token.
+            base += matched_tokens * RANK_COVERAGE_PER_MATCHED_TOKEN
+            base -= (len(tokens) - matched_tokens) * RANK_COVERAGE_PER_MISSING_TOKEN
+            common_token_hits = sum(1 for t in tokens if t in common)
+            base += common_token_hits * RANK_COMMON_PER_TOKEN_SUBSTRING
             if common.startswith(tokens[0]):
-                base += 50.0
+                base += RANK_COMMON_STARTSWITH_FIRST_TOKEN
             elif sci.startswith(tokens[0]) or any(
                 sci.startswith(t) or f" {t}" in sci for t in tokens
             ):
-                base += 35.0
-            # Slight preference for species rows over taxonomy-group rows when scores are close
-            if kind == "group":
-                base -= 1.5
+                base += RANK_SCI_PREFIX_OR_SUBTOKEN
+            # Family/group is helper intent: boost if query tokens clearly match taxonomy group text.
+            if grp.startswith(tokens[0]):
+                base += RANK_GROUP_STARTSWITH_FIRST_TOKEN
+            if any(t in grp for t in tokens):
+                base += RANK_GROUP_ANY_TOKEN_SUBSTRING
+            if _common_name_is_species_spuh_style(r["common_name"]):
+                base -= RANK_SPUH_STYLE_COMMON_NAME_PENALTY
+            if _common_name_has_trailing_parenthetical_qualifier(r["common_name"]):
+                base -= RANK_TRAILING_PAREN_QUALIFIER_PENALTY
             # Prefer shorter display names when scores tie
-            base -= len(common) * 0.001
+            base -= len(common) * RANK_LENGTH_TIEBREAK_PER_CHAR
             return base
 
         ranked = sorted(results, key=rank_key, reverse=True)

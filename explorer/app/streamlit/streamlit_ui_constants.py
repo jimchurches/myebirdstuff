@@ -27,13 +27,10 @@ SPECIES_SEARCH_MAX_OPTIONS = 12
 SPECIES_SEARCH_MIN_QUERY_LEN = 3
 SPECIES_SEARCH_DEBOUNCE_MS = 500
 SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
-SPECIES_SEARCH_PLACEHOLDER_GROUP_FILTERED = "Type to filter species in this group…"
 # Map sidebar “Search tips” expander: paragraphs separated by blank lines; rendered with ``st.caption``.
 SPECIES_SEARCH_CAPTION = """Start typing to search for a species.
 
 You can use common names, scientific names, or bird groups (e.g. Australasian Robins).
-
-If you select a group, you'll then be able to choose a species from your data.
 
 Tip: Turning on "Show only selected species" can improve map performance."""
 # Sidebar expander title (Map → Species locations); body is SPECIES_SEARCH_CAPTION.
