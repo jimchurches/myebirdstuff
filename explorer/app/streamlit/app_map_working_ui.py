@@ -28,6 +28,7 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_GROUP_SEL_COMMIT_KEY,
     SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
     SESSION_SPECIES_SEARCH_KEY,
+    SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY,
     SESSION_SPECIES_WS_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
@@ -245,6 +246,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     _prev_mv = st.session_state.get(SESSION_PREV_MAP_VIEW_KEY)
     if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
         st.session_state.pop(SESSION_SPECIES_SEARCH_KEY, None)
+        _n = int(st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0))
+        st.session_state.pop(f"{SESSION_SPECIES_SEARCH_KEY}__v{_n}", None)
+        st.session_state.pop(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, None)
 
     if map_view_mode == "species":
         tax_loc = (

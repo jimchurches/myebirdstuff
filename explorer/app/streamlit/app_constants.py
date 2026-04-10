@@ -193,6 +193,8 @@ PERSIST_SPECIES_COMMON_KEY = "_preserve_streamlit_species_common"
 PERSIST_SPECIES_SCI_KEY = "_preserve_streamlit_species_sci"
 SESSION_PREV_MAP_VIEW_KEY = "_streamlit_prev_map_view_mode"
 SESSION_SPECIES_SEARCH_KEY = "streamlit_species_searchbox"
+# Bumped on search reset so ``st_searchbox`` remounts with an empty field (refs #73).
+SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY = "_streamlit_species_search_remount_nonce"
 SESSION_SPECIES_WS_KEY = "_ws_for_species_search_fragment"
 SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"

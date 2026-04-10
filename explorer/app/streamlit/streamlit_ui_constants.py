@@ -25,7 +25,7 @@ CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
 
 SPECIES_SEARCH_MAX_OPTIONS = 12
 SPECIES_SEARCH_MIN_QUERY_LEN = 3
-SPECIES_SEARCH_DEBOUNCE_MS = 400
+SPECIES_SEARCH_DEBOUNCE_MS = 500
 SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
 SPECIES_SEARCH_CAPTION = (
     "Type at least three letters. Searches common and scientific names, and eBird species groups "

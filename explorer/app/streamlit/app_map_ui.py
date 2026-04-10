@@ -24,12 +24,14 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
+    PERSIST_SPECIES_SCI_KEY,
     SESSION_SPECIES_GROUP_PENDING_KEY,
     SESSION_SPECIES_GROUP_SEL_COMMIT_KEY,
     SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
+    SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY,
     SESSION_SPECIES_WS_KEY,
     SIDEBAR_CONTROL_LABEL_CSS,
     SPINNER_THEME_CSS,
@@ -59,6 +61,12 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_PLACEHOLDER,
     SPECIES_SEARCH_RERUN_SCOPE,
 )
+
+
+def _species_searchbox_widget_key() -> str:
+    """Stable Streamlit widget id; nonce bumps on reset so the field remounts empty (refs #73)."""
+    n = int(st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0))
+    return f"{SESSION_SPECIES_SEARCH_KEY}__v{n}"
 
 
 def inject_map_folium_iframe_min_height_css(height_px: int) -> None:
@@ -344,11 +352,17 @@ def species_searchbox_fragment() -> None:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
         st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
         st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+        st.session_state.pop(PERSIST_SPECIES_COMMON_KEY, None)
+        st.session_state.pop(PERSIST_SPECIES_SCI_KEY, None)
+        st.session_state.pop(SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY, None)
+        st.session_state[SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY] = int(
+            st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)
+        ) + 1
         st.rerun()
 
     pick = st_searchbox(
         _search,
-        key=SESSION_SPECIES_SEARCH_KEY,
+        key=_species_searchbox_widget_key(),
         placeholder=SPECIES_SEARCH_PLACEHOLDER,
         label="Species",
         default=search_default,
@@ -359,6 +373,9 @@ def species_searchbox_fragment() -> None:
         submit_function=_on_species_submit,
         reset_function=_on_species_reset,
     )
+    ws = st.session_state.get(SESSION_SPECIES_WS_KEY)
+    valid_common = frozenset(ws.species_list) if ws is not None else frozenset()
+
     if isinstance(pick, str) and pick.endswith(GROUP_ROW_SUFFIX):
         gname = pick[: -len(GROUP_ROW_SUFFIX)].strip()
         prev_g = str(st.session_state.get(SESSION_SPECIES_GROUP_PENDING_KEY) or "").strip()
@@ -369,45 +386,51 @@ def species_searchbox_fragment() -> None:
         if gname != prev_g:
             st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
     elif pick is not None:
-        st.session_state[SESSION_SPECIES_PICK_KEY] = pick
-        st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
-        st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+        raw = pick if isinstance(pick, str) else str(pick)
+        p = raw.strip()
+        if not p:
+            st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
+            st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+            st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+        elif p in valid_common:
+            st.session_state[SESSION_SPECIES_PICK_KEY] = p
+            st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+            st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+        # Partial / invalid typing: do not assign PICK (avoids empty filter → blank map) (refs #73).
 
     pending_group = str(st.session_state.get(SESSION_SPECIES_GROUP_PENDING_KEY) or "").strip()
-    if pending_group:
-        ws = st.session_state.get(SESSION_SPECIES_WS_KEY)
-        if ws is not None:
-            tax_loc = (
-                str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
-                or DEFAULT_TAXONOMY_LOCALE
+    if pending_group and ws is not None:
+        tax_loc = (
+            str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
+            or DEFAULT_TAXONOMY_LOCALE
+        )
+        group_choices = species_common_names_in_group(
+            ws.species_list,
+            ws.name_map,
+            tax_loc,
+            pending_group,
+        )
+        if group_choices:
+            opts = [""] + group_choices
+            prev = str(st.session_state.get(SESSION_SPECIES_PICK_KEY) or "")
+            idx = opts.index(prev) if prev in opts else 0
+            st.selectbox(
+                f'Species in "{pending_group}" (your data)',
+                options=opts,
+                index=idx,
+                format_func=lambda x: "— Select a species —" if x == "" else x,
+                key=SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
             )
-            group_choices = species_common_names_in_group(
-                ws.species_list,
-                ws.name_map,
-                tax_loc,
-                pending_group,
-            )
-            if group_choices:
-                opts = [""] + group_choices
-                prev = str(st.session_state.get(SESSION_SPECIES_PICK_KEY) or "")
-                idx = opts.index(prev) if prev in opts else 0
-                st.selectbox(
-                    f'Species in "{pending_group}" (your data)',
-                    options=opts,
-                    index=idx,
-                    format_func=lambda x: "— Select a species —" if x == "" else x,
-                    key=SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
-                )
-                # ``st.rerun()`` inside ``on_change`` is a no-op in Streamlit; commit + rerun here (#73).
-                raw_sel = st.session_state.get(SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY)
-                sel = raw_sel.strip() if isinstance(raw_sel, str) else ""
-                if sel:
-                    st.session_state[SESSION_SPECIES_PICK_KEY] = sel
-                    sig = (pending_group, sel)
-                    if st.session_state.get(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY) != sig:
-                        st.session_state[SESSION_SPECIES_GROUP_SEL_COMMIT_KEY] = sig
-                        st.rerun()
-            else:
-                st.caption(f'No species from "{pending_group}" in the current filtered set.')
-                st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
-                st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+            # ``st.rerun()`` inside ``on_change`` is a no-op in Streamlit; commit + rerun here (#73).
+            raw_sel = st.session_state.get(SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY)
+            sel = raw_sel.strip() if isinstance(raw_sel, str) else ""
+            if sel:
+                st.session_state[SESSION_SPECIES_PICK_KEY] = sel
+                sig = (pending_group, sel)
+                if st.session_state.get(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY) != sig:
+                    st.session_state[SESSION_SPECIES_GROUP_SEL_COMMIT_KEY] = sig
+                    st.rerun()
+        else:
+            st.caption(f'No species from "{pending_group}" in the current filtered set.')
+            st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+            st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
