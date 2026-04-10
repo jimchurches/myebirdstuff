@@ -24,6 +24,9 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_IX_SIG_KEY,
     SESSION_SPECIES_PICK_KEY,
+    SESSION_SPECIES_GROUP_PENDING_KEY,
+    SESSION_SPECIES_GROUP_SEL_COMMIT_KEY,
+    SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
     SESSION_SPECIES_SEARCH_KEY,
     SESSION_SPECIES_WS_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
@@ -67,7 +70,10 @@ from explorer.app.streamlit.map_working import (
     streamlit_working_set_and_status,
 )
 from explorer.app.streamlit.streamlit_ui_constants import SPECIES_SEARCH_CAPTION
-from explorer.core.species_search import build_ram_species_whoosh_index
+from explorer.core.species_search import (
+    build_ram_species_whoosh_index,
+    taxonomy_group_names_in_working_set,
+)
 
 
 def invalidate_folium_map_embed_cache() -> None:
@@ -120,6 +126,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             saved_basemap = MAP_BASEMAP_OPTIONS[0]
         override = st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY, "__default__")
         map_style = override if override in MAP_BASEMAP_OPTIONS else saved_basemap
+
+        # Renamed label (was "Selected species"); keep existing sessions valid.
+        if st.session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY) == "Selected species":
+            st.session_state[STREAMLIT_MAP_VIEW_LABEL_KEY] = "Species locations"
 
         map_view_label = st.selectbox(
             "Map view",
@@ -237,10 +247,17 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         st.session_state.pop(SESSION_SPECIES_SEARCH_KEY, None)
 
     if map_view_mode == "species":
-        _ix_sig = (len(ws.species_list), st.session_state.get(EBIRD_DATA_SIG_KEY))
+        tax_loc = (
+            str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
+            or DEFAULT_TAXONOMY_LOCALE
+        )
+        group_names = taxonomy_group_names_in_working_set(ws.species_list, ws.name_map, tax_loc)
+        _ix_sig = (len(ws.species_list), st.session_state.get(EBIRD_DATA_SIG_KEY), tax_loc)
         if st.session_state.get(SESSION_SPECIES_IX_SIG_KEY) != _ix_sig:
             st.session_state[SESSION_SPECIES_IX_KEY] = build_ram_species_whoosh_index(
-                ws.species_list, ws.name_map
+                ws.species_list,
+                ws.name_map,
+                taxonomy_group_names=group_names,
             )
             st.session_state[SESSION_SPECIES_IX_SIG_KEY] = _ix_sig
         st.session_state[SESSION_SPECIES_WS_KEY] = ws
@@ -268,6 +285,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             st.session_state.pop(PERSIST_SPECIES_SCI_KEY, None)
     else:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
+        st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+        st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+        st.session_state.pop(SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY, None)
 
     if map_view_mode == "families":
         from explorer.app.streamlit.app_caches import cached_family_map_bundle

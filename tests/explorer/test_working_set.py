@@ -89,7 +89,7 @@ def test_rebuild_whoosh_index_updated():
     index_dir = tempfile.mkdtemp()
     ix = create_in(index_dir, species_whoosh_schema())
     w = ix.writer()
-    w.add_document(common_name="Old Name", scientific_name="oldus nameus")
+    w.add_document(common_name="Old Name", scientific_name="oldus nameus", kind="species")
     w.commit()
 
     ws = rebuild_working_set_from_date_filter(
@@ -105,7 +105,7 @@ def test_rebuild_whoosh_index_updated():
     with ix.searcher() as searcher:
         assert searcher.doc_count() == 1
         assert list(searcher.all_stored_fields()) == [
-            {"common_name": "Grey Teal", "scientific_name": "Anas gracilis"}
+            {"common_name": "Grey Teal", "scientific_name": "Anas gracilis", "kind": "species"}
         ]
 
 

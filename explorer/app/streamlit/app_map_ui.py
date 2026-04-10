@@ -9,17 +9,28 @@ from typing import Any
 
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit.errors import StreamlitAPIException
 
-from explorer.core.species_search import whoosh_species_suggestions
+from explorer.core.species_search import (
+    GROUP_ROW_SUFFIX,
+    species_common_names_in_group,
+    whoosh_species_suggestions,
+)
 from explorer.app.streamlit.app_constants import (
+    DEFAULT_TAXONOMY_LOCALE,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
+    SESSION_SPECIES_GROUP_PENDING_KEY,
+    SESSION_SPECIES_GROUP_SEL_COMMIT_KEY,
+    SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
+    SESSION_SPECIES_WS_KEY,
     SIDEBAR_CONTROL_LABEL_CSS,
     SPINNER_THEME_CSS,
 )
@@ -281,7 +292,11 @@ def sidebar_footer_links(*, leading_divider: bool = True) -> None:
 
 @st.fragment
 def species_searchbox_fragment() -> None:
-    """Whoosh-backed search; fragment-scoped reruns avoid greying the whole app (refs #70)."""
+    """Whoosh-backed search + optional “species in group” dropdown.
+
+    Taxonomy group picks use ``st.rerun(scope="fragment")`` so the main prep spinner and map
+    pipeline do not run until a species is chosen (refs #70, #73).
+    """
     try:
         from streamlit_searchbox import st_searchbox
     except ImportError:
@@ -294,6 +309,12 @@ def species_searchbox_fragment() -> None:
     if ix is None:
         return
     persisted = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
+    group_pending = bool(str(st.session_state.get(SESSION_SPECIES_GROUP_PENDING_KEY) or "").strip())
+    # While a taxonomy group is selected, keep the previous species on the map until the user
+    # picks from the secondary dropdown (avoids a flash to the all-locations default). Don't
+    # pre-fill the search typing field with the persisted species name during group flow (#73).
+    search_default = None if group_pending else persisted
+    search_term = "" if group_pending else (persisted or "")
 
     def _search(term: str) -> list:
         return whoosh_species_suggestions(
@@ -304,11 +325,25 @@ def species_searchbox_fragment() -> None:
         )
 
     def _on_species_submit(selected: Any) -> None:
-        st.session_state[SESSION_SPECIES_PICK_KEY] = selected
-        st.rerun()
+        if isinstance(selected, str) and selected.endswith(GROUP_ROW_SUFFIX):
+            st.session_state[SESSION_SPECIES_GROUP_PENDING_KEY] = selected[: -len(GROUP_ROW_SUFFIX)].strip()
+            st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+            # Keep SESSION_SPECIES_PICK_KEY so the map stays on the previous species until the
+            # secondary dropdown chooses a species in this group.
+            try:
+                st.rerun(scope="fragment")
+            except StreamlitAPIException:
+                st.rerun()
+        else:
+            st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+            st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+            st.session_state[SESSION_SPECIES_PICK_KEY] = selected
+            st.rerun()
 
     def _on_species_reset() -> None:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
+        st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+        st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
         st.rerun()
 
     pick = st_searchbox(
@@ -316,12 +351,63 @@ def species_searchbox_fragment() -> None:
         key=SESSION_SPECIES_SEARCH_KEY,
         placeholder=SPECIES_SEARCH_PLACEHOLDER,
         label="Species",
-        default=persisted,
-        default_searchterm=persisted or "",
+        default=search_default,
+        default_searchterm=search_term,
         debounce=SPECIES_SEARCH_DEBOUNCE_MS,
         edit_after_submit=SPECIES_SEARCH_EDIT_AFTER_SUBMIT,
         rerun_scope=SPECIES_SEARCH_RERUN_SCOPE,
         submit_function=_on_species_submit,
         reset_function=_on_species_reset,
     )
-    st.session_state[SESSION_SPECIES_PICK_KEY] = pick
+    if isinstance(pick, str) and pick.endswith(GROUP_ROW_SUFFIX):
+        gname = pick[: -len(GROUP_ROW_SUFFIX)].strip()
+        prev_g = str(st.session_state.get(SESSION_SPECIES_GROUP_PENDING_KEY) or "").strip()
+        st.session_state[SESSION_SPECIES_GROUP_PENDING_KEY] = gname
+        # Only reset dropdown commit when the **group** changes. If we clear commit on every run while
+        # the searchbox still holds the group row, the species dropdown retriggers ``st.rerun()``
+        # forever (refs #73).
+        if gname != prev_g:
+            st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+    elif pick is not None:
+        st.session_state[SESSION_SPECIES_PICK_KEY] = pick
+        st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+        st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+
+    pending_group = str(st.session_state.get(SESSION_SPECIES_GROUP_PENDING_KEY) or "").strip()
+    if pending_group:
+        ws = st.session_state.get(SESSION_SPECIES_WS_KEY)
+        if ws is not None:
+            tax_loc = (
+                str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
+                or DEFAULT_TAXONOMY_LOCALE
+            )
+            group_choices = species_common_names_in_group(
+                ws.species_list,
+                ws.name_map,
+                tax_loc,
+                pending_group,
+            )
+            if group_choices:
+                opts = [""] + group_choices
+                prev = str(st.session_state.get(SESSION_SPECIES_PICK_KEY) or "")
+                idx = opts.index(prev) if prev in opts else 0
+                st.selectbox(
+                    f'Species in "{pending_group}" (your data)',
+                    options=opts,
+                    index=idx,
+                    format_func=lambda x: "— Select a species —" if x == "" else x,
+                    key=SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
+                )
+                # ``st.rerun()`` inside ``on_change`` is a no-op in Streamlit; commit + rerun here (#73).
+                raw_sel = st.session_state.get(SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY)
+                sel = raw_sel.strip() if isinstance(raw_sel, str) else ""
+                if sel:
+                    st.session_state[SESSION_SPECIES_PICK_KEY] = sel
+                    sig = (pending_group, sel)
+                    if st.session_state.get(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY) != sig:
+                        st.session_state[SESSION_SPECIES_GROUP_SEL_COMMIT_KEY] = sig
+                        st.rerun()
+            else:
+                st.caption(f'No species from "{pending_group}" in the current filtered set.')
+                st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+                st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)

@@ -28,7 +28,8 @@ SPECIES_SEARCH_MIN_QUERY_LEN = 3
 SPECIES_SEARCH_DEBOUNCE_MS = 400
 SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
 SPECIES_SEARCH_CAPTION = (
-    "Type at least three letters. Searches common and scientific names."
+    "Type at least three letters. Searches common and scientific names, and eBird species groups "
+    "(e.g. Australasian Robins). Pick a group to choose one species from your data."
 )
 SPECIES_SEARCH_EDIT_AFTER_SUBMIT = "option"
 SPECIES_SEARCH_RERUN_SCOPE = "fragment"

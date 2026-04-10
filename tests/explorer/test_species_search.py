@@ -45,3 +45,13 @@ def test_whoosh_species_suggestions_matches_scientific_name():
 
     out2 = whoosh_species_suggestions(ix, "anas gra", min_query_len=3)
     assert "Grey Teal" in out2
+
+
+def test_whoosh_species_suggestions_includes_taxonomy_group_row():
+    ix = build_ram_species_whoosh_index(
+        ["Grey Teal"],
+        {"Grey Teal": "Anas gracilis"},
+        taxonomy_group_names=["Ducks"],
+    )
+    out = whoosh_species_suggestions(ix, "duc", min_query_len=3)
+    assert "Ducks (group)" in out

@@ -3,7 +3,8 @@ Whoosh-backed species name suggestions for the map species picker (autocomplete-
 
 Pure helper with no UI imports: the app feeds suggestions into Streamlit widgets. Indexes store
 **common_name** and **scientific_name** so queries can match either field (eBird-like multi-token
-search).
+search). Optional **group** rows (eBird species-group labels such as “Australasian Robins”) support
+taxonomy-group type-ahead; rows have ``kind="group"`` and display as ``"{name} (group)"`` (refs #73).
 """
 
 from __future__ import annotations
@@ -16,22 +17,88 @@ from whoosh.fields import Schema, TEXT
 from whoosh.index import create_in
 from whoosh.qparser import MultifieldParser, OrGroup, QueryParser
 
+from explorer.core.species_family import build_base_species_to_family_map
+from explorer.core.species_logic import base_species_name
+
+GROUP_ROW_SUFFIX = " (group)"
+
 
 def species_whoosh_schema() -> Schema:
-    """Schema for species autocomplete (common + scientific names)."""
+    """Schema for species autocomplete (common + scientific names) and optional group labels."""
     ana = StemmingAnalyzer()
     return Schema(
         common_name=TEXT(stored=True, analyzer=ana),
         scientific_name=TEXT(stored=True, analyzer=ana),
+        kind=TEXT(stored=True),
     )
+
+
+def taxonomy_group_names_in_working_set(
+    species_list: Sequence[str],
+    name_map: Dict[str, str],
+    taxonomy_locale: str,
+) -> List[str]:
+    """Distinct eBird species-group names that have at least one species in *species_list*.
+
+    Uses the same base-species → group mapping as Rankings **Families**. Returns sorted
+    display names (excludes *Unmapped*). Empty when taxonomy cannot be loaded.
+    """
+    base_to_f = build_base_species_to_family_map(taxonomy_locale)
+    if not base_to_f:
+        return []
+    seen: set[str] = set()
+    out: list[str] = []
+    for common in species_list:
+        sci = str(name_map.get(common, "") or "")
+        base = base_species_name(sci)
+        if not base:
+            continue
+        g = base_to_f.get(base)
+        if not g or str(g).strip() == "Unmapped":
+            continue
+        gn = str(g).strip()
+        if gn not in seen:
+            seen.add(gn)
+            out.append(gn)
+    out.sort(key=str.casefold)
+    return out
+
+
+def species_common_names_in_group(
+    species_list: Sequence[str],
+    name_map: Dict[str, str],
+    taxonomy_locale: str,
+    group_name: str,
+) -> List[str]:
+    """Common names in *species_list* whose taxonomy group equals *group_name*."""
+    base_to_f = build_base_species_to_family_map(taxonomy_locale)
+    if not base_to_f:
+        return []
+    want = str(group_name).strip()
+    out: list[str] = []
+    for common in species_list:
+        sci = str(name_map.get(common, "") or "")
+        base = base_species_name(sci)
+        if not base:
+            continue
+        g = base_to_f.get(base)
+        if g and str(g).strip() == want:
+            out.append(common)
+    out.sort(key=str.casefold)
+    return out
 
 
 def build_ram_species_whoosh_index(
     species_list: Sequence[str],
     name_map: Dict[str, str],
+    *,
+    taxonomy_group_names: Sequence[str] | None = None,
 ) -> Any:
     """
     Build a small Whoosh index from unique common names and common→scientific map.
+
+    When *taxonomy_group_names* is non-empty, each label is indexed as a synthetic row
+    ``"{label} (group)"`` so it appears in the same type-ahead as species (refs #73).
 
     Uses a temporary directory (cleaned up by the OS); fine for Streamlit session use
     per working-set rebuild. Notebook uses a persistent temp dir with the same schema.
@@ -41,7 +108,13 @@ def build_ram_species_whoosh_index(
     w = ix.writer()
     for common in species_list:
         sci = str(name_map.get(common, "") or "")
-        w.add_document(common_name=common, scientific_name=sci)
+        w.add_document(common_name=common, scientific_name=sci, kind="species")
+    for g in taxonomy_group_names or ():
+        label = str(g).strip()
+        if not label:
+            continue
+        display = f"{label}{GROUP_ROW_SUFFIX}"
+        w.add_document(common_name=display, scientific_name=label, kind="group")
     w.commit()
     return ix
 
@@ -121,6 +194,7 @@ def whoosh_species_suggestions(
         def rank_key(r):
             common = (r["common_name"] or "").lower()
             sci = (r.get("scientific_name") or "").lower()
+            kind = (r.get("kind") or "species").strip()
             # Base: Whoosh relevance (higher is better for BM25F default scoring)
             base = getattr(r, "score", None)
             if base is None:
@@ -133,6 +207,9 @@ def whoosh_species_suggestions(
                 sci.startswith(t) or f" {t}" in sci for t in tokens
             ):
                 base += 35.0
+            # Slight preference for species rows over taxonomy-group rows when scores are close
+            if kind == "group":
+                base -= 1.5
             # Prefer shorter display names when scores tie
             base -= len(common) * 0.001
             return base

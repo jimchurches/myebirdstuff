@@ -33,7 +33,7 @@ DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", DEFAULT_EBI
 
 MAP_VIEW_LABEL_TO_MODE = {
     "All locations": "all",
-    "Selected species": "species",
+    "Species locations": "species",
     "Lifer locations": "lifers",
     "Family locations": "families",
 }
@@ -197,8 +197,13 @@ SESSION_SPECIES_WS_KEY = "_ws_for_species_search_fragment"
 SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
+# Selected species group (eBird label) → second dropdown lists species in data (refs #73).
+SESSION_SPECIES_GROUP_PENDING_KEY = "_streamlit_species_group_pending"
+SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY = "streamlit_species_group_species_select"
+# Last (pending group label, species common) we ran a full app rerun for; avoids callback st.rerun (#73).
+SESSION_SPECIES_GROUP_SEL_COMMIT_KEY = "_species_in_group_dropdown_commit"
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
-# Bumped when toggling Map view All locations <-> Selected species so streamlit-folium remounts cleanly.
+# Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
 SETTINGS_CONFIG_PATH_KEY = "_streamlit_settings_yaml_path"
 SETTINGS_CONFIG_SOURCE_KEY = "_streamlit_settings_source_label"
