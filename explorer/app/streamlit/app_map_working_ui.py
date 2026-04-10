@@ -74,6 +74,7 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_HELP_EXPANDER_LABEL,
 )
 from explorer.core.species_search import (
+    SPECIES_WHOOSH_INDEX_VERSION,
     build_ram_species_whoosh_index,
     taxonomy_group_names_in_working_set,
 )
@@ -257,12 +258,18 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             or DEFAULT_TAXONOMY_LOCALE
         )
         group_names = taxonomy_group_names_in_working_set(ws.species_list, ws.name_map, tax_loc)
-        _ix_sig = (len(ws.species_list), st.session_state.get(EBIRD_DATA_SIG_KEY), tax_loc)
+        _ix_sig = (
+            SPECIES_WHOOSH_INDEX_VERSION,
+            len(ws.species_list),
+            st.session_state.get(EBIRD_DATA_SIG_KEY),
+            tax_loc,
+        )
         if st.session_state.get(SESSION_SPECIES_IX_SIG_KEY) != _ix_sig:
             st.session_state[SESSION_SPECIES_IX_KEY] = build_ram_species_whoosh_index(
                 ws.species_list,
                 ws.name_map,
                 taxonomy_group_names=group_names,
+                taxonomy_locale=tax_loc,
             )
             st.session_state[SESSION_SPECIES_IX_SIG_KEY] = _ix_sig
         st.session_state[SESSION_SPECIES_WS_KEY] = ws

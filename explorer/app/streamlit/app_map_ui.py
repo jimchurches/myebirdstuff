@@ -25,6 +25,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_TAXONOMY_LOCALE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
+    SESSION_SPECIES_GROUP_BACK_TO_ALL_KEY,
     SESSION_SPECIES_GROUP_PENDING_KEY,
     SESSION_SPECIES_GROUP_SEL_COMMIT_KEY,
     SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY,
@@ -41,6 +42,7 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_DEFAULT,
+    SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2,
     THEME_PRIMARY_HEX,
 )
 from explorer.app.streamlit.streamlit_ui_constants import (
@@ -58,6 +60,7 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_MAX_OPTIONS,
     SPECIES_SEARCH_MIN_QUERY_LEN,
     SPECIES_SEARCH_PLACEHOLDER,
+    SPECIES_SEARCH_PLACEHOLDER_GROUP_FILTERED,
     SPECIES_SEARCH_RERUN_SCOPE,
 )
 
@@ -66,6 +69,33 @@ def _species_searchbox_widget_key() -> str:
     """Stable Streamlit widget id; nonce bumps on reset so the field remounts empty (refs #73)."""
     n = int(st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0))
     return f"{SESSION_SPECIES_SEARCH_KEY}__v{n}"
+
+
+def _refresh_species_searchbox_options_for_group(group_label: str) -> None:
+    """Replace cached streamlit-searchbox suggestions after picking a ``… (group)`` row.
+
+    The component only calls the search callback when the text changes; **submit** does not refresh
+    options, so the menu would keep showing the previous global list (refs #73).
+    """
+    label = str(group_label or "").strip()
+    if not label:
+        return
+    ix = st.session_state.get(SESSION_SPECIES_IX_KEY)
+    sk = _species_searchbox_widget_key()
+    box = st.session_state.get(sk)
+    if ix is None or not isinstance(box, dict):
+        return
+    fresh = whoosh_species_suggestions(
+        ix,
+        "",
+        max_options=SPECIES_SEARCH_MAX_OPTIONS,
+        min_query_len=SPECIES_SEARCH_MIN_QUERY_LEN,
+        restrict_taxonomy_group=label,
+    )
+    box["options_js"] = [{"label": str(x), "value": i} for i, x in enumerate(fresh)]
+    box["options_py"] = list(fresh)
+    # Next dropdown open / keystroke must not skip ``_process_search`` because term == last search.
+    box["search"] = ""
 
 
 def inject_map_folium_iframe_min_height_css(height_px: int) -> None:
@@ -286,10 +316,11 @@ def sidebar_footer_links(*, leading_divider: bool = True) -> None:
 
 @st.fragment
 def species_searchbox_fragment() -> None:
-    """Whoosh-backed search + optional “species in group” dropdown.
+    """Whoosh-backed species search; taxonomy groups via ``… (group)`` rows (refs #70, #73).
 
-    Taxonomy group picks use ``st.rerun(scope="fragment")`` so the main prep spinner and map
-    pipeline do not run until a species is chosen (refs #70, #73).
+    **Prototype 2** (``SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2``): one searchbox switches to
+    group-filtered species options — no second ``st.selectbox``. **Prototype 1**: group row plus
+    secondary dropdown (rollback via defaults flag).
     """
     try:
         from streamlit_searchbox import st_searchbox
@@ -304,13 +335,32 @@ def species_searchbox_fragment() -> None:
         return
     persisted = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
     group_pending = bool(str(st.session_state.get(SESSION_SPECIES_GROUP_PENDING_KEY) or "").strip())
+    pg_label = str(st.session_state.get(SESSION_SPECIES_GROUP_PENDING_KEY) or "").strip()
     # While a taxonomy group is selected, keep the previous species on the map until the user
-    # picks from the secondary dropdown (avoids a flash to the all-locations default). Don't
-    # pre-fill the search typing field with the persisted species name during group flow (#73).
+    # picks a species (avoids a flash to the all-locations default). Don't pre-fill the search
+    # typing field with the persisted species name during group flow (#73).
     search_default = None if group_pending else persisted
     search_term = "" if group_pending else (persisted or "")
+    species_search_label = (
+        f"Species ({pg_label})" if (SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2 and pg_label) else "Species"
+    )
+    species_search_placeholder = (
+        SPECIES_SEARCH_PLACEHOLDER_GROUP_FILTERED
+        if (SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2 and pg_label)
+        else SPECIES_SEARCH_PLACEHOLDER
+    )
 
     def _search(term: str) -> list:
+        if SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2:
+            pg_local = str(st.session_state.get(SESSION_SPECIES_GROUP_PENDING_KEY) or "").strip()
+            if pg_local:
+                return whoosh_species_suggestions(
+                    ix,
+                    term,
+                    max_options=SPECIES_SEARCH_MAX_OPTIONS,
+                    min_query_len=SPECIES_SEARCH_MIN_QUERY_LEN,
+                    restrict_taxonomy_group=pg_local,
+                )
         return whoosh_species_suggestions(
             ix,
             term,
@@ -320,8 +370,11 @@ def species_searchbox_fragment() -> None:
 
     def _on_species_submit(selected: Any) -> None:
         if isinstance(selected, str) and selected.endswith(GROUP_ROW_SUFFIX):
-            st.session_state[SESSION_SPECIES_GROUP_PENDING_KEY] = selected[: -len(GROUP_ROW_SUFFIX)].strip()
+            g = selected[: -len(GROUP_ROW_SUFFIX)].strip()
+            st.session_state[SESSION_SPECIES_GROUP_PENDING_KEY] = g
             st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+            if SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2:
+                _refresh_species_searchbox_options_for_group(g)
             # Keep SESSION_SPECIES_PICK_KEY so the map stays on the previous species until the
             # secondary dropdown chooses a species in this group.
             try:
@@ -349,8 +402,8 @@ def species_searchbox_fragment() -> None:
     pick = st_searchbox(
         _search,
         key=_species_searchbox_widget_key(),
-        placeholder=SPECIES_SEARCH_PLACEHOLDER,
-        label="Species",
+        placeholder=species_search_placeholder,
+        label=species_search_label,
         default=search_default,
         default_searchterm=search_term,
         debounce=SPECIES_SEARCH_DEBOUNCE_MS,
@@ -371,6 +424,8 @@ def species_searchbox_fragment() -> None:
         # forever (refs #73).
         if gname != prev_g:
             st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+            if SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2:
+                _refresh_species_searchbox_options_for_group(gname)
     elif pick is not None:
         raw = pick if isinstance(pick, str) else str(pick)
         p = raw.strip()
@@ -396,7 +451,27 @@ def species_searchbox_fragment() -> None:
             tax_loc,
             pending_group,
         )
-        if group_choices:
+        if SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2:
+            if not group_choices:
+                st.caption(f'No species from "{pending_group}" in the current filtered set.')
+                st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+                st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+            else:
+                if st.button(
+                    "Back to all species",
+                    key=SESSION_SPECIES_GROUP_BACK_TO_ALL_KEY,
+                    use_container_width=True,
+                ):
+                    st.session_state.pop(SESSION_SPECIES_GROUP_PENDING_KEY, None)
+                    st.session_state.pop(SESSION_SPECIES_GROUP_SEL_COMMIT_KEY, None)
+                    st.session_state[SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY] = int(
+                        st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)
+                    ) + 1
+                    try:
+                        st.rerun(scope="fragment")
+                    except StreamlitAPIException:
+                        st.rerun()
+        elif group_choices:
             opts = [""] + group_choices
             prev = str(st.session_state.get(SESSION_SPECIES_PICK_KEY) or "")
             idx = opts.index(prev) if prev in opts else 0

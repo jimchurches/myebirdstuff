@@ -27,6 +27,7 @@ SPECIES_SEARCH_MAX_OPTIONS = 12
 SPECIES_SEARCH_MIN_QUERY_LEN = 3
 SPECIES_SEARCH_DEBOUNCE_MS = 500
 SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
+SPECIES_SEARCH_PLACEHOLDER_GROUP_FILTERED = "Type to filter species in this group…"
 # Map sidebar “Search tips” expander: paragraphs separated by blank lines; rendered with ``st.caption``.
 SPECIES_SEARCH_CAPTION = """Start typing to search for a species.
 

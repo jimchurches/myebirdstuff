@@ -64,6 +64,10 @@ MAP_DATE_FILTER_DEFAULT = False
 
 MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer locations", "Family locations")
 
+# refs #73 Prototype 2: one searchbox for group → species (no second selectbox). Set False to use
+# Prototype 1 (group row + separate ``st.selectbox``) without reverting git.
+SPECIES_MAP_GROUP_SEARCH_PROTOTYPE2: bool = True
+
 # ---------------------------------------------------------------------------
 # Family map (Map view → **Family locations**; refs #138)
 #
