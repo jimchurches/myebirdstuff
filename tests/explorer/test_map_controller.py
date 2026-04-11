@@ -73,13 +73,13 @@ def test_all_species_builds_map_with_banner():
     r = build_species_overlay_map(
         **_common_kwargs(df),
         selected_species="",
-        date_filter_status="Date filter: Off",
     )
     assert r.warning is None
     assert r.map is not None
     html = r.map._repr_html_()
     assert "All species" in html
     assert "1 checklist" in html
+    assert "Date filter" not in html
 
 
 def test_species_view_no_selection_hide_only_empty_map():

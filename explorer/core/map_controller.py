@@ -90,8 +90,9 @@ def build_species_overlay_map(
     (session caches; same contract as the UI). Popup cache keys include
     *taxonomy_locale* so eBird species links refresh when the locale changes (Streamlit Settings).
 
-    *date_filter_status* is shown in banners (e.g. ``Date filter: Off``); pass
-    ``""`` to omit the extra line.
+    *date_filter_status*: optional extra muted line on map banners (e.g. date range). The Streamlit
+    app passes ``""`` so filter state stays in the sidebar only (refs #150); non-UI callers may
+    still pass a string for export or notebooks.
 
     *cluster_all_locations*: when there is no species filter (All locations view),
     group nearby pins with Leaflet.markercluster. Ignored for species and lifer maps.

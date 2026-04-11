@@ -275,7 +275,8 @@ def render_prep_spinner_and_map_tab(
                                 MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
                             )
                         ),
-                        "date_filter_status": "" if is_lifer_view else date_filter_banner,
+                        # Banner: context + counts only; date filter stays in sidebar (refs #150).
+                        "date_filter_status": "",
                         "species_url_fn": species_url_fn,
                         "base_species_fn": base_species_for_lifer,
                         "taxonomy_locale": tax_locale_effective,
