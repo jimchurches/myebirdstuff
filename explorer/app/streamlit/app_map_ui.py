@@ -12,6 +12,7 @@ import streamlit.components.v1 as components
 
 from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
+    EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
     FOLIUM_STATIC_MAP_CACHE_KEY,
@@ -24,7 +25,9 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
+    SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY,
     SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY,
+    SESSION_SPECIES_SEARCH_USER_EDITING_KEY,
     SESSION_SPECIES_WS_KEY,
     SPINNER_THEME_CSS,
 )
@@ -293,12 +296,36 @@ def species_searchbox_fragment() -> None:
         return
     persisted = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
     search_default = persisted
-    # Always use an empty initial search term for the widget props. Passing the persisted species
-    # here on every fragment rerun re-injected that string into the control and fought backspace /
-    # edits (focus jumped; map state flickered). Selection stays in session via ``default`` and
-    # ``SESSION_SPECIES_PICK_KEY``; only the reset (×) clears those (refs #73).
+    # ``default_searchterm``: show the persisted species name after full-app reruns (e.g. returning to
+    # the Map tab). Fragment-only reruns (typing) skip ``main()`` so we pass "" and avoid fighting
+    # backspace. ``SESSION_SPECIES_SEARCH_USER_EDITING_KEY`` prevents a full run from overwriting
+    # text the user is still editing (e.g. after switching tabs mid-query).
+    _main_id = int(st.session_state.get(EXPLORER_MAIN_SCRIPT_RUN_ID_KEY, 0))
+    _last_main = int(st.session_state.get(SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY, -1))
+    _just_ran_full_script = _main_id != _last_main
+    st.session_state[SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY] = _main_id
+    _editing = bool(st.session_state.get(SESSION_SPECIES_SEARCH_USER_EDITING_KEY, False))
+    _pick_s = (st.session_state.get(SESSION_SPECIES_PICK_KEY) or "").strip()
+    _persist_s = (persisted or "").strip()
+    # Full script run: refill bar after tab / map-view changes. Same run may execute this fragment
+    # twice; then ``_just_ran_full_script`` is false on the second pass—still show if pick matches
+    # persist (rehydrated in ``app_map_working_ui`` when re-entering species view).
+    _show_persisted_in_bar = (
+        not _editing
+        and bool(_persist_s)
+        and (_just_ran_full_script or _pick_s == _persist_s)
+    )
+    default_searchterm = _persist_s if _show_persisted_in_bar else ""
 
     def _search(term: str) -> list:
+        p = (persisted or "").strip()
+        t = (term or "").strip()
+        if t == p:
+            st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = False
+        elif not t and not p:
+            st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = False
+        else:
+            st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = True
         return whoosh_species_suggestions(
             ix,
             term,
@@ -316,10 +343,12 @@ def species_searchbox_fragment() -> None:
             return
         prev = st.session_state.get(SESSION_SPECIES_PICK_KEY)
         st.session_state[SESSION_SPECIES_PICK_KEY] = s
+        st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = False
         if prev != s:
             st.rerun()
 
     def _on_species_reset() -> None:
+        st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = False
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
         st.session_state.pop(PERSIST_SPECIES_COMMON_KEY, None)
         st.session_state.pop(PERSIST_SPECIES_SCI_KEY, None)
@@ -340,7 +369,7 @@ def species_searchbox_fragment() -> None:
         placeholder=SPECIES_SEARCH_PLACEHOLDER,
         label="Species",
         default=search_default,
-        default_searchterm="",
+        default_searchterm=default_searchterm,
         debounce=SPECIES_SEARCH_DEBOUNCE_MS,
         edit_after_submit=SPECIES_SEARCH_EDIT_AFTER_SUBMIT,
         rerun_scope=SPECIES_SEARCH_RERUN_SCOPE,

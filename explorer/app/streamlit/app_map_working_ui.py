@@ -250,6 +250,13 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         st.session_state.pop(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, None)
 
     if map_view_mode == "species":
+        # PICK is cleared when leaving species for All / Family / Lifers; PERSIST keeps the last
+        # species name for the map. Restore PICK so the map, search box, and persist stay aligned.
+        if not st.session_state.get(SESSION_SPECIES_PICK_KEY):
+            _pc = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
+            if _pc:
+                st.session_state[SESSION_SPECIES_PICK_KEY] = str(_pc).strip()
+
         tax_loc = (
             str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
             or DEFAULT_TAXONOMY_LOCALE
