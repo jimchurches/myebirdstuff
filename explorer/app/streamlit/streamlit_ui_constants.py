@@ -25,11 +25,16 @@ CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
 
 SPECIES_SEARCH_MAX_OPTIONS = 12
 SPECIES_SEARCH_MIN_QUERY_LEN = 3
-SPECIES_SEARCH_DEBOUNCE_MS = 400
+SPECIES_SEARCH_DEBOUNCE_MS = 500
 SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
-SPECIES_SEARCH_CAPTION = (
-    "Type at least three letters. Searches common and scientific names."
-)
+# Map sidebar “Search tips” expander: paragraphs separated by blank lines; rendered with ``st.caption``.
+SPECIES_SEARCH_CAPTION = """Start typing to search for a species.
+
+You can use common names, scientific names, or bird groups (e.g. Australasian Robins).
+
+Tip: "Show only selected species" defaults to on for performance; turn it off to see all locations with the selected species highlighted."""
+# Sidebar expander title (Map → Species locations); body is SPECIES_SEARCH_CAPTION.
+SPECIES_SEARCH_HELP_EXPANDER_LABEL = "Search tips"
 SPECIES_SEARCH_EDIT_AFTER_SUBMIT = "option"
 SPECIES_SEARCH_RERUN_SCOPE = "fragment"
 

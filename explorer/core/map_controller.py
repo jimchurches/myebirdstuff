@@ -96,6 +96,10 @@ def build_species_overlay_map(
     *cluster_all_locations*: when there is no species filter (All locations view),
     group nearby pins with Leaflet.markercluster. Ignored for species and lifer maps.
 
+    *hide_non_matching_locations*: in **Species locations** view with no species selected, when
+    ``False`` the map behaves like **All locations**; when ``True`` an empty map is shown until a
+    species is chosen (performance-friendly default in the Streamlit UI).
+
     *map_height_px*: pixel height for the Folium map pane (match Streamlit **Map height** slider).
     """
     tax_loc_key = (taxonomy_locale or "").strip()
@@ -103,7 +107,8 @@ def build_species_overlay_map(
     if mode not in VALID_MAP_VIEWS:
         mode = "all"
     if mode == "species" and not (selected_species or "").strip():
-        mode = "all"
+        if not hide_non_matching_locations:
+            mode = "all"
 
     if mode == "lifers":
         return build_lifer_overlay_map(

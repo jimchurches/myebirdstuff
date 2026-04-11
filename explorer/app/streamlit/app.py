@@ -89,6 +89,7 @@ from explorer.app.streamlit.app_caches import (  # noqa: E402
 )
 from explorer.app.streamlit.app_constants import (  # noqa: E402
     DEFAULT_TAXONOMY_LOCALE,
+    EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
     FILTERED_BY_LOC_CACHE_KEY,
     POPUP_HTML_CACHE_KEY,
     REPO_ROOT,
@@ -182,6 +183,10 @@ def main() -> None:
         return
     df_full, provenance, source_label, data_abs_path, data_basename = loaded
 
+    st.session_state[EXPLORER_MAIN_SCRIPT_RUN_ID_KEY] = int(
+        st.session_state.get(EXPLORER_MAIN_SCRIPT_RUN_ID_KEY, 0)
+    ) + 1
+
     st.session_state[SETTINGS_CONFIG_SOURCE_KEY] = source_label or ""
     settings_yaml_path = settings_yaml_path_for_source(REPO_ROOT, source_label or "")
     st.session_state[SETTINGS_CONFIG_PATH_KEY] = settings_yaml_path or ""
@@ -217,8 +222,7 @@ def main() -> None:
 
     title_with_logo()
 
-    # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``). Keyed lazy tabs existed only for Family Lists
-    # “main tab” session bookkeeping; the Families flow now relies on dataframe selection only (refs #73).
+    # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``).
     (
         tab_map,
         tab_checklist,

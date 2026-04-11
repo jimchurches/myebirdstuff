@@ -12,15 +12,23 @@ import streamlit.components.v1 as components
 
 from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
+    EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
+    EXPLORER_MAP_HTML_BYTES_KEY,
+    FOLIUM_MAP_MOUNT_NONCE_KEY,
+    FOLIUM_STATIC_MAP_CACHE_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
     PERSIST_SPECIES_COMMON_KEY,
+    PERSIST_SPECIES_SCI_KEY,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
-    SIDEBAR_CONTROL_LABEL_CSS,
+    SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY,
+    SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY,
+    SESSION_SPECIES_SEARCH_USER_EDITING_KEY,
+    SESSION_SPECIES_WS_KEY,
     SPINNER_THEME_CSS,
 )
 from explorer.app.streamlit.defaults import (
@@ -50,6 +58,12 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 )
 
 
+def _species_searchbox_widget_key() -> str:
+    """Stable Streamlit widget id; nonce bumps on reset so the field remounts empty (refs #73)."""
+    n = int(st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0))
+    return f"{SESSION_SPECIES_SEARCH_KEY}__v{n}"
+
+
 def inject_map_folium_iframe_min_height_css(height_px: int) -> None:
     """Reduce streamlit-folium letterboxing when the iframe gets a near-zero height on some reruns.
 
@@ -74,22 +88,9 @@ def inject_spinner_theme_css() -> None:
     ``st.html`` is applied via Streamlit’s event container (see Streamlit ``HtmlMixin.html``).
 
     **Must run on every rerun:** if injection is skipped after the first run, the ``<style>`` node is
-    omitted from Streamlit output and spinners revert to default styling (same issue as sidebar
-    control labels — see :func:`inject_sidebar_control_label_css`).
+    omitted from Streamlit output and spinners revert to default styling.
     """
     st.html(SPINNER_THEME_CSS.strip())
-
-
-def inject_sidebar_control_label_css() -> None:
-    """Unify Map sidebar **control** label typography (selectbox, slider, ``st.toggle``), not spinners (refs #124).
-
-    Separate from :func:`inject_spinner_theme_css` so loading-spinner styling stays clearly scoped.
-    Call before ``with st.sidebar``.
-
-    **Must run on every rerun:** if we skip ``st.html`` after the first run, Streamlit omits that node from the
-    new output and the global ``<style>`` block disappears — controls then revert to default Streamlit fonts.
-    """
-    st.html(SIDEBAR_CONTROL_LABEL_CSS.strip())
 
 
 def inject_spinner_emoji_animation() -> None:
@@ -281,7 +282,7 @@ def sidebar_footer_links(*, leading_divider: bool = True) -> None:
 
 @st.fragment
 def species_searchbox_fragment() -> None:
-    """Whoosh-backed search; fragment-scoped reruns avoid greying the whole app (refs #70)."""
+    """Whoosh-backed species search with weighted common/scientific/group matching (refs #73)."""
     try:
         from streamlit_searchbox import st_searchbox
     except ImportError:
@@ -294,8 +295,37 @@ def species_searchbox_fragment() -> None:
     if ix is None:
         return
     persisted = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
+    search_default = persisted
+    # ``default_searchterm``: show the persisted species name after full-app reruns (e.g. returning to
+    # the Map tab). Fragment-only reruns (typing) skip ``main()`` so we pass "" and avoid fighting
+    # backspace. ``SESSION_SPECIES_SEARCH_USER_EDITING_KEY`` prevents a full run from overwriting
+    # text the user is still editing (e.g. after switching tabs mid-query).
+    _main_id = int(st.session_state.get(EXPLORER_MAIN_SCRIPT_RUN_ID_KEY, 0))
+    _last_main = int(st.session_state.get(SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY, -1))
+    _just_ran_full_script = _main_id != _last_main
+    st.session_state[SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY] = _main_id
+    _editing = bool(st.session_state.get(SESSION_SPECIES_SEARCH_USER_EDITING_KEY, False))
+    _pick_s = (st.session_state.get(SESSION_SPECIES_PICK_KEY) or "").strip()
+    _persist_s = (persisted or "").strip()
+    # Full script run: refill bar after tab / map-view changes. Same run may execute this fragment
+    # twice; then ``_just_ran_full_script`` is false on the second pass—still show if pick matches
+    # persist (rehydrated in ``app_map_working_ui`` when re-entering species view).
+    _show_persisted_in_bar = (
+        not _editing
+        and bool(_persist_s)
+        and (_just_ran_full_script or _pick_s == _persist_s)
+    )
+    default_searchterm = _persist_s if _show_persisted_in_bar else ""
 
     def _search(term: str) -> list:
+        p = (persisted or "").strip()
+        t = (term or "").strip()
+        if t == p:
+            st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = False
+        elif not t and not p:
+            st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = False
+        else:
+            st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = True
         return whoosh_species_suggestions(
             ix,
             term,
@@ -304,24 +334,56 @@ def species_searchbox_fragment() -> None:
         )
 
     def _on_species_submit(selected: Any) -> None:
-        st.session_state[SESSION_SPECIES_PICK_KEY] = selected
-        st.rerun()
+        # Submit can fire while editing; only commit a real species and rerun when it changes (refs #73).
+        ws = st.session_state.get(SESSION_SPECIES_WS_KEY)
+        valid_common = frozenset(ws.species_list) if ws is not None else frozenset()
+        raw = selected if isinstance(selected, str) else str(selected)
+        s = raw.strip()
+        if s not in valid_common:
+            return
+        prev = st.session_state.get(SESSION_SPECIES_PICK_KEY)
+        st.session_state[SESSION_SPECIES_PICK_KEY] = s
+        st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = False
+        if prev != s:
+            st.rerun()
 
     def _on_species_reset() -> None:
+        st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = False
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
+        st.session_state.pop(PERSIST_SPECIES_COMMON_KEY, None)
+        st.session_state.pop(PERSIST_SPECIES_SCI_KEY, None)
+        st.session_state[SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY] = int(
+            st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)
+        ) + 1
+        # Remount Folium + drop cached HTML so the map returns to the all-locations view cleanly.
+        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        ) + 1
+        st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         st.rerun()
 
     pick = st_searchbox(
         _search,
-        key=SESSION_SPECIES_SEARCH_KEY,
+        key=_species_searchbox_widget_key(),
         placeholder=SPECIES_SEARCH_PLACEHOLDER,
         label="Species",
-        default=persisted,
-        default_searchterm=persisted or "",
+        default=search_default,
+        default_searchterm=default_searchterm,
         debounce=SPECIES_SEARCH_DEBOUNCE_MS,
         edit_after_submit=SPECIES_SEARCH_EDIT_AFTER_SUBMIT,
         rerun_scope=SPECIES_SEARCH_RERUN_SCOPE,
         submit_function=_on_species_submit,
         reset_function=_on_species_reset,
     )
-    st.session_state[SESSION_SPECIES_PICK_KEY] = pick
+    ws = st.session_state.get(SESSION_SPECIES_WS_KEY)
+    valid_common = frozenset(ws.species_list) if ws is not None else frozenset()
+
+    if pick is not None:
+        raw = pick if isinstance(pick, str) else str(pick)
+        p = raw.strip()
+        # Empty field while typing / backspacing must not clear the map species — only choosing a
+        # valid species updates PICK; reset (×) clears via ``_on_species_reset`` (refs #73).
+        if p in valid_common:
+            st.session_state[SESSION_SPECIES_PICK_KEY] = p
+        # Partial / invalid typing: do not assign PICK (avoids empty filter → blank map) (refs #73).

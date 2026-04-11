@@ -130,8 +130,8 @@ def static_map_cache_key(
 ) -> tuple:
     """Stable key for Folium map reuse (session holds one cached map; same key → skip rebuild).
 
-    *species_* / *hide_non_matching* matter for **Selected species** view; pass empty / False for
-    All / Lifers or Species with no selection (aligned with ``map_controller`` coercion).
+    *species_* / *hide_non_matching* matter for **Species locations** view (including the empty-map
+    case when no species is selected and only matching pins are shown).
     """
     n = len(work_df)
     sid0 = ""

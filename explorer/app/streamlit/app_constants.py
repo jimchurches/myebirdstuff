@@ -33,7 +33,7 @@ DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", DEFAULT_EBI
 
 MAP_VIEW_LABEL_TO_MODE = {
     "All locations": "all",
-    "Selected species": "species",
+    "Species locations": "species",
     "Lifer locations": "lifers",
     "Family locations": "families",
 }
@@ -193,12 +193,20 @@ PERSIST_SPECIES_COMMON_KEY = "_preserve_streamlit_species_common"
 PERSIST_SPECIES_SCI_KEY = "_preserve_streamlit_species_sci"
 SESSION_PREV_MAP_VIEW_KEY = "_streamlit_prev_map_view_mode"
 SESSION_SPECIES_SEARCH_KEY = "streamlit_species_searchbox"
+# Bumped on search reset so ``st_searchbox`` remounts with an empty field (refs #73).
+SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY = "_streamlit_species_search_remount_nonce"
 SESSION_SPECIES_WS_KEY = "_ws_for_species_search_fragment"
 SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
+# Incremented once per ``main()`` run (fragment-only reruns do not execute ``main``).
+EXPLORER_MAIN_SCRIPT_RUN_ID_KEY = "_explorer_main_script_run_id"
+# Species search: user has changed the text away from the persisted pick (typing, clear-to-search).
+SESSION_SPECIES_SEARCH_USER_EDITING_KEY = "_streamlit_species_search_user_editing"
+# Last main-run id the species search fragment saw; used to refill the bar after tab navigation.
+SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY = "_streamlit_species_search_last_main_run_id"
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
-# Bumped when toggling Map view All locations <-> Selected species so streamlit-folium remounts cleanly.
+# Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
 SETTINGS_CONFIG_PATH_KEY = "_streamlit_settings_yaml_path"
 SETTINGS_CONFIG_SOURCE_KEY = "_streamlit_settings_source_label"
@@ -325,40 +333,6 @@ div[data-testid="stSpinner"] div[class*="Spinner"] {{
   flex-direction: column;
   gap: 0.15rem;
   background: transparent;
-}}
-</style>
-"""
-
-# Sidebar **control** labels only (selectbox, slider, toggles) — not the loading spinner. Injected separately
-# and early so typography matches on first paint; bump SPINNER_THEME_CSS_CACHE_KEY_SUFFIX when this changes.
-SIDEBAR_CONTROL_LABEL_CSS = f"""
-<style>
-[data-testid="stSidebar"] [data-testid="stWidgetLabel"],
-[data-testid="stSidebar"] [data-testid="stWidgetLabel"] span,
-[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {{
-  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  line-height: 1.45 !important;
-  letter-spacing: normal !important;
-  color: {THEME_TEXT_HEX};
-  color: color-mix(in srgb, {THEME_PRIMARY_HEX} 22%, {THEME_TEXT_HEX}) !important;
-}}
-[data-testid="stSidebar"] label[data-baseweb="checkbox"] > div:first-of-type {{
-  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  line-height: 1.45 !important;
-  letter-spacing: normal !important;
-  color: {THEME_TEXT_HEX};
-  color: color-mix(in srgb, {THEME_PRIMARY_HEX} 22%, {THEME_TEXT_HEX}) !important;
-}}
-[data-testid="stSidebar"] label[data-baseweb="checkbox"] > div:first-of-type span {{
-  font-family: inherit !important;
-  font-size: inherit !important;
-  font-weight: inherit !important;
-  line-height: inherit !important;
-  color: inherit !important;
 }}
 </style>
 """

@@ -62,7 +62,10 @@ MAP_HEIGHT_PX_STEP = 20
 
 MAP_DATE_FILTER_DEFAULT = False
 
-MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer locations", "Family locations")
+# Species locations: when True, the map shows only pins for the selected species (session-only sidebar toggle).
+MAP_SPECIES_HIDE_ONLY_DEFAULT = True
+
+MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer locations", "Family locations")
 
 # ---------------------------------------------------------------------------
 # Family map (Map view → **Family locations**; refs #138)

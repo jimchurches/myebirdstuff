@@ -25,6 +25,7 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_IX_SIG_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
+    SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY,
     SESSION_SPECIES_WS_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
@@ -44,7 +45,6 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_map_ui import (
     ensure_streamlit_map_basemap_height_keys,
-    inject_sidebar_control_label_css,
     inject_spinner_theme_css,
     species_searchbox_fragment,
 )
@@ -60,14 +60,21 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_STEP,
+    MAP_SPECIES_HIDE_ONLY_DEFAULT,
     MAP_VIEW_LABELS,
 )
 from explorer.app.streamlit.map_working import (
     date_inception_to_today_default,
     streamlit_working_set_and_status,
 )
-from explorer.app.streamlit.streamlit_ui_constants import SPECIES_SEARCH_CAPTION
-from explorer.core.species_search import build_ram_species_whoosh_index
+from explorer.app.streamlit.streamlit_ui_constants import (
+    SPECIES_SEARCH_CAPTION,
+    SPECIES_SEARCH_HELP_EXPANDER_LABEL,
+)
+from explorer.core.species_search import (
+    SPECIES_WHOOSH_INDEX_VERSION,
+    build_ram_species_whoosh_index,
+)
 
 
 def invalidate_folium_map_embed_cache() -> None:
@@ -111,7 +118,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     apply_pending_map_height_override(st.session_state)
 
     inject_spinner_theme_css()
-    inject_sidebar_control_label_css()
 
     with st.sidebar:
         st.header("Map")
@@ -120,6 +126,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             saved_basemap = MAP_BASEMAP_OPTIONS[0]
         override = st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY, "__default__")
         map_style = override if override in MAP_BASEMAP_OPTIONS else saved_basemap
+
+        # Renamed label (was "Selected species"); keep existing sessions valid.
+        if st.session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY) == "Selected species":
+            st.session_state[STREAMLIT_MAP_VIEW_LABEL_KEY] = "Species locations"
 
         map_view_label = st.selectbox(
             "Map view",
@@ -235,27 +245,50 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     _prev_mv = st.session_state.get(SESSION_PREV_MAP_VIEW_KEY)
     if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
         st.session_state.pop(SESSION_SPECIES_SEARCH_KEY, None)
+        _n = int(st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0))
+        st.session_state.pop(f"{SESSION_SPECIES_SEARCH_KEY}__v{_n}", None)
+        st.session_state.pop(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, None)
 
     if map_view_mode == "species":
-        _ix_sig = (len(ws.species_list), st.session_state.get(EBIRD_DATA_SIG_KEY))
+        # PICK is cleared when leaving species for All / Family / Lifers; PERSIST keeps the last
+        # species name for the map. Restore PICK so the map, search box, and persist stay aligned.
+        if not st.session_state.get(SESSION_SPECIES_PICK_KEY):
+            _pc = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
+            if _pc:
+                st.session_state[SESSION_SPECIES_PICK_KEY] = str(_pc).strip()
+
+        tax_loc = (
+            str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
+            or DEFAULT_TAXONOMY_LOCALE
+        )
+        _ix_sig = (
+            SPECIES_WHOOSH_INDEX_VERSION,
+            len(ws.species_list),
+            st.session_state.get(EBIRD_DATA_SIG_KEY),
+            tax_loc,
+        )
         if st.session_state.get(SESSION_SPECIES_IX_SIG_KEY) != _ix_sig:
             st.session_state[SESSION_SPECIES_IX_KEY] = build_ram_species_whoosh_index(
-                ws.species_list, ws.name_map
+                ws.species_list,
+                ws.name_map,
+                taxonomy_locale=tax_loc,
             )
             st.session_state[SESSION_SPECIES_IX_SIG_KEY] = _ix_sig
         st.session_state[SESSION_SPECIES_WS_KEY] = ws
 
         with st.sidebar:
             st.markdown("**Species**")
-            st.caption(SPECIES_SEARCH_CAPTION)
+            with st.expander(SPECIES_SEARCH_HELP_EXPANDER_LABEL, expanded=False):
+                # Match Yearly Summary helper line (``st.caption`` for “Showing results…”).
+                for _para in (p.strip() for p in SPECIES_SEARCH_CAPTION.split("\n\n")):
+                    if _para:
+                        st.caption(_para)
             species_searchbox_fragment()
+            if STREAMLIT_SPECIES_HIDE_ONLY_KEY not in st.session_state:
+                st.session_state[STREAMLIT_SPECIES_HIDE_ONLY_KEY] = MAP_SPECIES_HIDE_ONLY_DEFAULT
             hide_non_matching_locations = st.toggle(
                 "Show only selected species",
                 key=STREAMLIT_SPECIES_HIDE_ONLY_KEY,
-                help=(
-                    "When off, all locations are shown with your species highlighted. "
-                    "When on, only locations where you recorded the species."
-                ),
             )
 
         species_pick_common = st.session_state.get(SESSION_SPECIES_PICK_KEY)

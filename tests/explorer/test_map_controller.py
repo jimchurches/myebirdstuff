@@ -82,6 +82,37 @@ def test_all_species_builds_map_with_banner():
     assert "1 checklist" in html
 
 
+def test_species_view_no_selection_hide_only_empty_map():
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        map_view_mode="species",
+        hide_non_matching_locations=True,
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map._repr_html_()
+    assert "Select a species in the sidebar" in html
+    assert "All species" not in html
+    assert "All locations" not in html
+
+
+def test_species_view_no_selection_show_all_matches_all_locations_banner():
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        map_view_mode="species",
+        hide_non_matching_locations=False,
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map._repr_html_()
+    assert "All species" in html
+    assert "1 checklist" in html
+
+
 def test_lifer_map_mode_builds_banner():
     df = _minimal_map_df()
     kwargs = _common_kwargs(df)
