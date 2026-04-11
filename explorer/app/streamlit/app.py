@@ -217,8 +217,7 @@ def main() -> None:
 
     title_with_logo()
 
-    # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``). Keyed lazy tabs existed only for Family Lists
-    # “main tab” session bookkeeping; the Families flow now relies on dataframe selection only (refs #73).
+    # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``).
     (
         tab_map,
         tab_checklist,

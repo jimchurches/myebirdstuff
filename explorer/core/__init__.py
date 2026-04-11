@@ -41,7 +41,6 @@ from typing import TYPE_CHECKING, Any
 # checkers and many IDEs without changing runtime imports.
 if TYPE_CHECKING:  # pragma: no cover
     from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
-    from explorer.core.species_search import whoosh_common_name_suggestions
     from explorer.presentation.checklist_stats_display import (
         format_checklist_stats_bundle,
         format_rankings_tab_html,
@@ -120,10 +119,6 @@ from explorer.presentation.maintenance_display import (
 # Whoosh / Folium are heavy optional stacks for search + map UIs. Lazy-load so
 # lightweight imports do not require whoosh or folium installed.
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
-    "whoosh_common_name_suggestions": (
-        "explorer.core.species_search",
-        "whoosh_common_name_suggestions",
-    ),
     "MapOverlayResult": ("explorer.core.map_controller", "MapOverlayResult"),
     "build_species_overlay_map": (
         "explorer.core.map_controller",
@@ -225,5 +220,4 @@ __all__ = [
     "format_map_maintenance_html",
     "format_sex_notation_maintenance_html",
     "format_incomplete_checklists_maintenance_html",
-    "whoosh_common_name_suggestions",
 ]

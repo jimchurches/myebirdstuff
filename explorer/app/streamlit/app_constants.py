@@ -199,12 +199,6 @@ SESSION_SPECIES_WS_KEY = "_ws_for_species_search_fragment"
 SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
-# Selected species group (eBird label) → second dropdown lists species in data (refs #73).
-SESSION_SPECIES_GROUP_PENDING_KEY = "_streamlit_species_group_pending"
-SESSION_SPECIES_GROUP_SPECIES_SELECT_KEY = "streamlit_species_group_species_select"
-SESSION_SPECIES_GROUP_BACK_TO_ALL_KEY = "streamlit_species_group_back_to_all"
-# Last (pending group label, species common) we ran a full app rerun for; avoids callback st.rerun (#73).
-SESSION_SPECIES_GROUP_SEL_COMMIT_KEY = "_species_in_group_dropdown_commit"
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
 # Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"

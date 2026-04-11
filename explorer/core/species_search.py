@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Sequence
 from whoosh.analysis import StemmingAnalyzer
 from whoosh.fields import Schema, TEXT
 from whoosh.index import create_in
-from whoosh.qparser import MultifieldParser, OrGroup, QueryParser
+from whoosh.qparser import MultifieldParser, OrGroup
 
 from explorer.core.species_family import build_base_species_to_family_map
 from explorer.core.species_logic import base_species_name
@@ -143,46 +143,6 @@ def build_ram_species_whoosh_index(
         )
     w.commit()
     return ix
-
-
-def whoosh_common_name_suggestions(
-    whoosh_index: Any,
-    raw_query: str,
-    *,
-    field_name: str = "common_name",
-    max_options: int = 6,
-    min_query_len: int = 3,
-) -> List[str]:
-    """Return up to *max_options* common-name strings matching *raw_query* (prefix-style per token).
-
-    Uses a single field (default ``common_name``). For indexes with both fields, prefer
-    :func:`whoosh_species_suggestions`.
-
-    Empty list when query is too short, parse fails, or there are no hits.
-    """
-    q = (raw_query or "").strip().lower()
-    if len(q) < min_query_len:
-        return []
-    tokens = _query_tokens(q)
-    if not tokens:
-        return []
-    with whoosh_index.searcher() as searcher:
-        qp = QueryParser(field_name, whoosh_index.schema, group=OrGroup)
-        try:
-            parsed = qp.parse(" ".join(f"{t}*" for t in tokens))
-        except Exception:
-            return []
-        results = searcher.search(parsed, limit=None)
-
-        def score(r):
-            name = r[field_name].lower()
-            base = 100 - r.rank
-            if name.startswith(tokens[0]):
-                base += 50
-            return base
-
-        ranked = sorted(results, key=score, reverse=True)
-        return [r[field_name] for r in ranked[:max_options]]
 
 
 def whoosh_species_suggestions(
