@@ -12,6 +12,9 @@ import streamlit.components.v1 as components
 
 from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
+    EXPLORER_MAP_HTML_BYTES_KEY,
+    FOLIUM_MAP_MOUNT_NONCE_KEY,
+    FOLIUM_STATIC_MAP_CACHE_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
@@ -290,7 +293,10 @@ def species_searchbox_fragment() -> None:
         return
     persisted = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
     search_default = persisted
-    search_term = persisted or ""
+    # Always use an empty initial search term for the widget props. Passing the persisted species
+    # here on every fragment rerun re-injected that string into the control and fought backspace /
+    # edits (focus jumped; map state flickered). Selection stays in session via ``default`` and
+    # ``SESSION_SPECIES_PICK_KEY``; only the reset (×) clears those (refs #73).
 
     def _search(term: str) -> list:
         return whoosh_species_suggestions(
@@ -301,8 +307,17 @@ def species_searchbox_fragment() -> None:
         )
 
     def _on_species_submit(selected: Any) -> None:
-        st.session_state[SESSION_SPECIES_PICK_KEY] = selected
-        st.rerun()
+        # Submit can fire while editing; only commit a real species and rerun when it changes (refs #73).
+        ws = st.session_state.get(SESSION_SPECIES_WS_KEY)
+        valid_common = frozenset(ws.species_list) if ws is not None else frozenset()
+        raw = selected if isinstance(selected, str) else str(selected)
+        s = raw.strip()
+        if s not in valid_common:
+            return
+        prev = st.session_state.get(SESSION_SPECIES_PICK_KEY)
+        st.session_state[SESSION_SPECIES_PICK_KEY] = s
+        if prev != s:
+            st.rerun()
 
     def _on_species_reset() -> None:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
@@ -311,6 +326,12 @@ def species_searchbox_fragment() -> None:
         st.session_state[SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY] = int(
             st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)
         ) + 1
+        # Remount Folium + drop cached HTML so the map returns to the all-locations view cleanly.
+        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        ) + 1
+        st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         st.rerun()
 
     pick = st_searchbox(
@@ -319,7 +340,7 @@ def species_searchbox_fragment() -> None:
         placeholder=SPECIES_SEARCH_PLACEHOLDER,
         label="Species",
         default=search_default,
-        default_searchterm=search_term,
+        default_searchterm="",
         debounce=SPECIES_SEARCH_DEBOUNCE_MS,
         edit_after_submit=SPECIES_SEARCH_EDIT_AFTER_SUBMIT,
         rerun_scope=SPECIES_SEARCH_RERUN_SCOPE,
@@ -332,8 +353,8 @@ def species_searchbox_fragment() -> None:
     if pick is not None:
         raw = pick if isinstance(pick, str) else str(pick)
         p = raw.strip()
-        if not p:
-            st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
-        elif p in valid_common:
+        # Empty field while typing / backspacing must not clear the map species — only choosing a
+        # valid species updates PICK; reset (×) clears via ``_on_species_reset`` (refs #73).
+        if p in valid_common:
             st.session_state[SESSION_SPECIES_PICK_KEY] = p
         # Partial / invalid typing: do not assign PICK (avoids empty filter → blank map) (refs #73).

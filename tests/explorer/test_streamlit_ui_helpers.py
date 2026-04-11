@@ -267,8 +267,18 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
         species_selected_sci="Turdus migratorius",
         hide_non_matching_locations=True,
     )
+    empty_awaiting_species = static_map_cache_key(
+        df,
+        "species",
+        "",
+        "default",
+        ro,
+        taxonomy_locale="en_AU",
+        hide_non_matching_locations=True,
+    )
     assert no_species != with_species
     assert with_species != hide_on
+    assert empty_awaiting_species != no_species
 
 
 # --- app_data_loading / app_map_ui / streamlit_theme (refs #98; UI-surface regressions) ---

@@ -250,9 +250,7 @@ def render_prep_spinner_and_map_tab(
                     )
                     overlay_sci = (species_pick_sci or "").strip() if map_view_mode == "species" else ""
                     hide_nm = (
-                        map_view_mode == "species"
-                        and bool(overlay_sci)
-                        and hide_non_matching_locations
+                        map_view_mode == "species" and bool(hide_non_matching_locations)
                     )
                     _map_kw = {
                         **ctx,
@@ -315,7 +313,8 @@ def render_prep_spinner_and_map_tab(
                     _species_selected = bool(overlay_sci)
                     _cache_map_view_mode = map_view_mode
                     if map_view_mode == "species" and not _species_selected:
-                        _cache_map_view_mode = "all"
+                        if not hide_non_matching_locations:
+                            _cache_map_view_mode = "all"
                     _ck = static_map_cache_key(
                         work_df,
                         _cache_map_view_mode,

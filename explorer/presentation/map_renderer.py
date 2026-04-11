@@ -351,6 +351,18 @@ def build_all_species_banner_html(
     )
 
 
+def build_species_locations_awaiting_selection_banner_html(date_filter_status=None):
+    """Banner when **Species locations** has no species selected and pins are restricted to a species."""
+    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
+    return (
+        f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
+        f'<span class="pebird-map-banner__title">Species locations</span>'
+        f'<div class="pebird-map-banner__stats">Select a species in the sidebar to show pins.</div>'
+        f'{date_block}'
+        f'</div>'
+    )
+
+
 def build_lifer_locations_banner_html(
     n_lifer_species, n_locations, date_filter_status=None, include_subspecies: bool = False
 ):

@@ -32,7 +32,7 @@ SPECIES_SEARCH_CAPTION = """Start typing to search for a species.
 
 You can use common names, scientific names, or bird groups (e.g. Australasian Robins).
 
-Tip: Turning on "Show only selected species" can improve map performance."""
+Tip: "Show only selected species" defaults to on for performance; turn it off to see all locations with the selected species highlighted."""
 # Sidebar expander title (Map → Species locations); body is SPECIES_SEARCH_CAPTION.
 SPECIES_SEARCH_HELP_EXPANDER_LABEL = "Search tips"
 SPECIES_SEARCH_EDIT_AFTER_SUBMIT = "option"

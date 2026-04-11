@@ -28,6 +28,7 @@ from explorer.presentation.map_renderer import (
     build_legend_html,
     build_location_popup_html,
     build_species_banner_html,
+    build_species_locations_awaiting_selection_banner_html,
     build_visit_info_html,
     classify_locations,
     create_map,
@@ -103,11 +104,33 @@ def build_visit_overlay_map(
             effective_location_data["Longitude"].mean(),
         ]
 
+    popup_ascending = popup_sort_order == "ascending"
+    date_filter_status_line = date_filter_status or None
+
+    if not selected_species and hide_non_matching_locations:
+        if effective_location_data.empty:
+            lat, lon = -25.0, 134.0
+        else:
+            lat = float(effective_location_data["Latitude"].mean())
+            lon = float(effective_location_data["Longitude"].mean())
+            if pd.isna(lat) or pd.isna(lon):
+                lat, lon = -25.0, 134.0
+        map_center_empty = [lat, lon]
+        species_map = create_map(map_center_empty, map_style, height_px=map_height_px)
+        inject_map_overlay_theme(species_map)
+        add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
+        species_map.get_root().html.add_child(
+            Element(build_species_locations_awaiting_selection_banner_html(date_filter_status_line))
+        )
+        scroll_popup_script = popup_scroll_script(
+            popup_scroll_hint, popup_sort_order == "ascending"
+        )
+        species_map.get_root().html.add_child(Element(scroll_popup_script))
+        return MapOverlayResult(species_map, None)
+
     species_map = create_map(map_center, map_style, height_px=map_height_px)
     inject_map_overlay_theme(species_map)
     add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
-    popup_ascending = popup_sort_order == "ascending"
-    date_filter_status_line = date_filter_status or None
 
     if not selected_species:
         tc, ts, ti = effective_totals

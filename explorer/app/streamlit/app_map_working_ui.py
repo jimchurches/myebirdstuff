@@ -60,6 +60,7 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_STEP,
+    MAP_SPECIES_HIDE_ONLY_DEFAULT,
     MAP_VIEW_LABELS,
 )
 from explorer.app.streamlit.map_working import (
@@ -276,13 +277,11 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                     if _para:
                         st.caption(_para)
             species_searchbox_fragment()
+            if STREAMLIT_SPECIES_HIDE_ONLY_KEY not in st.session_state:
+                st.session_state[STREAMLIT_SPECIES_HIDE_ONLY_KEY] = MAP_SPECIES_HIDE_ONLY_DEFAULT
             hide_non_matching_locations = st.toggle(
                 "Show only selected species",
                 key=STREAMLIT_SPECIES_HIDE_ONLY_KEY,
-                help=(
-                    "When off, all locations are shown with your species highlighted. "
-                    "When on, only locations where you recorded the species."
-                ),
             )
 
         species_pick_common = st.session_state.get(SESSION_SPECIES_PICK_KEY)
