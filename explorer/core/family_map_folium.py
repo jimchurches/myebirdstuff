@@ -150,8 +150,12 @@ def build_family_composition_folium_map(
     species_url_fn: Callable[[str], str | None] | None = None,
     fit_bounds_highlight_only: bool = False,
     colour_scheme_index: int | None = None,
+    default_center: tuple[float, float] | None = None,
 ) -> folium.Map:
     """Draw the family-composition map: markers, injected banner/legend HTML, and initial ``fit_bounds``.
+
+    *default_center* — when there are no pins, centre the blank map here (e.g. mean of the user’s
+    locations). If omitted, a broad regional default is used.
 
     *location_page_url_fn* maps ``Location ID`` → hotspot URL; *species_url_fn* maps common name
     (as shown in the export) to species page URL.
@@ -176,7 +180,7 @@ def build_family_composition_folium_map(
             sum(p.longitude for p in _cent_src) / len(_cent_src),
         )
     else:
-        center = _default_au_center()
+        center = default_center if default_center is not None else _default_au_center()
 
     m = create_map(center, map_style, height_px=height_px)
     m.get_root().html.add_child(Element(map_overlay_theme_stylesheet()))

@@ -17,6 +17,23 @@ from explorer.core.species_logic import base_species_for_lifer, countable_specie
 from explorer.core.stats import safe_count
 
 
+def mean_center_from_location_data(location_data: pd.DataFrame | None) -> tuple[float, float] | None:
+    """Mean ``(latitude, longitude)`` for default map centre (same idea as visit overlay empty map).
+
+    Returns ``None`` when *location_data* is missing, empty, or means are non-finite — callers fall back
+    to a regional default (e.g. family blank map).
+    """
+    if location_data is None or location_data.empty:
+        return None
+    if not {"Latitude", "Longitude"}.issubset(location_data.columns):
+        return None
+    lat = float(location_data["Latitude"].mean())
+    lon = float(location_data["Longitude"].mean())
+    if pd.isna(lat) or pd.isna(lon):
+        return None
+    return (lat, lon)
+
+
 def prepare_all_locations_map_context(
     df: pd.DataFrame,
     *,

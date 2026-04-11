@@ -9,6 +9,7 @@ from explorer.core.map_controller import build_species_overlay_map
 from explorer.core.species_logic import base_species_for_lifer
 from explorer.core.map_prep import (
     data_signature_for_caches,
+    mean_center_from_location_data,
     prepare_all_locations_map_context,
 )
 
@@ -62,3 +63,17 @@ def test_prepare_empty_raises():
 def test_data_signature_for_caches():
     df = _tiny_df()
     assert data_signature_for_caches(df, "disk") == ("disk", 1, "S1")
+
+
+def test_mean_center_from_location_data():
+    df = _tiny_df()
+    ctx = prepare_all_locations_map_context(df)
+    c = mean_center_from_location_data(ctx["effective_location_data"])
+    assert c is not None
+    assert c[0] == pytest.approx(-35.0)
+    assert c[1] == pytest.approx(149.0)
+
+
+def test_mean_center_from_location_data_empty_returns_none():
+    assert mean_center_from_location_data(pd.DataFrame()) is None
+    assert mean_center_from_location_data(None) is None
