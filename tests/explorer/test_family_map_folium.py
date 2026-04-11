@@ -99,6 +99,12 @@ def test_build_family_map_empty_pins_still_returns_map():
     assert "folium" in html.lower() or "map" in html.lower()
 
 
+def test_build_family_map_empty_pins_uses_default_center_when_given():
+    m = build_family_composition_folium_map((), default_center=(-33.8, 151.2))
+    html = m._repr_html_()
+    assert "-33.8" in html and "151.2" in html
+
+
 def test_fit_bounds_highlight_only_uses_highlight_pins():
     pins = _sample_pins()
     m_all = build_family_composition_folium_map(pins, fit_bounds_highlight_only=False)

@@ -69,7 +69,11 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 )
 from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_summary_session_inputs
 from explorer.core.map_controller import build_species_overlay_map
-from explorer.core.map_prep import data_signature_for_caches, prepare_all_locations_map_context
+from explorer.core.map_prep import (
+    data_signature_for_caches,
+    mean_center_from_location_data,
+    prepare_all_locations_map_context,
+)
 from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
 from explorer.core.species_logic import base_species_for_lifer
 from explorer.core.family_map_compute import (
@@ -160,6 +164,7 @@ def render_prep_spinner_and_map_tab(
                 st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
 
             map_warning_text: str | None = None
+            map_hint_text: str | None = None
             map_for_folium = None
             folium_st_key: str | None = None
             try:
@@ -176,6 +181,7 @@ def render_prep_spinner_and_map_tab(
                     fams = set(bundle.get("families") or ())
                     work = bundle.get("work")
                     tax_merged = bundle.get("tax_merged")
+                    fam_default_center = mean_center_from_location_data(ctx["effective_location_data"])
 
                     if not fam:
                         result_map = build_family_composition_folium_map(
@@ -183,16 +189,20 @@ def render_prep_spinner_and_map_tab(
                             map_style=map_style,
                             height_px=int(map_height),
                             colour_scheme_index=int(family_colour_scheme),
+                            default_center=fam_default_center,
                         )
-                        result_warning = "Select a family in the sidebar to load the map."
+                        map_hint_text = "Select a family in the sidebar to load the map."
+                        result_warning = None
                     elif fam not in fams or work is None or getattr(work, "empty", True):
                         result_map = build_family_composition_folium_map(
                             (),
                             map_style=map_style,
                             height_px=int(map_height),
                             colour_scheme_index=int(family_colour_scheme),
+                            default_center=fam_default_center,
                         )
-                        result_warning = "No family data available (taxonomy may not have loaded)."
+                        map_hint_text = "No family data available (taxonomy may not have loaded)."
+                        result_warning = None
                     else:
                         wf = filter_work_to_family(work, fam)
                         metrics = (
@@ -243,6 +253,7 @@ def render_prep_spinner_and_map_tab(
                         "key": _ck,
                         "map": result_map,
                         "warning": result_warning,
+                        "hint": map_hint_text,
                     }
                 else:
                     overlay_common = (
@@ -365,6 +376,8 @@ def render_prep_spinner_and_map_tab(
                 if map_warning_text is not None:
                     st.warning(map_warning_text)
                 elif map_for_folium is not None and folium_st_key is not None:
+                    if map_hint_text:
+                        st.info(map_hint_text)
                     inject_map_folium_iframe_min_height_css(map_height)
                     try:
                         from streamlit_folium import st_folium
