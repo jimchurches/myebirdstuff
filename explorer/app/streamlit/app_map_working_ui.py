@@ -125,8 +125,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         saved_basemap = st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_OPTIONS[0])
         if saved_basemap not in MAP_BASEMAP_OPTIONS:
             saved_basemap = MAP_BASEMAP_OPTIONS[0]
-        override = st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY, "__default__")
-        map_style = override if override in MAP_BASEMAP_OPTIONS else saved_basemap
+        override = st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY, saved_basemap)
+        if override not in MAP_BASEMAP_OPTIONS:
+            override = saved_basemap
+        map_style = override
 
         # Renamed label (was "Selected species"); keep existing sessions valid.
         if st.session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY) == "Selected species":
@@ -370,12 +372,8 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         with st.expander("Basemap", expanded=False):
             st.selectbox(
                 "Basemap",
-                options=["__default__"] + list(MAP_BASEMAP_OPTIONS),
-                format_func=lambda k: (
-                    f"Use default ({MAP_BASEMAP_LABELS.get(saved_basemap, saved_basemap)})"
-                    if k == "__default__"
-                    else MAP_BASEMAP_LABELS.get(k, k)
-                ),
+                options=list(MAP_BASEMAP_OPTIONS),
+                format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
                 key=STREAMLIT_MAP_BASEMAP_KEY,
                 on_change=_on_basemap_changed,
             )

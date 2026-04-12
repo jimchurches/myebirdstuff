@@ -118,7 +118,14 @@ def render_settings_tab(
                     )
                     if ok:
                         # Keep sidebar runtime controls in sync only after Save.
-                        st.session_state[STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY] = "__default__"
+                        _bm_save = st.session_state.get(
+                            STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_DEFAULT
+                        )
+                        st.session_state[STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY] = (
+                            _bm_save
+                            if _bm_save in MAP_BASEMAP_OPTIONS
+                            else MAP_BASEMAP_DEFAULT
+                        )
                         st.session_state[STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY] = int(
                             st.session_state.get(
                                 STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
@@ -283,7 +290,7 @@ def render_settings_tab(
 
         if apply_map:
             st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = str(basemap_default_w)
-            st.session_state[STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY] = "__default__"
+            st.session_state[STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY] = str(basemap_default_w)
             st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = int(map_height_default_w)
             st.session_state[STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY] = int(map_height_default_w)
             st.session_state[STREAMLIT_MARK_LIFER_KEY] = bool(mark_lifer_w)

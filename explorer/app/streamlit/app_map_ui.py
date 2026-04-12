@@ -227,14 +227,15 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
     elif st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY) not in MAP_BASEMAP_OPTIONS:
         st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
 
-    # Sidebar override (session-only): sentinel means "use default from Settings".
+    # Session sidebar basemap: concrete key only (same list as Settings). Seed from saved default.
     if STREAMLIT_MAP_BASEMAP_KEY not in st.session_state:
-        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = "__default__"
-    elif (
-        st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) not in MAP_BASEMAP_OPTIONS
-        and st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) != "__default__"
-    ):
-        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = "__default__"
+        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = st.session_state.get(
+            STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_DEFAULT
+        )
+    elif st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) not in MAP_BASEMAP_OPTIONS:
+        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = st.session_state.get(
+            STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_DEFAULT
+        )
     if STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY not in st.session_state:
         st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = MAP_HEIGHT_PX_DEFAULT
     else:
