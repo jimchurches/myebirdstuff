@@ -469,6 +469,17 @@ def test_inject_main_tab_panel_top_compact_css_emits_selectors(streamlit_stub) -
     assert "padding-top:" in blob
 
 
+def test_inject_app_header_css_emits_pebird_header(streamlit_stub) -> None:
+    from explorer.app.streamlit import streamlit_theme
+
+    streamlit_stub.html_calls.clear()
+    streamlit_theme.inject_app_header_css()
+    blob = streamlit_stub.html_calls[-1]
+    assert ".pebird-app-header" in blob
+    assert "h1" in blob and "p" in blob
+    assert "margin-bottom" in blob and "padding-bottom" in blob
+
+
 def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) -> None:
     from explorer.app.streamlit.app_map_ui import sidebar_footer_links
     from explorer.app.streamlit.streamlit_ui_constants import (
