@@ -16,6 +16,7 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_data_loading import load_dataframe
 from explorer.app.streamlit.app_map_ui import sidebar_footer_links
+from explorer.app.streamlit.streamlit_theme import inject_app_header_css
 
 _APP_LOGO_SVG = Path(REPO_ROOT) / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
 
@@ -32,13 +33,13 @@ def title_with_logo() -> None:
             .replace(">", "&gt;")
         )
         st.html(
-            "<div style='display:flex;flex-direction:row;align-items:flex-start;justify-content:space-between;"
-            "flex-wrap:wrap;column-gap:0.75rem;row-gap:0.35rem;margin:0;padding:0 0 0.5rem 0;'>"
+            "<div class='pebird-app-header' style='display:flex;flex-direction:row;align-items:flex-start;"
+            "justify-content:space-between;flex-wrap:wrap;column-gap:0.75rem;row-gap:0.35rem;"
+            "margin:0;padding:0;'>"
             "<div style='flex:1;min-width:min(100%,12rem);margin:0;padding:0;'>"
             "<h1 style='margin:0;padding:0;font-size:clamp(1.35rem,3.5vw,2.25rem);"
             "line-height:1.15;font-weight:600;'>Personal eBird Explorer</h1>"
-            "<p style='margin:0.25rem 0 0 0;padding:0;font-size:1rem;line-height:1.45;"
-            "color:rgb(49,51,63);'>"
+            "<p style='margin:0.25rem 0 0 0;padding:0;font-size:1rem;line-height:1.45;'>"
             f"{tagline_esc}</p></div>"
             f"<img src='data:image/svg+xml;base64,{b64}' alt='' width='64' "
             "style='width:64px;max-width:min(64px,16vw);height:auto;display:block;margin:0.15rem 0 0 0;"
@@ -46,8 +47,22 @@ def title_with_logo() -> None:
             "</div>"
         )
     else:
-        st.title("Personal eBird Explorer")
-        st.markdown(APP_TAGLINE)
+        tagline_esc = (
+            APP_TAGLINE.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+        st.html(
+            "<div class='pebird-app-header' style='display:flex;flex-direction:row;align-items:flex-start;"
+            "justify-content:space-between;flex-wrap:wrap;column-gap:0.75rem;row-gap:0.35rem;"
+            "margin:0;padding:0;'>"
+            "<div style='flex:1;min-width:min(100%,12rem);margin:0;padding:0;'>"
+            "<h1 style='margin:0;padding:0;font-size:clamp(1.35rem,3.5vw,2.25rem);"
+            "line-height:1.15;font-weight:600;'>Personal eBird Explorer</h1>"
+            f"<p style='margin:0.25rem 0 0 0;padding:0;font-size:1rem;line-height:1.45;'>{tagline_esc}</p>"
+            "</div></div>"
+        )
+    inject_app_header_css()
 
 
 def load_dataframe_after_landing(
