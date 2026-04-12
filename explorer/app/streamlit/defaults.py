@@ -41,7 +41,10 @@ MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 1.0
 MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
 MAP_LEGEND_PIN_DOT_PX = 8
 MAP_LEGEND_PIN_BORDER_PX = 2
-MAP_POPUP_MAX_WIDTH_PX = 800
+MAP_POPUP_MAX_WIDTH_PX = 420  # Folium L.popup maxWidth; card-like popups (refs #145).
+# Character shown for Macaulay Library media links in map popups (refs #145).
+# Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).
+MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
 
 # ---------------------------------------------------------------------------
 # Map UI (session-only; not persisted in embedded YAML)

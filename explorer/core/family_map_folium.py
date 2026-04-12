@@ -23,7 +23,12 @@ from explorer.core.family_map_compute import (
     FamilyMapBannerMetrics,
     format_family_location_popup_html,
 )
-from explorer.presentation.map_renderer import build_legend_html, create_map, map_overlay_theme_stylesheet
+from explorer.presentation.map_renderer import (
+    build_legend_html,
+    create_map,
+    map_overlay_theme_stylesheet,
+    map_popup_width_fix_script,
+)
 
 # Match species-map banner placement (``map_renderer``).
 _FAMILY_MAP_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
@@ -184,6 +189,7 @@ def build_family_composition_folium_map(
 
     m = create_map(center, map_style, height_px=height_px)
     m.get_root().html.add_child(Element(map_overlay_theme_stylesheet()))
+    m.get_root().html.add_child(Element(map_popup_width_fix_script()))
 
     if banner_html and str(banner_html).strip():
         m.get_root().html.add_child(Element(str(banner_html).strip()))

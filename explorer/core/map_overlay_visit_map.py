@@ -29,10 +29,10 @@ from explorer.presentation.map_renderer import (
     build_location_popup_html,
     build_species_banner_html,
     build_species_locations_awaiting_selection_banner_html,
+    build_species_map_location_popup_html,
     build_visit_info_html,
     classify_locations,
     create_map,
-    format_sighting_row,
     format_visit_time,
     popup_scroll_script,
     resolve_lifer_last_seen,
@@ -305,17 +305,23 @@ def build_visit_overlay_map(
                     "datetime", ascending=popup_ascending
                 )
                 visit_info = build_visit_info_html(visit_records, format_visit_time)
-                sightings_html = ""
+                n_visits = int(len(visit_records))
                 if row["has_species_match"]:
                     species_sightings = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(
                         "datetime", ascending=popup_ascending
                     )
-                    sightings_html = "".join(
-                        format_sighting_row(r) for _, r in species_sightings.iterrows()
+                    popup_html_cache[popup_key] = build_species_map_location_popup_html(
+                        row["Location"],
+                        loc_id,
+                        species_sightings,
+                        visit_info,
+                        visit_record_count=n_visits,
+                        popup_ascending=popup_ascending,
                     )
-                popup_html_cache[popup_key] = build_location_popup_html(
-                    row["Location"], loc_id, visit_info, sightings_html
-                )
+                else:
+                    popup_html_cache[popup_key] = build_location_popup_html(
+                        row["Location"], loc_id, visit_info, ""
+                    )
             popup_html = popup_html_cache[popup_key]
             popup_content = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
 
