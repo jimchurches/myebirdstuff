@@ -71,16 +71,20 @@ MAP_SPECIES_HIDE_ONLY_DEFAULT = True
 MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer locations", "Family locations")
 
 # ---------------------------------------------------------------------------
-# Family map (Map view → **Family locations**; refs #138)
+# Map marker colour schemes (Folium circle markers; refs #138)
 #
-# Two preset **colour schemes** (same structure). Sidebar radio (session-only) selects the active
-# scheme; ``FAMILY_MAP_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
+# Shared presets for marker styling on map views. **Family locations** is the first consumer; other
+# map modes can adopt the same bundles in due course.
+#
+# Three presets (same structure). Family-map sidebar radio (session-only) selects the active scheme;
+# ``MAP_MARKER_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
+# Scheme 3 is a placeholder for palette experiments (e.g. refs #147).
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
-class FamilyMapColourScheme:
-    """All Folium family-map tunables (colours, sizes, strokes, viewport, legend)."""
+class MapMarkerColourScheme:
+    """Folium map-marker tunables (colours, sizes, strokes, viewport, legend)."""
 
     display_name: str
     circle_marker_radius_px: int
@@ -98,8 +102,8 @@ class FamilyMapColourScheme:
     legend_highlight_swatch_fill_index: int
 
 
-# Scheme 1 — default: red density ramp + teal highlight.
-_FAMILY_MAP_SCHEME_1_VALUES = dict(
+# Scheme 1 — default: red density ramp
+_MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
     display_name="Reds",
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
@@ -125,8 +129,8 @@ _FAMILY_MAP_SCHEME_1_VALUES = dict(
     legend_highlight_swatch_fill_index=0,
 )
 
-# Scheme 2 — blue → purple density ramp, orange highlight (restored pre-dataclass palette; ``c48caca``).
-_FAMILY_MAP_SCHEME_2_VALUES = dict(
+# Scheme 2 — blue → purple density ramp
+_MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
     display_name="Blues & purples",
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
@@ -152,22 +156,53 @@ _FAMILY_MAP_SCHEME_2_VALUES = dict(
     legend_highlight_swatch_fill_index=0,
 )
 
-FAMILY_MAP_COLOUR_SCHEME_1 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_1_VALUES)
-FAMILY_MAP_COLOUR_SCHEME_2 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_2_VALUES)
+# Scheme 3 — experimental
+_MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
+    display_name="Experimental",
+    circle_marker_radius_px=5,
+    circle_marker_fill_opacity=0.88,
+    base_stroke_weight=2,
+    highlight_stroke_hex="#FF7F11",
+    highlight_stroke_weight=2,
+    density_fill_hex=(
+        "#3A86FF",
+        "#5E60CE",
+        "#9D4EDD",
+        "#C9184A",
+    ),
+    density_stroke_hex=(
+        "#2F6FD1",
+        "#4A4DA6",
+        "#7E3EAF",
+        "#A1143A",
+    ),
+    popup_max_width_px=320,
+    fit_bounds_padding_px=48,
+    fit_bounds_max_zoom=6,
+    fit_bounds_max_zoom_highlight=8,
+    legend_highlight_swatch_fill_index=0,
+)
+
+MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(**_MAP_MARKER_COLOUR_SCHEME_1_VALUES)
+MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(**_MAP_MARKER_COLOUR_SCHEME_2_VALUES)
+MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(**_MAP_MARKER_COLOUR_SCHEME_3_VALUES)
 
 # Default scheme index when callers do not pass a UI selection (tests, non-Streamlit builders).
-FAMILY_MAP_ACTIVE_COLOUR_SCHEME: int = 1
+MAP_MARKER_ACTIVE_COLOUR_SCHEME: int = 1
 
 
-def active_family_map_colour_scheme(scheme_index: int | None = None) -> FamilyMapColourScheme:
-    """Return the family-map style bundle for *scheme_index* ``1`` or ``2`` (refs #138).
+def active_map_marker_colour_scheme(scheme_index: int | None = None) -> MapMarkerColourScheme:
+    """Return the map-marker style bundle for *scheme_index* ``1``, ``2``, or ``3`` (refs #138).
 
-    When *scheme_index* is ``None``, uses :data:`FAMILY_MAP_ACTIVE_COLOUR_SCHEME` (Reds by default).
+    When *scheme_index* is ``None``, uses :data:`MAP_MARKER_ACTIVE_COLOUR_SCHEME` (Reds by default).
+    Unknown indices fall back to scheme ``1``.
     """
-    n = int(FAMILY_MAP_ACTIVE_COLOUR_SCHEME if scheme_index is None else scheme_index)
+    n = int(MAP_MARKER_ACTIVE_COLOUR_SCHEME if scheme_index is None else scheme_index)
     if n == 2:
-        return FAMILY_MAP_COLOUR_SCHEME_2
-    return FAMILY_MAP_COLOUR_SCHEME_1
+        return MAP_MARKER_COLOUR_SCHEME_2
+    if n == 3:
+        return MAP_MARKER_COLOUR_SCHEME_3
+    return MAP_MARKER_COLOUR_SCHEME_1
 
 
 # ---------------------------------------------------------------------------

@@ -38,7 +38,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_TAXONOMY_LOCALE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_SPECIES_HIDE_ONLY_KEY,
-    STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
     STREAMLIT_FAMILY_MAP_FAMILY_KEY,
     STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
     DEFAULT_TAXONOMY_LOCALE,
@@ -52,8 +52,9 @@ from explorer.app.streamlit.app_settings_state import apply_pending_map_cluster_
 from explorer.app.streamlit.app_settings_state import apply_pending_map_basemap_override
 from explorer.app.streamlit.app_settings_state import apply_pending_map_height_override
 from explorer.app.streamlit.defaults import (
-    FAMILY_MAP_COLOUR_SCHEME_1,
-    FAMILY_MAP_COLOUR_SCHEME_2,
+    MAP_MARKER_COLOUR_SCHEME_1,
+    MAP_MARKER_COLOUR_SCHEME_2,
+    MAP_MARKER_COLOUR_SCHEME_3,
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
     MAP_DATE_FILTER_DEFAULT,
@@ -346,21 +347,23 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 )
                 family_highlight_base = ""
 
-            family_colour_scheme = int(
-                st.radio(
-                    "Colour scheme",
-                    options=[1, 2],
-                    format_func=lambda n: (
-                        FAMILY_MAP_COLOUR_SCHEME_1.display_name
-                        if n == 1
-                        else FAMILY_MAP_COLOUR_SCHEME_2.display_name
-                    ),
-                    horizontal=True,
-                    key=STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
+            _family_scheme_labels = {
+                1: MAP_MARKER_COLOUR_SCHEME_1.display_name,
+                2: MAP_MARKER_COLOUR_SCHEME_2.display_name,
+                3: MAP_MARKER_COLOUR_SCHEME_3.display_name,
+            }
+            with st.expander("Colour schemes", expanded=False):
+                _scheme_sel = st.radio(
+                    "Family map colour scheme",
+                    options=[1, 2, 3],
+                    format_func=lambda n: _family_scheme_labels[int(n)],
+                    key=STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
                     index=0,
                     on_change=invalidate_folium_map_embed_cache,
+                    label_visibility="collapsed",
+                    width="stretch",
                 )
-            )
+                family_colour_scheme = int(_scheme_sel if _scheme_sel is not None else 1)
 
     with st.sidebar:
         st.divider()

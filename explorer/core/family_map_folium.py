@@ -13,9 +13,9 @@ import folium
 from branca.element import Element
 
 from explorer.app.streamlit.defaults import (
-    FamilyMapColourScheme,
     MAP_HEIGHT_PX_DEFAULT,
-    active_family_map_colour_scheme,
+    MapMarkerColourScheme,
+    active_map_marker_colour_scheme,
 )
 from explorer.core.family_map_compute import (
     DENSITY_BAND_LABELS,
@@ -36,10 +36,10 @@ _FAMILY_MAP_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
 def family_map_marker_style(
     pin: FamilyLocationPin,
     *,
-    style: FamilyMapColourScheme | None = None,
+    style: MapMarkerColourScheme | None = None,
 ) -> tuple[str, str, int]:
     """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin."""
-    s = style or active_family_map_colour_scheme()
+    s = style or active_map_marker_colour_scheme()
     fills = s.density_fill_hex
     strokes = s.density_stroke_hex
     idx = max(0, min(pin.density_band_index, len(fills) - 1))
@@ -95,14 +95,14 @@ def build_family_map_legend_overlay_html_for_pins(
     *,
     highlight_label: str | None,
     highlight_species_url: str | None = None,
-    style: FamilyMapColourScheme | None = None,
+    style: MapMarkerColourScheme | None = None,
 ) -> str:
     """Build the bottom-left legend: one row per richness band that appears on the map, plus highlight.
 
     Empty bands are omitted so sparse regions get a compact legend. When *highlight_species_url*
     is set together with *highlight_label*, the species name is linked to its eBird species page.
     """
-    s = style or active_family_map_colour_scheme()
+    s = style or active_map_marker_colour_scheme()
     pin_list = list(pins)
     bands_present = sorted({int(p.density_band_index) for p in pin_list}) if pin_list else []
     items: list[tuple[str, str, str]] = []
@@ -170,8 +170,8 @@ def build_family_composition_folium_map(
     and ``fit_bounds_max_zoom_highlight`` (closer zoom allowed than ``fit_bounds_max_zoom``).
     If none match, falls back to all pins.
 
-    *colour_scheme_index* ``1`` or ``2`` selects the sidebar palette; ``None`` uses
-    :func:`~explorer.app.streamlit.defaults.active_family_map_colour_scheme` defaults.
+    *colour_scheme_index* ``1``, ``2``, or ``3`` selects the sidebar palette; ``None`` uses
+    :func:`~explorer.app.streamlit.defaults.active_map_marker_colour_scheme` defaults.
     """
     pin_list = list(pins)
     if pin_list:
@@ -199,7 +199,7 @@ def build_family_composition_folium_map(
 
     loc_fn = location_page_url_fn or (lambda _lid: None)
     sp_fn = species_url_fn or (lambda _c: None)
-    style = active_family_map_colour_scheme(colour_scheme_index)
+    style = active_map_marker_colour_scheme(colour_scheme_index)
 
     # Draw non-highlighted first, then highlighted so highlights sit on top.
     normal = [p for p in pin_list if not p.highlight_match]

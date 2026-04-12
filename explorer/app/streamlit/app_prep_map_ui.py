@@ -81,7 +81,7 @@ from explorer.core.family_map_compute import (
     compute_family_map_banner_metrics,
     filter_work_to_family,
 )
-from explorer.app.streamlit.defaults import active_family_map_colour_scheme
+from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
 from explorer.core.family_map_folium import (
     build_family_composition_folium_map,
     build_family_map_banner_overlay_html,
@@ -221,7 +221,7 @@ def render_prep_spinner_and_map_tab(
                         if hl and hl_label:
                             _u = species_url_fn(hl_label)
                             hl_species_url = _u if _u else None
-                        _sch = active_family_map_colour_scheme(int(family_colour_scheme))
+                        _sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                         legend = build_family_map_legend_overlay_html_for_pins(
                             pins,
                             highlight_label=hl_label or None,

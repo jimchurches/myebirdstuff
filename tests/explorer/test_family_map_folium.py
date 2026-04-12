@@ -1,6 +1,10 @@
 """Tests for Family Map Folium builder (refs #138)."""
 
-from explorer.app.streamlit.defaults import FAMILY_MAP_COLOUR_SCHEME_1
+from explorer.app.streamlit.defaults import (
+    MAP_MARKER_COLOUR_SCHEME_1,
+    MAP_MARKER_COLOUR_SCHEME_3,
+    active_map_marker_colour_scheme,
+)
 from explorer.core.family_map_compute import FamilyLocationPin, FamilyMapBannerMetrics
 from explorer.core.family_map_folium import (
     build_family_composition_folium_map,
@@ -36,12 +40,16 @@ def _sample_pins():
     )
 
 
+def test_active_map_marker_colour_scheme_accepts_index_3():
+    assert active_map_marker_colour_scheme(3) is MAP_MARKER_COLOUR_SCHEME_3
+
+
 def test_family_map_marker_style_highlight_uses_amber_stroke():
     p = _sample_pins()[1]
-    fill, stroke, w = family_map_marker_style(p, style=FAMILY_MAP_COLOUR_SCHEME_1)
+    fill, stroke, w = family_map_marker_style(p, style=MAP_MARKER_COLOUR_SCHEME_1)
     assert p.highlight_match
-    assert stroke == FAMILY_MAP_COLOUR_SCHEME_1.highlight_stroke_hex
-    assert w == FAMILY_MAP_COLOUR_SCHEME_1.highlight_stroke_weight
+    assert stroke == MAP_MARKER_COLOUR_SCHEME_1.highlight_stroke_hex
+    assert w == MAP_MARKER_COLOUR_SCHEME_1.highlight_stroke_weight
 
 
 def test_build_family_composition_folium_map_html_contains_markers():

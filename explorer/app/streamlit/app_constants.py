@@ -127,7 +127,8 @@ EXPORT_MAP_HTML_BTN_KEY = "export_map_html_btn"
 # Family map tab widget keys (refs #138). Highlight key is suffixed with selected family in the UI.
 STREAMLIT_FAMILY_MAP_FAMILY_KEY = "streamlit_family_map_family"
 STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY = "streamlit_family_map_highlight"
-STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY = "streamlit_family_map_colour_scheme"
+# Session key string kept for backwards compatibility with saved browser sessions.
+STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY = "streamlit_family_map_colour_scheme"
 
 # Checklist stats payload keys (used by fragments).
 YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
