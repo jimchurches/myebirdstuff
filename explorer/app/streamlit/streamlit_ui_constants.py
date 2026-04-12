@@ -30,7 +30,7 @@ SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
 # Map sidebar “Search tips” expander: paragraphs separated by blank lines; rendered with ``st.caption``.
 SPECIES_SEARCH_CAPTION = """Start typing to search for a species.
 
-You can use common names, scientific names, or bird groups (e.g. Australasian Robins).
+You can use common names, scientific names, or family groups (e.g. Australasian Robins).
 
 Tip: "Show only selected species" defaults to on for performance; turn it off to see all locations with the selected species highlighted."""
 # Sidebar expander title (Map → Species locations); body is SPECIES_SEARCH_CAPTION.
