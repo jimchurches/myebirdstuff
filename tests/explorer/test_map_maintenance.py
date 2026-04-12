@@ -1,7 +1,6 @@
 """Tests for explorer.core.duplicate_checks module."""
 
 import pandas as pd
-import pytest
 
 from explorer.core.duplicate_checks import get_map_maintenance_data
 

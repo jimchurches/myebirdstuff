@@ -3,14 +3,40 @@ HTML builders for rankings tables in the Personal eBird Explorer.
 
 Scroll-wrapper and table builders used when rendering the Checklist Statistics
 rankings sections. Uses region_display for country/state names.
+Cell/row helpers: :mod:`explorer.presentation.stats_html_helpers` (refs #117).
 """
 
-import html as _html_module
-
-from explorer.core.region_display import country_for_display, state_for_display
+from explorer.presentation.stats_html_helpers import (
+    METRIC_CELL_STYLE,
+    a_external,
+    esc_attr,
+    esc_text,
+    td_html,
+    td_plain,
+    th_plain,
+    tr_row,
+)
 
 # Middle column in ``rankings_table_with_rank`` was historically unused (stats emit "—"); omit when safe.
 _PLACEHOLDER_MIDDLE_VALUES = frozenset({"", "—", "–", "-"})
+
+
+def _td_trusted_html(cell: object) -> str:
+    """``<td>`` for cell content already HTML from stats formatters (links, etc.) (refs #117)."""
+    return td_html(str(cell))
+
+
+def _region_country(code):
+    """Lazy import avoids ``explorer.core`` ↔ ``rankings_display`` circular import (refs #117)."""
+    from explorer.core.region_display import country_for_display as _cfd
+
+    return _cfd(code)
+
+
+def _region_state(country_code, state_code):
+    from explorer.core.region_display import state_for_display as _sfd
+
+    return _sfd(country_code, state_code)
 
 
 def _omit_placeholder_middle_column(headers_3col, rows_3col) -> bool:
@@ -54,14 +80,19 @@ def rankings_table(title, headers, rows, include_heading=True, scroll_hint="shad
     """Build a 3-column rankings table with scrollable body."""
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+        return f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{no_data}" if include_heading else no_data
     body = "".join(
-        f"<tr><td>{r[0]}</td><td>{r[1]}</td><td style='text-align:right;font-weight:600;'>{r[2]}</td></tr>"
+        tr_row(
+            td_plain(r[0]),
+            td_plain(r[1]),
+            td_plain(r[2], style=METRIC_CELL_STYLE),
+        )
         for r in rows
     )
-    tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead><tbody>{body}</tbody></table>"
+    head = "".join(th_plain(h) for h in headers)
+    tbl = f"<table class='stats-tbl rankings-tbl'><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-    content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+    content = f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
     return content
 
 
@@ -77,28 +108,31 @@ def rankings_not_seen_recently_table(
     """3-column table: Species (linked) | Last seen (HTML) | Days since (refs #106)."""
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+        return f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{no_data}" if include_heading else no_data
     rows_html = []
     for r in rows:
-        species_esc = _html_module.escape(str(r[0]), quote=True)
         species_url = link_urls_fn(r[0])[0] if link_urls_fn else None
         species_cell = (
-            f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>'
+            td_html(a_external(species_url, r[0], rel="noopener"))
             if species_url
-            else species_esc
+            else td_plain(r[0])
         )
         rows_html.append(
-            f"<tr><td>{species_cell}</td><td>{r[1]}</td>"
-            f"<td style='text-align:right;font-weight:600;'>{r[2]}</td></tr>"
+            tr_row(
+                species_cell,
+                _td_trusted_html(r[1]),
+                td_plain(r[2], style=METRIC_CELL_STYLE),
+            )
         )
     body = "".join(rows_html)
+    head = "".join(th_plain(h) for h in headers)
     tbl = (
         f"<table class='stats-tbl rankings-tbl'>"
-        f"<thead><tr><th>{headers[0]}</th><th>{headers[1]}</th><th>{headers[2]}</th></tr></thead>"
+        f"<thead><tr>{head}</tr></thead>"
         f"<tbody>{body}</tbody></table>"
     )
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-    content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+    content = f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
     return content
 
 
@@ -118,30 +152,41 @@ def rankings_table_location_5col(
     """
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+        return f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{no_data}" if include_heading else no_data
     tbl_classes = "stats-tbl rankings-tbl location-cols-tbl"
     if leading_rank_column:
         tbl_classes += " rank-col-soft-accent"
     if leading_rank_column:
         body = "".join(
-            f"<tr><td>{i}</td><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
-            f"<td>{r[3]}</td><td style='text-align:right;font-weight:600;'>{r[4]}</td></tr>"
+            tr_row(
+                td_plain(i),
+                _td_trusted_html(r[0]),
+                td_plain(_region_state(r[2], r[1])),
+                td_plain(_region_country(r[2])),
+                _td_trusted_html(r[3]),
+                td_html(str(r[4]), style=METRIC_CELL_STYLE),
+            )
             for i, r in enumerate(rows, start=1)
         )
-        head_cells = "".join(f"<th>{hdr}</th>" for hdr in ("Rank", *headers_5))
+        head_cells = "".join(th_plain(h) for h in ("Rank", *headers_5))
     else:
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
-            f"<td>{r[3]}</td><td style='text-align:right;font-weight:600;'>{r[4]}</td></tr>"
+            tr_row(
+                _td_trusted_html(r[0]),
+                td_plain(_region_state(r[2], r[1])),
+                td_plain(_region_country(r[2])),
+                _td_trusted_html(r[3]),
+                td_html(str(r[4]), style=METRIC_CELL_STYLE),
+            )
             for r in rows
         )
-        head_cells = "".join(f"<th>{hdr}</th>" for hdr in headers_5)
+        head_cells = "".join(th_plain(h) for h in headers_5)
     tbl = (
         f"<table class='{tbl_classes}'>"
         f"<thead><tr>{head_cells}</tr></thead><tbody>{body}</tbody></table>"
     )
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-    content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+    content = f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
     return content
 
 
@@ -172,12 +217,10 @@ def rankings_table_with_rank(
     """
     if not rows_3col:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+        return f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{no_data}" if include_heading else no_data
     omit_middle = _omit_placeholder_middle_column(headers_3col, rows_3col)
     rows_html = []
-    metric_style = "text-align:right;font-weight:600;"
     for i, r in enumerate(rows_3col, start=1):
-        cell1_esc = _html_module.escape(str(r[0]), quote=True)
         species_url = None
         lifelist_url = None
         if link_urls_fn:
@@ -187,35 +230,35 @@ def rankings_table_with_rank(
                 species_url = species_url_fn(r[0])
             if lifelist_url_fn:
                 lifelist_url = lifelist_url_fn(r[0])
-        cell1 = f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{cell1_esc}</a>' if species_url else cell1_esc
-        cell3 = str(r[2])
+        cell1 = (
+            td_html(a_external(species_url, r[0], rel="noopener"))
+            if species_url
+            else td_plain(r[0])
+        )
+        cell3_raw = str(r[2])
         if lifelist_url and (add_lifelist_link or lifelist_url_fn):
-            count_esc = _html_module.escape(cell3, quote=True)
-            cell3 = f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" target=\"_blank\" rel=\"noopener\">{count_esc}</a>"
-        if omit_middle:
-            rows_html.append(
-                f"<tr><td>{i}</td><td>{cell1}</td><td style='{metric_style}'>{cell3}</td></tr>"
-            )
+            cell3 = td_html(a_external(lifelist_url, cell3_raw, rel="noopener"), style=METRIC_CELL_STYLE)
         else:
-            rows_html.append(
-                f"<tr><td>{i}</td><td>{cell1}</td><td>{r[1]}</td><td style='{metric_style}'>{cell3}</td></tr>"
-            )
+            cell3 = td_plain(cell3_raw, style=METRIC_CELL_STYLE)
+        if omit_middle:
+            rows_html.append(tr_row(td_plain(i), cell1, cell3))
+        else:
+            rows_html.append(tr_row(td_plain(i), cell1, _td_trusted_html(r[1]), cell3))
     body = "".join(rows_html)
     if omit_middle:
-        thead = (
-            f"<thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[2]}</th></tr></thead>"
-        )
+        thead = "<thead><tr>" + "".join(
+            th_plain(h) for h in ("Rank", headers_3col[0], headers_3col[2])
+        ) + "</tr></thead>"
     else:
-        thead = (
-            f"<thead><tr><th>Rank</th><th>{headers_3col[0]}</th><th>{headers_3col[1]}</th>"
-            f"<th>{headers_3col[2]}</th></tr></thead>"
-        )
+        thead = "<thead><tr>" + "".join(
+            th_plain(h) for h in ("Rank", headers_3col[0], headers_3col[1], headers_3col[2])
+        ) + "</tr></thead>"
     tbl_classes = "stats-tbl rankings-tbl rank-tbl"
     if rank_column_soft_accent:
         tbl_classes += " rank-col-soft-accent"
     tbl = f"<table class='{tbl_classes}'>{thead}<tbody>{body}</tbody></table>"
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
-    content = f"<h4 style='margin:0 0 8px;'>{title}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
+    content = f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{scroll_wrapper}" if include_heading else scroll_wrapper
     return content
 
 
@@ -236,24 +279,45 @@ def rankings_visited_table(
         tbl_classes += " rank-col-soft-accent"
     if leading_rank_column:
         body = "".join(
-            f"<tr><td>{i}</td><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
-            f"<td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
+            tr_row(
+                td_plain(i),
+                _td_trusted_html(r[0]),
+                td_plain(_region_state(r[2], r[1])),
+                td_plain(_region_country(r[2])),
+                _td_trusted_html(r[3]),
+                _td_trusted_html(r[4]),
+                td_plain(r[5], style=METRIC_CELL_STYLE),
+            )
             for i, r in enumerate(rows, start=1)
         )
-        thead = (
-            "<thead><tr><th>Rank</th><th>Location</th><th>State</th><th>Country</th>"
-            "<th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead>"
-        )
+        thead = "<thead><tr>" + "".join(
+            th_plain(h)
+            for h in (
+                "Rank",
+                "Location",
+                "State",
+                "Country",
+                "First visit",
+                "Last visit",
+                "Visits",
+            )
+        ) + "</tr></thead>"
     else:
         body = "".join(
-            f"<tr><td>{r[0]}</td><td>{state_for_display(r[2], r[1])}</td><td>{country_for_display(r[2])}</td>"
-            f"<td>{r[3]}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
+            tr_row(
+                _td_trusted_html(r[0]),
+                td_plain(_region_state(r[2], r[1])),
+                td_plain(_region_country(r[2])),
+                _td_trusted_html(r[3]),
+                _td_trusted_html(r[4]),
+                td_plain(r[5], style=METRIC_CELL_STYLE),
+            )
             for r in rows
         )
-        thead = (
-            "<thead><tr><th>Location</th><th>State</th><th>Country</th>"
-            "<th>First visit</th><th>Last visit</th><th>Visits</th></tr></thead>"
-        )
+        thead = "<thead><tr>" + "".join(
+            th_plain(h)
+            for h in ("Location", "State", "Country", "First visit", "Last visit", "Visits")
+        ) + "</tr></thead>"
     tbl = (
         f"<table class='{tbl_classes}'>"
         f"{thead}<tbody>{body}</tbody></table>"
@@ -280,23 +344,43 @@ def rankings_seen_once_table(
         return f"<h4 style='margin:0 0 8px;'>Species: Seen only once</h4>{no_data}" if include_heading else no_data
     rows_html = []
     for r in rows:
-        species_esc = _html_module.escape(str(r[0]), quote=True)
         if link_urls_fn:
             species_url = link_urls_fn(r[0])[0]
         elif species_url_fn:
             species_url = species_url_fn(r[0])
         else:
             species_url = None
-        species_cell = f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>' if species_url else species_esc
+        species_cell = (
+            td_html(a_external(species_url, r[0], rel="noopener"))
+            if species_url
+            else td_plain(r[0])
+        )
         rows_html.append(
-            f"<tr><td>{species_cell}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
+            tr_row(
+                species_cell,
+                _td_trusted_html(r[1]),
+                td_plain(_region_state(r[3], r[2])),
+                td_plain(_region_country(r[3])),
+                _td_trusted_html(r[4]),
+                td_plain(r[5], style=METRIC_CELL_STYLE),
+            )
         )
     body = "".join(rows_html)
     tbl = (
         "<table class='stats-tbl rankings-tbl seen-once-tbl'>"
         "<thead><tr>"
-        "<th>Species</th><th>Location</th><th>State</th><th>Country</th><th>Visited date/time</th><th>Count</th>"
-        "</tr></thead><tbody>"
+        + "".join(
+            th_plain(h)
+            for h in (
+                "Species",
+                "Location",
+                "State",
+                "Country",
+                "Visited date/time",
+                "Count",
+            )
+        )
+        + "</tr></thead><tbody>"
         f"{body}</tbody></table>"
     )
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
@@ -320,27 +404,43 @@ def rankings_high_counts_table(
     order_label = "Sorted by count" if str(sort_mode).strip().lower() == "total_count" else "Sorted alphabetically"
     rows_html = []
     for r in rows:
-        species_esc = _html_module.escape(str(r[0]), quote=True)
         species_url = link_urls_fn(r[0])[0] if link_urls_fn else None
         species_cell = (
-            f'<a href="{_html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>'
+            td_html(a_external(species_url, r[0], rel="noopener"))
             if species_url
-            else species_esc
+            else td_plain(r[0])
         )
         rows_html.append(
-            f"<tr><td>{species_cell}</td><td>{r[1]}</td><td>{state_for_display(r[3], r[2])}</td><td>{country_for_display(r[3])}</td><td>{r[4]}</td><td style='text-align:right;font-weight:600;'>{r[5]}</td></tr>"
+            tr_row(
+                species_cell,
+                _td_trusted_html(r[1]),
+                td_plain(_region_state(r[3], r[2])),
+                td_plain(_region_country(r[3])),
+                _td_trusted_html(r[4]),
+                td_plain(r[5], style=METRIC_CELL_STYLE),
+            )
         )
     body = "".join(rows_html)
     tbl = (
         "<table class='stats-tbl rankings-tbl seen-once-tbl'>"
         "<thead><tr>"
-        "<th>Species</th><th>Location</th><th>State</th><th>Country</th><th>High-count checklist</th><th>Count</th>"
-        "</tr></thead><tbody>"
+        + "".join(
+            th_plain(h)
+            for h in (
+                "Species",
+                "Location",
+                "State",
+                "Country",
+                "High-count checklist",
+                "Count",
+            )
+        )
+        + "</tr></thead><tbody>"
         f"{body}</tbody></table>"
     )
     caption = (
-        f"<p style='margin:4px 0;color:#6b7280;font-size:12px;'>{order_label}. "
-        f"{winner} when count ties.</p>"
+        f"<p style='margin:4px 0;color:#6b7280;font-size:12px;'>{esc_text(order_label)}. "
+        f"{esc_text(winner)} when count ties.</p>"
     )
     scroll_wrapper = rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
     content = f"{caption}{scroll_wrapper}"
@@ -362,7 +462,7 @@ def rankings_subspecies_hierarchical_table(
     """
     if not species_blocks:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{no_data}" if include_heading else no_data
+        return f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{no_data}" if include_heading else no_data
 
     rows_html = []
     for block in species_blocks:
@@ -376,18 +476,14 @@ def rankings_subspecies_hierarchical_table(
         species_url = species_url_fn(species_common) if species_url_fn else None
         total_count = f"{total:,}"
         if lifelist_url:
-            total_count_html = (
-                f"<a href=\"{_html_module.escape(lifelist_url, quote=True)}\" "
-                f'target="_blank" rel="noopener">{total_count}</a>'
-            )
+            total_count_html = a_external(lifelist_url, total_count, rel="noopener")
         else:
-            total_count_html = total_count
+            total_count_html = esc_text(total_count)
         link_suffix = ""
         if species_url:
             link_suffix = (
                 " "
-                f"<a href=\"{_html_module.escape(species_url, quote=True)}\" "
-                'target="_blank" rel="noopener" '
+                f' <a href="{esc_attr(species_url)}" target="_blank" rel="noopener" '
                 'style="color:inherit;text-decoration:none;">⧉</a>'
             )
         if frac is not None:
@@ -396,9 +492,9 @@ def rankings_subspecies_hierarchical_table(
         else:
             total_line = f"{total_count_html}{link_suffix}"
 
-        header_parts = [_html_module.escape(str(species_common))]
+        header_parts = [esc_text(str(species_common))]
         if species_sci:
-            esc_sci = _html_module.escape(str(species_sci))
+            esc_sci = esc_text(str(species_sci))
             header_parts.append(f'<span class="subspecies-sci-secondary">({esc_sci})</span>')
         header_text = " ".join(header_parts)
 
@@ -408,15 +504,18 @@ def rankings_subspecies_hierarchical_table(
             sub_sci = sub.get("subspecies_scientific", "")
             count = sub.get("individuals", 0)
             label_raw = label or sub.get("subspecies_common_full", "") or ""
-            label_html = _html_module.escape(str(label_raw))
+            label_html = esc_text(str(label_raw))
             sci_html = (
-                f'<span class="subspecies-sci-secondary">{_html_module.escape(str(sub_sci))}</span>'
+                f'<span class="subspecies-sci-secondary">{esc_text(str(sub_sci))}</span>'
                 if sub_sci
                 else ""
             )
             subspecies_rows.append(
-                f"<tr><td>{label_html}</td><td>{sci_html}</td>"
-                f"<td style='text-align:right;font-weight:600;'>{count:,}</td></tr>"
+                tr_row(
+                    td_html(label_html),
+                    td_html(sci_html),
+                    td_plain(f"{count:,}", style=METRIC_CELL_STYLE),
+                )
             )
         subspecies_table = (
             "<table class='stats-tbl rankings-tbl subspecies-tbl'>"
@@ -449,7 +548,6 @@ def rankings_subspecies_hierarchical_table(
         + "</div>"
     )
 
-    # Reuse scroll wrapper so long lists remain usable
     wrapped = rankings_scroll_wrapper(all_html, scroll_hint, visible_rows)
 
     css = """
@@ -477,5 +575,5 @@ def rankings_subspecies_hierarchical_table(
 """
     content = f"<style>{css}</style>{wrapped}"
     if include_heading:
-        return f"<h4 style='margin:0 0 8px;'>{title}</h4>{content}"
+        return f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{content}"
     return content

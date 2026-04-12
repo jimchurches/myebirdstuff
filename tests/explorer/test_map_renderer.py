@@ -1,24 +1,26 @@
 """Tests for explorer.presentation.map_renderer helpers."""
 
-import math
-from datetime import datetime
-
 import folium
 import pandas as pd
 
+from explorer.app.streamlit.defaults import MAP_POPUP_MACAULAY_LINK_SYMBOL, MAP_POPUP_MAX_WIDTH_PX
 from explorer.presentation.map_renderer import (
-    create_map,
-    format_visit_time,
-    format_sighting_row,
-    popup_scroll_script,
-    pin_legend_item,
+    build_species_map_location_popup_html,
+    build_species_seen_sections_html,
+    build_visit_info_html,
     build_all_species_banner_html,
     build_species_banner_html,
     build_legend_html,
-    build_visit_info_html,
     build_location_popup_html,
-    resolve_lifer_last_seen,
     classify_locations,
+    create_map,
+    format_species_map_sighting_row,
+    format_sighting_row,
+    format_visit_time,
+    map_popup_width_fix_script,
+    pin_legend_item,
+    popup_scroll_script,
+    resolve_lifer_last_seen,
 )
 
 
@@ -82,7 +84,8 @@ def test_format_sighting_row_with_media():
     })
     html = format_sighting_row(row)
     assert "macaulaylibrary.org/asset/ML12345" in html
-    assert "📷" in html
+    assert "pebird-map-popup__media-link" in html and MAP_POPUP_MACAULAY_LINK_SYMBOL in html
+    assert 'title="media"' in html
 
 
 def test_format_sighting_row_no_submission_id():
@@ -112,6 +115,91 @@ def test_format_sighting_row_with_datetime():
 
 
 # ---------------------------------------------------------------------------
+# format_species_map_sighting_row / build_species_seen_sections_html (refs #145)
+# ---------------------------------------------------------------------------
+
+def test_format_species_map_sighting_row_omits_common_name():
+    row = pd.Series({
+        "Date": pd.Timestamp("2024-11-12"),
+        "Time": "05:54",
+        "Common Name": "Pacific Golden Plover",
+        "Count": 1,
+        "Submission ID": "SCHK1",
+        "ML Catalog Numbers": None,
+        "datetime": pd.Timestamp("2024-11-12 05:54"),
+    })
+    html = format_species_map_sighting_row(row)
+    assert "Pacific Golden Plover" not in html
+    assert "pebird-map-popup__obs-line" in html
+    assert "2024-11-12 05:54" in html
+    assert "(Observed: 1)" in html
+    assert "ebird.org/checklist/SCHK1" in html
+
+
+def test_format_species_map_sighting_row_media():
+    row = pd.Series({
+        "Date": pd.Timestamp("2024-11-12"),
+        "Time": "05:54",
+        "Common Name": "X",
+        "Count": 2,
+        "Submission ID": "S2",
+        "ML Catalog Numbers": "ML999",
+        "datetime": pd.Timestamp("2024-11-12 05:54"),
+    })
+    html = format_species_map_sighting_row(row)
+    assert "pebird-map-popup__obs-line" in html
+    assert "macaulaylibrary.org/asset/ML999" in html
+    assert "pebird-map-popup__media-link" in html and MAP_POPUP_MACAULAY_LINK_SYMBOL in html
+    assert 'title="media"' in html
+
+
+def test_build_species_seen_sections_two_common_names():
+    df = pd.DataFrame({
+        "Common Name": ["Grey Teal", "Pacific Golden Plover", "Grey Teal"],
+        "datetime": [
+            pd.Timestamp("2025-01-01 08:00"),
+            pd.Timestamp("2025-02-01 09:00"),
+            pd.Timestamp("2025-01-02 10:00"),
+        ],
+        "Count": [1, 2, 3],
+        "Submission ID": ["A", "B", "C"],
+        "ML Catalog Numbers": [None, None, None],
+    })
+    html = build_species_seen_sections_html(df, ascending=True)
+    assert html.count('<details class="pebird-map-popup__species-seen">') == 2
+    assert '<details class="pebird-map-popup__species-seen" open>' not in html
+    assert 'pebird-map-popup__section-label">Grey Teal:</summary>' in html
+    assert 'pebird-map-popup__section-label">Pacific Golden Plover:</summary>' in html
+    assert "pebird-map-popup__obs-list" in html
+    assert html.index("Grey Teal") < html.index("Pacific Golden Plover")
+
+
+def test_build_species_map_location_popup_html_collapsed_visits():
+    species_df = pd.DataFrame({
+        "Common Name": ["Bird X"],
+        "datetime": [pd.Timestamp("2025-06-01 12:00")],
+        "Count": [5],
+        "Submission ID": ["SID1"],
+        "ML Catalog Numbers": [None],
+    })
+    visit_fragment = '<a href="https://ebird.org/checklist/V1">2025-01-01</a>'
+    html = build_species_map_location_popup_html(
+        "Hotspot",
+        "L99",
+        species_df,
+        visit_fragment,
+        visit_record_count=3,
+        popup_ascending=True,
+    )
+    assert '<details class="pebird-map-popup__species-seen" open>' in html
+    assert "details" in html and "pebird-map-popup__all-visits" in html
+    assert "Visited: (3)" in html
+    assert visit_fragment in html
+    # Species map uses <summary>, not the standalone Visited block from build_location_popup_html.
+    assert '<div class="pebird-map-popup__section-label">Visited:</div>' not in html
+
+
+# ---------------------------------------------------------------------------
 # popup_scroll_script
 # ---------------------------------------------------------------------------
 
@@ -135,6 +223,12 @@ def test_popup_scroll_script_scroll_to_bottom():
 def test_popup_scroll_script_none_hint():
     result = popup_scroll_script(None, False)
     assert "None" in result
+
+
+def test_map_popup_width_fix_script_embeds_max_width():
+    s = map_popup_width_fix_script()
+    assert "<script>" in s and "shrinkPebirdPopups" in s
+    assert f"var MAX_PX = {MAP_POPUP_MAX_WIDTH_PX}" in s
 
 
 # ---------------------------------------------------------------------------
@@ -524,14 +618,14 @@ def test_classify_locations_basic():
     result = classify_locations(loc_df, seen_location_ids={"L1", "L3"}, lifer_location="L1", last_seen_location="L3")
     assert {"has_species_match", "is_lifer", "is_last_seen"}.issubset(result.columns)
     l1 = result[result["Location ID"] == "L1"].iloc[0]
-    assert l1["has_species_match"] == True
-    assert l1["is_lifer"] == True
-    assert l1["is_last_seen"] == False
+    assert l1["has_species_match"]
+    assert l1["is_lifer"]
+    assert not l1["is_last_seen"]
     l2 = result[result["Location ID"] == "L2"].iloc[0]
-    assert l2["has_species_match"] == False
+    assert not l2["has_species_match"]
     l3 = result[result["Location ID"] == "L3"].iloc[0]
-    assert l3["has_species_match"] == True
-    assert l3["is_last_seen"] == True
+    assert l3["has_species_match"]
+    assert l3["is_last_seen"]
 
 
 def test_classify_locations_sort_order():

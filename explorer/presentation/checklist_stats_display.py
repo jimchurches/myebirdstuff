@@ -11,6 +11,7 @@ import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import quote as url_quote
 
+from explorer.app.streamlit.defaults import THEME_PRIMARY_HEX
 from explorer.core.checklist_stats_compute import ChecklistStatsPayload
 from explorer.core.region_display import country_for_display
 from explorer.presentation.rankings_display import (
@@ -29,6 +30,14 @@ from explorer.core.constants import (
 )
 
 LinkUrlsFn = Optional[Callable[[str], Tuple[Optional[str], Optional[str]]]]
+
+
+# Discoverability for #108 (green note style — matches theme primary; Rankings = full export).
+_NOT_SEEN_RECENTLY_COUNTRY_TAB_HINT_HTML = (
+    f'<p style="margin:0 0 10px;font-size:12px;line-height:1.5;max-width:52rem;color:{THEME_PRIMARY_HEX};">'
+    "An equivalent country-specific list can be found on the <strong>Country</strong> tab."
+    "</p>"
+)
 
 
 def _ebird_country_region_iso2(country_key: str) -> Optional[str]:
@@ -1477,7 +1486,8 @@ def format_checklist_stats_bundle(
         ),
         (
             "Species: Not seen in the past year",
-            rankings_not_seen_recently_table(
+            _NOT_SEEN_RECENTLY_COUNTRY_TAB_HINT_HTML
+            + rankings_not_seen_recently_table(
                 "Species: Not seen in the past year",
                 ["Species", "Last seen", "Days since"],
                 rankings["not_seen_recently"],

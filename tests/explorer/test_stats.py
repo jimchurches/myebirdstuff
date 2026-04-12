@@ -1,8 +1,6 @@
 """Tests for explorer.core.stats module."""
 
-import numpy as np
 import pandas as pd
-import pytest
 
 from explorer.core.stats import (
     checklist_country_keys,
@@ -18,9 +16,8 @@ from explorer.core.stats import (
     rankings_subspecies_hierarchical,
     rankings_seen_once,
     rankings_by_visits,
-    rankings_by_value,
-    rankings_by_location,
     rankings_not_seen_recently,
+    rankings_not_seen_recently_in_country,
     rankings_high_counts,
 )
 
@@ -389,6 +386,40 @@ class TestRankingsNotSeenRecently:
         assert "S_new" in rows[0][1]
 
 
+class TestRankingsNotSeenRecentlyInCountry:
+    def test_empty_and_unknown_country(self):
+        df = _obs_df([{"Date": pd.Timestamp("2020-01-01")}])
+        cl = df.drop_duplicates(subset=["Submission ID"])
+        assert rankings_not_seen_recently_in_country(pd.DataFrame(), cl, "AU") == []
+        assert rankings_not_seen_recently_in_country(df, cl, "_UNKNOWN") == []
+
+    def test_uses_last_seen_in_country_not_global(self):
+        """Global list can exclude a species (recent abroad); country list uses in-country dates only."""
+        ref = pd.Timestamp("2025-06-01")
+        df = _obs_df([
+            {
+                "Common Name": "Grey Teal",
+                "Scientific Name": "Anas gracilis",
+                "Submission ID": "S_US",
+                "Date": pd.Timestamp("2025-01-01"),
+                "Country": "US",
+            },
+            {
+                "Common Name": "Grey Teal",
+                "Scientific Name": "Anas gracilis",
+                "Submission ID": "S_AU",
+                "Date": pd.Timestamp("2020-01-01"),
+                "Country": "AU",
+            },
+        ])
+        cl = df.drop_duplicates(subset=["Submission ID"])
+        assert rankings_not_seen_recently(df, reference_date=ref) == []
+        au_rows = rankings_not_seen_recently_in_country(df, cl, "AU", reference_date=ref)
+        assert len(au_rows) == 1
+        assert au_rows[0][0] == "Grey Teal"
+        assert "S_AU" in au_rows[0][1]
+
+
 # ---------------------------------------------------------------------------
 # compute_rankings (integration)
 # ---------------------------------------------------------------------------
@@ -452,6 +483,37 @@ class TestYearlySummaryStats:
         assert "Total species" in labels
         assert "Total bird families" in labels
         assert "Total checklists" in labels
+
+    def test_yearly_summary_static_row_order(self):
+        """Main yearly table row order (refs #128); protocol detail rows follow separately."""
+        expected_static = [
+            "Lifers",
+            "Total bird families",
+            "Total species",
+            "Total individuals",
+            "Total checklists",
+            "Completed checklists",
+            "Incomplete checklists",
+            "Traveling checklists",
+            "Stationary checklists",
+            "Incidental checklists",
+            "Shared checklists",
+            "Days with checklist",
+            "Days birding with others",
+            "Cumulative days eBird on",
+            "Total birding hours",
+            "Total distance (km)",
+            "Unique locations",
+        ]
+        df, cl = self._minimal_data()
+        _, rows, _ = yearly_summary_stats(df, cl, "Duration (Min)", "Distance Traveled (km)")
+        static = []
+        for label, _ in rows:
+            ls = label.strip()
+            if ls.startswith("Traveling checklist:") or ls.startswith("Stationary checklist:"):
+                break
+            static.append(ls.split(" <span")[0].strip())
+        assert static == expected_static
 
     def test_total_bird_families_uses_taxonomy_map(self, monkeypatch):
         """Per-year distinct family names match a stub base_species → family map (no network)."""

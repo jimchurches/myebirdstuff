@@ -639,7 +639,7 @@ def rankings_by_visits(cl_sub, limit):
     rows = []
     for _, r in vc.iterrows():
         lid = r["Location ID"]
-        # For visit-focused tables, link to the user's checklists at that location (refs #59).
+        # Link location names to the user’s mychecklists view for that hotspot.
         loc_link = f'<a href="https://ebird.org/mychecklists/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
         state_str = ""
         country_str = ""
@@ -667,7 +667,7 @@ def rankings_not_seen_recently(df_obs, reference_date=None):
     :func:`explorer.presentation.rankings_display.rankings_not_seen_recently_table`.
     *last_seen_html* is the visit date/time linking to the checklist of that observation.
 
-    *reference_date* defaults to local today (normalized); set for deterministic tests (refs #106).
+    *reference_date* defaults to local today (normalized); pass a fixed date in tests for determinism.
     """
     if df_obs.empty:
         return []
@@ -712,6 +712,38 @@ def rankings_not_seen_recently(df_obs, reference_date=None):
         days_str = f"{d:,} days"
         rows.append((name, last_link, days_str))
     return rows
+
+
+def rankings_not_seen_recently_in_country(df_obs, cl, country_key, reference_date=None):
+    """Countable species whose last observation *in this country* was before the past 12 months.
+
+    Uses the same checklist → country key mapping as :func:`country_summary_stats` /
+    :func:`checklist_country_keys` (``Country`` column, else ``State/Province``). Only
+    observation rows whose checklist falls in *country_key* are considered when finding
+    each species’ last seen date.
+
+    Returns the same row shape as :func:`rankings_not_seen_recently`. Empty when
+    *country_key* is missing or ``_UNKNOWN``.
+    """
+    if (
+        df_obs.empty
+        or cl.empty
+        or not country_key
+        or country_key == "_UNKNOWN"
+        or "Submission ID" not in df_obs.columns
+        or "Submission ID" not in cl.columns
+    ):
+        return []
+    cl2 = cl.dropna(subset=["Date"]).copy()
+    if cl2.empty:
+        return []
+    ck_series = checklist_country_keys(cl2)
+    cl2 = cl2.copy()
+    cl2["_country_key"] = ck_series
+    sid_map = cl2.drop_duplicates(subset=["Submission ID"]).set_index("Submission ID")["_country_key"]
+    obs_key = df_obs["Submission ID"].map(sid_map)
+    sub = df_obs[obs_key == country_key].copy()
+    return rankings_not_seen_recently(sub, reference_date=reference_date)
 
 
 # ---------------------------------------------------------------------------
@@ -788,6 +820,8 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
 
     *taxonomy_locale* selects the eBird taxonomy locale for **Total bird families**
     (species-group names); defaults to the app default (e.g. ``en_AU``).
+
+    Row order is fixed for the UI: core outcomes first, then checklist activity, effort, coverage.
     """
     cl = cl.dropna(subset=["Date"])
     if cl.empty:
@@ -818,118 +852,93 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     incomplete_hint = _html.escape("Incomplete checklists not counted.", quote=True)
     info_icon = f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{incomplete_hint}</span></span>' if has_all_obs else ""
 
+    # Working columns (not eBird export): _base = countable species key; _count = numeric Count; _family only on temporary copies below for the families row.
     sp_series = countable_species_vectorized(df_with_yr)
     df_with_yr["_base"] = sp_series
     df_with_yr["_count"] = df_with_yr["Count"].apply(safe_count)
 
-    rows = []
+    rows: list[tuple[str, list[str]]] = []
 
-    # 1. Total species
+    # --- Computations (order here is arbitrary; the yearly table enforces display order below) ---
+
+    # Total species
     by_yr_sp = df_with_yr.dropna(subset=["_base"]).groupby("_year")["_base"].nunique()
-    vals = [int(by_yr_sp.get(y, 0)) for y in years_sorted]
-    rows.append(("Total species", [f"{v:,}" for v in vals]))
+    vals_sp = [int(by_yr_sp.get(y, 0)) for y in years_sorted]
+    row_total_species = ("Total species", [f"{v:,}" for v in vals_sp])
 
-    # 2. Total bird families (eBird species groups; same mapping as Rankings → Families)
+    # Total bird families (eBird species groups; same mapping as Rankings → Families)
     loc = (taxonomy_locale or "").strip() or TAXONOMY_LOCALE_DEFAULT
     base_to_family = build_base_species_to_family_map(loc)
     if base_to_family:
         dfb = df_with_yr.dropna(subset=["_base"]).copy()
+        # _family: species-group name (same convention as explorer.core.family_map_compute work frames).
         dfb["_family"] = dfb["_base"].astype(str).str.strip().map(base_to_family)
         fam = dfb.dropna(subset=["_family"])
         by_yr_fam = fam.groupby("_year")["_family"].nunique()
         vals_f = [int(by_yr_fam.get(y, 0)) for y in years_sorted]
-        rows.append(("Total bird families", [f"{v:,}" for v in vals_f]))
+        row_total_bird_families = ("Total bird families", [f"{v:,}" for v in vals_f])
     else:
-        rows.append(("Total bird families", ["—"] * len(years_sorted)))
+        row_total_bird_families = ("Total bird families", ["—"] * len(years_sorted))
 
-    # 3. Total individuals
+    # Total individuals
     by_yr_ind = df_with_yr.groupby("_year")["_count"].sum()
-    vals = [int(by_yr_ind.get(y, 0)) for y in years_sorted]
-    rows.append(("Total individuals", [f"{v:,}" for v in vals]))
+    vals_ind = [int(by_yr_ind.get(y, 0)) for y in years_sorted]
+    row_total_individuals = ("Total individuals", [f"{v:,}" for v in vals_ind])
 
-    # 4. Lifers
+    # Lifers
     first_seen = df_with_yr.dropna(subset=["_base"]).groupby("_base")["Date"].min()
     first_seen_year = first_seen.dt.year
     lifers_per_year = first_seen_year.value_counts()
-    vals = [int(lifers_per_year.get(y, 0)) for y in years_sorted]
-    rows.append(("Lifers", [f"{v:,}" for v in vals]))
+    vals_lifers = [int(lifers_per_year.get(y, 0)) for y in years_sorted]
+    row_lifers = ("Lifers", [f"{v:,}" for v in vals_lifers])
 
-    # 5. Traveling checklists (complete only)
-    if has_protocol:
-        trav_count = cl[traveling_complete].groupby("_year").size()
-        vals = [int(trav_count.get(y, 0)) for y in years_sorted]
-        rows.append((f"Traveling checklists{info_icon}", [f"{v:,}" for v in vals]))
-    else:
-        rows.append(("Traveling checklists", ["—"] * len(years_sorted)))
-
-    # 6. Stationary checklists (complete only)
-    if has_protocol:
-        stat_count = cl[stationary_complete].groupby("_year").size()
-        vals = [int(stat_count.get(y, 0)) for y in years_sorted]
-        rows.append((f"Stationary checklists{info_icon}", [f"{v:,}" for v in vals]))
-    else:
-        rows.append(("Stationary checklists", ["—"] * len(years_sorted)))
-
-    # 7. Incidental checklists
-    if has_protocol:
-        inc_count = cl[incidental_mask].groupby("_year").size()
-        vals = [int(inc_count.get(y, 0)) for y in years_sorted]
-        rows.append(("Incidental checklists", [f"{v:,}" for v in vals]))
-    else:
-        rows.append(("Incidental checklists", ["—"] * len(years_sorted)))
-
-    # 8. Total checklists
+    # Total checklists
     by_yr_cl = cl.groupby("_year").size()
-    vals = [int(by_yr_cl.get(y, 0)) for y in years_sorted]
-    rows.append(("Total checklists", [f"{v:,}" for v in vals]))
+    vals_tcl = [int(by_yr_cl.get(y, 0)) for y in years_sorted]
+    row_total_checklists = ("Total checklists", [f"{v:,}" for v in vals_tcl])
 
-    # 9. Completed checklists
+    # Completed checklists
     if has_all_obs:
         completed = cl[completed_mask]
         by_yr = completed.groupby("_year").size()
-        vals = [int(by_yr.get(y, 0)) for y in years_sorted]
-        rows.append(("Completed checklists", [f"{v:,}" for v in vals]))
+        vals_comp = [int(by_yr.get(y, 0)) for y in years_sorted]
+        row_completed_checklists = ("Completed checklists", [f"{v:,}" for v in vals_comp])
     else:
-        rows.append(("Completed checklists", ["—"] * len(years_sorted)))
+        row_completed_checklists = ("Completed checklists", ["—"] * len(years_sorted))
 
-    # 10. Incomplete checklists (not incidental)
+    # Incomplete checklists (not incidental)
     if has_all_obs and has_protocol:
         inc_count = cl[incomplete_not_incidental].groupby("_year").size()
-        vals = [int(inc_count.get(y, 0)) for y in years_sorted]
-        rows.append(("Incomplete checklists", [f"{v:,}" for v in vals]))
+        vals_inc = [int(inc_count.get(y, 0)) for y in years_sorted]
+        row_incomplete_checklists = ("Incomplete checklists", [f"{v:,}" for v in vals_inc])
     else:
-        rows.append(("Incomplete checklists", ["—"] * len(years_sorted)))
+        row_incomplete_checklists = ("Incomplete checklists", ["—"] * len(years_sorted))
 
-    # 11. Days with checklist
-    by_yr_dates = cl.groupby("_year")["Date"].apply(lambda s: s.dt.normalize().nunique())
-    vals = [int(by_yr_dates.get(y, 0)) for y in years_sorted]
-    rows.append(("Days with checklist", [f"{v:,}" for v in vals]))
-
-    # 12. Cumulative days eBird on
-    all_dates = cl["Date"].dt.normalize()
-    cum = [int(all_dates[all_dates.dt.year <= y].nunique()) for y in years_sorted]
-    rows.append(("Cumulative days eBird on", [f"{v:,}" for v in cum]))
-
-    # 13. Total birding hours
-    if dur_col:
-        timed = cl.dropna(subset=[dur_col]).copy()
-        timed["_dur"] = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0)
-        timed["_year"] = timed["Date"].dt.year
-        if has_protocol:
-            excl = timed["Protocol"].astype(str).str.strip().str.lower().str.contains("incidental|historical|casual observation", na=False, regex=True)
-            timed = timed[~excl]
-        by_yr_min = timed.groupby("_year")["_dur"].sum()
-        vals = [by_yr_min.get(y, 0) / 60 for y in years_sorted]
-        rows.append(("Total birding hours", [f"{v:.1f}" if v else "—" for v in vals]))
+    # Traveling checklists (complete only)
+    if has_protocol:
+        trav_count = cl[traveling_complete].groupby("_year").size()
+        vals_trav = [int(trav_count.get(y, 0)) for y in years_sorted]
+        row_traveling_checklists = (f"Traveling checklists{info_icon}", [f"{v:,}" for v in vals_trav])
     else:
-        rows.append(("Total birding hours", ["—"] * len(years_sorted)))
+        row_traveling_checklists = ("Traveling checklists", ["—"] * len(years_sorted))
 
-    # 14. Unique locations
-    by_yr_loc = cl.groupby("_year")["Location ID"].nunique()
-    vals = [int(by_yr_loc.get(y, 0)) for y in years_sorted]
-    rows.append(("Unique locations", [f"{v:,}" for v in vals]))
+    # Stationary checklists (complete only)
+    if has_protocol:
+        stat_count = cl[stationary_complete].groupby("_year").size()
+        vals_stat = [int(stat_count.get(y, 0)) for y in years_sorted]
+        row_stationary_checklists = (f"Stationary checklists{info_icon}", [f"{v:,}" for v in vals_stat])
+    else:
+        row_stationary_checklists = ("Stationary checklists", ["—"] * len(years_sorted))
 
-    # 15–16. Shared checklists / Days birding with others
+    # Incidental checklists
+    if has_protocol:
+        inc_count = cl[incidental_mask].groupby("_year").size()
+        vals_inc2 = [int(inc_count.get(y, 0)) for y in years_sorted]
+        row_incidental_checklists = ("Incidental checklists", [f"{v:,}" for v in vals_inc2])
+    else:
+        row_incidental_checklists = ("Incidental checklists", ["—"] * len(years_sorted))
+
+    # Shared checklists / Days birding with others
     if "Number of Observers" in cl.columns:
         shared_cl = cl.dropna(subset=["Number of Observers"]).copy()
         shared_cl["_nobs"] = pd.to_numeric(shared_cl["Number of Observers"], errors="coerce").fillna(0)
@@ -938,27 +947,78 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         if not shared_sub.empty:
             by_yr_shared = shared_sub.groupby("_year").size()
             vals_shared = [int(by_yr_shared.get(y, 0)) for y in years_sorted]
-            rows.append(("Shared checklists", [f"{v:,}" for v in vals_shared]))
+            row_shared_checklists = ("Shared checklists", [f"{v:,}" for v in vals_shared])
             shared_sub = shared_sub.copy()
             shared_sub["_date"] = shared_sub["Date"].dt.normalize()
             by_yr_days = shared_sub.groupby("_year")["_date"].nunique()
-            vals_days = [int(by_yr_days.get(y, 0)) for y in years_sorted]
-            rows.append(("Days birding with others", [f"{v:,}" for v in vals_days]))
+            vals_days_bo = [int(by_yr_days.get(y, 0)) for y in years_sorted]
+            row_days_birding_with_others = ("Days birding with others", [f"{v:,}" for v in vals_days_bo])
         else:
-            rows.append(("Shared checklists", ["—"] * len(years_sorted)))
-            rows.append(("Days birding with others", ["—"] * len(years_sorted)))
+            row_shared_checklists = ("Shared checklists", ["—"] * len(years_sorted))
+            row_days_birding_with_others = ("Days birding with others", ["—"] * len(years_sorted))
     else:
-        rows.append(("Shared checklists", ["—"] * len(years_sorted)))
-        rows.append(("Days birding with others", ["—"] * len(years_sorted)))
+        row_shared_checklists = ("Shared checklists", ["—"] * len(years_sorted))
+        row_days_birding_with_others = ("Days birding with others", ["—"] * len(years_sorted))
 
-    # 16. Total distance (km)
+    # Days with checklist
+    by_yr_dates = cl.groupby("_year")["Date"].apply(lambda s: s.dt.normalize().nunique())
+    vals_dwc = [int(by_yr_dates.get(y, 0)) for y in years_sorted]
+    row_days_with_checklist = ("Days with checklist", [f"{v:,}" for v in vals_dwc])
+
+    # Cumulative days eBird on
+    all_dates = cl["Date"].dt.normalize()
+    cum = [int(all_dates[all_dates.dt.year <= y].nunique()) for y in years_sorted]
+    row_cumulative_days_ebird_on = ("Cumulative days eBird on", [f"{v:,}" for v in cum])
+
+    # Total birding hours
+    if dur_col:
+        timed = cl.dropna(subset=[dur_col]).copy()
+        timed["_dur"] = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0)
+        timed["_year"] = timed["Date"].dt.year
+        if has_protocol:
+            excl = timed["Protocol"].astype(str).str.strip().str.lower().str.contains("incidental|historical|casual observation", na=False, regex=True)
+            timed = timed[~excl]
+        by_yr_min = timed.groupby("_year")["_dur"].sum()
+        vals_hours = [by_yr_min.get(y, 0) / 60 for y in years_sorted]
+        row_total_birding_hours = ("Total birding hours", [f"{v:.1f}" if v else "—" for v in vals_hours])
+    else:
+        row_total_birding_hours = ("Total birding hours", ["—"] * len(years_sorted))
+
+    # Total distance (km) — sets ``cl["_dist"]`` for any downstream use
     if dist_col:
         cl["_dist"] = pd.to_numeric(cl[dist_col], errors="coerce").fillna(0)
         by_yr_km = cl.groupby("_year")["_dist"].sum()
-        vals = [by_yr_km.get(y, 0) for y in years_sorted]
-        rows.append(("Total distance (km)", [f"{v:,.1f}" if v else "—" for v in vals]))
+        vals_km_tot = [by_yr_km.get(y, 0) for y in years_sorted]
+        row_total_distance_km = ("Total distance (km)", [f"{v:,.1f}" if v else "—" for v in vals_km_tot])
     else:
-        rows.append(("Total distance (km)", ["—"] * len(years_sorted)))
+        row_total_distance_km = ("Total distance (km)", ["—"] * len(years_sorted))
+
+    # Unique locations
+    by_yr_loc = cl.groupby("_year")["Location ID"].nunique()
+    vals_loc = [int(by_yr_loc.get(y, 0)) for y in years_sorted]
+    row_unique_locations = ("Unique locations", [f"{v:,}" for v in vals_loc])
+
+    rows.extend(
+        [
+            row_lifers,
+            row_total_bird_families,
+            row_total_species,
+            row_total_individuals,
+            row_total_checklists,
+            row_completed_checklists,
+            row_incomplete_checklists,
+            row_traveling_checklists,
+            row_stationary_checklists,
+            row_incidental_checklists,
+            row_shared_checklists,
+            row_days_with_checklist,
+            row_days_birding_with_others,
+            row_cumulative_days_ebird_on,
+            row_total_birding_hours,
+            row_total_distance_km,
+            row_unique_locations,
+        ]
+    )
 
     # 17–18. Traveling checklist: Total distance, Average distance
     if dist_col and has_protocol:
@@ -1252,7 +1312,7 @@ def country_summary_stats(df, cl):
 # ---------------------------------------------------------------------------
 
 def _observation_details_is_sex_notation(s: str) -> bool:
-    """True if the whole field looks like sex/age shorthand (conservative; refs #58).
+    """True if the whole field looks like sex/age shorthand (conservative heuristics).
 
     Matches:
     - Legacy: runs of M, F, J, ? only (e.g. ``MF``, ``MFFF``, ``MMF??``).

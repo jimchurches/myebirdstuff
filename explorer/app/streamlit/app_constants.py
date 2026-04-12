@@ -20,7 +20,6 @@ from explorer.core.settings_schema_defaults import (
 )
 from explorer.app.streamlit.defaults import (
     SETTINGS_PANEL_MAX_WIDTH_REM,
-    SPINNER_THEME_CSS_CACHE_KEY_SUFFIX,
     THEME_PRIMARY_HEX,
     THEME_SECONDARY_BG_HEX,
     THEME_TEXT_HEX,
@@ -34,8 +33,9 @@ DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", DEFAULT_EBI
 
 MAP_VIEW_LABEL_TO_MODE = {
     "All locations": "all",
-    "Selected species": "species",
+    "Species locations": "species",
     "Lifer locations": "lifers",
+    "Family locations": "families",
 }
 
 SETTINGS_PANEL_CSS = f"""
@@ -124,6 +124,11 @@ STREAMLIT_RESET_SETTINGS_BTN_KEY = "streamlit_reset_settings_btn"
 # Download/export button keys.
 EXPORT_MAP_HTML_BTN_KEY = "export_map_html_btn"
 
+# Family map tab widget keys (refs #138). Highlight key is suffixed with selected family in the UI.
+STREAMLIT_FAMILY_MAP_FAMILY_KEY = "streamlit_family_map_family"
+STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY = "streamlit_family_map_highlight"
+STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY = "streamlit_family_map_colour_scheme"
+
 # Checklist stats payload keys (used by fragments).
 YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
 COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY = "_streamlit_country_tab_checklist_payload"
@@ -137,6 +142,9 @@ STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY = "streamlit_country_yearly_show_full"
 
 # Country selectbox key.
 STREAMLIT_COUNTRY_TAB_COUNTRY_KEY = "streamlit_country_tab_country"
+# Country tab: not-seen-recently block — wrapper constrains width; expander key is inner (refs #108).
+STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY = "streamlit_country_not_seen_wrap"
+STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY = "streamlit_country_not_seen_expander"
 
 # Settings/table/list/toggle keys (all used as ``key=...`` or ``st.session_state[...]``).
 STREAMLIT_POPUP_SORT_ORDER_KEY = "streamlit_popup_sort_order"
@@ -150,6 +158,14 @@ STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY = "_streamlit_map_cluster_apply_from_settings_pending"
 # Persisted default: Settings form + Save settings / YAML (may differ from runtime after sidebar).
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY = "streamlit_map_cluster_all_locations_saved"
+
+# Basemap: persisted default + sidebar session override (Option A for #139).
+STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY = "_streamlit_map_basemap_apply_from_settings_pending"
+STREAMLIT_MAP_BASEMAP_SAVED_KEY = "streamlit_map_basemap_saved"
+STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY = "_streamlit_map_height_apply_from_settings_pending"
+STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY = "streamlit_map_height_px_saved"
+
+SESSION_PREV_EFFECTIVE_BASEMAP_KEY = "_streamlit_prev_effective_basemap"
 
 STREAMLIT_DEFAULT_COLOR_KEY = "streamlit_default_color"
 STREAMLIT_SPECIES_COLOR_KEY = "streamlit_species_color"
@@ -177,12 +193,20 @@ PERSIST_SPECIES_COMMON_KEY = "_preserve_streamlit_species_common"
 PERSIST_SPECIES_SCI_KEY = "_preserve_streamlit_species_sci"
 SESSION_PREV_MAP_VIEW_KEY = "_streamlit_prev_map_view_mode"
 SESSION_SPECIES_SEARCH_KEY = "streamlit_species_searchbox"
+# Bumped on search reset so ``st_searchbox`` remounts with an empty field (refs #73).
+SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY = "_streamlit_species_search_remount_nonce"
 SESSION_SPECIES_WS_KEY = "_ws_for_species_search_fragment"
 SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
 SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
+# Incremented once per ``main()`` run (fragment-only reruns do not execute ``main``).
+EXPLORER_MAIN_SCRIPT_RUN_ID_KEY = "_explorer_main_script_run_id"
+# Species search: user has changed the text away from the persisted pick (typing, clear-to-search).
+SESSION_SPECIES_SEARCH_USER_EDITING_KEY = "_streamlit_species_search_user_editing"
+# Last main-run id the species search fragment saw; used to refill the bar after tab navigation.
+SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY = "_streamlit_species_search_last_main_run_id"
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
-# Bumped when toggling Map view All locations <-> Selected species so streamlit-folium remounts cleanly.
+# Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
 SETTINGS_CONFIG_PATH_KEY = "_streamlit_settings_yaml_path"
 SETTINGS_CONFIG_SOURCE_KEY = "_streamlit_settings_source_label"
@@ -203,6 +227,8 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
     STREAMLIT_MARK_LIFER_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
+    STREAMLIT_MAP_BASEMAP_SAVED_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_DEFAULT_COLOR_KEY,
@@ -223,16 +249,25 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
 )
 
-SPINNER_THEME_CSS_INJECTED_KEY = f"_ebird_spinner_theme_css_injected_{SPINNER_THEME_CSS_CACHE_KEY_SUFFIX}"
-
 SPINNER_THEME_CSS = f"""
 <style>
-/* Hoisted ``st.spinner`` — theme greens (refs #74); bump SPINNER_THEME_CSS_CACHE_KEY_SUFFIX when CSS changes. */
+/* ``st.spinner`` — text-style (no pill): theme greens on icon + label only (refs #74). */
 /* Modern Streamlit uses an icon spinner (``iconValue: spinner``), not a CSS border ring. */
 div[data-testid="stSpinner"],
 div[data-testid="stSpinner"].stSpinner {{
   color: {THEME_PRIMARY_HEX};
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: inline-flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0 !important;
+  margin: 0.15rem 0 0.25rem 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  max-width: min(96vw, 42rem);
 }}
 /* Graphic: ``currentColor`` on the SVG so the arc tracks primary (not default grey). */
 div[data-testid="stSpinner"] svg {{
@@ -261,6 +296,43 @@ div[data-testid="stSpinner"] label {{
 div[data-testid="stSpinner"] div[class*="Spinner"] {{
   border-color: {THEME_SECONDARY_BG_HEX} !important;
   border-top-color: {THEME_PRIMARY_HEX} !important;
+}}
+
+/* Bird-emoji strip (only ``components.html`` in Explorer uses height 52): tuck under spinner, centered. */
+[data-testid="stAppViewContainer"] main iframe[height="52"],
+[data-testid="stSidebar"] iframe[height="52"] {{
+  display: block !important;
+  margin: 0.1rem auto 0.4rem auto !important;
+  border: none !important;
+  max-width: 100%;
+}}
+[data-testid="stSidebar"] div[data-testid="stSpinner"],
+[data-testid="stSidebar"] div[data-testid="stSpinner"].stSpinner {{
+  max-width: 100%;
+  box-sizing: border-box;
+  /* In-flow only (no fixed positioning). */
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  display: flex !important;
+  width: 100%;
+}}
+/* Bottom region (spinner, export, footer): sticky within the sidebar scroll area only — no separate
+   “panel” colour or min-height (those read as an empty box when idle; refs #124). */
+[data-testid="stSidebar"] .ebird-sidebar-bottom-slot {{
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 0.25rem;
+  padding-bottom: 0.15rem;
+  margin-top: 0.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: transparent;
 }}
 </style>
 """

@@ -5,6 +5,10 @@ Country order follows **Settings → Tables & lists → Country ordering** (``st
 
 Per-country yearly tables match **Yearly Summary**: when year columns exceed **Settings → Yearly tables:
 recent year columns**, a **Show full history** ``st.toggle`` switches recent vs full (refs #85).
+
+**Species: Not seen in the past year (<country>)** (expander below the yearly table; title follows the
+dropdown) scopes the same recency idea as Rankings **Interesting Lists**, but last seen uses checklists in
+the selected country only; data matches the filtered working set (refs #108).
 """
 
 from __future__ import annotations
@@ -12,6 +16,7 @@ from __future__ import annotations
 import streamlit as st
 
 from explorer.core.checklist_stats_compute import ChecklistStatsPayload
+from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 from explorer.presentation.checklist_stats_display import (
     sort_country_sections_for_display,
     country_display_name_plain,
@@ -20,20 +25,61 @@ from explorer.presentation.checklist_stats_display import (
     slice_yearly_table_rows,
     yearly_streamlit_year_window_slice,
 )
+from explorer.presentation.rankings_display import rankings_not_seen_recently_table
+
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 from explorer.app.streamlit.yearly_summary_streamlit_html import get_yearly_recent_column_count
+from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT
 from explorer.app.streamlit.app_constants import (
     COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY,
+    STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY,
+    STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY,
     STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
     STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY,
+    STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
 
-_COUNTRY_TAB_EXTRA_CSS = """
+_COUNTRY_TAB_EXTRA_CSS = (
+    """
 .streamlit-checklist-html-ab .stats-links-row { margin: 0 0 0.65rem; line-height: 1.45; }
 .streamlit-checklist-html-ab .stats-links-row a { font-weight: 500; }
 .streamlit-checklist-html-ab .stats-link-sep { opacity: 0.55; padding: 0 0.15em; }
 .streamlit-checklist-html-ab .stats-link-icon { opacity: 0.85; }
 """
+    + f"""
+/* Country picker: cap width on very wide viewports (table below uses ~min(68rem); refs #132). */
+section[data-testid="stMain"] div.st-key-{STREAMLIT_COUNTRY_TAB_COUNTRY_KEY} {{
+  max-width: min(36rem, 100%);
+}}
+/* Not-seen block: keyed container wraps expander — match .streamlit-checklist-html-ab max-width (refs #108). */
+section[data-testid="stMain"] div.stElementContainer.st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY},
+section[data-testid="stMain"] div.st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY},
+section[data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"].st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY} {{
+  max-width: min(68rem, 100%);
+  box-sizing: border-box;
+}}
+section[data-testid="stMain"] div.stElementContainer.st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY} [data-testid="stExpander"],
+section[data-testid="stMain"] div.st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY} [data-testid="stExpander"],
+section[data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"].st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY} [data-testid="stExpander"] {{
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}}
+"""
+)
+
+# Inset below the tab strip for the first control (dropdown / info), similar to Settings tab rhythm (#132).
+_COUNTRY_TAB_TOP_SPACER_REM = 0.85
+
+
+def _country_tab_top_spacer() -> None:
+    """Thin vertical gap so the Country tab does not sit flush like Map/table tabs (refs #132)."""
+    h = f"{_COUNTRY_TAB_TOP_SPACER_REM}rem"
+    st.html(
+        f'<div style="height:{h};min-height:{h};flex-shrink:0" aria-hidden="true"></div>'
+    )
+
 
 # Set by ``app.py`` on every full script run so ``@st.fragment`` partial reruns still see the payload.
 
@@ -45,6 +91,7 @@ def render_country_stats_streamlit_html(
 ) -> None:
     """Per-country yearly statistics table; ordering from *country_sort*."""
     inject_streamlit_checklist_css(_COUNTRY_TAB_EXTRA_CSS)
+    _country_tab_top_spacer()
 
     if payload is None or not payload.country_sections:
         st.info("No country data to show. Add **Country** or **State/Province** to your eBird export.")
@@ -61,13 +108,16 @@ def render_country_stats_streamlit_html(
     if cur not in keys:
         st.session_state[STREAMLIT_COUNTRY_TAB_COUNTRY_KEY] = keys[0]
 
-    selected = st.selectbox(
-        "Country for statistics",
-        options=keys,
-        format_func=country_display_name_plain,
-        key=STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
-        label_visibility="hidden",
-    )
+    # Narrow column so the picker does not stretch full width; ratio keeps it responsive (refs #132).
+    _sel_col, _ = st.columns([2, 5], gap="small")
+    with _sel_col:
+        selected = st.selectbox(
+            "Country for statistics",
+            options=keys,
+            format_func=country_display_name_plain,
+            key=STREAMLIT_COUNTRY_TAB_COUNTRY_KEY,
+            label_visibility="collapsed",
+        )
 
     section_by_key = {ck: (ys, rs) for ck, ys, rs in valid}
     years_list, rows = section_by_key[selected]
@@ -124,6 +174,43 @@ def render_country_stats_streamlit_html(
         )
         if not st.session_state.get(STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY, False):
             st.caption(f"Showing results for the most recent {recent_n} years.")
+
+    _render_country_not_seen_recently_expander(payload, selected)
+
+
+def _render_country_not_seen_recently_expander(
+    payload: ChecklistStatsPayload,
+    selected_country_key: str,
+) -> None:
+    """In-country recency list (refs #108); discoverable from Rankings Interesting Lists hint."""
+    rows = (payload.country_not_seen_recently or {}).get(selected_country_key, [])
+    country_label = country_display_name_plain(selected_country_key)
+    expander_title = f"Species: Not seen in the past year ({country_label})"
+    tax_loc = str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "") or "").strip()
+    loc = tax_loc if tax_loc else None
+    link_urls_fn = (
+        get_species_and_lifelist_urls if load_taxonomy(locale=loc) else (lambda _: (None, None))
+    )
+    try:
+        visible_rows = int(st.session_state.get(STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY, 16))
+    except (TypeError, ValueError):
+        visible_rows = 16
+
+    with st.container(key=STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY):
+        with st.expander(expander_title, expanded=False, key=STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY):
+            inner = rankings_not_seen_recently_table(
+                expander_title,
+                ["Species", "Last seen", "Days since"],
+                rows,
+                include_heading=False,
+                scroll_hint=RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT,
+                visible_rows=visible_rows,
+                link_urls_fn=link_urls_fn,
+            )
+            st.markdown(
+                f'<div class="streamlit-checklist-html-ab">{inner}</div>',
+                unsafe_allow_html=True,
+            )
 
 
 def sync_country_tab_session_inputs(payload: ChecklistStatsPayload | None) -> None:

@@ -20,6 +20,8 @@ Map code under ``explorer/`` imports cluster/pin/theme values from this module w
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster via Folium)
 # ---------------------------------------------------------------------------
@@ -39,7 +41,10 @@ MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 1.0
 MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
 MAP_LEGEND_PIN_DOT_PX = 8
 MAP_LEGEND_PIN_BORDER_PX = 2
-MAP_POPUP_MAX_WIDTH_PX = 800
+MAP_POPUP_MAX_WIDTH_PX = 420  # Folium L.popup maxWidth; card-like popups (refs #145).
+# Character shown for Macaulay Library media links in map popups (refs #145).
+# Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).
+MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
 
 # ---------------------------------------------------------------------------
 # Map UI (session-only; not persisted in embedded YAML)
@@ -60,7 +65,110 @@ MAP_HEIGHT_PX_STEP = 20
 
 MAP_DATE_FILTER_DEFAULT = False
 
-MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Selected species", "Lifer locations")
+# Species locations: when True, the map shows only pins for the selected species (session-only sidebar toggle).
+MAP_SPECIES_HIDE_ONLY_DEFAULT = True
+
+MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer locations", "Family locations")
+
+# ---------------------------------------------------------------------------
+# Family map (Map view → **Family locations**; refs #138)
+#
+# Two preset **colour schemes** (same structure). Sidebar radio (session-only) selects the active
+# scheme; ``FAMILY_MAP_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FamilyMapColourScheme:
+    """All Folium family-map tunables (colours, sizes, strokes, viewport, legend)."""
+
+    display_name: str
+    circle_marker_radius_px: int
+    circle_marker_fill_opacity: float
+    base_stroke_weight: int
+    highlight_stroke_hex: str
+    highlight_stroke_weight: int
+    density_fill_hex: tuple[str, ...]
+    density_stroke_hex: tuple[str, ...]
+    popup_max_width_px: int
+    fit_bounds_padding_px: int
+    # Max zoom for fit_bounds: full family vs species-highlight framing (see values below).
+    fit_bounds_max_zoom: int
+    fit_bounds_max_zoom_highlight: int
+    legend_highlight_swatch_fill_index: int
+
+
+# Scheme 1 — default: red density ramp + teal highlight.
+_FAMILY_MAP_SCHEME_1_VALUES = dict(
+    display_name="Reds",
+    circle_marker_radius_px=5,
+    circle_marker_fill_opacity=0.88,
+    base_stroke_weight=2,
+    highlight_stroke_hex="#14667B",
+    highlight_stroke_weight=2,
+    density_fill_hex=(
+        "#E57373",
+        "#C62828",
+        "#8B0000",
+        "#4A0000",
+    ),
+    density_stroke_hex=(
+        "#B55252",
+        "#8E1B1B",
+        "#5A0000",
+        "#2A0000",
+    ),
+    popup_max_width_px=320,
+    fit_bounds_padding_px=48,
+    fit_bounds_max_zoom=6,
+    fit_bounds_max_zoom_highlight=8,
+    legend_highlight_swatch_fill_index=0,
+)
+
+# Scheme 2 — blue → purple density ramp, orange highlight (restored pre-dataclass palette; ``c48caca``).
+_FAMILY_MAP_SCHEME_2_VALUES = dict(
+    display_name="Blues & purples",
+    circle_marker_radius_px=5,
+    circle_marker_fill_opacity=0.88,
+    base_stroke_weight=2,
+    highlight_stroke_hex="#FF7F11",
+    highlight_stroke_weight=2,
+    density_fill_hex=(
+        "#3A86FF",
+        "#5E60CE",
+        "#9D4EDD",
+        "#C9184A",
+    ),
+    density_stroke_hex=(
+        "#2F6FD1",
+        "#4A4DA6",
+        "#7E3EAF",
+        "#A1143A",
+    ),
+    popup_max_width_px=320,
+    fit_bounds_padding_px=48,
+    fit_bounds_max_zoom=6,
+    fit_bounds_max_zoom_highlight=8,
+    legend_highlight_swatch_fill_index=0,
+)
+
+FAMILY_MAP_COLOUR_SCHEME_1 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_1_VALUES)
+FAMILY_MAP_COLOUR_SCHEME_2 = FamilyMapColourScheme(**_FAMILY_MAP_SCHEME_2_VALUES)
+
+# Default scheme index when callers do not pass a UI selection (tests, non-Streamlit builders).
+FAMILY_MAP_ACTIVE_COLOUR_SCHEME: int = 1
+
+
+def active_family_map_colour_scheme(scheme_index: int | None = None) -> FamilyMapColourScheme:
+    """Return the family-map style bundle for *scheme_index* ``1`` or ``2`` (refs #138).
+
+    When *scheme_index* is ``None``, uses :data:`FAMILY_MAP_ACTIVE_COLOUR_SCHEME` (Reds by default).
+    """
+    n = int(FAMILY_MAP_ACTIVE_COLOUR_SCHEME if scheme_index is None else scheme_index)
+    if n == 2:
+        return FAMILY_MAP_COLOUR_SCHEME_2
+    return FAMILY_MAP_COLOUR_SCHEME_1
+
 
 # ---------------------------------------------------------------------------
 # Layout / theme (Streamlit-only)
@@ -72,7 +180,7 @@ THEME_TEXT_HEX = "#1A2E22"
 THEME_PRIMARY_HEX = "#1F6F54"
 THEME_SECONDARY_BG_HEX = "#EEF4F0"
 
-SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v4"
+SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v18"
 
 # ---------------------------------------------------------------------------
 # Ranking & Lists HTML (``rankings_streamlit_html``)

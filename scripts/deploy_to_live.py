@@ -4,6 +4,8 @@ Copy eBirdChecklistNameFromGPS.py from the repo to the live install location.
 Run on demand when you want to deploy changes. Path is in `config/config_secret.yaml` (recommended).
 Creates a timestamped backup of the existing script before overwriting; keeps 12 backups, prunes older ones.
 """
+from __future__ import annotations
+
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -17,12 +19,14 @@ def _load_destination() -> Path:
     """Load deploy destination from YAML config."""
     repo_root = SCRIPT_DIR.parent
     config_dir = repo_root / "config"
+    yaml_missing = False
     for cfg in (config_dir / "config_secret.yaml", config_dir / "config.yaml"):
         if not cfg.exists():
             continue
         try:
             import yaml  # type: ignore
-        except Exception:
+        except Exception:  # pragma: no cover
+            yaml_missing = True
             break
         raw = {}
         try:
@@ -38,11 +42,12 @@ def _load_destination() -> Path:
         "ERROR: Missing deploy destination.\n\n"
         "Set `deploy_destination` in `config/config_secret.yaml` "
         "(copy from `config/config_template.yaml`)."
+        + ("\n\nAlso install PyYAML: `pip install pyyaml`." if yaml_missing else "")
     )
     raise SystemExit(1)
 
 
-def main():
+def main() -> int:
     if not SOURCE.exists():
         print(f"ERROR: Source not found: {SOURCE}")
         return 1

@@ -1,8 +1,8 @@
 """
 Rebuild the explorer's filtered working DataFrame and derived map/search structures.
 
-Extracted from the UI layer for reuse and clearer
-separation of data-prep from widgets. See GitHub #66.
+Lives outside the Streamlit layer so the same filtering and aggregates can be tested and reused
+without importing UI widgets.
 """
 
 from __future__ import annotations
@@ -126,7 +126,7 @@ def rebuild_working_set_from_date_filter(
         w.delete_by_query(Every())
         for common in species_list:
             sci = str(name_map.get(common, "") or "")
-            w.add_document(common_name=common, scientific_name=sci)
+            w.add_document(common_name=common, scientific_name=sci, taxonomy_group="")
         w.commit()
 
     return WorkingSet(
