@@ -2,6 +2,9 @@
 
 Kept separate from :mod:`explorer.core.map_controller` so family colours, banners, and
 legends can change without touching the all-species overlay pipeline.
+
+Band and legend hex values are resolved via :mod:`explorer.core.map_marker_colour_resolve`
+so production matches the design map utility (refs #147).
 """
 
 from __future__ import annotations
@@ -23,6 +26,10 @@ from explorer.core.family_map_compute import (
     FamilyMapBannerMetrics,
     format_family_location_popup_html,
 )
+from explorer.core.map_marker_colour_resolve import (
+    normalize_marker_hex,
+    resolve_family_band_colours,
+)
 from explorer.presentation.map_renderer import (
     build_legend_html,
     create_map,
@@ -38,16 +45,24 @@ def family_map_marker_style(
     *,
     style: MapMarkerColourScheme | None = None,
 ) -> tuple[str, str, int]:
-    """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin."""
+    """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin.
+
+    Band and highlight colours use :func:`~explorer.core.map_marker_colour_resolve.resolve_family_band_colours`
+    and :func:`~explorer.core.map_marker_colour_resolve.normalize_marker_hex` so the live map matches the
+    design utility hierarchy (scheme bands → global defaults → scheme defaults → catch-all).
+    """
     s = style or active_map_marker_colour_scheme()
     fills = s.density_fill_hex
-    strokes = s.density_stroke_hex
-    idx = max(0, min(pin.density_band_index, len(fills) - 1))
-    fill = fills[idx]
-    stroke = strokes[idx]
+    n = len(fills)
+    idx = max(0, min(pin.density_band_index, n - 1)) if n else 0
+    fill_res, edge_res = resolve_family_band_colours(s, idx)
     if pin.highlight_match:
-        return fill, s.highlight_stroke_hex, s.highlight_stroke_weight
-    return fill, stroke, s.base_stroke_weight
+        return (
+            fill_res,
+            normalize_marker_hex(s.highlight_stroke_hex, channel="edge"),
+            s.highlight_stroke_weight,
+        )
+    return fill_res, edge_res, s.base_stroke_weight
 
 
 def _default_au_center() -> tuple[float, float]:
@@ -101,6 +116,7 @@ def build_family_map_legend_overlay_html_for_pins(
 
     Empty bands are omitted so sparse regions get a compact legend. When *highlight_species_url*
     is set together with *highlight_label*, the species name is linked to its eBird species page.
+    Colours use the same resolution as :func:`family_map_marker_style` (refs #147).
     """
     s = style or active_map_marker_colour_scheme()
     pin_list = list(pins)
@@ -109,10 +125,11 @@ def build_family_map_legend_overlay_html_for_pins(
     for i in bands_present:
         if 0 <= i < len(DENSITY_BAND_LABELS):
             lab = DENSITY_BAND_LABELS[i]
+            fill_r, edge_r = resolve_family_band_colours(s, i)
             items.append(
                 (
-                    s.density_stroke_hex[i],
-                    s.density_fill_hex[i],
+                    edge_r,
+                    fill_r,
                     f"{lab} species at location",
                 )
             )
@@ -134,10 +151,11 @@ def build_family_map_legend_overlay_html_for_pins(
             )
         else:
             hl_legend = f"Highlight: {html_module.escape(hl, quote=False)}"
+        fill_hl, _ = resolve_family_band_colours(s, sw_i)
         items.append(
             (
-                s.highlight_stroke_hex,
-                s.density_fill_hex[sw_i],
+                normalize_marker_hex(s.highlight_stroke_hex, channel="edge"),
+                fill_hl,
                 hl_legend,
             )
         )
