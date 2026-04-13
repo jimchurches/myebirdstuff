@@ -12,3 +12,4 @@ ignore = ["E501"]
 [lint.per-file-ignores]
 # Entrypoint prepends repo root to sys.path before package imports (refs #70).
 "explorer/app/streamlit/app.py" = ["E402"]
+"explorer/app/streamlit/design_map_app.py" = ["E402"]

@@ -28,6 +28,10 @@ if _REPO_ROOT not in sys.path:
 
 import streamlit as st
 
+from explorer.core.map_marker_colour_resolve import (
+    MAP_MARKER_CATCHALL_EDGE_HEX,
+    MAP_MARKER_CATCHALL_FILL_HEX,
+)
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
@@ -37,8 +41,6 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_STEP,
     MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
     MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
-    MAP_MARKER_CATCHALL_EDGE_HEX,
-    MAP_MARKER_CATCHALL_FILL_HEX,
     active_map_marker_colour_scheme,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,

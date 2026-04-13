@@ -23,8 +23,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from explorer.core.map_marker_colour_resolve import (
-    MAP_MARKER_CATCHALL_EDGE_HEX,
-    MAP_MARKER_CATCHALL_FILL_HEX,
     MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
     MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
 )
