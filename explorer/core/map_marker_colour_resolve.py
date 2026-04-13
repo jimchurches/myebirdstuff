@@ -123,7 +123,7 @@ def resolve_location_visit_colours(sch: Any) -> tuple[str, str]:
     return normalize_marker_hex(fill, channel="fill"), normalize_marker_hex(edge, channel="edge")
 
 
-# TODO(#147): Wire ``map_overlay_*`` and family folium builders to these resolvers; explorer not updated yet.
+# TODO(#147): Lifer map + MarkerCluster tier icons; family map already uses schemes.
 
 
 def resolve_species_colours(sch: Any) -> tuple[str, str]:

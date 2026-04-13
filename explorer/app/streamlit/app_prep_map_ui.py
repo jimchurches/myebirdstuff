@@ -265,6 +265,12 @@ def render_prep_spinner_and_map_tab(
                     hide_nm = (
                         map_view_mode == "species" and bool(hide_non_matching_locations)
                     )
+                    _use_visit_marker_scheme = not bool(overlay_sci)
+                    _visit_sch = (
+                        active_map_marker_colour_scheme(int(family_colour_scheme))
+                        if _use_visit_marker_scheme
+                        else None
+                    )
                     _map_kw = {
                         **ctx,
                         "selected_species": overlay_sci,
@@ -301,6 +307,7 @@ def render_prep_spinner_and_map_tab(
                             st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)
                         ),
                         "map_height_px": int(map_height),
+                        "visit_marker_scheme": _visit_sch,
                     }
                     _render_opts_sig = (
                         popup_sort_order,
@@ -323,6 +330,8 @@ def render_prep_spinner_and_map_tab(
                         ),
                         bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
                         int(map_height),
+                        int(family_colour_scheme),
+                        _use_visit_marker_scheme,
                     )
                     _species_selected = bool(overlay_sci)
                     _cache_map_view_mode = map_view_mode

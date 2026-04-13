@@ -22,11 +22,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from explorer.core.map_marker_colour_resolve import (
-    MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
-    MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-)
-
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster via Folium)
 # ---------------------------------------------------------------------------
@@ -83,6 +78,16 @@ MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK = 2
 # Design utility sliders and incoming preset values clamp to this max (refs #147). Higher values in
 # ``defaults.py`` can still be set by editing the file directly.
 MAP_MARKER_CIRCLE_RADIUS_PX_MAX = 10
+
+# Hex equivalents of legacy Folium named colours from ``settings_schema_defaults`` (visit map pre-#147).
+_LEGACY_VISIT_MAP_DEFAULT_EDGE = "#008000"  # green
+_LEGACY_VISIT_MAP_DEFAULT_FILL = "#D3D3D3"  # lightgray
+_LEGACY_VISIT_MAP_SPECIES_EDGE = "#800080"  # purple
+_LEGACY_VISIT_MAP_SPECIES_FILL = "#FF0000"  # red
+_LEGACY_VISIT_MAP_LIFER_EDGE = "#800080"  # purple
+_LEGACY_VISIT_MAP_LIFER_FILL = "#FFFF00"  # yellow
+_LEGACY_VISIT_MAP_LAST_SEEN_EDGE = "#800080"  # purple
+_LEGACY_VISIT_MAP_LAST_SEEN_FILL = "#90EE90"  # lightgreen
 
 
 def clamp_map_marker_circle_radius_px(value: int | float | None) -> int:
@@ -206,19 +211,19 @@ class MapMarkerColourScheme:
 # Scheme 1 — default: red density ramp
 _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
     display_name="Reds",
-    marker_default_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_default_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_default_fill_hex=_LEGACY_VISIT_MAP_DEFAULT_FILL,
+    marker_default_edge_hex=_LEGACY_VISIT_MAP_DEFAULT_EDGE,
     marker_default_circle_radius_px=5,
     marker_default_circle_fill_opacity=0.88,
     marker_default_base_stroke_weight=2,
-    marker_location_visit_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_location_visit_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
-    marker_species_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_species_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
-    marker_lifer_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_lifer_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
-    marker_last_seen_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_last_seen_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_location_visit_fill_hex=_LEGACY_VISIT_MAP_DEFAULT_FILL,
+    marker_location_visit_edge_hex=_LEGACY_VISIT_MAP_DEFAULT_EDGE,
+    marker_species_fill_hex=_LEGACY_VISIT_MAP_SPECIES_FILL,
+    marker_species_edge_hex=_LEGACY_VISIT_MAP_SPECIES_EDGE,
+    marker_lifer_fill_hex=_LEGACY_VISIT_MAP_LIFER_FILL,
+    marker_lifer_edge_hex=_LEGACY_VISIT_MAP_LIFER_EDGE,
+    marker_last_seen_fill_hex=_LEGACY_VISIT_MAP_LAST_SEEN_FILL,
+    marker_last_seen_edge_hex=_LEGACY_VISIT_MAP_LAST_SEEN_EDGE,
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
@@ -251,19 +256,19 @@ _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
 # Scheme 2 — blue → purple density ramp
 _MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
     display_name="Blues & purples",
-    marker_default_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_default_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_default_fill_hex=_LEGACY_VISIT_MAP_DEFAULT_FILL,
+    marker_default_edge_hex=_LEGACY_VISIT_MAP_DEFAULT_EDGE,
     marker_default_circle_radius_px=5,
     marker_default_circle_fill_opacity=0.88,
     marker_default_base_stroke_weight=2,
-    marker_location_visit_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_location_visit_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
-    marker_species_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_species_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
-    marker_lifer_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_lifer_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
-    marker_last_seen_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
-    marker_last_seen_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_location_visit_fill_hex=_LEGACY_VISIT_MAP_DEFAULT_FILL,
+    marker_location_visit_edge_hex=_LEGACY_VISIT_MAP_DEFAULT_EDGE,
+    marker_species_fill_hex=_LEGACY_VISIT_MAP_SPECIES_FILL,
+    marker_species_edge_hex=_LEGACY_VISIT_MAP_SPECIES_EDGE,
+    marker_lifer_fill_hex=_LEGACY_VISIT_MAP_LIFER_FILL,
+    marker_lifer_edge_hex=_LEGACY_VISIT_MAP_LIFER_EDGE,
+    marker_last_seen_fill_hex=_LEGACY_VISIT_MAP_LAST_SEEN_FILL,
+    marker_last_seen_edge_hex=_LEGACY_VISIT_MAP_LAST_SEEN_EDGE,
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,

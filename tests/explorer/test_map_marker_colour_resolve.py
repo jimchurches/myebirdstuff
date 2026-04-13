@@ -23,12 +23,12 @@ def test_normalize_marker_hex_channel_fallback() -> None:
     assert normalize_marker_hex("not-a-colour", channel="edge") == MAP_MARKER_CATCHALL_EDGE_HEX
 
 
-def test_resolve_scheme_1_visit_matches_globals_when_all_default() -> None:
+def test_resolve_scheme_1_visit_matches_legacy_globals() -> None:
     sch = MAP_MARKER_COLOUR_SCHEME_1
     vf, ve = resolve_location_visit_colours(sch)
     gf, ge = resolve_marker_global_colours(sch)
-    assert vf == gf == MAP_MARKER_SCHEME_DEFAULT_FILL_HEX
-    assert ve == ge == MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX
+    assert vf == gf == "#D3D3D3"
+    assert ve == ge == "#008000"
 
 
 def test_resolve_experimental_visit_distinct_from_global() -> None:

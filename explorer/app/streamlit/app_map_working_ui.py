@@ -305,7 +305,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     else:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
 
-    if map_view_mode == "families":
+    if map_view_mode in ("all", "families"):
         from explorer.app.streamlit.app_caches import cached_family_map_bundle
         from explorer.core.family_map_compute import (
             filter_work_to_family,
@@ -313,41 +313,41 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         )
 
         with st.sidebar:
-
-            tax_loc = (
-                str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
-                or DEFAULT_TAXONOMY_LOCALE
-            )
-            bundle = cached_family_map_bundle(df_full, tax_loc)
-            fams = list(bundle.get("families") or ())
-            work = bundle.get("work")
-            base_to_common = bundle.get("base_to_common") or {}
-
-            family_name = st.selectbox(
-                "Family",
-                options=[""] + fams,
-                format_func=lambda x: "— Select a family —" if x == "" else x,
-                key=STREAMLIT_FAMILY_MAP_FAMILY_KEY,
-            )
-
-            if family_name and isinstance(work, pd.DataFrame) and not work.empty:
-                wf = filter_work_to_family(work, family_name)
-                pairs = highlight_species_choices_alphabetical(wf, base_to_common)
-                bases = [b for _lab, b in pairs]
-                family_highlight_base = st.selectbox(
-                    "Highlight species (optional)",
-                    options=[""] + bases,
-                    format_func=lambda b: "— None —" if b == "" else (base_to_common.get(b) or b),
-                    key=STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+            if map_view_mode == "families":
+                tax_loc = (
+                    str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
+                    or DEFAULT_TAXONOMY_LOCALE
                 )
-            else:
-                st.selectbox(
-                    "Highlight species (optional)",
-                    options=["— None —"],
-                    disabled=True,
-                    key=f"{STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY}__disabled",
+                bundle = cached_family_map_bundle(df_full, tax_loc)
+                fams = list(bundle.get("families") or ())
+                work = bundle.get("work")
+                base_to_common = bundle.get("base_to_common") or {}
+
+                family_name = st.selectbox(
+                    "Family",
+                    options=[""] + fams,
+                    format_func=lambda x: "— Select a family —" if x == "" else x,
+                    key=STREAMLIT_FAMILY_MAP_FAMILY_KEY,
                 )
-                family_highlight_base = ""
+
+                if family_name and isinstance(work, pd.DataFrame) and not work.empty:
+                    wf = filter_work_to_family(work, family_name)
+                    pairs = highlight_species_choices_alphabetical(wf, base_to_common)
+                    bases = [b for _lab, b in pairs]
+                    family_highlight_base = st.selectbox(
+                        "Highlight species (optional)",
+                        options=[""] + bases,
+                        format_func=lambda b: "— None —" if b == "" else (base_to_common.get(b) or b),
+                        key=STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+                    )
+                else:
+                    st.selectbox(
+                        "Highlight species (optional)",
+                        options=["— None —"],
+                        disabled=True,
+                        key=f"{STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY}__disabled",
+                    )
+                    family_highlight_base = ""
 
             _family_scheme_labels = {
                 1: MAP_MARKER_COLOUR_SCHEME_1.display_name,
@@ -355,8 +355,13 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 3: MAP_MARKER_COLOUR_SCHEME_3.display_name,
             }
             with st.expander("Colour schemes", expanded=False):
+                _scheme_radio_label = (
+                    "All locations map colour scheme"
+                    if map_view_mode == "all"
+                    else "Family map colour scheme"
+                )
                 _scheme_sel = st.radio(
-                    "Family map colour scheme",
+                    _scheme_radio_label,
                     options=[1, 2, 3],
                     format_func=lambda n: _family_scheme_labels[int(n)],
                     key=STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,

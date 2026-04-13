@@ -19,7 +19,11 @@ from explorer.app.streamlit.defaults import (
     MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
     MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
     MAP_PIN_FILL_OPACITY_EMPHASIS,
+    MapMarkerColourScheme,
+    clamp_map_marker_circle_fill_opacity,
+    clamp_map_marker_circle_radius_px,
 )
+from explorer.core.map_marker_colour_resolve import resolve_location_visit_colours
 from explorer.core.map_overlay_theme import inject_map_overlay_theme
 from explorer.core.map_overlay_types import BaseSpeciesFn, MapOverlayResult, SpeciesUrlFn
 from explorer.presentation.map_renderer import (
@@ -40,6 +44,23 @@ from explorer.presentation.map_renderer import (
 from explorer.presentation.map_ui_constants import MAP_POPUP_MAX_WIDTH_PX
 from explorer.core.species_logic import filter_species
 from explorer.core.stats import safe_count
+
+
+def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tuple[str, str, int, int, float]:
+    """Resolved fill, edge (stroke), radius (px), stroke weight, fill opacity for **All locations** view."""
+    fill_c, edge = resolve_location_visit_colours(sch)
+    md = int(sch.marker_default_circle_radius_px)
+    loc = sch.marker_circle_radius_px_locations
+    radius_px = clamp_map_marker_circle_radius_px(loc if loc is not None else md)
+    sw = max(1, int(sch.visit_stroke_weight))
+    legacy_fo = float(sch.visit_fill_opacity_all_locations)
+    fo_override = sch.marker_circle_fill_opacity_locations
+    fo = (
+        clamp_map_marker_circle_fill_opacity(fo_override, fallback=legacy_fo)
+        if fo_override is not None
+        else legacy_fo
+    )
+    return fill_c, edge, radius_px, sw, fo
 
 
 def build_visit_overlay_map(
@@ -81,6 +102,7 @@ def build_visit_overlay_map(
     filtered_by_loc_cache_max: int,
     tax_loc_key: str,
     map_height_px: int,
+    visit_marker_scheme: MapMarkerColourScheme | None = None,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode)."""
     if selected_species:
@@ -137,8 +159,18 @@ def build_visit_overlay_map(
         species_map.get_root().html.add_child(
             Element(build_all_species_banner_html(tc, ts, ti, date_filter_status_line))
         )
+        if visit_marker_scheme is not None:
+            _fill, _edge, _radius_px, _stroke_w, _fill_op = _all_locations_marker_params_from_scheme(
+                visit_marker_scheme
+            )
+            legend_pair = (_edge, _fill)
+        else:
+            _fill, _edge = default_fill, default_color
+            _radius_px, _stroke_w = MAP_CIRCLE_MARKER_RADIUS_PX, MAP_CIRCLE_MARKER_STROKE_WEIGHT
+            _fill_op = MAP_PIN_FILL_OPACITY_ALL_LOCATIONS
+            legend_pair = (default_color, default_fill)
         species_map.get_root().html.add_child(
-            Element(build_legend_html([(default_color, default_fill, "All locations")]))
+            Element(build_legend_html([(legend_pair[0], legend_pair[1], "All locations")]))
         )
 
         marker_cluster: Optional[MarkerCluster] = None
@@ -168,12 +200,12 @@ def build_visit_overlay_map(
             popup_html = popup_html_cache[popup_key]
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                color=default_color,
-                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                radius=_radius_px,
+                color=_edge,
+                weight=_stroke_w,
                 fill=True,
-                fill_color=default_fill,
-                fill_opacity=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+                fill_color=_fill,
+                fill_opacity=_fill_op,
                 popup=folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX),
             ).add_to(pin_parent)
 

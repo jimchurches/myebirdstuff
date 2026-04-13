@@ -22,7 +22,7 @@ from typing import Any, Dict, Hashable, MutableMapping, Optional, Tuple
 
 import pandas as pd
 
-from explorer.app.streamlit.defaults import MAP_HEIGHT_PX_DEFAULT
+from explorer.app.streamlit.defaults import MAP_HEIGHT_PX_DEFAULT, MapMarkerColourScheme
 from explorer.core.map_overlay_lifer_map import build_lifer_overlay_map
 from explorer.core.map_overlay_types import (
     BaseSpeciesFn,
@@ -79,6 +79,7 @@ def build_species_overlay_map(
     taxonomy_locale: str = "",
     show_subspecies_lifers: bool = False,
     map_height_px: int = MAP_HEIGHT_PX_DEFAULT,
+    visit_marker_scheme: MapMarkerColourScheme | None = None,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -102,6 +103,10 @@ def build_species_overlay_map(
     species is chosen (performance-friendly default in the Streamlit UI).
 
     *map_height_px*: pixel height for the Folium map pane (match Streamlit **Map height** slider).
+
+    *visit_marker_scheme*: when set and the visit overlay has no species filter, **All locations**
+    markers use :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` (refs #147). When
+    ``None`` or a species is selected, legacy named colours from ``settings_schema_defaults`` apply.
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
@@ -175,4 +180,5 @@ def build_species_overlay_map(
         filtered_by_loc_cache_max=filtered_by_loc_cache_max,
         tax_loc_key=tax_loc_key,
         map_height_px=map_height_px,
+        visit_marker_scheme=visit_marker_scheme,
     )

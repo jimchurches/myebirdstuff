@@ -83,10 +83,10 @@ def test_build_design_preview_map_returns_folium_with_markers() -> None:
     html = m._repr_html_()
     assert "CircleMarker" in html or "circle" in html.lower()
     assert "-35" in html  # Canberra latitude area
-    # Design utility: default-location markers use fixed white fill + cream edge (not scheme colours).
+    # Scheme 1 visit markers use legacy light gray fill / green edge (``defaults.py``).
     h = html.lower()
-    assert "fff8e7" in h
-    assert "#ffffff" in h or "ffffff" in h
+    assert "d3d3d3" in h
+    assert "008000" in h
 
 
 def test_all_locations_scope_has_only_default_pins() -> None:
