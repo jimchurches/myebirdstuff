@@ -216,7 +216,11 @@ def _circle_radius_px_for_marker_kind(cfg: DesignMapPreviewConfig, kind: str) ->
 def _legend_entry_for_kind(kind: str, cfg: DesignMapPreviewConfig) -> tuple[str, str, str] | None:
     """One ``build_legend_html`` row: ``(stroke_hex, fill_hex, label)``."""
     if kind == "visit_default":
-        lab = "All locations" if cfg.preview_scope == MAP_SCOPE_ALL_LOCATIONS else "Other"
+        lab = (
+            "All locations"
+            if cfg.preview_scope == MAP_SCOPE_ALL_LOCATIONS
+            else "Default location marker"
+        )
         return (normalize_hex_colour(cfg.default_edge), normalize_hex_colour(cfg.default_fill), lab)
     if kind == "visit_species":
         return (normalize_hex_colour(cfg.species_edge), normalize_hex_colour(cfg.species_fill), "Species")
@@ -268,10 +272,19 @@ def _design_legend_items(cfg: DesignMapPreviewConfig, rows: tuple[PreviewMarkerR
     return items
 
 
+def _family_highlight_copy(copy_index: int) -> bool:
+    """Highlight stroke on copies 0 (Canberra cluster) and 2 (wide scatter) so both are visible."""
+    return copy_index == 0 or copy_index == 2
+
+
 def _popup_text(kind: str, cfg: DesignMapPreviewConfig, *, copy_index: int) -> str:
     """Popup line (plain text; matches legend labels where applicable)."""
     if kind == "visit_default":
-        return "All locations" if cfg.preview_scope == MAP_SCOPE_ALL_LOCATIONS else "Other"
+        return (
+            "All locations"
+            if cfg.preview_scope == MAP_SCOPE_ALL_LOCATIONS
+            else "Default location marker"
+        )
     if kind == "visit_species":
         return "Species"
     if kind == "visit_lifer":
@@ -288,7 +301,9 @@ def _popup_text(kind: str, cfg: DesignMapPreviewConfig, *, copy_index: int) -> s
         bi = int(kind[-1])
         base = f"{DENSITY_BAND_LABELS[bi]} species at location"
         if copy_index == 0:
-            return f"{base} — highlight stroke"
+            return f"{base} — highlight stroke (cluster)"
+        if copy_index == 2:
+            return f"{base} — highlight stroke (spread)"
         return base
     return kind
 
@@ -378,7 +393,7 @@ def build_design_preview_map(
                 bi = int(kind[-1])
                 stroke = normalize_hex_colour(cfg.family_stroke_hex[bi])
                 fill_c = normalize_hex_colour(cfg.family_fill_hex[bi])
-                if copy_index == 0:
+                if _family_highlight_copy(copy_index):
                     stroke = normalize_hex_colour(cfg.family_highlight_stroke_hex)
                     sw = max(1, int(cfg.stroke_weight_family_highlight))
                 else:

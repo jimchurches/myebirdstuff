@@ -551,7 +551,8 @@ def main() -> None:
             )
             st.caption(
                 "Bottom-left legend matches production maps (``build_legend_html``). "
-                "Copies **0–1** cluster near Canberra; **2–3** scatter across the zoom‑5 viewport. "
+                "Copies **0–1** cluster near Canberra; **2–3** scatter. Family bands: highlight stroke on "
+                "copy **0** (cluster) and copy **2** (spread) so you can compare packed vs isolated. "
                 "Lifer **both**: outer ring is stroke-only; inner uses lifer fill. "
                 "Invalid hex → **#FFFFFF** (design default)."
             )
