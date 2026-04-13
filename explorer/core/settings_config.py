@@ -17,20 +17,11 @@ from explorer.core.settings_schema_defaults import (
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_MAX,
     MAP_BASEMAP_OPTIONS,
-    MAP_DEFAULT_COLOR_DEFAULT,
-    MAP_DEFAULT_FILL_DEFAULT,
-    MAP_LAST_SEEN_COLOR_DEFAULT,
-    MAP_LAST_SEEN_FILL_DEFAULT,
-    MAP_LIFER_COLOR_DEFAULT,
-    MAP_LIFER_FILL_DEFAULT,
     MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
     MAP_MARK_LAST_SEEN_DEFAULT,
     MAP_MARK_LIFER_DEFAULT,
-    MAP_PIN_COLOUR_ALLOWLIST,
     MAP_POPUP_SCROLL_HINT_DEFAULT,
     MAP_POPUP_SORT_ORDER_DEFAULT,
-    MAP_SPECIES_COLOR_DEFAULT,
-    MAP_SPECIES_FILL_DEFAULT,
     SETTINGS_SCHEMA_VERSION,
     TABLES_RANKINGS_TOP_N_DEFAULT,
     TABLES_RANKINGS_TOP_N_MAX,
@@ -66,14 +57,6 @@ class MapDisplayConfig(BaseModel):
         le=MAP_HEIGHT_PX_MAX,
     )
     cluster_all_locations: bool = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
-    default_color: str = Field(default=MAP_DEFAULT_COLOR_DEFAULT)
-    default_fill: str = Field(default=MAP_DEFAULT_FILL_DEFAULT)
-    species_color: str = Field(default=MAP_SPECIES_COLOR_DEFAULT)
-    species_fill: str = Field(default=MAP_SPECIES_FILL_DEFAULT)
-    lifer_color: str = Field(default=MAP_LIFER_COLOR_DEFAULT)
-    lifer_fill: str = Field(default=MAP_LIFER_FILL_DEFAULT)
-    last_seen_color: str = Field(default=MAP_LAST_SEEN_COLOR_DEFAULT)
-    last_seen_fill: str = Field(default=MAP_LAST_SEEN_FILL_DEFAULT)
 
 
 class TablesListsConfig(BaseModel):
@@ -161,19 +144,6 @@ def _validate_settings_mapping(raw: Any) -> tuple[dict[str, Any], str | None]:
     # Guard user-edited basemap with explicit allowlist (same keys as Streamlit defaults).
     if data["map_display"].get("basemap") not in MAP_BASEMAP_OPTIONS:
         data["map_display"]["basemap"] = MAP_BASEMAP_DEFAULT
-    # Guard user-edited colors with explicit allowlist.
-    for key in (
-        "default_color",
-        "default_fill",
-        "species_color",
-        "species_fill",
-        "lifer_color",
-        "lifer_fill",
-        "last_seen_color",
-        "last_seen_fill",
-    ):
-        if data["map_display"][key] not in MAP_PIN_COLOUR_ALLOWLIST:
-            data["map_display"][key] = defaults_dict()["map_display"][key]
     return data, None
 
 

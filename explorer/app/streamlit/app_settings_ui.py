@@ -15,7 +15,6 @@ from explorer.presentation.checklist_stats_display import (
 )
 from explorer.core.settings_schema_defaults import (
     MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-    MAP_PIN_COLOUR_ALLOWLIST,
     MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
@@ -41,12 +40,6 @@ from explorer.app.streamlit.app_constants import (
     SETTINGS_PANEL_CSS,
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
     STREAMLIT_COUNTRY_TAB_SORT_KEY,
-    STREAMLIT_DEFAULT_COLOR_KEY,
-    STREAMLIT_DEFAULT_FILL_KEY,
-    STREAMLIT_LIFER_COLOR_KEY,
-    STREAMLIT_LIFER_FILL_KEY,
-    STREAMLIT_LAST_SEEN_COLOR_KEY,
-    STREAMLIT_LAST_SEEN_FILL_KEY,
     STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY,
@@ -65,8 +58,6 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
     STREAMLIT_SAVE_SETTINGS_BTN_KEY,
     STREAMLIT_RESET_SETTINGS_BTN_KEY,
-    STREAMLIT_SPECIES_COLOR_KEY,
-    STREAMLIT_SPECIES_FILL_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
     STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
 )
@@ -164,8 +155,8 @@ def render_settings_tab(
         st.divider()
         st.subheader("Map display")
         st.caption(
-            "Popup behaviour, mark toggles, default clustering for the All locations map (saved when you "
-            "**Save settings**), and pin colours are batched here; click **Apply map settings** for one rerun. "
+            "Popup behaviour, mark toggles, and default clustering for the All locations map (saved when you "
+            "**Save settings**) are batched here; click **Apply map settings** for one rerun. "
             "For a quick on/off without changing your saved default, use the **Map** sidebar toggle."
         )
         _popup_sort_opts = ["ascending", "descending"]
@@ -176,10 +167,6 @@ def render_settings_tab(
         _popup_scroll_cur = str(st.session_state.get(STREAMLIT_POPUP_SCROLL_HINT_KEY, "shading"))
         if _popup_scroll_cur not in _popup_scroll_opts:
             _popup_scroll_cur = "shading"
-
-        def _pin_idx(key: str) -> int:
-            cur = st.session_state.get(key, MAP_PIN_COLOUR_ALLOWLIST[0])
-            return MAP_PIN_COLOUR_ALLOWLIST.index(cur) if cur in MAP_PIN_COLOUR_ALLOWLIST else 0
 
         with st.form("ebird_map_settings_batch"):
             basemap_default_w = st.selectbox(
@@ -242,50 +229,6 @@ def render_settings_tab(
                 options=_popup_scroll_opts,
                 index=_popup_scroll_opts.index(_popup_scroll_cur),
             )
-            st.caption("Pin colors")
-            c1, c2 = st.columns(2)
-            with c1:
-                default_edge_w = st.selectbox(
-                    "Default edge",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    index=_pin_idx(STREAMLIT_DEFAULT_COLOR_KEY),
-                )
-                species_edge_w = st.selectbox(
-                    "Species edge",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    index=_pin_idx(STREAMLIT_SPECIES_COLOR_KEY),
-                )
-                lifer_edge_w = st.selectbox(
-                    "Lifer edge",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    index=_pin_idx(STREAMLIT_LIFER_COLOR_KEY),
-                )
-                last_seen_edge_w = st.selectbox(
-                    "Last-seen edge",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    index=_pin_idx(STREAMLIT_LAST_SEEN_COLOR_KEY),
-                )
-            with c2:
-                default_fill_w = st.selectbox(
-                    "Default fill",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    index=_pin_idx(STREAMLIT_DEFAULT_FILL_KEY),
-                )
-                species_fill_w = st.selectbox(
-                    "Species fill",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    index=_pin_idx(STREAMLIT_SPECIES_FILL_KEY),
-                )
-                lifer_fill_w = st.selectbox(
-                    "Lifer fill",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    index=_pin_idx(STREAMLIT_LIFER_FILL_KEY),
-                )
-                last_seen_fill_w = st.selectbox(
-                    "Last-seen fill",
-                    MAP_PIN_COLOUR_ALLOWLIST,
-                    index=_pin_idx(STREAMLIT_LAST_SEEN_FILL_KEY),
-                )
             apply_map = st.form_submit_button("Apply map settings", width="stretch")
 
         if apply_map:
@@ -300,14 +243,6 @@ def render_settings_tab(
             st.session_state[STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY] = _cl
             st.session_state[STREAMLIT_POPUP_SORT_ORDER_KEY] = popup_sort_w
             st.session_state[STREAMLIT_POPUP_SCROLL_HINT_KEY] = popup_scroll_w
-            st.session_state[STREAMLIT_DEFAULT_COLOR_KEY] = default_edge_w
-            st.session_state[STREAMLIT_SPECIES_COLOR_KEY] = species_edge_w
-            st.session_state[STREAMLIT_LIFER_COLOR_KEY] = lifer_edge_w
-            st.session_state[STREAMLIT_LAST_SEEN_COLOR_KEY] = last_seen_edge_w
-            st.session_state[STREAMLIT_DEFAULT_FILL_KEY] = default_fill_w
-            st.session_state[STREAMLIT_SPECIES_FILL_KEY] = species_fill_w
-            st.session_state[STREAMLIT_LIFER_FILL_KEY] = lifer_fill_w
-            st.session_state[STREAMLIT_LAST_SEEN_FILL_KEY] = last_seen_fill_w
             init_and_clamp_streamlit_table_settings()
             st.rerun()
 

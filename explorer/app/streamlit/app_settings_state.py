@@ -17,12 +17,6 @@ from explorer.app.streamlit.app_constants import (
     SETTINGS_FLASH_RESET_KEY,
     SETTINGS_FLASH_SAVE_KEY,
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
-    STREAMLIT_DEFAULT_COLOR_KEY,
-    STREAMLIT_DEFAULT_FILL_KEY,
-    STREAMLIT_LIFER_COLOR_KEY,
-    STREAMLIT_LIFER_FILL_KEY,
-    STREAMLIT_LAST_SEEN_COLOR_KEY,
-    STREAMLIT_LAST_SEEN_FILL_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_MARK_LAST_SEEN_KEY,
@@ -41,8 +35,6 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
     STREAMLIT_HIGH_COUNT_SORT_KEY,
     STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
-    STREAMLIT_SPECIES_COLOR_KEY,
-    STREAMLIT_SPECIES_FILL_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
     STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
 )
@@ -52,20 +44,11 @@ from explorer.core.settings_schema_defaults import (
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_MAX,
     MAP_BASEMAP_OPTIONS,
-    MAP_DEFAULT_COLOR_DEFAULT,
-    MAP_DEFAULT_FILL_DEFAULT,
-    MAP_LAST_SEEN_COLOR_DEFAULT,
-    MAP_LAST_SEEN_FILL_DEFAULT,
-    MAP_LIFER_COLOR_DEFAULT,
-    MAP_LIFER_FILL_DEFAULT,
     MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
     MAP_MARK_LAST_SEEN_DEFAULT,
     MAP_MARK_LIFER_DEFAULT,
-    MAP_PIN_COLOUR_ALLOWLIST,
     MAP_POPUP_SCROLL_HINT_DEFAULT,
     MAP_POPUP_SORT_ORDER_DEFAULT,
-    MAP_SPECIES_COLOR_DEFAULT,
-    MAP_SPECIES_FILL_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
     SETTINGS_SCHEMA_VERSION,
@@ -189,22 +172,6 @@ def init_and_clamp_streamlit_table_settings() -> None:
         ]
     if STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY not in st.session_state:
         st.session_state.streamlit_lifer_show_subspecies = False
-    for k, default in (
-        (STREAMLIT_LIFER_COLOR_KEY, MAP_LIFER_COLOR_DEFAULT),
-        (STREAMLIT_LIFER_FILL_KEY, MAP_LIFER_FILL_DEFAULT),
-        (STREAMLIT_LAST_SEEN_COLOR_KEY, MAP_LAST_SEEN_COLOR_DEFAULT),
-        (STREAMLIT_LAST_SEEN_FILL_KEY, MAP_LAST_SEEN_FILL_DEFAULT),
-        (STREAMLIT_SPECIES_COLOR_KEY, MAP_SPECIES_COLOR_DEFAULT),
-        (STREAMLIT_SPECIES_FILL_KEY, MAP_SPECIES_FILL_DEFAULT),
-        (STREAMLIT_DEFAULT_COLOR_KEY, MAP_DEFAULT_COLOR_DEFAULT),
-        (STREAMLIT_DEFAULT_FILL_KEY, MAP_DEFAULT_FILL_DEFAULT),
-    ):
-        if k not in st.session_state:
-            st.session_state[k] = default
-        elif st.session_state[k] not in MAP_PIN_COLOUR_ALLOWLIST:
-            st.session_state[k] = default
-
-
 def settings_state_payload() -> dict[str, Any]:
     """Current Settings payload in config schema shape."""
     return {
@@ -219,14 +186,6 @@ def settings_state_payload() -> dict[str, Any]:
                 st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY, MAP_HEIGHT_PX_DEFAULT)
             ),
             "cluster_all_locations": bool(st.session_state.streamlit_map_cluster_all_locations_saved),
-            "default_color": st.session_state.streamlit_default_color,
-            "default_fill": st.session_state.streamlit_default_fill,
-            "species_color": st.session_state.streamlit_species_color,
-            "species_fill": st.session_state.streamlit_species_fill,
-            "lifer_color": st.session_state.streamlit_lifer_color,
-            "lifer_fill": st.session_state.streamlit_lifer_fill,
-            "last_seen_color": st.session_state.streamlit_last_seen_color,
-            "last_seen_fill": st.session_state.streamlit_last_seen_fill,
         },
         "tables_lists": {
             "rankings_top_n": int(st.session_state.streamlit_rankings_top_n),
@@ -282,18 +241,6 @@ def apply_settings_payload_to_state(cfg: dict[str, Any]) -> None:
         _cluster = bool(mp.get("cluster_all_locations", MAP_CLUSTER_ALL_LOCATIONS_DEFAULT))
         st.session_state.streamlit_map_cluster_all_locations = _cluster
         st.session_state.streamlit_map_cluster_all_locations_saved = _cluster
-        st.session_state.streamlit_default_color = mp.get("default_color", MAP_DEFAULT_COLOR_DEFAULT)
-        st.session_state.streamlit_default_fill = mp.get("default_fill", MAP_DEFAULT_FILL_DEFAULT)
-        st.session_state.streamlit_species_color = mp.get("species_color", MAP_SPECIES_COLOR_DEFAULT)
-        st.session_state.streamlit_species_fill = mp.get("species_fill", MAP_SPECIES_FILL_DEFAULT)
-        st.session_state.streamlit_lifer_color = mp.get("lifer_color", MAP_LIFER_COLOR_DEFAULT)
-        st.session_state.streamlit_lifer_fill = mp.get("lifer_fill", MAP_LIFER_FILL_DEFAULT)
-        st.session_state.streamlit_last_seen_color = mp.get(
-            "last_seen_color", MAP_LAST_SEEN_COLOR_DEFAULT
-        )
-        st.session_state.streamlit_last_seen_fill = mp.get(
-            "last_seen_fill", MAP_LAST_SEEN_FILL_DEFAULT
-        )
     if isinstance(tl, dict):
         st.session_state.streamlit_rankings_top_n = int(
             tl.get("rankings_top_n", TABLES_RANKINGS_TOP_N_DEFAULT)
