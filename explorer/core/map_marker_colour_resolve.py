@@ -1,5 +1,5 @@
 """
-Hierarchical map marker hex resolution for the design utility (explorer wiring: refs #147).
+Hierarchical map marker hex resolution for Folium circle markers.
 
 Resolution order for each channel (fill / edge) independently:
 

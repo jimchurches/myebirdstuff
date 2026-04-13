@@ -4,7 +4,7 @@ Kept separate from :mod:`explorer.core.map_controller` so family colours, banner
 legends can change without touching the all-species overlay pipeline.
 
 Band and legend hex values are resolved via :mod:`explorer.core.map_marker_colour_resolve`
-so production matches the design map utility (refs #147).
+(the same module used when previewing schemes in ``explorer/app/streamlit/design_map_app.py``).
 """
 
 from __future__ import annotations
@@ -48,8 +48,9 @@ def family_map_marker_style(
     """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin.
 
     Band and highlight colours use :func:`~explorer.core.map_marker_colour_resolve.resolve_family_band_colours`
-    and :func:`~explorer.core.map_marker_colour_resolve.normalize_marker_hex` so the live map matches the
-    design utility hierarchy (scheme bands → global defaults → scheme defaults → catch-all).
+    and :func:`~explorer.core.map_marker_colour_resolve.normalize_marker_hex`, i.e. the same per-channel
+    chain as other scheme-driven maps (band-specific hex, then ``marker_default_*``, then module defaults,
+    then catch-all — see :mod:`explorer.core.map_marker_colour_resolve`).
     """
     s = style or active_map_marker_colour_scheme()
     fills = s.density_fill_hex
@@ -116,7 +117,7 @@ def build_family_map_legend_overlay_html_for_pins(
 
     Empty bands are omitted so sparse regions get a compact legend. When *highlight_species_url*
     is set together with *highlight_label*, the species name is linked to its eBird species page.
-    Colours use the same resolution as :func:`family_map_marker_style` (refs #147).
+    Swatch colours use the same resolution as :func:`family_map_marker_style`.
     """
     s = style or active_map_marker_colour_scheme()
     pin_list = list(pins)

@@ -1,4 +1,4 @@
-"""Tests for hierarchical map marker hex resolution (refs #147)."""
+"""Tests for :mod:`explorer.core.map_marker_colour_resolve` (hierarchical marker hex)."""
 
 from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1, active_map_marker_colour_scheme
 from explorer.core.map_marker_colour_resolve import (

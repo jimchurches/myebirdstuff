@@ -170,6 +170,23 @@ explorer/app/streamlit/defaults.py
 
 **Fixed UI strings and URLs** (tab names, spinner emoji strip, footer links) live in `explorer/app/streamlit/streamlit_ui_constants.py`. **Persisted settings schema defaults** (YAML-backed) live in `explorer/core/settings_schema_defaults.py`.
 
+### Map marker colour design utility (developers)
+
+The main explorer does **not** expose this in the product UI; it is a **developer-only** Streamlit app for building and sanity-checking `MapMarkerColourScheme` presets in `explorer/app/streamlit/defaults.py` before merge.
+
+**Run** (repository root):
+
+```
+streamlit run explorer/app/streamlit/design_map_app.py
+```
+
+| Piece | Location |
+|-------|----------|
+| Streamlit UI (sliders, export) | `explorer/app/streamlit/design_map_app.py` |
+| Dummy Folium preview map | `explorer/presentation/design_map_preview.py` |
+| Hierarchical hex resolution (shared with production maps that use schemes) | `explorer/core/map_marker_colour_resolve.py` |
+| Preset dataclasses / registration | `explorer/app/streamlit/defaults.py` |
+
 ---
 
 # Testing

@@ -105,8 +105,9 @@ def build_species_overlay_map(
     *map_height_px*: pixel height for the Folium map pane (match Streamlit **Map height** slider).
 
     *visit_marker_scheme*: when set and the visit overlay has no species filter, **All locations**
-    markers use :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` (refs #147). When
-    ``None`` or a species is selected, legacy named colours from ``settings_schema_defaults`` apply.
+    markers use :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` (resolved via
+    :mod:`explorer.core.map_marker_colour_resolve`). When ``None`` or a species is selected, legacy
+    named colours from ``settings_schema_defaults`` apply.
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()

@@ -75,11 +75,11 @@ MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer
 #
 # Fallback when a scheme has no ``marker_default_circle_radius_px`` (design utility / migration).
 MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK = 2
-# Design utility sliders and incoming preset values clamp to this max (refs #147). Higher values in
-# ``defaults.py`` can still be set by editing the file directly.
+# Design-utility sliders and pasted preset values clamp to this max; you can set higher radii by
+# editing ``defaults.py`` directly.
 MAP_MARKER_CIRCLE_RADIUS_PX_MAX = 10
 
-# Hex equivalents of legacy Folium named colours from ``settings_schema_defaults`` (visit map pre-#147).
+# Hex equivalents of legacy Folium named colours from ``settings_schema_defaults`` (YAML / species visit path).
 _LEGACY_VISIT_MAP_DEFAULT_EDGE = "#008000"  # green
 _LEGACY_VISIT_MAP_DEFAULT_FILL = "#D3D3D3"  # lightgray
 _LEGACY_VISIT_MAP_SPECIES_EDGE = "#800080"  # purple
@@ -115,21 +115,22 @@ def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float
 
 
 # Shared presets for marker styling on map views. Each scheme holds **family** density/highlight
-# fields and **visit_*** tunables (geometry, opacities, hex pairs); visit consumers wire up in #147.
+# fields and **visit_*** tunables (geometry, opacities, hex pairs). All-locations and family maps read
+# these via ``map_marker_colour_resolve`` when the sidebar scheme is active.
 # Optional ``marker_circle_radius_px_*`` override the global ``marker_default_circle_radius_px`` per map collection.
 # Optional ``marker_circle_fill_opacity_*`` override ``marker_default_circle_fill_opacity`` the same way (sparse dict).
 # Optional ``marker_cluster_tier_fill_hex`` overrides Leaflet.markercluster icon fills (small → medium → large);
-# omit to use the plugin / Folium defaults (refs #147).
+# omit to use the plugin / Folium defaults until that path is wired in the visit overlay.
 #
 # Three presets (same structure). Family-map sidebar radio (session-only) selects the active scheme;
 # ``MAP_MARKER_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
-# Scheme 3 is a placeholder for palette experiments (e.g. refs #147).
+# Scheme 3 is a spare slot for palette experiments.
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class MapMarkerColourOverrides:
-    """Optional hex overrides layered on :class:`MapMarkerColourScheme` (refs #147).
+    """Optional hex overrides layered on :class:`MapMarkerColourScheme`.
 
     ``None`` on a field means “use the scheme’s normal field”; resolution order is
     (a) override → (b) scheme role/global → (c) scheme defaults → (d) catch-all
@@ -152,14 +153,15 @@ class MapMarkerColourOverrides:
 class MapMarkerColourScheme:
     """Folium map-marker tunables (colours, sizes, strokes, viewport, legend).
 
-    **Family locations** folium code today reads ``circle_marker_radius_px``, ``base_stroke_weight``,
-    ``highlight_*``, and ``density_*`` — keep those attribute names stable until callers move to
-    newer fields (refs #147). Per-role marker hex and defaults use the ``marker_*`` names below.
+    **Family locations** Folium code reads ``circle_marker_radius_px``, ``base_stroke_weight``,
+    ``highlight_*``, and ``density_*``; keep those attribute names aligned with
+    ``explorer.core.family_map_folium``. Per-role marker hex and defaults use the ``marker_*`` names below.
 
-    **Colour resolution** (design utility today; explorer folium maps: TODO #147): per channel,
-    (a) role-specific hex and optional :class:`MapMarkerColourOverrides`, (b) ``marker_default_*``,
-    (c) scheme defaults (white fill / cream edge), (d) catch-all — see
-    :mod:`explorer.core.map_marker_colour_resolve`.
+    **Colour resolution** when the active scheme is applied: per channel, (a) role-specific hex and
+    optional :class:`MapMarkerColourOverrides`, (b) ``marker_default_*``, (c) scheme defaults (white fill /
+    cream edge), (d) catch-all — see :mod:`explorer.core.map_marker_colour_resolve`. Legacy YAML pin
+    *names* in :mod:`explorer.core.settings_schema_defaults` still apply where a map view has not been
+    switched to scheme-driven hex. TODO(#147): MarkerCluster tier fills and any remaining callers.
     """
 
     display_name: str
@@ -193,7 +195,7 @@ class MapMarkerColourScheme:
     fit_bounds_max_zoom: int
     fit_bounds_max_zoom_highlight: int
     legend_highlight_swatch_fill_index: int
-    # Optional per-map collection circle radii (None = use ``marker_default_circle_radius_px``); refs #147.
+    # Optional per-map collection circle radii (None = use ``marker_default_circle_radius_px``).
     marker_circle_radius_px_locations: int | None = field(default=None)
     marker_circle_radius_px_species: int | None = field(default=None)
     marker_circle_radius_px_lifers: int | None = field(default=None)

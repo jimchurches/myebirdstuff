@@ -1,5 +1,5 @@
 """
-Map marker **design** utility — dummy Folium markers for tuning colours and geometry (refs #147).
+Map marker **design** utility — dummy Folium markers for tuning colours and geometry.
 
 No eBird data required. Run from repo root::
 
@@ -171,7 +171,7 @@ def _cluster_tier_fill_hex_from_session() -> tuple[str, str, str] | None:
 
 
 def _fill_opacity_from_session(key: str, *, legacy_key: str | None, default: float) -> float:
-    """Read slider session value; optional *legacy_key* for renamed widgets (refs #147)."""
+    """Read slider session value; *legacy_key* supports session keys from older widget names."""
     v = st.session_state.get(key)
     if v is None and legacy_key is not None:
         v = st.session_state.get(legacy_key)
@@ -187,7 +187,7 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
     scope = str(st.session_state.get("design_preview_scope", MAP_SCOPE_ALL))
     cfg = scheme_seed_config(scheme_index, preview_scope=scope)
     # Do not set ``design_scheme_pick`` here: when "Load preset" runs, the selectbox is already
-    # instantiated above the button — Streamlit forbids mutating that key afterward (refs #147).
+    # instantiated above the button, and Streamlit forbids mutating that widget key after creation.
     st.session_state["design_map_style"] = cfg.map_style
     st.session_state["design_height_px"] = int(cfg.height_px)
     st.session_state["design_radius_default"] = int(cfg.marker_default_circle_radius_px)
@@ -586,7 +586,8 @@ def main() -> None:
         st.caption(
             "Single ``MapMarkerColourScheme`` dict: resolved ``visit_*`` / ``circle_marker_*`` opacities "
             "and radii, plus optional sparse ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` "
-            "and ``marker_cluster_tier_fill_hex`` when set. Rename ``EXPORT`` symbols as needed; #147 wires consumers."
+            "and ``marker_cluster_tier_fill_hex`` when set. Rename ``EXPORT`` symbols and register new presets "
+            "in ``active_map_marker_colour_scheme`` in ``defaults.py`` as needed."
         )
 
 

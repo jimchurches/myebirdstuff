@@ -50,7 +50,7 @@ DESIGN_PREVIEW_MARKER_COPY_COUNT = 8
 
 _HEX_RE = re.compile(r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 
-# Hard fallbacks when :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` omits marker defaults (refs #147).
+# Hard fallbacks when :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` omits marker defaults.
 MARKER_SCHEME_FALLBACK_DEFAULT_RADIUS_PX = 5
 MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY = 0.88
 MARKER_SCHEME_FALLBACK_DEFAULT_BASE_STROKE_WEIGHT = 2
@@ -354,7 +354,7 @@ def build_design_preview_map(
     for type_slot, row in enumerate(rows):
         kind = row.kind
         for copy_index in range(DESIGN_PREVIEW_MARKER_COPY_COUNT):
-            # Each block of four: copies 0–1 local cluster; 2–3 broad scatter (refs #147 design utility).
+            # Eight copies per marker kind: (copy_index % 4) < 2 → tight local span, else wide span (two cluster pairs, two spread pairs).
             local = (copy_index % 4) < 2
             loc = _memo_loc(kind, copy_index, type_slot, local)
 

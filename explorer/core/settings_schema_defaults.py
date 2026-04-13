@@ -26,7 +26,8 @@ MAP_HEIGHT_PX_MIN = 440
 MAP_HEIGHT_PX_MAX = 1200
 # All-locations map only: group nearby pins (Leaflet.markercluster). Species / lifer maps never cluster.
 MAP_CLUSTER_ALL_LOCATIONS_DEFAULT = True
-# Fixed visit-map pin colours (Folium named colours) until #147 consumes ``MapMarkerColourScheme``.
+# Visit-map pin colours as Folium named strings: used when the explorer is not using sidebar
+# ``MapMarkerColourScheme`` for that view (e.g. species-selected visit overlay).
 MAP_DEFAULT_COLOR_DEFAULT = "green"
 MAP_DEFAULT_FILL_DEFAULT = "lightgray"
 MAP_SPECIES_COLOR_DEFAULT = "purple"

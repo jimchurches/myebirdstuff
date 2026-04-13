@@ -3,7 +3,7 @@ Generate paste-ready Python snippets for :mod:`explorer.app.streamlit.defaults` 
 :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig`.
 
 Output is a single ``dict`` aligned with field order on
-:class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` (refs #147).
+:class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme`.
 
 Optional per-collection circle radius and fill-opacity keys are emitted only when they differ from the
 global defaults (``marker_default_circle_radius_px`` / ``marker_default_circle_fill_opacity``).
@@ -126,8 +126,8 @@ def format_full_defaults_export(
         "# --- Copy into explorer/app/streamlit/defaults.py (merge by hand) ---\n"
         "# Rename _MAP_MARKER_COLOUR_SCHEME_EXPORT_VALUES / MAP_MARKER_COLOUR_SCHEME_EXPORT, then\n"
         "# register the index in active_map_marker_colour_scheme() if you add a new slot.\n"
-        "# ``circle_marker_*`` / ``density_*`` / ``highlight_*`` / ``base_stroke_weight`` are consumed\n"
-        "# by family-map folium today; keep those names until #147 migrates callers.\n"
+        "# ``circle_marker_*`` / ``density_*`` / ``highlight_*`` / ``base_stroke_weight`` are required\n"
+        "# by ``explorer.core.family_map_folium``; keep those keys aligned with ``MapMarkerColourScheme``.\n"
         "# Optional ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` keys appear only\n"
         "# when they differ from ``marker_default_circle_radius_px`` / ``marker_default_circle_fill_opacity``.\n"
         "# Optional ``marker_cluster_tier_fill_hex`` appears only when all three tier colours are set.\n"
