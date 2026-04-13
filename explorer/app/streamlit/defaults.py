@@ -329,7 +329,7 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
         '#593654',
     ),
     visit_circle_marker_radius_px=5,
-    visit_stroke_weight=3,
+    visit_stroke_weight=2,
     visit_fill_opacity_all_locations=0.9,
     visit_fill_opacity_emphasis=0.9,
     visit_fill_opacity_lifers=0.9,
