@@ -187,6 +187,8 @@ streamlit run explorer/app/streamlit/design_map_app.py
 | Hierarchical hex resolution (shared with production maps that use schemes) | `explorer/core/map_marker_colour_resolve.py` |
 | Preset dataclasses / registration | `explorer/app/streamlit/defaults.py` |
 
+> The website [Coolors](https://coolors.co/?home) is an excellent resource when working on colour schemes.
+
 ---
 
 # Testing
