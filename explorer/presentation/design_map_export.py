@@ -7,6 +7,7 @@ Output is a single ``dict`` aligned with field order on
 
 Optional per-collection circle radius and fill-opacity keys are emitted only when they differ from the
 global defaults (``marker_default_circle_radius_px`` / ``marker_default_circle_fill_opacity``).
+``marker_cluster_tier_fill_hex`` is emitted only when all three tier colours are set (otherwise Folium defaults).
 """
 
 from __future__ import annotations
@@ -41,6 +42,14 @@ def _append_sparse_radius_overrides(lines: list[str], cfg: DesignMapPreviewConfi
     for name, val in pairs:
         if int(val) != d:
             lines.append(f"    {name}={int(val)},")
+
+
+def _append_sparse_cluster_tier_fill_hex(lines: list[str], cfg: DesignMapPreviewConfig) -> None:
+    """Emit ``marker_cluster_tier_fill_hex`` only when set (overrides Folium / plugin defaults)."""
+    t = cfg.marker_cluster_tier_fill_hex
+    if t is None:
+        return
+    lines.append(f"    marker_cluster_tier_fill_hex={_fmt_hex_tuple(t)},")
 
 
 def _append_sparse_fill_opacity_overrides(lines: list[str], cfg: DesignMapPreviewConfig) -> None:
@@ -101,6 +110,7 @@ def format_map_marker_colour_scheme_dict_py(
     ]
     _append_sparse_radius_overrides(lines, cfg)
     _append_sparse_fill_opacity_overrides(lines, cfg)
+    _append_sparse_cluster_tier_fill_hex(lines, cfg)
     lines.append(")")
     return "\n".join(lines)
 
@@ -120,6 +130,7 @@ def format_full_defaults_export(
         "# by family-map folium today; keep those names until #147 migrates callers.\n"
         "# Optional ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` keys appear only\n"
         "# when they differ from ``marker_default_circle_radius_px`` / ``marker_default_circle_fill_opacity``.\n"
+        "# Optional ``marker_cluster_tier_fill_hex`` appears only when all three tier colours are set.\n"
     )
     mm = format_map_marker_colour_scheme_dict_py(cfg, display_name, template=template)
     inst = (

@@ -46,6 +46,9 @@ from explorer.app.streamlit.design_map_constants import (
     FAMILY_DENSITY_BAND_UI_LABELS,
     H_BASEMAP,
     H_FO_DEFAULT,
+    H_CLUSTER_TIER_LARGE,
+    H_CLUSTER_TIER_MEDIUM,
+    H_CLUSTER_TIER_SMALL,
     H_FO_FAMILY,
     H_FO_LIFERS,
     H_FO_LOCATIONS,
@@ -86,6 +89,7 @@ from explorer.presentation.design_map_preview import (
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     DesignMapPreviewConfig,
     build_design_preview_map,
+    normalize_hex_colour,
     scheme_seed_config,
 )
 
@@ -123,6 +127,17 @@ def _hex_text_input(label: str, *, key: str, help: str) -> None:
     st.text_input(label, key=key, help=help, on_change=_hex_hash_on_change(key))
 
 
+def _hex_text_input_cluster_tier(label: str, *, key: str, help: str) -> None:
+    """Optional hex fields for MarkerCluster tiers; empty means use Folium defaults."""
+    st.text_input(
+        label,
+        key=key,
+        help=help,
+        placeholder="no value required",
+        on_change=_hex_hash_on_change(key),
+    )
+
+
 def _radius_from_session(key: str, *, default_px: int) -> int:
     """Clamp session circle radius to ``[1, MAP_MARKER_CIRCLE_RADIUS_PX_MAX]``."""
     v = st.session_state.get(key)
@@ -132,6 +147,24 @@ def _radius_from_session(key: str, *, default_px: int) -> int:
         return clamp_map_marker_circle_radius_px(int(v))
     except (TypeError, ValueError):
         return default_px
+
+
+def _cluster_tier_fill_hex_from_session() -> tuple[str, str, str] | None:
+    """Return three tier hexes only if all fields are non-empty; otherwise ``None`` (Folium defaults)."""
+    parts: list[str] = []
+    for i in range(3):
+        raw = st.session_state.get(f"design_cluster_hex_{i}")
+        s = "" if raw is None else str(raw).strip()
+        parts.append(s)
+    if all(x == "" for x in parts):
+        return None
+    if any(x == "" for x in parts):
+        return None
+    return (
+        normalize_hex_colour(parts[0]),
+        normalize_hex_colour(parts[1]),
+        normalize_hex_colour(parts[2]),
+    )
 
 
 def _fill_opacity_from_session(key: str, *, legacy_key: str | None, default: float) -> float:
@@ -183,6 +216,13 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
         st.session_state[f"design_hex_fs{i}"] = cfg.family_stroke_hex[i]
     st.session_state["design_hex_fam_hl"] = cfg.family_highlight_stroke_hex
     st.session_state["design_legend_hl_swatch_ix"] = int(cfg.legend_highlight_swatch_fill_index)
+    ct = cfg.marker_cluster_tier_fill_hex
+    if ct is not None and len(ct) == 3:
+        for i in range(3):
+            st.session_state[f"design_cluster_hex_{i}"] = ct[i]
+    else:
+        for i in range(3):
+            st.session_state[f"design_cluster_hex_{i}"] = ""
     st.session_state[_K_EXPORT_NAME] = active_map_marker_colour_scheme(scheme_index).display_name
 
 
@@ -253,6 +293,7 @@ def _config_from_session() -> DesignMapPreviewConfig:
         legend_highlight_swatch_fill_index=max(
             0, min(3, int(st.session_state.get("design_legend_hl_swatch_ix", 0)))
         ),
+        marker_cluster_tier_fill_hex=_cluster_tier_fill_hex_from_session(),
     )
 
 
@@ -351,6 +392,26 @@ def main() -> None:
             )
             _hex_text_input("Fill", key="design_hex_df", help=H_HEX_DF)
             _hex_text_input("Edge", key="design_hex_de", help=H_HEX_DE)
+            with st.expander("Cluster colours", expanded=False):
+                st.caption(
+                    "Optional fills for **All locations** map MarkerCluster icons (small → medium → large "
+                    "marker counts). Leave all blank to keep Folium / Leaflet.markercluster defaults."
+                )
+                _hex_text_input_cluster_tier(
+                    "Small tier",
+                    key="design_cluster_hex_0",
+                    help=H_CLUSTER_TIER_SMALL,
+                )
+                _hex_text_input_cluster_tier(
+                    "Medium tier",
+                    key="design_cluster_hex_1",
+                    help=H_CLUSTER_TIER_MEDIUM,
+                )
+                _hex_text_input_cluster_tier(
+                    "Large tier",
+                    key="design_cluster_hex_2",
+                    help=H_CLUSTER_TIER_LARGE,
+                )
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_SPECIES_LOCATIONS], expanded=False):
             st.slider(
@@ -514,7 +575,7 @@ def main() -> None:
         st.caption(
             "Single ``MapMarkerColourScheme`` dict: resolved ``visit_*`` / ``circle_marker_*`` opacities "
             "and radii, plus optional sparse ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` "
-            "when a collection differs from the globals. Rename ``EXPORT`` symbols as needed; #147 wires consumers."
+            "and ``marker_cluster_tier_fill_hex`` when set. Rename ``EXPORT`` symbols as needed; #147 wires consumers."
         )
 
 

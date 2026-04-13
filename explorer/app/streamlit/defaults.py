@@ -108,6 +108,8 @@ def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float
 # fields and **visit_*** tunables (geometry, opacities, hex pairs); visit consumers wire up in #147.
 # Optional ``marker_circle_radius_px_*`` override the global ``marker_default_circle_radius_px`` per map collection.
 # Optional ``marker_circle_fill_opacity_*`` override ``marker_default_circle_fill_opacity`` the same way (sparse dict).
+# Optional ``marker_cluster_tier_fill_hex`` overrides Leaflet.markercluster icon fills (small → medium → large);
+# omit to use the plugin / Folium defaults (refs #147).
 #
 # Three presets (same structure). Family-map sidebar radio (session-only) selects the active scheme;
 # ``MAP_MARKER_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
@@ -164,6 +166,9 @@ class MapMarkerColourScheme:
     marker_circle_fill_opacity_species: float | None = field(default=None)
     marker_circle_fill_opacity_lifers: float | None = field(default=None)
     marker_circle_fill_opacity_families: float | None = field(default=None)
+    # All-locations map only: MarkerCluster icon fill colours by tier (small / medium / large counts).
+    # ``None`` = Folium / Leaflet.markercluster default styling until wired in ``map_overlay_visit_map``.
+    marker_cluster_tier_fill_hex: tuple[str, str, str] | None = field(default=None)
 
 
 # Scheme 1 — default: red density ramp

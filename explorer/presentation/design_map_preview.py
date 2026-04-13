@@ -179,6 +179,8 @@ class DesignMapPreviewConfig:
     family_highlight_stroke_hex: str
     # Swatch fill for the family-map highlight legend row (:class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme`).
     legend_highlight_swatch_fill_index: int
+    # Optional All-locations MarkerCluster tier fills (small → medium → large); ``None`` = Folium defaults.
+    marker_cluster_tier_fill_hex: tuple[str, str, str] | None
 
 
 # Bottom-left legend row order: visit map matches ``map_overlay_visit_map`` (Lifer → Last seen → Species → Other);
@@ -470,6 +472,18 @@ def scheme_seed_config(
     fo_lif = _collection_fill_opacity("marker_circle_fill_opacity_lifers", float(sch.visit_fill_opacity_lifers))
     fo_fam = _collection_fill_opacity("marker_circle_fill_opacity_families", float(sch.circle_marker_fill_opacity))
 
+    def _optional_cluster_tiers() -> tuple[str, str, str] | None:
+        v = getattr(sch, "marker_cluster_tier_fill_hex", None)
+        if v is None:
+            return None
+        if not isinstance(v, tuple) or len(v) != 3:
+            return None
+        return (
+            normalize_hex_colour(str(v[0])),
+            normalize_hex_colour(str(v[1])),
+            normalize_hex_colour(str(v[2])),
+        )
+
     return DesignMapPreviewConfig(
         preview_scope=preview_scope,
         map_style=map_style,
@@ -502,4 +516,5 @@ def scheme_seed_config(
         family_stroke_hex=strokes,
         family_highlight_stroke_hex=str(sch.highlight_stroke_hex),
         legend_highlight_swatch_fill_index=max(0, min(int(sch.legend_highlight_swatch_fill_index), 3)),
+        marker_cluster_tier_fill_hex=_optional_cluster_tiers(),
     )
