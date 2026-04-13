@@ -1,6 +1,7 @@
 """Tests for :mod:`explorer.core.map_controller` / overlay map build."""
 
 from collections import OrderedDict
+from dataclasses import replace
 
 import pandas as pd
 
@@ -109,7 +110,39 @@ def test_all_locations_cluster_markers_use_scheme_cluster_tier_fills_when_presen
     assert r.map is not None
     html = r.map._repr_html_().lower()
     assert "marker-cluster" in html
-    assert any(x in html for x in ("efe6ee", "e0ccdd", "cfb4cc"))
+    # Custom cluster icons use rgba(...) from hex + marker_cluster_*_opacity (not raw #hex in HTML).
+    assert "rgba(" in html
+    assert "239,230,238" in html
+
+
+def test_all_locations_cluster_markers_apply_tier_border_colours_when_present():
+    df = _minimal_map_df()
+    scheme_with_border = replace(
+        MAP_MARKER_COLOUR_SCHEME_3,
+        marker_cluster_colours_hex=(
+            "#EFE6EE",
+            "#4b2e46",
+            "#e0ccdd",
+            "#E0CCDD",
+            "#5b3655",
+            "#cfb4cc",
+            "#CFB4CC",
+            "#6a3f64",
+            "#b78fb3",
+        ),
+    )
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        cluster_all_locations=True,
+        visit_marker_scheme=scheme_with_border,
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map._repr_html_().lower()
+    assert "border:2px solid" in html
+    assert "rgba(" in html
+    assert "75,46,70" in html
 
 
 def test_species_view_no_selection_hide_only_empty_map():

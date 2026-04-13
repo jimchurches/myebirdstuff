@@ -7,12 +7,21 @@ Output is a single ``dict`` aligned with field order on
 
 Optional per-collection circle radius and fill-opacity keys are emitted only when they differ from the
 global defaults (``marker_default_circle_radius_px`` / ``marker_default_circle_fill_opacity``).
-``marker_cluster_tier_fill_hex`` is emitted only when all three tier colours are set (otherwise Folium defaults).
+``marker_cluster_colours_hex`` is emitted only when all nine values are set (otherwise Folium defaults).
+Optional ``marker_cluster_*_opacity`` / spread / border width are emitted when they differ from
+``MAP_MARKER_CLUSTER_*_DEFAULT`` in ``defaults.py``.
 """
 
 from __future__ import annotations
 
-from explorer.app.streamlit.defaults import MapMarkerColourScheme
+from explorer.app.streamlit.defaults import (
+    MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT,
+    MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT,
+    MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT,
+    MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
+    MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
+    MapMarkerColourScheme,
+)
 from explorer.presentation.design_map_preview import DesignMapPreviewConfig
 
 
@@ -44,12 +53,29 @@ def _append_sparse_radius_overrides(lines: list[str], cfg: DesignMapPreviewConfi
             lines.append(f"    {name}={int(val)},")
 
 
-def _append_sparse_cluster_tier_fill_hex(lines: list[str], cfg: DesignMapPreviewConfig) -> None:
-    """Emit ``marker_cluster_tier_fill_hex`` only when set (overrides Folium / plugin defaults)."""
-    t = cfg.marker_cluster_tier_fill_hex
-    if t is None:
+def _append_sparse_cluster_colours(lines: list[str], cfg: DesignMapPreviewConfig) -> None:
+    """Emit ``marker_cluster_colours_hex`` only when set (overrides plugin defaults)."""
+    t = cfg.marker_cluster_colours_hex
+    if t is not None:
+        lines.append(f"    marker_cluster_colours_hex={_fmt_hex_tuple(t)},")
+
+
+def _append_sparse_marker_cluster_geometry(lines: list[str], cfg: DesignMapPreviewConfig) -> None:
+    """Emit cluster icon rgba/geometry only when custom cluster colours are set and values differ from defaults."""
+    if cfg.marker_cluster_colours_hex is None:
         return
-    lines.append(f"    marker_cluster_tier_fill_hex={_fmt_hex_tuple(t)},")
+    pairs: tuple[tuple[str, float, float], ...] = (
+        ("marker_cluster_inner_fill_opacity", cfg.marker_cluster_inner_fill_opacity, MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT),
+        ("marker_cluster_halo_opacity", cfg.marker_cluster_halo_opacity, MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT),
+        ("marker_cluster_border_opacity", cfg.marker_cluster_border_opacity, MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT),
+    )
+    for name, val, dflt in pairs:
+        if round(float(val), 4) != round(float(dflt), 4):
+            lines.append(f"    {name}={_fmt_float(val)},")
+    if int(cfg.marker_cluster_halo_spread_px) != int(MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT):
+        lines.append(f"    marker_cluster_halo_spread_px={int(cfg.marker_cluster_halo_spread_px)},")
+    if int(cfg.marker_cluster_border_width_px) != int(MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT):
+        lines.append(f"    marker_cluster_border_width_px={int(cfg.marker_cluster_border_width_px)},")
 
 
 def _append_sparse_fill_opacity_overrides(lines: list[str], cfg: DesignMapPreviewConfig) -> None:
@@ -110,7 +136,8 @@ def format_map_marker_colour_scheme_dict_py(
     ]
     _append_sparse_radius_overrides(lines, cfg)
     _append_sparse_fill_opacity_overrides(lines, cfg)
-    _append_sparse_cluster_tier_fill_hex(lines, cfg)
+    _append_sparse_cluster_colours(lines, cfg)
+    _append_sparse_marker_cluster_geometry(lines, cfg)
     lines.append(")")
     return "\n".join(lines)
 
@@ -130,7 +157,8 @@ def format_full_defaults_export(
         "# by ``explorer.core.family_map_folium``; keep those keys aligned with ``MapMarkerColourScheme``.\n"
         "# Optional ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` keys appear only\n"
         "# when they differ from ``marker_default_circle_radius_px`` / ``marker_default_circle_fill_opacity``.\n"
-        "# Optional ``marker_cluster_tier_fill_hex`` appears only when all three tier colours are set.\n"
+        "# Optional ``marker_cluster_colours_hex`` appears only when all nine values are set\n"
+        "# (small_fill/small_border/small_halo ... large_fill/large_border/large_halo).\n"
     )
     mm = format_map_marker_colour_scheme_dict_py(cfg, display_name, template=template)
     inst = (

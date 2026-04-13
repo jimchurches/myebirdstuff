@@ -190,8 +190,15 @@ class DesignMapPreviewConfig:
     family_highlight_stroke_hex: str
     # Swatch fill for the family-map highlight legend row (:class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme`).
     legend_highlight_swatch_fill_index: int
-    # Optional All-locations MarkerCluster tier fills (small → medium → large); ``None`` = Folium defaults.
-    marker_cluster_tier_fill_hex: tuple[str, str, str] | None
+    # Optional MarkerCluster icon colours as:
+    # ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
+    marker_cluster_colours_hex: tuple[str, str, str, str, str, str, str, str, str] | None
+    # Rgba / geometry for custom cluster icons (see ``MAP_MARKER_CLUSTER_*_DEFAULT`` in defaults).
+    marker_cluster_inner_fill_opacity: float
+    marker_cluster_halo_opacity: float
+    marker_cluster_border_opacity: float
+    marker_cluster_halo_spread_px: int
+    marker_cluster_border_width_px: int
 
 
 # Bottom-left legend row order: visit map matches ``map_overlay_visit_map`` (Lifer → Last seen → Species → Other);
@@ -436,7 +443,14 @@ def scheme_seed_config(
     preview_scope: str = MAP_SCOPE_ALL,
 ) -> DesignMapPreviewConfig:
     """Build a config from :func:`explorer.app.streamlit.defaults.active_map_marker_colour_scheme`."""
-    from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+    from explorer.app.streamlit.defaults import (
+        MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT,
+        MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT,
+        MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT,
+        MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
+        MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
+        active_map_marker_colour_scheme,
+    )
 
     sch = active_map_marker_colour_scheme(scheme_index)
     fb_fo = MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY
@@ -498,17 +512,53 @@ def scheme_seed_config(
     fo_lif = _collection_fill_opacity("marker_circle_fill_opacity_lifers", float(sch.visit_fill_opacity_lifers))
     fo_fam = _collection_fill_opacity("marker_circle_fill_opacity_families", float(sch.circle_marker_fill_opacity))
 
-    def _optional_cluster_tiers() -> tuple[str, str, str] | None:
-        v = getattr(sch, "marker_cluster_tier_fill_hex", None)
+    def _optional_cluster_colours() -> tuple[str, str, str, str, str, str, str, str, str] | None:
+        v = getattr(sch, "marker_cluster_colours_hex", None)
         if v is None:
             return None
-        if not isinstance(v, tuple) or len(v) != 3:
+        if not isinstance(v, tuple) or len(v) != 9:
             return None
         return (
             normalize_marker_hex(str(v[0]), channel="fill"),
-            normalize_marker_hex(str(v[1]), channel="fill"),
+            normalize_marker_hex(str(v[1]), channel="edge"),
             normalize_marker_hex(str(v[2]), channel="fill"),
+            normalize_marker_hex(str(v[3]), channel="fill"),
+            normalize_marker_hex(str(v[4]), channel="edge"),
+            normalize_marker_hex(str(v[5]), channel="fill"),
+            normalize_marker_hex(str(v[6]), channel="fill"),
+            normalize_marker_hex(str(v[7]), channel="edge"),
+            normalize_marker_hex(str(v[8]), channel="fill"),
         )
+
+    def _cluster_style_float(attr: str, default: float) -> float:
+        v = getattr(sch, attr, None)
+        if v is None:
+            return default
+        try:
+            return max(0.0, min(1.0, float(v)))
+        except (TypeError, ValueError):
+            return default
+
+    def _cluster_style_int(attr: str, default: int, *, lo: int, hi: int) -> int:
+        v = getattr(sch, attr, None)
+        if v is None:
+            return default
+        try:
+            return max(lo, min(hi, int(v)))
+        except (TypeError, ValueError):
+            return default
+
+    _inner_fo = _cluster_style_float(
+        "marker_cluster_inner_fill_opacity", MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT
+    )
+    _halo_o = _cluster_style_float("marker_cluster_halo_opacity", MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT)
+    _border_o = _cluster_style_float("marker_cluster_border_opacity", MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT)
+    _halo_sp = _cluster_style_int(
+        "marker_cluster_halo_spread_px", MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT, lo=0, hi=24
+    )
+    _bw = _cluster_style_int(
+        "marker_cluster_border_width_px", MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT, lo=0, hi=8
+    )
 
     return DesignMapPreviewConfig(
         preview_scope=preview_scope,
@@ -542,5 +592,10 @@ def scheme_seed_config(
         family_stroke_hex=strokes,
         family_highlight_stroke_hex=hl_stroke,
         legend_highlight_swatch_fill_index=max(0, min(int(sch.legend_highlight_swatch_fill_index), 3)),
-        marker_cluster_tier_fill_hex=_optional_cluster_tiers(),
+        marker_cluster_colours_hex=_optional_cluster_colours(),
+        marker_cluster_inner_fill_opacity=_inner_fo,
+        marker_cluster_halo_opacity=_halo_o,
+        marker_cluster_border_opacity=_border_o,
+        marker_cluster_halo_spread_px=_halo_sp,
+        marker_cluster_border_width_px=_bw,
     )

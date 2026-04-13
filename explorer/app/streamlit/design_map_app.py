@@ -16,6 +16,7 @@ The preview map matches the main explorer’s initial framing: Canberra centre, 
 
 from __future__ import annotations
 
+from dataclasses import replace
 import os
 import re
 import sys
@@ -41,6 +42,11 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_STEP,
     MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
     MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+    MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT,
+    MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT,
+    MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT,
+    MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
+    MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
     active_map_marker_colour_scheme,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
@@ -50,9 +56,20 @@ from explorer.app.streamlit.design_map_constants import (
     FAMILY_DENSITY_BAND_UI_LABELS,
     H_BASEMAP,
     H_FO_DEFAULT,
-    H_CLUSTER_TIER_LARGE,
-    H_CLUSTER_TIER_MEDIUM,
-    H_CLUSTER_TIER_SMALL,
+    H_CLUSTER_BORDER_O,
+    H_CLUSTER_BORDER_W,
+    H_CLUSTER_HALO_O,
+    H_CLUSTER_HALO_SPREAD,
+    H_CLUSTER_INNER_FO,
+    H_CLUSTER_LARGE_BORDER,
+    H_CLUSTER_LARGE_FILL,
+    H_CLUSTER_LARGE_HALO,
+    H_CLUSTER_MEDIUM_BORDER,
+    H_CLUSTER_MEDIUM_FILL,
+    H_CLUSTER_MEDIUM_HALO,
+    H_CLUSTER_SMALL_BORDER,
+    H_CLUSTER_SMALL_FILL,
+    H_CLUSTER_SMALL_HALO,
     H_FO_FAMILY,
     H_FO_LIFERS,
     H_FO_LOCATIONS,
@@ -152,22 +169,38 @@ def _radius_from_session(key: str, *, default_px: int) -> int:
         return default_px
 
 
-def _cluster_tier_fill_hex_from_session() -> tuple[str, str, str] | None:
-    """Return three tier hexes only if all fields are non-empty; otherwise ``None`` (Folium defaults)."""
+def _cluster_colours_from_session() -> tuple[str, str, str, str, str, str, str, str, str] | None:
+    """Return all nine MarkerCluster colours when complete; otherwise ``None`` (plugin defaults)."""
     parts: list[str] = []
-    for i in range(3):
-        raw = st.session_state.get(f"design_cluster_hex_{i}")
+    for i in range(9):
+        raw = st.session_state.get(f"design_cluster_colour_hex_{i}")
         s = "" if raw is None else str(raw).strip()
         parts.append(s)
     if all(x == "" for x in parts):
         return None
     if any(x == "" for x in parts):
         return None
-    return (
-        normalize_hex_colour(parts[0]),
-        normalize_hex_colour(parts[1]),
-        normalize_hex_colour(parts[2]),
-    )
+    return tuple(normalize_hex_colour(parts[i]) for i in range(9))
+
+
+def _cluster_style_float_from_session(key: str, default: float) -> float:
+    v = st.session_state.get(key)
+    if v is None:
+        return default
+    try:
+        return max(0.0, min(1.0, float(v)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _cluster_style_int_from_session(key: str, default: int, *, lo: int, hi: int) -> int:
+    v = st.session_state.get(key)
+    if v is None:
+        return default
+    try:
+        return max(lo, min(hi, int(v)))
+    except (TypeError, ValueError):
+        return default
 
 
 def _fill_opacity_from_session(key: str, *, legacy_key: str | None, default: float) -> float:
@@ -219,13 +252,18 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
         st.session_state[f"design_hex_fs{i}"] = cfg.family_stroke_hex[i]
     st.session_state["design_hex_fam_hl"] = cfg.family_highlight_stroke_hex
     st.session_state["design_legend_hl_swatch_ix"] = int(cfg.legend_highlight_swatch_fill_index)
-    ct = cfg.marker_cluster_tier_fill_hex
-    if ct is not None and len(ct) == 3:
-        for i in range(3):
-            st.session_state[f"design_cluster_hex_{i}"] = ct[i]
+    cc = cfg.marker_cluster_colours_hex
+    if cc is not None and len(cc) == 9:
+        for i in range(9):
+            st.session_state[f"design_cluster_colour_hex_{i}"] = cc[i]
     else:
-        for i in range(3):
-            st.session_state[f"design_cluster_hex_{i}"] = ""
+        for i in range(9):
+            st.session_state[f"design_cluster_colour_hex_{i}"] = ""
+    st.session_state["design_cluster_inner_fo"] = float(cfg.marker_cluster_inner_fill_opacity)
+    st.session_state["design_cluster_halo_o"] = float(cfg.marker_cluster_halo_opacity)
+    st.session_state["design_cluster_border_o"] = float(cfg.marker_cluster_border_opacity)
+    st.session_state["design_cluster_halo_spread"] = int(cfg.marker_cluster_halo_spread_px)
+    st.session_state["design_cluster_border_w"] = int(cfg.marker_cluster_border_width_px)
     st.session_state[_K_EXPORT_NAME] = active_map_marker_colour_scheme(scheme_index).display_name
 
 
@@ -302,8 +340,57 @@ def _config_from_session() -> DesignMapPreviewConfig:
         legend_highlight_swatch_fill_index=max(
             0, min(3, int(st.session_state.get("design_legend_hl_swatch_ix", 0)))
         ),
-        marker_cluster_tier_fill_hex=_cluster_tier_fill_hex_from_session(),
+        marker_cluster_colours_hex=_cluster_colours_from_session(),
+        marker_cluster_inner_fill_opacity=_cluster_style_float_from_session(
+            "design_cluster_inner_fo", MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT
+        ),
+        marker_cluster_halo_opacity=_cluster_style_float_from_session(
+            "design_cluster_halo_o", MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT
+        ),
+        marker_cluster_border_opacity=_cluster_style_float_from_session(
+            "design_cluster_border_o", MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT
+        ),
+        marker_cluster_halo_spread_px=_cluster_style_int_from_session(
+            "design_cluster_halo_spread", MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT, lo=0, hi=24
+        ),
+        marker_cluster_border_width_px=_cluster_style_int_from_session(
+            "design_cluster_border_w", MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT, lo=0, hi=8
+        ),
     )
+
+
+def _config_for_export() -> DesignMapPreviewConfig:
+    """Session config for **Export** tab.
+
+    If the nine cluster hex fields are empty in session (e.g. preset was changed before we synced)
+    but the selected **defaults.py** preset defines ``marker_cluster_colours_hex``, merge those
+    resolved values so the export block matches the file without requiring a separate button click.
+    """
+    cfg = _config_from_session()
+    if cfg.marker_cluster_colours_hex is not None:
+        return cfg
+    pick = int(st.session_state.get("design_scheme_pick", 1))
+    sch = active_map_marker_colour_scheme(pick)
+    if sch.marker_cluster_colours_hex is None:
+        return cfg
+    scope = str(st.session_state.get("design_preview_scope", MAP_SCOPE_ALL))
+    if scope not in MAP_SCOPES:
+        scope = MAP_SCOPE_ALL
+    seeded = scheme_seed_config(pick, preview_scope=scope)
+    return replace(
+        cfg,
+        marker_cluster_colours_hex=seeded.marker_cluster_colours_hex,
+        marker_cluster_inner_fill_opacity=seeded.marker_cluster_inner_fill_opacity,
+        marker_cluster_halo_opacity=seeded.marker_cluster_halo_opacity,
+        marker_cluster_border_opacity=seeded.marker_cluster_border_opacity,
+        marker_cluster_halo_spread_px=seeded.marker_cluster_halo_spread_px,
+        marker_cluster_border_width_px=seeded.marker_cluster_border_width_px,
+    )
+
+
+def _on_preset_scheme_change() -> None:
+    """Keep sidebar widgets aligned with the selected ``defaults.py`` preset (incl. cluster hex)."""
+    _seed_controls_from_scheme(int(st.session_state["design_scheme_pick"]))
 
 
 def main() -> None:
@@ -339,15 +426,19 @@ def main() -> None:
 
         st.divider()
         st.subheader("Colour scheme (defaults)")
-        scheme_ix = st.selectbox(
+        st.selectbox(
             "Preset from defaults.py",
             options=[1, 2, 3],
             key="design_scheme_pick",
             format_func=lambda i: active_map_marker_colour_scheme(int(i)).display_name,
             help=H_PRESET,
+            on_change=_on_preset_scheme_change,
+        )
+        st.caption(
+            "Changing the preset reloads all controls from ``defaults.py``, including MarkerCluster hex fields."
         )
         if st.button("Load preset into controls", use_container_width=True):
-            _seed_controls_from_scheme(int(scheme_ix))
+            _seed_controls_from_scheme(int(st.session_state.get("design_scheme_pick", 1)))
             st.rerun()
         if st.button("Shuffle positions", use_container_width=True):
             st.session_state[_K_POS_SEED] = int(st.session_state.get(_K_POS_SEED, 42)) + 1
@@ -403,23 +494,98 @@ def main() -> None:
             _hex_text_input("Edge", key="design_hex_de", help=H_HEX_DE)
             with st.expander("Cluster colours", expanded=False):
                 st.caption(
-                    "Optional fills for **All locations** map MarkerCluster icons (small → medium → large "
-                    "marker counts). Leave all blank to keep Folium / Leaflet.markercluster defaults."
+                    "Optional MarkerCluster icon colours for **All locations** (small → medium → large "
+                    "marker counts). Enter all nine values (fill/border/halo per tier), or leave blank "
+                    "for Leaflet.markercluster defaults."
                 )
                 _hex_text_input_cluster_tier(
-                    "Small tier",
-                    key="design_cluster_hex_0",
-                    help=H_CLUSTER_TIER_SMALL,
+                    "Small tier fill",
+                    key="design_cluster_colour_hex_0",
+                    help=H_CLUSTER_SMALL_FILL,
                 )
                 _hex_text_input_cluster_tier(
-                    "Medium tier",
-                    key="design_cluster_hex_1",
-                    help=H_CLUSTER_TIER_MEDIUM,
+                    "Small tier border",
+                    key="design_cluster_colour_hex_1",
+                    help=H_CLUSTER_SMALL_BORDER,
                 )
                 _hex_text_input_cluster_tier(
-                    "Large tier",
-                    key="design_cluster_hex_2",
-                    help=H_CLUSTER_TIER_LARGE,
+                    "Small tier halo",
+                    key="design_cluster_colour_hex_2",
+                    help=H_CLUSTER_SMALL_HALO,
+                )
+                _hex_text_input_cluster_tier(
+                    "Medium tier fill",
+                    key="design_cluster_colour_hex_3",
+                    help=H_CLUSTER_MEDIUM_FILL,
+                )
+                _hex_text_input_cluster_tier(
+                    "Medium tier border",
+                    key="design_cluster_colour_hex_4",
+                    help=H_CLUSTER_MEDIUM_BORDER,
+                )
+                _hex_text_input_cluster_tier(
+                    "Medium tier halo",
+                    key="design_cluster_colour_hex_5",
+                    help=H_CLUSTER_MEDIUM_HALO,
+                )
+                _hex_text_input_cluster_tier(
+                    "Large tier fill",
+                    key="design_cluster_colour_hex_6",
+                    help=H_CLUSTER_LARGE_FILL,
+                )
+                _hex_text_input_cluster_tier(
+                    "Large tier border",
+                    key="design_cluster_colour_hex_7",
+                    help=H_CLUSTER_LARGE_BORDER,
+                )
+                _hex_text_input_cluster_tier(
+                    "Large tier halo",
+                    key="design_cluster_colour_hex_8",
+                    help=H_CLUSTER_LARGE_HALO,
+                )
+                st.caption(
+                    "Opacity / spread mirror Leaflet.markercluster’s layered rgba look (inner fill, halo ring, border). "
+                    "Defaults match ``MAP_MARKER_CLUSTER_*_DEFAULT`` in ``defaults.py``."
+                )
+                st.slider(
+                    "Inner fill opacity",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.05,
+                    key="design_cluster_inner_fo",
+                    help=H_CLUSTER_INNER_FO,
+                )
+                st.slider(
+                    "Halo ring opacity",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.05,
+                    key="design_cluster_halo_o",
+                    help=H_CLUSTER_HALO_O,
+                )
+                st.slider(
+                    "Border opacity",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.05,
+                    key="design_cluster_border_o",
+                    help=H_CLUSTER_BORDER_O,
+                )
+                st.slider(
+                    "Halo spread (px)",
+                    min_value=0,
+                    max_value=24,
+                    step=1,
+                    key="design_cluster_halo_spread",
+                    help=H_CLUSTER_HALO_SPREAD,
+                )
+                st.slider(
+                    "Border width (px)",
+                    min_value=0,
+                    max_value=8,
+                    step=1,
+                    key="design_cluster_border_w",
+                    help=H_CLUSTER_BORDER_W,
                 )
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_SPECIES_LOCATIONS], expanded=False):
@@ -529,7 +695,7 @@ def main() -> None:
         st.session_state[_K_RENDER] = int(st.session_state.get(_K_RENDER, 0)) + 1
 
     applied: DesignMapPreviewConfig | None = st.session_state.get(_K_APPLIED)
-    cfg_live = _config_from_session()
+    cfg_export = _config_for_export()
     template_sch = active_map_marker_colour_scheme(int(st.session_state.get("design_scheme_pick", 1)))
 
     tab_preview, tab_export = st.tabs(["Map preview", "Export to defaults.py"])
@@ -578,7 +744,7 @@ def main() -> None:
             help="display_name",
         )
         export_body = format_full_defaults_export(
-            cfg_live,
+            cfg_export,
             display_name=str(st.session_state.get(_K_EXPORT_NAME, "Scheme")),
             template=template_sch,
         )
@@ -586,8 +752,9 @@ def main() -> None:
         st.caption(
             "Single ``MapMarkerColourScheme`` dict: resolved ``visit_*`` / ``circle_marker_*`` opacities "
             "and radii, plus optional sparse ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` "
-            "and ``marker_cluster_tier_fill_hex`` when set. Rename ``EXPORT`` symbols and register new presets "
-            "in ``active_map_marker_colour_scheme`` in ``defaults.py`` as needed."
+            "and optional ``marker_cluster_colours_hex`` when set. "
+            "Rename ``EXPORT`` symbols and register new presets in ``active_map_marker_colour_scheme`` in "
+            "``defaults.py`` as needed."
         )
 
 

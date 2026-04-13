@@ -119,8 +119,16 @@ def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float
 # these via ``map_marker_colour_resolve`` when the sidebar scheme is active.
 # Optional ``marker_circle_radius_px_*`` override the global ``marker_default_circle_radius_px`` per map collection.
 # Optional ``marker_circle_fill_opacity_*`` override ``marker_default_circle_fill_opacity`` the same way (sparse dict).
-# Optional ``marker_cluster_tier_fill_hex`` overrides Leaflet.markercluster icon fills (small → medium → large);
-# omit to use the plugin / Folium defaults until that path is wired in the visit overlay.
+# Optional ``marker_cluster_colours_hex`` provides all MarkerCluster icon tier colours in one tuple:
+# ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
+# Omit to keep Leaflet.markercluster defaults.
+# Optional ``marker_cluster_*_opacity`` / spread / border width tune the custom ``iconCreateFunction``
+# (plugin defaults use semi-transparent rgba layers — see ``MAP_MARKER_CLUSTER_*_DEFAULT``).
+MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT = 0.6
+MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT = 0.6
+MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT = 1.0
+MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT = 6
+MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT = 2
 #
 # Three presets (same structure). Family-map sidebar radio (session-only) selects the active scheme;
 # ``MAP_MARKER_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
@@ -204,9 +212,18 @@ class MapMarkerColourScheme:
     marker_circle_fill_opacity_species: float | None = field(default=None)
     marker_circle_fill_opacity_lifers: float | None = field(default=None)
     marker_circle_fill_opacity_families: float | None = field(default=None)
-    # All-locations map only: MarkerCluster icon fill colours by tier (small / medium / large counts).
-    # ``None`` = Folium / Leaflet.markercluster default styling until wired in ``map_overlay_visit_map``.
-    marker_cluster_tier_fill_hex: tuple[str, str, str] | None = field(default=None)
+    # All-locations map only: Leaflet.markercluster **cluster icon** colours by tier and channel:
+    # ``(small_fill, small_border, small_halo, medium_*, large_*)``. The halo is drawn as a ``box-shadow``
+    # ring around the inner disc (do not nest extra divs — plugin CSS targets a single inner ``div``).
+    # ``None`` keeps plugin default styling.
+    marker_cluster_colours_hex: tuple[str, str, str, str, str, str, str, str, str] | None = field(default=None)
+    # When ``marker_cluster_colours_hex`` is set, these tune rgba / geometry for the custom cluster icon
+    # (``None`` = use ``MAP_MARKER_CLUSTER_*_DEFAULT`` in ``map_overlay_visit_map``).
+    marker_cluster_inner_fill_opacity: float | None = field(default=None)
+    marker_cluster_halo_opacity: float | None = field(default=None)
+    marker_cluster_border_opacity: float | None = field(default=None)
+    marker_cluster_halo_spread_px: int | None = field(default=None)
+    marker_cluster_border_width_px: int | None = field(default=None)
     marker_overrides: MapMarkerColourOverrides | None = field(default=None)
 
 
@@ -347,11 +364,16 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     marker_circle_fill_opacity_species=0.9,
     marker_circle_fill_opacity_lifers=0.9,
     marker_circle_fill_opacity_families=0.85,
-    marker_cluster_tier_fill_hex=(
-        '#EFE6EE',
-        '#E0CCDD',
-        '#CFB4CC',
+    marker_cluster_colours_hex=(
+        '#EFE6EE', '#E0CCDD', '#E0CCDD',
+        '#E0CCDD', '#CFB4CC', '#CFB4CC',
+        '#CFB4CC', '#B78FB3', '#B78FB3',
     ),
+    marker_cluster_inner_fill_opacity=0.58,
+    marker_cluster_halo_opacity=0.48,
+    marker_cluster_border_opacity=0.82,
+    marker_cluster_halo_spread_px=8,
+    marker_cluster_border_width_px=2,
 )
 
 

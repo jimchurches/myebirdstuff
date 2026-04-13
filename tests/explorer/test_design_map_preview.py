@@ -3,6 +3,7 @@
 from explorer.app.streamlit.defaults import (
     MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
     MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+    MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
 )
@@ -75,6 +76,8 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
     lsf, lse = resolve_last_seen_colours(sch)
     assert cfg.last_seen_fill == lsf
     assert cfg.last_seen_edge == lse
+    assert cfg.marker_cluster_colours_hex is None
+    assert cfg.marker_cluster_inner_fill_opacity == MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT
 
 
 def test_build_design_preview_map_returns_folium_with_markers() -> None:

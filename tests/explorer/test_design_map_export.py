@@ -37,7 +37,7 @@ def test_format_map_marker_dict_contains_key_fields() -> None:
     assert "marker_circle_radius_px_species=" not in text
     assert "marker_default_circle_radius_px=" in text
     assert "marker_default_circle_fill_opacity=" in text
-    assert "marker_cluster_tier_fill_hex=" not in text
+    assert "marker_cluster_colours_hex=" not in text
 
 
 def test_sparse_fill_opacity_omitted_when_all_collections_match_default() -> None:
@@ -104,17 +104,30 @@ def test_format_full_export_is_single_expanded_scheme_block() -> None:
     assert text.index("marker_default_fill_hex") < text.index("circle_marker_radius_px=")
 
 
-def test_export_emits_marker_cluster_tier_fill_hex_when_configured() -> None:
+def test_export_emits_marker_cluster_colours_hex_when_configured() -> None:
     cfg = _sample_cfg()
     sch = active_map_marker_colour_scheme(1)
     from dataclasses import replace
 
     cfg2 = replace(
         cfg,
-        marker_cluster_tier_fill_hex=("#b91c1c", "#eab308", "#16a34a"),
+        marker_cluster_colours_hex=(
+            "#b91c1c",
+            "#991b1b",
+            "#fecaca",
+            "#eab308",
+            "#a16207",
+            "#fef08a",
+            "#16a34a",
+            "#166534",
+            "#bbf7d0",
+        ),
     )
     text = format_map_marker_colour_scheme_dict_py(cfg2, "Clusters", template=sch)
-    assert "marker_cluster_tier_fill_hex=" in text
+    assert "marker_cluster_colours_hex=" in text
     assert "'#b91c1c'" in text
+    assert "'#991b1b'" in text
     assert "'#eab308'" in text
+    assert "'#a16207'" in text
     assert "'#16a34a'" in text
+    assert "'#166534'" in text

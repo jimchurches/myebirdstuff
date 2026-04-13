@@ -187,6 +187,8 @@ streamlit run explorer/app/streamlit/design_map_app.py
 | Hierarchical hex resolution (shared with production maps that use schemes) | `explorer/core/map_marker_colour_resolve.py` |
 | Preset dataclasses / registration | `explorer/app/streamlit/defaults.py` |
 
+**All locations — MarkerCluster “cluster icons”:** the plugin expects the same DOM as its default `iconCreateFunction` — **one** inner `<div>` wrapping the count `<span>`. Extra nested divs interact badly with `.marker-cluster div { … }` sizing rules and look offset or triple-stacked. Custom colours in this repo use that single inner div: **fill** = `background-color`, **border** = `border`, **halo** = a `box-shadow` ring, and the default tier background on the icon root is cleared so it does not add another coloured layer. Hex colours are combined with optional **opacity** and **spread/width** fields on `MapMarkerColourScheme` (`marker_cluster_inner_fill_opacity`, `marker_cluster_halo_opacity`, `marker_cluster_border_opacity`, `marker_cluster_halo_spread_px`, `marker_cluster_border_width_px`; defaults `MAP_MARKER_CLUSTER_*_DEFAULT` in `defaults.py`) so you can approximate the plugin’s semi-transparent rgba layers without nested divs. Implementation: `explorer/core/map_overlay_visit_map.py`.
+
 > The website [Coolors](https://coolors.co/?home) is an excellent resource when working on colour schemes.
 
 ---
