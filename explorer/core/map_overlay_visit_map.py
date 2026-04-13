@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import OrderedDict
 from typing import Any, Dict, Hashable, MutableMapping, Optional, Tuple, cast
 
@@ -23,7 +24,11 @@ from explorer.app.streamlit.defaults import (
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
 )
-from explorer.core.map_marker_colour_resolve import resolve_location_visit_colours
+from explorer.core.map_marker_colour_resolve import (
+    is_valid_hex_colour,
+    normalize_marker_hex,
+    resolve_location_visit_colours,
+)
 from explorer.core.map_overlay_theme import inject_map_overlay_theme
 from explorer.core.map_overlay_types import BaseSpeciesFn, MapOverlayResult, SpeciesUrlFn
 from explorer.presentation.map_renderer import (
@@ -61,6 +66,42 @@ def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tupl
         else legacy_fo
     )
     return fill_c, edge, radius_px, sw, fo
+
+
+def _marker_cluster_icon_create_function_from_scheme(
+    sch: MapMarkerColourScheme | None,
+) -> str | None:
+    """Return Leaflet.markercluster ``iconCreateFunction`` when tier fills are configured.
+
+    When no valid tier fills are present, returns ``None`` so Folium / Leaflet.markercluster defaults apply.
+    """
+    if sch is None:
+        return None
+    tiers = getattr(sch, "marker_cluster_tier_fill_hex", None)
+    if tiers is None:
+        return None
+    try:
+        raw = (tiers[0], tiers[1], tiers[2])
+    except Exception:
+        return None
+    if not all(is_valid_hex_colour(x) for x in raw):
+        return None
+    cols = [normalize_marker_hex(x, channel="fill") for x in raw]
+    cols_js = json.dumps(cols)
+    # Keep the stock cluster CSS classes so sizing/text remain consistent; only override fill colour.
+    return (
+        "function(cluster) {"
+        "var count = cluster.getChildCount();"
+        f"var tiers = {cols_js};"
+        "var c = (count < 10) ? tiers[0] : (count < 100) ? tiers[1] : tiers[2];"
+        "var sizeClass = (count < 10) ? 'marker-cluster-small' : (count < 100) ? 'marker-cluster-medium' : 'marker-cluster-large';"
+        "return new L.DivIcon({"
+        "html: '<div style=\"background-color:' + c + ';\"><span>' + count + '</span></div>',"
+        "className: 'marker-cluster ' + sizeClass,"
+        "iconSize: new L.Point(40, 40)"
+        "});"
+        "}"
+    )
 
 
 def build_visit_overlay_map(
@@ -175,8 +216,10 @@ def build_visit_overlay_map(
 
         marker_cluster: Optional[MarkerCluster] = None
         if cluster_all_locations:
+            icon_fn = _marker_cluster_icon_create_function_from_scheme(visit_marker_scheme)
             marker_cluster = MarkerCluster(
                 name="All locations",
+                icon_create_function=icon_fn,
                 options={
                     "maxClusterRadius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
                     "disableClusteringAtZoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,

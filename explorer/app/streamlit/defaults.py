@@ -347,6 +347,11 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     marker_circle_fill_opacity_species=0.9,
     marker_circle_fill_opacity_lifers=0.9,
     marker_circle_fill_opacity_families=0.85,
+    marker_cluster_tier_fill_hex=(
+        '#EFE6EE',
+        '#E0CCDD',
+        '#CFB4CC',
+    ),
 )
 
 

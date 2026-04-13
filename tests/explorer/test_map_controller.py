@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1
+from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1, MAP_MARKER_COLOUR_SCHEME_3
 from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
 from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
 from explorer.core.species_logic import base_species_for_lifer
@@ -95,6 +95,21 @@ def test_all_locations_visit_marker_scheme_uses_hex_from_scheme():
     html = r.map._repr_html_().lower()
     assert "008000" in html
     assert "d3d3d3" in html
+
+
+def test_all_locations_cluster_markers_use_scheme_cluster_tier_fills_when_present():
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        cluster_all_locations=True,
+        visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_3,
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map._repr_html_().lower()
+    assert "marker-cluster" in html
+    assert any(x in html for x in ("efe6ee", "e0ccdd", "cfb4cc"))
 
 
 def test_species_view_no_selection_hide_only_empty_map():
