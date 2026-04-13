@@ -6,6 +6,7 @@ from explorer.app.streamlit.defaults import (
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
 )
+from explorer.core.map_marker_colour_resolve import MAP_MARKER_CATCHALL_EDGE_HEX
 from explorer.presentation.design_map_preview import (
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     MAP_SCOPE_ALL_LOCATIONS,
@@ -36,21 +37,44 @@ def test_normalize_hex_colour_accepts_hash_six() -> None:
 
 
 def test_normalize_hex_colour_invalid_falls_back() -> None:
-    assert normalize_hex_colour("not-a-colour") == "#FFFFFF"
-    assert normalize_hex_colour("") == "#FFFFFF"
+    assert normalize_hex_colour("not-a-colour") == MAP_MARKER_CATCHALL_EDGE_HEX
+    assert normalize_hex_colour("") == MAP_MARKER_CATCHALL_EDGE_HEX
 
 
 def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
     from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+    from explorer.core.map_marker_colour_resolve import (
+        normalize_marker_hex,
+        resolve_family_band_colours,
+        resolve_lifer_colours,
+        resolve_last_seen_colours,
+        resolve_location_visit_colours,
+        resolve_marker_global_colours,
+        resolve_species_colours,
+    )
 
     sch = active_map_marker_colour_scheme(2)
     cfg = scheme_seed_config(2)
-    assert cfg.family_fill_hex == sch.density_fill_hex
-    assert cfg.family_stroke_hex == sch.density_stroke_hex
-    assert cfg.family_highlight_stroke_hex == sch.highlight_stroke_hex
-    assert cfg.default_edge == sch.marker_location_visit_edge_hex
-    assert cfg.species_edge == sch.marker_species_edge_hex
-    assert cfg.marker_default_fill_hex == sch.marker_default_fill_hex
+    for i in range(4):
+        ef, es = resolve_family_band_colours(sch, i)
+        assert cfg.family_fill_hex[i] == ef
+        assert cfg.family_stroke_hex[i] == es
+    assert cfg.family_highlight_stroke_hex == normalize_marker_hex(sch.highlight_stroke_hex, channel="edge")
+    vf, ve = resolve_location_visit_colours(sch)
+    assert cfg.default_fill == vf
+    assert cfg.default_edge == ve
+    spf, spe = resolve_species_colours(sch)
+    assert cfg.species_fill == spf
+    assert cfg.species_edge == spe
+    gf, ge = resolve_marker_global_colours(sch)
+    assert cfg.marker_default_fill_hex == gf
+    assert cfg.marker_default_edge_hex == ge
+    lf, le = resolve_lifer_colours(sch)
+    assert cfg.lifer_fill == lf
+    assert cfg.lifer_edge == le
+    lsf, lse = resolve_last_seen_colours(sch)
+    assert cfg.last_seen_fill == lsf
+    assert cfg.last_seen_edge == lse
 
 
 def test_build_design_preview_map_returns_folium_with_markers() -> None:
@@ -59,21 +83,27 @@ def test_build_design_preview_map_returns_folium_with_markers() -> None:
     html = m._repr_html_()
     assert "CircleMarker" in html or "circle" in html.lower()
     assert "-35" in html  # Canberra latitude area
+    # Design utility: default-location markers use fixed white fill + cream edge (not scheme colours).
+    h = html.lower()
+    assert "fff8e7" in h
+    assert "#ffffff" in h or "ffffff" in h
 
 
 def test_all_locations_scope_has_only_default_pins() -> None:
     cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL_LOCATIONS)
     m = build_design_preview_map(cfg, position_seed=3)
     html = m._repr_html_()
-    assert html.count("All locations") >= 4
+    assert html.count("All locations") >= 8
     assert "species at location" not in html
 
 
-def test_family_scope_has_only_family_labels() -> None:
+def test_family_scope_shows_only_family_markers() -> None:
     cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
     m = build_design_preview_map(cfg, position_seed=3)
     html = m._repr_html_()
-    assert html.count("species at location") >= 4
+    assert html.count("species at location") >= 8
+    assert "Default location marker" not in html
+    assert "All locations" not in html
     assert "Last seen" not in html
     assert "pebird-map-legend" in html
 

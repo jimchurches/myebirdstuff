@@ -22,6 +22,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from explorer.core.map_marker_colour_resolve import (
+    MAP_MARKER_CATCHALL_EDGE_HEX,
+    MAP_MARKER_CATCHALL_FILL_HEX,
+    MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+)
+
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster via Folium)
 # ---------------------------------------------------------------------------
@@ -118,12 +125,38 @@ def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float
 
 
 @dataclass(frozen=True)
+class MapMarkerColourOverrides:
+    """Optional hex overrides layered on :class:`MapMarkerColourScheme` (refs #147).
+
+    ``None`` on a field means “use the scheme’s normal field”; resolution order is
+    (a) override → (b) scheme role/global → (c) scheme defaults → (d) catch-all
+    (see :mod:`explorer.core.map_marker_colour_resolve`).
+    """
+
+    marker_default_fill_hex: str | None = None
+    marker_default_edge_hex: str | None = None
+    location_visit_fill_hex: str | None = None
+    location_visit_edge_hex: str | None = None
+    species_fill_hex: str | None = None
+    species_edge_hex: str | None = None
+    lifer_fill_hex: str | None = None
+    lifer_edge_hex: str | None = None
+    last_seen_fill_hex: str | None = None
+    last_seen_edge_hex: str | None = None
+
+
+@dataclass(frozen=True)
 class MapMarkerColourScheme:
     """Folium map-marker tunables (colours, sizes, strokes, viewport, legend).
 
     **Family locations** folium code today reads ``circle_marker_radius_px``, ``base_stroke_weight``,
     ``highlight_*``, and ``density_*`` — keep those attribute names stable until callers move to
     newer fields (refs #147). Per-role marker hex and defaults use the ``marker_*`` names below.
+
+    **Colour resolution** (design utility today; explorer folium maps: TODO #147): per channel,
+    (a) role-specific hex and optional :class:`MapMarkerColourOverrides`, (b) ``marker_default_*``,
+    (c) scheme defaults (white fill / cream edge), (d) catch-all — see
+    :mod:`explorer.core.map_marker_colour_resolve`.
     """
 
     display_name: str
@@ -169,24 +202,25 @@ class MapMarkerColourScheme:
     # All-locations map only: MarkerCluster icon fill colours by tier (small / medium / large counts).
     # ``None`` = Folium / Leaflet.markercluster default styling until wired in ``map_overlay_visit_map``.
     marker_cluster_tier_fill_hex: tuple[str, str, str] | None = field(default=None)
+    marker_overrides: MapMarkerColourOverrides | None = field(default=None)
 
 
 # Scheme 1 — default: red density ramp
 _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
     display_name="Reds",
-    marker_default_fill_hex="#FFFFFF",
-    marker_default_edge_hex="#FFFFFF",
+    marker_default_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_default_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
     marker_default_circle_radius_px=5,
     marker_default_circle_fill_opacity=0.88,
     marker_default_base_stroke_weight=2,
-    marker_location_visit_fill_hex="#FFFFFF",
-    marker_location_visit_edge_hex="#FFFFFF",
-    marker_species_fill_hex="#FFFFFF",
-    marker_species_edge_hex="#FFFFFF",
-    marker_lifer_fill_hex="#FFFFFF",
-    marker_lifer_edge_hex="#FFFFFF",
-    marker_last_seen_fill_hex="#FFFFFF",
-    marker_last_seen_edge_hex="#FFFFFF",
+    marker_location_visit_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_location_visit_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_species_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_species_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_lifer_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_lifer_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_last_seen_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_last_seen_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
@@ -219,19 +253,19 @@ _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
 # Scheme 2 — blue → purple density ramp
 _MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
     display_name="Blues & purples",
-    marker_default_fill_hex="#FFFFFF",
-    marker_default_edge_hex="#FFFFFF",
+    marker_default_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_default_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
     marker_default_circle_radius_px=5,
     marker_default_circle_fill_opacity=0.88,
     marker_default_base_stroke_weight=2,
-    marker_location_visit_fill_hex="#FFFFFF",
-    marker_location_visit_edge_hex="#FFFFFF",
-    marker_species_fill_hex="#FFFFFF",
-    marker_species_edge_hex="#FFFFFF",
-    marker_lifer_fill_hex="#FFFFFF",
-    marker_lifer_edge_hex="#FFFFFF",
-    marker_last_seen_fill_hex="#FFFFFF",
-    marker_last_seen_edge_hex="#FFFFFF",
+    marker_location_visit_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_location_visit_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_species_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_species_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_lifer_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_lifer_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    marker_last_seen_fill_hex=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    marker_last_seen_edge_hex=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
@@ -265,34 +299,34 @@ _MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
 _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     display_name='Experimental',
     marker_default_fill_hex='#FFFFFF',
-    marker_default_edge_hex='#FFFFFF',
+    marker_default_edge_hex='#FFF8E7',
     marker_default_circle_radius_px=5,
     marker_default_circle_fill_opacity=0.88,
     marker_default_base_stroke_weight=2,
-    marker_location_visit_fill_hex='#FFFFFF',
-    marker_location_visit_edge_hex='#FFFFFF',
+    marker_location_visit_fill_hex='#C7A8C1',
+    marker_location_visit_edge_hex='#4D2D48',
     marker_species_fill_hex='#FFFFFF',
-    marker_species_edge_hex='#FFFFFF',
+    marker_species_edge_hex='#FFF8E7',
     marker_lifer_fill_hex='#FFFFFF',
-    marker_lifer_edge_hex='#FFFFFF',
+    marker_lifer_edge_hex='#FFF8E7',
     marker_last_seen_fill_hex='#FFFFFF',
-    marker_last_seen_edge_hex='#FFFFFF',
+    marker_last_seen_edge_hex='#FFF8E7',
     circle_marker_radius_px=5,
-    circle_marker_fill_opacity=0.88,
-    base_stroke_weight=3,
+    circle_marker_fill_opacity=0.85,
+    base_stroke_weight=2,
     highlight_stroke_hex='#E00000',
     highlight_stroke_weight=2,
     density_fill_hex=(
         '#95A5B2',
         '#B78FAF',
         '#8D5383',
-        '#221B1E',
+        '#593653',
     ),
     density_stroke_hex=(
         '#677C8E',
         '#704868',
         '#5A3554',
-        '#0B090A',
+        '#593654',
     ),
     visit_circle_marker_radius_px=5,
     visit_stroke_weight=3,
@@ -307,6 +341,7 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     marker_circle_fill_opacity_locations=0.9,
     marker_circle_fill_opacity_species=0.9,
     marker_circle_fill_opacity_lifers=0.9,
+    marker_circle_fill_opacity_families=0.85,
 )
 
 

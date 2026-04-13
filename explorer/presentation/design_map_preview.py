@@ -2,7 +2,7 @@
 Folium preview map for the **Map marker design** Streamlit utility.
 
 Builds a fixed Canberra-centred map at the same initial zoom as :func:`create_map` (zoom 5) with
-dummy ``CircleMarker`` pins for each visit-map and family-map role. No UI dependencies.
+dummy ``CircleMarker`` markers for each visit-map and family-map role. No UI dependencies.
 """
 
 from __future__ import annotations
@@ -22,6 +22,16 @@ from explorer.app.streamlit.defaults import (
     clamp_map_marker_circle_radius_px,
 )
 from explorer.core.family_map_compute import DENSITY_BAND_LABELS
+from explorer.core.map_marker_colour_resolve import (
+    MAP_MARKER_CATCHALL_EDGE_HEX,
+    normalize_marker_hex,
+    resolve_family_band_colours,
+    resolve_last_seen_colours,
+    resolve_lifer_colours,
+    resolve_location_visit_colours,
+    resolve_marker_global_colours,
+    resolve_species_colours,
+)
 from explorer.presentation.map_renderer import (
     build_legend_html,
     create_map,
@@ -35,11 +45,11 @@ DESIGN_PREVIEW_MAP_CENTER: tuple[float, float] = (-35.28, 149.13)
 DESIGN_PREVIEW_WIDE_SPAN_DEG = (9.0, 11.0)  # lat, lon — broad distribution over the framed map
 # Tight cluster around Canberra / ACT for proximity examples.
 DESIGN_PREVIEW_LOCAL_SPAN_DEG = (0.38, 0.48)
+# Samples per marker kind (each block of four: two cluster + two spread).
+DESIGN_PREVIEW_MARKER_COPY_COUNT = 8
 
 _HEX_RE = re.compile(r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 
-# Undefined / invalid hex in the design utility (avoids clashing with red ramps; refs #147).
-DESIGN_HEX_FALLBACK = "#FFFFFF"
 # Hard fallbacks when :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` omits marker defaults (refs #147).
 MARKER_SCHEME_FALLBACK_DEFAULT_RADIUS_PX = 5
 MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY = 0.88
@@ -60,7 +70,7 @@ MAP_SCOPES: tuple[str, ...] = (
 )
 
 
-def normalize_hex_colour(raw: str, *, fallback: str = DESIGN_HEX_FALLBACK) -> str:
+def normalize_hex_colour(raw: str, *, fallback: str = MAP_MARKER_CATCHALL_EDGE_HEX) -> str:
     """Return a ``#RRGGBB`` string, or *fallback* if input is empty/invalid."""
     s = (raw or "").strip()
     if not s:
@@ -85,6 +95,7 @@ class PreviewMarkerRow:
 # ``lifer_subspecies`` / ``lifer_both_*`` mirror :mod:`explorer.core.map_overlay_lifer_map` when
 # subspecies lifers are enabled.
 PREVIEW_MARKER_ROWS: tuple[PreviewMarkerRow, ...] = (
+    # Same scopes as production visit map default markers — not lifer-only or family-only maps.
     PreviewMarkerRow("visit_default", frozenset({MAP_SCOPE_ALL_LOCATIONS, MAP_SCOPE_SPECIES_LOCATIONS})),
     PreviewMarkerRow("visit_species", frozenset({MAP_SCOPE_SPECIES_LOCATIONS})),
     PreviewMarkerRow("visit_lifer", frozenset({MAP_SCOPE_SPECIES_LOCATIONS, MAP_SCOPE_LIFER_LOCATIONS})),
@@ -164,7 +175,7 @@ class DesignMapPreviewConfig:
     marker_default_edge_hex: str
     marker_default_circle_fill_opacity: float
     marker_default_base_stroke_weight: int
-    # Visit-map style pins — map to ``marker_location_visit_*`` / ``marker_species_*`` / … on export.
+    # Visit-map style markers — map to ``marker_location_visit_*`` / ``marker_species_*`` / … on export.
     default_edge: str
     default_fill: str
     species_edge: str
@@ -221,7 +232,7 @@ def _legend_entry_for_kind(kind: str, cfg: DesignMapPreviewConfig) -> tuple[str,
             if cfg.preview_scope == MAP_SCOPE_ALL_LOCATIONS
             else "Default location marker"
         )
-        return (normalize_hex_colour(cfg.default_edge), normalize_hex_colour(cfg.default_fill), lab)
+        return (cfg.default_edge, cfg.default_fill, lab)
     if kind == "visit_species":
         return (normalize_hex_colour(cfg.species_edge), normalize_hex_colour(cfg.species_fill), "Species")
     if kind == "visit_lifer":
@@ -233,7 +244,7 @@ def _legend_entry_for_kind(kind: str, cfg: DesignMapPreviewConfig) -> tuple[str,
     if kind == "lifer_both_outer":
         return (
             normalize_hex_colour(cfg.species_edge),
-            DESIGN_HEX_FALLBACK,
+            normalize_hex_colour(cfg.marker_default_fill_hex),
             "Both — outer ring",
         )
     if kind == "lifer_both_inner":
@@ -342,16 +353,15 @@ def build_design_preview_map(
 
     for type_slot, row in enumerate(rows):
         kind = row.kind
-        for copy_index in range(4):
-            # Copies 0–1: local cluster; 2–3: broad scatter (refs #147 design utility).
-            local = copy_index < 2
+        for copy_index in range(DESIGN_PREVIEW_MARKER_COPY_COUNT):
+            # Each block of four: copies 0–1 local cluster; 2–3 broad scatter (refs #147 design utility).
+            local = (copy_index % 4) < 2
             loc = _memo_loc(kind, copy_index, type_slot, local)
 
             fill = True
             radius_px = max(1, int(_circle_radius_px_for_marker_kind(cfg, kind)))
             if kind == "visit_default":
-                stroke = normalize_hex_colour(cfg.default_edge)
-                fill_c = normalize_hex_colour(cfg.default_fill)
+                stroke, fill_c = cfg.default_edge, cfg.default_fill
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_locations))
                 sw = max(1, int(cfg.stroke_weight_visit))
             elif kind == "visit_species":
@@ -429,13 +439,17 @@ def scheme_seed_config(
     from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
 
     sch = active_map_marker_colour_scheme(scheme_index)
-    fb_hex = DESIGN_HEX_FALLBACK
     fb_fo = MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY
     fb_sw = MARKER_SCHEME_FALLBACK_DEFAULT_BASE_STROKE_WEIGHT
 
-    def _hex(attr: str) -> str:
-        v = getattr(sch, attr, None)
-        return str(v) if isinstance(v, str) and v.strip() else fb_hex
+    g_fill, g_edge = resolve_marker_global_colours(sch)
+    d_fill, d_edge = resolve_location_visit_colours(sch)
+    sp_fill, sp_edge = resolve_species_colours(sch)
+    lf_fill, lf_edge = resolve_lifer_colours(sch)
+    ls_fill, ls_edge = resolve_last_seen_colours(sch)
+    fills = tuple(resolve_family_band_colours(sch, i)[0] for i in range(4))
+    strokes = tuple(resolve_family_band_colours(sch, i)[1] for i in range(4))
+    hl_stroke = normalize_marker_hex(str(getattr(sch, "highlight_stroke_hex", "")), channel="edge")
 
     def _int_attr(attr: str, fallback: int) -> int:
         v = getattr(sch, attr, None)
@@ -443,9 +457,6 @@ def scheme_seed_config(
             return max(1, int(v)) if v is not None else fallback
         except (TypeError, ValueError):
             return fallback
-
-    fills = tuple(sch.density_fill_hex[i] for i in range(4))
-    strokes = tuple(sch.density_stroke_hex[i] for i in range(4))
 
     def _marker_default_radius() -> int:
         v = getattr(sch, "marker_default_circle_radius_px", None)
@@ -494,9 +505,9 @@ def scheme_seed_config(
         if not isinstance(v, tuple) or len(v) != 3:
             return None
         return (
-            normalize_hex_colour(str(v[0])),
-            normalize_hex_colour(str(v[1])),
-            normalize_hex_colour(str(v[2])),
+            normalize_marker_hex(str(v[0]), channel="fill"),
+            normalize_marker_hex(str(v[1]), channel="fill"),
+            normalize_marker_hex(str(v[2]), channel="fill"),
         )
 
     return DesignMapPreviewConfig(
@@ -515,21 +526,21 @@ def scheme_seed_config(
         marker_circle_fill_opacity_species=fo_spec,
         marker_circle_fill_opacity_lifers=fo_lif,
         marker_circle_fill_opacity_families=fo_fam,
-        marker_default_fill_hex=_hex("marker_default_fill_hex"),
-        marker_default_edge_hex=_hex("marker_default_edge_hex"),
+        marker_default_fill_hex=g_fill,
+        marker_default_edge_hex=g_edge,
         marker_default_circle_fill_opacity=md_fo,
         marker_default_base_stroke_weight=max(1, md_sw),
-        default_edge=_hex("marker_location_visit_edge_hex"),
-        default_fill=_hex("marker_location_visit_fill_hex"),
-        species_edge=_hex("marker_species_edge_hex"),
-        species_fill=_hex("marker_species_fill_hex"),
-        lifer_edge=_hex("marker_lifer_edge_hex"),
-        lifer_fill=_hex("marker_lifer_fill_hex"),
-        last_seen_edge=_hex("marker_last_seen_edge_hex"),
-        last_seen_fill=_hex("marker_last_seen_fill_hex"),
+        default_edge=d_edge,
+        default_fill=d_fill,
+        species_edge=sp_edge,
+        species_fill=sp_fill,
+        lifer_edge=lf_edge,
+        lifer_fill=lf_fill,
+        last_seen_edge=ls_edge,
+        last_seen_fill=ls_fill,
         family_fill_hex=fills,
         family_stroke_hex=strokes,
-        family_highlight_stroke_hex=str(sch.highlight_stroke_hex),
+        family_highlight_stroke_hex=hl_stroke,
         legend_highlight_swatch_fill_index=max(0, min(int(sch.legend_highlight_swatch_fill_index), 3)),
         marker_cluster_tier_fill_hex=_optional_cluster_tiers(),
     )

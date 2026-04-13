@@ -37,6 +37,8 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_STEP,
     MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
     MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+    MAP_MARKER_CATCHALL_EDGE_HEX,
+    MAP_MARKER_CATCHALL_FILL_HEX,
     active_map_marker_colour_scheme,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
@@ -78,7 +80,6 @@ from explorer.app.streamlit.design_map_constants import (
 )
 from explorer.presentation.design_map_export import format_full_defaults_export
 from explorer.presentation.design_map_preview import (
-    DESIGN_HEX_FALLBACK,
     MAP_SCOPES,
     MAP_SCOPE_ALL,
     MAP_SCOPE_ALL_LOCATIONS,
@@ -264,10 +265,10 @@ def _config_from_session() -> DesignMapPreviewConfig:
             "design_fo_family", legacy_key=None, default=_mdf
         ),
         marker_default_fill_hex=str(
-            st.session_state.get("design_marker_default_fill_hex", DESIGN_HEX_FALLBACK)
+            st.session_state.get("design_marker_default_fill_hex", MAP_MARKER_CATCHALL_FILL_HEX)
         ),
         marker_default_edge_hex=str(
-            st.session_state.get("design_marker_default_edge_hex", DESIGN_HEX_FALLBACK)
+            st.session_state.get("design_marker_default_edge_hex", MAP_MARKER_CATCHALL_EDGE_HEX)
         ),
         marker_default_circle_fill_opacity=_mdf,
         marker_default_base_stroke_weight=max(
@@ -279,17 +280,23 @@ def _config_from_session() -> DesignMapPreviewConfig:
                 )
             ),
         ),
-        default_edge=str(st.session_state.get("design_hex_de", DESIGN_HEX_FALLBACK)),
-        default_fill=str(st.session_state.get("design_hex_df", DESIGN_HEX_FALLBACK)),
-        species_edge=str(st.session_state.get("design_hex_se", DESIGN_HEX_FALLBACK)),
-        species_fill=str(st.session_state.get("design_hex_sf", DESIGN_HEX_FALLBACK)),
-        lifer_edge=str(st.session_state.get("design_hex_le", DESIGN_HEX_FALLBACK)),
-        lifer_fill=str(st.session_state.get("design_hex_lf", DESIGN_HEX_FALLBACK)),
-        last_seen_edge=str(st.session_state.get("design_hex_lse", DESIGN_HEX_FALLBACK)),
-        last_seen_fill=str(st.session_state.get("design_hex_lsf", DESIGN_HEX_FALLBACK)),
-        family_fill_hex=tuple(str(st.session_state.get(f"design_hex_ff{i}", DESIGN_HEX_FALLBACK)) for i in range(4)),
-        family_stroke_hex=tuple(str(st.session_state.get(f"design_hex_fs{i}", DESIGN_HEX_FALLBACK)) for i in range(4)),
-        family_highlight_stroke_hex=str(st.session_state.get("design_hex_fam_hl", DESIGN_HEX_FALLBACK)),
+        default_edge=str(st.session_state.get("design_hex_de", MAP_MARKER_CATCHALL_EDGE_HEX)),
+        default_fill=str(st.session_state.get("design_hex_df", MAP_MARKER_CATCHALL_FILL_HEX)),
+        species_edge=str(st.session_state.get("design_hex_se", MAP_MARKER_CATCHALL_EDGE_HEX)),
+        species_fill=str(st.session_state.get("design_hex_sf", MAP_MARKER_CATCHALL_FILL_HEX)),
+        lifer_edge=str(st.session_state.get("design_hex_le", MAP_MARKER_CATCHALL_EDGE_HEX)),
+        lifer_fill=str(st.session_state.get("design_hex_lf", MAP_MARKER_CATCHALL_FILL_HEX)),
+        last_seen_edge=str(st.session_state.get("design_hex_lse", MAP_MARKER_CATCHALL_EDGE_HEX)),
+        last_seen_fill=str(st.session_state.get("design_hex_lsf", MAP_MARKER_CATCHALL_FILL_HEX)),
+        family_fill_hex=tuple(
+            str(st.session_state.get(f"design_hex_ff{i}", MAP_MARKER_CATCHALL_FILL_HEX)) for i in range(4)
+        ),
+        family_stroke_hex=tuple(
+            str(st.session_state.get(f"design_hex_fs{i}", MAP_MARKER_CATCHALL_EDGE_HEX)) for i in range(4)
+        ),
+        family_highlight_stroke_hex=str(
+            st.session_state.get("design_hex_fam_hl", MAP_MARKER_CATCHALL_EDGE_HEX)
+        ),
         legend_highlight_swatch_fill_index=max(
             0, min(3, int(st.session_state.get("design_legend_hl_swatch_ix", 0)))
         ),
@@ -554,7 +561,8 @@ def main() -> None:
                 "Copies **0–1** cluster near Canberra; **2–3** scatter. Family bands: highlight stroke on "
                 "copy **0** (cluster) and copy **2** (spread) so you can compare packed vs isolated. "
                 "Lifer **both**: outer ring is stroke-only; inner uses lifer fill. "
-                "Invalid hex → **#FFFFFF** (design default)."
+                "Invalid hex falls back to catch-all white/cream (see ``map_marker_colour_resolve``); "
+                "resolved colours follow the scheme hierarchy in the sidebar preset."
             )
 
     with tab_export:
