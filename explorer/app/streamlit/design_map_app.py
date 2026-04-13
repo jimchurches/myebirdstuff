@@ -31,20 +31,25 @@ import streamlit as st
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
-    MAP_CIRCLE_MARKER_RADIUS_PX,
     MAP_HEIGHT_PX_DEFAULT,
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_STEP,
+    MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
+    MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
     active_map_marker_colour_scheme,
+    clamp_map_marker_circle_fill_opacity,
+    clamp_map_marker_circle_radius_px,
 )
 from explorer.app.streamlit.app_map_ui import inject_map_folium_iframe_min_height_css
 from explorer.app.streamlit.design_map_constants import (
     FAMILY_DENSITY_BAND_UI_LABELS,
     H_BASEMAP,
-    H_FO_ALL,
-    H_FO_EMPH,
+    H_FO_DEFAULT,
     H_FO_FAMILY,
+    H_FO_LIFERS,
+    H_FO_LOCATIONS,
+    H_FO_SPECIES,
     H_HEIGHT,
     H_HEX_DE,
     H_HEX_DF,
@@ -58,7 +63,11 @@ from explorer.app.streamlit.design_map_constants import (
     H_HEX_SE,
     H_HEX_SF,
     H_PRESET,
-    H_RADIUS,
+    H_RADIUS_DEFAULT,
+    H_RADIUS_FAMILIES,
+    H_RADIUS_LIFERS,
+    H_RADIUS_LOCATIONS,
+    H_RADIUS_SPECIES,
     H_SW_FAM,
     H_SW_FAM_HL,
     H_SW_VISIT,
@@ -75,7 +84,6 @@ from explorer.presentation.design_map_preview import (
     MAP_SCOPE_SPECIES_LOCATIONS,
     MARKER_SCHEME_FALLBACK_DEFAULT_BASE_STROKE_WEIGHT,
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
-    MARKER_SCHEME_FALLBACK_DEFAULT_RADIUS_PX,
     DesignMapPreviewConfig,
     build_design_preview_map,
     scheme_seed_config,
@@ -115,6 +123,30 @@ def _hex_text_input(label: str, *, key: str, help: str) -> None:
     st.text_input(label, key=key, help=help, on_change=_hex_hash_on_change(key))
 
 
+def _radius_from_session(key: str, *, default_px: int) -> int:
+    """Clamp session circle radius to ``[1, MAP_MARKER_CIRCLE_RADIUS_PX_MAX]``."""
+    v = st.session_state.get(key)
+    if v is None:
+        return default_px
+    try:
+        return clamp_map_marker_circle_radius_px(int(v))
+    except (TypeError, ValueError):
+        return default_px
+
+
+def _fill_opacity_from_session(key: str, *, legacy_key: str | None, default: float) -> float:
+    """Read slider session value; optional *legacy_key* for renamed widgets (refs #147)."""
+    v = st.session_state.get(key)
+    if v is None and legacy_key is not None:
+        v = st.session_state.get(legacy_key)
+    if v is None:
+        return clamp_map_marker_circle_fill_opacity(None, fallback=default)
+    try:
+        return clamp_map_marker_circle_fill_opacity(float(v), fallback=default)
+    except (TypeError, ValueError):
+        return default
+
+
 def _seed_controls_from_scheme(scheme_index: int) -> None:
     scope = str(st.session_state.get("design_preview_scope", MAP_SCOPE_ALL))
     cfg = scheme_seed_config(scheme_index, preview_scope=scope)
@@ -122,16 +154,20 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
     # instantiated above the button — Streamlit forbids mutating that key afterward (refs #147).
     st.session_state["design_map_style"] = cfg.map_style
     st.session_state["design_height_px"] = int(cfg.height_px)
-    st.session_state["design_radius"] = int(cfg.circle_radius_px)
+    st.session_state["design_radius_default"] = int(cfg.marker_default_circle_radius_px)
+    st.session_state["design_radius_locations"] = int(cfg.marker_circle_radius_locations)
+    st.session_state["design_radius_species"] = int(cfg.marker_circle_radius_species)
+    st.session_state["design_radius_lifers"] = int(cfg.marker_circle_radius_lifers)
+    st.session_state["design_radius_families"] = int(cfg.marker_circle_radius_families)
     st.session_state["design_sw_visit"] = int(cfg.stroke_weight_visit)
     st.session_state["design_sw_family"] = int(cfg.stroke_weight_family)
     st.session_state["design_sw_family_hl"] = int(cfg.stroke_weight_family_highlight)
-    st.session_state["design_fo_all"] = float(cfg.fill_opacity_all_locations)
-    st.session_state["design_fo_emph"] = float(cfg.fill_opacity_emphasis)
-    st.session_state["design_fo_family"] = float(cfg.family_fill_opacity)
+    st.session_state["design_fo_locations"] = float(cfg.marker_circle_fill_opacity_locations)
+    st.session_state["design_fo_species"] = float(cfg.marker_circle_fill_opacity_species)
+    st.session_state["design_fo_lifers"] = float(cfg.marker_circle_fill_opacity_lifers)
+    st.session_state["design_fo_family"] = float(cfg.marker_circle_fill_opacity_families)
     st.session_state["design_marker_default_fill_hex"] = cfg.marker_default_fill_hex
     st.session_state["design_marker_default_edge_hex"] = cfg.marker_default_edge_hex
-    st.session_state["design_marker_default_circle_radius_px"] = int(cfg.marker_default_circle_radius_px)
     st.session_state["design_marker_default_circle_fill_opacity"] = float(cfg.marker_default_circle_fill_opacity)
     st.session_state["design_marker_default_base_stroke_weight"] = int(cfg.marker_default_base_stroke_weight)
     st.session_state["design_hex_de"] = cfg.default_edge
@@ -153,6 +189,13 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
 def _config_from_session() -> DesignMapPreviewConfig:
     _ps = str(st.session_state.get("design_preview_scope", MAP_SCOPE_ALL))
     _scope = _ps if _ps in MAP_SCOPES else MAP_SCOPE_ALL
+    _fb = MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK
+    _raw_default = st.session_state.get("design_radius_default")
+    _md = clamp_map_marker_circle_radius_px(_raw_default if _raw_default is not None else _fb)
+    _mdf = clamp_map_marker_circle_fill_opacity(
+        st.session_state.get("design_marker_default_circle_fill_opacity"),
+        fallback=MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
+    )
     return DesignMapPreviewConfig(
         preview_scope=_scope,
         map_style=str(st.session_state.get("design_map_style", "default")),
@@ -160,34 +203,33 @@ def _config_from_session() -> DesignMapPreviewConfig:
             MAP_HEIGHT_PX_MIN,
             min(MAP_HEIGHT_PX_MAX, int(st.session_state.get("design_height_px", MAP_HEIGHT_PX_DEFAULT))),
         ),
-        circle_radius_px=max(1, int(st.session_state.get("design_radius", MAP_CIRCLE_MARKER_RADIUS_PX))),
+        marker_default_circle_radius_px=_md,
+        marker_circle_radius_locations=_radius_from_session("design_radius_locations", default_px=_md),
+        marker_circle_radius_species=_radius_from_session("design_radius_species", default_px=_md),
+        marker_circle_radius_lifers=_radius_from_session("design_radius_lifers", default_px=_md),
+        marker_circle_radius_families=_radius_from_session("design_radius_families", default_px=_md),
         stroke_weight_visit=max(1, int(st.session_state.get("design_sw_visit", 1))),
         stroke_weight_family=max(1, int(st.session_state.get("design_sw_family", 1))),
         stroke_weight_family_highlight=max(1, int(st.session_state.get("design_sw_family_hl", 1))),
-        fill_opacity_all_locations=float(st.session_state.get("design_fo_all", 1.0)),
-        fill_opacity_emphasis=float(st.session_state.get("design_fo_emph", 1.0)),
-        family_fill_opacity=float(st.session_state.get("design_fo_family", 1.0)),
+        marker_circle_fill_opacity_locations=_fill_opacity_from_session(
+            "design_fo_locations", legacy_key="design_fo_all", default=_mdf
+        ),
+        marker_circle_fill_opacity_species=_fill_opacity_from_session(
+            "design_fo_species", legacy_key="design_fo_emph", default=_mdf
+        ),
+        marker_circle_fill_opacity_lifers=_fill_opacity_from_session(
+            "design_fo_lifers", legacy_key=None, default=_mdf
+        ),
+        marker_circle_fill_opacity_families=_fill_opacity_from_session(
+            "design_fo_family", legacy_key=None, default=_mdf
+        ),
         marker_default_fill_hex=str(
             st.session_state.get("design_marker_default_fill_hex", DESIGN_HEX_FALLBACK)
         ),
         marker_default_edge_hex=str(
             st.session_state.get("design_marker_default_edge_hex", DESIGN_HEX_FALLBACK)
         ),
-        marker_default_circle_radius_px=max(
-            1,
-            int(
-                st.session_state.get(
-                    "design_marker_default_circle_radius_px",
-                    MARKER_SCHEME_FALLBACK_DEFAULT_RADIUS_PX,
-                )
-            ),
-        ),
-        marker_default_circle_fill_opacity=float(
-            st.session_state.get(
-                "design_marker_default_circle_fill_opacity",
-                MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
-            )
-        ),
+        marker_default_circle_fill_opacity=_mdf,
         marker_default_base_stroke_weight=max(
             1,
             int(
@@ -262,18 +304,44 @@ def main() -> None:
         update = st.button("Update map", type="primary", use_container_width=True)
 
         st.divider()
-        st.caption("Map-type settings — grouped like **Map view** options (except **All maps**).")
+        st.caption(
+            "**Globals** holds defaults for all maps; each collection expander holds that map type’s "
+            "circle radius, fill opacity, and colours (like **Map view**)."
+        )
 
-        with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_ALL_LOCATIONS], expanded=False):
+        with st.expander("Globals", expanded=False):
             st.slider(
-                "Fill opacity — all-locations style",
+                "Default circle radius (px) — all maps",
+                min_value=1,
+                max_value=MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+                key="design_radius_default",
+                help=H_RADIUS_DEFAULT,
+            )
+            st.slider(
+                "Default circle fill opacity — all maps",
                 min_value=0.0,
                 max_value=1.0,
                 step=0.05,
-                key="design_fo_all",
-                help=H_FO_ALL,
+                key="design_marker_default_circle_fill_opacity",
+                help=H_FO_DEFAULT,
             )
-            st.slider("Circle radius (px)", min_value=1, max_value=24, key="design_radius", help=H_RADIUS)
+
+        with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_ALL_LOCATIONS], expanded=False):
+            st.slider(
+                "Circle radius (px)",
+                min_value=1,
+                max_value=MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+                key="design_radius_locations",
+                help=H_RADIUS_LOCATIONS,
+            )
+            st.slider(
+                "Circle fill opacity",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.05,
+                key="design_fo_locations",
+                help=H_FO_LOCATIONS,
+            )
             st.slider(
                 "Edge weight",
                 min_value=1,
@@ -285,16 +353,23 @@ def main() -> None:
             _hex_text_input("Edge", key="design_hex_de", help=H_HEX_DE)
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_SPECIES_LOCATIONS], expanded=False):
+            st.slider(
+                "Circle radius (px)",
+                min_value=1,
+                max_value=MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+                key="design_radius_species",
+                help=H_RADIUS_SPECIES,
+            )
             st.caption(
-                "Lifer marker colours are configured in the Lifer locations expander below."
+                "Lifer marker colours and lifer fill opacity are configured in the Lifer locations expander."
             )
             st.slider(
-                "Fill opacity — emphasis (species / lifer / last seen)",
+                "Circle fill opacity (species / last seen)",
                 min_value=0.0,
                 max_value=1.0,
                 step=0.05,
-                key="design_fo_emph",
-                help=H_FO_EMPH,
+                key="design_fo_species",
+                help=H_FO_SPECIES,
             )
             _hex_text_input("Fill (Species)", key="design_hex_sf", help=H_HEX_SF)
             _hex_text_input("Edge (Species)", key="design_hex_se", help=H_HEX_SE)
@@ -302,13 +377,34 @@ def main() -> None:
             _hex_text_input("Edge (Last seen)", key="design_hex_lse", help=H_HEX_LSE)
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_LIFER_LOCATIONS], expanded=False):
-            st.caption("Marker size and opacity derived from species marker configuration.")
+            st.slider(
+                "Circle radius (px)",
+                min_value=1,
+                max_value=MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+                key="design_radius_lifers",
+                help=H_RADIUS_LIFERS,
+            )
+            st.slider(
+                "Circle fill opacity",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.05,
+                key="design_fo_lifers",
+                help=H_FO_LIFERS,
+            )
             _hex_text_input("Fill", key="design_hex_lf", help=H_HEX_LF)
             _hex_text_input("Edge", key="design_hex_le", help=H_HEX_LE)
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_FAMILY_LOCATIONS], expanded=False):
             st.slider(
-                "Fill opacity",
+                "Circle radius (px)",
+                min_value=1,
+                max_value=MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+                key="design_radius_families",
+                help=H_RADIUS_FAMILIES,
+            )
+            st.slider(
+                "Circle fill opacity",
                 min_value=0.0,
                 max_value=1.0,
                 step=0.05,
@@ -416,9 +512,9 @@ def main() -> None:
         )
         st.code(export_body, language="python")
         st.caption(
-            "Single ``MapMarkerColourScheme`` dict: ``marker_*`` / ``marker_default_*``, family "
-            "``circle_marker_*`` / ``density_*`` / ``highlight_*``, and ``visit_*`` geometry/opacities. "
-            "Rename ``EXPORT`` symbols as needed; #147 wires consumers."
+            "Single ``MapMarkerColourScheme`` dict: resolved ``visit_*`` / ``circle_marker_*`` opacities "
+            "and radii, plus optional sparse ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` "
+            "when a collection differs from the globals. Rename ``EXPORT`` symbols as needed; #147 wires consumers."
         )
 
 

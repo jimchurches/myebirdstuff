@@ -20,7 +20,7 @@ Map code under ``explorer/`` imports cluster/pin/theme values from this module w
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster via Folium)
@@ -73,8 +73,41 @@ MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer
 # ---------------------------------------------------------------------------
 # Map marker colour schemes (Folium circle markers; refs #138)
 #
+# Fallback when a scheme has no ``marker_default_circle_radius_px`` (design utility / migration).
+MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK = 2
+# Design utility sliders and incoming preset values clamp to this max (refs #147). Higher values in
+# ``defaults.py`` can still be set by editing the file directly.
+MAP_MARKER_CIRCLE_RADIUS_PX_MAX = 10
+
+
+def clamp_map_marker_circle_radius_px(value: int | float | None) -> int:
+    """Clamp circle-marker radius to ``[1, MAP_MARKER_CIRCLE_RADIUS_PX_MAX]`` for the design utility."""
+    if value is None:
+        n = MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK
+    else:
+        try:
+            n = int(value)
+        except (TypeError, ValueError):
+            n = MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK
+    return max(1, min(MAP_MARKER_CIRCLE_RADIUS_PX_MAX, n))
+
+
+def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float) -> float:
+    """Clamp circle fill opacity to ``[0, 1]`` for map marker schemes and the design utility."""
+    if value is None:
+        x = fallback
+    else:
+        try:
+            x = float(value)
+        except (TypeError, ValueError):
+            x = fallback
+    return max(0.0, min(1.0, x))
+
+
 # Shared presets for marker styling on map views. Each scheme holds **family** density/highlight
 # fields and **visit_*** tunables (geometry, opacities, hex pairs); visit consumers wire up in #147.
+# Optional ``marker_circle_radius_px_*`` override the global ``marker_default_circle_radius_px`` per map collection.
+# Optional ``marker_circle_fill_opacity_*`` override ``marker_default_circle_fill_opacity`` the same way (sparse dict).
 #
 # Three presets (same structure). Family-map sidebar radio (session-only) selects the active scheme;
 # ``MAP_MARKER_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
@@ -116,11 +149,21 @@ class MapMarkerColourScheme:
     visit_stroke_weight: int
     visit_fill_opacity_all_locations: float
     visit_fill_opacity_emphasis: float
+    visit_fill_opacity_lifers: float
     popup_max_width_px: int
     fit_bounds_padding_px: int
     fit_bounds_max_zoom: int
     fit_bounds_max_zoom_highlight: int
     legend_highlight_swatch_fill_index: int
+    # Optional per-map collection circle radii (None = use ``marker_default_circle_radius_px``); refs #147.
+    marker_circle_radius_px_locations: int | None = field(default=None)
+    marker_circle_radius_px_species: int | None = field(default=None)
+    marker_circle_radius_px_lifers: int | None = field(default=None)
+    marker_circle_radius_px_families: int | None = field(default=None)
+    marker_circle_fill_opacity_locations: float | None = field(default=None)
+    marker_circle_fill_opacity_species: float | None = field(default=None)
+    marker_circle_fill_opacity_lifers: float | None = field(default=None)
+    marker_circle_fill_opacity_families: float | None = field(default=None)
 
 
 # Scheme 1 — default: red density ramp
@@ -142,24 +185,25 @@ _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
-    highlight_stroke_hex="#14667B",
+    highlight_stroke_hex='#E00000',
     highlight_stroke_weight=2,
     density_fill_hex=(
-        "#E57373",
-        "#C62828",
-        "#8B0000",
-        "#4A0000",
+        '#95A5B2',
+        '#B78FAF',
+        '#8D5383',
+        '#221B1E',
     ),
     density_stroke_hex=(
-        "#B55252",
-        "#8E1B1B",
-        "#5A0000",
-        "#2A0000",
+        '#677C8E',
+        '#704868',
+        '#5A3554',
+        '#0B090A',
     ),
     visit_circle_marker_radius_px=MAP_CIRCLE_MARKER_RADIUS_PX,
     visit_stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     visit_fill_opacity_all_locations=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
     visit_fill_opacity_emphasis=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_fill_opacity_lifers=MAP_PIN_FILL_OPACITY_EMPHASIS,
     popup_max_width_px=320,
     fit_bounds_padding_px=48,
     fit_bounds_max_zoom=6,
@@ -204,6 +248,7 @@ _MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
     visit_stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     visit_fill_opacity_all_locations=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
     visit_fill_opacity_emphasis=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_fill_opacity_lifers=MAP_PIN_FILL_OPACITY_EMPHASIS,
     popup_max_width_px=320,
     fit_bounds_padding_px=48,
     fit_bounds_max_zoom=6,
@@ -213,24 +258,24 @@ _MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
 
 # Scheme 3 — experimental
 _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
-    display_name="Experimental",
-    marker_default_fill_hex="#FFFFFF",
-    marker_default_edge_hex="#FFFFFF",
+    display_name='Experimental',
+    marker_default_fill_hex='#FFFFFF',
+    marker_default_edge_hex='#FFFFFF',
     marker_default_circle_radius_px=5,
     marker_default_circle_fill_opacity=0.88,
     marker_default_base_stroke_weight=2,
-    marker_location_visit_fill_hex="#FFFFFF",
-    marker_location_visit_edge_hex="#FFFFFF",
-    marker_species_fill_hex="#FFFFFF",
-    marker_species_edge_hex="#FFFFFF",
-    marker_lifer_fill_hex="#FFFFFF",
-    marker_lifer_edge_hex="#FFFFFF",
-    marker_last_seen_fill_hex="#FFFFFF",
-    marker_last_seen_edge_hex="#FFFFFF",
+    marker_location_visit_fill_hex='#FFFFFF',
+    marker_location_visit_edge_hex='#FFFFFF',
+    marker_species_fill_hex='#FFFFFF',
+    marker_species_edge_hex='#FFFFFF',
+    marker_lifer_fill_hex='#FFFFFF',
+    marker_lifer_edge_hex='#FFFFFF',
+    marker_last_seen_fill_hex='#FFFFFF',
+    marker_last_seen_edge_hex='#FFFFFF',
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
-    base_stroke_weight=2,
-    highlight_stroke_hex='#00C5CC',
+    base_stroke_weight=3,
+    highlight_stroke_hex='#E00000',
     highlight_stroke_weight=2,
     density_fill_hex=(
         '#95A5B2',
@@ -244,16 +289,21 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
         '#5A3554',
         '#0B090A',
     ),
-    visit_circle_marker_radius_px=MAP_CIRCLE_MARKER_RADIUS_PX,
-    visit_stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-    visit_fill_opacity_all_locations=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
-    visit_fill_opacity_emphasis=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_circle_marker_radius_px=5,
+    visit_stroke_weight=3,
+    visit_fill_opacity_all_locations=0.9,
+    visit_fill_opacity_emphasis=0.9,
+    visit_fill_opacity_lifers=0.9,
     popup_max_width_px=320,
     fit_bounds_padding_px=48,
     fit_bounds_max_zoom=6,
     fit_bounds_max_zoom_highlight=8,
     legend_highlight_swatch_fill_index=0,
+    marker_circle_fill_opacity_locations=0.9,
+    marker_circle_fill_opacity_species=0.9,
+    marker_circle_fill_opacity_lifers=0.9,
 )
+
 
 MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(**_MAP_MARKER_COLOUR_SCHEME_1_VALUES)
 MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(**_MAP_MARKER_COLOUR_SCHEME_2_VALUES)

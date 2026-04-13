@@ -15,7 +15,12 @@ from dataclasses import dataclass
 import folium
 from branca.element import Element
 
-from explorer.app.streamlit.defaults import MAP_POPUP_MAX_WIDTH_PX
+from explorer.app.streamlit.defaults import (
+    MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
+    MAP_POPUP_MAX_WIDTH_PX,
+    clamp_map_marker_circle_fill_opacity,
+    clamp_map_marker_circle_radius_px,
+)
 from explorer.core.family_map_compute import DENSITY_BAND_LABELS
 from explorer.presentation.map_renderer import (
     build_legend_html,
@@ -140,17 +145,23 @@ class DesignMapPreviewConfig:
     preview_scope: str
     map_style: str
     height_px: int
-    circle_radius_px: int
+    # Resolved circle radii (px): map collection uses global default unless overridden in the scheme.
+    marker_default_circle_radius_px: int
+    marker_circle_radius_locations: int
+    marker_circle_radius_species: int
+    marker_circle_radius_lifers: int
+    marker_circle_radius_families: int
     stroke_weight_visit: int
     stroke_weight_family: int
     stroke_weight_family_highlight: int
-    fill_opacity_all_locations: float
-    fill_opacity_emphasis: float
-    family_fill_opacity: float
+    # Resolved circle fill opacities (``marker_default_circle_fill_opacity`` unless overridden in scheme).
+    marker_circle_fill_opacity_locations: float
+    marker_circle_fill_opacity_species: float
+    marker_circle_fill_opacity_lifers: float
+    marker_circle_fill_opacity_families: float
     # Align with ``MapMarkerColourScheme.marker_default_*`` (design export / future wiring).
     marker_default_fill_hex: str
     marker_default_edge_hex: str
-    marker_default_circle_radius_px: int
     marker_default_circle_fill_opacity: float
     marker_default_base_stroke_weight: int
     # Visit-map style pins — map to ``marker_location_visit_*`` / ``marker_species_*`` / … on export.
@@ -185,6 +196,19 @@ _LEGEND_KIND_ORDER: tuple[str, ...] = (
     "family_2",
     "family_3",
 )
+
+
+def _circle_radius_px_for_marker_kind(cfg: DesignMapPreviewConfig, kind: str) -> int:
+    """Resolved CircleMarker radius for this marker row (per-map collection overrides)."""
+    if kind == "visit_default":
+        return cfg.marker_circle_radius_locations
+    if kind in ("visit_species", "visit_last_seen"):
+        return cfg.marker_circle_radius_species
+    if kind in ("visit_lifer", "lifer_subspecies", "lifer_both_outer", "lifer_both_inner"):
+        return cfg.marker_circle_radius_lifers
+    if kind.startswith("family"):
+        return cfg.marker_circle_radius_families
+    return cfg.marker_default_circle_radius_px
 
 
 def _legend_entry_for_kind(kind: str, cfg: DesignMapPreviewConfig) -> tuple[str, str, str] | None:
@@ -307,34 +331,46 @@ def build_design_preview_map(
             loc = _memo_loc(kind, copy_index, type_slot, local)
 
             fill = True
-            radius_px = max(1, int(cfg.circle_radius_px))
+            radius_px = max(1, int(_circle_radius_px_for_marker_kind(cfg, kind)))
             if kind == "visit_default":
                 stroke = normalize_hex_colour(cfg.default_edge)
                 fill_c = normalize_hex_colour(cfg.default_fill)
-                fo = max(0.0, min(1.0, cfg.fill_opacity_all_locations))
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_locations))
                 sw = max(1, int(cfg.stroke_weight_visit))
-            elif kind in ("visit_species", "visit_lifer", "visit_last_seen"):
+            elif kind == "visit_species":
                 _slug, (e, f) = next(x for x in visit_emphasis_specs if x[0] == kind)
                 stroke = normalize_hex_colour(e)
                 fill_c = normalize_hex_colour(f)
-                fo = max(0.0, min(1.0, cfg.fill_opacity_emphasis))
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
+                sw = max(1, int(cfg.stroke_weight_visit))
+            elif kind == "visit_lifer":
+                _slug, (e, f) = next(x for x in visit_emphasis_specs if x[0] == kind)
+                stroke = normalize_hex_colour(e)
+                fill_c = normalize_hex_colour(f)
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_lifers))
+                sw = max(1, int(cfg.stroke_weight_visit))
+            elif kind == "visit_last_seen":
+                _slug, (e, f) = next(x for x in visit_emphasis_specs if x[0] == kind)
+                stroke = normalize_hex_colour(e)
+                fill_c = normalize_hex_colour(f)
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
                 sw = max(1, int(cfg.stroke_weight_visit))
             elif kind == "lifer_subspecies":
                 stroke = normalize_hex_colour(cfg.species_edge)
                 fill_c = normalize_hex_colour(cfg.species_fill)
-                fo = max(0.0, min(1.0, cfg.fill_opacity_emphasis))
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
                 sw = max(1, int(cfg.stroke_weight_visit))
             elif kind == "lifer_both_outer":
                 stroke = normalize_hex_colour(cfg.species_edge)
                 fill_c = normalize_hex_colour(cfg.species_fill)
                 fo = 0.0
                 fill = False
-                radius_px = max(1, int(cfg.circle_radius_px) + 2)
+                radius_px = max(1, int(_circle_radius_px_for_marker_kind(cfg, kind)) + 2)
                 sw = max(1, int(cfg.stroke_weight_visit))
             elif kind == "lifer_both_inner":
                 stroke = normalize_hex_colour(cfg.lifer_edge)
                 fill_c = normalize_hex_colour(cfg.lifer_fill)
-                fo = max(0.0, min(1.0, cfg.fill_opacity_emphasis))
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_lifers))
                 sw = max(1, int(cfg.stroke_weight_visit))
             else:
                 bi = int(kind[-1])
@@ -345,7 +381,7 @@ def build_design_preview_map(
                     sw = max(1, int(cfg.stroke_weight_family_highlight))
                 else:
                     sw = max(1, int(cfg.stroke_weight_family))
-                fo = max(0.0, min(1.0, cfg.family_fill_opacity))
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_families))
 
             label_esc = html_module.escape(_popup_text(kind, cfg, copy_index=copy_index), quote=False)
             popup_html = f'<div class="pebird-map-popup"><p style="margin:0;">{label_esc}</p></div>'
@@ -377,7 +413,6 @@ def scheme_seed_config(
 
     sch = active_map_marker_colour_scheme(scheme_index)
     fb_hex = DESIGN_HEX_FALLBACK
-    fb_r = MARKER_SCHEME_FALLBACK_DEFAULT_RADIUS_PX
     fb_fo = MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY
     fb_sw = MARKER_SCHEME_FALLBACK_DEFAULT_BASE_STROKE_WEIGHT
 
@@ -392,34 +427,67 @@ def scheme_seed_config(
         except (TypeError, ValueError):
             return fallback
 
-    def _float_attr(attr: str, fallback: float) -> float:
-        v = getattr(sch, attr, None)
-        try:
-            return float(v) if v is not None else fallback
-        except (TypeError, ValueError):
-            return fallback
-
     fills = tuple(sch.density_fill_hex[i] for i in range(4))
     strokes = tuple(sch.density_stroke_hex[i] for i in range(4))
-    cr = max(1, int(sch.circle_marker_radius_px))
-    md_radius = _int_attr("marker_default_circle_radius_px", fb_r)
-    md_fo = _float_attr("marker_default_circle_fill_opacity", fb_fo)
+
+    def _marker_default_radius() -> int:
+        v = getattr(sch, "marker_default_circle_radius_px", None)
+        if v is None:
+            return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
+        try:
+            return clamp_map_marker_circle_radius_px(int(v))
+        except (TypeError, ValueError):
+            return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
+
+    def _collection_radius(attr: str, md: int) -> int:
+        v = getattr(sch, attr, None)
+        if v is None:
+            return md
+        try:
+            return clamp_map_marker_circle_radius_px(int(v))
+        except (TypeError, ValueError):
+            return md
+
+    md = _marker_default_radius()
+    md_fo = clamp_map_marker_circle_fill_opacity(
+        getattr(sch, "marker_default_circle_fill_opacity", None),
+        fallback=fb_fo,
+    )
     md_sw = _int_attr("marker_default_base_stroke_weight", fb_sw)
+    rl = _collection_radius("marker_circle_radius_px_locations", md)
+    rs = _collection_radius("marker_circle_radius_px_species", md)
+    rli = _collection_radius("marker_circle_radius_px_lifers", md)
+    rf = _collection_radius("marker_circle_radius_px_families", md)
+
+    def _collection_fill_opacity(attr: str, legacy: float) -> float:
+        v = getattr(sch, attr, None)
+        if v is not None:
+            return clamp_map_marker_circle_fill_opacity(v, fallback=md_fo)
+        return clamp_map_marker_circle_fill_opacity(legacy, fallback=md_fo)
+
+    fo_loc = _collection_fill_opacity("marker_circle_fill_opacity_locations", float(sch.visit_fill_opacity_all_locations))
+    fo_spec = _collection_fill_opacity("marker_circle_fill_opacity_species", float(sch.visit_fill_opacity_emphasis))
+    fo_lif = _collection_fill_opacity("marker_circle_fill_opacity_lifers", float(sch.visit_fill_opacity_lifers))
+    fo_fam = _collection_fill_opacity("marker_circle_fill_opacity_families", float(sch.circle_marker_fill_opacity))
 
     return DesignMapPreviewConfig(
         preview_scope=preview_scope,
         map_style=map_style,
         height_px=height_px,
-        circle_radius_px=cr,
+        marker_default_circle_radius_px=md,
+        marker_circle_radius_locations=rl,
+        marker_circle_radius_species=rs,
+        marker_circle_radius_lifers=rli,
+        marker_circle_radius_families=rf,
         stroke_weight_visit=max(1, int(sch.visit_stroke_weight)),
         stroke_weight_family=max(1, int(sch.base_stroke_weight)),
         stroke_weight_family_highlight=max(1, int(sch.highlight_stroke_weight)),
-        fill_opacity_all_locations=float(sch.visit_fill_opacity_all_locations),
-        fill_opacity_emphasis=float(sch.visit_fill_opacity_emphasis),
-        family_fill_opacity=float(sch.circle_marker_fill_opacity),
+        marker_circle_fill_opacity_locations=fo_loc,
+        marker_circle_fill_opacity_species=fo_spec,
+        marker_circle_fill_opacity_lifers=fo_lif,
+        marker_circle_fill_opacity_families=fo_fam,
         marker_default_fill_hex=_hex("marker_default_fill_hex"),
         marker_default_edge_hex=_hex("marker_default_edge_hex"),
-        marker_default_circle_radius_px=md_radius,
         marker_default_circle_fill_opacity=md_fo,
         marker_default_base_stroke_weight=max(1, md_sw),
         default_edge=_hex("marker_location_visit_edge_hex"),

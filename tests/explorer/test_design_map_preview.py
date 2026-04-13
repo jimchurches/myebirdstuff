@@ -1,12 +1,33 @@
 """Tests for the map marker design preview builder."""
 
+from explorer.app.streamlit.defaults import (
+    MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
+    MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+    clamp_map_marker_circle_fill_opacity,
+    clamp_map_marker_circle_radius_px,
+)
 from explorer.presentation.design_map_preview import (
+    MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     MAP_SCOPE_ALL_LOCATIONS,
     MAP_SCOPE_FAMILY_LOCATIONS,
     build_design_preview_map,
     normalize_hex_colour,
     scheme_seed_config,
 )
+
+
+def test_clamp_map_marker_circle_radius_px() -> None:
+    assert clamp_map_marker_circle_radius_px(99) == MAP_MARKER_CIRCLE_RADIUS_PX_MAX
+    assert clamp_map_marker_circle_radius_px(0) == 1
+    assert clamp_map_marker_circle_radius_px(5) == 5
+    assert clamp_map_marker_circle_radius_px(None) == MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK
+
+
+def test_clamp_map_marker_circle_fill_opacity() -> None:
+    fb = MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY
+    assert clamp_map_marker_circle_fill_opacity(1.5, fallback=fb) == 1.0
+    assert clamp_map_marker_circle_fill_opacity(-0.1, fallback=fb) == 0.0
+    assert clamp_map_marker_circle_fill_opacity(None, fallback=fb) == fb
 
 
 def test_normalize_hex_colour_accepts_hash_six() -> None:
