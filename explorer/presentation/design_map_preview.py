@@ -2,7 +2,9 @@
 Folium preview map for the **Map marker design** Streamlit utility.
 
 Builds a fixed Canberra-centred map at the same initial zoom as :func:`create_map` (zoom 5) with
-dummy ``CircleMarker`` markers for each visit-map and family-map role. No UI dependencies.
+dummy ``CircleMarker`` markers for each visit-map and family-map role, plus a separate
+**SEQ (Brisbane / Gold Coast) MarkerCluster** demo (synthetic points) when the preview scope
+includes all-locations roles. No UI dependencies.
 """
 
 from __future__ import annotations
@@ -14,12 +16,20 @@ from dataclasses import dataclass
 
 import folium
 from branca.element import Element
+from folium.plugins import MarkerCluster
 
 from explorer.app.streamlit.defaults import (
+    MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+    MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+    MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
     MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
     MAP_POPUP_MAX_WIDTH_PX,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
+)
+from explorer.core.map_overlay_visit_map import (
+    _marker_cluster_icon_create_function_from_scheme,
+    _marker_cluster_root_background_reset_css,
 )
 from explorer.core.family_map_compute import DENSITY_BAND_LABELS
 from explorer.core.map_marker_colour_resolve import (
@@ -47,6 +57,16 @@ DESIGN_PREVIEW_WIDE_SPAN_DEG = (9.0, 11.0)  # lat, lon — broad distribution ov
 DESIGN_PREVIEW_LOCAL_SPAN_DEG = (0.38, 0.48)
 # Samples per marker kind (each block of four: two cluster + two spread).
 DESIGN_PREVIEW_MARKER_COPY_COUNT = 8
+
+# MarkerCluster demo: Brisbane / Gold Coast anchors, separate from Canberra role markers.
+# Counts target Leaflet.markercluster tiers: ``<10`` small, ``<100`` medium, ``>=100`` large.
+# Two SEQ city-area anchors are spaced W vs NE so they stay distinct clusters at default zoom.
+DESIGN_PREVIEW_CLUSTER_DEMO_ANCHORS: tuple[tuple[float, float, int, str], ...] = (
+    (-28.02, 153.42, 7, "Gold Coast (small tier)"),
+    (-27.62, 152.78, 45, "Brisbane W (medium tier)"),
+    (-27.05, 153.42, 120, "Brisbane NE (large tier)"),
+)
+DESIGN_PREVIEW_CLUSTER_JITTER_DEG = 0.008
 
 _HEX_RE = re.compile(r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 
@@ -326,6 +346,71 @@ def _popup_text(kind: str, cfg: DesignMapPreviewConfig, *, copy_index: int) -> s
     return kind
 
 
+def _cluster_demo_jittered_locations(
+    anchor_lat: float,
+    anchor_lon: float,
+    n: int,
+    rng: random.Random,
+) -> list[tuple[float, float]]:
+    j = DESIGN_PREVIEW_CLUSTER_JITTER_DEG
+    return [
+        (
+            anchor_lat + rng.uniform(-j, j),
+            anchor_lon + rng.uniform(-j, j),
+        )
+        for _ in range(n)
+    ]
+
+
+def _add_seq_cluster_marker_demo(
+    m: folium.Map,
+    cfg: DesignMapPreviewConfig,
+    *,
+    position_seed: int,
+) -> None:
+    """Synthetic ``visit_default`` circles in a ``MarkerCluster`` near SEQ (not Canberra)."""
+    icon_fn = _marker_cluster_icon_create_function_from_scheme(cfg)
+    if icon_fn is not None:
+        m.get_root().html.add_child(Element(_marker_cluster_root_background_reset_css()))
+
+    marker_cluster = MarkerCluster(
+        name="SEQ cluster demo",
+        icon_create_function=icon_fn,
+        options={
+            "maxClusterRadius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+            "disableClusteringAtZoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+            "spiderfyOnMaxZoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+            "zoomToBoundsOnClick": True,
+        },
+    )
+
+    rng = random.Random(int(position_seed) + 9001)
+    radius_px = max(1, int(_circle_radius_px_for_marker_kind(cfg, "visit_default")))
+    stroke, fill_c = cfg.default_edge, cfg.default_fill
+    fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_locations))
+    sw = max(1, int(cfg.stroke_weight_visit))
+
+    for anchor_lat, anchor_lon, n, tier_label in DESIGN_PREVIEW_CLUSTER_DEMO_ANCHORS:
+        for loc in _cluster_demo_jittered_locations(anchor_lat, anchor_lon, n, rng):
+            label_esc = html_module.escape(
+                f"SEQ cluster demo — {tier_label} (synthetic)",
+                quote=False,
+            )
+            popup_html = f'<div class="pebird-map-popup"><p style="margin:0;">{label_esc}</p></div>'
+            folium.CircleMarker(
+                location=loc,
+                radius=radius_px,
+                color=stroke,
+                weight=sw,
+                fill=True,
+                fill_color=fill_c,
+                fill_opacity=fo,
+                popup=folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX),
+            ).add_to(marker_cluster)
+
+    marker_cluster.add_to(m)
+
+
 def build_design_preview_map(
     cfg: DesignMapPreviewConfig,
     *,
@@ -431,6 +516,9 @@ def build_design_preview_map(
                 kw["fill_color"] = fill_c
                 kw["fill_opacity"] = fo
             folium.CircleMarker(**kw).add_to(m)
+
+    if cfg.preview_scope in (MAP_SCOPE_ALL, MAP_SCOPE_ALL_LOCATIONS):
+        _add_seq_cluster_marker_demo(m, cfg, position_seed=position_seed)
 
     return m
 

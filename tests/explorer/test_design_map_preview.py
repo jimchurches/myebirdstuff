@@ -100,6 +100,22 @@ def test_all_locations_scope_has_only_default_pins() -> None:
     assert "species at location" not in html
 
 
+def test_all_locations_scope_includes_seq_cluster_demo() -> None:
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL_LOCATIONS)
+    m = build_design_preview_map(cfg, position_seed=3)
+    html = m._repr_html_()
+    assert "SEQ cluster demo" in html
+    assert "Gold Coast (small tier)" in html
+    assert "-27" in html or "-28" in html
+
+
+def test_family_scope_excludes_seq_cluster_demo() -> None:
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
+    m = build_design_preview_map(cfg, position_seed=3)
+    html = m._repr_html_()
+    assert "SEQ cluster demo" not in html
+
+
 def test_family_scope_shows_only_family_markers() -> None:
     cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
     m = build_design_preview_map(cfg, position_seed=3)

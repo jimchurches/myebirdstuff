@@ -105,9 +105,12 @@ def _marker_cluster_root_background_reset_css() -> str:
 
 
 def _marker_cluster_icon_create_function_from_scheme(
-    sch: MapMarkerColourScheme | None,
+    sch: Any,
 ) -> str | None:
     """Return Leaflet.markercluster ``iconCreateFunction`` for configured cluster icon tier colours.
+
+    Duck-typed: ``MapMarkerColourScheme``, :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig`,
+    or any object with ``marker_cluster_colours_hex`` and ``marker_cluster_*`` opacity/spread fields.
 
     Expects ``marker_cluster_colours_hex`` with nine values
     ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
