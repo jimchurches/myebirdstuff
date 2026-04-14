@@ -34,7 +34,7 @@ def _minimal_map_df():
     )
 
 
-def _common_kwargs(df):
+def _common_kwargs(df, *, visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_1):
     location_data = df[["Location ID", "Location", "Latitude", "Longitude"]].drop_duplicates()
     records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
     prep = prepare_lifer_last_seen(df, base_species_fn=base_species_for_lifer)
@@ -53,6 +53,7 @@ def _common_kwargs(df):
         true_last_seen_locations_taxon=prep.true_last_seen_locations_taxon,
         popup_html_cache={},
         filtered_by_loc_cache=OrderedDict(),
+        visit_marker_scheme=visit_marker_scheme,
     )
 
 
@@ -84,12 +85,26 @@ def test_all_species_builds_map_with_banner():
     assert "Date filter" not in html
 
 
+def test_species_filter_visit_overlay_uses_scheme_hex():
+    """Species-filtered map uses :class:`MapMarkerColourScheme` (no separate named-colour path)."""
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="Anas gracilis",
+        selected_common_name="Grey Teal",
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map._repr_html_().lower()
+    # Scheme 1 sets lifer/species/last-seen stroke to #800080.
+    assert "800080" in html
+
+
 def test_all_locations_visit_marker_scheme_uses_hex_from_scheme():
     df = _minimal_map_df()
     r = build_species_overlay_map(
         **_common_kwargs(df),
         selected_species="",
-        visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_1,
     )
     assert r.warning is None
     assert r.map is not None
@@ -101,10 +116,9 @@ def test_all_locations_visit_marker_scheme_uses_hex_from_scheme():
 def test_all_locations_cluster_markers_use_scheme_cluster_tier_fills_when_present():
     df = _minimal_map_df()
     r = build_species_overlay_map(
-        **_common_kwargs(df),
+        **_common_kwargs(df, visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_3),
         selected_species="",
         cluster_all_locations=True,
-        visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_3,
     )
     assert r.warning is None
     assert r.map is not None
@@ -134,10 +148,9 @@ def test_all_locations_cluster_markers_apply_tier_border_colours_when_present():
         ),
     )
     r = build_species_overlay_map(
-        **_common_kwargs(df),
+        **_common_kwargs(df, visit_marker_scheme=scheme_with_border),
         selected_species="",
         cluster_all_locations=True,
-        visit_marker_scheme=scheme_with_border,
     )
     assert r.warning is None
     assert r.map is not None
@@ -187,7 +200,6 @@ def test_lifer_map_mode_uses_visit_marker_scheme_when_provided():
         selected_species="",
         map_view_mode="lifers",
         full_location_data=full_loc,
-        visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_1,
     )
     assert r.warning is None
     assert r.map is not None

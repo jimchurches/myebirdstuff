@@ -2,7 +2,7 @@
 Framework-neutral map build pipeline for the species overlay map.
 
 Streamlit (or any host) calls :func:`build_species_overlay_map` with data and options and receives
-Folium HTML; the legacy Jupyter notebook keeps its own display and widget layer instead of this path.
+Folium HTML.
 
 Implementation is split for readability:
 
@@ -56,14 +56,6 @@ def build_species_overlay_map(
     map_style: str = "default",
     popup_sort_order: str = "ascending",
     popup_scroll_hint: str = "shading",
-    lifer_color: str = "purple",
-    lifer_fill: str = "yellow",
-    last_seen_color: str = "purple",
-    last_seen_fill: str = "lightgreen",
-    species_color: str = "purple",
-    species_fill: str = "red",
-    default_color: str = "green",
-    default_fill: str = "lightgreen",
     mark_lifer: bool = True,
     mark_last_seen: bool = True,
     cluster_all_locations: bool = True,
@@ -79,7 +71,7 @@ def build_species_overlay_map(
     taxonomy_locale: str = "",
     show_subspecies_lifers: bool = False,
     map_height_px: int = MAP_HEIGHT_PX_DEFAULT,
-    visit_marker_scheme: MapMarkerColourScheme | None = None,
+    visit_marker_scheme: MapMarkerColourScheme,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -104,12 +96,10 @@ def build_species_overlay_map(
 
     *map_height_px*: pixel height for the Folium map pane (match Streamlit **Map height** slider).
 
-    *visit_marker_scheme*: when set and the visit overlay has no species filter, **All locations**
-    markers use :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` (resolved via
-    :mod:`explorer.core.map_marker_colour_resolve`). **Lifer locations** mode uses the same scheme
-    for lifer / species emphasis pins (radius, stroke, fill opacities, and hex). When ``None`` or a
-    species is selected for the visit overlay, legacy named colours from ``settings_schema_defaults``
-    apply where the visit path has not been switched to scheme-driven hex.
+    *visit_marker_scheme*: active :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme`
+    (resolved via :mod:`explorer.core.map_marker_colour_resolve`) for **All locations**, **Species
+    locations**, and **Lifer locations** pins (colours, radii, stroke weight, fill opacities, cluster
+    tiers).
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
@@ -129,10 +119,6 @@ def build_species_overlay_map(
             map_height_px=map_height_px,
             popup_sort_order=popup_sort_order,
             popup_scroll_hint=popup_scroll_hint,
-            lifer_color=lifer_color,
-            lifer_fill=lifer_fill,
-            species_color=species_color,
-            species_fill=species_fill,
             date_filter_status=date_filter_status,
             popup_html_cache=popup_html_cache,
             tax_loc_key=tax_loc_key,
@@ -164,14 +150,6 @@ def build_species_overlay_map(
         map_style=map_style,
         popup_sort_order=popup_sort_order,
         popup_scroll_hint=popup_scroll_hint,
-        lifer_color=lifer_color,
-        lifer_fill=lifer_fill,
-        last_seen_color=last_seen_color,
-        last_seen_fill=last_seen_fill,
-        species_color=species_color,
-        species_fill=species_fill,
-        default_color=default_color,
-        default_fill=default_fill,
         mark_lifer=mark_lifer,
         mark_last_seen=mark_last_seen,
         cluster_all_locations=cluster_all_locations,

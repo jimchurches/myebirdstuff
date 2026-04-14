@@ -66,17 +66,7 @@ from explorer.core.map_prep import (
     mean_center_from_location_data,
     prepare_all_locations_map_context,
 )
-from explorer.core.settings_schema_defaults import (
-    MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-    MAP_DEFAULT_COLOR_DEFAULT,
-    MAP_DEFAULT_FILL_DEFAULT,
-    MAP_LAST_SEEN_COLOR_DEFAULT,
-    MAP_LAST_SEEN_FILL_DEFAULT,
-    MAP_LIFER_COLOR_DEFAULT,
-    MAP_LIFER_FILL_DEFAULT,
-    MAP_SPECIES_COLOR_DEFAULT,
-    MAP_SPECIES_FILL_DEFAULT,
-)
+from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
 from explorer.core.species_logic import base_species_for_lifer
 from explorer.core.family_map_compute import (
     build_family_location_pins,
@@ -265,12 +255,7 @@ def render_prep_spinner_and_map_tab(
                     hide_nm = (
                         map_view_mode == "species" and bool(hide_non_matching_locations)
                     )
-                    _use_visit_marker_scheme = not bool(overlay_sci)
-                    _visit_sch = (
-                        active_map_marker_colour_scheme(int(family_colour_scheme))
-                        if _use_visit_marker_scheme
-                        else None
-                    )
+                    _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _map_kw = {
                         **ctx,
                         "selected_species": overlay_sci,
@@ -278,14 +263,6 @@ def render_prep_spinner_and_map_tab(
                         "map_style": map_style,
                         "popup_sort_order": popup_sort_order,
                         "popup_scroll_hint": popup_scroll_hint,
-                        "lifer_color": MAP_LIFER_COLOR_DEFAULT,
-                        "lifer_fill": MAP_LIFER_FILL_DEFAULT,
-                        "last_seen_color": MAP_LAST_SEEN_COLOR_DEFAULT,
-                        "last_seen_fill": MAP_LAST_SEEN_FILL_DEFAULT,
-                        "species_color": MAP_SPECIES_COLOR_DEFAULT,
-                        "species_fill": MAP_SPECIES_FILL_DEFAULT,
-                        "default_color": MAP_DEFAULT_COLOR_DEFAULT,
-                        "default_fill": MAP_DEFAULT_FILL_DEFAULT,
                         "mark_lifer": mark_lifer,
                         "mark_last_seen": mark_last_seen,
                         "cluster_all_locations": bool(
@@ -312,14 +289,6 @@ def render_prep_spinner_and_map_tab(
                     _render_opts_sig = (
                         popup_sort_order,
                         popup_scroll_hint,
-                        MAP_LIFER_COLOR_DEFAULT,
-                        MAP_LIFER_FILL_DEFAULT,
-                        MAP_LAST_SEEN_COLOR_DEFAULT,
-                        MAP_LAST_SEEN_FILL_DEFAULT,
-                        MAP_SPECIES_COLOR_DEFAULT,
-                        MAP_SPECIES_FILL_DEFAULT,
-                        MAP_DEFAULT_COLOR_DEFAULT,
-                        MAP_DEFAULT_FILL_DEFAULT,
                         mark_lifer,
                         mark_last_seen,
                         bool(
@@ -331,7 +300,6 @@ def render_prep_spinner_and_map_tab(
                         bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
                         int(map_height),
                         int(family_colour_scheme),
-                        _use_visit_marker_scheme,
                     )
                     _species_selected = bool(overlay_sci)
                     _cache_map_view_mode = map_view_mode

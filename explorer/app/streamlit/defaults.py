@@ -12,7 +12,7 @@ you may edit in one place without hunting through core modules.
 **What does *not* belong here** (see other modules)
 
 - **Fixed copy, URLs, emoji lists, tab names** → :mod:`explorer.app.streamlit.streamlit_ui_constants`
-- **Persisted YAML settings schema defaults** (tables, taxonomy locale ranges, pin colour *names* for schema) →
+- **Persisted YAML settings schema defaults** (tables, taxonomy locale ranges) →
   :mod:`explorer.core.settings_schema_defaults`
 
 Map code under ``explorer/`` imports cluster/pin/theme values from this module where noted in code.
@@ -79,15 +79,15 @@ MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK = 2
 # editing ``defaults.py`` directly.
 MAP_MARKER_CIRCLE_RADIUS_PX_MAX = 10
 
-# Hex equivalents of legacy Folium named colours from ``settings_schema_defaults`` (YAML / species visit path).
-_LEGACY_VISIT_MAP_DEFAULT_EDGE = "#008000"  # green
-_LEGACY_VISIT_MAP_DEFAULT_FILL = "#D3D3D3"  # lightgray
-_LEGACY_VISIT_MAP_SPECIES_EDGE = "#800080"  # purple
-_LEGACY_VISIT_MAP_SPECIES_FILL = "#FF0000"  # red
-_LEGACY_VISIT_MAP_LIFER_EDGE = "#800080"  # purple
-_LEGACY_VISIT_MAP_LIFER_FILL = "#FFFF00"  # yellow
-_LEGACY_VISIT_MAP_LAST_SEEN_EDGE = "#800080"  # purple
-_LEGACY_VISIT_MAP_LAST_SEEN_FILL = "#90EE90"  # lightgreen
+# Preset hex for schemes 1 & 2 (aligned with historical Folium named-colour appearance).
+VISIT_MAP_DEFAULT_EDGE_HEX = "#008000"  # green
+VISIT_MAP_DEFAULT_FILL_HEX = "#D3D3D3"  # lightgray
+VISIT_MAP_SPECIES_EDGE_HEX = "#800080"  # purple
+VISIT_MAP_SPECIES_FILL_HEX = "#FF0000"  # red
+VISIT_MAP_LIFER_EDGE_HEX = "#800080"  # purple
+VISIT_MAP_LIFER_FILL_HEX = "#FFFF00"  # yellow
+VISIT_MAP_LAST_SEEN_EDGE_HEX = "#800080"  # purple
+VISIT_MAP_LAST_SEEN_FILL_HEX = "#90EE90"  # lightgreen
 
 
 def clamp_map_marker_circle_radius_px(value: int | float | None) -> int:
@@ -163,15 +163,13 @@ class MapMarkerColourScheme:
 
     **Family locations** Folium uses :func:`~explorer.core.map_marker_colour_resolve.family_map_resolved_circle_radius_px`
     and :func:`~explorer.core.map_marker_colour_resolve.family_map_resolved_fill_opacity` (same rules as the
-    map-marker design utility), plus ``base_stroke_weight``, ``highlight_*``, and ``density_*``. Legacy
+    map-marker design utility), plus ``base_stroke_weight``, ``highlight_*``, and ``density_*``.
     ``circle_marker_radius_px`` / ``circle_marker_fill_opacity`` apply when the sparse
     ``marker_circle_*_families`` overrides are unset.
 
-    **Colour resolution** when the active scheme is applied: per channel, (a) role-specific hex and
-    optional :class:`MapMarkerColourOverrides`, (b) ``marker_default_*``, (c) scheme defaults (white fill /
-    cream edge), (d) catch-all — see :mod:`explorer.core.map_marker_colour_resolve`. Legacy YAML pin
-    *names* in :mod:`explorer.core.settings_schema_defaults` still apply where a map view has not been
-    switched to scheme-driven hex. TODO(#147): MarkerCluster tier fills and any remaining callers.
+    **Colour resolution** for the active scheme: per channel, (a) role-specific hex and optional
+    :class:`MapMarkerColourOverrides`, (b) ``marker_default_*``, (c) scheme defaults (white fill / cream
+    edge), (d) catch-all — see :mod:`explorer.core.map_marker_colour_resolve`.
     """
 
     display_name: str
@@ -232,19 +230,19 @@ class MapMarkerColourScheme:
 # Scheme 1 — default: red density ramp
 _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
     display_name="Reds",
-    marker_default_fill_hex=_LEGACY_VISIT_MAP_DEFAULT_FILL,
-    marker_default_edge_hex=_LEGACY_VISIT_MAP_DEFAULT_EDGE,
+    marker_default_fill_hex=VISIT_MAP_DEFAULT_FILL_HEX,
+    marker_default_edge_hex=VISIT_MAP_DEFAULT_EDGE_HEX,
     marker_default_circle_radius_px=5,
     marker_default_circle_fill_opacity=0.88,
     marker_default_base_stroke_weight=2,
-    marker_location_visit_fill_hex=_LEGACY_VISIT_MAP_DEFAULT_FILL,
-    marker_location_visit_edge_hex=_LEGACY_VISIT_MAP_DEFAULT_EDGE,
-    marker_species_fill_hex=_LEGACY_VISIT_MAP_SPECIES_FILL,
-    marker_species_edge_hex=_LEGACY_VISIT_MAP_SPECIES_EDGE,
-    marker_lifer_fill_hex=_LEGACY_VISIT_MAP_LIFER_FILL,
-    marker_lifer_edge_hex=_LEGACY_VISIT_MAP_LIFER_EDGE,
-    marker_last_seen_fill_hex=_LEGACY_VISIT_MAP_LAST_SEEN_FILL,
-    marker_last_seen_edge_hex=_LEGACY_VISIT_MAP_LAST_SEEN_EDGE,
+    marker_location_visit_fill_hex=VISIT_MAP_DEFAULT_FILL_HEX,
+    marker_location_visit_edge_hex=VISIT_MAP_DEFAULT_EDGE_HEX,
+    marker_species_fill_hex=VISIT_MAP_SPECIES_FILL_HEX,
+    marker_species_edge_hex=VISIT_MAP_SPECIES_EDGE_HEX,
+    marker_lifer_fill_hex=VISIT_MAP_LIFER_FILL_HEX,
+    marker_lifer_edge_hex=VISIT_MAP_LIFER_EDGE_HEX,
+    marker_last_seen_fill_hex=VISIT_MAP_LAST_SEEN_FILL_HEX,
+    marker_last_seen_edge_hex=VISIT_MAP_LAST_SEEN_EDGE_HEX,
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
@@ -277,19 +275,19 @@ _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
 # Scheme 2 — blue → purple density ramp
 _MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
     display_name="Blues & purples",
-    marker_default_fill_hex=_LEGACY_VISIT_MAP_DEFAULT_FILL,
-    marker_default_edge_hex=_LEGACY_VISIT_MAP_DEFAULT_EDGE,
+    marker_default_fill_hex=VISIT_MAP_DEFAULT_FILL_HEX,
+    marker_default_edge_hex=VISIT_MAP_DEFAULT_EDGE_HEX,
     marker_default_circle_radius_px=5,
     marker_default_circle_fill_opacity=0.88,
     marker_default_base_stroke_weight=2,
-    marker_location_visit_fill_hex=_LEGACY_VISIT_MAP_DEFAULT_FILL,
-    marker_location_visit_edge_hex=_LEGACY_VISIT_MAP_DEFAULT_EDGE,
-    marker_species_fill_hex=_LEGACY_VISIT_MAP_SPECIES_FILL,
-    marker_species_edge_hex=_LEGACY_VISIT_MAP_SPECIES_EDGE,
-    marker_lifer_fill_hex=_LEGACY_VISIT_MAP_LIFER_FILL,
-    marker_lifer_edge_hex=_LEGACY_VISIT_MAP_LIFER_EDGE,
-    marker_last_seen_fill_hex=_LEGACY_VISIT_MAP_LAST_SEEN_FILL,
-    marker_last_seen_edge_hex=_LEGACY_VISIT_MAP_LAST_SEEN_EDGE,
+    marker_location_visit_fill_hex=VISIT_MAP_DEFAULT_FILL_HEX,
+    marker_location_visit_edge_hex=VISIT_MAP_DEFAULT_EDGE_HEX,
+    marker_species_fill_hex=VISIT_MAP_SPECIES_FILL_HEX,
+    marker_species_edge_hex=VISIT_MAP_SPECIES_EDGE_HEX,
+    marker_lifer_fill_hex=VISIT_MAP_LIFER_FILL_HEX,
+    marker_lifer_edge_hex=VISIT_MAP_LIFER_EDGE_HEX,
+    marker_last_seen_fill_hex=VISIT_MAP_LAST_SEEN_FILL_HEX,
+    marker_last_seen_edge_hex=VISIT_MAP_LAST_SEEN_EDGE_HEX,
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.88,
     base_stroke_weight=2,
@@ -329,12 +327,12 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     marker_default_base_stroke_weight=2,
     marker_location_visit_fill_hex='#C7A8C1',
     marker_location_visit_edge_hex='#4D2D48',
-    marker_species_fill_hex='#FFFFFF',
-    marker_species_edge_hex='#FFF8E7',
-    marker_lifer_fill_hex='#10BC91',
+    marker_species_fill_hex='#B78FAF',
+    marker_species_edge_hex='#704868',
+    marker_lifer_fill_hex='#FCEC52',
     marker_lifer_edge_hex='#566776',
-    marker_last_seen_fill_hex='#FFFFFF',
-    marker_last_seen_edge_hex='#FFF8E7',
+    marker_last_seen_fill_hex='#9EA93F',
+    marker_last_seen_edge_hex='#704868',
     circle_marker_radius_px=5,
     circle_marker_fill_opacity=0.85,
     base_stroke_weight=2,
@@ -381,7 +379,7 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     marker_cluster_halo_opacity=0.4,
     marker_cluster_border_opacity=0.4,
     marker_cluster_halo_spread_px=5,
-    marker_cluster_border_width_px=0
+    marker_cluster_border_width_px=0,
 )
 
 

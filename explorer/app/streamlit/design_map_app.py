@@ -757,6 +757,8 @@ def main() -> None:
             "Single ``MapMarkerColourScheme`` dict: resolved ``visit_*`` / ``circle_marker_*`` opacities "
             "and radii, plus optional sparse ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` "
             "and optional ``marker_cluster_colours_hex`` when set. "
+            "The live explorer applies the same scheme fields via ``resolve_species_visit_pin`` (species filter) "
+            "and ``resolve_lifer_overlay_pin_params`` (lifer locations) in ``map_marker_colour_resolve``. "
             "Rename ``EXPORT`` symbols and register new presets in ``active_map_marker_colour_scheme`` in "
             "``defaults.py`` as needed."
         )

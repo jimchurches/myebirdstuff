@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import OrderedDict
-from typing import Any, Dict, Hashable, MutableMapping, Optional, Tuple, cast
+from typing import Any, Dict, Hashable, Literal, MutableMapping, Optional, Tuple, cast
 
 import folium
 import pandas as pd
@@ -12,8 +12,6 @@ from branca.element import Element
 from folium.plugins import MarkerCluster
 
 from explorer.app.streamlit.defaults import (
-    MAP_CIRCLE_MARKER_RADIUS_PX,
-    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     MAP_DEBUG_SHOW_ZOOM_LEVEL,
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
@@ -23,8 +21,6 @@ from explorer.app.streamlit.defaults import (
     MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT,
     MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
     MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
-    MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
-    MAP_PIN_FILL_OPACITY_EMPHASIS,
     MapMarkerColourScheme,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
@@ -33,6 +29,7 @@ from explorer.core.map_marker_colour_resolve import (
     is_valid_hex_colour,
     normalize_marker_hex,
     resolve_location_visit_colours,
+    resolve_species_visit_pin,
 )
 from explorer.core.map_overlay_theme import inject_map_overlay_theme
 from explorer.core.map_overlay_types import BaseSpeciesFn, MapOverlayResult, SpeciesUrlFn
@@ -225,14 +222,6 @@ def build_visit_overlay_map(
     map_style: str,
     popup_sort_order: str,
     popup_scroll_hint: str,
-    lifer_color: str,
-    lifer_fill: str,
-    last_seen_color: str,
-    last_seen_fill: str,
-    species_color: str,
-    species_fill: str,
-    default_color: str,
-    default_fill: str,
     mark_lifer: bool,
     mark_last_seen: bool,
     cluster_all_locations: bool,
@@ -245,7 +234,7 @@ def build_visit_overlay_map(
     filtered_by_loc_cache_max: int,
     tax_loc_key: str,
     map_height_px: int,
-    visit_marker_scheme: MapMarkerColourScheme | None = None,
+    visit_marker_scheme: MapMarkerColourScheme,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode)."""
     if selected_species:
@@ -302,16 +291,10 @@ def build_visit_overlay_map(
         species_map.get_root().html.add_child(
             Element(build_all_species_banner_html(tc, ts, ti, date_filter_status_line))
         )
-        if visit_marker_scheme is not None:
-            _fill, _edge, _radius_px, _stroke_w, _fill_op = _all_locations_marker_params_from_scheme(
-                visit_marker_scheme
-            )
-            legend_pair = (_edge, _fill)
-        else:
-            _fill, _edge = default_fill, default_color
-            _radius_px, _stroke_w = MAP_CIRCLE_MARKER_RADIUS_PX, MAP_CIRCLE_MARKER_STROKE_WEIGHT
-            _fill_op = MAP_PIN_FILL_OPACITY_ALL_LOCATIONS
-            legend_pair = (default_color, default_fill)
+        _fill, _edge, _radius_px, _stroke_w, _fill_op = _all_locations_marker_params_from_scheme(
+            visit_marker_scheme
+        )
+        legend_pair = (_edge, _fill)
         species_map.get_root().html.add_child(
             Element(build_legend_html([(legend_pair[0], legend_pair[1], "All locations")]))
         )
@@ -462,13 +445,18 @@ def build_visit_overlay_map(
                 pin_types_present.add("Species")
             else:
                 pin_types_present.add("Other")
-        legend_order = [
-            ("Lifer", lifer_color, lifer_fill),
-            ("Last seen", last_seen_color, last_seen_fill),
-            ("Species", species_color, species_fill),
-            ("Other", default_color, default_fill),
+        _legend_roles: list[tuple[str, Literal["lifer", "last_seen", "species", "default"]]] = [
+            ("Lifer", "lifer"),
+            ("Last seen", "last_seen"),
+            ("Species", "species"),
+            ("Other", "default"),
         ]
-        legend_items = [(c, f, label) for label, c, f in legend_order if label in pin_types_present]
+        legend_items = []
+        for label, role in _legend_roles:
+            if label not in pin_types_present:
+                continue
+            e, f, _, _, _ = resolve_species_visit_pin(visit_marker_scheme, role)
+            legend_items.append((e, f, label))
         species_map.get_root().html.add_child(Element(build_legend_html(legend_items)))
 
         for _, row in location_data_local.iterrows():
@@ -504,20 +492,24 @@ def build_visit_overlay_map(
             popup_html = popup_html_cache[popup_key]
             popup_content = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
 
+            visit_role: Literal["lifer", "last_seen", "species", "default"]
             if row["is_lifer"]:
-                color, fill, fill_opacity = lifer_color, lifer_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
+                visit_role = "lifer"
             elif row["is_last_seen"]:
-                color, fill, fill_opacity = last_seen_color, last_seen_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
+                visit_role = "last_seen"
             elif row["has_species_match"]:
-                color, fill, fill_opacity = species_color, species_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
+                visit_role = "species"
             else:
-                color, fill, fill_opacity = default_color, default_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
+                visit_role = "default"
+            color, fill, radius_px, stroke_w, fill_opacity = resolve_species_visit_pin(
+                visit_marker_scheme, visit_role
+            )
 
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
+                radius=radius_px,
                 color=color,
-                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                weight=stroke_w,
                 fill=True,
                 fill_color=fill,
                 fill_opacity=fill_opacity,

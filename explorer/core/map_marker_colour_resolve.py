@@ -18,9 +18,10 @@ Invalid hex at any step is treated as missing and the chain continues.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 from explorer.app.streamlit.defaults import (
+    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
@@ -131,7 +132,108 @@ def resolve_location_visit_colours(sch: Any) -> tuple[str, str]:
     return normalize_marker_hex(fill, channel="fill"), normalize_marker_hex(edge, channel="edge")
 
 
-# TODO(#147): Lifer map + MarkerCluster tier icons; family map already uses schemes.
+def _collection_radius_px(sch: Any, attr: str, md: int) -> int:
+    v = getattr(sch, attr, None)
+    if v is None:
+        return md
+    try:
+        return clamp_map_marker_circle_radius_px(int(v))
+    except (TypeError, ValueError):
+        return md
+
+
+def _collection_fill_opacity_visit(
+    sch: Any, attr: str, legacy: float, *, md_fo: float
+) -> float:
+    v = getattr(sch, attr, None)
+    if v is not None:
+        return clamp_map_marker_circle_fill_opacity(v, fallback=md_fo)
+    return clamp_map_marker_circle_fill_opacity(legacy, fallback=md_fo)
+
+
+def resolve_species_visit_pin(
+    sch: Any, role: Literal["lifer", "last_seen", "species", "default"]
+) -> tuple[str, str, int, int, float]:
+    """Species-filtered visit overlay: stroke hex, fill hex, radius, stroke weight, fill opacity.
+
+    Matches :func:`~explorer.presentation.design_map_preview.scheme_seed_config` /
+    :func:`~explorer.presentation.design_map_preview.build_design_preview_map` for ``visit_*`` rows.
+    """
+    md = _map_marker_scheme_default_radius_px(sch)
+    md_fo = clamp_map_marker_circle_fill_opacity(
+        getattr(sch, "marker_default_circle_fill_opacity", None),
+        fallback=0.88,
+    )
+    sw = max(1, int(getattr(sch, "visit_stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
+    if role == "lifer":
+        fill, edge = resolve_lifer_colours(sch)
+        r = _collection_radius_px(sch, "marker_circle_radius_px_lifers", md)
+        fo = _collection_fill_opacity_visit(
+            sch,
+            "marker_circle_fill_opacity_lifers",
+            float(getattr(sch, "visit_fill_opacity_lifers", 0.9)),
+            md_fo=md_fo,
+        )
+    elif role == "last_seen":
+        fill, edge = resolve_last_seen_colours(sch)
+        r = _collection_radius_px(sch, "marker_circle_radius_px_species", md)
+        fo = _collection_fill_opacity_visit(
+            sch,
+            "marker_circle_fill_opacity_species",
+            float(getattr(sch, "visit_fill_opacity_emphasis", 0.9)),
+            md_fo=md_fo,
+        )
+    elif role == "species":
+        fill, edge = resolve_species_colours(sch)
+        r = _collection_radius_px(sch, "marker_circle_radius_px_species", md)
+        fo = _collection_fill_opacity_visit(
+            sch,
+            "marker_circle_fill_opacity_species",
+            float(getattr(sch, "visit_fill_opacity_emphasis", 0.9)),
+            md_fo=md_fo,
+        )
+    else:
+        fill, edge = resolve_location_visit_colours(sch)
+        r = _collection_radius_px(sch, "marker_circle_radius_px_locations", md)
+        fo = _collection_fill_opacity_visit(
+            sch,
+            "marker_circle_fill_opacity_locations",
+            float(getattr(sch, "visit_fill_opacity_all_locations", 1.0)),
+            md_fo=md_fo,
+        )
+    return edge, fill, r, sw, fo
+
+
+def resolve_lifer_overlay_pin_params(
+    sch: Any,
+) -> tuple[str, str, str, str, int, int, int, float, float]:
+    """Lifer-locations map: lifer + species pin styling (same resolver path as the design utility).
+
+    Returns ``(lifer_edge, lifer_fill, species_edge, species_fill, r_lifer, r_species, stroke_w, fo_lifer, fo_spec)``.
+    """
+    lf_fill, lf_edge = resolve_lifer_colours(sch)
+    sp_fill, sp_edge = resolve_species_colours(sch)
+    md = _map_marker_scheme_default_radius_px(sch)
+    r_lifer = _collection_radius_px(sch, "marker_circle_radius_px_lifers", md)
+    r_species = _collection_radius_px(sch, "marker_circle_radius_px_species", md)
+    sw = max(1, int(getattr(sch, "visit_stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
+    md_fo = clamp_map_marker_circle_fill_opacity(
+        getattr(sch, "marker_default_circle_fill_opacity", None),
+        fallback=0.88,
+    )
+    fo_lif = _collection_fill_opacity_visit(
+        sch,
+        "marker_circle_fill_opacity_lifers",
+        float(getattr(sch, "visit_fill_opacity_lifers", 0.9)),
+        md_fo=md_fo,
+    )
+    fo_spec = _collection_fill_opacity_visit(
+        sch,
+        "marker_circle_fill_opacity_species",
+        float(getattr(sch, "visit_fill_opacity_emphasis", 0.9)),
+        md_fo=md_fo,
+    )
+    return lf_edge, lf_fill, sp_edge, sp_fill, r_lifer, r_species, sw, fo_lif, fo_spec
 
 
 def resolve_species_colours(sch: Any) -> tuple[str, str]:
@@ -247,7 +349,7 @@ def family_map_resolved_circle_radius_px(sch: Any) -> int:
 def family_map_resolved_fill_opacity(sch: Any) -> float:
     """Family map fill opacity — matches ``scheme_seed_config`` / design preview.
 
-    Uses optional ``marker_circle_fill_opacity_families``; legacy fallback is ``circle_marker_fill_opacity``.
+    Uses optional ``marker_circle_fill_opacity_families``; otherwise ``circle_marker_fill_opacity``.
     """
     md_fo = clamp_map_marker_circle_fill_opacity(
         getattr(sch, "marker_default_circle_fill_opacity", None),
