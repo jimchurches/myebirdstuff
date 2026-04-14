@@ -349,28 +349,11 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                     )
                     family_highlight_base = ""
 
-            _family_scheme_labels = {
-                1: MAP_MARKER_COLOUR_SCHEME_1.display_name,
-                2: MAP_MARKER_COLOUR_SCHEME_2.display_name,
-                3: MAP_MARKER_COLOUR_SCHEME_3.display_name,
-            }
-            with st.expander("Colour schemes", expanded=False):
-                _scheme_radio_label = (
-                    "All locations map colour scheme"
-                    if map_view_mode == "all"
-                    else "Family map colour scheme"
-                )
-                _scheme_sel = st.radio(
-                    _scheme_radio_label,
-                    options=[1, 2, 3],
-                    format_func=lambda n: _family_scheme_labels[int(n)],
-                    key=STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
-                    index=0,
-                    on_change=invalidate_folium_map_embed_cache,
-                    label_visibility="collapsed",
-                    width="stretch",
-                )
-                family_colour_scheme = int(_scheme_sel if _scheme_sel is not None else 1)
+    _scheme_preset_labels = {
+        1: MAP_MARKER_COLOUR_SCHEME_1.display_name,
+        2: MAP_MARKER_COLOUR_SCHEME_2.display_name,
+        3: MAP_MARKER_COLOUR_SCHEME_3.display_name,
+    }
 
     with st.sidebar:
         st.divider()
@@ -382,6 +365,16 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 key=STREAMLIT_MAP_BASEMAP_KEY,
                 on_change=_on_basemap_changed,
             )
+        with st.expander("Colour schemes", expanded=False):
+            _scheme_sel = st.radio(
+                "Map marker colour scheme",
+                options=[1, 2, 3],
+                format_func=lambda n: _scheme_preset_labels[int(n)],
+                key=STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
+                on_change=invalidate_folium_map_embed_cache,
+                width="stretch",
+            )
+            family_colour_scheme = int(_scheme_sel if _scheme_sel is not None else 1)
         map_height = st.slider(
             "Map height (px)",
             min_value=MAP_HEIGHT_PX_MIN,
