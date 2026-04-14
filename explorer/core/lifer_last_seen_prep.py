@@ -171,3 +171,22 @@ def aggregate_lifer_sites(
         for k, v in by_loc.items()
     }
     return sorted_by_loc, len(global_sci)
+
+
+def count_subspecies_lifer_taxa(
+    lifer_lookup_df: pd.DataFrame,
+    true_lifer_locations_taxon: Dict[str, Any],
+) -> int:
+    """Count distinct taxon-level lifers that are subspecies (3+ word scientific name).
+
+    Matches the rule in :func:`aggregate_lifer_sites` — from underlying prep data only, not map markers.
+    """
+    n = 0
+    for taxon in true_lifer_locations_taxon:
+        subset = lifer_lookup_df[lifer_lookup_df["_taxon"] == taxon]
+        if subset.empty:
+            continue
+        sci = str(subset.iloc[0]["Scientific Name"])
+        if len(sci.strip().split()) >= 3:
+            n += 1
+    return n

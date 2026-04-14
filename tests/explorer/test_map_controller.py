@@ -210,8 +210,8 @@ def test_lifer_map_mode_builds_banner():
     assert r.map is not None
     html = r.map._repr_html_()
     assert "Lifer locations" in html
+    assert "+ subspecies" not in html
     assert " lifer " in html or "1 lifer" in html
-    assert "Sub-species included" not in html
     # refs #104: lifer popup should be simplified (no visit history noise).
     assert "Visited:" not in html
     assert "Lifers (first recorded here):" not in html
@@ -228,5 +228,6 @@ def test_lifer_map_mode_builds_banner():
     assert r2.warning is None
     assert r2.map is not None
     html2 = r2.map.get_root().render()
-    assert "separate pin only when no species lifer" in html2
+    assert "Lifer locations + subspecies" in html2
+    assert "0 subspecies lifers" in html2.lower()
     assert "Visited:" not in html2

@@ -18,7 +18,7 @@ from explorer.app.streamlit.defaults import (
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
 )
-from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites
+from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites, count_subspecies_lifer_taxa
 from explorer.core.map_marker_colour_resolve import resolve_lifer_colours, resolve_species_colours
 from explorer.core.map_overlay_lifer_popups import format_lifer_popup_lines
 from explorer.core.map_overlay_theme import inject_map_overlay_theme
@@ -140,7 +140,7 @@ def build_lifer_overlay_map(
             None,
             warning="⚠️ Lifer map mode requires full location data.",
         )
-    loc_to_species, n_lifer_taxa = aggregate_lifer_sites(
+    loc_to_species, _ = aggregate_lifer_sites(
         lifer_lookup_df,
         true_lifer_locations,
         true_lifer_locations_taxon,
@@ -150,12 +150,12 @@ def build_lifer_overlay_map(
             None,
             warning="⚠️ No lifer locations found in your dataset.",
         )
+    n_species_lifers = len(true_lifer_locations)
+    n_subspecies_lifers = count_subspecies_lifer_taxa(lifer_lookup_df, true_lifer_locations_taxon)
     if show_subspecies_lifers:
         lifer_loc_ids = set(loc_to_species.keys())
-        n_lifer_count = n_lifer_taxa
     else:
         lifer_loc_ids = set(true_lifer_locations.values())
-        n_lifer_count = len(true_lifer_locations)
     loc_rows = full_location_data[full_location_data["Location ID"].isin(lifer_loc_ids)]
     if loc_rows.empty:
         return MapOverlayResult(
@@ -179,10 +179,11 @@ def build_lifer_overlay_map(
     species_map.get_root().html.add_child(
         Element(
             build_lifer_locations_banner_html(
-                n_lifer_count,
+                n_species_lifers,
                 n_locations,
                 date_filter_status_line,
                 include_subspecies=bool(show_subspecies_lifers),
+                n_subspecies_lifers=n_subspecies_lifers if show_subspecies_lifers else None,
             )
         )
     )
