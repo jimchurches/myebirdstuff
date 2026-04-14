@@ -496,7 +496,7 @@ def main() -> None:
                 "Default circle fill opacity — all maps",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.05,
+                step=0.01,
                 key="design_marker_default_circle_fill_opacity",
                 help=H_FO_DEFAULT,
             )
@@ -513,7 +513,7 @@ def main() -> None:
                 "Circle fill opacity",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.05,
+                step=0.01,
                 key="design_fo_locations",
                 help=H_FO_LOCATIONS,
             )
@@ -585,7 +585,7 @@ def main() -> None:
                     "Inner fill opacity",
                     min_value=0.0,
                     max_value=1.0,
-                    step=0.05,
+                    step=0.01,
                     key="design_cluster_inner_fo",
                     help=H_CLUSTER_INNER_FO,
                 )
@@ -593,7 +593,7 @@ def main() -> None:
                     "Halo ring opacity",
                     min_value=0.0,
                     max_value=1.0,
-                    step=0.05,
+                    step=0.01,
                     key="design_cluster_halo_o",
                     help=H_CLUSTER_HALO_O,
                 )
@@ -601,7 +601,7 @@ def main() -> None:
                     "Border opacity",
                     min_value=0.0,
                     max_value=1.0,
-                    step=0.05,
+                    step=0.01,
                     key="design_cluster_border_o",
                     help=H_CLUSTER_BORDER_O,
                 )
@@ -635,7 +635,7 @@ def main() -> None:
                 "Circle fill opacity (species / last seen)",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.05,
+                step=0.01,
                 key="design_fo_species",
                 help=H_FO_SPECIES,
             )
@@ -656,7 +656,7 @@ def main() -> None:
                 "Circle fill opacity",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.05,
+                step=0.01,
                 key="design_fo_species_map_lifer",
                 help=H_FO_SPECIES_MAP_LIFER,
             )
@@ -676,7 +676,7 @@ def main() -> None:
                 "Circle fill opacity",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.05,
+                step=0.01,
                 key="design_fo_lifer_map_lifer",
                 help=H_FO_LIFER_MAP_LIFER,
             )
@@ -695,7 +695,7 @@ def main() -> None:
                 "Circle fill opacity",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.05,
+                step=0.01,
                 key="design_fo_lifer_map_subspecies",
                 help=H_FO_LIFER_MAP_SUBSPECIES,
             )
@@ -714,7 +714,7 @@ def main() -> None:
                 "Circle fill opacity",
                 min_value=0.0,
                 max_value=1.0,
-                step=0.05,
+                step=0.01,
                 key="design_fo_family",
                 help=H_FO_FAMILY,
             )
