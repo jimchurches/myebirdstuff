@@ -161,9 +161,10 @@ class MapMarkerColourOverrides:
 class MapMarkerColourScheme:
     """Folium map-marker tunables (colours, sizes, strokes, viewport, legend).
 
-    **Family locations** Folium code reads ``circle_marker_radius_px``, ``base_stroke_weight``,
-    ``highlight_*``, and ``density_*``; keep those attribute names aligned with
-    ``explorer.core.family_map_folium``. Per-role marker hex and defaults use the ``marker_*`` names below.
+    **Family locations** Folium uses :func:`family_map_resolved_circle_radius_px` /
+    :func:`family_map_resolved_fill_opacity` (same rules as the map-marker design utility), plus
+    ``base_stroke_weight``, ``highlight_*``, and ``density_*``. Legacy ``circle_marker_radius_px`` /
+    ``circle_marker_fill_opacity`` apply when the sparse ``marker_circle_*_families`` overrides are unset.
 
     **Colour resolution** when the active scheme is applied: per channel, (a) role-specific hex and
     optional :class:`MapMarkerColourOverrides`, (b) ``marker_default_*``, (c) scheme defaults (white fill /
@@ -403,6 +404,52 @@ def active_map_marker_colour_scheme(scheme_index: int | None = None) -> MapMarke
     if n == 3:
         return MAP_MARKER_COLOUR_SCHEME_3
     return MAP_MARKER_COLOUR_SCHEME_1
+
+
+def _map_marker_scheme_default_radius_px(sch: MapMarkerColourScheme) -> int:
+    """Resolved default circle radius (``marker_default_circle_radius_px`` with clamp/fallback)."""
+    v = getattr(sch, "marker_default_circle_radius_px", None)
+    if v is None:
+        return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
+    try:
+        return clamp_map_marker_circle_radius_px(int(v))
+    except (TypeError, ValueError):
+        return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
+
+
+def family_map_resolved_circle_radius_px(sch: MapMarkerColourScheme) -> int:
+    """Family map CircleMarker radius — matches :func:`~explorer.presentation.design_map_preview.scheme_seed_config`.
+
+    Uses ``marker_circle_radius_px_families`` when set; otherwise ``marker_default_circle_radius_px``
+    (not ``circle_marker_radius_px``), so the explorer matches the map-marker design utility.
+    """
+    md = _map_marker_scheme_default_radius_px(sch)
+    v = getattr(sch, "marker_circle_radius_px_families", None)
+    if v is None:
+        return md
+    try:
+        return clamp_map_marker_circle_radius_px(int(v))
+    except (TypeError, ValueError):
+        return md
+
+
+def family_map_resolved_fill_opacity(sch: MapMarkerColourScheme) -> float:
+    """Family map fill opacity — matches ``scheme_seed_config`` / design preview.
+
+    Uses optional ``marker_circle_fill_opacity_families``; legacy fallback is ``circle_marker_fill_opacity``.
+    Clamps with ``marker_default_circle_fill_opacity`` like other per-collection opacities.
+    """
+    md_fo = clamp_map_marker_circle_fill_opacity(
+        getattr(sch, "marker_default_circle_fill_opacity", None),
+        fallback=0.88,
+    )
+    v = getattr(sch, "marker_circle_fill_opacity_families", None)
+    if v is not None:
+        return clamp_map_marker_circle_fill_opacity(v, fallback=md_fo)
+    return clamp_map_marker_circle_fill_opacity(
+        float(getattr(sch, "circle_marker_fill_opacity", 0.88)),
+        fallback=md_fo,
+    )
 
 
 # ---------------------------------------------------------------------------

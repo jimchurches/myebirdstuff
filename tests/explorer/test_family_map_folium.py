@@ -1,9 +1,13 @@
 """Tests for Family Map Folium builder (refs #138)."""
 
+from dataclasses import replace
+
 from explorer.app.streamlit.defaults import (
     MAP_MARKER_COLOUR_SCHEME_1,
     MAP_MARKER_COLOUR_SCHEME_3,
     active_map_marker_colour_scheme,
+    family_map_resolved_circle_radius_px,
+    family_map_resolved_fill_opacity,
 )
 from explorer.core.family_map_compute import FamilyLocationPin, FamilyMapBannerMetrics
 from explorer.core.family_map_folium import (
@@ -43,6 +47,20 @@ def _sample_pins():
 
 def test_active_map_marker_colour_scheme_accepts_index_3():
     assert active_map_marker_colour_scheme(3) is MAP_MARKER_COLOUR_SCHEME_3
+
+
+def test_family_map_resolved_fill_opacity_experimental_scheme():
+    """Experimental (scheme 3) sets both ``marker_circle_fill_opacity_families`` and legacy fill to 0.85."""
+    assert family_map_resolved_fill_opacity(MAP_MARKER_COLOUR_SCHEME_3) == 0.85
+
+
+def test_family_map_resolved_fill_opacity_prefers_marker_circle_fill_opacity_families():
+    sch = replace(MAP_MARKER_COLOUR_SCHEME_1, marker_circle_fill_opacity_families=0.4)
+    assert family_map_resolved_fill_opacity(sch) == 0.4
+
+
+def test_family_map_resolved_circle_radius_px_matches_marker_default_without_families_override():
+    assert family_map_resolved_circle_radius_px(MAP_MARKER_COLOUR_SCHEME_3) == 5
 
 
 def test_family_map_marker_style_highlight_uses_resolved_highlight_stroke():

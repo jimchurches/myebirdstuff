@@ -19,6 +19,8 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_DEFAULT,
     MapMarkerColourScheme,
     active_map_marker_colour_scheme,
+    family_map_resolved_circle_radius_px,
+    family_map_resolved_fill_opacity,
 )
 from explorer.core.family_map_compute import (
     DENSITY_BAND_LABELS,
@@ -238,12 +240,12 @@ def build_family_composition_folium_map(
         popup_body = f'<div class="pebird-map-popup">{inner}</div>'
         folium.CircleMarker(
             location=(pin.latitude, pin.longitude),
-            radius=style.circle_marker_radius_px,
+            radius=family_map_resolved_circle_radius_px(style),
             color=stroke,
             weight=sw,
             fill=True,
             fill_color=fill,
-            fill_opacity=style.circle_marker_fill_opacity,
+            fill_opacity=family_map_resolved_fill_opacity(style),
             popup=folium.Popup(popup_body, max_width=style.popup_max_width_px),
         ).add_to(m)
 
