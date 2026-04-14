@@ -188,7 +188,7 @@ class DesignMapPreviewConfig:
     marker_circle_fill_opacity_lifer_map_lifer: float
     marker_circle_fill_opacity_lifer_map_subspecies: float
     marker_circle_fill_opacity_families: float
-    # Align with ``MapMarkerColourScheme.marker_default_*`` (design export / future wiring).
+    # Align with ``MapMarkerColourScheme.global_defaults.*`` (design export / future wiring).
     marker_default_fill_hex: str
     marker_default_edge_hex: str
     marker_default_circle_fill_opacity: float
@@ -552,17 +552,22 @@ def scheme_seed_config(
     ls_fill, ls_edge = resolve_last_seen_colours(sch)
     fills = tuple(resolve_family_band_colours(sch, i)[0] for i in range(4))
     strokes = tuple(resolve_family_band_colours(sch, i)[1] for i in range(4))
-    hl_stroke = normalize_marker_hex(str(getattr(sch, "highlight_stroke_hex", "")), channel="edge")
+    g = sch.global_defaults
+    al = sch.all_locations
+    sp = sch.species_locations
+    ll = sch.lifer_locations
+    fam = sch.family_locations
+    cl = al.cluster
+    hl_stroke = normalize_marker_hex(str(fam.highlight_stroke_hex), channel="edge")
 
-    def _int_attr(attr: str, fallback: int) -> int:
-        v = getattr(sch, attr, None)
+    def _int_or_fb(v: object, fallback: int) -> int:
         try:
             return max(1, int(v)) if v is not None else fallback
         except (TypeError, ValueError):
             return fallback
 
     def _marker_default_radius() -> int:
-        v = getattr(sch, "marker_default_circle_radius_px", None)
+        v = getattr(g, "circle_radius_px", None)
         if v is None:
             return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
         try:
@@ -570,49 +575,53 @@ def scheme_seed_config(
         except (TypeError, ValueError):
             return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
 
-    def _collection_radius(attr: str, md: int) -> int:
-        v = getattr(sch, attr, None)
-        if v is None:
+    def _collection_radius(override: int | None, md: int) -> int:
+        if override is None:
             return md
         try:
-            return clamp_map_marker_circle_radius_px(int(v))
+            return clamp_map_marker_circle_radius_px(int(override))
         except (TypeError, ValueError):
             return md
 
     md = _marker_default_radius()
     md_fo = clamp_map_marker_circle_fill_opacity(
-        getattr(sch, "marker_default_circle_fill_opacity", None),
+        getattr(g, "circle_fill_opacity", None),
         fallback=fb_fo,
     )
-    md_sw = _int_attr("marker_default_base_stroke_weight", fb_sw)
-    rl = _collection_radius("marker_circle_radius_px_locations", md)
-    rs = _collection_radius("marker_circle_radius_px_species", md)
-    r_sml = _collection_radius("marker_circle_radius_px_species_map_lifer", md)
-    r_lml = _collection_radius("marker_circle_radius_px_lifer_map_lifer", md)
-    r_lms = _collection_radius("marker_circle_radius_px_lifer_map_subspecies", md)
-    rf = _collection_radius("marker_circle_radius_px_families", md)
+    md_sw = _int_or_fb(getattr(g, "base_stroke_weight", None), fb_sw)
+    rl = _collection_radius(al.marker_circle_radius_px_locations, md)
+    rs = _collection_radius(sp.marker_circle_radius_px_species, md)
+    r_sml = _collection_radius(sp.marker_circle_radius_px_species_map_lifer, md)
+    r_lml = _collection_radius(ll.marker_circle_radius_px_lifer_map_lifer, md)
+    r_lms = _collection_radius(ll.marker_circle_radius_px_lifer_map_subspecies, md)
+    rf = _collection_radius(fam.marker_circle_radius_px_families, md)
 
-    def _collection_fill_opacity(attr: str, legacy: float) -> float:
-        v = getattr(sch, attr, None)
-        if v is not None:
-            return clamp_map_marker_circle_fill_opacity(v, fallback=md_fo)
+    def _collection_fill_opacity(override: float | None, legacy: float) -> float:
+        if override is not None:
+            return clamp_map_marker_circle_fill_opacity(override, fallback=md_fo)
         return clamp_map_marker_circle_fill_opacity(legacy, fallback=md_fo)
 
-    fo_loc = _collection_fill_opacity("marker_circle_fill_opacity_locations", float(sch.visit_fill_opacity_all_locations))
-    fo_spec = _collection_fill_opacity("marker_circle_fill_opacity_species", float(sch.visit_fill_opacity_emphasis))
+    fo_loc = _collection_fill_opacity(
+        al.marker_circle_fill_opacity_locations, float(al.visit_fill_opacity_all_locations)
+    )
+    fo_spec = _collection_fill_opacity(
+        sp.marker_circle_fill_opacity_species, float(sp.visit_fill_opacity_emphasis)
+    )
     fo_sml = _collection_fill_opacity(
-        "marker_circle_fill_opacity_species_map_lifer", float(sch.visit_fill_opacity_species_map_lifer)
+        sp.marker_circle_fill_opacity_species_map_lifer, float(sp.visit_fill_opacity_species_map_lifer)
     )
     fo_lml = _collection_fill_opacity(
-        "marker_circle_fill_opacity_lifer_map_lifer", float(sch.visit_fill_opacity_lifer_map_lifer)
+        ll.marker_circle_fill_opacity_lifer_map_lifer, float(ll.visit_fill_opacity_lifer_map_lifer)
     )
     fo_lms = _collection_fill_opacity(
-        "marker_circle_fill_opacity_lifer_map_subspecies", float(sch.visit_fill_opacity_lifer_map_subspecies)
+        ll.marker_circle_fill_opacity_lifer_map_subspecies, float(ll.visit_fill_opacity_lifer_map_subspecies)
     )
-    fo_fam = _collection_fill_opacity("marker_circle_fill_opacity_families", float(sch.circle_marker_fill_opacity))
+    fo_fam = _collection_fill_opacity(
+        fam.marker_circle_fill_opacity_families, float(fam.circle_marker_fill_opacity)
+    )
 
     def _optional_cluster_colours() -> tuple[str, str, str, str, str, str, str, str, str] | None:
-        v = getattr(sch, "marker_cluster_colours_hex", None)
+        v = getattr(cl, "colours_hex", None)
         if v is None:
             return None
         if not isinstance(v, tuple) or len(v) != 9:
@@ -630,7 +639,7 @@ def scheme_seed_config(
         )
 
     def _cluster_style_float(attr: str, default: float) -> float:
-        v = getattr(sch, attr, None)
+        v = getattr(cl, attr, None)
         if v is None:
             return default
         try:
@@ -639,7 +648,7 @@ def scheme_seed_config(
             return default
 
     def _cluster_style_int(attr: str, default: int, *, lo: int, hi: int) -> int:
-        v = getattr(sch, attr, None)
+        v = getattr(cl, attr, None)
         if v is None:
             return default
         try:
@@ -647,17 +656,11 @@ def scheme_seed_config(
         except (TypeError, ValueError):
             return default
 
-    _inner_fo = _cluster_style_float(
-        "marker_cluster_inner_fill_opacity", MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT
-    )
-    _halo_o = _cluster_style_float("marker_cluster_halo_opacity", MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT)
-    _border_o = _cluster_style_float("marker_cluster_border_opacity", MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT)
-    _halo_sp = _cluster_style_int(
-        "marker_cluster_halo_spread_px", MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT, lo=0, hi=24
-    )
-    _bw = _cluster_style_int(
-        "marker_cluster_border_width_px", MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT, lo=0, hi=8
-    )
+    _inner_fo = _cluster_style_float("inner_fill_opacity", MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT)
+    _halo_o = _cluster_style_float("halo_opacity", MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT)
+    _border_o = _cluster_style_float("border_opacity", MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT)
+    _halo_sp = _cluster_style_int("halo_spread_px", MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT, lo=0, hi=24)
+    _bw = _cluster_style_int("border_width_px", MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT, lo=0, hi=8)
 
     return DesignMapPreviewConfig(
         preview_scope=preview_scope,
@@ -670,9 +673,9 @@ def scheme_seed_config(
         marker_circle_radius_lifer_map_lifer=r_lml,
         marker_circle_radius_lifer_map_subspecies=r_lms,
         marker_circle_radius_families=rf,
-        stroke_weight_visit=max(1, int(sch.visit_stroke_weight)),
-        stroke_weight_family=max(1, int(sch.base_stroke_weight)),
-        stroke_weight_family_highlight=max(1, int(sch.highlight_stroke_weight)),
+        stroke_weight_visit=max(1, int(al.visit_stroke_weight)),
+        stroke_weight_family=max(1, int(fam.base_stroke_weight)),
+        stroke_weight_family_highlight=max(1, int(fam.highlight_stroke_weight)),
         marker_circle_fill_opacity_locations=fo_loc,
         marker_circle_fill_opacity_species=fo_spec,
         marker_circle_fill_opacity_species_map_lifer=fo_sml,
@@ -698,7 +701,7 @@ def scheme_seed_config(
         family_fill_hex=fills,
         family_stroke_hex=strokes,
         family_highlight_stroke_hex=hl_stroke,
-        legend_highlight_swatch_fill_index=max(0, min(int(sch.legend_highlight_swatch_fill_index), 3)),
+        legend_highlight_swatch_fill_index=max(0, min(int(fam.legend_highlight_swatch_fill_index), 3)),
         marker_cluster_colours_hex=_optional_cluster_colours(),
         marker_cluster_inner_fill_opacity=_inner_fo,
         marker_cluster_halo_opacity=_halo_o,

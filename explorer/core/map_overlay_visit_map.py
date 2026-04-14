@@ -56,12 +56,14 @@ from explorer.core.stats import safe_count
 def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tuple[str, str, int, int, float]:
     """Resolved fill, edge (stroke), radius (px), stroke weight, fill opacity for **All locations** view."""
     fill_c, edge = resolve_location_visit_colours(sch)
-    md = int(sch.marker_default_circle_radius_px)
-    loc = sch.marker_circle_radius_px_locations
+    g = sch.global_defaults
+    al = sch.all_locations
+    md = int(g.circle_radius_px)
+    loc = al.marker_circle_radius_px_locations
     radius_px = clamp_map_marker_circle_radius_px(loc if loc is not None else md)
-    sw = max(1, int(sch.visit_stroke_weight))
-    legacy_fo = float(sch.visit_fill_opacity_all_locations)
-    fo_override = sch.marker_circle_fill_opacity_locations
+    sw = max(1, int(al.visit_stroke_weight))
+    legacy_fo = float(al.visit_fill_opacity_all_locations)
+    fo_override = al.marker_circle_fill_opacity_locations
     fo = (
         clamp_map_marker_circle_fill_opacity(fo_override, fallback=legacy_fo)
         if fo_override is not None
@@ -106,22 +108,40 @@ def _marker_cluster_icon_create_function_from_scheme(
 ) -> str | None:
     """Return Leaflet.markercluster ``iconCreateFunction`` for configured cluster icon tier colours.
 
-    Duck-typed: ``MapMarkerColourScheme``, :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig`,
-    or any object with ``marker_cluster_colours_hex`` and ``marker_cluster_*`` opacity/spread fields.
+    Duck-typed: ``MapMarkerColourScheme`` (reads ``all_locations.cluster.*``),
+    :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig` (flat ``marker_cluster_*`` fields),
+    or any object exposing the same attributes.
 
-    Expects ``marker_cluster_colours_hex`` with nine values
+    Expects nine cluster tier colours (``colours_hex`` or legacy ``marker_cluster_colours_hex``) with nine values
     ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
     If unset or invalid, returns ``None`` so Folium / Leaflet.markercluster defaults apply.
     """
 
-    def _resolve_cluster_colours() -> tuple[list[str], list[str], list[str]] | None:
+    def _cluster_colours_tuple() -> tuple[str, ...] | None:
         if sch is None:
             return None
+        al = getattr(sch, "all_locations", None)
+        if al is not None:
+            cl = getattr(al, "cluster", None)
+            if cl is not None:
+                v = getattr(cl, "colours_hex", None)
+                if v is not None:
+                    t = tuple(v) if isinstance(v, (tuple, list)) else None
+                    if t is not None and len(t) == 9:
+                        return t
         vals = getattr(sch, "marker_cluster_colours_hex", None)
         if vals is None:
             return None
+        t = tuple(vals) if isinstance(vals, (tuple, list)) else None
+        return t if t is not None and len(t) == 9 else None
+
+    def _resolve_cluster_colours() -> tuple[list[str], list[str], list[str]] | None:
+        raw_tuple = _cluster_colours_tuple()
+        if raw_tuple is None:
+            return None
+        vals = raw_tuple
         try:
-            raw = tuple(vals[i] for i in range(9))
+            raw = tuple(str(vals[i]) for i in range(9))
         except Exception:
             return None
         if not all(is_valid_hex_colour(x) for x in raw):
@@ -150,8 +170,18 @@ def _marker_cluster_icon_create_function_from_scheme(
         return None
     fills, borders, halos = col
 
-    def _o(attr: str, default: float) -> float:
-        v = getattr(sch, attr, None)
+    def _o(nested_attr: str, flat_attr: str, default: float) -> float:
+        al = getattr(sch, "all_locations", None)
+        if al is not None:
+            cl = getattr(al, "cluster", None)
+            if cl is not None:
+                v = getattr(cl, nested_attr, None)
+                if v is not None:
+                    try:
+                        return max(0.0, min(1.0, float(v)))
+                    except (TypeError, ValueError):
+                        pass
+        v = getattr(sch, flat_attr, None)
         if v is None:
             return default
         try:
@@ -159,20 +189,30 @@ def _marker_cluster_icon_create_function_from_scheme(
         except (TypeError, ValueError):
             return default
 
-    def _oi(attr: str, default: int) -> int:
-        v = getattr(sch, attr, None)
+    def _oi(nested_attr: str, flat_attr: str, default: int, *, hi: int) -> int:
+        al = getattr(sch, "all_locations", None)
+        if al is not None:
+            cl = getattr(al, "cluster", None)
+            if cl is not None:
+                v = getattr(cl, nested_attr, None)
+                if v is not None:
+                    try:
+                        return max(0, min(hi, int(v)))
+                    except (TypeError, ValueError):
+                        pass
+        v = getattr(sch, flat_attr, None)
         if v is None:
             return default
         try:
-            return max(0, min(24, int(v)))
+            return max(0, min(hi, int(v)))
         except (TypeError, ValueError):
             return default
 
-    inner_a = _o("marker_cluster_inner_fill_opacity", MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT)
-    halo_a = _o("marker_cluster_halo_opacity", MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT)
-    border_a = _o("marker_cluster_border_opacity", MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT)
-    spread = _oi("marker_cluster_halo_spread_px", MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT)
-    bw = _oi("marker_cluster_border_width_px", MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT)
+    inner_a = _o("inner_fill_opacity", "marker_cluster_inner_fill_opacity", MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT)
+    halo_a = _o("halo_opacity", "marker_cluster_halo_opacity", MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT)
+    border_a = _o("border_opacity", "marker_cluster_border_opacity", MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT)
+    spread = _oi("halo_spread_px", "marker_cluster_halo_spread_px", MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT, hi=24)
+    bw = _oi("border_width_px", "marker_cluster_border_width_px", MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT, hi=8)
 
     fills_rgba = [_hex_to_rgba_css(fills[i], inner_a, channel="fill") for i in range(3)]
     borders_rgba = [_hex_to_rgba_css(borders[i], border_a, channel="edge") for i in range(3)]

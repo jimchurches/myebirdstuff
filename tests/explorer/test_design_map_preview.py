@@ -62,7 +62,9 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
         ef, es = resolve_family_band_colours(sch, i)
         assert cfg.family_fill_hex[i] == ef
         assert cfg.family_stroke_hex[i] == es
-    assert cfg.family_highlight_stroke_hex == normalize_marker_hex(sch.highlight_stroke_hex, channel="edge")
+    assert cfg.family_highlight_stroke_hex == normalize_marker_hex(
+        sch.family_locations.highlight_stroke_hex, channel="edge"
+    )
     vf, ve = resolve_location_visit_colours(sch)
     assert cfg.default_fill == vf
     assert cfg.default_edge == ve

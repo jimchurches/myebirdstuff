@@ -50,9 +50,9 @@ def test_family_map_marker_style_highlight_uses_resolved_highlight_stroke():
     fill, stroke, w = family_map_marker_style(p, style=MAP_MARKER_COLOUR_SCHEME_1)
     assert p.highlight_match
     assert stroke == normalize_marker_hex(
-        MAP_MARKER_COLOUR_SCHEME_1.highlight_stroke_hex, channel="edge"
+        MAP_MARKER_COLOUR_SCHEME_1.family_locations.highlight_stroke_hex, channel="edge"
     )
-    assert w == MAP_MARKER_COLOUR_SCHEME_1.highlight_stroke_weight
+    assert w == MAP_MARKER_COLOUR_SCHEME_1.family_locations.highlight_stroke_weight
 
 
 def test_build_family_composition_folium_map_html_contains_markers():

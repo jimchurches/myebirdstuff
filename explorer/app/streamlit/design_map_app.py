@@ -405,7 +405,7 @@ def _config_for_export() -> DesignMapPreviewConfig:
         return cfg
     pick = int(st.session_state.get("design_scheme_pick", 1))
     sch = active_map_marker_colour_scheme(pick)
-    if sch.marker_cluster_colours_hex is None:
+    if sch.all_locations.cluster.colours_hex is None:
         return cfg
     scope = str(st.session_state.get("design_preview_scope", MAP_SCOPE_ALL))
     if scope not in MAP_SCOPES:

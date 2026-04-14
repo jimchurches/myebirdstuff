@@ -61,7 +61,13 @@ def test_family_map_resolved_fill_opacity_experimental_scheme() -> None:
 
 
 def test_family_map_resolved_fill_opacity_prefers_marker_circle_fill_opacity_families() -> None:
-    sch = replace(MAP_MARKER_COLOUR_SCHEME_1, marker_circle_fill_opacity_families=0.4)
+    sch = replace(
+        MAP_MARKER_COLOUR_SCHEME_1,
+        family_locations=replace(
+            MAP_MARKER_COLOUR_SCHEME_1.family_locations,
+            marker_circle_fill_opacity_families=0.4,
+        ),
+    )
     assert family_map_resolved_fill_opacity(sch) == 0.4
 
 

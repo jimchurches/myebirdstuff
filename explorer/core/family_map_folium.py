@@ -55,17 +55,18 @@ def family_map_marker_style(
     then catch-all — see :mod:`explorer.core.map_marker_colour_resolve`).
     """
     s = style or active_map_marker_colour_scheme()
-    fills = s.density_fill_hex
+    fam = s.family_locations
+    fills = fam.density_fill_hex
     n = len(fills)
     idx = max(0, min(pin.density_band_index, n - 1)) if n else 0
     fill_res, edge_res = resolve_family_band_colours(s, idx)
     if pin.highlight_match:
         return (
             fill_res,
-            normalize_marker_hex(s.highlight_stroke_hex, channel="edge"),
-            s.highlight_stroke_weight,
+            normalize_marker_hex(fam.highlight_stroke_hex, channel="edge"),
+            fam.highlight_stroke_weight,
         )
-    return fill_res, edge_res, s.base_stroke_weight
+    return fill_res, edge_res, fam.base_stroke_weight
 
 
 def _default_au_center() -> tuple[float, float]:
@@ -122,6 +123,7 @@ def build_family_map_legend_overlay_html_for_pins(
     Swatch colours use the same resolution as :func:`family_map_marker_style`.
     """
     s = style or active_map_marker_colour_scheme()
+    fam = s.family_locations
     pin_list = list(pins)
     bands_present = sorted({int(p.density_band_index) for p in pin_list}) if pin_list else []
     items: list[tuple[str, str, str]] = []
@@ -141,8 +143,8 @@ def build_family_map_legend_overlay_html_for_pins(
         sw_i = max(
             0,
             min(
-                s.legend_highlight_swatch_fill_index,
-                len(s.density_fill_hex) - 1,
+                fam.legend_highlight_swatch_fill_index,
+                len(fam.density_fill_hex) - 1,
             ),
         )
         url = (highlight_species_url or "").strip()
@@ -157,7 +159,7 @@ def build_family_map_legend_overlay_html_for_pins(
         fill_hl, _ = resolve_family_band_colours(s, sw_i)
         items.append(
             (
-                normalize_marker_hex(s.highlight_stroke_hex, channel="edge"),
+                normalize_marker_hex(fam.highlight_stroke_hex, channel="edge"),
                 fill_hl,
                 hl_legend,
             )
@@ -246,12 +248,13 @@ def build_family_composition_folium_map(
             fill=True,
             fill_color=fill,
             fill_opacity=family_map_resolved_fill_opacity(style),
-            popup=folium.Popup(popup_body, max_width=style.popup_max_width_px),
+            popup=folium.Popup(popup_body, max_width=style.viewport.popup_max_width_px),
         ).add_to(m)
 
     # Family-map-only initial viewport:
     # - fit relevant pins with edge padding (all family pins, or highlight-only when requested)
     # - cap how far fitBounds may zoom in (family-wide vs species-highlight use different caps)
+    vp = style.viewport
     if pin_list:
         if fit_bounds_highlight_only:
             hl_pins = [p for p in pin_list if p.highlight_match]
@@ -261,11 +264,11 @@ def build_family_composition_folium_map(
             _bounds_src = pin_list
             _species_framed = False
         bounds = [[p.latitude, p.longitude] for p in _bounds_src]
-        pad = int(style.fit_bounds_padding_px)
+        pad = int(vp.fit_bounds_padding_px)
         _mz = int(
-            style.fit_bounds_max_zoom_highlight
+            vp.fit_bounds_max_zoom_highlight
             if _species_framed
-            else style.fit_bounds_max_zoom
+            else vp.fit_bounds_max_zoom
         )
         m.fit_bounds(
             bounds,

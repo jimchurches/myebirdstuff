@@ -135,16 +135,22 @@ def test_all_locations_cluster_markers_apply_tier_border_colours_when_present():
     df = _minimal_map_df()
     scheme_with_border = replace(
         MAP_MARKER_COLOUR_SCHEME_3,
-        marker_cluster_colours_hex=(
-            "#EFE6EE",
-            "#4b2e46",
-            "#e0ccdd",
-            "#E0CCDD",
-            "#5b3655",
-            "#cfb4cc",
-            "#CFB4CC",
-            "#6a3f64",
-            "#b78fb3",
+        all_locations=replace(
+            MAP_MARKER_COLOUR_SCHEME_3.all_locations,
+            cluster=replace(
+                MAP_MARKER_COLOUR_SCHEME_3.all_locations.cluster,
+                colours_hex=(
+                    "#EFE6EE",
+                    "#4b2e46",
+                    "#e0ccdd",
+                    "#E0CCDD",
+                    "#5b3655",
+                    "#cfb4cc",
+                    "#CFB4CC",
+                    "#6a3f64",
+                    "#b78fb3",
+                ),
+            ),
         ),
     )
     r = build_species_overlay_map(
