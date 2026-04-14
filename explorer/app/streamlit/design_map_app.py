@@ -630,6 +630,11 @@ def main() -> None:
             )
             _hex_text_input("Fill", key="design_hex_lf", help=H_HEX_LF)
             _hex_text_input("Edge", key="design_hex_le", help=H_HEX_LE)
+            st.caption(
+                "On the **Lifer locations** map, subspecies-only pins and the **both** outer ring use "
+                "the **Species locations** sliders and hex (species radius, species fill opacity, "
+                "species / last-seen colours) — same fields as the species map’s non-lifer emphasis pins."
+            )
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_FAMILY_LOCATIONS], expanded=False):
             st.slider(

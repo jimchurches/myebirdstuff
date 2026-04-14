@@ -12,9 +12,14 @@ from explorer.app.streamlit.defaults import (
     MAP_CIRCLE_MARKER_RADIUS_PX,
     MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     MAP_DEBUG_SHOW_ZOOM_LEVEL,
+    MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
     MAP_PIN_FILL_OPACITY_EMPHASIS,
+    MapMarkerColourScheme,
+    clamp_map_marker_circle_fill_opacity,
+    clamp_map_marker_circle_radius_px,
 )
 from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites
+from explorer.core.map_marker_colour_resolve import resolve_lifer_colours, resolve_species_colours
 from explorer.core.map_overlay_lifer_popups import format_lifer_popup_lines
 from explorer.core.map_overlay_theme import inject_map_overlay_theme
 from explorer.core.map_overlay_types import BaseSpeciesFn, MapOverlayResult
@@ -27,6 +32,84 @@ from explorer.presentation.map_renderer import (
     popup_scroll_script,
 )
 from explorer.presentation.map_ui_constants import MAP_POPUP_MAX_WIDTH_PX
+
+
+def _marker_default_radius_px(sch: MapMarkerColourScheme) -> int:
+    v = getattr(sch, "marker_default_circle_radius_px", None)
+    if v is None:
+        return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
+    try:
+        return clamp_map_marker_circle_radius_px(int(v))
+    except (TypeError, ValueError):
+        return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
+
+
+def _collection_radius_px(sch: MapMarkerColourScheme, attr: str, md: int) -> int:
+    v = getattr(sch, attr, None)
+    if v is None:
+        return md
+    try:
+        return clamp_map_marker_circle_radius_px(int(v))
+    except (TypeError, ValueError):
+        return md
+
+
+def _collection_fill_opacity(
+    sch: MapMarkerColourScheme,
+    attr: str,
+    legacy: float,
+    *,
+    md_fo: float,
+) -> float:
+    v = getattr(sch, attr, None)
+    if v is not None:
+        return clamp_map_marker_circle_fill_opacity(v, fallback=md_fo)
+    return clamp_map_marker_circle_fill_opacity(legacy, fallback=md_fo)
+
+
+def _lifer_overlay_pin_params(
+    visit_marker_scheme: MapMarkerColourScheme | None,
+    *,
+    lifer_color: str,
+    lifer_fill: str,
+    species_color: str,
+    species_fill: str,
+) -> tuple[str, str, str, str, int, int, int, float, float]:
+    """Colours and geometry for lifer-map pins — same resolver path as the map-marker design preview.
+
+    Returns ``(lifer_edge, lifer_fill, species_edge, species_fill, r_lifer, r_species, stroke_w, fo_lifer, fo_spec)``.
+    When *visit_marker_scheme* is ``None``, falls back to legacy constants and caller colour strings.
+    """
+    if visit_marker_scheme is None:
+        return (
+            lifer_color,
+            lifer_fill,
+            species_color,
+            species_fill,
+            MAP_CIRCLE_MARKER_RADIUS_PX,
+            MAP_CIRCLE_MARKER_RADIUS_PX,
+            MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+            MAP_PIN_FILL_OPACITY_EMPHASIS,
+            MAP_PIN_FILL_OPACITY_EMPHASIS,
+        )
+    sch = visit_marker_scheme
+    lf_fill, lf_edge = resolve_lifer_colours(sch)
+    sp_fill, sp_edge = resolve_species_colours(sch)
+    md = _marker_default_radius_px(sch)
+    r_lifer = _collection_radius_px(sch, "marker_circle_radius_px_lifers", md)
+    r_species = _collection_radius_px(sch, "marker_circle_radius_px_species", md)
+    sw = max(1, int(getattr(sch, "visit_stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
+    md_fo = float(getattr(sch, "marker_default_circle_fill_opacity", 0.88))
+    fo_lif = _collection_fill_opacity(
+        sch, "marker_circle_fill_opacity_lifers", float(sch.visit_fill_opacity_lifers), md_fo=md_fo
+    )
+    fo_spec = _collection_fill_opacity(
+        sch,
+        "marker_circle_fill_opacity_species",
+        float(sch.visit_fill_opacity_emphasis),
+        md_fo=md_fo,
+    )
+    return (lf_edge, lf_fill, sp_edge, sp_fill, r_lifer, r_species, sw, fo_lif, fo_spec)
 
 
 def build_lifer_overlay_map(
@@ -49,6 +132,7 @@ def build_lifer_overlay_map(
     show_subspecies_lifers: bool,
     effective_use_full: bool,
     base_species_fn: BaseSpeciesFn,
+    visit_marker_scheme: MapMarkerColourScheme | None = None,
 ) -> MapOverlayResult:
     """Assemble the lifer-locations Folium map or return a user-facing *warning*."""
     if full_location_data is None or full_location_data.empty:
@@ -85,6 +169,13 @@ def build_lifer_overlay_map(
     popup_asc = popup_sort_order == "ascending"
     date_filter_status_line = date_filter_status or None
     n_locations = int(loc_rows["Location ID"].nunique())
+    le, lf, se, sp, r_lifer, r_species, stroke_w, fo_lif, fo_spec = _lifer_overlay_pin_params(
+        visit_marker_scheme,
+        lifer_color=lifer_color,
+        lifer_fill=lifer_fill,
+        species_color=species_color,
+        species_fill=species_fill,
+    )
     species_map.get_root().html.add_child(
         Element(
             build_lifer_locations_banner_html(
@@ -97,9 +188,7 @@ def build_lifer_overlay_map(
     )
     loc_kind_by_id: dict[Any, str] = {}
     if not show_subspecies_lifers:
-        species_map.get_root().html.add_child(
-            Element(build_legend_html([(lifer_color, lifer_fill, "Lifer")]))
-        )
+        species_map.get_root().html.add_child(Element(build_legend_html([(le, lf, "Lifer")])))
     else:
 
         def _loc_kind(entries: list[dict]) -> str:
@@ -115,11 +204,11 @@ def build_lifer_overlay_map(
         kinds_present = set(loc_kind_by_id.values())
         legend_items = []
         if "lifer" in kinds_present:
-            legend_items.append((lifer_color, lifer_fill, "Lifer"))
+            legend_items.append((le, lf, "Lifer"))
         if "subspecies" in kinds_present:
-            legend_items.append((species_color, species_fill, "Subspecies"))
+            legend_items.append((se, sp, "Subspecies"))
         if "both" in kinds_present:
-            legend_items.append((lifer_color, lifer_fill, "Both"))
+            legend_items.append((le, lf, "Both"))
         species_map.get_root().html.add_child(Element(build_legend_html(legend_items)))
 
     for _, row in loc_rows.iterrows():
@@ -149,12 +238,12 @@ def build_lifer_overlay_map(
             popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                color=lifer_color,
-                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                radius=r_lifer,
+                color=le,
+                weight=stroke_w,
                 fill=True,
-                fill_color=lifer_fill,
-                fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+                fill_color=lf,
+                fill_opacity=fo_lif,
                 popup=popup,
             ).add_to(species_map)
         else:
@@ -164,45 +253,45 @@ def build_lifer_overlay_map(
                 outer_popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
                 folium.CircleMarker(
                     location=latlng,
-                    radius=MAP_CIRCLE_MARKER_RADIUS_PX + 2,
-                    color=species_color,
-                    weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                    radius=r_lifer + 2,
+                    color=se,
+                    weight=stroke_w,
                     fill=False,
                     popup=outer_popup,
                 ).add_to(species_map)
                 inner_popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
                 folium.CircleMarker(
                     location=latlng,
-                    radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                    color=lifer_color,
-                    weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                    radius=r_lifer,
+                    color=le,
+                    weight=stroke_w,
                     fill=True,
-                    fill_color=lifer_fill,
-                    fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+                    fill_color=lf,
+                    fill_opacity=fo_lif,
                     popup=inner_popup,
                 ).add_to(species_map)
             elif loc_kind == "subspecies":
                 popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
                 folium.CircleMarker(
                     location=latlng,
-                    radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                    color=species_color,
-                    weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                    radius=r_species,
+                    color=se,
+                    weight=stroke_w,
                     fill=True,
-                    fill_color=species_fill,
-                    fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+                    fill_color=sp,
+                    fill_opacity=fo_spec,
                     popup=popup,
                 ).add_to(species_map)
             else:
                 popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
                 folium.CircleMarker(
                     location=latlng,
-                    radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                    color=lifer_color,
-                    weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                    radius=r_lifer,
+                    color=le,
+                    weight=stroke_w,
                     fill=True,
-                    fill_color=lifer_fill,
-                    fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+                    fill_color=lf,
+                    fill_opacity=fo_lif,
                     popup=popup,
                 ).add_to(species_map)
 

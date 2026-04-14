@@ -108,11 +108,13 @@ def test_all_locations_cluster_markers_use_scheme_cluster_tier_fills_when_presen
     )
     assert r.warning is None
     assert r.map is not None
-    html = r.map._repr_html_().lower()
-    assert "marker-cluster" in html
+    # ``_repr_html_`` may omit iframe script bodies; full root includes cluster iconCreateFunction.
+    full = r.map.get_root().render().lower()
+    assert "marker-cluster" in full
     # Custom cluster icons use rgba(...) from hex + marker_cluster_*_opacity (not raw #hex in HTML).
-    assert "rgba(" in html
-    assert "239,230,238" in html
+    assert "rgba(" in full
+    # Scheme 3 small-tier fill is ``#DFCEDE`` → ``rgb(223,206,222)`` in the custom icon JS.
+    assert "223,206,222" in full
 
 
 def test_all_locations_cluster_markers_apply_tier_border_colours_when_present():
@@ -174,6 +176,24 @@ def test_species_view_no_selection_show_all_matches_all_locations_banner():
     html = r.map._repr_html_()
     assert "All species" in html
     assert "1 checklist" in html
+
+
+def test_lifer_map_mode_uses_visit_marker_scheme_when_provided():
+    df = _minimal_map_df()
+    kwargs = _common_kwargs(df)
+    full_loc = kwargs["location_data"]
+    r = build_species_overlay_map(
+        **kwargs,
+        selected_species="",
+        map_view_mode="lifers",
+        full_location_data=full_loc,
+        visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_1,
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map._repr_html_().lower()
+    assert "800080" in html
+    assert "ffff00" in html
 
 
 def test_lifer_map_mode_builds_banner():

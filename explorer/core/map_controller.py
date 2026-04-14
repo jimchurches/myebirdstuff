@@ -106,8 +106,10 @@ def build_species_overlay_map(
 
     *visit_marker_scheme*: when set and the visit overlay has no species filter, **All locations**
     markers use :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` (resolved via
-    :mod:`explorer.core.map_marker_colour_resolve`). When ``None`` or a species is selected, legacy
-    named colours from ``settings_schema_defaults`` apply.
+    :mod:`explorer.core.map_marker_colour_resolve`). **Lifer locations** mode uses the same scheme
+    for lifer / species emphasis pins (radius, stroke, fill opacities, and hex). When ``None`` or a
+    species is selected for the visit overlay, legacy named colours from ``settings_schema_defaults``
+    apply where the visit path has not been switched to scheme-driven hex.
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
@@ -137,6 +139,7 @@ def build_species_overlay_map(
             show_subspecies_lifers=show_subspecies_lifers,
             effective_use_full=effective_use_full,
             base_species_fn=base_species_fn,
+            visit_marker_scheme=visit_marker_scheme,
         )
 
     # Species overlay is driven by a non-empty *selected_species* (same as legacy behaviour), not only
