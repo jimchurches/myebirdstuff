@@ -19,8 +19,6 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_DEFAULT,
     MapMarkerColourScheme,
     active_map_marker_colour_scheme,
-    family_map_resolved_circle_radius_px,
-    family_map_resolved_fill_opacity,
 )
 from explorer.core.family_map_compute import (
     DENSITY_BAND_LABELS,
@@ -29,6 +27,8 @@ from explorer.core.family_map_compute import (
     format_family_location_popup_html,
 )
 from explorer.core.map_marker_colour_resolve import (
+    family_map_resolved_circle_radius_px,
+    family_map_resolved_fill_opacity,
     normalize_marker_hex,
     resolve_family_band_colours,
 )

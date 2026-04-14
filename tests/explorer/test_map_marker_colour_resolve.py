@@ -1,11 +1,19 @@
 """Tests for :mod:`explorer.core.map_marker_colour_resolve` (hierarchical marker hex)."""
 
-from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1, active_map_marker_colour_scheme
+from dataclasses import replace
+
+from explorer.app.streamlit.defaults import (
+    MAP_MARKER_COLOUR_SCHEME_1,
+    MAP_MARKER_COLOUR_SCHEME_3,
+    active_map_marker_colour_scheme,
+)
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_EDGE_HEX,
     MAP_MARKER_CATCHALL_FILL_HEX,
     MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
     MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    family_map_resolved_circle_radius_px,
+    family_map_resolved_fill_opacity,
     is_valid_hex_colour,
     normalize_marker_hex,
     resolve_location_visit_colours,
@@ -45,3 +53,17 @@ def test_is_valid_hex_colour() -> None:
     assert is_valid_hex_colour("#FFFFFF")
     assert not is_valid_hex_colour("")
     assert not is_valid_hex_colour("nope")
+
+
+def test_family_map_resolved_fill_opacity_experimental_scheme() -> None:
+    """Experimental (scheme 3) sets both sparse and legacy family fill to 0.85."""
+    assert family_map_resolved_fill_opacity(MAP_MARKER_COLOUR_SCHEME_3) == 0.85
+
+
+def test_family_map_resolved_fill_opacity_prefers_marker_circle_fill_opacity_families() -> None:
+    sch = replace(MAP_MARKER_COLOUR_SCHEME_1, marker_circle_fill_opacity_families=0.4)
+    assert family_map_resolved_fill_opacity(sch) == 0.4
+
+
+def test_family_map_resolved_circle_radius_px_uses_marker_default_without_families_override() -> None:
+    assert family_map_resolved_circle_radius_px(MAP_MARKER_COLOUR_SCHEME_3) == 5

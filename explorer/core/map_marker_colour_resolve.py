@@ -1,5 +1,7 @@
 """
-Hierarchical map marker hex resolution for Folium circle markers.
+Hierarchical map marker hex resolution for Folium circle markers, plus family-map **geometry**
+(radius / fill opacity) derived from :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme`
+so the explorer matches the map-marker design utility.
 
 Resolution order for each channel (fill / edge) independently:
 
@@ -17,6 +19,12 @@ from __future__ import annotations
 
 import re
 from typing import Any
+
+from explorer.app.streamlit.defaults import (
+    MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
+    clamp_map_marker_circle_fill_opacity,
+    clamp_map_marker_circle_radius_px,
+)
 
 _HEX_RE = re.compile(r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 
@@ -207,3 +215,48 @@ def resolve_family_band_colours(sch: Any, index: int) -> tuple[str, str]:
         catchall=MAP_MARKER_CATCHALL_EDGE_HEX,
     )
     return normalize_marker_hex(fill, channel="fill"), normalize_marker_hex(edge, channel="edge")
+
+
+def _map_marker_scheme_default_radius_px(sch: Any) -> int:
+    """``marker_default_circle_radius_px`` with clamp (same base as design ``scheme_seed_config``)."""
+    v = getattr(sch, "marker_default_circle_radius_px", None)
+    if v is None:
+        return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
+    try:
+        return clamp_map_marker_circle_radius_px(int(v))
+    except (TypeError, ValueError):
+        return clamp_map_marker_circle_radius_px(MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK)
+
+
+def family_map_resolved_circle_radius_px(sch: Any) -> int:
+    """Family map CircleMarker radius — matches :func:`~explorer.presentation.design_map_preview.scheme_seed_config`.
+
+    Uses ``marker_circle_radius_px_families`` when set; otherwise ``marker_default_circle_radius_px``
+    (not ``circle_marker_radius_px``).
+    """
+    md = _map_marker_scheme_default_radius_px(sch)
+    v = getattr(sch, "marker_circle_radius_px_families", None)
+    if v is None:
+        return md
+    try:
+        return clamp_map_marker_circle_radius_px(int(v))
+    except (TypeError, ValueError):
+        return md
+
+
+def family_map_resolved_fill_opacity(sch: Any) -> float:
+    """Family map fill opacity — matches ``scheme_seed_config`` / design preview.
+
+    Uses optional ``marker_circle_fill_opacity_families``; legacy fallback is ``circle_marker_fill_opacity``.
+    """
+    md_fo = clamp_map_marker_circle_fill_opacity(
+        getattr(sch, "marker_default_circle_fill_opacity", None),
+        fallback=0.88,
+    )
+    v = getattr(sch, "marker_circle_fill_opacity_families", None)
+    if v is not None:
+        return clamp_map_marker_circle_fill_opacity(v, fallback=md_fo)
+    return clamp_map_marker_circle_fill_opacity(
+        float(getattr(sch, "circle_marker_fill_opacity", 0.88)),
+        fallback=md_fo,
+    )
