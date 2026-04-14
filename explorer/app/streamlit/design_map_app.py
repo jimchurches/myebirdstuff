@@ -631,9 +631,9 @@ def main() -> None:
             _hex_text_input("Fill", key="design_hex_lf", help=H_HEX_LF)
             _hex_text_input("Edge", key="design_hex_le", help=H_HEX_LE)
             st.caption(
-                "On the **Lifer locations** map, subspecies-only pins and the **both** outer ring use "
-                "the **Species locations** sliders and hex (species radius, species fill opacity, "
-                "species / last-seen colours) — same fields as the species map’s non-lifer emphasis pins."
+                "On the **Lifer locations** map, **Subspecies** pins (taxon lifer only, when no species lifer "
+                "at that location) use the **Species locations** sliders and hex — same fields as species "
+                "emphasis pins on the species map."
             )
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_FAMILY_LOCATIONS], expanded=False):
@@ -733,7 +733,6 @@ def main() -> None:
                 "Bottom-left legend matches production maps (``build_legend_html``). "
                 "Copies **0–1** cluster near Canberra; **2–3** scatter. Family bands: highlight stroke on "
                 "copy **0** (cluster) and copy **2** (spread) so you can compare packed vs isolated. "
-                "Lifer **both**: outer ring is stroke-only; inner uses lifer fill. "
                 "Invalid hex falls back to catch-all white/cream (see ``map_marker_colour_resolve``); "
                 "resolved colours follow the scheme hierarchy in the sidebar preset."
             )

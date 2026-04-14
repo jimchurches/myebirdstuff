@@ -111,9 +111,9 @@ class PreviewMarkerRow:
     map_scopes: frozenset[str]
 
 
-# Order: All locations → Species → Lifer (incl. subspecies / both rings) → Family bands.
-# ``lifer_subspecies`` / ``lifer_both_*`` mirror :mod:`explorer.core.map_overlay_lifer_map` when
-# subspecies lifers are enabled.
+# Order: All locations → Species → Lifer (species + optional subspecies-only) → Family bands.
+# ``lifer_subspecies`` mirrors :mod:`explorer.core.map_overlay_lifer_map` when subspecies lifers are enabled
+# (taxon lifer only — no extra pin when a species lifer already covers that location).
 PREVIEW_MARKER_ROWS: tuple[PreviewMarkerRow, ...] = (
     # Same scopes as production visit map default markers — not lifer-only or family-only maps.
     PreviewMarkerRow("visit_default", frozenset({MAP_SCOPE_ALL_LOCATIONS, MAP_SCOPE_SPECIES_LOCATIONS})),
@@ -121,8 +121,6 @@ PREVIEW_MARKER_ROWS: tuple[PreviewMarkerRow, ...] = (
     PreviewMarkerRow("visit_lifer", frozenset({MAP_SCOPE_SPECIES_LOCATIONS, MAP_SCOPE_LIFER_LOCATIONS})),
     PreviewMarkerRow("visit_last_seen", frozenset({MAP_SCOPE_SPECIES_LOCATIONS})),
     PreviewMarkerRow("lifer_subspecies", frozenset({MAP_SCOPE_LIFER_LOCATIONS})),
-    PreviewMarkerRow("lifer_both_outer", frozenset({MAP_SCOPE_LIFER_LOCATIONS})),
-    PreviewMarkerRow("lifer_both_inner", frozenset({MAP_SCOPE_LIFER_LOCATIONS})),
     PreviewMarkerRow("family_0", frozenset({MAP_SCOPE_FAMILY_LOCATIONS})),
     PreviewMarkerRow("family_1", frozenset({MAP_SCOPE_FAMILY_LOCATIONS})),
     PreviewMarkerRow("family_2", frozenset({MAP_SCOPE_FAMILY_LOCATIONS})),
@@ -140,13 +138,6 @@ def _rows_for_scope(scope: str) -> tuple[PreviewMarkerRow, ...]:
     return tuple(out)
 
 
-def _location_key(kind: str, copy_index: int) -> tuple[str, int]:
-    """Outer/inner ``both`` rings share the same coordinates per copy."""
-    if kind in ("lifer_both_outer", "lifer_both_inner"):
-        return ("lifer_both_pair", copy_index)
-    return (kind, copy_index)
-
-
 def _location_for_marker(
     kind: str,
     copy_index: int,
@@ -157,7 +148,7 @@ def _location_for_marker(
 ) -> tuple[float, float]:
     """Pseudo-random point: *local* uses a tight Canberra box; otherwise wide viewport scatter."""
     seed_int = (
-        int(position_seed) * 10009 + hash(_location_key(kind, copy_index)) % 100003 + type_slot * 17
+        int(position_seed) * 10009 + hash((kind, copy_index)) % 100003 + type_slot * 17
     ) & 0xFFFFFFFF
     rng = random.Random(seed_int)
     if local:
@@ -229,8 +220,6 @@ _LEGEND_KIND_ORDER: tuple[str, ...] = (
     "visit_species",
     "visit_default",
     "lifer_subspecies",
-    "lifer_both_outer",
-    "lifer_both_inner",
     "family_0",
     "family_1",
     "family_2",
@@ -244,7 +233,7 @@ def _circle_radius_px_for_marker_kind(cfg: DesignMapPreviewConfig, kind: str) ->
         return cfg.marker_circle_radius_locations
     if kind in ("visit_species", "visit_last_seen"):
         return cfg.marker_circle_radius_species
-    if kind in ("visit_lifer", "lifer_subspecies", "lifer_both_outer", "lifer_both_inner"):
+    if kind in ("visit_lifer", "lifer_subspecies"):
         return cfg.marker_circle_radius_lifers
     if kind.startswith("family"):
         return cfg.marker_circle_radius_families
@@ -268,14 +257,6 @@ def _legend_entry_for_kind(kind: str, cfg: DesignMapPreviewConfig) -> tuple[str,
         return (normalize_hex_colour(cfg.last_seen_edge), normalize_hex_colour(cfg.last_seen_fill), "Last seen")
     if kind == "lifer_subspecies":
         return (normalize_hex_colour(cfg.species_edge), normalize_hex_colour(cfg.species_fill), "Subspecies")
-    if kind == "lifer_both_outer":
-        return (
-            normalize_hex_colour(cfg.species_edge),
-            normalize_hex_colour(cfg.marker_default_fill_hex),
-            "Both — outer ring",
-        )
-    if kind == "lifer_both_inner":
-        return (normalize_hex_colour(cfg.lifer_edge), normalize_hex_colour(cfg.lifer_fill), "Both — inner fill")
     if kind.startswith("family_"):
         bi = int(kind.rsplit("_", 1)[-1])
         if 0 <= bi < len(DENSITY_BAND_LABELS):
@@ -331,10 +312,6 @@ def _popup_text(kind: str, cfg: DesignMapPreviewConfig, *, copy_index: int) -> s
         return "Last seen"
     if kind == "lifer_subspecies":
         return "Subspecies"
-    if kind == "lifer_both_outer":
-        return "Both — outer ring"
-    if kind == "lifer_both_inner":
-        return "Both — inner fill"
     if kind.startswith("family"):
         bi = int(kind[-1])
         base = f"{DENSITY_BAND_LABELS[bi]} species at location"
@@ -435,12 +412,9 @@ def build_design_preview_map(
     _loc_memo: dict[tuple[tuple[str, int], bool], tuple[float, float]] = {}
 
     def _memo_loc(kind: str, copy_index: int, type_slot: int, local: bool) -> tuple[float, float]:
-        lk = _location_key(kind, copy_index)
-        key = (lk, local)
+        key = (kind, copy_index, local)
         if key not in _loc_memo:
-            # Paired lifer “both” rings share one draw so inner/outer align (``map_overlay_lifer_map``).
-            slot = 0 if lk[0] == "lifer_both_pair" else type_slot
-            _loc_memo[key] = _location_for_marker(kind, copy_index, slot, position_seed, local=local)
+            _loc_memo[key] = _location_for_marker(kind, copy_index, type_slot, position_seed, local=local)
         return _loc_memo[key]
 
     for type_slot, row in enumerate(rows):
@@ -478,18 +452,6 @@ def build_design_preview_map(
                 stroke = normalize_hex_colour(cfg.species_edge)
                 fill_c = normalize_hex_colour(cfg.species_fill)
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
-                sw = max(1, int(cfg.stroke_weight_visit))
-            elif kind == "lifer_both_outer":
-                stroke = normalize_hex_colour(cfg.species_edge)
-                fill_c = normalize_hex_colour(cfg.species_fill)
-                fo = 0.0
-                fill = False
-                radius_px = max(1, int(_circle_radius_px_for_marker_kind(cfg, kind)) + 2)
-                sw = max(1, int(cfg.stroke_weight_visit))
-            elif kind == "lifer_both_inner":
-                stroke = normalize_hex_colour(cfg.lifer_edge)
-                fill_c = normalize_hex_colour(cfg.lifer_fill)
-                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_lifers))
                 sw = max(1, int(cfg.stroke_weight_visit))
             else:
                 bi = int(kind[-1])

@@ -81,9 +81,9 @@ def prepare_lifer_last_seen(
 class LiferSiteEntry(TypedDict):
     """One species line in a lifer-location popup (base and/or subspecies lifer semantics).
 
-    - base-level lifer: first record for the base species
+    - base-level lifer: first record for the base species (species lifer pin when present at the location)
     - taxon-level lifer: first record for the specific taxon (subspecies)
-    - both: same underlying record satisfied both
+    - entries may set both flags when the same checklist row satisfies base and taxon; the map uses one **Lifer** pin
     """
 
     scientific_name: str
@@ -154,7 +154,7 @@ def aggregate_lifer_sites(
         r = subset.iloc[0]
         sci = str(r["Scientific Name"])
         # Only treat taxon-level lifers as "subspecies lifers" when the scientific name has 3+ parts.
-        # A 2-part name duplicates the base-species lifer and must not create a spurious "Both" pin.
+        # A 2-part name duplicates the base-species lifer and must not create a spurious extra pin.
         if len(sci.strip().split()) < 3:
             continue
         com = "" if pd.isna(r.get("Common Name")) else str(r["Common Name"])

@@ -227,6 +227,6 @@ def test_lifer_map_mode_builds_banner():
     )
     assert r2.warning is None
     assert r2.map is not None
-    html2 = r2.map._repr_html_()
-    assert "Sub-species included" in html2
+    html2 = r2.map.get_root().render()
+    assert "separate pin only when no species lifer" in html2
     assert "Visited:" not in html2

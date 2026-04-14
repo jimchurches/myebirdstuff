@@ -655,7 +655,13 @@ def build_lifer_locations_banner_html(
         f'{n_lifer_species} lifer{"s" if n_lifer_species != 1 else ""}'
         f'{sep}{n_locations} {loc_w}'
     )
-    note = _banner_muted_line("Sub-species included") if include_subspecies else ""
+    note = (
+        _banner_muted_line(
+            "Sub-species lifers: separate pin only when no species lifer at that location"
+        )
+        if include_subspecies
+        else ""
+    )
     date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
     if note and date_block:
         muted_stack = f"{note}<br>{date_block}"

@@ -192,9 +192,10 @@ def build_lifer_overlay_map(
     else:
 
         def _loc_kind(entries: list[dict]) -> str:
-            for e in entries:
-                if e.get("is_base_lifer") and e.get("is_taxon_lifer"):
-                    return "both"
+            """``lifer`` = species first-seen (base lifer) at this location; ``subspecies`` = taxon lifer only.
+
+            When base and taxon lifers coincide, use a single **Lifer** pin (no double ring).
+            """
             for e in entries:
                 if e.get("is_base_lifer"):
                     return "lifer"
@@ -207,8 +208,6 @@ def build_lifer_overlay_map(
             legend_items.append((le, lf, "Lifer"))
         if "subspecies" in kinds_present:
             legend_items.append((se, sp, "Subspecies"))
-        if "both" in kinds_present:
-            legend_items.append((le, lf, "Both"))
         species_map.get_root().html.add_child(Element(build_legend_html(legend_items)))
 
     for _, row in loc_rows.iterrows():
@@ -249,28 +248,7 @@ def build_lifer_overlay_map(
         else:
             latlng = [row["Latitude"], row["Longitude"]]
             loc_kind = loc_kind_by_id.get(lid, "lifer")
-            if loc_kind == "both":
-                outer_popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
-                folium.CircleMarker(
-                    location=latlng,
-                    radius=r_lifer + 2,
-                    color=se,
-                    weight=stroke_w,
-                    fill=False,
-                    popup=outer_popup,
-                ).add_to(species_map)
-                inner_popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
-                folium.CircleMarker(
-                    location=latlng,
-                    radius=r_lifer,
-                    color=le,
-                    weight=stroke_w,
-                    fill=True,
-                    fill_color=lf,
-                    fill_opacity=fo_lif,
-                    popup=inner_popup,
-                ).add_to(species_map)
-            elif loc_kind == "subspecies":
+            if loc_kind == "subspecies":
                 popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
                 folium.CircleMarker(
                     location=latlng,
