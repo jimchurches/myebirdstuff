@@ -166,12 +166,12 @@ def resolve_species_visit_pin(
     )
     sw = max(1, int(getattr(sch, "visit_stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
     if role == "lifer":
-        fill, edge = resolve_lifer_colours(sch)
-        r = _collection_radius_px(sch, "marker_circle_radius_px_lifers", md)
+        fill, edge = resolve_species_map_lifer_colours(sch)
+        r = _collection_radius_px(sch, "marker_circle_radius_px_species_map_lifer", md)
         fo = _collection_fill_opacity_visit(
             sch,
-            "marker_circle_fill_opacity_lifers",
-            float(getattr(sch, "visit_fill_opacity_lifers", 0.9)),
+            "marker_circle_fill_opacity_species_map_lifer",
+            float(getattr(sch, "visit_fill_opacity_species_map_lifer", 0.9)),
             md_fo=md_fo,
         )
     elif role == "last_seen":
@@ -211,11 +211,11 @@ def resolve_lifer_overlay_pin_params(
 
     Returns ``(lifer_edge, lifer_fill, species_edge, species_fill, r_lifer, r_species, stroke_w, fo_lifer, fo_spec)``.
     """
-    lf_fill, lf_edge = resolve_lifer_colours(sch)
-    sp_fill, sp_edge = resolve_species_colours(sch)
+    lf_fill, lf_edge = resolve_lifer_map_lifer_colours(sch)
+    sp_fill, sp_edge = resolve_lifer_map_subspecies_colours(sch)
     md = _map_marker_scheme_default_radius_px(sch)
-    r_lifer = _collection_radius_px(sch, "marker_circle_radius_px_lifers", md)
-    r_species = _collection_radius_px(sch, "marker_circle_radius_px_species", md)
+    r_lifer = _collection_radius_px(sch, "marker_circle_radius_px_lifer_map_lifer", md)
+    r_sub = _collection_radius_px(sch, "marker_circle_radius_px_lifer_map_subspecies", md)
     sw = max(1, int(getattr(sch, "visit_stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
     md_fo = clamp_map_marker_circle_fill_opacity(
         getattr(sch, "marker_default_circle_fill_opacity", None),
@@ -223,17 +223,17 @@ def resolve_lifer_overlay_pin_params(
     )
     fo_lif = _collection_fill_opacity_visit(
         sch,
-        "marker_circle_fill_opacity_lifers",
-        float(getattr(sch, "visit_fill_opacity_lifers", 0.9)),
+        "marker_circle_fill_opacity_lifer_map_lifer",
+        float(getattr(sch, "visit_fill_opacity_lifer_map_lifer", 0.9)),
         md_fo=md_fo,
     )
-    fo_spec = _collection_fill_opacity_visit(
+    fo_sub = _collection_fill_opacity_visit(
         sch,
-        "marker_circle_fill_opacity_species",
-        float(getattr(sch, "visit_fill_opacity_emphasis", 0.9)),
+        "marker_circle_fill_opacity_lifer_map_subspecies",
+        float(getattr(sch, "visit_fill_opacity_lifer_map_subspecies", 0.9)),
         md_fo=md_fo,
     )
-    return lf_edge, lf_fill, sp_edge, sp_fill, r_lifer, r_species, sw, fo_lif, fo_spec
+    return lf_edge, lf_fill, sp_edge, sp_fill, r_lifer, r_sub, sw, fo_lif, fo_sub
 
 
 def resolve_species_colours(sch: Any) -> tuple[str, str]:
@@ -256,19 +256,59 @@ def resolve_species_colours(sch: Any) -> tuple[str, str]:
     return normalize_marker_hex(fill, channel="fill"), normalize_marker_hex(edge, channel="edge")
 
 
-def resolve_lifer_colours(sch: Any) -> tuple[str, str]:
-    """Lifer emphasis markers."""
+def resolve_species_map_lifer_colours(sch: Any) -> tuple[str, str]:
+    """Species-filtered map — **Lifer** pin (first-seen location for the selected taxon)."""
     o = _overrides(sch)
     fill = _resolve_channel(
-        override=getattr(o, "lifer_fill_hex", None) if o else None,
-        specific=getattr(sch, "marker_lifer_fill_hex", None),
+        override=getattr(o, "species_map_lifer_fill_hex", None) if o else None,
+        specific=getattr(sch, "marker_species_map_lifer_fill_hex", None),
         global_=getattr(sch, "marker_default_fill_hex", None),
         scheme_default=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
         catchall=MAP_MARKER_CATCHALL_FILL_HEX,
     )
     edge = _resolve_channel(
-        override=getattr(o, "lifer_edge_hex", None) if o else None,
-        specific=getattr(sch, "marker_lifer_edge_hex", None),
+        override=getattr(o, "species_map_lifer_edge_hex", None) if o else None,
+        specific=getattr(sch, "marker_species_map_lifer_edge_hex", None),
+        global_=getattr(sch, "marker_default_edge_hex", None),
+        scheme_default=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+        catchall=MAP_MARKER_CATCHALL_EDGE_HEX,
+    )
+    return normalize_marker_hex(fill, channel="fill"), normalize_marker_hex(edge, channel="edge")
+
+
+def resolve_lifer_map_lifer_colours(sch: Any) -> tuple[str, str]:
+    """Lifer-locations map — base-species lifer pin."""
+    o = _overrides(sch)
+    fill = _resolve_channel(
+        override=getattr(o, "lifer_map_lifer_fill_hex", None) if o else None,
+        specific=getattr(sch, "marker_lifer_map_lifer_fill_hex", None),
+        global_=getattr(sch, "marker_default_fill_hex", None),
+        scheme_default=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+        catchall=MAP_MARKER_CATCHALL_FILL_HEX,
+    )
+    edge = _resolve_channel(
+        override=getattr(o, "lifer_map_lifer_edge_hex", None) if o else None,
+        specific=getattr(sch, "marker_lifer_map_lifer_edge_hex", None),
+        global_=getattr(sch, "marker_default_edge_hex", None),
+        scheme_default=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+        catchall=MAP_MARKER_CATCHALL_EDGE_HEX,
+    )
+    return normalize_marker_hex(fill, channel="fill"), normalize_marker_hex(edge, channel="edge")
+
+
+def resolve_lifer_map_subspecies_colours(sch: Any) -> tuple[str, str]:
+    """Lifer-locations map — taxon-only (subspecies) lifer pin."""
+    o = _overrides(sch)
+    fill = _resolve_channel(
+        override=getattr(o, "lifer_map_subspecies_fill_hex", None) if o else None,
+        specific=getattr(sch, "marker_lifer_map_subspecies_fill_hex", None),
+        global_=getattr(sch, "marker_default_fill_hex", None),
+        scheme_default=MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+        catchall=MAP_MARKER_CATCHALL_FILL_HEX,
+    )
+    edge = _resolve_channel(
+        override=getattr(o, "lifer_map_subspecies_edge_hex", None) if o else None,
+        specific=getattr(sch, "marker_lifer_map_subspecies_edge_hex", None),
         global_=getattr(sch, "marker_default_edge_hex", None),
         scheme_default=MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
         catchall=MAP_MARKER_CATCHALL_EDGE_HEX,

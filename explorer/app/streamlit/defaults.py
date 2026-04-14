@@ -141,8 +141,12 @@ class MapMarkerColourOverrides:
     location_visit_edge_hex: str | None = None
     species_fill_hex: str | None = None
     species_edge_hex: str | None = None
-    lifer_fill_hex: str | None = None
-    lifer_edge_hex: str | None = None
+    species_map_lifer_fill_hex: str | None = None
+    species_map_lifer_edge_hex: str | None = None
+    lifer_map_lifer_fill_hex: str | None = None
+    lifer_map_lifer_edge_hex: str | None = None
+    lifer_map_subspecies_fill_hex: str | None = None
+    lifer_map_subspecies_edge_hex: str | None = None
     last_seen_fill_hex: str | None = None
     last_seen_edge_hex: str | None = None
 
@@ -172,8 +176,12 @@ class MapMarkerColourScheme:
     marker_location_visit_edge_hex: str
     marker_species_fill_hex: str
     marker_species_edge_hex: str
-    marker_lifer_fill_hex: str
-    marker_lifer_edge_hex: str
+    marker_species_map_lifer_fill_hex: str
+    marker_species_map_lifer_edge_hex: str
+    marker_lifer_map_lifer_fill_hex: str
+    marker_lifer_map_lifer_edge_hex: str
+    marker_lifer_map_subspecies_fill_hex: str
+    marker_lifer_map_subspecies_edge_hex: str
     marker_last_seen_fill_hex: str
     marker_last_seen_edge_hex: str
     circle_marker_radius_px: int
@@ -187,7 +195,9 @@ class MapMarkerColourScheme:
     visit_stroke_weight: int
     visit_fill_opacity_all_locations: float
     visit_fill_opacity_emphasis: float
-    visit_fill_opacity_lifers: float
+    visit_fill_opacity_species_map_lifer: float
+    visit_fill_opacity_lifer_map_lifer: float
+    visit_fill_opacity_lifer_map_subspecies: float
     popup_max_width_px: int
     fit_bounds_padding_px: int
     fit_bounds_max_zoom: int
@@ -196,11 +206,15 @@ class MapMarkerColourScheme:
     # Optional per-map collection circle radii (None = use ``marker_default_circle_radius_px``).
     marker_circle_radius_px_locations: int | None = field(default=None)
     marker_circle_radius_px_species: int | None = field(default=None)
-    marker_circle_radius_px_lifers: int | None = field(default=None)
+    marker_circle_radius_px_species_map_lifer: int | None = field(default=None)
+    marker_circle_radius_px_lifer_map_lifer: int | None = field(default=None)
+    marker_circle_radius_px_lifer_map_subspecies: int | None = field(default=None)
     marker_circle_radius_px_families: int | None = field(default=None)
     marker_circle_fill_opacity_locations: float | None = field(default=None)
     marker_circle_fill_opacity_species: float | None = field(default=None)
-    marker_circle_fill_opacity_lifers: float | None = field(default=None)
+    marker_circle_fill_opacity_species_map_lifer: float | None = field(default=None)
+    marker_circle_fill_opacity_lifer_map_lifer: float | None = field(default=None)
+    marker_circle_fill_opacity_lifer_map_subspecies: float | None = field(default=None)
     marker_circle_fill_opacity_families: float | None = field(default=None)
     # All-locations map only: Leaflet.markercluster **cluster icon** colours by tier and channel:
     # ``(small_fill, small_border, small_halo, medium_*, large_*)``. The halo is drawn as a ``box-shadow``
@@ -229,8 +243,12 @@ _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
     marker_location_visit_edge_hex="#008000",
     marker_species_fill_hex="#FF0000",
     marker_species_edge_hex="#800080",
-    marker_lifer_fill_hex="#FFFF00",
-    marker_lifer_edge_hex="#800080",
+    marker_species_map_lifer_fill_hex="#FFFF00",
+    marker_species_map_lifer_edge_hex="#800080",
+    marker_lifer_map_lifer_fill_hex="#FFFF00",
+    marker_lifer_map_lifer_edge_hex="#800080",
+    marker_lifer_map_subspecies_fill_hex="#FF0000",
+    marker_lifer_map_subspecies_edge_hex="#800080",
     marker_last_seen_fill_hex="#90EE90",
     marker_last_seen_edge_hex="#800080",
     circle_marker_radius_px=5,
@@ -254,7 +272,9 @@ _MAP_MARKER_COLOUR_SCHEME_1_VALUES = dict(
     visit_stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     visit_fill_opacity_all_locations=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
     visit_fill_opacity_emphasis=MAP_PIN_FILL_OPACITY_EMPHASIS,
-    visit_fill_opacity_lifers=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_fill_opacity_species_map_lifer=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_fill_opacity_lifer_map_lifer=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_fill_opacity_lifer_map_subspecies=MAP_PIN_FILL_OPACITY_EMPHASIS,
     popup_max_width_px=320,
     fit_bounds_padding_px=48,
     fit_bounds_max_zoom=6,
@@ -274,8 +294,12 @@ _MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
     marker_location_visit_edge_hex="#008000",
     marker_species_fill_hex="#FF0000",
     marker_species_edge_hex="#800080",
-    marker_lifer_fill_hex="#FFFF00",
-    marker_lifer_edge_hex="#800080",
+    marker_species_map_lifer_fill_hex="#FFFF00",
+    marker_species_map_lifer_edge_hex="#800080",
+    marker_lifer_map_lifer_fill_hex="#FFFF00",
+    marker_lifer_map_lifer_edge_hex="#800080",
+    marker_lifer_map_subspecies_fill_hex="#FF0000",
+    marker_lifer_map_subspecies_edge_hex="#800080",
     marker_last_seen_fill_hex="#90EE90",
     marker_last_seen_edge_hex="#800080",
     circle_marker_radius_px=5,
@@ -299,7 +323,9 @@ _MAP_MARKER_COLOUR_SCHEME_2_VALUES = dict(
     visit_stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     visit_fill_opacity_all_locations=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
     visit_fill_opacity_emphasis=MAP_PIN_FILL_OPACITY_EMPHASIS,
-    visit_fill_opacity_lifers=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_fill_opacity_species_map_lifer=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_fill_opacity_lifer_map_lifer=MAP_PIN_FILL_OPACITY_EMPHASIS,
+    visit_fill_opacity_lifer_map_subspecies=MAP_PIN_FILL_OPACITY_EMPHASIS,
     popup_max_width_px=320,
     fit_bounds_padding_px=48,
     fit_bounds_max_zoom=6,
@@ -319,8 +345,12 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     marker_location_visit_edge_hex='#4D2D48',
     marker_species_fill_hex='#B78FAF',
     marker_species_edge_hex='#704868',
-    marker_lifer_fill_hex='#FCEC52',
-    marker_lifer_edge_hex='#566776',
+    marker_species_map_lifer_fill_hex='#FCEC52',
+    marker_species_map_lifer_edge_hex='#566776',
+    marker_lifer_map_lifer_fill_hex='#FCEC52',
+    marker_lifer_map_lifer_edge_hex='#566776',
+    marker_lifer_map_subspecies_fill_hex='#B78FAF',
+    marker_lifer_map_subspecies_edge_hex='#704868',
     marker_last_seen_fill_hex='#9EA93F',
     marker_last_seen_edge_hex='#704868',
     circle_marker_radius_px=5,
@@ -344,7 +374,9 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     visit_stroke_weight=2,
     visit_fill_opacity_all_locations=0.9,
     visit_fill_opacity_emphasis=0.9,
-    visit_fill_opacity_lifers=0.9,
+    visit_fill_opacity_species_map_lifer=0.9,
+    visit_fill_opacity_lifer_map_lifer=0.9,
+    visit_fill_opacity_lifer_map_subspecies=0.9,
     popup_max_width_px=320,
     fit_bounds_padding_px=48,
     fit_bounds_max_zoom=6,
@@ -352,7 +384,9 @@ _MAP_MARKER_COLOUR_SCHEME_3_VALUES = dict(
     legend_highlight_swatch_fill_index=0,
     marker_circle_fill_opacity_locations=0.9,
     marker_circle_fill_opacity_species=0.9,
-    marker_circle_fill_opacity_lifers=0.9,
+    marker_circle_fill_opacity_species_map_lifer=0.9,
+    marker_circle_fill_opacity_lifer_map_lifer=0.9,
+    marker_circle_fill_opacity_lifer_map_subspecies=0.9,
     marker_circle_fill_opacity_families=0.85,
     marker_cluster_colours_hex=(
         '#DFCEDE',

@@ -45,7 +45,9 @@ def _append_sparse_radius_overrides(lines: list[str], cfg: DesignMapPreviewConfi
     pairs: tuple[tuple[str, int], ...] = (
         ("marker_circle_radius_px_locations", cfg.marker_circle_radius_locations),
         ("marker_circle_radius_px_species", cfg.marker_circle_radius_species),
-        ("marker_circle_radius_px_lifers", cfg.marker_circle_radius_lifers),
+        ("marker_circle_radius_px_species_map_lifer", cfg.marker_circle_radius_species_map_lifer),
+        ("marker_circle_radius_px_lifer_map_lifer", cfg.marker_circle_radius_lifer_map_lifer),
+        ("marker_circle_radius_px_lifer_map_subspecies", cfg.marker_circle_radius_lifer_map_subspecies),
         ("marker_circle_radius_px_families", cfg.marker_circle_radius_families),
     )
     for name, val in pairs:
@@ -84,7 +86,9 @@ def _append_sparse_fill_opacity_overrides(lines: list[str], cfg: DesignMapPrevie
     pairs: tuple[tuple[str, float], ...] = (
         ("marker_circle_fill_opacity_locations", cfg.marker_circle_fill_opacity_locations),
         ("marker_circle_fill_opacity_species", cfg.marker_circle_fill_opacity_species),
-        ("marker_circle_fill_opacity_lifers", cfg.marker_circle_fill_opacity_lifers),
+        ("marker_circle_fill_opacity_species_map_lifer", cfg.marker_circle_fill_opacity_species_map_lifer),
+        ("marker_circle_fill_opacity_lifer_map_lifer", cfg.marker_circle_fill_opacity_lifer_map_lifer),
+        ("marker_circle_fill_opacity_lifer_map_subspecies", cfg.marker_circle_fill_opacity_lifer_map_subspecies),
         ("marker_circle_fill_opacity_families", cfg.marker_circle_fill_opacity_families),
     )
     for name, val in pairs:
@@ -112,8 +116,12 @@ def format_map_marker_colour_scheme_dict_py(
         f"    marker_location_visit_edge_hex={cfg.default_edge!r},",
         f"    marker_species_fill_hex={cfg.species_fill!r},",
         f"    marker_species_edge_hex={cfg.species_edge!r},",
-        f"    marker_lifer_fill_hex={cfg.lifer_fill!r},",
-        f"    marker_lifer_edge_hex={cfg.lifer_edge!r},",
+        f"    marker_species_map_lifer_fill_hex={cfg.species_map_lifer_fill!r},",
+        f"    marker_species_map_lifer_edge_hex={cfg.species_map_lifer_edge!r},",
+        f"    marker_lifer_map_lifer_fill_hex={cfg.lifer_map_lifer_fill!r},",
+        f"    marker_lifer_map_lifer_edge_hex={cfg.lifer_map_lifer_edge!r},",
+        f"    marker_lifer_map_subspecies_fill_hex={cfg.lifer_map_subspecies_fill!r},",
+        f"    marker_lifer_map_subspecies_edge_hex={cfg.lifer_map_subspecies_edge!r},",
         f"    marker_last_seen_fill_hex={cfg.last_seen_fill!r},",
         f"    marker_last_seen_edge_hex={cfg.last_seen_edge!r},",
         f"    circle_marker_radius_px={int(cfg.marker_circle_radius_families)},",
@@ -127,7 +135,9 @@ def format_map_marker_colour_scheme_dict_py(
         f"    visit_stroke_weight={int(cfg.stroke_weight_visit)},",
         f"    visit_fill_opacity_all_locations={_fmt_float(cfg.marker_circle_fill_opacity_locations)},",
         f"    visit_fill_opacity_emphasis={_fmt_float(cfg.marker_circle_fill_opacity_species)},",
-        f"    visit_fill_opacity_lifers={_fmt_float(cfg.marker_circle_fill_opacity_lifers)},",
+        f"    visit_fill_opacity_species_map_lifer={_fmt_float(cfg.marker_circle_fill_opacity_species_map_lifer)},",
+        f"    visit_fill_opacity_lifer_map_lifer={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_lifer)},",
+        f"    visit_fill_opacity_lifer_map_subspecies={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_subspecies)},",
         f"    popup_max_width_px={int(template.popup_max_width_px)},",
         f"    fit_bounds_padding_px={int(template.fit_bounds_padding_px)},",
         f"    fit_bounds_max_zoom={int(template.fit_bounds_max_zoom)},",

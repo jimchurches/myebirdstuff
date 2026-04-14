@@ -37,10 +37,12 @@ from explorer.core.map_marker_colour_resolve import (
     normalize_marker_hex,
     resolve_family_band_colours,
     resolve_last_seen_colours,
-    resolve_lifer_colours,
+    resolve_lifer_map_lifer_colours,
+    resolve_lifer_map_subspecies_colours,
     resolve_location_visit_colours,
     resolve_marker_global_colours,
     resolve_species_colours,
+    resolve_species_map_lifer_colours,
 )
 from explorer.presentation.map_renderer import (
     build_legend_html,
@@ -111,15 +113,16 @@ class PreviewMarkerRow:
     map_scopes: frozenset[str]
 
 
-# Order: All locations → Species → Lifer (species + optional subspecies-only) → Family bands.
-# ``lifer_subspecies`` mirrors :mod:`explorer.core.map_overlay_lifer_map` when subspecies lifers are enabled
-# (taxon lifer only — no extra pin when a species lifer already covers that location).
+# Order: All locations → Species map roles → Lifer-map-only roles → Family bands.
+# ``species_visit_lifer`` is the species-filtered map lifer pin; ``lifer_map_lifer`` / ``lifer_subspecies``
+# mirror :mod:`explorer.core.map_overlay_lifer_map` (base lifer vs taxon-only subspecies lifer).
 PREVIEW_MARKER_ROWS: tuple[PreviewMarkerRow, ...] = (
     # Same scopes as production visit map default markers — not lifer-only or family-only maps.
     PreviewMarkerRow("visit_default", frozenset({MAP_SCOPE_ALL_LOCATIONS, MAP_SCOPE_SPECIES_LOCATIONS})),
     PreviewMarkerRow("visit_species", frozenset({MAP_SCOPE_SPECIES_LOCATIONS})),
-    PreviewMarkerRow("visit_lifer", frozenset({MAP_SCOPE_SPECIES_LOCATIONS, MAP_SCOPE_LIFER_LOCATIONS})),
+    PreviewMarkerRow("species_visit_lifer", frozenset({MAP_SCOPE_SPECIES_LOCATIONS})),
     PreviewMarkerRow("visit_last_seen", frozenset({MAP_SCOPE_SPECIES_LOCATIONS})),
+    PreviewMarkerRow("lifer_map_lifer", frozenset({MAP_SCOPE_LIFER_LOCATIONS})),
     PreviewMarkerRow("lifer_subspecies", frozenset({MAP_SCOPE_LIFER_LOCATIONS})),
     PreviewMarkerRow("family_0", frozenset({MAP_SCOPE_FAMILY_LOCATIONS})),
     PreviewMarkerRow("family_1", frozenset({MAP_SCOPE_FAMILY_LOCATIONS})),
@@ -171,7 +174,9 @@ class DesignMapPreviewConfig:
     marker_default_circle_radius_px: int
     marker_circle_radius_locations: int
     marker_circle_radius_species: int
-    marker_circle_radius_lifers: int
+    marker_circle_radius_species_map_lifer: int
+    marker_circle_radius_lifer_map_lifer: int
+    marker_circle_radius_lifer_map_subspecies: int
     marker_circle_radius_families: int
     stroke_weight_visit: int
     stroke_weight_family: int
@@ -179,7 +184,9 @@ class DesignMapPreviewConfig:
     # Resolved circle fill opacities (``marker_default_circle_fill_opacity`` unless overridden in scheme).
     marker_circle_fill_opacity_locations: float
     marker_circle_fill_opacity_species: float
-    marker_circle_fill_opacity_lifers: float
+    marker_circle_fill_opacity_species_map_lifer: float
+    marker_circle_fill_opacity_lifer_map_lifer: float
+    marker_circle_fill_opacity_lifer_map_subspecies: float
     marker_circle_fill_opacity_families: float
     # Align with ``MapMarkerColourScheme.marker_default_*`` (design export / future wiring).
     marker_default_fill_hex: str
@@ -191,8 +198,12 @@ class DesignMapPreviewConfig:
     default_fill: str
     species_edge: str
     species_fill: str
-    lifer_edge: str
-    lifer_fill: str
+    species_map_lifer_edge: str
+    species_map_lifer_fill: str
+    lifer_map_lifer_edge: str
+    lifer_map_lifer_fill: str
+    lifer_map_subspecies_edge: str
+    lifer_map_subspecies_fill: str
     last_seen_edge: str
     last_seen_fill: str
     # Family density bands 0..3
@@ -215,10 +226,11 @@ class DesignMapPreviewConfig:
 # Bottom-left legend row order: visit map matches ``map_overlay_visit_map`` (Lifer → Last seen → Species → Other);
 # then lifer-map extras; then density bands (``DENSITY_BAND_LABELS`` + ``species at location``, same as family_map_folium).
 _LEGEND_KIND_ORDER: tuple[str, ...] = (
-    "visit_lifer",
+    "species_visit_lifer",
     "visit_last_seen",
     "visit_species",
     "visit_default",
+    "lifer_map_lifer",
     "lifer_subspecies",
     "family_0",
     "family_1",
@@ -233,8 +245,12 @@ def _circle_radius_px_for_marker_kind(cfg: DesignMapPreviewConfig, kind: str) ->
         return cfg.marker_circle_radius_locations
     if kind in ("visit_species", "visit_last_seen"):
         return cfg.marker_circle_radius_species
-    if kind in ("visit_lifer", "lifer_subspecies"):
-        return cfg.marker_circle_radius_lifers
+    if kind == "species_visit_lifer":
+        return cfg.marker_circle_radius_species_map_lifer
+    if kind == "lifer_map_lifer":
+        return cfg.marker_circle_radius_lifer_map_lifer
+    if kind == "lifer_subspecies":
+        return cfg.marker_circle_radius_lifer_map_subspecies
     if kind.startswith("family"):
         return cfg.marker_circle_radius_families
     return cfg.marker_default_circle_radius_px
@@ -251,12 +267,26 @@ def _legend_entry_for_kind(kind: str, cfg: DesignMapPreviewConfig) -> tuple[str,
         return (cfg.default_edge, cfg.default_fill, lab)
     if kind == "visit_species":
         return (normalize_hex_colour(cfg.species_edge), normalize_hex_colour(cfg.species_fill), "Species")
-    if kind == "visit_lifer":
-        return (normalize_hex_colour(cfg.lifer_edge), normalize_hex_colour(cfg.lifer_fill), "Lifer")
+    if kind == "species_visit_lifer":
+        return (
+            normalize_hex_colour(cfg.species_map_lifer_edge),
+            normalize_hex_colour(cfg.species_map_lifer_fill),
+            "Lifer",
+        )
     if kind == "visit_last_seen":
         return (normalize_hex_colour(cfg.last_seen_edge), normalize_hex_colour(cfg.last_seen_fill), "Last seen")
+    if kind == "lifer_map_lifer":
+        return (
+            normalize_hex_colour(cfg.lifer_map_lifer_edge),
+            normalize_hex_colour(cfg.lifer_map_lifer_fill),
+            "Lifer",
+        )
     if kind == "lifer_subspecies":
-        return (normalize_hex_colour(cfg.species_edge), normalize_hex_colour(cfg.species_fill), "Subspecies")
+        return (
+            normalize_hex_colour(cfg.lifer_map_subspecies_edge),
+            normalize_hex_colour(cfg.lifer_map_subspecies_fill),
+            "Subspecies",
+        )
     if kind.startswith("family_"):
         bi = int(kind.rsplit("_", 1)[-1])
         if 0 <= bi < len(DENSITY_BAND_LABELS):
@@ -306,8 +336,10 @@ def _popup_text(kind: str, cfg: DesignMapPreviewConfig, *, copy_index: int) -> s
         )
     if kind == "visit_species":
         return "Species"
-    if kind == "visit_lifer":
-        return "Lifer"
+    if kind == "species_visit_lifer":
+        return "Lifer (species map)"
+    if kind == "lifer_map_lifer":
+        return "Lifer (lifer map)"
     if kind == "visit_last_seen":
         return "Last seen"
     if kind == "lifer_subspecies":
@@ -405,7 +437,7 @@ def build_design_preview_map(
 
     visit_emphasis_specs: list[tuple[str, tuple[str, str]]] = [
         ("visit_species", (cfg.species_edge, cfg.species_fill)),
-        ("visit_lifer", (cfg.lifer_edge, cfg.lifer_fill)),
+        ("species_visit_lifer", (cfg.species_map_lifer_edge, cfg.species_map_lifer_fill)),
         ("visit_last_seen", (cfg.last_seen_edge, cfg.last_seen_fill)),
     ]
 
@@ -436,11 +468,16 @@ def build_design_preview_map(
                 fill_c = normalize_hex_colour(f)
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
                 sw = max(1, int(cfg.stroke_weight_visit))
-            elif kind == "visit_lifer":
+            elif kind == "species_visit_lifer":
                 _slug, (e, f) = next(x for x in visit_emphasis_specs if x[0] == kind)
                 stroke = normalize_hex_colour(e)
                 fill_c = normalize_hex_colour(f)
-                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_lifers))
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species_map_lifer))
+                sw = max(1, int(cfg.stroke_weight_visit))
+            elif kind == "lifer_map_lifer":
+                stroke = normalize_hex_colour(cfg.lifer_map_lifer_edge)
+                fill_c = normalize_hex_colour(cfg.lifer_map_lifer_fill)
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_lifer_map_lifer))
                 sw = max(1, int(cfg.stroke_weight_visit))
             elif kind == "visit_last_seen":
                 _slug, (e, f) = next(x for x in visit_emphasis_specs if x[0] == kind)
@@ -449,9 +486,9 @@ def build_design_preview_map(
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
                 sw = max(1, int(cfg.stroke_weight_visit))
             elif kind == "lifer_subspecies":
-                stroke = normalize_hex_colour(cfg.species_edge)
-                fill_c = normalize_hex_colour(cfg.species_fill)
-                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
+                stroke = normalize_hex_colour(cfg.lifer_map_subspecies_edge)
+                fill_c = normalize_hex_colour(cfg.lifer_map_subspecies_fill)
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_lifer_map_subspecies))
                 sw = max(1, int(cfg.stroke_weight_visit))
             else:
                 bi = int(kind[-1])
@@ -509,7 +546,9 @@ def scheme_seed_config(
     g_fill, g_edge = resolve_marker_global_colours(sch)
     d_fill, d_edge = resolve_location_visit_colours(sch)
     sp_fill, sp_edge = resolve_species_colours(sch)
-    lf_fill, lf_edge = resolve_lifer_colours(sch)
+    sml_fill, sml_edge = resolve_species_map_lifer_colours(sch)
+    lml_fill, lml_edge = resolve_lifer_map_lifer_colours(sch)
+    lms_fill, lms_edge = resolve_lifer_map_subspecies_colours(sch)
     ls_fill, ls_edge = resolve_last_seen_colours(sch)
     fills = tuple(resolve_family_band_colours(sch, i)[0] for i in range(4))
     strokes = tuple(resolve_family_band_colours(sch, i)[1] for i in range(4))
@@ -548,7 +587,9 @@ def scheme_seed_config(
     md_sw = _int_attr("marker_default_base_stroke_weight", fb_sw)
     rl = _collection_radius("marker_circle_radius_px_locations", md)
     rs = _collection_radius("marker_circle_radius_px_species", md)
-    rli = _collection_radius("marker_circle_radius_px_lifers", md)
+    r_sml = _collection_radius("marker_circle_radius_px_species_map_lifer", md)
+    r_lml = _collection_radius("marker_circle_radius_px_lifer_map_lifer", md)
+    r_lms = _collection_radius("marker_circle_radius_px_lifer_map_subspecies", md)
     rf = _collection_radius("marker_circle_radius_px_families", md)
 
     def _collection_fill_opacity(attr: str, legacy: float) -> float:
@@ -559,7 +600,15 @@ def scheme_seed_config(
 
     fo_loc = _collection_fill_opacity("marker_circle_fill_opacity_locations", float(sch.visit_fill_opacity_all_locations))
     fo_spec = _collection_fill_opacity("marker_circle_fill_opacity_species", float(sch.visit_fill_opacity_emphasis))
-    fo_lif = _collection_fill_opacity("marker_circle_fill_opacity_lifers", float(sch.visit_fill_opacity_lifers))
+    fo_sml = _collection_fill_opacity(
+        "marker_circle_fill_opacity_species_map_lifer", float(sch.visit_fill_opacity_species_map_lifer)
+    )
+    fo_lml = _collection_fill_opacity(
+        "marker_circle_fill_opacity_lifer_map_lifer", float(sch.visit_fill_opacity_lifer_map_lifer)
+    )
+    fo_lms = _collection_fill_opacity(
+        "marker_circle_fill_opacity_lifer_map_subspecies", float(sch.visit_fill_opacity_lifer_map_subspecies)
+    )
     fo_fam = _collection_fill_opacity("marker_circle_fill_opacity_families", float(sch.circle_marker_fill_opacity))
 
     def _optional_cluster_colours() -> tuple[str, str, str, str, str, str, str, str, str] | None:
@@ -617,14 +666,18 @@ def scheme_seed_config(
         marker_default_circle_radius_px=md,
         marker_circle_radius_locations=rl,
         marker_circle_radius_species=rs,
-        marker_circle_radius_lifers=rli,
+        marker_circle_radius_species_map_lifer=r_sml,
+        marker_circle_radius_lifer_map_lifer=r_lml,
+        marker_circle_radius_lifer_map_subspecies=r_lms,
         marker_circle_radius_families=rf,
         stroke_weight_visit=max(1, int(sch.visit_stroke_weight)),
         stroke_weight_family=max(1, int(sch.base_stroke_weight)),
         stroke_weight_family_highlight=max(1, int(sch.highlight_stroke_weight)),
         marker_circle_fill_opacity_locations=fo_loc,
         marker_circle_fill_opacity_species=fo_spec,
-        marker_circle_fill_opacity_lifers=fo_lif,
+        marker_circle_fill_opacity_species_map_lifer=fo_sml,
+        marker_circle_fill_opacity_lifer_map_lifer=fo_lml,
+        marker_circle_fill_opacity_lifer_map_subspecies=fo_lms,
         marker_circle_fill_opacity_families=fo_fam,
         marker_default_fill_hex=g_fill,
         marker_default_edge_hex=g_edge,
@@ -634,8 +687,12 @@ def scheme_seed_config(
         default_fill=d_fill,
         species_edge=sp_edge,
         species_fill=sp_fill,
-        lifer_edge=lf_edge,
-        lifer_fill=lf_fill,
+        species_map_lifer_edge=sml_edge,
+        species_map_lifer_fill=sml_fill,
+        lifer_map_lifer_edge=lml_edge,
+        lifer_map_lifer_fill=lml_fill,
+        lifer_map_subspecies_edge=lms_edge,
+        lifer_map_subspecies_fill=lms_fill,
         last_seen_edge=ls_edge,
         last_seen_fill=ls_fill,
         family_fill_hex=fills,

@@ -30,7 +30,9 @@ def test_format_map_marker_dict_contains_key_fields() -> None:
     assert "density_fill_hex=" in text
     assert "visit_circle_marker_radius_px=" in text
     assert "visit_stroke_weight=" in text
-    assert "visit_fill_opacity_lifers=" in text
+    assert "visit_fill_opacity_species_map_lifer=" in text
+    assert "visit_fill_opacity_lifer_map_lifer=" in text
+    assert "visit_fill_opacity_lifer_map_subspecies=" in text
     assert "legend_highlight_swatch_fill_index=" in text
     # Sparse overrides: scheme 1 has no per-collection overrides → all match default
     assert "marker_circle_radius_px_locations=" not in text
@@ -50,7 +52,9 @@ def test_sparse_fill_opacity_omitted_when_all_collections_match_default() -> Non
         cfg,
         marker_circle_fill_opacity_locations=md,
         marker_circle_fill_opacity_species=md,
-        marker_circle_fill_opacity_lifers=md,
+        marker_circle_fill_opacity_species_map_lifer=md,
+        marker_circle_fill_opacity_lifer_map_lifer=md,
+        marker_circle_fill_opacity_lifer_map_subspecies=md,
         marker_circle_fill_opacity_families=md,
     )
     text = format_map_marker_colour_scheme_dict_py(flat, "Flat", template=sch)
@@ -69,7 +73,7 @@ def test_export_emits_radius_override_only_when_differs_from_default() -> None:
     text = format_map_marker_colour_scheme_dict_py(cfg2, "O", template=sch)
     assert f"marker_circle_radius_px_species={d + 3}" in text
     assert "marker_circle_radius_px_locations=" not in text
-    assert "marker_circle_radius_px_lifers=" not in text
+    assert "marker_circle_radius_px_species_map_lifer=" not in text
     assert "marker_circle_radius_px_families=" not in text
 
 
@@ -83,13 +87,15 @@ def test_export_emits_fill_opacity_override_only_when_differs_from_default() -> 
         cfg,
         marker_circle_fill_opacity_locations=md,
         marker_circle_fill_opacity_species=0.42,
-        marker_circle_fill_opacity_lifers=md,
+        marker_circle_fill_opacity_species_map_lifer=md,
+        marker_circle_fill_opacity_lifer_map_lifer=md,
+        marker_circle_fill_opacity_lifer_map_subspecies=md,
         marker_circle_fill_opacity_families=md,
     )
     text = format_map_marker_colour_scheme_dict_py(cfg2, "O", template=sch)
     assert "marker_circle_fill_opacity_species=0.42" in text
     assert "marker_circle_fill_opacity_locations=" not in text
-    assert "marker_circle_fill_opacity_lifers=" not in text
+    assert "marker_circle_fill_opacity_lifer_map_lifer=" not in text
 
 
 def test_format_full_export_is_single_expanded_scheme_block() -> None:
@@ -98,7 +104,7 @@ def test_format_full_export_is_single_expanded_scheme_block() -> None:
     text = format_full_defaults_export(cfg, display_name="Export me", template=sch)
     assert "_MAP_MARKER_COLOUR_SCHEME_EXPORT_VALUES" in text
     assert "MAP_MARKER_COLOUR_SCHEME_EXPORT = MapMarkerColourScheme" in text
-    assert "marker_lifer_fill_hex=" in text
+    assert "marker_species_map_lifer_fill_hex=" in text
     assert "MAP_CIRCLE_MARKER_RADIUS_PX =" not in text
     # Ordered block: marker defaults before family circle_marker_* in output
     assert text.index("marker_default_fill_hex") < text.index("circle_marker_radius_px=")

@@ -47,11 +47,13 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
     from explorer.core.map_marker_colour_resolve import (
         normalize_marker_hex,
         resolve_family_band_colours,
-        resolve_lifer_colours,
         resolve_last_seen_colours,
+        resolve_lifer_map_lifer_colours,
+        resolve_lifer_map_subspecies_colours,
         resolve_location_visit_colours,
         resolve_marker_global_colours,
         resolve_species_colours,
+        resolve_species_map_lifer_colours,
     )
 
     sch = active_map_marker_colour_scheme(2)
@@ -70,9 +72,15 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
     gf, ge = resolve_marker_global_colours(sch)
     assert cfg.marker_default_fill_hex == gf
     assert cfg.marker_default_edge_hex == ge
-    lf, le = resolve_lifer_colours(sch)
-    assert cfg.lifer_fill == lf
-    assert cfg.lifer_edge == le
+    smlf, smle = resolve_species_map_lifer_colours(sch)
+    assert cfg.species_map_lifer_fill == smlf
+    assert cfg.species_map_lifer_edge == smle
+    lmlf, lmle = resolve_lifer_map_lifer_colours(sch)
+    assert cfg.lifer_map_lifer_fill == lmlf
+    assert cfg.lifer_map_lifer_edge == lmle
+    lmsf, lmse = resolve_lifer_map_subspecies_colours(sch)
+    assert cfg.lifer_map_subspecies_fill == lmsf
+    assert cfg.lifer_map_subspecies_edge == lmse
     lsf, lse = resolve_last_seen_colours(sch)
     assert cfg.last_seen_fill == lsf
     assert cfg.last_seen_edge == lse
