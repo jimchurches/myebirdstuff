@@ -267,7 +267,7 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
         st.session_state[f"design_hex_ff{i}"] = cfg.family_fill_hex[i]
         st.session_state[f"design_hex_fs{i}"] = cfg.family_stroke_hex[i]
     st.session_state["design_hex_fam_hl"] = cfg.family_highlight_stroke_hex
-    st.session_state["design_legend_hl_swatch_ix"] = int(cfg.legend_highlight_swatch_fill_index)
+    st.session_state["design_legend_hl_swatch_ix"] = int(cfg.legend_highlight_band_index)
     cc = cfg.marker_cluster_colours_hex
     if cc is not None and len(cc) == 9:
         for i in range(9):
@@ -371,7 +371,7 @@ def _config_from_session() -> DesignMapPreviewConfig:
         family_highlight_stroke_hex=str(
             st.session_state.get("design_hex_fam_hl", MAP_MARKER_CATCHALL_EDGE_HEX)
         ),
-        legend_highlight_swatch_fill_index=max(
+        legend_highlight_band_index=max(
             0, min(3, int(st.session_state.get("design_legend_hl_swatch_ix", 0)))
         ),
         marker_cluster_colours_hex=_cluster_colours_from_session(),

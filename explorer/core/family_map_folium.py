@@ -143,7 +143,7 @@ def build_family_map_legend_overlay_html_for_pins(
         sw_i = max(
             0,
             min(
-                fam.legend_highlight_swatch_fill_index,
+                fam.legend_highlight_band_index,
                 len(fam.density_fill_hex) - 1,
             ),
         )

@@ -59,11 +59,11 @@ def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tupl
     g = sch.global_defaults
     al = sch.all_locations
     md = int(g.circle_radius_px)
-    loc = al.marker_circle_radius_px_locations
+    loc = al.radius_override_px
     radius_px = clamp_map_marker_circle_radius_px(loc if loc is not None else md)
-    sw = max(1, int(al.visit_stroke_weight))
-    legacy_fo = float(al.visit_fill_opacity_all_locations)
-    fo_override = al.marker_circle_fill_opacity_locations
+    sw = max(1, int(al.stroke_weight))
+    legacy_fo = float(al.fill_opacity)
+    fo_override = al.fill_opacity_override
     fo = (
         clamp_map_marker_circle_fill_opacity(fo_override, fallback=legacy_fo)
         if fo_override is not None

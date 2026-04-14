@@ -210,8 +210,8 @@ class DesignMapPreviewConfig:
     family_fill_hex: tuple[str, str, str, str]
     family_stroke_hex: tuple[str, str, str, str]
     family_highlight_stroke_hex: str
-    # Swatch fill for the family-map highlight legend row (:class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme`).
-    legend_highlight_swatch_fill_index: int
+    # Swatch fill for the family-map highlight legend row (mirrors ``family_locations.legend_highlight_band_index``).
+    legend_highlight_band_index: int
     # Optional MarkerCluster icon colours as:
     # ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
     marker_cluster_colours_hex: tuple[str, str, str, str, str, str, str, str, str] | None
@@ -310,7 +310,7 @@ def _design_legend_items(cfg: DesignMapPreviewConfig, rows: tuple[PreviewMarkerR
         if entry is not None:
             items.append(entry)
     if kinds_present & {"family_0", "family_1", "family_2", "family_3"}:
-        sw_i = max(0, min(int(cfg.legend_highlight_swatch_fill_index), len(cfg.family_fill_hex) - 1))
+        sw_i = max(0, min(int(cfg.legend_highlight_band_index), len(cfg.family_fill_hex) - 1))
         items.append(
             (
                 normalize_hex_colour(cfg.family_highlight_stroke_hex),
@@ -589,12 +589,12 @@ def scheme_seed_config(
         fallback=fb_fo,
     )
     md_sw = _int_or_fb(getattr(g, "base_stroke_weight", None), fb_sw)
-    rl = _collection_radius(al.marker_circle_radius_px_locations, md)
-    rs = _collection_radius(sp.marker_circle_radius_px_species, md)
-    r_sml = _collection_radius(sp.marker_circle_radius_px_species_map_lifer, md)
-    r_lml = _collection_radius(ll.marker_circle_radius_px_lifer_map_lifer, md)
-    r_lms = _collection_radius(ll.marker_circle_radius_px_lifer_map_subspecies, md)
-    rf = _collection_radius(fam.marker_circle_radius_px_families, md)
+    rl = _collection_radius(al.radius_override_px, md)
+    rs = _collection_radius(sp.radius_override_px, md)
+    r_sml = _collection_radius(sp.map_lifer_radius_override_px, md)
+    r_lml = _collection_radius(ll.lifer_radius_override_px, md)
+    r_lms = _collection_radius(ll.subspecies_radius_override_px, md)
+    rf = _collection_radius(fam.radius_override_px, md)
 
     def _collection_fill_opacity(override: float | None, legacy: float) -> float:
         if override is not None:
@@ -602,22 +602,22 @@ def scheme_seed_config(
         return clamp_map_marker_circle_fill_opacity(legacy, fallback=md_fo)
 
     fo_loc = _collection_fill_opacity(
-        al.marker_circle_fill_opacity_locations, float(al.visit_fill_opacity_all_locations)
+        al.fill_opacity_override, float(al.fill_opacity)
     )
     fo_spec = _collection_fill_opacity(
-        sp.marker_circle_fill_opacity_species, float(sp.visit_fill_opacity_emphasis)
+        sp.fill_opacity_override, float(sp.emphasis_fill_opacity)
     )
     fo_sml = _collection_fill_opacity(
-        sp.marker_circle_fill_opacity_species_map_lifer, float(sp.visit_fill_opacity_species_map_lifer)
+        sp.map_lifer_fill_opacity_override, float(sp.map_lifer_fill_opacity)
     )
     fo_lml = _collection_fill_opacity(
-        ll.marker_circle_fill_opacity_lifer_map_lifer, float(ll.visit_fill_opacity_lifer_map_lifer)
+        ll.lifer_fill_opacity_override, float(ll.lifer_fill_opacity)
     )
     fo_lms = _collection_fill_opacity(
-        ll.marker_circle_fill_opacity_lifer_map_subspecies, float(ll.visit_fill_opacity_lifer_map_subspecies)
+        ll.subspecies_fill_opacity_override, float(ll.subspecies_fill_opacity)
     )
     fo_fam = _collection_fill_opacity(
-        fam.marker_circle_fill_opacity_families, float(fam.circle_marker_fill_opacity)
+        fam.fill_opacity_override, float(fam.pin_fill_opacity)
     )
 
     def _optional_cluster_colours() -> tuple[str, str, str, str, str, str, str, str, str] | None:
@@ -673,7 +673,7 @@ def scheme_seed_config(
         marker_circle_radius_lifer_map_lifer=r_lml,
         marker_circle_radius_lifer_map_subspecies=r_lms,
         marker_circle_radius_families=rf,
-        stroke_weight_visit=max(1, int(al.visit_stroke_weight)),
+        stroke_weight_visit=max(1, int(al.stroke_weight)),
         stroke_weight_family=max(1, int(fam.base_stroke_weight)),
         stroke_weight_family_highlight=max(1, int(fam.highlight_stroke_weight)),
         marker_circle_fill_opacity_locations=fo_loc,
@@ -701,7 +701,7 @@ def scheme_seed_config(
         family_fill_hex=fills,
         family_stroke_hex=strokes,
         family_highlight_stroke_hex=hl_stroke,
-        legend_highlight_swatch_fill_index=max(0, min(int(fam.legend_highlight_swatch_fill_index), 3)),
+        legend_highlight_band_index=max(0, min(int(fam.legend_highlight_band_index), 3)),
         marker_cluster_colours_hex=_optional_cluster_colours(),
         marker_cluster_inner_fill_opacity=_inner_fo,
         marker_cluster_halo_opacity=_halo_o,

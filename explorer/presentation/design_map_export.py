@@ -61,17 +61,17 @@ def format_map_marker_colour_scheme_dict_py(
 
     al_parts: list[str] = [
         "    all_locations=MapMarkerAllLocationsStyle(",
-        f"        location_visit_fill_hex={cfg.default_fill!r},",
-        f"        location_visit_edge_hex={cfg.default_edge!r},",
-        f"        visit_circle_marker_radius_px={int(cfg.marker_circle_radius_locations)},",
-        f"        visit_stroke_weight={int(cfg.stroke_weight_visit)},",
-        f"        visit_fill_opacity_all_locations={_fmt_float(cfg.marker_circle_fill_opacity_locations)},",
+        f"        fill_hex={cfg.default_fill!r},",
+        f"        edge_hex={cfg.default_edge!r},",
+        f"        circle_radius_px={int(cfg.marker_circle_radius_locations)},",
+        f"        stroke_weight={int(cfg.stroke_weight_visit)},",
+        f"        fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_locations)},",
     ]
     if int(cfg.marker_circle_radius_locations) != md:
-        al_parts.append(f"        marker_circle_radius_px_locations={int(cfg.marker_circle_radius_locations)},")
+        al_parts.append(f"        radius_override_px={int(cfg.marker_circle_radius_locations)},")
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_locations, md_fo):
         al_parts.append(
-            f"        marker_circle_fill_opacity_locations={_fmt_float(cfg.marker_circle_fill_opacity_locations)},"
+            f"        fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_locations)},"
         )
 
     cl_parts: list[str] = []
@@ -100,76 +100,76 @@ def format_map_marker_colour_scheme_dict_py(
     lines.extend(
         [
             "    species_locations=MapMarkerSpeciesLocationsStyle(",
-            f"        species_fill_hex={cfg.species_fill!r},",
-            f"        species_edge_hex={cfg.species_edge!r},",
-            f"        species_map_lifer_fill_hex={cfg.species_map_lifer_fill!r},",
-            f"        species_map_lifer_edge_hex={cfg.species_map_lifer_edge!r},",
+            f"        fill_hex={cfg.species_fill!r},",
+            f"        edge_hex={cfg.species_edge!r},",
+            f"        map_lifer_fill_hex={cfg.species_map_lifer_fill!r},",
+            f"        map_lifer_edge_hex={cfg.species_map_lifer_edge!r},",
             f"        last_seen_fill_hex={cfg.last_seen_fill!r},",
             f"        last_seen_edge_hex={cfg.last_seen_edge!r},",
-            f"        visit_fill_opacity_emphasis={_fmt_float(cfg.marker_circle_fill_opacity_species)},",
-            f"        visit_fill_opacity_species_map_lifer={_fmt_float(cfg.marker_circle_fill_opacity_species_map_lifer)},",
+            f"        emphasis_fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_species)},",
+            f"        map_lifer_fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_species_map_lifer)},",
         ]
     )
     if int(cfg.marker_circle_radius_species) != md:
-        lines.append(f"        marker_circle_radius_px_species={int(cfg.marker_circle_radius_species)},")
+        lines.append(f"        radius_override_px={int(cfg.marker_circle_radius_species)},")
     if int(cfg.marker_circle_radius_species_map_lifer) != md:
         lines.append(
-            f"        marker_circle_radius_px_species_map_lifer={int(cfg.marker_circle_radius_species_map_lifer)},"
+            f"        map_lifer_radius_override_px={int(cfg.marker_circle_radius_species_map_lifer)},"
         )
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_species, md_fo):
-        lines.append(f"        marker_circle_fill_opacity_species={_fmt_float(cfg.marker_circle_fill_opacity_species)},")
+        lines.append(f"        fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_species)},")
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_species_map_lifer, md_fo):
         lines.append(
-            f"        marker_circle_fill_opacity_species_map_lifer={_fmt_float(cfg.marker_circle_fill_opacity_species_map_lifer)},"
+            f"        map_lifer_fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_species_map_lifer)},"
         )
     lines.append("    ),")
 
     lines.extend(
         [
             "    lifer_locations=MapMarkerLiferLocationsStyle(",
-            f"        lifer_map_lifer_fill_hex={cfg.lifer_map_lifer_fill!r},",
-            f"        lifer_map_lifer_edge_hex={cfg.lifer_map_lifer_edge!r},",
-            f"        lifer_map_subspecies_fill_hex={cfg.lifer_map_subspecies_fill!r},",
-            f"        lifer_map_subspecies_edge_hex={cfg.lifer_map_subspecies_edge!r},",
-            f"        visit_fill_opacity_lifer_map_lifer={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_lifer)},",
-            f"        visit_fill_opacity_lifer_map_subspecies={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_subspecies)},",
+            f"        lifer_fill_hex={cfg.lifer_map_lifer_fill!r},",
+            f"        lifer_edge_hex={cfg.lifer_map_lifer_edge!r},",
+            f"        subspecies_fill_hex={cfg.lifer_map_subspecies_fill!r},",
+            f"        subspecies_edge_hex={cfg.lifer_map_subspecies_edge!r},",
+            f"        lifer_fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_lifer)},",
+            f"        subspecies_fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_subspecies)},",
         ]
     )
     if int(cfg.marker_circle_radius_lifer_map_lifer) != md:
         lines.append(
-            f"        marker_circle_radius_px_lifer_map_lifer={int(cfg.marker_circle_radius_lifer_map_lifer)},"
+            f"        lifer_radius_override_px={int(cfg.marker_circle_radius_lifer_map_lifer)},"
         )
     if int(cfg.marker_circle_radius_lifer_map_subspecies) != md:
         lines.append(
-            f"        marker_circle_radius_px_lifer_map_subspecies={int(cfg.marker_circle_radius_lifer_map_subspecies)},"
+            f"        subspecies_radius_override_px={int(cfg.marker_circle_radius_lifer_map_subspecies)},"
         )
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_lifer_map_lifer, md_fo):
         lines.append(
-            f"        marker_circle_fill_opacity_lifer_map_lifer={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_lifer)},"
+            f"        lifer_fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_lifer)},"
         )
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_lifer_map_subspecies, md_fo):
         lines.append(
-            f"        marker_circle_fill_opacity_lifer_map_subspecies={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_subspecies)},"
+            f"        subspecies_fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_subspecies)},"
         )
     lines.append("    ),")
 
     lines.extend(
         [
             "    family_locations=MapMarkerFamilyLocationsStyle(",
-            f"        circle_marker_radius_px={int(cfg.marker_circle_radius_families)},",
-            f"        circle_marker_fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_families)},",
+            f"        pin_radius_px={int(cfg.marker_circle_radius_families)},",
+            f"        pin_fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_families)},",
             f"        base_stroke_weight={int(cfg.stroke_weight_family)},",
             f"        highlight_stroke_hex={cfg.family_highlight_stroke_hex!r},",
             f"        highlight_stroke_weight={int(cfg.stroke_weight_family_highlight)},",
             f"        density_fill_hex={_fmt_hex_tuple(cfg.family_fill_hex)},",
             f"        density_stroke_hex={_fmt_hex_tuple(cfg.family_stroke_hex)},",
-            f"        legend_highlight_swatch_fill_index={int(cfg.legend_highlight_swatch_fill_index)},",
+            f"        legend_highlight_band_index={int(cfg.legend_highlight_band_index)},",
         ]
     )
     if int(cfg.marker_circle_radius_families) != md:
-        lines.append(f"        marker_circle_radius_px_families={int(cfg.marker_circle_radius_families)},")
+        lines.append(f"        radius_override_px={int(cfg.marker_circle_radius_families)},")
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_families, md_fo):
-        lines.append(f"        marker_circle_fill_opacity_families={_fmt_float(cfg.marker_circle_fill_opacity_families)},")
+        lines.append(f"        fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_families)},")
     lines.append("    ),")
 
     lines.extend(
