@@ -5,8 +5,8 @@ Nested dataclasses for :class:`MapMarkerColourScheme`.
 
 - **Per collection:** ``fill_hex`` / ``edge_hex`` for the primary pin colours; role-specific pairs
   use short prefixes (``map_lifer_*``, ``last_seen_*``, ``lifer_*``, ``subspecies_*``).
-- **Sparse tweaks:** ``radius_override_px`` and ``fill_opacity_override`` (and role-specific variants
-  like ``map_lifer_radius_override_px``) only when a collection differs from :class:`MapMarkerGlobalDefaults`.
+- **Sparse tweaks:** ``radius_override_px`` and ``fill_opacity_override`` only when a collection differs
+  from :class:`MapMarkerGlobalDefaults`.
 - **Family map:** ``pin_radius_px`` / ``pin_fill_opacity`` are the styled defaults; overrides use the same
   ``*_override_*`` pattern.
 - **Flat overrides:** :class:`SchemeColourOverrides` uses short keys (``default_fill_hex``, ``location_fill_hex``, …).
@@ -67,11 +67,8 @@ class MapMarkerSpeciesLocationsStyle:
     last_seen_fill_hex: str
     last_seen_edge_hex: str
     emphasis_fill_opacity: float
-    map_lifer_fill_opacity: float
     radius_override_px: int | None = None
-    map_lifer_radius_override_px: int | None = None
     fill_opacity_override: float | None = None
-    map_lifer_fill_opacity_override: float | None = None
 
 
 @dataclass(frozen=True)

@@ -175,12 +175,10 @@ def resolve_species_visit_pin(
     sw = max(1, int(getattr(al, "stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
     if role == "lifer":
         fill, edge = resolve_species_map_lifer_colours(sch)
-        r = _collection_radius_px(
-            getattr(sp, "map_lifer_radius_override_px", None), md
-        )
+        r = _collection_radius_px(getattr(sp, "radius_override_px", None), md)
         fo = _collection_fill_opacity_visit(
-            getattr(sp, "map_lifer_fill_opacity_override", None),
-            float(getattr(sp, "map_lifer_fill_opacity", 0.9)),
+            getattr(sp, "fill_opacity_override", None),
+            float(getattr(sp, "emphasis_fill_opacity", 0.9)),
             md_fo=md_fo,
         )
     elif role == "last_seen":

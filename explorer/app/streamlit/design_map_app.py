@@ -75,7 +75,6 @@ from explorer.app.streamlit.design_map_constants import (
     H_FO_LIFER_MAP_SUBSPECIES,
     H_FO_LOCATIONS,
     H_FO_SPECIES,
-    H_FO_SPECIES_MAP_LIFER,
     H_HEIGHT,
     H_HEX_DE,
     H_HEX_DF,
@@ -99,7 +98,6 @@ from explorer.app.streamlit.design_map_constants import (
     H_RADIUS_LIFER_MAP_SUBSPECIES,
     H_RADIUS_LOCATIONS,
     H_RADIUS_SPECIES,
-    H_RADIUS_SPECIES_MAP_LIFER,
     H_SW_FAM,
     H_SW_FAM_HL,
     H_SW_VISIT,
@@ -234,7 +232,6 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
     st.session_state["design_radius_default"] = int(cfg.marker_default_circle_radius_px)
     st.session_state["design_radius_locations"] = int(cfg.marker_circle_radius_locations)
     st.session_state["design_radius_species"] = int(cfg.marker_circle_radius_species)
-    st.session_state["design_radius_species_map_lifer"] = int(cfg.marker_circle_radius_species_map_lifer)
     st.session_state["design_radius_lifer_map_lifer"] = int(cfg.marker_circle_radius_lifer_map_lifer)
     st.session_state["design_radius_lifer_map_subspecies"] = int(cfg.marker_circle_radius_lifer_map_subspecies)
     st.session_state["design_radius_families"] = int(cfg.marker_circle_radius_families)
@@ -243,7 +240,6 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
     st.session_state["design_sw_family_hl"] = int(cfg.stroke_weight_family_highlight)
     st.session_state["design_fo_locations"] = float(cfg.marker_circle_fill_opacity_locations)
     st.session_state["design_fo_species"] = float(cfg.marker_circle_fill_opacity_species)
-    st.session_state["design_fo_species_map_lifer"] = float(cfg.marker_circle_fill_opacity_species_map_lifer)
     st.session_state["design_fo_lifer_map_lifer"] = float(cfg.marker_circle_fill_opacity_lifer_map_lifer)
     st.session_state["design_fo_lifer_map_subspecies"] = float(cfg.marker_circle_fill_opacity_lifer_map_subspecies)
     st.session_state["design_fo_family"] = float(cfg.marker_circle_fill_opacity_families)
@@ -303,9 +299,6 @@ def _config_from_session() -> DesignMapPreviewConfig:
         marker_default_circle_radius_px=_md,
         marker_circle_radius_locations=_radius_from_session("design_radius_locations", default_px=_md),
         marker_circle_radius_species=_radius_from_session("design_radius_species", default_px=_md),
-        marker_circle_radius_species_map_lifer=_radius_from_session(
-            "design_radius_species_map_lifer", default_px=_md
-        ),
         marker_circle_radius_lifer_map_lifer=_radius_from_session(
             "design_radius_lifer_map_lifer", default_px=_md
         ),
@@ -321,9 +314,6 @@ def _config_from_session() -> DesignMapPreviewConfig:
         ),
         marker_circle_fill_opacity_species=_fill_opacity_from_session(
             "design_fo_species", legacy_key="design_fo_emph", default=_mdf
-        ),
-        marker_circle_fill_opacity_species_map_lifer=_fill_opacity_from_session(
-            "design_fo_species_map_lifer", legacy_key=None, default=_mdf
         ),
         marker_circle_fill_opacity_lifer_map_lifer=_fill_opacity_from_session(
             "design_fo_lifer_map_lifer", legacy_key=None, default=_mdf
@@ -623,7 +613,7 @@ def main() -> None:
                 )
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_SPECIES_LOCATIONS], expanded=False):
-            st.markdown("**Species / last seen** (species-match and last-seen pins)")
+            st.markdown("**Species** (species-match pins)")
             st.slider(
                 "Circle radius (px)",
                 min_value=1,
@@ -641,25 +631,14 @@ def main() -> None:
             )
             _hex_text_input("Fill (Species)", key="design_hex_sf", help=H_HEX_SF)
             _hex_text_input("Edge (Species)", key="design_hex_se", help=H_HEX_SE)
+            st.divider()
+            st.markdown("**Last seen** (last-seen pins)")
+            st.caption("Uses the same radius and fill-opacity sliders as **Species** above.")
             _hex_text_input("Fill (Last seen)", key="design_hex_lsf", help=H_HEX_LSF)
             _hex_text_input("Edge (Last seen)", key="design_hex_lse", help=H_HEX_LSE)
             st.divider()
             st.markdown("**Lifer** (species-filtered map — first-record location for the selected taxon)")
-            st.slider(
-                "Circle radius (px)",
-                min_value=1,
-                max_value=MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
-                key="design_radius_species_map_lifer",
-                help=H_RADIUS_SPECIES_MAP_LIFER,
-            )
-            st.slider(
-                "Circle fill opacity",
-                min_value=0.0,
-                max_value=1.0,
-                step=0.01,
-                key="design_fo_species_map_lifer",
-                help=H_FO_SPECIES_MAP_LIFER,
-            )
+            st.caption("Uses the same radius and fill-opacity sliders as **Species** above.")
             _hex_text_input("Fill (Lifer)", key="design_hex_sml_f", help=H_HEX_SML_F)
             _hex_text_input("Edge (Lifer)", key="design_hex_sml_e", help=H_HEX_SML_E)
 

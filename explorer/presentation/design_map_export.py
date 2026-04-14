@@ -107,21 +107,12 @@ def format_map_marker_colour_scheme_dict_py(
             f"        last_seen_fill_hex={cfg.last_seen_fill!r},",
             f"        last_seen_edge_hex={cfg.last_seen_edge!r},",
             f"        emphasis_fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_species)},",
-            f"        map_lifer_fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_species_map_lifer)},",
         ]
     )
     if int(cfg.marker_circle_radius_species) != md:
         lines.append(f"        radius_override_px={int(cfg.marker_circle_radius_species)},")
-    if int(cfg.marker_circle_radius_species_map_lifer) != md:
-        lines.append(
-            f"        map_lifer_radius_override_px={int(cfg.marker_circle_radius_species_map_lifer)},"
-        )
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_species, md_fo):
         lines.append(f"        fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_species)},")
-    if _opacity_overrides_default(cfg.marker_circle_fill_opacity_species_map_lifer, md_fo):
-        lines.append(
-            f"        map_lifer_fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_species_map_lifer)},"
-        )
     lines.append("    ),")
 
     lines.extend(

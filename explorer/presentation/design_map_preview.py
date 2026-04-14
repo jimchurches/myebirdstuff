@@ -174,7 +174,6 @@ class DesignMapPreviewConfig:
     marker_default_circle_radius_px: int
     marker_circle_radius_locations: int
     marker_circle_radius_species: int
-    marker_circle_radius_species_map_lifer: int
     marker_circle_radius_lifer_map_lifer: int
     marker_circle_radius_lifer_map_subspecies: int
     marker_circle_radius_families: int
@@ -184,7 +183,6 @@ class DesignMapPreviewConfig:
     # Resolved circle fill opacities (``marker_default_circle_fill_opacity`` unless overridden in scheme).
     marker_circle_fill_opacity_locations: float
     marker_circle_fill_opacity_species: float
-    marker_circle_fill_opacity_species_map_lifer: float
     marker_circle_fill_opacity_lifer_map_lifer: float
     marker_circle_fill_opacity_lifer_map_subspecies: float
     marker_circle_fill_opacity_families: float
@@ -246,7 +244,7 @@ def _circle_radius_px_for_marker_kind(cfg: DesignMapPreviewConfig, kind: str) ->
     if kind in ("visit_species", "visit_last_seen"):
         return cfg.marker_circle_radius_species
     if kind == "species_visit_lifer":
-        return cfg.marker_circle_radius_species_map_lifer
+        return cfg.marker_circle_radius_species
     if kind == "lifer_map_lifer":
         return cfg.marker_circle_radius_lifer_map_lifer
     if kind == "lifer_subspecies":
@@ -472,7 +470,7 @@ def build_design_preview_map(
                 _slug, (e, f) = next(x for x in visit_emphasis_specs if x[0] == kind)
                 stroke = normalize_hex_colour(e)
                 fill_c = normalize_hex_colour(f)
-                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species_map_lifer))
+                fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
                 sw = max(1, int(cfg.stroke_weight_visit))
             elif kind == "lifer_map_lifer":
                 stroke = normalize_hex_colour(cfg.lifer_map_lifer_edge)
@@ -591,7 +589,6 @@ def scheme_seed_config(
     md_sw = _int_or_fb(getattr(g, "base_stroke_weight", None), fb_sw)
     rl = _collection_radius(al.radius_override_px, md)
     rs = _collection_radius(sp.radius_override_px, md)
-    r_sml = _collection_radius(sp.map_lifer_radius_override_px, md)
     r_lml = _collection_radius(ll.lifer_radius_override_px, md)
     r_lms = _collection_radius(ll.subspecies_radius_override_px, md)
     rf = _collection_radius(fam.radius_override_px, md)
@@ -606,9 +603,6 @@ def scheme_seed_config(
     )
     fo_spec = _collection_fill_opacity(
         sp.fill_opacity_override, float(sp.emphasis_fill_opacity)
-    )
-    fo_sml = _collection_fill_opacity(
-        sp.map_lifer_fill_opacity_override, float(sp.map_lifer_fill_opacity)
     )
     fo_lml = _collection_fill_opacity(
         ll.lifer_fill_opacity_override, float(ll.lifer_fill_opacity)
@@ -669,7 +663,6 @@ def scheme_seed_config(
         marker_default_circle_radius_px=md,
         marker_circle_radius_locations=rl,
         marker_circle_radius_species=rs,
-        marker_circle_radius_species_map_lifer=r_sml,
         marker_circle_radius_lifer_map_lifer=r_lml,
         marker_circle_radius_lifer_map_subspecies=r_lms,
         marker_circle_radius_families=rf,
@@ -678,7 +671,6 @@ def scheme_seed_config(
         stroke_weight_family_highlight=max(1, int(fam.highlight_stroke_weight)),
         marker_circle_fill_opacity_locations=fo_loc,
         marker_circle_fill_opacity_species=fo_spec,
-        marker_circle_fill_opacity_species_map_lifer=fo_sml,
         marker_circle_fill_opacity_lifer_map_lifer=fo_lml,
         marker_circle_fill_opacity_lifer_map_subspecies=fo_lms,
         marker_circle_fill_opacity_families=fo_fam,

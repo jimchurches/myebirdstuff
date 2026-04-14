@@ -34,7 +34,6 @@ def test_format_map_marker_dict_contains_key_fields() -> None:
     assert "pin_radius_px=" in text
     assert "density_fill_hex=" in text
     assert "stroke_weight=" in text
-    assert "map_lifer_fill_opacity=" in text
     assert "lifer_fill_opacity=" in text
     assert "subspecies_fill_opacity=" in text
     assert "legend_highlight_band_index=" in text
@@ -52,7 +51,6 @@ def test_sparse_fill_opacity_omitted_when_all_collections_match_default() -> Non
         cfg,
         marker_circle_fill_opacity_locations=md,
         marker_circle_fill_opacity_species=md,
-        marker_circle_fill_opacity_species_map_lifer=md,
         marker_circle_fill_opacity_lifer_map_lifer=md,
         marker_circle_fill_opacity_lifer_map_subspecies=md,
         marker_circle_fill_opacity_families=md,
@@ -79,7 +77,6 @@ def test_export_emits_fill_opacity_override_only_when_differs_from_default() -> 
         cfg,
         marker_circle_fill_opacity_locations=md,
         marker_circle_fill_opacity_species=0.42,
-        marker_circle_fill_opacity_species_map_lifer=md,
         marker_circle_fill_opacity_lifer_map_lifer=md,
         marker_circle_fill_opacity_lifer_map_subspecies=md,
         marker_circle_fill_opacity_families=md,
