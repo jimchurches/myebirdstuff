@@ -451,14 +451,6 @@ def main() -> None:
     _scope_options = tuple(PREVIEW_SCOPE_LABELS.keys())
 
     with st.sidebar:
-        st.selectbox(
-            "Map view",
-            options=list(_scope_options),
-            format_func=lambda k: PREVIEW_SCOPE_LABELS.get(k, k),
-            key="design_preview_scope",
-        )
-
-        st.divider()
         st.subheader("Colour scheme (defaults)")
         st.selectbox(
             "Preset from defaults.py",
@@ -477,6 +469,14 @@ def main() -> None:
         if st.button("Shuffle positions", use_container_width=True):
             st.session_state[_K_POS_SEED] = int(st.session_state.get(_K_POS_SEED, 42)) + 1
         update = st.button("Update map", type="primary", use_container_width=True)
+
+        st.divider()
+        st.selectbox(
+            "Map view",
+            options=list(_scope_options),
+            format_func=lambda k: PREVIEW_SCOPE_LABELS.get(k, k),
+            key="design_preview_scope",
+        )
 
         st.divider()
         st.caption(
