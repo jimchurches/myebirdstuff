@@ -172,7 +172,14 @@ def resolve_species_visit_pin(
         getattr(g, "circle_fill_opacity", None),
         fallback=0.88,
     )
-    sw = max(1, int(getattr(al, "stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
+    sw_raw = getattr(sp, "stroke_weight_override", None)
+    if sw_raw is None:
+        al_sw = getattr(al, "stroke_weight", None)
+        if al_sw is not None:
+            sw_raw = al_sw
+        else:
+            sw_raw = getattr(g, "base_stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)
+    sw = max(1, int(sw_raw))
     if role == "lifer":
         fill, edge = resolve_species_map_lifer_colours(sch)
         r = _collection_radius_px(getattr(sp, "radius_override_px", None), md)
@@ -202,9 +209,11 @@ def resolve_species_visit_pin(
         r = _collection_radius_px(
             getattr(al, "radius_override_px", None), md
         )
+        _raw_al_fo = getattr(al, "fill_opacity", None)
+        legacy_fo = float(_raw_al_fo) if _raw_al_fo is not None else md_fo
         fo = _collection_fill_opacity_visit(
             getattr(al, "fill_opacity_override", None),
-            float(getattr(al, "fill_opacity", 1.0)),
+            legacy_fo,
             md_fo=md_fo,
         )
     return edge, fill, r, sw, fo
@@ -229,7 +238,14 @@ def resolve_lifer_overlay_pin_params(
     r_sub = _collection_radius_px(
         getattr(ll, "subspecies_radius_override_px", None), md
     )
-    sw = max(1, int(getattr(al, "stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
+    sw_raw = getattr(ll, "stroke_weight_override", None)
+    if sw_raw is None:
+        al_sw = getattr(al, "stroke_weight", None)
+        if al_sw is not None:
+            sw_raw = al_sw
+        else:
+            sw_raw = getattr(g, "base_stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)
+    sw = max(1, int(sw_raw))
     md_fo = clamp_map_marker_circle_fill_opacity(
         getattr(g, "circle_fill_opacity", None),
         fallback=0.88,

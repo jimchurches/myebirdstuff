@@ -76,6 +76,8 @@ from explorer.app.streamlit.design_map_constants import (
     H_FO_LOCATIONS,
     H_FO_SPECIES,
     H_HEIGHT,
+    H_GLOBAL_EDGE,
+    H_GLOBAL_FILL,
     H_HEX_DE,
     H_HEX_DF,
     H_HEX_FAM_HL,
@@ -94,12 +96,15 @@ from explorer.app.streamlit.design_map_constants import (
     H_PRESET,
     H_RADIUS_DEFAULT,
     H_RADIUS_FAMILIES,
+    H_SW_GLOBAL,
     H_RADIUS_LIFER_MAP_LIFER,
     H_RADIUS_LIFER_MAP_SUBSPECIES,
     H_RADIUS_LOCATIONS,
     H_RADIUS_SPECIES,
     H_SW_FAM,
     H_SW_FAM_HL,
+    H_SW_LIFER,
+    H_SW_SPECIES,
     H_SW_VISIT,
     PREVIEW_SCOPE_LABELS,
 )
@@ -236,6 +241,8 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
     st.session_state["design_radius_lifer_map_subspecies"] = int(cfg.marker_circle_radius_lifer_map_subspecies)
     st.session_state["design_radius_families"] = int(cfg.marker_circle_radius_families)
     st.session_state["design_sw_visit"] = int(cfg.stroke_weight_visit)
+    st.session_state["design_sw_species"] = int(cfg.stroke_weight_species)
+    st.session_state["design_sw_lifer"] = int(cfg.stroke_weight_lifer)
     st.session_state["design_sw_family"] = int(cfg.stroke_weight_family)
     st.session_state["design_sw_family_hl"] = int(cfg.stroke_weight_family_highlight)
     st.session_state["design_fo_locations"] = float(cfg.marker_circle_fill_opacity_locations)
@@ -307,6 +314,8 @@ def _config_from_session() -> DesignMapPreviewConfig:
         ),
         marker_circle_radius_families=_radius_from_session("design_radius_families", default_px=_md),
         stroke_weight_visit=max(1, int(st.session_state.get("design_sw_visit", 1))),
+        stroke_weight_species=max(1, int(st.session_state.get("design_sw_species", st.session_state.get("design_sw_visit", 1)))),
+        stroke_weight_lifer=max(1, int(st.session_state.get("design_sw_lifer", st.session_state.get("design_sw_visit", 1)))),
         stroke_weight_family=max(1, int(st.session_state.get("design_sw_family", 1))),
         stroke_weight_family_highlight=max(1, int(st.session_state.get("design_sw_family_hl", 1))),
         marker_circle_fill_opacity_locations=_fill_opacity_from_session(
@@ -470,25 +479,43 @@ def main() -> None:
 
         st.divider()
         st.caption(
-            "**Globals** holds defaults for all maps; each collection expander holds that map type’s "
-            "circle radius, fill opacity, and colours (like **Map view**)."
+            "**Globals** contains the base marker settings used across all map types. Per-map sections "
+            "override these values where required. The saved scheme is sparse, so values equal to the "
+            "globals are omitted."
         )
 
         with st.expander("Globals", expanded=False):
             st.slider(
-                "Default circle radius (px) — all maps",
+                "Circle radius (px)",
                 min_value=1,
                 max_value=MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
                 key="design_radius_default",
                 help=H_RADIUS_DEFAULT,
             )
             st.slider(
-                "Default circle fill opacity — all maps",
+                "Circle fill opacity",
                 min_value=0.0,
                 max_value=1.0,
                 step=0.01,
                 key="design_marker_default_circle_fill_opacity",
                 help=H_FO_DEFAULT,
+            )
+            st.slider(
+                "Edge weight",
+                min_value=1,
+                max_value=8,
+                key="design_marker_default_base_stroke_weight",
+                help=H_SW_GLOBAL,
+            )
+            _hex_text_input(
+                "Fill",
+                key="design_marker_default_fill_hex",
+                help=H_GLOBAL_FILL,
+            )
+            _hex_text_input(
+                "Edge",
+                key="design_marker_default_edge_hex",
+                help=H_GLOBAL_EDGE,
             )
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_ALL_LOCATIONS], expanded=False):
@@ -629,6 +656,13 @@ def main() -> None:
                 key="design_fo_species",
                 help=H_FO_SPECIES,
             )
+            st.slider(
+                "Edge weight",
+                min_value=1,
+                max_value=8,
+                key="design_sw_species",
+                help=H_SW_SPECIES,
+            )
             _hex_text_input("Fill (Species)", key="design_hex_sf", help=H_HEX_SF)
             _hex_text_input("Edge (Species)", key="design_hex_se", help=H_HEX_SE)
             st.divider()
@@ -656,6 +690,13 @@ def main() -> None:
                 step=0.01,
                 key="design_fo_lifer_map_lifer",
                 help=H_FO_LIFER_MAP_LIFER,
+            )
+            st.slider(
+                "Edge weight",
+                min_value=1,
+                max_value=8,
+                key="design_sw_lifer",
+                help=H_SW_LIFER,
             )
             _hex_text_input("Fill", key="design_hex_lml_f", help=H_HEX_LML_F)
             _hex_text_input("Edge", key="design_hex_lml_e", help=H_HEX_LML_E)

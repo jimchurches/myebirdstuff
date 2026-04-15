@@ -44,13 +44,17 @@ class MapMarkerClusterStyle:
 
 @dataclass(frozen=True)
 class MapMarkerAllLocationsStyle:
-    """Default location pins on the all-locations map + optional cluster icon styling."""
+    """Default location pins on the all-locations map + optional cluster icon styling.
+
+    Radius uses :data:`MapMarkerColourScheme.global_defaults.circle_radius_px` unless
+    ``radius_override_px`` is set. ``stroke_weight`` / ``fill_opacity`` default to ``None`` so they inherit
+    ``global_defaults.base_stroke_weight`` and ``global_defaults.circle_fill_opacity`` (sparse presets).
+    """
 
     fill_hex: str
     edge_hex: str
-    circle_radius_px: int
-    stroke_weight: int
-    fill_opacity: float
+    stroke_weight: int | None = None
+    fill_opacity: float | None = None
     radius_override_px: int | None = None
     fill_opacity_override: float | None = None
     cluster: MapMarkerClusterStyle = field(default_factory=MapMarkerClusterStyle)
@@ -67,6 +71,7 @@ class MapMarkerSpeciesLocationsStyle:
     last_seen_fill_hex: str
     last_seen_edge_hex: str
     emphasis_fill_opacity: float
+    stroke_weight_override: int | None = None
     radius_override_px: int | None = None
     fill_opacity_override: float | None = None
 
@@ -81,6 +86,7 @@ class MapMarkerLiferLocationsStyle:
     subspecies_edge_hex: str
     lifer_fill_opacity: float
     subspecies_fill_opacity: float
+    stroke_weight_override: int | None = None
     lifer_radius_override_px: int | None = None
     subspecies_radius_override_px: int | None = None
     lifer_fill_opacity_override: float | None = None

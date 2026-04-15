@@ -46,6 +46,8 @@ def format_map_marker_colour_scheme_dict_py(
     vp = template.viewport
     md = int(cfg.marker_default_circle_radius_px)
     md_fo = float(cfg.marker_default_circle_fill_opacity)
+    md_sw = int(cfg.marker_default_base_stroke_weight)
+    t_al = template.all_locations
 
     lines: list[str] = [
         f"{dict_name} = MapMarkerColourScheme(",
@@ -59,20 +61,24 @@ def format_map_marker_colour_scheme_dict_py(
         "    ),",
     ]
 
+    crl = int(cfg.marker_circle_radius_locations)
+    sw_v = int(cfg.stroke_weight_visit)
+    fo_loc = float(cfg.marker_circle_fill_opacity_locations)
+
     al_parts: list[str] = [
         "    all_locations=MapMarkerAllLocationsStyle(",
         f"        fill_hex={cfg.default_fill!r},",
         f"        edge_hex={cfg.default_edge!r},",
-        f"        circle_radius_px={int(cfg.marker_circle_radius_locations)},",
-        f"        stroke_weight={int(cfg.stroke_weight_visit)},",
-        f"        fill_opacity={_fmt_float(cfg.marker_circle_fill_opacity_locations)},",
     ]
-    if int(cfg.marker_circle_radius_locations) != md:
-        al_parts.append(f"        radius_override_px={int(cfg.marker_circle_radius_locations)},")
-    if _opacity_overrides_default(cfg.marker_circle_fill_opacity_locations, md_fo):
-        al_parts.append(
-            f"        fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_locations)},"
-        )
+    if sw_v != md_sw:
+        al_parts.append(f"        stroke_weight={sw_v},")
+    if crl != md:
+        al_parts.append(f"        radius_override_px={crl},")
+    if _opacity_overrides_default(fo_loc, md_fo):
+        if t_al.fill_opacity_override is not None:
+            al_parts.append(f"        fill_opacity_override={_fmt_float(fo_loc)},")
+        else:
+            al_parts.append(f"        fill_opacity={_fmt_float(fo_loc)},")
 
     cl_parts: list[str] = []
     if cfg.marker_cluster_colours_hex is not None:
@@ -111,6 +117,8 @@ def format_map_marker_colour_scheme_dict_py(
     )
     if int(cfg.marker_circle_radius_species) != md:
         lines.append(f"        radius_override_px={int(cfg.marker_circle_radius_species)},")
+    if int(cfg.stroke_weight_species) != int(cfg.stroke_weight_visit):
+        lines.append(f"        stroke_weight_override={int(cfg.stroke_weight_species)},")
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_species, md_fo):
         lines.append(f"        fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_species)},")
     lines.append("    ),")
@@ -134,6 +142,8 @@ def format_map_marker_colour_scheme_dict_py(
         lines.append(
             f"        subspecies_radius_override_px={int(cfg.marker_circle_radius_lifer_map_subspecies)},"
         )
+    if int(cfg.stroke_weight_lifer) != int(cfg.stroke_weight_visit):
+        lines.append(f"        stroke_weight_override={int(cfg.stroke_weight_lifer)},")
     if _opacity_overrides_default(cfg.marker_circle_fill_opacity_lifer_map_lifer, md_fo):
         lines.append(
             f"        lifer_fill_opacity_override={_fmt_float(cfg.marker_circle_fill_opacity_lifer_map_lifer)},"

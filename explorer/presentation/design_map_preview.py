@@ -178,6 +178,8 @@ class DesignMapPreviewConfig:
     marker_circle_radius_lifer_map_subspecies: int
     marker_circle_radius_families: int
     stroke_weight_visit: int
+    stroke_weight_species: int
+    stroke_weight_lifer: int
     stroke_weight_family: int
     stroke_weight_family_highlight: int
     # Resolved circle fill opacities (``marker_default_circle_fill_opacity`` unless overridden in scheme).
@@ -465,29 +467,29 @@ def build_design_preview_map(
                 stroke = normalize_hex_colour(e)
                 fill_c = normalize_hex_colour(f)
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
-                sw = max(1, int(cfg.stroke_weight_visit))
+                sw = max(1, int(cfg.stroke_weight_species))
             elif kind == "species_visit_lifer":
                 _slug, (e, f) = next(x for x in visit_emphasis_specs if x[0] == kind)
                 stroke = normalize_hex_colour(e)
                 fill_c = normalize_hex_colour(f)
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
-                sw = max(1, int(cfg.stroke_weight_visit))
+                sw = max(1, int(cfg.stroke_weight_species))
             elif kind == "lifer_map_lifer":
                 stroke = normalize_hex_colour(cfg.lifer_map_lifer_edge)
                 fill_c = normalize_hex_colour(cfg.lifer_map_lifer_fill)
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_lifer_map_lifer))
-                sw = max(1, int(cfg.stroke_weight_visit))
+                sw = max(1, int(cfg.stroke_weight_lifer))
             elif kind == "visit_last_seen":
                 _slug, (e, f) = next(x for x in visit_emphasis_specs if x[0] == kind)
                 stroke = normalize_hex_colour(e)
                 fill_c = normalize_hex_colour(f)
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_species))
-                sw = max(1, int(cfg.stroke_weight_visit))
+                sw = max(1, int(cfg.stroke_weight_species))
             elif kind == "lifer_subspecies":
                 stroke = normalize_hex_colour(cfg.lifer_map_subspecies_edge)
                 fill_c = normalize_hex_colour(cfg.lifer_map_subspecies_fill)
                 fo = max(0.0, min(1.0, cfg.marker_circle_fill_opacity_lifer_map_subspecies))
-                sw = max(1, int(cfg.stroke_weight_visit))
+                sw = max(1, int(cfg.stroke_weight_lifer))
             else:
                 bi = int(kind[-1])
                 stroke = normalize_hex_colour(cfg.family_stroke_hex[bi])
@@ -598,9 +600,8 @@ def scheme_seed_config(
             return clamp_map_marker_circle_fill_opacity(override, fallback=md_fo)
         return clamp_map_marker_circle_fill_opacity(legacy, fallback=md_fo)
 
-    fo_loc = _collection_fill_opacity(
-        al.fill_opacity_override, float(al.fill_opacity)
-    )
+    legacy_loc = float(al.fill_opacity) if al.fill_opacity is not None else md_fo
+    fo_loc = _collection_fill_opacity(al.fill_opacity_override, legacy_loc)
     fo_spec = _collection_fill_opacity(
         sp.fill_opacity_override, float(sp.emphasis_fill_opacity)
     )
@@ -666,7 +667,9 @@ def scheme_seed_config(
         marker_circle_radius_lifer_map_lifer=r_lml,
         marker_circle_radius_lifer_map_subspecies=r_lms,
         marker_circle_radius_families=rf,
-        stroke_weight_visit=max(1, int(al.stroke_weight)),
+        stroke_weight_visit=_int_or_fb(al.stroke_weight, md_sw),
+        stroke_weight_species=_int_or_fb(getattr(sp, "stroke_weight_override", None), _int_or_fb(al.stroke_weight, md_sw)),
+        stroke_weight_lifer=_int_or_fb(getattr(ll, "stroke_weight_override", None), _int_or_fb(al.stroke_weight, md_sw)),
         stroke_weight_family=max(1, int(fam.base_stroke_weight)),
         stroke_weight_family_highlight=max(1, int(fam.highlight_stroke_weight)),
         marker_circle_fill_opacity_locations=fo_loc,

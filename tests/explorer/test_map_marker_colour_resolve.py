@@ -42,8 +42,8 @@ def test_resolve_scheme_1_visit_matches_legacy_globals() -> None:
 def test_resolve_experimental_visit_distinct_from_global() -> None:
     sch = active_map_marker_colour_scheme(3)
     vf, ve = resolve_location_visit_colours(sch)
-    assert vf == "#C7A8C1"
-    assert ve == "#4D2D48"
+    assert vf == "#BF9BBC"
+    assert ve == "#677C8E"
     gf, _ge = resolve_marker_global_colours(sch)
     assert vf != gf
 
