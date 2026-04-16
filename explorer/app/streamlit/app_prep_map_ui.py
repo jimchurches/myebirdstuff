@@ -302,13 +302,9 @@ def render_prep_spinner_and_map_tab(
                         int(family_colour_scheme),
                     )
                     _species_selected = bool(overlay_sci)
-                    _cache_map_view_mode = map_view_mode
-                    if map_view_mode == "species" and not _species_selected:
-                        if not hide_non_matching_locations:
-                            _cache_map_view_mode = "all"
                     _ck = static_map_cache_key(
                         work_df,
-                        _cache_map_view_mode,
+                        map_view_mode,
                         date_filter_banner,
                         map_style,
                         _render_opts_sig,
@@ -372,8 +368,8 @@ def render_prep_spinner_and_map_tab(
                         map_for_folium,
                         use_container_width=True,
                         height=map_height,
-                        # ``_ck`` coerces **Species** with no pick to ``all`` so we reuse one Folium build
-                        # when the cache is valid. *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
+                        # Cache key includes *map_view_mode* so All vs Species builds stay distinct (refs #147).
+                        # *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
                         # distinct streamlit-folium component identity when the sidebar layout changes
                         # (All↔Species); see invalidation block above.
                         key=folium_st_key,

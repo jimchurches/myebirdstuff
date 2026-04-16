@@ -8,27 +8,28 @@ from explorer.app.streamlit.defaults import (
     active_map_marker_colour_scheme,
 )
 from explorer.core.map_marker_colour_resolve import (
-    MAP_MARKER_CATCHALL_EDGE_HEX,
     MAP_MARKER_CATCHALL_FILL_HEX,
-    MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX,
+    MAP_MARKER_CATCHALL_STROKE_HEX,
     MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
+    MAP_MARKER_SCHEME_DEFAULT_STROKE_HEX,
     family_map_resolved_circle_radius_px,
     family_map_resolved_fill_opacity,
     is_valid_hex_colour,
     normalize_marker_hex,
     resolve_location_visit_colours,
     resolve_marker_global_colours,
+    resolve_species_map_background_colours,
 )
 
 
 def test_catchall_matches_scheme_defaults() -> None:
     assert MAP_MARKER_CATCHALL_FILL_HEX == MAP_MARKER_SCHEME_DEFAULT_FILL_HEX
-    assert MAP_MARKER_CATCHALL_EDGE_HEX == MAP_MARKER_SCHEME_DEFAULT_EDGE_HEX
+    assert MAP_MARKER_CATCHALL_STROKE_HEX == MAP_MARKER_SCHEME_DEFAULT_STROKE_HEX
 
 
 def test_normalize_marker_hex_channel_fallback() -> None:
     assert normalize_marker_hex("", channel="fill") == MAP_MARKER_CATCHALL_FILL_HEX
-    assert normalize_marker_hex("not-a-colour", channel="edge") == MAP_MARKER_CATCHALL_EDGE_HEX
+    assert normalize_marker_hex("not-a-colour", channel="edge") == MAP_MARKER_CATCHALL_STROKE_HEX
 
 
 def test_resolve_scheme_1_visit_matches_legacy_globals() -> None:
@@ -39,11 +40,19 @@ def test_resolve_scheme_1_visit_matches_legacy_globals() -> None:
     assert ve == ge == "#008000"
 
 
+def test_resolve_species_map_background_colours_scheme3_matches_all_locations_colours() -> None:
+    """Bundled scheme 3 uses the same hex for ``all_locations`` and ``species_map_background``."""
+    sch = active_map_marker_colour_scheme(3)
+    al = resolve_location_visit_colours(sch)
+    sm = resolve_species_map_background_colours(sch)
+    assert al == sm
+
+
 def test_resolve_experimental_visit_distinct_from_global() -> None:
     sch = active_map_marker_colour_scheme(3)
     vf, ve = resolve_location_visit_colours(sch)
-    assert vf == "#BF9BBC"
-    assert ve == "#677C8E"
+    assert vf == "#EBE9ED"
+    assert ve == "#CCC7D1"
     gf, _ge = resolve_marker_global_colours(sch)
     assert vf != gf
 

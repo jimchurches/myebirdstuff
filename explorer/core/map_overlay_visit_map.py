@@ -58,15 +58,15 @@ def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tupl
     fill_c, edge = resolve_location_visit_colours(sch)
     g = sch.global_defaults
     al = sch.all_locations
-    md = int(g.circle_radius_px)
-    loc = al.radius_override_px
+    md = int(g.radius_px)
+    loc = al.radius_px
     radius_px = clamp_map_marker_circle_radius_px(loc if loc is not None else md)
     sw_raw = al.stroke_weight
     if sw_raw is None:
-        sw_raw = g.base_stroke_weight
+        sw_raw = g.stroke_weight
     sw = max(1, int(sw_raw))
     md_fo = clamp_map_marker_circle_fill_opacity(
-        getattr(g, "circle_fill_opacity", None),
+        getattr(g, "fill_opacity", None),
         fallback=0.88,
     )
     legacy_fo = float(al.fill_opacity) if al.fill_opacity is not None else md_fo
@@ -119,7 +119,7 @@ def _marker_cluster_icon_create_function_from_scheme(
     :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig` (flat ``marker_cluster_*`` fields),
     or any object exposing the same attributes.
 
-    Expects nine cluster tier colours (``colours_hex`` or legacy ``marker_cluster_colours_hex``) with nine values
+    Expects nine cluster tier colours (``tier_icon_hex`` or flat ``marker_cluster_tier_icon_hex``) with nine values
     ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
     If unset or invalid, returns ``None`` so Folium / Leaflet.markercluster defaults apply.
     """
@@ -131,12 +131,12 @@ def _marker_cluster_icon_create_function_from_scheme(
         if al is not None:
             cl = getattr(al, "cluster", None)
             if cl is not None:
-                v = getattr(cl, "colours_hex", None)
+                v = getattr(cl, "tier_icon_hex", None)
                 if v is not None:
                     t = tuple(v) if isinstance(v, (tuple, list)) else None
                     if t is not None and len(t) == 9:
                         return t
-        vals = getattr(sch, "marker_cluster_colours_hex", None)
+        vals = getattr(sch, "marker_cluster_tier_icon_hex", None)
         if vals is None:
             return None
         t = tuple(vals) if isinstance(vals, (tuple, list)) else None
@@ -282,6 +282,7 @@ def build_visit_overlay_map(
     tax_loc_key: str,
     map_height_px: int,
     visit_marker_scheme: MapMarkerColourScheme,
+    map_view_mode: str = "all",
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode)."""
     if selected_species:
@@ -308,7 +309,8 @@ def build_visit_overlay_map(
     popup_ascending = popup_sort_order == "ascending"
     date_filter_status_line = date_filter_status or None
 
-    if not selected_species and hide_non_matching_locations:
+    _mv = (map_view_mode or "all").strip().lower()
+    if not selected_species and (hide_non_matching_locations or _mv == "species"):
         if effective_location_data.empty:
             lat, lon = -25.0, 134.0
         else:
@@ -491,12 +493,12 @@ def build_visit_overlay_map(
             elif row["has_species_match"]:
                 pin_types_present.add("Species")
             else:
-                pin_types_present.add("Other")
+                pin_types_present.add("Locations")
         _legend_roles: list[tuple[str, Literal["lifer", "last_seen", "species", "default"]]] = [
+            ("Species", "species"),
+            ("Locations", "default"),
             ("Lifer", "lifer"),
             ("Last seen", "last_seen"),
-            ("Species", "species"),
-            ("Other", "default"),
         ]
         legend_items = []
         for label, role in _legend_roles:

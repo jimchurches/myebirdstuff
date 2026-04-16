@@ -7,7 +7,7 @@ from explorer.app.streamlit.defaults import (
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
 )
-from explorer.core.map_marker_colour_resolve import MAP_MARKER_CATCHALL_EDGE_HEX
+from explorer.core.map_marker_colour_resolve import MAP_MARKER_CATCHALL_STROKE_HEX
 from explorer.presentation.design_map_preview import (
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     MAP_SCOPE_ALL_LOCATIONS,
@@ -38,8 +38,8 @@ def test_normalize_hex_colour_accepts_hash_six() -> None:
 
 
 def test_normalize_hex_colour_invalid_falls_back() -> None:
-    assert normalize_hex_colour("not-a-colour") == MAP_MARKER_CATCHALL_EDGE_HEX
-    assert normalize_hex_colour("") == MAP_MARKER_CATCHALL_EDGE_HEX
+    assert normalize_hex_colour("not-a-colour") == MAP_MARKER_CATCHALL_STROKE_HEX
+    assert normalize_hex_colour("") == MAP_MARKER_CATCHALL_STROKE_HEX
 
 
 def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
@@ -66,27 +66,27 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
         sch.family_locations.highlight_stroke_hex, channel="edge"
     )
     vf, ve = resolve_location_visit_colours(sch)
-    assert cfg.default_fill == vf
-    assert cfg.default_edge == ve
+    assert cfg.default_fill_hex == vf
+    assert cfg.default_stroke_hex == ve
     spf, spe = resolve_species_colours(sch)
-    assert cfg.species_fill == spf
-    assert cfg.species_edge == spe
+    assert cfg.species_fill_hex == spf
+    assert cfg.species_stroke_hex == spe
     gf, ge = resolve_marker_global_colours(sch)
     assert cfg.marker_default_fill_hex == gf
-    assert cfg.marker_default_edge_hex == ge
+    assert cfg.marker_default_stroke_hex == ge
     smlf, smle = resolve_species_map_lifer_colours(sch)
-    assert cfg.species_map_lifer_fill == smlf
-    assert cfg.species_map_lifer_edge == smle
+    assert cfg.species_lifer_fill_hex == smlf
+    assert cfg.species_lifer_stroke_hex == smle
     lmlf, lmle = resolve_lifer_map_lifer_colours(sch)
-    assert cfg.lifer_map_lifer_fill == lmlf
-    assert cfg.lifer_map_lifer_edge == lmle
+    assert cfg.lifer_map_lifer_fill_hex == lmlf
+    assert cfg.lifer_map_lifer_stroke_hex == lmle
     lmsf, lmse = resolve_lifer_map_subspecies_colours(sch)
-    assert cfg.lifer_map_subspecies_fill == lmsf
-    assert cfg.lifer_map_subspecies_edge == lmse
+    assert cfg.lifer_map_subspecies_fill_hex == lmsf
+    assert cfg.lifer_map_subspecies_stroke_hex == lmse
     lsf, lse = resolve_last_seen_colours(sch)
-    assert cfg.last_seen_fill == lsf
-    assert cfg.last_seen_edge == lse
-    assert cfg.marker_cluster_colours_hex is None
+    assert cfg.last_seen_fill_hex == lsf
+    assert cfg.last_seen_stroke_hex == lse
+    assert cfg.marker_cluster_tier_icon_hex is None
     assert cfg.marker_cluster_inner_fill_opacity == MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT
 
 

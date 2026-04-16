@@ -139,7 +139,7 @@ def test_all_locations_cluster_markers_apply_tier_border_colours_when_present():
             MAP_MARKER_COLOUR_SCHEME_3.all_locations,
             cluster=replace(
                 MAP_MARKER_COLOUR_SCHEME_3.all_locations.cluster,
-                colours_hex=(
+                tier_icon_hex=(
                     "#EFE6EE",
                     "#4b2e46",
                     "#e0ccdd",
@@ -182,7 +182,8 @@ def test_species_view_no_selection_hide_only_empty_map():
     assert "All locations" not in html
 
 
-def test_species_view_no_selection_show_all_matches_all_locations_banner():
+def test_species_view_no_selection_empty_even_when_hide_filter_off():
+    """Species tab with no pick is empty — no fallback to the all-locations map (refs #147)."""
     df = _minimal_map_df()
     r = build_species_overlay_map(
         **_common_kwargs(df),
@@ -193,8 +194,8 @@ def test_species_view_no_selection_show_all_matches_all_locations_banner():
     assert r.warning is None
     assert r.map is not None
     html = r.map._repr_html_()
-    assert "All species" in html
-    assert "1 checklist" in html
+    assert "Select a species in the sidebar" in html
+    assert "All species" not in html
 
 
 def test_lifer_map_mode_uses_visit_marker_scheme_when_provided():

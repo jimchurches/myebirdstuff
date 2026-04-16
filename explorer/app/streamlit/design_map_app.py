@@ -30,8 +30,8 @@ if _REPO_ROOT not in sys.path:
 import streamlit as st
 
 from explorer.core.map_marker_colour_resolve import (
-    MAP_MARKER_CATCHALL_EDGE_HEX,
     MAP_MARKER_CATCHALL_FILL_HEX,
+    MAP_MARKER_CATCHALL_STROKE_HEX,
 )
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_LABELS,
@@ -75,6 +75,7 @@ from explorer.app.streamlit.design_map_constants import (
     H_FO_LIFER_MAP_SUBSPECIES,
     H_FO_LOCATIONS,
     H_FO_SPECIES,
+    H_FO_SPECIES_MAP_LOCATIONS,
     H_HEIGHT,
     H_GLOBAL_EDGE,
     H_GLOBAL_FILL,
@@ -91,6 +92,8 @@ from explorer.app.streamlit.design_map_constants import (
     H_HEX_LSF,
     H_HEX_SE,
     H_HEX_SF,
+    H_HEX_SMPL_E,
+    H_HEX_SMPL_F,
     H_HEX_SML_E,
     H_HEX_SML_F,
     H_PRESET,
@@ -101,10 +104,12 @@ from explorer.app.streamlit.design_map_constants import (
     H_RADIUS_LIFER_MAP_SUBSPECIES,
     H_RADIUS_LOCATIONS,
     H_RADIUS_SPECIES,
+    H_RADIUS_SPECIES_MAP_LOCATIONS,
     H_SW_FAM,
     H_SW_FAM_HL,
     H_SW_LIFER,
     H_SW_SPECIES,
+    H_SW_SPECIES_MAP_LOCATIONS,
     H_SW_VISIT,
     PREVIEW_SCOPE_LABELS,
 )
@@ -116,7 +121,7 @@ from explorer.presentation.design_map_preview import (
     MAP_SCOPE_FAMILY_LOCATIONS,
     MAP_SCOPE_LIFER_LOCATIONS,
     MAP_SCOPE_SPECIES_LOCATIONS,
-    MARKER_SCHEME_FALLBACK_DEFAULT_BASE_STROKE_WEIGHT,
+    MARKER_SCHEME_FALLBACK_DEFAULT_STROKE_WEIGHT,
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     DesignMapPreviewConfig,
     build_design_preview_map,
@@ -234,44 +239,49 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
     # instantiated above the button, and Streamlit forbids mutating that widget key after creation.
     st.session_state["design_map_style"] = cfg.map_style
     st.session_state["design_height_px"] = int(cfg.height_px)
-    st.session_state["design_radius_default"] = int(cfg.marker_default_circle_radius_px)
-    st.session_state["design_radius_locations"] = int(cfg.marker_circle_radius_locations)
-    st.session_state["design_radius_species"] = int(cfg.marker_circle_radius_species)
-    st.session_state["design_radius_lifer_map_lifer"] = int(cfg.marker_circle_radius_lifer_map_lifer)
-    st.session_state["design_radius_lifer_map_subspecies"] = int(cfg.marker_circle_radius_lifer_map_subspecies)
-    st.session_state["design_radius_families"] = int(cfg.marker_circle_radius_families)
+    st.session_state["design_radius_default"] = int(cfg.marker_default_radius_px)
+    st.session_state["design_radius_locations"] = int(cfg.marker_radius_locations)
+    st.session_state["design_radius_species"] = int(cfg.marker_radius_species)
+    st.session_state["design_radius_species_map_background"] = int(cfg.marker_radius_species_map_background)
+    st.session_state["design_radius_lifer_map_lifer"] = int(cfg.marker_radius_lifer_map_lifer)
+    st.session_state["design_radius_lifer_map_subspecies"] = int(cfg.marker_radius_lifer_map_subspecies)
+    st.session_state["design_radius_families"] = int(cfg.marker_radius_families)
     st.session_state["design_sw_visit"] = int(cfg.stroke_weight_visit)
     st.session_state["design_sw_species"] = int(cfg.stroke_weight_species)
+    st.session_state["design_sw_species_map_background"] = int(cfg.stroke_weight_species_map_background)
     st.session_state["design_sw_lifer"] = int(cfg.stroke_weight_lifer)
     st.session_state["design_sw_family"] = int(cfg.stroke_weight_family)
     st.session_state["design_sw_family_hl"] = int(cfg.stroke_weight_family_highlight)
-    st.session_state["design_fo_locations"] = float(cfg.marker_circle_fill_opacity_locations)
-    st.session_state["design_fo_species"] = float(cfg.marker_circle_fill_opacity_species)
-    st.session_state["design_fo_lifer_map_lifer"] = float(cfg.marker_circle_fill_opacity_lifer_map_lifer)
-    st.session_state["design_fo_lifer_map_subspecies"] = float(cfg.marker_circle_fill_opacity_lifer_map_subspecies)
-    st.session_state["design_fo_family"] = float(cfg.marker_circle_fill_opacity_families)
+    st.session_state["design_fo_locations"] = float(cfg.marker_fill_opacity_locations)
+    st.session_state["design_fo_species"] = float(cfg.marker_fill_opacity_species)
+    st.session_state["design_fo_species_map_background"] = float(cfg.marker_fill_opacity_species_map_background)
+    st.session_state["design_fo_lifer_map_lifer"] = float(cfg.marker_fill_opacity_lifer_map_lifer)
+    st.session_state["design_fo_lifer_map_subspecies"] = float(cfg.marker_fill_opacity_lifer_map_subspecies)
+    st.session_state["design_fo_family"] = float(cfg.marker_fill_opacity_families)
     st.session_state["design_marker_default_fill_hex"] = cfg.marker_default_fill_hex
-    st.session_state["design_marker_default_edge_hex"] = cfg.marker_default_edge_hex
-    st.session_state["design_marker_default_circle_fill_opacity"] = float(cfg.marker_default_circle_fill_opacity)
-    st.session_state["design_marker_default_base_stroke_weight"] = int(cfg.marker_default_base_stroke_weight)
-    st.session_state["design_hex_de"] = cfg.default_edge
-    st.session_state["design_hex_df"] = cfg.default_fill
-    st.session_state["design_hex_se"] = cfg.species_edge
-    st.session_state["design_hex_sf"] = cfg.species_fill
-    st.session_state["design_hex_sml_e"] = cfg.species_map_lifer_edge
-    st.session_state["design_hex_sml_f"] = cfg.species_map_lifer_fill
-    st.session_state["design_hex_lml_e"] = cfg.lifer_map_lifer_edge
-    st.session_state["design_hex_lml_f"] = cfg.lifer_map_lifer_fill
-    st.session_state["design_hex_lms_e"] = cfg.lifer_map_subspecies_edge
-    st.session_state["design_hex_lms_f"] = cfg.lifer_map_subspecies_fill
-    st.session_state["design_hex_lse"] = cfg.last_seen_edge
-    st.session_state["design_hex_lsf"] = cfg.last_seen_fill
+    st.session_state["design_marker_default_stroke_hex"] = cfg.marker_default_stroke_hex
+    st.session_state["design_marker_default_fill_opacity"] = float(cfg.marker_default_fill_opacity)
+    st.session_state["design_marker_default_stroke_weight"] = int(cfg.marker_default_stroke_weight)
+    st.session_state["design_hex_de"] = cfg.default_stroke_hex
+    st.session_state["design_hex_df"] = cfg.default_fill_hex
+    st.session_state["design_hex_se"] = cfg.species_stroke_hex
+    st.session_state["design_hex_sf"] = cfg.species_fill_hex
+    st.session_state["design_hex_smpl_f"] = cfg.species_map_background_fill_hex
+    st.session_state["design_hex_smpl_e"] = cfg.species_map_background_stroke_hex
+    st.session_state["design_hex_sml_e"] = cfg.species_lifer_stroke_hex
+    st.session_state["design_hex_sml_f"] = cfg.species_lifer_fill_hex
+    st.session_state["design_hex_lml_e"] = cfg.lifer_map_lifer_stroke_hex
+    st.session_state["design_hex_lml_f"] = cfg.lifer_map_lifer_fill_hex
+    st.session_state["design_hex_lms_e"] = cfg.lifer_map_subspecies_stroke_hex
+    st.session_state["design_hex_lms_f"] = cfg.lifer_map_subspecies_fill_hex
+    st.session_state["design_hex_lse"] = cfg.last_seen_stroke_hex
+    st.session_state["design_hex_lsf"] = cfg.last_seen_fill_hex
     for i in range(4):
         st.session_state[f"design_hex_ff{i}"] = cfg.family_fill_hex[i]
         st.session_state[f"design_hex_fs{i}"] = cfg.family_stroke_hex[i]
     st.session_state["design_hex_fam_hl"] = cfg.family_highlight_stroke_hex
     st.session_state["design_legend_hl_swatch_ix"] = int(cfg.legend_highlight_band_index)
-    cc = cfg.marker_cluster_colours_hex
+    cc = cfg.marker_cluster_tier_icon_hex
     if cc is not None and len(cc) == 9:
         for i in range(9):
             st.session_state[f"design_cluster_colour_hex_{i}"] = cc[i]
@@ -293,7 +303,7 @@ def _config_from_session() -> DesignMapPreviewConfig:
     _raw_default = st.session_state.get("design_radius_default")
     _md = clamp_map_marker_circle_radius_px(_raw_default if _raw_default is not None else _fb)
     _mdf = clamp_map_marker_circle_fill_opacity(
-        st.session_state.get("design_marker_default_circle_fill_opacity"),
+        st.session_state.get("design_marker_default_fill_opacity"),
         fallback=MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     )
     return DesignMapPreviewConfig(
@@ -303,77 +313,94 @@ def _config_from_session() -> DesignMapPreviewConfig:
             MAP_HEIGHT_PX_MIN,
             min(MAP_HEIGHT_PX_MAX, int(st.session_state.get("design_height_px", MAP_HEIGHT_PX_DEFAULT))),
         ),
-        marker_default_circle_radius_px=_md,
-        marker_circle_radius_locations=_radius_from_session("design_radius_locations", default_px=_md),
-        marker_circle_radius_species=_radius_from_session("design_radius_species", default_px=_md),
-        marker_circle_radius_lifer_map_lifer=_radius_from_session(
+        marker_default_radius_px=_md,
+        marker_radius_locations=_radius_from_session("design_radius_locations", default_px=_md),
+        marker_radius_species=_radius_from_session("design_radius_species", default_px=_md),
+        marker_radius_species_map_background=_radius_from_session(
+            "design_radius_species_map_background", default_px=_md
+        ),
+        marker_radius_lifer_map_lifer=_radius_from_session(
             "design_radius_lifer_map_lifer", default_px=_md
         ),
-        marker_circle_radius_lifer_map_subspecies=_radius_from_session(
+        marker_radius_lifer_map_subspecies=_radius_from_session(
             "design_radius_lifer_map_subspecies", default_px=_md
         ),
-        marker_circle_radius_families=_radius_from_session("design_radius_families", default_px=_md),
+        marker_radius_families=_radius_from_session("design_radius_families", default_px=_md),
         stroke_weight_visit=max(1, int(st.session_state.get("design_sw_visit", 1))),
         stroke_weight_species=max(1, int(st.session_state.get("design_sw_species", st.session_state.get("design_sw_visit", 1)))),
+        stroke_weight_species_map_background=max(
+            1,
+            int(
+                st.session_state.get(
+                    "design_sw_species_map_background",
+                    st.session_state.get("design_sw_species", st.session_state.get("design_sw_visit", 1)),
+                )
+            ),
+        ),
         stroke_weight_lifer=max(1, int(st.session_state.get("design_sw_lifer", st.session_state.get("design_sw_visit", 1)))),
         stroke_weight_family=max(1, int(st.session_state.get("design_sw_family", 1))),
         stroke_weight_family_highlight=max(1, int(st.session_state.get("design_sw_family_hl", 1))),
-        marker_circle_fill_opacity_locations=_fill_opacity_from_session(
+        marker_fill_opacity_locations=_fill_opacity_from_session(
             "design_fo_locations", legacy_key="design_fo_all", default=_mdf
         ),
-        marker_circle_fill_opacity_species=_fill_opacity_from_session(
+        marker_fill_opacity_species=_fill_opacity_from_session(
             "design_fo_species", legacy_key="design_fo_emph", default=_mdf
         ),
-        marker_circle_fill_opacity_lifer_map_lifer=_fill_opacity_from_session(
+        marker_fill_opacity_species_map_background=_fill_opacity_from_session(
+            "design_fo_species_map_background", legacy_key=None, default=_mdf
+        ),
+        marker_fill_opacity_lifer_map_lifer=_fill_opacity_from_session(
             "design_fo_lifer_map_lifer", legacy_key=None, default=_mdf
         ),
-        marker_circle_fill_opacity_lifer_map_subspecies=_fill_opacity_from_session(
+        marker_fill_opacity_lifer_map_subspecies=_fill_opacity_from_session(
             "design_fo_lifer_map_subspecies", legacy_key=None, default=_mdf
         ),
-        marker_circle_fill_opacity_families=_fill_opacity_from_session(
+        marker_fill_opacity_families=_fill_opacity_from_session(
             "design_fo_family", legacy_key=None, default=_mdf
         ),
         marker_default_fill_hex=str(
             st.session_state.get("design_marker_default_fill_hex", MAP_MARKER_CATCHALL_FILL_HEX)
         ),
-        marker_default_edge_hex=str(
-            st.session_state.get("design_marker_default_edge_hex", MAP_MARKER_CATCHALL_EDGE_HEX)
+        marker_default_stroke_hex=str(
+            st.session_state.get("design_marker_default_stroke_hex", MAP_MARKER_CATCHALL_STROKE_HEX)
         ),
-        marker_default_circle_fill_opacity=_mdf,
-        marker_default_base_stroke_weight=max(
+        marker_default_fill_opacity=_mdf,
+        marker_default_stroke_weight=max(
             1,
             int(
                 st.session_state.get(
-                    "design_marker_default_base_stroke_weight",
-                    MARKER_SCHEME_FALLBACK_DEFAULT_BASE_STROKE_WEIGHT,
+                    "design_marker_default_stroke_weight",
+                    MARKER_SCHEME_FALLBACK_DEFAULT_STROKE_WEIGHT,
                 )
             ),
         ),
-        default_edge=str(st.session_state.get("design_hex_de", MAP_MARKER_CATCHALL_EDGE_HEX)),
-        default_fill=str(st.session_state.get("design_hex_df", MAP_MARKER_CATCHALL_FILL_HEX)),
-        species_edge=str(st.session_state.get("design_hex_se", MAP_MARKER_CATCHALL_EDGE_HEX)),
-        species_fill=str(st.session_state.get("design_hex_sf", MAP_MARKER_CATCHALL_FILL_HEX)),
-        species_map_lifer_edge=str(st.session_state.get("design_hex_sml_e", MAP_MARKER_CATCHALL_EDGE_HEX)),
-        species_map_lifer_fill=str(st.session_state.get("design_hex_sml_f", MAP_MARKER_CATCHALL_FILL_HEX)),
-        lifer_map_lifer_edge=str(st.session_state.get("design_hex_lml_e", MAP_MARKER_CATCHALL_EDGE_HEX)),
-        lifer_map_lifer_fill=str(st.session_state.get("design_hex_lml_f", MAP_MARKER_CATCHALL_FILL_HEX)),
-        lifer_map_subspecies_edge=str(st.session_state.get("design_hex_lms_e", MAP_MARKER_CATCHALL_EDGE_HEX)),
-        lifer_map_subspecies_fill=str(st.session_state.get("design_hex_lms_f", MAP_MARKER_CATCHALL_FILL_HEX)),
-        last_seen_edge=str(st.session_state.get("design_hex_lse", MAP_MARKER_CATCHALL_EDGE_HEX)),
-        last_seen_fill=str(st.session_state.get("design_hex_lsf", MAP_MARKER_CATCHALL_FILL_HEX)),
+        default_stroke_hex=str(st.session_state.get("design_hex_de", MAP_MARKER_CATCHALL_STROKE_HEX)),
+        default_fill_hex=str(st.session_state.get("design_hex_df", MAP_MARKER_CATCHALL_FILL_HEX)),
+        species_map_background_fill_hex=str(st.session_state.get("design_hex_smpl_f", MAP_MARKER_CATCHALL_FILL_HEX)),
+        species_map_background_stroke_hex=str(st.session_state.get("design_hex_smpl_e", MAP_MARKER_CATCHALL_STROKE_HEX)),
+        species_stroke_hex=str(st.session_state.get("design_hex_se", MAP_MARKER_CATCHALL_STROKE_HEX)),
+        species_fill_hex=str(st.session_state.get("design_hex_sf", MAP_MARKER_CATCHALL_FILL_HEX)),
+        species_lifer_stroke_hex=str(st.session_state.get("design_hex_sml_e", MAP_MARKER_CATCHALL_STROKE_HEX)),
+        species_lifer_fill_hex=str(st.session_state.get("design_hex_sml_f", MAP_MARKER_CATCHALL_FILL_HEX)),
+        lifer_map_lifer_stroke_hex=str(st.session_state.get("design_hex_lml_e", MAP_MARKER_CATCHALL_STROKE_HEX)),
+        lifer_map_lifer_fill_hex=str(st.session_state.get("design_hex_lml_f", MAP_MARKER_CATCHALL_FILL_HEX)),
+        lifer_map_subspecies_stroke_hex=str(st.session_state.get("design_hex_lms_e", MAP_MARKER_CATCHALL_STROKE_HEX)),
+        lifer_map_subspecies_fill_hex=str(st.session_state.get("design_hex_lms_f", MAP_MARKER_CATCHALL_FILL_HEX)),
+        last_seen_stroke_hex=str(st.session_state.get("design_hex_lse", MAP_MARKER_CATCHALL_STROKE_HEX)),
+        last_seen_fill_hex=str(st.session_state.get("design_hex_lsf", MAP_MARKER_CATCHALL_FILL_HEX)),
         family_fill_hex=tuple(
             str(st.session_state.get(f"design_hex_ff{i}", MAP_MARKER_CATCHALL_FILL_HEX)) for i in range(4)
         ),
         family_stroke_hex=tuple(
-            str(st.session_state.get(f"design_hex_fs{i}", MAP_MARKER_CATCHALL_EDGE_HEX)) for i in range(4)
+            str(st.session_state.get(f"design_hex_fs{i}", MAP_MARKER_CATCHALL_STROKE_HEX)) for i in range(4)
         ),
         family_highlight_stroke_hex=str(
-            st.session_state.get("design_hex_fam_hl", MAP_MARKER_CATCHALL_EDGE_HEX)
+            st.session_state.get("design_hex_fam_hl", MAP_MARKER_CATCHALL_STROKE_HEX)
         ),
         legend_highlight_band_index=max(
             0, min(3, int(st.session_state.get("design_legend_hl_swatch_ix", 0)))
         ),
-        marker_cluster_colours_hex=_cluster_colours_from_session(),
+        marker_cluster_tier_icon_hex=_cluster_colours_from_session(),
         marker_cluster_inner_fill_opacity=_cluster_style_float_from_session(
             "design_cluster_inner_fo", MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT
         ),
@@ -396,15 +423,15 @@ def _config_for_export() -> DesignMapPreviewConfig:
     """Session config for **Export** tab.
 
     If the nine cluster hex fields are empty in session (e.g. preset was changed before we synced)
-    but the selected **defaults.py** preset defines ``marker_cluster_colours_hex``, merge those
+    but the selected **defaults.py** preset defines ``tier_icon_hex``, merge those
     resolved values so the export block matches the file without requiring a separate button click.
     """
     cfg = _config_from_session()
-    if cfg.marker_cluster_colours_hex is not None:
+    if cfg.marker_cluster_tier_icon_hex is not None:
         return cfg
     pick = int(st.session_state.get("design_scheme_pick", 1))
     sch = active_map_marker_colour_scheme(pick)
-    if sch.all_locations.cluster.colours_hex is None:
+    if sch.all_locations.cluster.tier_icon_hex is None:
         return cfg
     scope = str(st.session_state.get("design_preview_scope", MAP_SCOPE_ALL))
     if scope not in MAP_SCOPES:
@@ -412,7 +439,7 @@ def _config_for_export() -> DesignMapPreviewConfig:
     seeded = scheme_seed_config(pick, preview_scope=scope)
     return replace(
         cfg,
-        marker_cluster_colours_hex=seeded.marker_cluster_colours_hex,
+        marker_cluster_tier_icon_hex=seeded.marker_cluster_tier_icon_hex,
         marker_cluster_inner_fill_opacity=seeded.marker_cluster_inner_fill_opacity,
         marker_cluster_halo_opacity=seeded.marker_cluster_halo_opacity,
         marker_cluster_border_opacity=seeded.marker_cluster_border_opacity,
@@ -497,14 +524,14 @@ def main() -> None:
                 min_value=0.0,
                 max_value=1.0,
                 step=0.01,
-                key="design_marker_default_circle_fill_opacity",
+                key="design_marker_default_fill_opacity",
                 help=H_FO_DEFAULT,
             )
             st.slider(
                 "Edge weight",
                 min_value=1,
                 max_value=8,
-                key="design_marker_default_base_stroke_weight",
+                key="design_marker_default_stroke_weight",
                 help=H_SW_GLOBAL,
             )
             _hex_text_input(
@@ -514,7 +541,7 @@ def main() -> None:
             )
             _hex_text_input(
                 "Edge",
-                key="design_marker_default_edge_hex",
+                key="design_marker_default_stroke_hex",
                 help=H_GLOBAL_EDGE,
             )
 
@@ -666,13 +693,39 @@ def main() -> None:
             _hex_text_input("Fill (Species)", key="design_hex_sf", help=H_HEX_SF)
             _hex_text_input("Edge (Species)", key="design_hex_se", help=H_HEX_SE)
             st.divider()
-            st.markdown("**Lifer**")
+            st.markdown("**Lifer** (map lifer)")
             _hex_text_input("Fill", key="design_hex_sml_f", help=H_HEX_SML_F)
             _hex_text_input("Edge", key="design_hex_sml_e", help=H_HEX_SML_E)
             st.divider()
             st.markdown("**Last seen**")
             _hex_text_input("Fill", key="design_hex_lsf", help=H_HEX_LSF)
             _hex_text_input("Edge", key="design_hex_lse", help=H_HEX_LSE)
+            st.divider()
+            with st.expander("Locations", expanded=False):
+                st.slider(
+                    "Circle radius (px)",
+                    min_value=1,
+                    max_value=MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
+                    key="design_radius_species_map_background",
+                    help=H_RADIUS_SPECIES_MAP_LOCATIONS,
+                )
+                st.slider(
+                    "Circle fill opacity",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.01,
+                    key="design_fo_species_map_background",
+                    help=H_FO_SPECIES_MAP_LOCATIONS,
+                )
+                st.slider(
+                    "Edge weight",
+                    min_value=1,
+                    max_value=8,
+                    key="design_sw_species_map_background",
+                    help=H_SW_SPECIES_MAP_LOCATIONS,
+                )
+                _hex_text_input("Fill", key="design_hex_smpl_f", help=H_HEX_SMPL_F)
+                _hex_text_input("Edge", key="design_hex_smpl_e", help=H_HEX_SMPL_E)
 
         with st.expander(PREVIEW_SCOPE_LABELS[MAP_SCOPE_LIFER_LOCATIONS], expanded=False):
             st.markdown("**Base lifer** (species-level lifer at this location)")
@@ -836,11 +889,11 @@ def main() -> None:
         )
         st.code(export_body, language="python")
         st.caption(
-            "Single ``MapMarkerColourScheme`` dict: resolved ``visit_*`` / ``circle_marker_*`` opacities "
-            "and radii, plus optional sparse ``marker_circle_radius_px_*`` / ``marker_circle_fill_opacity_*`` "
-            "and optional ``marker_cluster_colours_hex`` when set. "
+            "Single ``MapMarkerColourScheme`` dict: resolved visit-map opacities "
+            "and radii, plus optional sparse per-collection ``radius_px`` / ``fill_opacity`` "
+            "and optional ``all_locations.cluster.tier_icon_hex`` when set. "
             "The live explorer resolves species-map pins via ``resolve_species_visit_pin`` (roles include "
-            "``species_map_lifer`` hex/radius) and lifer-map pins via ``resolve_lifer_overlay_pin_params`` "
+            "species lifer / last-seen hex and radius) and lifer-map pins via ``resolve_lifer_overlay_pin_params`` "
             "(``lifer_map_lifer`` vs ``lifer_map_subspecies``). "
             "Rename ``EXPORT`` symbols and register new presets in ``active_map_marker_colour_scheme`` in "
             "``defaults.py`` as needed."

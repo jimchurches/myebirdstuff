@@ -66,7 +66,7 @@ def family_map_marker_style(
             normalize_marker_hex(fam.highlight_stroke_hex, channel="edge"),
             fam.highlight_stroke_weight,
         )
-    return fill_res, edge_res, fam.base_stroke_weight
+    return fill_res, edge_res, fam.stroke_weight
 
 
 def _default_au_center() -> tuple[float, float]:

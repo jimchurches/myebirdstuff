@@ -3,13 +3,13 @@ Nested dataclasses for :class:`MapMarkerColourScheme`.
 
 **Naming**
 
-- **Per collection:** ``fill_hex`` / ``edge_hex`` for the primary pin colours; role-specific pairs
-  use short prefixes (``map_lifer_*``, ``last_seen_*``, ``lifer_*``, ``subspecies_*``).
-- **Sparse tweaks:** ``radius_override_px`` and ``fill_opacity_override`` only when a collection differs
-  from :class:`MapMarkerGlobalDefaults`.
-- **Family map:** ``pin_radius_px`` / ``pin_fill_opacity`` are the styled defaults; overrides use the same
-  ``*_override_*`` pattern.
-- **Flat overrides:** :class:`SchemeColourOverrides` uses short keys (``default_fill_hex``, ``location_fill_hex``, …).
+- **Per collection:** ``fill_hex`` / ``stroke_hex`` for pin fill and outline colour; role-specific pairs use
+  short prefixes (``lifer_*``, ``last_seen_*``, ``subspecies_*``) where needed.
+- **Sparse tweaks:** optional ``radius_px`` / ``fill_opacity`` / ``fill_opacity_override`` when a collection
+  differs from :class:`MapMarkerGlobalDefaults`.
+- **Family map:** ``radius_px`` / ``fill_opacity`` are the styled defaults; optional overrides use the same
+  ``*_override_*`` pattern where required.
+- **Flat overrides:** :class:`SchemeColourOverrides` uses short keys layered on the scheme.
 
 ``explorer.app.streamlit.defaults`` builds the three bundled presets from these types.
 """
@@ -24,17 +24,20 @@ class MapMarkerGlobalDefaults:
     """Fallback stroke/fill and default circle geometry shared across resolution (a)→(b)→(c)→(d)."""
 
     fill_hex: str
-    edge_hex: str
-    circle_radius_px: int
-    circle_fill_opacity: float
-    base_stroke_weight: int
+    stroke_hex: str
+    radius_px: int
+    fill_opacity: float
+    stroke_weight: int
 
 
 @dataclass(frozen=True)
 class MapMarkerClusterStyle:
-    """Leaflet.markercluster tier icon overrides (all-locations map only)."""
+    """Leaflet.markercluster tier icon overrides (all-locations map only).
 
-    colours_hex: tuple[str, str, str, str, str, str, str, str, str] | None = None
+    Nine entries: small / medium / large tier, each (fill, border, halo) — see ``map_overlay_visit_map``.
+    """
+
+    tier_icon_hex: tuple[str, str, str, str, str, str, str, str, str] | None = None
     inner_fill_opacity: float | None = None
     halo_opacity: float | None = None
     border_opacity: float | None = None
@@ -46,33 +49,48 @@ class MapMarkerClusterStyle:
 class MapMarkerAllLocationsStyle:
     """Default location pins on the all-locations map + optional cluster icon styling.
 
-    Radius uses :data:`MapMarkerColourScheme.global_defaults.circle_radius_px` unless
-    ``radius_override_px`` is set. ``stroke_weight`` / ``fill_opacity`` default to ``None`` so they inherit
-    ``global_defaults.base_stroke_weight`` and ``global_defaults.circle_fill_opacity`` (sparse presets).
+    Radius uses :data:`MapMarkerColourScheme.global_defaults.radius_px` unless ``radius_px`` is set here.
+    ``stroke_weight`` / ``fill_opacity`` default to ``None`` so they inherit globals (sparse presets).
     """
 
     fill_hex: str
-    edge_hex: str
+    stroke_hex: str
     stroke_weight: int | None = None
     fill_opacity: float | None = None
-    radius_override_px: int | None = None
+    radius_px: int | None = None
     fill_opacity_override: float | None = None
     cluster: MapMarkerClusterStyle = field(default_factory=MapMarkerClusterStyle)
 
 
 @dataclass(frozen=True)
 class MapMarkerSpeciesLocationsStyle:
-    """Species-filtered visit overlay: species / map-lifer / last-seen pins."""
+    """Species-filtered visit overlay: species / lifer / last-seen pins."""
 
     fill_hex: str
-    edge_hex: str
-    map_lifer_fill_hex: str
-    map_lifer_edge_hex: str
+    stroke_hex: str
+    lifer_fill_hex: str
+    lifer_stroke_hex: str
     last_seen_fill_hex: str
-    last_seen_edge_hex: str
-    emphasis_fill_opacity: float
+    last_seen_stroke_hex: str
+    fill_opacity: float
     stroke_weight_override: int | None = None
-    radius_override_px: int | None = None
+    radius_px: int | None = None
+    fill_opacity_override: float | None = None
+
+
+@dataclass(frozen=True)
+class MapMarkerSpeciesMapBackgroundStyle:
+    """Background (non-emphasis) pins on the species-filtered map only.
+
+    Independent of :class:`MapMarkerAllLocationsStyle` (refs #147). Same sparse pattern as
+    :class:`MapMarkerAllLocationsStyle` (no cluster).
+    """
+
+    fill_hex: str
+    stroke_hex: str
+    stroke_weight: int | None = None
+    fill_opacity: float | None = None
+    radius_px: int | None = None
     fill_opacity_override: float | None = None
 
 
@@ -81,14 +99,14 @@ class MapMarkerLiferLocationsStyle:
     """Lifer-locations map: base lifer vs taxon-only (subspecies) lifer pins."""
 
     lifer_fill_hex: str
-    lifer_edge_hex: str
+    lifer_stroke_hex: str
     subspecies_fill_hex: str
-    subspecies_edge_hex: str
+    subspecies_stroke_hex: str
     lifer_fill_opacity: float
     subspecies_fill_opacity: float
     stroke_weight_override: int | None = None
-    lifer_radius_override_px: int | None = None
-    subspecies_radius_override_px: int | None = None
+    lifer_radius_px: int | None = None
+    subspecies_radius_px: int | None = None
     lifer_fill_opacity_override: float | None = None
     subspecies_fill_opacity_override: float | None = None
 
@@ -97,15 +115,15 @@ class MapMarkerLiferLocationsStyle:
 class MapMarkerFamilyLocationsStyle:
     """Family density map: bands, highlight stroke, optional per-collection overrides."""
 
-    pin_radius_px: int
-    pin_fill_opacity: float
-    base_stroke_weight: int
+    radius_px: int
+    fill_opacity: float
+    stroke_weight: int
     highlight_stroke_hex: str
     highlight_stroke_weight: int
     density_fill_hex: tuple[str, ...]
     density_stroke_hex: tuple[str, ...]
     legend_highlight_band_index: int
-    radius_override_px: int | None = None
+    radius_px_override: int | None = None
     fill_opacity_override: float | None = None
 
 
@@ -127,19 +145,21 @@ class SchemeColourOverrides:
     """
 
     default_fill_hex: str | None = None
-    default_edge_hex: str | None = None
+    default_stroke_hex: str | None = None
     location_fill_hex: str | None = None
-    location_edge_hex: str | None = None
+    location_stroke_hex: str | None = None
     species_fill_hex: str | None = None
-    species_edge_hex: str | None = None
-    map_lifer_fill_hex: str | None = None
-    map_lifer_edge_hex: str | None = None
+    species_stroke_hex: str | None = None
+    species_lifer_fill_hex: str | None = None
+    species_lifer_stroke_hex: str | None = None
     lifer_fill_hex: str | None = None
-    lifer_edge_hex: str | None = None
+    lifer_stroke_hex: str | None = None
     subspecies_fill_hex: str | None = None
-    subspecies_edge_hex: str | None = None
+    subspecies_stroke_hex: str | None = None
     last_seen_fill_hex: str | None = None
-    last_seen_edge_hex: str | None = None
+    last_seen_stroke_hex: str | None = None
+    species_background_fill_hex: str | None = None
+    species_background_stroke_hex: str | None = None
 
 
 @dataclass(frozen=True)
@@ -150,6 +170,7 @@ class MapMarkerColourScheme:
     global_defaults: MapMarkerGlobalDefaults
     all_locations: MapMarkerAllLocationsStyle
     species_locations: MapMarkerSpeciesLocationsStyle
+    species_map_background: MapMarkerSpeciesMapBackgroundStyle
     lifer_locations: MapMarkerLiferLocationsStyle
     family_locations: MapMarkerFamilyLocationsStyle
     viewport: MapMarkerViewportStyle
