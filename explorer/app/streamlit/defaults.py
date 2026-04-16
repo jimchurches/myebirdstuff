@@ -277,7 +277,6 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
         lifer_stroke_hex='#660700',
         last_seen_fill_hex='#03DD70',
         last_seen_stroke_hex='#660700',
-        fill_opacity=0.88,
     ),
     species_map_background=MapMarkerSpeciesMapBackgroundStyle(
         fill_hex='#EBE9ED',
@@ -290,8 +289,6 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
         lifer_stroke_hex='#704868',
         subspecies_fill_hex='#CCC7D1',
         subspecies_stroke_hex='#704868',
-        lifer_fill_opacity=0.88,
-        subspecies_fill_opacity=0.88,
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
         radius_px=5,
@@ -302,7 +299,6 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
         density_fill_hex=("#95A5B2", "#B78FAF", "#8D5383", "#593653"),
         density_stroke_hex=("#677C8E", "#704868", "#5A3554", "#593654"),
         legend_highlight_band_index=0,
-        fill_opacity_override=0.85,
     ),
     viewport=_MAP_VIEWPORT_STANDARD,
 )

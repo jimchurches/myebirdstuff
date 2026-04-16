@@ -626,15 +626,14 @@ def scheme_seed_config(
 
     legacy_loc = float(al.fill_opacity) if al.fill_opacity is not None else md_fo
     fo_loc = _collection_fill_opacity(al.fill_opacity_override, legacy_loc)
-    fo_spec = _collection_fill_opacity(sp.fill_opacity_override, float(sp.fill_opacity))
+    legacy_spec = float(sp.fill_opacity) if sp.fill_opacity is not None else md_fo
+    fo_spec = _collection_fill_opacity(sp.fill_opacity_override, legacy_spec)
     legacy_smb = float(smb.fill_opacity) if smb.fill_opacity is not None else md_fo
     fo_smb = _collection_fill_opacity(smb.fill_opacity_override, legacy_smb)
-    fo_lml = _collection_fill_opacity(
-        ll.lifer_fill_opacity_override, float(ll.lifer_fill_opacity)
-    )
-    fo_lms = _collection_fill_opacity(
-        ll.subspecies_fill_opacity_override, float(ll.subspecies_fill_opacity)
-    )
+    legacy_lml = float(ll.lifer_fill_opacity) if ll.lifer_fill_opacity is not None else md_fo
+    fo_lml = _collection_fill_opacity(ll.lifer_fill_opacity_override, legacy_lml)
+    legacy_lms = float(ll.subspecies_fill_opacity) if ll.subspecies_fill_opacity is not None else md_fo
+    fo_lms = _collection_fill_opacity(ll.subspecies_fill_opacity_override, legacy_lms)
     fo_fam = _collection_fill_opacity(
         fam.fill_opacity_override, float(fam.fill_opacity)
     )

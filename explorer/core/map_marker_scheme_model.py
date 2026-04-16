@@ -6,7 +6,9 @@ Nested dataclasses for :class:`MapMarkerColourScheme`.
 - **Per collection:** ``fill_hex`` / ``stroke_hex`` for pin fill and outline colour; role-specific pairs use
   short prefixes (``lifer_*``, ``last_seen_*``, ``subspecies_*``) where needed.
 - **Sparse tweaks:** optional ``radius_px`` / ``fill_opacity`` / ``fill_opacity_override`` when a collection
-  differs from :class:`MapMarkerGlobalDefaults`.
+  differs from :class:`MapMarkerGlobalDefaults`. On ``MapMarkerSpeciesLocationsStyle`` and
+  ``MapMarkerLiferLocationsStyle``, ``fill_opacity`` / ``lifer_*_fill_opacity`` may be omitted (``None``) to
+  inherit ``global_defaults.fill_opacity`` in resolution.
 - **Family map:** ``radius_px`` / ``fill_opacity`` are the styled defaults; optional overrides use the same
   ``*_override_*`` pattern where required.
 - **Flat overrides:** :class:`SchemeColourOverrides` uses short keys layered on the scheme.
@@ -72,7 +74,7 @@ class MapMarkerSpeciesLocationsStyle:
     lifer_stroke_hex: str
     last_seen_fill_hex: str
     last_seen_stroke_hex: str
-    fill_opacity: float
+    fill_opacity: float | None = None
     stroke_weight_override: int | None = None
     radius_px: int | None = None
     fill_opacity_override: float | None = None
@@ -102,8 +104,8 @@ class MapMarkerLiferLocationsStyle:
     lifer_stroke_hex: str
     subspecies_fill_hex: str
     subspecies_stroke_hex: str
-    lifer_fill_opacity: float
-    subspecies_fill_opacity: float
+    lifer_fill_opacity: float | None = None
+    subspecies_fill_opacity: float | None = None
     stroke_weight_override: int | None = None
     lifer_radius_px: int | None = None
     subspecies_radius_px: int | None = None

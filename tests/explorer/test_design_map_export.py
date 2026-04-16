@@ -67,7 +67,7 @@ def test_export_emits_radius_px_only_when_differs_from_default() -> None:
     assert text.count(f"radius_px={d + 3}") >= 1
 
 
-def test_export_emits_fill_opacity_override_only_when_differs_from_default() -> None:
+def test_export_emits_species_fill_opacity_when_differs_from_default() -> None:
     cfg = _sample_cfg()
     sch = active_map_marker_colour_scheme(1)
     md = float(cfg.marker_default_fill_opacity)
@@ -80,7 +80,9 @@ def test_export_emits_fill_opacity_override_only_when_differs_from_default() -> 
         marker_fill_opacity_families=md,
     )
     text = format_map_marker_colour_scheme_dict_py(cfg2, "O", template=sch)
-    assert "fill_opacity_override=0.42" in text
+    assert "fill_opacity=0.42" in text
+    assert "species_locations=MapMarkerSpeciesLocationsStyle(" in text
+    assert text.index("species_locations=") < text.index("fill_opacity=0.42")
 
 
 def test_format_full_export_is_single_expanded_scheme_block() -> None:
@@ -91,6 +93,25 @@ def test_format_full_export_is_single_expanded_scheme_block() -> None:
     assert "lifer_fill_hex=" in text
     assert "MAP_CIRCLE_MARKER_RADIUS_PX =" not in text
     assert text.index("fill_hex=") < text.index("density_fill_hex=")
+
+
+def test_export_scheme3_omits_redundant_fill_opacity_lines() -> None:
+    """Sparse export: species/lifer inherit global opacity; family has no duplicate override."""
+    cfg = scheme_seed_config(3, preview_scope=MAP_SCOPE_ALL)
+    sch = active_map_marker_colour_scheme(3)
+    text = format_map_marker_colour_scheme_dict_py(cfg, "Ash Violet", template=sch)
+    sp_start = text.index("species_locations=")
+    sm_start = text.index("species_map_background=")
+    species_block = text[sp_start:sm_start]
+    assert "fill_opacity=" not in species_block
+    ll_start = text.index("lifer_locations=")
+    fam_start = text.index("family_locations=")
+    lifer_block = text[ll_start:fam_start]
+    assert "lifer_fill_opacity=" not in lifer_block
+    assert "subspecies_fill_opacity=" not in lifer_block
+    vp_start = text.index("viewport=")
+    fam_block = text[fam_start:vp_start]
+    assert "fill_opacity_override=" not in fam_block
 
 
 def test_export_emits_marker_cluster_tier_icon_hex_when_configured() -> None:

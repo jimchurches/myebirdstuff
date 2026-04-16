@@ -210,12 +210,16 @@ def resolve_species_visit_pin(
                 return max(1, int(sw_raw))
         return max(1, int(getattr(g, "stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
 
+    def _species_emphasis_fill_opacity() -> float:
+        raw = getattr(sp, "fill_opacity", None)
+        return float(raw) if raw is not None else md_fo
+
     if role == "lifer":
         fill, stroke = resolve_species_map_lifer_colours(sch)
         r = _collection_radius_px(getattr(sp, "radius_px", None), md)
         fo = _collection_fill_opacity_visit(
             getattr(sp, "fill_opacity_override", None),
-            float(getattr(sp, "fill_opacity", 0.9)),
+            _species_emphasis_fill_opacity(),
             md_fo=md_fo,
         )
         sw = _emphasis_stroke_weight()
@@ -224,7 +228,7 @@ def resolve_species_visit_pin(
         r = _collection_radius_px(getattr(sp, "radius_px", None), md)
         fo = _collection_fill_opacity_visit(
             getattr(sp, "fill_opacity_override", None),
-            float(getattr(sp, "fill_opacity", 0.9)),
+            _species_emphasis_fill_opacity(),
             md_fo=md_fo,
         )
         sw = _emphasis_stroke_weight()
@@ -233,7 +237,7 @@ def resolve_species_visit_pin(
         r = _collection_radius_px(getattr(sp, "radius_px", None), md)
         fo = _collection_fill_opacity_visit(
             getattr(sp, "fill_opacity_override", None),
-            float(getattr(sp, "fill_opacity", 0.9)),
+            _species_emphasis_fill_opacity(),
             md_fo=md_fo,
         )
         sw = _emphasis_stroke_weight()
@@ -285,14 +289,18 @@ def resolve_lifer_overlay_pin_params(
         getattr(g, "fill_opacity", None),
         fallback=0.88,
     )
+    _raw_lif = getattr(ll, "lifer_fill_opacity", None)
+    legacy_lif = float(_raw_lif) if _raw_lif is not None else md_fo
     fo_lif = _collection_fill_opacity_visit(
         getattr(ll, "lifer_fill_opacity_override", None),
-        float(getattr(ll, "lifer_fill_opacity", 0.9)),
+        legacy_lif,
         md_fo=md_fo,
     )
+    _raw_sub = getattr(ll, "subspecies_fill_opacity", None)
+    legacy_sub = float(_raw_sub) if _raw_sub is not None else md_fo
     fo_sub = _collection_fill_opacity_visit(
         getattr(ll, "subspecies_fill_opacity_override", None),
-        float(getattr(ll, "subspecies_fill_opacity", 0.9)),
+        legacy_sub,
         md_fo=md_fo,
     )
     return lf_stroke, lf_fill, sp_stroke, sp_fill, r_lifer, r_sub, sw, fo_lif, fo_sub
