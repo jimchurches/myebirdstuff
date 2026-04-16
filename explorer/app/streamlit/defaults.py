@@ -238,9 +238,9 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
     viewport=_MAP_VIEWPORT_STANDARD,
 )
 
-# Scheme 3 — experimental
+# Scheme 3 — Ash Violet
 MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
-    display_name="Experimental",
+    display_name="Ash Violet",
     global_defaults=MapMarkerGlobalDefaults(
         fill_hex='#FFFFFF',
         stroke_hex='#FFF8E7',
@@ -251,7 +251,6 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
     all_locations=MapMarkerAllLocationsStyle(
         fill_hex='#D3D3D3',
         stroke_hex='#857891',
-        radius_px=4,
         cluster=MapMarkerClusterStyle(
             tier_icon_hex=(
             '#DFCEDE',
@@ -273,7 +272,7 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
     ),
     species_locations=MapMarkerSpeciesLocationsStyle(
         fill_hex='#B78FAF',
-        stroke_hex='#9C0A07',
+        stroke_hex='#704868',
         lifer_fill_hex='#EEE82C',
         lifer_stroke_hex='#660700',
         last_seen_fill_hex='#03DD70',
@@ -287,14 +286,12 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
         fill_opacity=0.75,
     ),
     lifer_locations=MapMarkerLiferLocationsStyle(
-        lifer_fill_hex="#B78FAF",
-        lifer_stroke_hex="#704868",
-        subspecies_fill_hex="#D3D3D3",
-        subspecies_stroke_hex="#704868",
-        lifer_fill_opacity=0.9,
-        subspecies_fill_opacity=0.9,
-        lifer_fill_opacity_override=0.9,
-        subspecies_fill_opacity_override=0.9,
+        lifer_fill_hex='#B78FAF',
+        lifer_stroke_hex='#704868',
+        subspecies_fill_hex='#CCC7D1',
+        subspecies_stroke_hex='#704868',
+        lifer_fill_opacity=0.88,
+        subspecies_fill_opacity=0.88,
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
         radius_px=5,
