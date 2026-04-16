@@ -97,6 +97,30 @@ def test_export_omits_hex_when_collections_match_global_defaults() -> None:
         assert needle not in ll_block
 
 
+def test_export_omits_blank_hex_values_as_inherit_global() -> None:
+    """Blank hex values are treated as unset/inherit and not exported as explicit overrides."""
+    cfg = _sample_cfg()
+    sch = active_map_marker_colour_scheme(1)
+    cfg2 = replace(
+        cfg,
+        lifer_map_lifer_fill_hex="",
+        lifer_map_lifer_stroke_hex="",
+        species_lifer_fill_hex="",
+        species_lifer_stroke_hex="",
+    )
+    text = format_map_marker_colour_scheme_dict_py(cfg2, "Blank", template=sch)
+    ll_start = text.index("lifer_locations=")
+    ll_end = text.index("family_locations=")
+    ll_block = text[ll_start:ll_end]
+    assert "        lifer_fill_hex=''," not in ll_block
+    assert "        lifer_stroke_hex=''," not in ll_block
+    sp_start = text.index("species_locations=")
+    sp_end = text.index("species_map_background=")
+    sp_block = text[sp_start:sp_end]
+    assert "        lifer_fill_hex=''," not in sp_block
+    assert "        lifer_stroke_hex=''," not in sp_block
+
+
 def test_sparse_fill_opacity_omitted_when_all_collections_match_default() -> None:
     cfg = _sample_cfg()
     sch = active_map_marker_colour_scheme(1)

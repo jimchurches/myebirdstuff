@@ -306,6 +306,18 @@ def _config_from_session() -> DesignMapPreviewConfig:
         st.session_state.get("design_marker_default_fill_opacity"),
         fallback=MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     )
+    _global_fill_hex = str(
+        st.session_state.get("design_marker_default_fill_hex", MAP_MARKER_CATCHALL_FILL_HEX)
+    )
+    _global_stroke_hex = str(
+        st.session_state.get("design_marker_default_stroke_hex", MAP_MARKER_CATCHALL_STROKE_HEX)
+    )
+
+    def _hex_from_session(key: str, *, fallback: str) -> str:
+        """Blank session hex means 'inherit' (fall back to the provided channel default)."""
+        raw = str(st.session_state.get(key, fallback))
+        return raw if raw.strip() else fallback
+
     return DesignMapPreviewConfig(
         preview_scope=_scope,
         map_style=str(st.session_state.get("design_map_style", "default")),
@@ -358,12 +370,8 @@ def _config_from_session() -> DesignMapPreviewConfig:
         marker_fill_opacity_families=_fill_opacity_from_session(
             "design_fo_family", legacy_key=None, default=_mdf
         ),
-        marker_default_fill_hex=str(
-            st.session_state.get("design_marker_default_fill_hex", MAP_MARKER_CATCHALL_FILL_HEX)
-        ),
-        marker_default_stroke_hex=str(
-            st.session_state.get("design_marker_default_stroke_hex", MAP_MARKER_CATCHALL_STROKE_HEX)
-        ),
+        marker_default_fill_hex=_global_fill_hex,
+        marker_default_stroke_hex=_global_stroke_hex,
         marker_default_fill_opacity=_mdf,
         marker_default_stroke_weight=max(
             1,
@@ -374,20 +382,32 @@ def _config_from_session() -> DesignMapPreviewConfig:
                 )
             ),
         ),
-        default_stroke_hex=str(st.session_state.get("design_hex_de", MAP_MARKER_CATCHALL_STROKE_HEX)),
-        default_fill_hex=str(st.session_state.get("design_hex_df", MAP_MARKER_CATCHALL_FILL_HEX)),
-        species_map_background_fill_hex=str(st.session_state.get("design_hex_smpl_f", MAP_MARKER_CATCHALL_FILL_HEX)),
-        species_map_background_stroke_hex=str(st.session_state.get("design_hex_smpl_e", MAP_MARKER_CATCHALL_STROKE_HEX)),
-        species_stroke_hex=str(st.session_state.get("design_hex_se", MAP_MARKER_CATCHALL_STROKE_HEX)),
-        species_fill_hex=str(st.session_state.get("design_hex_sf", MAP_MARKER_CATCHALL_FILL_HEX)),
-        species_lifer_stroke_hex=str(st.session_state.get("design_hex_sml_e", MAP_MARKER_CATCHALL_STROKE_HEX)),
-        species_lifer_fill_hex=str(st.session_state.get("design_hex_sml_f", MAP_MARKER_CATCHALL_FILL_HEX)),
-        lifer_map_lifer_stroke_hex=str(st.session_state.get("design_hex_lml_e", MAP_MARKER_CATCHALL_STROKE_HEX)),
-        lifer_map_lifer_fill_hex=str(st.session_state.get("design_hex_lml_f", MAP_MARKER_CATCHALL_FILL_HEX)),
-        lifer_map_subspecies_stroke_hex=str(st.session_state.get("design_hex_lms_e", MAP_MARKER_CATCHALL_STROKE_HEX)),
-        lifer_map_subspecies_fill_hex=str(st.session_state.get("design_hex_lms_f", MAP_MARKER_CATCHALL_FILL_HEX)),
-        last_seen_stroke_hex=str(st.session_state.get("design_hex_lse", MAP_MARKER_CATCHALL_STROKE_HEX)),
-        last_seen_fill_hex=str(st.session_state.get("design_hex_lsf", MAP_MARKER_CATCHALL_FILL_HEX)),
+        default_stroke_hex=_hex_from_session("design_hex_de", fallback=_global_stroke_hex),
+        default_fill_hex=_hex_from_session("design_hex_df", fallback=_global_fill_hex),
+        species_map_background_fill_hex=_hex_from_session(
+            "design_hex_smpl_f", fallback=_global_fill_hex
+        ),
+        species_map_background_stroke_hex=_hex_from_session(
+            "design_hex_smpl_e", fallback=_global_stroke_hex
+        ),
+        species_stroke_hex=_hex_from_session("design_hex_se", fallback=_global_stroke_hex),
+        species_fill_hex=_hex_from_session("design_hex_sf", fallback=_global_fill_hex),
+        species_lifer_stroke_hex=_hex_from_session(
+            "design_hex_sml_e", fallback=_global_stroke_hex
+        ),
+        species_lifer_fill_hex=_hex_from_session("design_hex_sml_f", fallback=_global_fill_hex),
+        lifer_map_lifer_stroke_hex=_hex_from_session(
+            "design_hex_lml_e", fallback=_global_stroke_hex
+        ),
+        lifer_map_lifer_fill_hex=_hex_from_session("design_hex_lml_f", fallback=_global_fill_hex),
+        lifer_map_subspecies_stroke_hex=_hex_from_session(
+            "design_hex_lms_e", fallback=_global_stroke_hex
+        ),
+        lifer_map_subspecies_fill_hex=_hex_from_session(
+            "design_hex_lms_f", fallback=_global_fill_hex
+        ),
+        last_seen_stroke_hex=_hex_from_session("design_hex_lse", fallback=_global_stroke_hex),
+        last_seen_fill_hex=_hex_from_session("design_hex_lsf", fallback=_global_fill_hex),
         family_fill_hex=tuple(
             str(st.session_state.get(f"design_hex_ff{i}", MAP_MARKER_CATCHALL_FILL_HEX)) for i in range(4)
         ),

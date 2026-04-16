@@ -46,7 +46,10 @@ def _norm_hex7(h: str) -> str:
 
 def _hex_differs(resolved: str, base: str) -> bool:
     """True when *resolved* is a different colour from *base* (``#RRGGBB``, case-insensitive)."""
-    return _norm_hex7(resolved) != _norm_hex7(base)
+    nr = _norm_hex7(resolved)
+    if not nr:
+        return False
+    return nr != _norm_hex7(base)
 
 
 def format_map_marker_colour_scheme_dict_py(
