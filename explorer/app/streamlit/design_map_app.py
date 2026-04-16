@@ -141,15 +141,21 @@ _HEX_BODY_NO_HASH = re.compile(r"^(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8
 
 
 def _ensure_hex_leading_hash(key: str) -> None:
-    """Prefix ``#`` when the widget value is hex digits only (e.g. pasted ``95A5B2``)."""
+    """Prefix ``#`` and uppercase A–F when the value is a valid hex colour (e.g. ``95a5b2`` → ``#95A5B2``)."""
     v = st.session_state.get(key)
     if v is None:
         return
     s = str(v).strip()
-    if not s or s.startswith("#"):
+    if not s:
         return
-    if _HEX_BODY_NO_HASH.match(s):
-        st.session_state[key] = f"#{s}"
+    body = s[1:] if s.startswith("#") else s
+    if not body:
+        return
+    if not _HEX_BODY_NO_HASH.match(body):
+        return
+    normalized = f"#{body.upper()}"
+    if normalized != s:
+        st.session_state[key] = normalized
 
 
 def _hex_hash_on_change(key: str):
