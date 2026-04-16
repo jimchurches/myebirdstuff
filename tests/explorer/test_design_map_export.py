@@ -41,6 +41,62 @@ def test_format_map_marker_dict_contains_key_fields() -> None:
     assert "colours_hex=" not in text
 
 
+def test_export_omits_hex_when_collections_match_global_defaults() -> None:
+    """Sparse export: per-map fill/stroke hex lines are omitted when they match globals."""
+    cfg = _sample_cfg()
+    sch = active_map_marker_colour_scheme(1)
+    g_fill = cfg.marker_default_fill_hex
+    g_stroke = cfg.marker_default_stroke_hex
+    flat = replace(
+        cfg,
+        default_fill_hex=g_fill,
+        default_stroke_hex=g_stroke,
+        species_fill_hex=g_fill,
+        species_stroke_hex=g_stroke,
+        species_lifer_fill_hex=g_fill,
+        species_lifer_stroke_hex=g_stroke,
+        last_seen_fill_hex=g_fill,
+        last_seen_stroke_hex=g_stroke,
+        lifer_map_lifer_fill_hex=g_fill,
+        lifer_map_lifer_stroke_hex=g_stroke,
+        lifer_map_subspecies_fill_hex=g_fill,
+        lifer_map_subspecies_stroke_hex=g_stroke,
+        species_map_background_fill_hex=g_fill,
+        species_map_background_stroke_hex=g_stroke,
+    )
+    text = format_map_marker_colour_scheme_dict_py(flat, "G", template=sch)
+    al_start = text.index("all_locations=")
+    sp_start = text.index("species_locations=")
+    al_block = text[al_start:sp_start]
+    assert "        fill_hex=" not in al_block
+    assert "        stroke_hex=" not in al_block
+    sp_end = text.index("species_map_background=")
+    species_block = text[sp_start:sp_end]
+    for needle in (
+        "        fill_hex=",
+        "        stroke_hex=",
+        "        lifer_fill_hex=",
+        "        lifer_stroke_hex=",
+        "        last_seen_fill_hex=",
+        "        last_seen_stroke_hex=",
+    ):
+        assert needle not in species_block
+    smb_start = sp_end
+    smb_end = text.index("lifer_locations=")
+    smb_block = text[smb_start:smb_end]
+    assert "        fill_hex=" not in smb_block
+    assert "        stroke_hex=" not in smb_block
+    ll_end = text.index("family_locations=")
+    ll_block = text[smb_end:ll_end]
+    for needle in (
+        "        lifer_fill_hex=",
+        "        lifer_stroke_hex=",
+        "        subspecies_fill_hex=",
+        "        subspecies_stroke_hex=",
+    ):
+        assert needle not in ll_block
+
+
 def test_sparse_fill_opacity_omitted_when_all_collections_match_default() -> None:
     cfg = _sample_cfg()
     sch = active_map_marker_colour_scheme(1)

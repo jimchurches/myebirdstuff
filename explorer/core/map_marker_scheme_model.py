@@ -4,7 +4,9 @@ Nested dataclasses for :class:`MapMarkerColourScheme`.
 **Naming**
 
 - **Per collection:** ``fill_hex`` / ``stroke_hex`` for pin fill and outline colour; role-specific pairs use
-  short prefixes (``lifer_*``, ``last_seen_*``, ``subspecies_*``) where needed.
+  short prefixes (``lifer_*``, ``last_seen_*``, ``subspecies_*``) where needed. On non-global collections,
+  ``None`` for a hex means inherit :class:`MapMarkerGlobalDefaults` for that channel (same resolution chain as
+  ``fill_opacity``).
 - **Sparse tweaks:** optional ``radius_px`` / ``fill_opacity`` / ``fill_opacity_override`` when a collection
   differs from :class:`MapMarkerGlobalDefaults`. On ``MapMarkerSpeciesLocationsStyle`` and
   ``MapMarkerLiferLocationsStyle``, ``fill_opacity`` / ``lifer_*_fill_opacity`` may be omitted (``None``) to
@@ -52,11 +54,12 @@ class MapMarkerAllLocationsStyle:
     """Default location pins on the all-locations map + optional cluster icon styling.
 
     Radius uses :data:`MapMarkerColourScheme.global_defaults.radius_px` unless ``radius_px`` is set here.
-    ``stroke_weight`` / ``fill_opacity`` default to ``None`` so they inherit globals (sparse presets).
+    ``fill_hex`` / ``stroke_hex`` / ``stroke_weight`` / ``fill_opacity`` default to ``None`` so they inherit
+    globals where applicable (sparse presets).
     """
 
-    fill_hex: str
-    stroke_hex: str
+    fill_hex: str | None = None
+    stroke_hex: str | None = None
     stroke_weight: int | None = None
     fill_opacity: float | None = None
     radius_px: int | None = None
@@ -68,12 +71,12 @@ class MapMarkerAllLocationsStyle:
 class MapMarkerSpeciesLocationsStyle:
     """Species-filtered visit overlay: species / lifer / last-seen pins."""
 
-    fill_hex: str
-    stroke_hex: str
-    lifer_fill_hex: str
-    lifer_stroke_hex: str
-    last_seen_fill_hex: str
-    last_seen_stroke_hex: str
+    fill_hex: str | None = None
+    stroke_hex: str | None = None
+    lifer_fill_hex: str | None = None
+    lifer_stroke_hex: str | None = None
+    last_seen_fill_hex: str | None = None
+    last_seen_stroke_hex: str | None = None
     fill_opacity: float | None = None
     stroke_weight_override: int | None = None
     radius_px: int | None = None
@@ -88,8 +91,8 @@ class MapMarkerSpeciesMapBackgroundStyle:
     :class:`MapMarkerAllLocationsStyle` (no cluster).
     """
 
-    fill_hex: str
-    stroke_hex: str
+    fill_hex: str | None = None
+    stroke_hex: str | None = None
     stroke_weight: int | None = None
     fill_opacity: float | None = None
     radius_px: int | None = None
@@ -100,10 +103,10 @@ class MapMarkerSpeciesMapBackgroundStyle:
 class MapMarkerLiferLocationsStyle:
     """Lifer-locations map: base lifer vs taxon-only (subspecies) lifer pins."""
 
-    lifer_fill_hex: str
-    lifer_stroke_hex: str
-    subspecies_fill_hex: str
-    subspecies_stroke_hex: str
+    lifer_fill_hex: str | None = None
+    lifer_stroke_hex: str | None = None
+    subspecies_fill_hex: str | None = None
+    subspecies_stroke_hex: str | None = None
     lifer_fill_opacity: float | None = None
     subspecies_fill_opacity: float | None = None
     stroke_weight_override: int | None = None

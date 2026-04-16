@@ -3,9 +3,9 @@ Generate paste-ready Python for :mod:`explorer.app.streamlit.defaults` from a
 :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig`.
 
 Output is a nested :class:`~explorer.core.map_marker_scheme_model.MapMarkerColourScheme` constructor
-matching the structure in ``defaults.py``. Optional per-collection radius / fill-opacity fields are
-emitted only when they differ from the global defaults; cluster tier colours and geometry follow the
-same rules as the previous flat dict exporter.
+matching the structure in ``defaults.py``. Optional per-collection radius, fill opacity, and
+fill/stroke hex fields are emitted only when they differ from :class:`MapMarkerGlobalDefaults` (or the
+appropriate inherit-global rule); cluster tier colours and geometry follow the same rules as before.
 """
 
 from __future__ import annotations
@@ -35,6 +35,20 @@ def _opacity_overrides_default(resolved: float, default: float) -> bool:
     return round(float(resolved), 4) != round(float(default), 4)
 
 
+def _norm_hex7(h: str) -> str:
+    s = (h or "").strip()
+    if not s:
+        return ""
+    if not s.startswith("#"):
+        s = f"#{s}"
+    return s[:7].lower()
+
+
+def _hex_differs(resolved: str, base: str) -> bool:
+    """True when *resolved* is a different colour from *base* (``#RRGGBB``, case-insensitive)."""
+    return _norm_hex7(resolved) != _norm_hex7(base)
+
+
 def format_map_marker_colour_scheme_dict_py(
     cfg: DesignMapPreviewConfig,
     display_name: str,
@@ -47,6 +61,8 @@ def format_map_marker_colour_scheme_dict_py(
     md = int(cfg.marker_default_radius_px)
     md_fo = float(cfg.marker_default_fill_opacity)
     md_sw = int(cfg.marker_default_stroke_weight)
+    g_fill = cfg.marker_default_fill_hex
+    g_stroke = cfg.marker_default_stroke_hex
     t_al = template.all_locations
     t_smb = template.species_map_background
     t_sp = template.species_locations
@@ -57,8 +73,8 @@ def format_map_marker_colour_scheme_dict_py(
         f"{dict_name} = MapMarkerColourScheme(",
         f"    display_name={display_name!r},",
         "    global_defaults=MapMarkerGlobalDefaults(",
-        f"        fill_hex={cfg.marker_default_fill_hex!r},",
-        f"        stroke_hex={cfg.marker_default_stroke_hex!r},",
+        f"        fill_hex={g_fill!r},",
+        f"        stroke_hex={g_stroke!r},",
         f"        radius_px={md},",
         f"        fill_opacity={_fmt_float(cfg.marker_default_fill_opacity)},",
         f"        stroke_weight={int(cfg.marker_default_stroke_weight)},",
@@ -71,9 +87,11 @@ def format_map_marker_colour_scheme_dict_py(
 
     al_parts: list[str] = [
         "    all_locations=MapMarkerAllLocationsStyle(",
-        f"        fill_hex={cfg.default_fill_hex!r},",
-        f"        stroke_hex={cfg.default_stroke_hex!r},",
     ]
+    if _hex_differs(cfg.default_fill_hex, g_fill):
+        al_parts.append(f"        fill_hex={cfg.default_fill_hex!r},")
+    if _hex_differs(cfg.default_stroke_hex, g_stroke):
+        al_parts.append(f"        stroke_hex={cfg.default_stroke_hex!r},")
     if sw_v != md_sw:
         al_parts.append(f"        stroke_weight={sw_v},")
     if crl != md:
@@ -110,13 +128,19 @@ def format_map_marker_colour_scheme_dict_py(
     fo_spec = float(cfg.marker_fill_opacity_species)
     sp_lines: list[str] = [
         "    species_locations=MapMarkerSpeciesLocationsStyle(",
-        f"        fill_hex={cfg.species_fill_hex!r},",
-        f"        stroke_hex={cfg.species_stroke_hex!r},",
-        f"        lifer_fill_hex={cfg.species_lifer_fill_hex!r},",
-        f"        lifer_stroke_hex={cfg.species_lifer_stroke_hex!r},",
-        f"        last_seen_fill_hex={cfg.last_seen_fill_hex!r},",
-        f"        last_seen_stroke_hex={cfg.last_seen_stroke_hex!r},",
     ]
+    if _hex_differs(cfg.species_fill_hex, g_fill):
+        sp_lines.append(f"        fill_hex={cfg.species_fill_hex!r},")
+    if _hex_differs(cfg.species_stroke_hex, g_stroke):
+        sp_lines.append(f"        stroke_hex={cfg.species_stroke_hex!r},")
+    if _hex_differs(cfg.species_lifer_fill_hex, g_fill):
+        sp_lines.append(f"        lifer_fill_hex={cfg.species_lifer_fill_hex!r},")
+    if _hex_differs(cfg.species_lifer_stroke_hex, g_stroke):
+        sp_lines.append(f"        lifer_stroke_hex={cfg.species_lifer_stroke_hex!r},")
+    if _hex_differs(cfg.last_seen_fill_hex, g_fill):
+        sp_lines.append(f"        last_seen_fill_hex={cfg.last_seen_fill_hex!r},")
+    if _hex_differs(cfg.last_seen_stroke_hex, g_stroke):
+        sp_lines.append(f"        last_seen_stroke_hex={cfg.last_seen_stroke_hex!r},")
     if _opacity_overrides_default(fo_spec, md_fo):
         if t_sp.fill_opacity_override is not None:
             sp_lines.append(f"        fill_opacity_override={_fmt_float(fo_spec)},")
@@ -134,9 +158,11 @@ def format_map_marker_colour_scheme_dict_py(
     fo_smb = float(cfg.marker_fill_opacity_species_map_background)
     smb_lines: list[str] = [
         "    species_map_background=MapMarkerSpeciesMapBackgroundStyle(",
-        f"        fill_hex={cfg.species_map_background_fill_hex!r},",
-        f"        stroke_hex={cfg.species_map_background_stroke_hex!r},",
     ]
+    if _hex_differs(cfg.species_map_background_fill_hex, g_fill):
+        smb_lines.append(f"        fill_hex={cfg.species_map_background_fill_hex!r},")
+    if _hex_differs(cfg.species_map_background_stroke_hex, g_stroke):
+        smb_lines.append(f"        stroke_hex={cfg.species_map_background_stroke_hex!r},")
     if sw_smb != md_sw:
         smb_lines.append(f"        stroke_weight={sw_smb},")
     if rsmb != md:
@@ -153,11 +179,15 @@ def format_map_marker_colour_scheme_dict_py(
     fo_lms = float(cfg.marker_fill_opacity_lifer_map_subspecies)
     ll_lines: list[str] = [
         "    lifer_locations=MapMarkerLiferLocationsStyle(",
-        f"        lifer_fill_hex={cfg.lifer_map_lifer_fill_hex!r},",
-        f"        lifer_stroke_hex={cfg.lifer_map_lifer_stroke_hex!r},",
-        f"        subspecies_fill_hex={cfg.lifer_map_subspecies_fill_hex!r},",
-        f"        subspecies_stroke_hex={cfg.lifer_map_subspecies_stroke_hex!r},",
     ]
+    if _hex_differs(cfg.lifer_map_lifer_fill_hex, g_fill):
+        ll_lines.append(f"        lifer_fill_hex={cfg.lifer_map_lifer_fill_hex!r},")
+    if _hex_differs(cfg.lifer_map_lifer_stroke_hex, g_stroke):
+        ll_lines.append(f"        lifer_stroke_hex={cfg.lifer_map_lifer_stroke_hex!r},")
+    if _hex_differs(cfg.lifer_map_subspecies_fill_hex, g_fill):
+        ll_lines.append(f"        subspecies_fill_hex={cfg.lifer_map_subspecies_fill_hex!r},")
+    if _hex_differs(cfg.lifer_map_subspecies_stroke_hex, g_stroke):
+        ll_lines.append(f"        subspecies_stroke_hex={cfg.lifer_map_subspecies_stroke_hex!r},")
     if _opacity_overrides_default(fo_lml, md_fo):
         if t_ll.lifer_fill_opacity_override is not None:
             ll_lines.append(f"        lifer_fill_opacity_override={_fmt_float(fo_lml)},")
