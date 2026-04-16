@@ -40,19 +40,20 @@ def test_resolve_scheme_1_visit_matches_legacy_globals() -> None:
     assert ve == ge == "#008000"
 
 
-def test_resolve_species_map_background_colours_scheme3_matches_all_locations_colours() -> None:
-    """Bundled scheme 3 uses the same hex for ``all_locations`` and ``species_map_background``."""
+def test_resolve_species_map_background_colours_scheme3_distinct_from_all_locations() -> None:
+    """Bundled scheme 3 keeps species-map background separate from all-locations."""
     sch = active_map_marker_colour_scheme(3)
     al = resolve_location_visit_colours(sch)
     sm = resolve_species_map_background_colours(sch)
-    assert al == sm
+    assert al != sm
+    assert sm == ("#EBE9ED", "#CCC7D1")
 
 
 def test_resolve_experimental_visit_distinct_from_global() -> None:
     sch = active_map_marker_colour_scheme(3)
     vf, ve = resolve_location_visit_colours(sch)
-    assert vf == "#EBE9ED"
-    assert ve == "#CCC7D1"
+    assert vf == "#D3D3D3"
+    assert ve == "#857891"
     gf, _ge = resolve_marker_global_colours(sch)
     assert vf != gf
 
