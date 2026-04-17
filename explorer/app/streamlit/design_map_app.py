@@ -415,13 +415,13 @@ def _config_from_session() -> DesignMapPreviewConfig:
         last_seen_stroke_hex=_hex_from_session("design_hex_lse", fallback=_global_stroke_hex),
         last_seen_fill_hex=_hex_from_session("design_hex_lsf", fallback=_global_fill_hex),
         family_fill_hex=tuple(
-            str(st.session_state.get(f"design_hex_ff{i}", MAP_MARKER_CATCHALL_FILL_HEX)) for i in range(4)
+            _hex_from_session(f"design_hex_ff{i}", fallback=_global_fill_hex) for i in range(4)
         ),
         family_stroke_hex=tuple(
-            str(st.session_state.get(f"design_hex_fs{i}", MAP_MARKER_CATCHALL_STROKE_HEX)) for i in range(4)
+            _hex_from_session(f"design_hex_fs{i}", fallback=_global_stroke_hex) for i in range(4)
         ),
-        family_highlight_stroke_hex=str(
-            st.session_state.get("design_hex_fam_hl", MAP_MARKER_CATCHALL_STROKE_HEX)
+        family_highlight_stroke_hex=_hex_from_session(
+            "design_hex_fam_hl", fallback=_global_stroke_hex
         ),
         legend_highlight_band_index=max(
             0, min(3, int(st.session_state.get("design_legend_hl_swatch_ix", 0)))
