@@ -17,6 +17,10 @@ from branca.element import Element
 
 from explorer.app.streamlit.defaults import (
     MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+    MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM,
+    MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT,
+    MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX,
+    MAP_FAMILY_MAP_POPUP_MAX_WIDTH_PX,
     MAP_HEIGHT_PX_DEFAULT,
     MapMarkerColourScheme,
     active_map_marker_colour_scheme,
@@ -254,13 +258,10 @@ def build_family_composition_folium_map(
             fill=True,
             fill_color=fill,
             fill_opacity=family_map_resolved_fill_opacity(style),
-            popup=folium.Popup(popup_body, max_width=style.viewport.popup_max_width_px),
+            popup=folium.Popup(popup_body, max_width=MAP_FAMILY_MAP_POPUP_MAX_WIDTH_PX),
         ).add_to(m)
 
-    # Family-map-only initial viewport:
-    # - fit relevant pins with edge padding (all family pins, or highlight-only when requested)
-    # - cap how far fitBounds may zoom in (family-wide vs species-highlight use different caps)
-    vp = style.viewport
+    # Family-map-only initial viewport (not part of colour schemes; see ``MAP_FAMILY_MAP_*`` in defaults).
     if pin_list:
         if fit_bounds_highlight_only:
             hl_pins = [p for p in pin_list if p.highlight_match]
@@ -270,11 +271,11 @@ def build_family_composition_folium_map(
             _bounds_src = pin_list
             _species_framed = False
         bounds = [[p.latitude, p.longitude] for p in _bounds_src]
-        pad = int(vp.fit_bounds_padding_px)
+        pad = int(MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX)
         _mz = int(
-            vp.fit_bounds_max_zoom_highlight
+            MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT
             if _species_framed
-            else vp.fit_bounds_max_zoom
+            else MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM
         )
         m.fit_bounds(
             bounds,

@@ -70,7 +70,6 @@ def format_map_marker_colour_scheme_dict_py(
     dict_name: str = "MAP_MARKER_COLOUR_SCHEME_EXPORT",
 ) -> str:
     """Return a ``MapMarkerColourScheme(...)`` assignment for pasting into ``defaults.py``."""
-    vp = template.viewport
     md = int(cfg.marker_default_radius_px)
     md_fo = float(cfg.marker_default_fill_opacity)
     md_sw = int(cfg.marker_default_stroke_weight)
@@ -250,18 +249,7 @@ def format_map_marker_colour_scheme_dict_py(
             fam_lines.append(f"        fill_opacity={_fmt_float(fo_fam)},")
     fam_lines.append("    ),")
     lines.extend(fam_lines)
-
-    lines.extend(
-        [
-            "    viewport=MapMarkerViewportStyle(",
-            f"        popup_max_width_px={int(vp.popup_max_width_px)},",
-            f"        fit_bounds_padding_px={int(vp.fit_bounds_padding_px)},",
-            f"        fit_bounds_max_zoom={int(vp.fit_bounds_max_zoom)},",
-            f"        fit_bounds_max_zoom_highlight={int(vp.fit_bounds_max_zoom_highlight)},",
-            "    ),",
-            ")",
-        ]
-    )
+    lines.append(")")
     return "\n".join(lines)
 
 

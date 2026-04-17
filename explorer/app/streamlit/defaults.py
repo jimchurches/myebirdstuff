@@ -29,7 +29,6 @@ from explorer.core.map_marker_scheme_model import (
     MapMarkerLiferLocationsStyle,
     MapMarkerSpeciesLocationsStyle,
     MapMarkerSpeciesMapBackgroundStyle,
-    MapMarkerViewportStyle,
 )
 
 # ---------------------------------------------------------------------------
@@ -52,6 +51,11 @@ MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
 MAP_LEGEND_PIN_DOT_PX = 8
 MAP_LEGEND_PIN_BORDER_PX = 2
 MAP_POPUP_MAX_WIDTH_PX = 420  # Folium L.popup maxWidth; card-like popups (refs #145).
+# Family-locations map only (popup width + initial ``fit_bounds``); not tied to marker colour presets.
+MAP_FAMILY_MAP_POPUP_MAX_WIDTH_PX = 320
+MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX = 48
+MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM = 6
+MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT = 8
 # Character shown for Macaulay Library media links in map popups (refs #145).
 # Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).
 MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
@@ -115,7 +119,7 @@ def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float
 
 
 # Nested :class:`~explorer.core.map_marker_scheme_model.MapMarkerColourScheme` — globals, then per-map
-# collections (all-locations → species visit → lifer map → family) and viewport. See that module for structure.
+# collections (all-locations → species visit → lifer map → family). See that module for structure.
 # MarkerCluster defaults for rgba math in ``map_overlay_visit_map``:
 MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT = 0.6
 MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT = 0.6
@@ -126,13 +130,6 @@ MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT = 2
 # Three presets. Family-map sidebar radio selects the active scheme;
 # ``MAP_MARKER_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
 # ---------------------------------------------------------------------------
-
-_MAP_VIEWPORT_STANDARD = MapMarkerViewportStyle(
-    popup_max_width_px=320,
-    fit_bounds_padding_px=48,
-    fit_bounds_max_zoom=6,
-    fit_bounds_max_zoom_highlight=8,
-)
 
 # Scheme 1 — default: red density ramp
 MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
@@ -163,23 +160,17 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
         density_fill_hex=(
             '#FFF2C2',
             '#D3D3D3',
-            '#B8B100',
-            '#A71B11',
+            '#30B06A',
+            '#05612B',
         ),
         legend_highlight_band_index=0,
         density_stroke_hex=(
             '#23804D',
-            '#008000',
-            '#008000',
-            '#166426',
+            '#033A1A',
+            '#033A1A',
+            '#033A1A',
         ),
         highlight_stroke_hex='#E00000',
-    ),
-    viewport=MapMarkerViewportStyle(
-        popup_max_width_px=320,
-        fit_bounds_padding_px=48,
-        fit_bounds_max_zoom=6,
-        fit_bounds_max_zoom_highlight=8,
     ),
 )
 
@@ -228,7 +219,6 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
         density_stroke_hex=("#2F6FD1", "#4A4DA6", "#7E3EAF", "#A1143A"),
         highlight_stroke_hex="#FF7F11",
     ),
-    viewport=_MAP_VIEWPORT_STANDARD,
 )
 
 # Scheme 3 — Ash Violet
@@ -290,7 +280,6 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
         highlight_stroke_hex="#E00000",
         fill_opacity=0.85,
     ),
-    viewport=_MAP_VIEWPORT_STANDARD,
 )
 
 # Default scheme index when callers do not pass a UI selection (tests, non-Streamlit builders).

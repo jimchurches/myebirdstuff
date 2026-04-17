@@ -20,6 +20,13 @@ def _sample_cfg() -> DesignMapPreviewConfig:
     return scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
 
 
+def _family_locations_block(text: str) -> str:
+    """Slice from ``family_locations=`` through the closing ``,`` of that nested constructor."""
+    fam_start = text.index("family_locations=")
+    scheme_close = text.rindex("\n)")
+    return text[fam_start:scheme_close]
+
+
 def test_format_map_marker_dict_contains_key_fields() -> None:
     cfg = _sample_cfg()
     sch = active_map_marker_colour_scheme(1)
@@ -37,6 +44,7 @@ def test_format_map_marker_dict_contains_key_fields() -> None:
     assert "legend_highlight_band_index=" in text
     assert "radius_override_px=" not in text
     assert "colours_hex=" not in text
+    assert "viewport=" not in text
 
 
 def test_export_omits_hex_when_collections_match_global_defaults() -> None:
@@ -179,9 +187,7 @@ def test_export_omits_family_fill_opacity_when_matches_global() -> None:
     cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
     sch = active_map_marker_colour_scheme(1)
     text = format_map_marker_colour_scheme_dict_py(cfg, "S1", template=sch)
-    fam_start = text.index("family_locations=")
-    vp_start = text.index("viewport=")
-    fam_block = text[fam_start:vp_start]
+    fam_block = _family_locations_block(text)
     assert "        fill_opacity=" not in fam_block
 
 
@@ -195,9 +201,7 @@ def test_export_omits_family_density_stroke_when_all_bands_match_global() -> Non
         family_stroke_hex=(g_stroke, g_stroke, g_stroke, g_stroke),
     )
     text = format_map_marker_colour_scheme_dict_py(flat, "AllStrokeGlobal", template=sch)
-    fam_start = text.index("family_locations=")
-    vp_start = text.index("viewport=")
-    fam_block = text[fam_start:vp_start]
+    fam_block = _family_locations_block(text)
     assert "        density_stroke_hex=" not in fam_block
 
 
@@ -215,8 +219,7 @@ def test_export_scheme3_omits_redundant_fill_opacity_lines() -> None:
     lifer_block = text[ll_start:fam_start]
     assert "lifer_fill_opacity=" not in lifer_block
     assert "subspecies_fill_opacity=" not in lifer_block
-    vp_start = text.index("viewport=")
-    fam_block = text[fam_start:vp_start]
+    fam_block = _family_locations_block(text)
     assert "fill_opacity_override=" not in fam_block
 
 

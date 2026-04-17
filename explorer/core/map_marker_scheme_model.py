@@ -136,16 +136,6 @@ class MapMarkerFamilyLocationsStyle:
 
 
 @dataclass(frozen=True)
-class MapMarkerViewportStyle:
-    """Popup width and fit-bounds tuning (shared Folium behaviour)."""
-
-    popup_max_width_px: int
-    fit_bounds_padding_px: int
-    fit_bounds_max_zoom: int
-    fit_bounds_max_zoom_highlight: int
-
-
-@dataclass(frozen=True)
 class SchemeColourOverrides:
     """Optional hex overrides (flat keys) layered on :class:`MapMarkerColourScheme`.
 
@@ -181,5 +171,4 @@ class MapMarkerColourScheme:
     species_map_background: MapMarkerSpeciesMapBackgroundStyle
     lifer_locations: MapMarkerLiferLocationsStyle
     family_locations: MapMarkerFamilyLocationsStyle
-    viewport: MapMarkerViewportStyle
     colour_overrides: SchemeColourOverrides | None = None
