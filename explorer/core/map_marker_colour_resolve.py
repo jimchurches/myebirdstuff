@@ -477,7 +477,6 @@ def family_map_resolved_fill_opacity(sch: Any) -> float:
     v = getattr(fam, "fill_opacity_override", None)
     if v is not None:
         return clamp_map_marker_circle_fill_opacity(v, fallback=md_fo)
-    return clamp_map_marker_circle_fill_opacity(
-        float(getattr(fam, "fill_opacity", 0.88)),
-        fallback=md_fo,
-    )
+    raw = getattr(fam, "fill_opacity", None)
+    legacy = float(raw) if raw is not None else md_fo
+    return clamp_map_marker_circle_fill_opacity(legacy, fallback=md_fo)

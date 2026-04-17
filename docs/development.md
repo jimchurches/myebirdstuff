@@ -178,7 +178,7 @@ Presets are **frozen dataclasses** in `explorer/core/map_marker_scheme_model.py`
 
 **Resolution:** `explorer/core/map_marker_colour_resolve.py` turns scheme + optional overrides into concrete Folium colours and geometry. Per-channel rules are documented there (fill/stroke independently: role-specific hex, then globals, then scheme defaults / catch-all). Call sites include species-filtered visit pins (`resolve_species_visit_pin` — roles such as species emphasis, lifer, last-seen, background), lifer-locations map (`resolve_lifer_overlay_pin_params` — lifer vs subspecies), and family density bands (`resolve_family_band_colours`). Folium builders under `explorer/core/` (e.g. `map_overlay_visit_map.py`, `family_map_folium.py`) consume those helpers so the design utility and production maps stay aligned.
 
-Omitted or `None` per-collection fields are intended to **inherit** `global_defaults` where the model allows it; the design utility’s export tab emits sparse Python to match (see `explorer/presentation/design_map_export.py`).
+Omitted or `None` per-collection fields are intended to **inherit** `global_defaults` where the model allows it (including optional `family_locations.fill_opacity`); the design utility’s export tab emits sparse Python to match (see `explorer/presentation/design_map_export.py`).
 
 ### Map marker colour design utility (developers)
 

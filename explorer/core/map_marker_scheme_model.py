@@ -11,8 +11,9 @@ Nested dataclasses for :class:`MapMarkerColourScheme`.
   differs from :class:`MapMarkerGlobalDefaults`. On ``MapMarkerSpeciesLocationsStyle`` and
   ``MapMarkerLiferLocationsStyle``, ``fill_opacity`` / ``lifer_*_fill_opacity`` may be omitted (``None``) to
   inherit ``global_defaults.fill_opacity`` in resolution.
-- **Family map:** ``radius_px`` / ``fill_opacity`` are the styled defaults; optional overrides use the same
-  ``*_override_*`` pattern where required.
+- **Family map:** ``radius_px`` / ``stroke_weight`` / band and highlight fields are required; ``fill_opacity``
+  may be omitted (``None``) to inherit ``global_defaults.fill_opacity``. Optional ``*_override_*`` fields
+  follow the same pattern as other collections.
 - **Flat overrides:** :class:`SchemeColourOverrides` uses short keys layered on the scheme.
 
 ``explorer.app.streamlit.defaults`` builds the three bundled presets from these types.
@@ -121,13 +122,13 @@ class MapMarkerFamilyLocationsStyle:
     """Family density map: bands, highlight stroke, optional per-collection overrides."""
 
     radius_px: int
-    fill_opacity: float
     stroke_weight: int
     highlight_stroke_hex: str
     highlight_stroke_weight: int
     density_fill_hex: tuple[str, ...]
     density_stroke_hex: tuple[str, ...]
     legend_highlight_band_index: int
+    fill_opacity: float | None = None
     radius_px_override: int | None = None
     fill_opacity_override: float | None = None
 

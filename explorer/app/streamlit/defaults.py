@@ -161,7 +161,6 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
         radius_px=5,
-        fill_opacity=0.88,
         stroke_weight=2,
         highlight_stroke_hex='#E00000',
         highlight_stroke_weight=2,
@@ -228,7 +227,6 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
         radius_px=5,
-        fill_opacity=0.88,
         stroke_weight=2,
         highlight_stroke_hex="#FF7F11",
         highlight_stroke_weight=2,
@@ -293,13 +291,13 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
         radius_px=5,
-        fill_opacity=0.85,
         stroke_weight=2,
         highlight_stroke_hex="#E00000",
         highlight_stroke_weight=2,
         density_fill_hex=("#95A5B2", "#B78FAF", "#8D5383", "#593653"),
         density_stroke_hex=("#677C8E", "#704868", "#5A3554", "#593654"),
         legend_highlight_band_index=0,
+        fill_opacity=0.85,
     ),
     viewport=_MAP_VIEWPORT_STANDARD,
 )

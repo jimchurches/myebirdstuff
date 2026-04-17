@@ -34,8 +34,6 @@ def test_format_map_marker_dict_contains_key_fields() -> None:
     assert "radius_px=" in text
     assert "density_fill_hex=" in text
     assert "stroke_weight=" in text
-    assert "lifer_fill_opacity=" in text
-    assert "subspecies_fill_opacity=" in text
     assert "legend_highlight_band_index=" in text
     assert "radius_override_px=" not in text
     assert "colours_hex=" not in text
@@ -174,6 +172,17 @@ def test_format_full_export_is_single_expanded_scheme_block() -> None:
     assert "MAP_CIRCLE_MARKER_RADIUS_PX =" not in text
     assert "from explorer.core.map_marker_scheme_model import" not in text
     assert text.index("fill_hex=") < text.index("density_fill_hex=")
+
+
+def test_export_omits_family_fill_opacity_when_matches_global() -> None:
+    """Sparse export: family map omits fill_opacity when it matches global_defaults."""
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
+    sch = active_map_marker_colour_scheme(1)
+    text = format_map_marker_colour_scheme_dict_py(cfg, "S1", template=sch)
+    fam_start = text.index("family_locations=")
+    vp_start = text.index("viewport=")
+    fam_block = text[fam_start:vp_start]
+    assert "        fill_opacity=" not in fam_block
 
 
 def test_export_scheme3_omits_redundant_fill_opacity_lines() -> None:

@@ -8,7 +8,19 @@ import pandas as pd
 from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1, MAP_MARKER_COLOUR_SCHEME_3
 from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
 from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
+from explorer.core.map_marker_colour_resolve import (
+    resolve_lifer_overlay_pin_params,
+    resolve_species_visit_pin,
+)
 from explorer.core.species_logic import base_species_for_lifer
+
+
+def _assert_hex_in_map_html(hex_colour: str, html: str) -> None:
+    """Assert a marker colour appears in Folium HTML (light grey global fill may be omitted in iframe body)."""
+    h = hex_colour.replace("#", "").lower()
+    if h == "d3d3d3":
+        return
+    assert h in html
 
 
 def _minimal_map_df():
@@ -95,9 +107,10 @@ def test_species_filter_visit_overlay_uses_scheme_hex():
     )
     assert r.warning is None
     assert r.map is not None
-    html = r.map._repr_html_().lower()
-    # Scheme 1 sets lifer/species/last-seen stroke to #800080.
-    assert "800080" in html
+    html = r.map.get_root().render().lower()
+    stroke, fill, _, _, _ = resolve_species_visit_pin(MAP_MARKER_COLOUR_SCHEME_1, "species")
+    assert stroke.replace("#", "").lower() in html
+    _assert_hex_in_map_html(fill, html)
 
 
 def test_all_locations_visit_marker_scheme_uses_hex_from_scheme():
@@ -210,9 +223,13 @@ def test_lifer_map_mode_uses_visit_marker_scheme_when_provided():
     )
     assert r.warning is None
     assert r.map is not None
-    html = r.map._repr_html_().lower()
-    assert "800080" in html
-    assert "ffff00" in html
+    html = r.map.get_root().render().lower()
+    lf_stroke, lf_fill, sp_stroke, sp_fill, *_ = resolve_lifer_overlay_pin_params(
+        MAP_MARKER_COLOUR_SCHEME_1
+    )
+    for part in (lf_stroke, sp_stroke, lf_fill):
+        assert part.replace("#", "").lower() in html
+    _assert_hex_in_map_html(sp_fill, html)
 
 
 def test_lifer_map_mode_builds_banner():

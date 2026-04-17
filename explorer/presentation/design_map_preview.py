@@ -635,7 +635,8 @@ def scheme_seed_config(
     legacy_lms = float(ll.subspecies_fill_opacity) if ll.subspecies_fill_opacity is not None else md_fo
     fo_lms = _collection_fill_opacity(ll.subspecies_fill_opacity_override, legacy_lms)
     fo_fam = _collection_fill_opacity(
-        fam.fill_opacity_override, float(fam.fill_opacity)
+        fam.fill_opacity_override,
+        float(fam.fill_opacity) if fam.fill_opacity is not None else md_fo,
     )
 
     def _optional_cluster_tier_icon_hex() -> tuple[str, str, str, str, str, str, str, str, str] | None:

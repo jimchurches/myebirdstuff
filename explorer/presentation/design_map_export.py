@@ -215,28 +215,26 @@ def format_map_marker_colour_scheme_dict_py(
     lines.extend(ll_lines)
 
     rf = int(cfg.marker_radius_families)
-    lines.extend(
-        [
-            "    family_locations=MapMarkerFamilyLocationsStyle(",
-            f"        radius_px={rf},",
-            f"        fill_opacity={_fmt_float(cfg.marker_fill_opacity_families)},",
-            f"        stroke_weight={int(cfg.stroke_weight_family)},",
-            f"        highlight_stroke_hex={cfg.family_highlight_stroke_hex!r},",
-            f"        highlight_stroke_weight={int(cfg.stroke_weight_family_highlight)},",
-            f"        density_fill_hex={_fmt_hex_tuple(cfg.family_fill_hex)},",
-            f"        density_stroke_hex={_fmt_hex_tuple(cfg.family_stroke_hex)},",
-            f"        legend_highlight_band_index={int(cfg.legend_highlight_band_index)},",
-        ]
-    )
-    if rf != md:
-        lines.append(f"        radius_px_override={rf},")
     fo_fam = float(cfg.marker_fill_opacity_families)
-    if t_fam.fill_opacity_override is not None:
-        base_fam = float(t_fam.fill_opacity)
-        ovr_fam = float(t_fam.fill_opacity_override)
-        if _opacity_overrides_default(ovr_fam, base_fam) and _opacity_overrides_default(fo_fam, md_fo):
-            lines.append(f"        fill_opacity_override={_fmt_float(fo_fam)},")
-    lines.append("    ),")
+    fam_lines: list[str] = [
+        "    family_locations=MapMarkerFamilyLocationsStyle(",
+        f"        radius_px={rf},",
+        f"        stroke_weight={int(cfg.stroke_weight_family)},",
+        f"        highlight_stroke_hex={cfg.family_highlight_stroke_hex!r},",
+        f"        highlight_stroke_weight={int(cfg.stroke_weight_family_highlight)},",
+        f"        density_fill_hex={_fmt_hex_tuple(cfg.family_fill_hex)},",
+        f"        density_stroke_hex={_fmt_hex_tuple(cfg.family_stroke_hex)},",
+        f"        legend_highlight_band_index={int(cfg.legend_highlight_band_index)},",
+    ]
+    if _opacity_overrides_default(fo_fam, md_fo):
+        if t_fam.fill_opacity_override is not None:
+            fam_lines.append(f"        fill_opacity_override={_fmt_float(fo_fam)},")
+        else:
+            fam_lines.append(f"        fill_opacity={_fmt_float(fo_fam)},")
+    if rf != md:
+        fam_lines.append(f"        radius_px_override={rf},")
+    fam_lines.append("    ),")
+    lines.extend(fam_lines)
 
     lines.extend(
         [
