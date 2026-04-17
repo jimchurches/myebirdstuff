@@ -11,9 +11,11 @@ Nested dataclasses for :class:`MapMarkerColourScheme`.
   differs from :class:`MapMarkerGlobalDefaults`. On ``MapMarkerSpeciesLocationsStyle`` and
   ``MapMarkerLiferLocationsStyle``, ``fill_opacity`` / ``lifer_*_fill_opacity`` may be omitted (``None``) to
   inherit ``global_defaults.fill_opacity`` in resolution.
-- **Family map:** ``radius_px`` / ``stroke_weight`` / band and highlight fields are required; ``fill_opacity``
-  may be omitted (``None``) to inherit ``global_defaults.fill_opacity``. Optional ``*_override_*`` fields
-  follow the same pattern as other collections.
+- **Family map:** ``density_fill_hex`` and ``legend_highlight_band_index`` are required. ``density_stroke_hex``,
+  ``radius_px``, ``stroke_weight``, ``highlight_stroke_hex``, ``highlight_stroke_weight``, and ``fill_opacity``
+  may be omitted (``None``) to inherit the matching field from ``global_defaults`` (see
+  :mod:`explorer.core.map_marker_colour_resolve`). Optional ``*_override_*`` fields follow the same pattern
+  as other collections.
 - **Flat overrides:** :class:`SchemeColourOverrides` uses short keys layered on the scheme.
 
 ``explorer.app.streamlit.defaults`` builds the three bundled presets from these types.
@@ -121,13 +123,13 @@ class MapMarkerLiferLocationsStyle:
 class MapMarkerFamilyLocationsStyle:
     """Family density map: bands, highlight stroke, optional per-collection overrides."""
 
-    radius_px: int
-    stroke_weight: int
-    highlight_stroke_hex: str
-    highlight_stroke_weight: int
     density_fill_hex: tuple[str, ...]
-    density_stroke_hex: tuple[str, ...]
     legend_highlight_band_index: int
+    density_stroke_hex: tuple[str, ...] | None = None
+    radius_px: int | None = None
+    stroke_weight: int | None = None
+    highlight_stroke_hex: str | None = None
+    highlight_stroke_weight: int | None = None
     fill_opacity: float | None = None
     radius_px_override: int | None = None
     fill_opacity_override: float | None = None

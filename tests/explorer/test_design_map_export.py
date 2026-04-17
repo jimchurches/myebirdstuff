@@ -185,6 +185,22 @@ def test_export_omits_family_fill_opacity_when_matches_global() -> None:
     assert "        fill_opacity=" not in fam_block
 
 
+def test_export_omits_family_density_stroke_when_all_bands_match_global() -> None:
+    """Sparse export: omit density_stroke_hex when every band equals global stroke."""
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
+    sch = active_map_marker_colour_scheme(1)
+    g_stroke = cfg.marker_default_stroke_hex
+    flat = replace(
+        cfg,
+        family_stroke_hex=(g_stroke, g_stroke, g_stroke, g_stroke),
+    )
+    text = format_map_marker_colour_scheme_dict_py(flat, "AllStrokeGlobal", template=sch)
+    fam_start = text.index("family_locations=")
+    vp_start = text.index("viewport=")
+    fam_block = text[fam_start:vp_start]
+    assert "        density_stroke_hex=" not in fam_block
+
+
 def test_export_scheme3_omits_redundant_fill_opacity_lines() -> None:
     """Sparse export: species/lifer inherit global opacity; family has no duplicate override."""
     cfg = scheme_seed_config(3, preview_scope=MAP_SCOPE_ALL)

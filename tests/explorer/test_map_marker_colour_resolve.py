@@ -16,6 +16,8 @@ from explorer.core.map_marker_colour_resolve import (
     family_map_resolved_fill_opacity,
     is_valid_hex_colour,
     normalize_marker_hex,
+    resolve_family_band_colours,
+    resolve_family_highlight_stroke_hex,
     resolve_location_visit_colours,
     resolve_marker_global_colours,
     resolve_species_map_background_colours,
@@ -83,3 +85,29 @@ def test_family_map_resolved_fill_opacity_prefers_family_fill_opacity_override()
 
 def test_family_map_resolved_circle_radius_px_uses_marker_default_without_families_override() -> None:
     assert family_map_resolved_circle_radius_px(MAP_MARKER_COLOUR_SCHEME_3) == 5
+
+
+def test_resolve_family_band_colours_omitted_density_strokes_use_global_edge() -> None:
+    """When ``density_stroke_hex`` is unset, band edge matches ``global_defaults.stroke_hex``."""
+    sch = replace(
+        MAP_MARKER_COLOUR_SCHEME_1,
+        family_locations=replace(
+            MAP_MARKER_COLOUR_SCHEME_1.family_locations,
+            density_stroke_hex=None,
+        ),
+    )
+    ge = resolve_marker_global_colours(sch)[1]
+    for i in range(4):
+        _f, s = resolve_family_band_colours(sch, i)
+        assert s == ge
+
+
+def test_resolve_family_highlight_stroke_hex_inherits_global_when_unset() -> None:
+    sch = replace(
+        MAP_MARKER_COLOUR_SCHEME_1,
+        family_locations=replace(
+            MAP_MARKER_COLOUR_SCHEME_1.family_locations,
+            highlight_stroke_hex=None,
+        ),
+    )
+    assert resolve_family_highlight_stroke_hex(sch) == resolve_marker_global_colours(sch)[1]

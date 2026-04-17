@@ -13,7 +13,9 @@ from explorer.core.family_map_folium import (
     build_family_map_legend_overlay_html_for_pins,
     family_map_marker_style,
 )
-from explorer.core.map_marker_colour_resolve import normalize_marker_hex
+from explorer.core.map_marker_colour_resolve import (
+    resolve_family_highlight_stroke_hex,
+)
 
 
 def _sample_pins():
@@ -47,12 +49,11 @@ def test_active_map_marker_colour_scheme_accepts_index_3():
 
 def test_family_map_marker_style_highlight_uses_resolved_highlight_stroke():
     p = _sample_pins()[1]
-    fill, stroke, w = family_map_marker_style(p, style=MAP_MARKER_COLOUR_SCHEME_1)
+    sch = MAP_MARKER_COLOUR_SCHEME_1
+    fill, stroke, w = family_map_marker_style(p, style=sch)
     assert p.highlight_match
-    assert stroke == normalize_marker_hex(
-        MAP_MARKER_COLOUR_SCHEME_1.family_locations.highlight_stroke_hex, channel="edge"
-    )
-    assert w == MAP_MARKER_COLOUR_SCHEME_1.family_locations.highlight_stroke_weight
+    assert stroke == resolve_family_highlight_stroke_hex(sch)
+    assert w == max(1, int(sch.global_defaults.stroke_weight))
 
 
 def test_build_family_composition_folium_map_html_contains_markers():

@@ -416,12 +416,22 @@ def resolve_last_seen_colours(sch: Any) -> tuple[str, str]:
     return normalize_marker_hex(fill, channel="fill"), normalize_marker_hex(stroke, channel="edge")
 
 
+def resolve_family_highlight_stroke_hex(sch: Any) -> str:
+    """Family-map highlight pin edge colour: explicit ``highlight_stroke_hex`` or ``global_defaults.stroke_hex``."""
+    g = _global_defaults(sch)
+    fam = getattr(sch, "family_locations", sch)
+    raw = getattr(fam, "highlight_stroke_hex", None)
+    if raw is not None and str(raw).strip():
+        return normalize_marker_hex(str(raw), channel="edge")
+    return normalize_marker_hex(getattr(g, "stroke_hex", None), channel="edge")
+
+
 def resolve_family_band_colours(sch: Any, index: int) -> tuple[str, str]:
     """Family density band *index* (0..3): band colours then global then (c)→(d)."""
     g = _global_defaults(sch)
     fam = getattr(sch, "family_locations", sch)
-    fills = getattr(fam, "density_fill_hex", ())
-    strokes = getattr(fam, "density_stroke_hex", ())
+    fills = getattr(fam, "density_fill_hex", None) or ()
+    strokes = getattr(fam, "density_stroke_hex", None) or ()
     spec_f = fills[index] if 0 <= index < len(fills) else None
     spec_s = strokes[index] if 0 <= index < len(strokes) else None
     fill = _resolve_channel(
@@ -457,13 +467,19 @@ def family_map_resolved_circle_radius_px(sch: Any) -> int:
     """Family map CircleMarker radius — matches :func:`~explorer.presentation.design_map_preview.scheme_seed_config`."""
     fam = getattr(sch, "family_locations", sch)
     md = _map_marker_scheme_default_radius_px(sch)
-    v = getattr(fam, "radius_px_override", None)
-    if v is None:
-        return md
-    try:
-        return clamp_map_marker_circle_radius_px(int(v))
-    except (TypeError, ValueError):
-        return md
+    ovr = getattr(fam, "radius_px_override", None)
+    if ovr is not None:
+        try:
+            return clamp_map_marker_circle_radius_px(int(ovr))
+        except (TypeError, ValueError):
+            return md
+    base = getattr(fam, "radius_px", None)
+    if base is not None:
+        try:
+            return clamp_map_marker_circle_radius_px(int(base))
+        except (TypeError, ValueError):
+            return md
+    return md
 
 
 def family_map_resolved_fill_opacity(sch: Any) -> float:

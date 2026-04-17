@@ -5,7 +5,8 @@ Generate paste-ready Python for :mod:`explorer.app.streamlit.defaults` from a
 Output is a nested :class:`~explorer.core.map_marker_scheme_model.MapMarkerColourScheme` constructor
 matching the structure in ``defaults.py``. Optional per-collection radius, fill opacity, and
 fill/stroke hex fields are emitted only when they differ from :class:`MapMarkerGlobalDefaults` (or the
-appropriate inherit-global rule); cluster tier colours and geometry follow the same rules as before.
+appropriate inherit-global rule). For ``family_locations``, density edge colours, radii, stroke weights,
+and highlight stroke also follow sparse rules. Cluster tier colours and geometry follow the same rules as before.
 """
 
 from __future__ import annotations
@@ -50,6 +51,15 @@ def _hex_differs(resolved: str, base: str) -> bool:
     if not nr:
         return False
     return nr != _norm_hex7(base)
+
+
+def _family_density_strokes_match_global(
+    cfg: DesignMapPreviewConfig, global_stroke_hex: str
+) -> bool:
+    """True when all four family band edge colours match *global_stroke_hex* (omit tuple in export)."""
+    return all(
+        not _hex_differs(cfg.family_stroke_hex[i], global_stroke_hex) for i in range(4)
+    )
 
 
 def format_map_marker_colour_scheme_dict_py(
@@ -216,23 +226,28 @@ def format_map_marker_colour_scheme_dict_py(
 
     rf = int(cfg.marker_radius_families)
     fo_fam = float(cfg.marker_fill_opacity_families)
+    sw_fam = int(cfg.stroke_weight_family)
+    sw_hl = int(cfg.stroke_weight_family_highlight)
     fam_lines: list[str] = [
         "    family_locations=MapMarkerFamilyLocationsStyle(",
-        f"        radius_px={rf},",
-        f"        stroke_weight={int(cfg.stroke_weight_family)},",
-        f"        highlight_stroke_hex={cfg.family_highlight_stroke_hex!r},",
-        f"        highlight_stroke_weight={int(cfg.stroke_weight_family_highlight)},",
         f"        density_fill_hex={_fmt_hex_tuple(cfg.family_fill_hex)},",
-        f"        density_stroke_hex={_fmt_hex_tuple(cfg.family_stroke_hex)},",
         f"        legend_highlight_band_index={int(cfg.legend_highlight_band_index)},",
     ]
+    if not _family_density_strokes_match_global(cfg, g_stroke):
+        fam_lines.append(f"        density_stroke_hex={_fmt_hex_tuple(cfg.family_stroke_hex)},")
+    if rf != md:
+        fam_lines.append(f"        radius_px_override={rf},")
+    if sw_fam != md_sw:
+        fam_lines.append(f"        stroke_weight={sw_fam},")
+    if _hex_differs(cfg.family_highlight_stroke_hex, g_stroke):
+        fam_lines.append(f"        highlight_stroke_hex={cfg.family_highlight_stroke_hex!r},")
+    if sw_hl != md_sw:
+        fam_lines.append(f"        highlight_stroke_weight={sw_hl},")
     if _opacity_overrides_default(fo_fam, md_fo):
         if t_fam.fill_opacity_override is not None:
             fam_lines.append(f"        fill_opacity_override={_fmt_float(fo_fam)},")
         else:
             fam_lines.append(f"        fill_opacity={_fmt_float(fo_fam)},")
-    if rf != md:
-        fam_lines.append(f"        radius_px_override={rf},")
     fam_lines.append("    ),")
     lines.extend(fam_lines)
 

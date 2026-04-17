@@ -16,6 +16,7 @@ import folium
 from branca.element import Element
 
 from explorer.app.streamlit.defaults import (
+    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     MAP_HEIGHT_PX_DEFAULT,
     MapMarkerColourScheme,
     active_map_marker_colour_scheme,
@@ -27,10 +28,11 @@ from explorer.core.family_map_compute import (
     format_family_location_popup_html,
 )
 from explorer.core.map_marker_colour_resolve import (
+    _global_defaults,
     family_map_resolved_circle_radius_px,
     family_map_resolved_fill_opacity,
-    normalize_marker_hex,
     resolve_family_band_colours,
+    resolve_family_highlight_stroke_hex,
 )
 from explorer.presentation.map_renderer import (
     build_legend_html,
@@ -56,6 +58,10 @@ def family_map_marker_style(
     """
     s = style or active_map_marker_colour_scheme()
     fam = s.family_locations
+    g = _global_defaults(s)
+    md_sw = max(1, int(getattr(g, "stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
+    sw_band = md_sw if fam.stroke_weight is None else max(1, int(fam.stroke_weight))
+    sw_hl = md_sw if fam.highlight_stroke_weight is None else max(1, int(fam.highlight_stroke_weight))
     fills = fam.density_fill_hex
     n = len(fills)
     idx = max(0, min(pin.density_band_index, n - 1)) if n else 0
@@ -63,10 +69,10 @@ def family_map_marker_style(
     if pin.highlight_match:
         return (
             fill_res,
-            normalize_marker_hex(fam.highlight_stroke_hex, channel="edge"),
-            fam.highlight_stroke_weight,
+            resolve_family_highlight_stroke_hex(s),
+            sw_hl,
         )
-    return fill_res, edge_res, fam.stroke_weight
+    return fill_res, edge_res, sw_band
 
 
 def _default_au_center() -> tuple[float, float]:
@@ -159,7 +165,7 @@ def build_family_map_legend_overlay_html_for_pins(
         fill_hl, _ = resolve_family_band_colours(s, sw_i)
         items.append(
             (
-                normalize_marker_hex(fam.highlight_stroke_hex, channel="edge"),
+                resolve_family_highlight_stroke_hex(s),
                 fill_hl,
                 hl_legend,
             )

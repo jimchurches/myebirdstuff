@@ -36,6 +36,7 @@ from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_STROKE_HEX,
     normalize_marker_hex,
     resolve_family_band_colours,
+    resolve_family_highlight_stroke_hex,
     resolve_last_seen_colours,
     resolve_lifer_map_lifer_colours,
     resolve_lifer_map_subspecies_colours,
@@ -581,7 +582,7 @@ def scheme_seed_config(
     ll = sch.lifer_locations
     fam = sch.family_locations
     cl = al.cluster
-    hl_stroke = normalize_marker_hex(str(fam.highlight_stroke_hex), channel="edge")
+    hl_stroke = resolve_family_highlight_stroke_hex(sch)
 
     def _int_or_fb(v: object, fallback: int) -> int:
         try:
@@ -617,7 +618,15 @@ def scheme_seed_config(
     r_smb = _collection_radius(smb.radius_px, md)
     r_lml = _collection_radius(ll.lifer_radius_px, md)
     r_lms = _collection_radius(ll.subspecies_radius_px, md)
-    rf = _collection_radius(fam.radius_px_override, md)
+    if getattr(fam, "radius_px_override", None) is not None:
+        rf = _collection_radius(fam.radius_px_override, md)
+    elif getattr(fam, "radius_px", None) is not None:
+        try:
+            rf = clamp_map_marker_circle_radius_px(int(fam.radius_px))
+        except (TypeError, ValueError):
+            rf = md
+    else:
+        rf = md
 
     def _collection_fill_opacity(override: float | None, legacy: float) -> float:
         if override is not None:
@@ -700,8 +709,12 @@ def scheme_seed_config(
         stroke_weight_lifer=_int_or_fb(
             getattr(ll, "stroke_weight_override", None), _int_or_fb(al.stroke_weight, md_sw)
         ),
-        stroke_weight_family=max(1, int(fam.stroke_weight)),
-        stroke_weight_family_highlight=max(1, int(fam.highlight_stroke_weight)),
+        stroke_weight_family=max(1, int(fam.stroke_weight))
+        if fam.stroke_weight is not None
+        else max(1, md_sw),
+        stroke_weight_family_highlight=max(1, int(fam.highlight_stroke_weight))
+        if fam.highlight_stroke_weight is not None
+        else max(1, md_sw),
         marker_fill_opacity_locations=fo_loc,
         marker_fill_opacity_species=fo_spec,
         marker_fill_opacity_species_map_background=fo_smb,
