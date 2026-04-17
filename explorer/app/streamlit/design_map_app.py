@@ -914,16 +914,6 @@ def main() -> None:
             template=template_sch,
         )
         st.code(export_body, language="python")
-        st.caption(
-            "Single ``MapMarkerColourScheme`` dict: resolved visit-map opacities "
-            "and radii, plus optional sparse per-collection ``radius_px`` / ``fill_opacity`` "
-            "and optional ``all_locations.cluster.tier_icon_hex`` when set. "
-            "The live explorer resolves species-map pins via ``resolve_species_visit_pin`` (roles include "
-            "species lifer / last-seen hex and radius) and lifer-map pins via ``resolve_lifer_overlay_pin_params`` "
-            "(``lifer_map_lifer`` vs ``lifer_map_subspecies``). "
-            "Rename ``EXPORT`` symbols and register new presets in ``active_map_marker_colour_scheme`` in "
-            "``defaults.py`` as needed."
-        )
 
 
 if __name__ == "__main__":

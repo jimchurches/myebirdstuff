@@ -258,28 +258,15 @@ def format_full_defaults_export(
     display_name: str,
     template: MapMarkerColourScheme,
 ) -> str:
-    """Single expanded scheme constructor plus import hint for pasting into ``defaults.py``."""
+    """Single ``MAP_MARKER_COLOUR_SCHEME_*`` assignment for pasting into ``defaults.py`` (no import block)."""
     header = (
         "# --- Copy into explorer/app/streamlit/defaults.py (merge by hand) ---\n"
         "# Rename MAP_MARKER_COLOUR_SCHEME_EXPORT, then register the index in\n"
         "# active_map_marker_colour_scheme() if you add a new slot.\n"
-        "# Requires: MapMarkerColourScheme and nested types from\n"
-        "# explorer.core.map_marker_scheme_model (see existing MAP_MARKER_COLOUR_SCHEME_* blocks).\n"
-    )
-    imports = (
-        "from explorer.core.map_marker_scheme_model import (\n"
-        "    MapMarkerAllLocationsStyle,\n"
-        "    MapMarkerClusterStyle,\n"
-        "    MapMarkerColourScheme,\n"
-        "    MapMarkerFamilyLocationsStyle,\n"
-        "    MapMarkerGlobalDefaults,\n"
-        "    MapMarkerLiferLocationsStyle,\n"
-        "    MapMarkerSpeciesLocationsStyle,\n"
-        "    MapMarkerSpeciesMapBackgroundStyle,\n"
-        "    MapMarkerViewportStyle,\n"
-        ")\n"
+        "# Nested constructors match types in explorer.core.map_marker_scheme_model\n"
+        "# (see existing MAP_MARKER_COLOUR_SCHEME_* blocks in this file).\n"
     )
     body = format_map_marker_colour_scheme_dict_py(
         cfg, display_name, template=template, dict_name="MAP_MARKER_COLOUR_SCHEME_EXPORT"
     )
-    return "\n".join([header, "", imports, "", body, ""])
+    return "\n".join([header, "", body, ""])

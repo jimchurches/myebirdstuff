@@ -136,54 +136,55 @@ _MAP_VIEWPORT_STANDARD = MapMarkerViewportStyle(
 
 # Scheme 1 — default: red density ramp
 MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
-    display_name="Reds",
+    display_name='Experimental',
     global_defaults=MapMarkerGlobalDefaults(
-        fill_hex="#D3D3D3",
-        stroke_hex="#008000",
+        fill_hex='#D3D3D3',
+        stroke_hex='#008000',
         radius_px=5,
         fill_opacity=0.88,
         stroke_weight=2,
     ),
     all_locations=MapMarkerAllLocationsStyle(
-        fill_hex="#D3D3D3",
-        stroke_hex="#008000",
-        stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-        fill_opacity=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+        cluster=MapMarkerClusterStyle(),
     ),
     species_locations=MapMarkerSpeciesLocationsStyle(
-        fill_hex="#FF0000",
-        stroke_hex="#800080",
-        lifer_fill_hex="#FFFF00",
-        lifer_stroke_hex="#800080",
-        last_seen_fill_hex="#90EE90",
-        last_seen_stroke_hex="#800080",
-        fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+        lifer_fill_hex='#FFC600',
+        last_seen_fill_hex='#70E000',
     ),
     species_map_background=MapMarkerSpeciesMapBackgroundStyle(
-        fill_hex="#D3D3D3",
-        stroke_hex="#008000",
-        stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-        fill_opacity=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+        fill_hex='#F6F5F4',
+        stroke_hex='#E6E1DB',
+        radius_px=4,
     ),
     lifer_locations=MapMarkerLiferLocationsStyle(
-        lifer_fill_hex="#FFFF00",
-        lifer_stroke_hex="#800080",
-        subspecies_fill_hex="#FF0000",
-        subspecies_stroke_hex="#800080",
-        lifer_fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
-        subspecies_fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+        lifer_fill_hex='#FF8700',
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
         radius_px=5,
         fill_opacity=0.88,
         stroke_weight=2,
-        highlight_stroke_hex="#E00000",
+        highlight_stroke_hex='#E00000',
         highlight_stroke_weight=2,
-        density_fill_hex=("#95A5B2", "#B78FAF", "#8D5383", "#221B1E"),
-        density_stroke_hex=("#677C8E", "#704868", "#5A3554", "#0B090A"),
+        density_fill_hex=(
+            '#FFF2C2',
+            '#D3D3D3',
+            '#B8B100',
+            '#A71B11',
+        ),
+        density_stroke_hex=(
+            '#23804D',
+            '#008000',
+            '#008000',
+            '#166426',
+        ),
         legend_highlight_band_index=0,
     ),
-    viewport=_MAP_VIEWPORT_STANDARD,
+    viewport=MapMarkerViewportStyle(
+        popup_max_width_px=320,
+        fit_bounds_padding_px=48,
+        fit_bounds_max_zoom=6,
+        fit_bounds_max_zoom_highlight=8,
+    ),
 )
 
 # Scheme 2 — blue → purple density ramp

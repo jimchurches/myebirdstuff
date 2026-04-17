@@ -172,6 +172,7 @@ def test_format_full_export_is_single_expanded_scheme_block() -> None:
     assert "MAP_MARKER_COLOUR_SCHEME_EXPORT = MapMarkerColourScheme(" in text
     assert "lifer_fill_hex=" in text
     assert "MAP_CIRCLE_MARKER_RADIUS_PX =" not in text
+    assert "from explorer.core.map_marker_scheme_model import" not in text
     assert text.index("fill_hex=") < text.index("density_fill_hex=")
 
 
