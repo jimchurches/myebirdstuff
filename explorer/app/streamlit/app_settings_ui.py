@@ -14,6 +14,9 @@ from explorer.presentation.checklist_stats_display import (
     COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
 from explorer.core.settings_schema_defaults import (
+    MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_MAX,
+    MAP_MARKER_COLOUR_SCHEME_MIN,
     MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
@@ -45,6 +48,8 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY,
@@ -76,6 +81,9 @@ from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
+    MAP_MARKER_COLOUR_SCHEME_1,
+    MAP_MARKER_COLOUR_SCHEME_2,
+    MAP_MARKER_COLOUR_SCHEME_3,
     MAP_HEIGHT_PX_DEFAULT,
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
@@ -129,6 +137,19 @@ def render_settings_tab(
                                 st.session_state.get(STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY, True),
                             )
                         )
+                        try:
+                            _msc_save = int(
+                                st.session_state.get(
+                                    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
+                                    MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+                                )
+                            )
+                            _msc_save = max(
+                                MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _msc_save)
+                            )
+                        except (TypeError, ValueError):
+                            _msc_save = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+                        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY] = _msc_save
                         st.session_state[SETTINGS_BASELINE_KEY] = settings_state_payload()
                         st.session_state[SETTINGS_FLASH_SAVE_KEY] = True
                         st.rerun()
@@ -183,6 +204,27 @@ def render_settings_tab(
                     "Your default map background. The Map sidebar can temporarily override this for the current session."
                 ),
             )
+            _scheme_preset_labels = {
+                1: MAP_MARKER_COLOUR_SCHEME_1.display_name,
+                2: MAP_MARKER_COLOUR_SCHEME_2.display_name,
+                3: MAP_MARKER_COLOUR_SCHEME_3.display_name,
+            }
+            _cur_scheme = int(
+                st.session_state.get(STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY, MAP_MARKER_COLOUR_SCHEME_DEFAULT)
+            )
+            if _cur_scheme not in (1, 2, 3):
+                _cur_scheme = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+            with st.expander("Colour schemes", expanded=False):
+                colour_scheme_default_w = st.radio(
+                    "Map marker colour scheme — default",
+                    options=[1, 2, 3],
+                    index=[1, 2, 3].index(_cur_scheme),
+                    format_func=lambda n: _scheme_preset_labels[int(n)],
+                    help=(
+                        "Saved default for visit, species, lifer, and family maps. "
+                        "The Map sidebar control can override for the current session only until you apply or save here."
+                    ),
+                )
             mark_lifer_w = st.toggle(
                 "Mark lifer",
                 value=bool(st.session_state.get(STREAMLIT_MARK_LIFER_KEY, True)),
@@ -236,6 +278,10 @@ def render_settings_tab(
             st.session_state[STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY] = str(basemap_default_w)
             st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = int(map_height_default_w)
             st.session_state[STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY] = int(map_height_default_w)
+            _msc = int(colour_scheme_default_w)
+            _msc = max(MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _msc))
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = _msc
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY] = _msc
             st.session_state[STREAMLIT_MARK_LIFER_KEY] = bool(mark_lifer_w)
             st.session_state[STREAMLIT_MARK_LAST_SEEN_KEY] = bool(mark_last_seen_w)
             _cl = bool(cluster_all_locations_w)

@@ -45,12 +45,14 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_map_ui import (
     ensure_streamlit_map_basemap_height_keys,
+    ensure_streamlit_map_marker_colour_scheme_keys,
     inject_spinner_theme_css,
     species_searchbox_fragment,
 )
 from explorer.app.streamlit.app_settings_state import apply_pending_map_cluster_toggle
 from explorer.app.streamlit.app_settings_state import apply_pending_map_basemap_override
 from explorer.app.streamlit.app_settings_state import apply_pending_map_height_override
+from explorer.app.streamlit.app_settings_state import apply_pending_map_marker_colour_scheme
 from explorer.app.streamlit.defaults import (
     MAP_MARKER_COLOUR_SCHEME_1,
     MAP_MARKER_COLOUR_SCHEME_2,
@@ -113,10 +115,12 @@ class MapWorkingContext:
 def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     """Map sidebar widgets, working set + species search, Folium cache invalidation on All↔Species."""
     ensure_streamlit_map_basemap_height_keys()
+    ensure_streamlit_map_marker_colour_scheme_keys()
 
     apply_pending_map_cluster_toggle(st.session_state)
     apply_pending_map_basemap_override(st.session_state)
     apply_pending_map_height_override(st.session_state)
+    apply_pending_map_marker_colour_scheme(st.session_state)
 
     inject_spinner_theme_css()
 

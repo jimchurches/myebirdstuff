@@ -26,6 +26,10 @@ MAP_HEIGHT_PX_MIN = 440
 MAP_HEIGHT_PX_MAX = 1200
 # All-locations map only: group nearby pins (Leaflet.markercluster). Species / lifer maps never cluster.
 MAP_CLUSTER_ALL_LOCATIONS_DEFAULT = True
+# Bundled map-marker palette index (``1``…``3``); see ``active_map_marker_colour_scheme`` in defaults.
+MAP_MARKER_COLOUR_SCHEME_DEFAULT = 1
+MAP_MARKER_COLOUR_SCHEME_MIN = 1
+MAP_MARKER_COLOUR_SCHEME_MAX = 3
 
 TABLES_RANKINGS_TOP_N_DEFAULT = 200
 TABLES_RANKINGS_TOP_N_MIN = 10
@@ -60,6 +64,7 @@ def build_persisted_settings_defaults_dict() -> dict[str, Any]:
             "basemap": MAP_BASEMAP_DEFAULT,
             "map_height_px": MAP_HEIGHT_PX_DEFAULT,
             "cluster_all_locations": MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+            "map_marker_colour_scheme": MAP_MARKER_COLOUR_SCHEME_DEFAULT,
         },
         "tables_lists": {
             "rankings_top_n": TABLES_RANKINGS_TOP_N_DEFAULT,

@@ -29,6 +29,9 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
     STREAMLIT_POPUP_SCROLL_HINT_KEY,
     STREAMLIT_POPUP_SORT_ORDER_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
@@ -45,6 +48,9 @@ from explorer.core.settings_schema_defaults import (
     MAP_HEIGHT_PX_MAX,
     MAP_BASEMAP_OPTIONS,
     MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_MAX,
+    MAP_MARKER_COLOUR_SCHEME_MIN,
     MAP_MARK_LAST_SEEN_DEFAULT,
     MAP_MARK_LIFER_DEFAULT,
     MAP_POPUP_SCROLL_HINT_DEFAULT,
@@ -164,6 +170,16 @@ def init_and_clamp_streamlit_table_settings() -> None:
             MAP_HEIGHT_PX_MIN,
             min(MAP_HEIGHT_PX_MAX, int(st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY])),
         )
+    if STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY not in st.session_state:
+        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+    else:
+        try:
+            _msc = int(st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY])
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = max(
+                MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _msc)
+            )
+        except (TypeError, ValueError):
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
     if STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY not in st.session_state:
         st.session_state.streamlit_map_cluster_all_locations = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
     if STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY not in st.session_state:
@@ -188,6 +204,9 @@ def settings_state_payload() -> dict[str, Any]:
                 st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY, MAP_HEIGHT_PX_DEFAULT)
             ),
             "cluster_all_locations": bool(st.session_state.streamlit_map_cluster_all_locations_saved),
+            "map_marker_colour_scheme": int(
+                st.session_state.get(STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY, MAP_MARKER_COLOUR_SCHEME_DEFAULT)
+            ),
         },
         "tables_lists": {
             "rankings_top_n": int(st.session_state.streamlit_rankings_top_n),
@@ -243,6 +262,12 @@ def apply_settings_payload_to_state(cfg: dict[str, Any]) -> None:
         _cluster = bool(mp.get("cluster_all_locations", MAP_CLUSTER_ALL_LOCATIONS_DEFAULT))
         st.session_state.streamlit_map_cluster_all_locations = _cluster
         st.session_state.streamlit_map_cluster_all_locations_saved = _cluster
+        try:
+            _msc = int(mp.get("map_marker_colour_scheme", MAP_MARKER_COLOUR_SCHEME_DEFAULT))
+            _msc = max(MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _msc))
+        except (TypeError, ValueError):
+            _msc = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = _msc
     if isinstance(tl, dict):
         st.session_state.streamlit_rankings_top_n = int(
             tl.get("rankings_top_n", TABLES_RANKINGS_TOP_N_DEFAULT)
@@ -384,3 +409,14 @@ def apply_pending_map_height_override(session_state: MutableMapping[str, Any]) -
     pending = session_state.pop(STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY, None)
     if pending is not None:
         session_state[STREAMLIT_MAP_HEIGHT_PX_KEY] = int(pending)
+
+
+def apply_pending_map_marker_colour_scheme(session_state: MutableMapping[str, Any]) -> None:
+    """Apply Settings → Save / Apply map settings deferred palette index before the sidebar radio builds."""
+    pending = session_state.pop(STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY, None)
+    if pending is not None:
+        try:
+            n = max(MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, int(pending)))
+        except (TypeError, ValueError):
+            n = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+        session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY] = n

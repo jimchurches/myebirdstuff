@@ -165,6 +165,9 @@ STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY = "_streamlit_map_basemap_apply_from_set
 STREAMLIT_MAP_BASEMAP_SAVED_KEY = "streamlit_map_basemap_saved"
 STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY = "_streamlit_map_height_apply_from_settings_pending"
 STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY = "streamlit_map_height_px_saved"
+# Map marker palette (1–3): persisted default + sidebar radio; Settings → Save defers apply (refs #147).
+STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY = "_streamlit_map_marker_colour_scheme_apply_pending"
+STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY = "streamlit_map_marker_colour_scheme_saved"
 
 SESSION_PREV_EFFECTIVE_BASEMAP_KEY = "_streamlit_prev_effective_basemap"
 
@@ -220,6 +223,7 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,

@@ -131,7 +131,6 @@ MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT = 2
 # ``MAP_MARKER_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
 # ---------------------------------------------------------------------------
 
-# Scheme 1 — default: red density ramp
 MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
     display_name='Eucalypt',
     global_defaults=MapMarkerGlobalDefaults(
@@ -175,7 +174,6 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
     ),
 )
 
-# Scheme 2 — blue → purple density ramp
 MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
     display_name="Blues & purples",
     global_defaults=MapMarkerGlobalDefaults(
@@ -222,7 +220,6 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
     ),
 )
 
-# Scheme 3 — Ash Violet
 MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
     display_name="Ash Violet",
     global_defaults=MapMarkerGlobalDefaults(

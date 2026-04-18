@@ -18,6 +18,9 @@ from explorer.core.settings_schema_defaults import (
     MAP_HEIGHT_PX_MAX,
     MAP_BASEMAP_OPTIONS,
     MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_MAX,
+    MAP_MARKER_COLOUR_SCHEME_MIN,
     MAP_MARK_LAST_SEEN_DEFAULT,
     MAP_MARK_LIFER_DEFAULT,
     MAP_POPUP_SCROLL_HINT_DEFAULT,
@@ -57,6 +60,11 @@ class MapDisplayConfig(BaseModel):
         le=MAP_HEIGHT_PX_MAX,
     )
     cluster_all_locations: bool = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
+    map_marker_colour_scheme: int = Field(
+        default=MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+        ge=MAP_MARKER_COLOUR_SCHEME_MIN,
+        le=MAP_MARKER_COLOUR_SCHEME_MAX,
+    )
 
 
 class TablesListsConfig(BaseModel):
@@ -144,6 +152,13 @@ def _validate_settings_mapping(raw: Any) -> tuple[dict[str, Any], str | None]:
     # Guard user-edited basemap with explicit allowlist (same keys as Streamlit defaults).
     if data["map_display"].get("basemap") not in MAP_BASEMAP_OPTIONS:
         data["map_display"]["basemap"] = MAP_BASEMAP_DEFAULT
+    try:
+        _msc = int(data["map_display"].get("map_marker_colour_scheme", MAP_MARKER_COLOUR_SCHEME_DEFAULT))
+        data["map_display"]["map_marker_colour_scheme"] = max(
+            MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _msc)
+        )
+    except (TypeError, ValueError):
+        data["map_display"]["map_marker_colour_scheme"] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
     return data, None
 
 
