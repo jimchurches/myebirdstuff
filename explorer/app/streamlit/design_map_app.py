@@ -854,8 +854,6 @@ def main() -> None:
 
     applied: DesignMapPreviewConfig | None = st.session_state.get(_K_APPLIED)
     cfg_export = _config_for_export()
-    template_sch = active_map_marker_colour_scheme(int(st.session_state.get("design_scheme_pick", 1)))
-
     tab_preview, tab_export = st.tabs(["Map preview", "Export to defaults.py"])
 
     with tab_preview:
@@ -903,7 +901,6 @@ def main() -> None:
         export_body = format_full_defaults_export(
             cfg_export,
             display_name=str(st.session_state.get(_K_EXPORT_NAME, "Scheme")),
-            template=template_sch,
         )
         st.code(export_body, language="python")
 

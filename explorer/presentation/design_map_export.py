@@ -7,6 +7,11 @@ matching the structure in ``defaults.py``. Optional per-collection radius, fill 
 fill/stroke hex fields are emitted only when they differ from :class:`MapMarkerGlobalDefaults` (or the
 appropriate inherit-global rule). For ``family_locations``, density edge colours, radii, stroke weights,
 and highlight stroke also follow sparse rules. Cluster tier colours and geometry follow the same rules as before.
+
+**Fill opacity:** when a collection’s resolved opacity differs from globals, the export always emits the
+non-``*_override`` field names (``fill_opacity``, ``lifer_fill_opacity``, ``subspecies_fill_opacity``, …).
+That matches :mod:`~explorer.core.map_marker_colour_resolve` (override wins at load time if ever present;
+``defaults.py`` presets use the sparse forms only).
 """
 
 from __future__ import annotations
@@ -18,7 +23,6 @@ from explorer.app.streamlit.defaults import (
     MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
     MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
 )
-from explorer.core.map_marker_scheme_model import MapMarkerColourScheme
 from explorer.presentation.design_map_preview import DesignMapPreviewConfig
 
 
@@ -66,7 +70,6 @@ def format_map_marker_colour_scheme_dict_py(
     cfg: DesignMapPreviewConfig,
     display_name: str,
     *,
-    template: MapMarkerColourScheme,
     dict_name: str = "MAP_MARKER_COLOUR_SCHEME_EXPORT",
 ) -> str:
     """Return a ``MapMarkerColourScheme(...)`` assignment for pasting into ``defaults.py``."""
@@ -75,11 +78,6 @@ def format_map_marker_colour_scheme_dict_py(
     md_sw = int(cfg.marker_default_stroke_weight)
     g_fill = cfg.marker_default_fill_hex
     g_stroke = cfg.marker_default_stroke_hex
-    t_al = template.all_locations
-    t_smb = template.species_map_background
-    t_sp = template.species_locations
-    t_ll = template.lifer_locations
-    t_fam = template.family_locations
 
     lines: list[str] = [
         f"{dict_name} = MapMarkerColourScheme(",
@@ -109,10 +107,7 @@ def format_map_marker_colour_scheme_dict_py(
     if crl != md:
         al_parts.append(f"        radius_px={crl},")
     if _opacity_overrides_default(fo_loc, md_fo):
-        if t_al.fill_opacity_override is not None:
-            al_parts.append(f"        fill_opacity_override={_fmt_float(fo_loc)},")
-        else:
-            al_parts.append(f"        fill_opacity={_fmt_float(fo_loc)},")
+        al_parts.append(f"        fill_opacity={_fmt_float(fo_loc)},")
 
     cl_parts: list[str] = []
     if cfg.marker_cluster_tier_icon_hex is not None:
@@ -154,10 +149,7 @@ def format_map_marker_colour_scheme_dict_py(
     if _hex_differs(cfg.last_seen_stroke_hex, g_stroke):
         sp_lines.append(f"        last_seen_stroke_hex={cfg.last_seen_stroke_hex!r},")
     if _opacity_overrides_default(fo_spec, md_fo):
-        if t_sp.fill_opacity_override is not None:
-            sp_lines.append(f"        fill_opacity_override={_fmt_float(fo_spec)},")
-        else:
-            sp_lines.append(f"        fill_opacity={_fmt_float(fo_spec)},")
+        sp_lines.append(f"        fill_opacity={_fmt_float(fo_spec)},")
     if int(cfg.marker_radius_species) != md:
         sp_lines.append(f"        radius_px={int(cfg.marker_radius_species)},")
     if int(cfg.stroke_weight_species) != int(cfg.stroke_weight_visit):
@@ -180,10 +172,7 @@ def format_map_marker_colour_scheme_dict_py(
     if rsmb != md:
         smb_lines.append(f"        radius_px={rsmb},")
     if _opacity_overrides_default(fo_smb, md_fo):
-        if t_smb.fill_opacity_override is not None:
-            smb_lines.append(f"        fill_opacity_override={_fmt_float(fo_smb)},")
-        else:
-            smb_lines.append(f"        fill_opacity={_fmt_float(fo_smb)},")
+        smb_lines.append(f"        fill_opacity={_fmt_float(fo_smb)},")
     smb_lines.append("    ),")
     lines.extend(smb_lines)
 
@@ -201,15 +190,9 @@ def format_map_marker_colour_scheme_dict_py(
     if _hex_differs(cfg.lifer_map_subspecies_stroke_hex, g_stroke):
         ll_lines.append(f"        subspecies_stroke_hex={cfg.lifer_map_subspecies_stroke_hex!r},")
     if _opacity_overrides_default(fo_lml, md_fo):
-        if t_ll.lifer_fill_opacity_override is not None:
-            ll_lines.append(f"        lifer_fill_opacity_override={_fmt_float(fo_lml)},")
-        else:
-            ll_lines.append(f"        lifer_fill_opacity={_fmt_float(fo_lml)},")
+        ll_lines.append(f"        lifer_fill_opacity={_fmt_float(fo_lml)},")
     if _opacity_overrides_default(fo_lms, md_fo):
-        if t_ll.subspecies_fill_opacity_override is not None:
-            ll_lines.append(f"        subspecies_fill_opacity_override={_fmt_float(fo_lms)},")
-        else:
-            ll_lines.append(f"        subspecies_fill_opacity={_fmt_float(fo_lms)},")
+        ll_lines.append(f"        subspecies_fill_opacity={_fmt_float(fo_lms)},")
     if int(cfg.marker_radius_lifer_map_lifer) != md:
         ll_lines.append(
             f"        lifer_radius_px={int(cfg.marker_radius_lifer_map_lifer)},"
@@ -243,10 +226,7 @@ def format_map_marker_colour_scheme_dict_py(
     if sw_hl != md_sw:
         fam_lines.append(f"        highlight_stroke_weight={sw_hl},")
     if _opacity_overrides_default(fo_fam, md_fo):
-        if t_fam.fill_opacity_override is not None:
-            fam_lines.append(f"        fill_opacity_override={_fmt_float(fo_fam)},")
-        else:
-            fam_lines.append(f"        fill_opacity={_fmt_float(fo_fam)},")
+        fam_lines.append(f"        fill_opacity={_fmt_float(fo_fam)},")
     fam_lines.append("    ),")
     lines.extend(fam_lines)
     lines.append(")")
@@ -257,7 +237,6 @@ def format_full_defaults_export(
     cfg: DesignMapPreviewConfig,
     *,
     display_name: str,
-    template: MapMarkerColourScheme,
 ) -> str:
     """Single ``MAP_MARKER_COLOUR_SCHEME_*`` assignment for pasting into ``defaults.py`` (no import block)."""
     header = (
@@ -268,6 +247,6 @@ def format_full_defaults_export(
         "# (see existing MAP_MARKER_COLOUR_SCHEME_* blocks in this file).\n"
     )
     body = format_map_marker_colour_scheme_dict_py(
-        cfg, display_name, template=template, dict_name="MAP_MARKER_COLOUR_SCHEME_EXPORT"
+        cfg, display_name, dict_name="MAP_MARKER_COLOUR_SCHEME_EXPORT"
     )
     return "\n".join([header, "", body, ""])
