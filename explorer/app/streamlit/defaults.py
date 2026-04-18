@@ -175,48 +175,73 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
 )
 
 MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
-    display_name="Blues & purples",
+    display_name="Cold Current",
     global_defaults=MapMarkerGlobalDefaults(
-        fill_hex="#D3D3D3",
-        stroke_hex="#008000",
+        fill_hex="#DDE6F2",
+        stroke_hex="#2F5D8A",
         radius_px=5,
         fill_opacity=0.88,
-        stroke_weight=2,
+        stroke_weight=2.5,
     ),
     all_locations=MapMarkerAllLocationsStyle(
-        fill_hex="#D3D3D3",
-        stroke_hex="#008000",
-        stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-        fill_opacity=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+        fill_hex="#E6EEF7",
+        stroke_hex="#4A6FA5",
+        fill_opacity=0.75,
+        cluster=MapMarkerClusterStyle(
+            tier_icon_hex = (
+                "#E6F1F7",
+                "#5A8FB3",
+                "#E6F1F7",
+                "#5FA8D3",
+                "#1F4E79",
+                "#5FA8D3",
+                "#4A7FB8",
+                "#0B3A66",
+                "#4A7FB8",
+            ),
+            inner_fill_opacity=0.8,
+            halo_opacity=0.4,
+            border_opacity=0.4,
+            halo_spread_px=5,
+            border_width_px=0,
+        ),      
     ),
     species_locations=MapMarkerSpeciesLocationsStyle(
-        fill_hex="#FF0000",
-        stroke_hex="#800080",
-        lifer_fill_hex="#FFFF00",
-        lifer_stroke_hex="#800080",
-        last_seen_fill_hex="#90EE90",
-        last_seen_stroke_hex="#800080",
-        fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+        fill_hex="#5FA8D3", 
+        stroke_hex="#1F4E79",
+        lifer_fill_hex="#FFD166",  
+        lifer_stroke_hex="#C75100",
+        last_seen_fill_hex="#06D6A0",  
+        last_seen_stroke_hex="#0B6E4F",
     ),
     species_map_background=MapMarkerSpeciesMapBackgroundStyle(
-        fill_hex="#D3D3D3",
-        stroke_hex="#008000",
-        stroke_weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-        fill_opacity=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+        fill_hex="#F0F4F8",
+        stroke_hex="#C7D3E0",
+        radius_px=4,
+        fill_opacity=0.7,
     ),
     lifer_locations=MapMarkerLiferLocationsStyle(
-        lifer_fill_hex="#FFFF00",
-        lifer_stroke_hex="#800080",
-        subspecies_fill_hex="#FF0000",
-        subspecies_stroke_hex="#800080",
-        lifer_fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
-        subspecies_fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+        lifer_fill_hex="#FFD166",
+        lifer_stroke_hex="#C75100",
+
+        subspecies_fill_hex="#8ECAE6",  # pale blue
+        subspecies_stroke_hex="#2F5D8A",
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
-        density_fill_hex=("#3A86FF", "#5E60CE", "#9D4EDD", "#C9184A"),
+        density_fill_hex=(
+            "#A9D6E5",  # light blue
+            "#5FA8D3",  # mid blue
+            "#F8961E",  # orange
+            "#D62828",  # strong red
+        ),
+        density_stroke_hex=(
+            "#457B9D",
+            "#1D4E89",
+            "#C46A00",
+            "#7F1D1D",
+        ),
         legend_highlight_band_index=0,
-        density_stroke_hex=("#2F6FD1", "#4A4DA6", "#7E3EAF", "#A1143A"),
-        highlight_stroke_hex="#FF7F11",
+        highlight_stroke_hex="#D65A00",  # bright red (iOS-style visibility)
     ),
 )
 
@@ -234,16 +259,16 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
         stroke_hex='#857891',
         cluster=MapMarkerClusterStyle(
             tier_icon_hex=(
-            '#DFCEDE',
-            '#9E6B9B',
-            '#DFCEDE',
-            '#CFB4CD',
-            '#9E6B9B',
-            '#CFB4CD',
-            '#B78FB4',
-            '#9E6B9B',
-            '#B78FB4',
-        ),
+                '#DFCEDE',
+                '#9E6B9B',
+                '#DFCEDE',
+                '#CFB4CD',
+                '#9E6B9B',
+                '#CFB4CD',
+                '#B78FB4',
+                '#9E6B9B',
+                '#B78FB4',
+            ),
             inner_fill_opacity=0.8,
             halo_opacity=0.4,
             border_opacity=0.4,
