@@ -5,14 +5,23 @@ from dataclasses import replace
 
 import pandas as pd
 
-from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1, MAP_MARKER_COLOUR_SCHEME_3
+from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
 from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
 from explorer.core.map_marker_colour_resolve import (
+    normalize_marker_hex,
     resolve_lifer_overlay_pin_params,
+    resolve_location_visit_colours,
     resolve_species_visit_pin,
 )
 from explorer.core.species_logic import base_species_for_lifer
+
+from tests.colour_scheme_test_utils import (
+    BUNDLED_COLOUR_SCHEME_INDICES,
+    first_bundled_scheme_index_with_nine_cluster_tiers,
+    leaflet_rgb_csv_from_hex_rrggbb,
+)
 
 
 def _minimal_map_df():
@@ -38,7 +47,9 @@ def _minimal_map_df():
     )
 
 
-def _common_kwargs(df, *, visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_1):
+def _common_kwargs(df, *, visit_marker_scheme=None):
+    if visit_marker_scheme is None:
+        visit_marker_scheme = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
     location_data = df[["Location ID", "Location", "Latitude", "Longitude"]].drop_duplicates()
     records_by_loc = {lid: grp for lid, grp in df.groupby("Location ID")}
     prep = prepare_lifer_last_seen(df, base_species_fn=base_species_for_lifer)
@@ -92,6 +103,7 @@ def test_all_species_builds_map_with_banner():
 def test_species_filter_visit_overlay_uses_scheme_hex():
     """Species-filtered map uses :class:`MapMarkerColourScheme` (no separate named-colour path)."""
     df = _minimal_map_df()
+    sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
     r = build_species_overlay_map(
         **_common_kwargs(df),
         selected_species="Anas gracilis",
@@ -100,13 +112,15 @@ def test_species_filter_visit_overlay_uses_scheme_hex():
     assert r.warning is None
     assert r.map is not None
     html = r.map.get_root().render().lower()
-    stroke, _fill, _, _, _ = resolve_species_visit_pin(MAP_MARKER_COLOUR_SCHEME_1, "species")
+    stroke, _fill, _, _, _ = resolve_species_visit_pin(sch, "species")
     # Edge colour is reliably present in the rendered document; fill may be inlined differently.
     assert stroke.replace("#", "").lower() in html
 
 
 def test_all_locations_visit_marker_scheme_uses_hex_from_scheme():
     df = _minimal_map_df()
+    sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
+    vf, ve = resolve_location_visit_colours(sch)
     r = build_species_overlay_map(
         **_common_kwargs(df),
         selected_species="",
@@ -114,14 +128,21 @@ def test_all_locations_visit_marker_scheme_uses_hex_from_scheme():
     assert r.warning is None
     assert r.map is not None
     html = r.map.get_root().render().lower()
-    assert "4f8e4a" in html
-    assert "c2d6be" in html
+    for hx in (vf, ve):
+        assert hx.replace("#", "").lower() in html
 
 
 def test_all_locations_cluster_markers_use_scheme_cluster_tier_fills_when_present():
+    idx = first_bundled_scheme_index_with_nine_cluster_tiers()
+    assert idx is not None
+    sch = active_map_marker_colour_scheme(idx)
+    tier = sch.all_locations.cluster.tier_icon_hex
+    assert tier is not None
+    small_fill = normalize_marker_hex(str(tier[0]), channel="fill")
+    expected_rgb = leaflet_rgb_csv_from_hex_rrggbb(small_fill)
     df = _minimal_map_df()
     r = build_species_overlay_map(
-        **_common_kwargs(df, visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_3),
+        **_common_kwargs(df, visit_marker_scheme=sch),
         selected_species="",
         cluster_all_locations=True,
     )
@@ -132,18 +153,18 @@ def test_all_locations_cluster_markers_use_scheme_cluster_tier_fills_when_presen
     assert "marker-cluster" in full
     # Custom cluster icons use rgba(...) from hex + marker_cluster_*_opacity (not raw #hex in HTML).
     assert "rgba(" in full
-    # Scheme 3 small-tier fill is ``#DFCEDE`` → ``rgb(223,206,222)`` in the custom icon JS.
-    assert "223,206,222" in full
+    assert expected_rgb in full
 
 
 def test_all_locations_cluster_markers_apply_tier_border_colours_when_present():
     df = _minimal_map_df()
+    base = active_map_marker_colour_scheme(BUNDLED_COLOUR_SCHEME_INDICES[-1])
     scheme_with_border = replace(
-        MAP_MARKER_COLOUR_SCHEME_3,
+        base,
         all_locations=replace(
-            MAP_MARKER_COLOUR_SCHEME_3.all_locations,
+            base.all_locations,
             cluster=replace(
-                MAP_MARKER_COLOUR_SCHEME_3.all_locations.cluster,
+                base.all_locations.cluster,
                 tier_icon_hex=(
                     "#EFE6EE",
                     "#4b2e46",
@@ -206,6 +227,7 @@ def test_species_view_no_selection_empty_even_when_hide_filter_off():
 def test_lifer_map_mode_uses_visit_marker_scheme_when_provided():
     df = _minimal_map_df()
     kwargs = _common_kwargs(df)
+    sch = kwargs["visit_marker_scheme"]
     full_loc = kwargs["location_data"]
     r = build_species_overlay_map(
         **kwargs,
@@ -216,7 +238,7 @@ def test_lifer_map_mode_uses_visit_marker_scheme_when_provided():
     assert r.warning is None
     assert r.map is not None
     html = r.map.get_root().render().lower()
-    lf_stroke, lf_fill, *_ = resolve_lifer_overlay_pin_params(MAP_MARKER_COLOUR_SCHEME_1)
+    lf_stroke, lf_fill, *_ = resolve_lifer_overlay_pin_params(sch)
     assert lf_stroke.replace("#", "").lower() in html
     assert lf_fill.replace("#", "").lower() in html
 

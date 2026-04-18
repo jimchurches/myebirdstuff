@@ -5,7 +5,8 @@ from collections import OrderedDict
 import pandas as pd
 import pytest
 
-from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1
+from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.map_controller import build_species_overlay_map
 from explorer.core.species_logic import base_species_for_lifer
 from explorer.core.map_prep import (
@@ -49,7 +50,7 @@ def test_prepare_all_locations_map_context_matches_controller_contract():
         species_url_fn=None,
         base_species_fn=base_species_for_lifer,
         map_view_mode="all",
-        visit_marker_scheme=MAP_MARKER_COLOUR_SCHEME_1,
+        visit_marker_scheme=active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT),
     )
     assert r.warning is None
     assert r.map is not None

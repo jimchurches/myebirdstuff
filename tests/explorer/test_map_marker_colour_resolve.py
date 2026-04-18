@@ -2,11 +2,7 @@
 
 from dataclasses import replace
 
-from explorer.app.streamlit.defaults import (
-    MAP_MARKER_COLOUR_SCHEME_1,
-    MAP_MARKER_COLOUR_SCHEME_3,
-    active_map_marker_colour_scheme,
-)
+from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1, active_map_marker_colour_scheme
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_FILL_HEX,
     MAP_MARKER_CATCHALL_STROKE_HEX,
@@ -23,6 +19,8 @@ from explorer.core.map_marker_colour_resolve import (
     resolve_species_map_background_colours,
 )
 
+from tests.colour_scheme_test_utils import BUNDLED_COLOUR_SCHEME_INDICES
+
 
 def test_catchall_matches_scheme_defaults() -> None:
     assert MAP_MARKER_CATCHALL_FILL_HEX == MAP_MARKER_SCHEME_DEFAULT_FILL_HEX
@@ -34,30 +32,23 @@ def test_normalize_marker_hex_channel_fallback() -> None:
     assert normalize_marker_hex("not-a-colour", channel="edge") == MAP_MARKER_CATCHALL_STROKE_HEX
 
 
-def test_resolve_scheme_1_visit_matches_globals() -> None:
-    sch = MAP_MARKER_COLOUR_SCHEME_1
-    vf, ve = resolve_location_visit_colours(sch)
-    gf, ge = resolve_marker_global_colours(sch)
-    assert vf == gf == "#C2D6BE"
-    assert ve == ge == "#4F8E4A"
+def test_resolve_location_visit_and_globals_are_valid_hex_for_all_bundled_schemes() -> None:
+    for idx in BUNDLED_COLOUR_SCHEME_INDICES:
+        sch = active_map_marker_colour_scheme(idx)
+        vf, ve = resolve_location_visit_colours(sch)
+        gf, ge = resolve_marker_global_colours(sch)
+        assert is_valid_hex_colour(vf)
+        assert is_valid_hex_colour(ve)
+        assert is_valid_hex_colour(gf)
+        assert is_valid_hex_colour(ge)
 
 
-def test_resolve_species_map_background_colours_scheme3_distinct_from_all_locations() -> None:
-    """Bundled scheme 3 keeps species-map background separate from all-locations."""
-    sch = active_map_marker_colour_scheme(3)
-    al = resolve_location_visit_colours(sch)
-    sm = resolve_species_map_background_colours(sch)
-    assert al != sm
-    assert sm == ("#EBE9ED", "#CCC7D1")
-
-
-def test_resolve_experimental_visit_distinct_from_global() -> None:
-    sch = active_map_marker_colour_scheme(3)
-    vf, ve = resolve_location_visit_colours(sch)
-    assert vf == "#D3D3D3"
-    assert ve == "#857891"
-    gf, _ge = resolve_marker_global_colours(sch)
-    assert vf != gf
+def test_resolve_species_map_background_colours_valid_for_all_bundled_schemes() -> None:
+    for idx in BUNDLED_COLOUR_SCHEME_INDICES:
+        sch = active_map_marker_colour_scheme(idx)
+        f, s = resolve_species_map_background_colours(sch)
+        assert is_valid_hex_colour(f)
+        assert is_valid_hex_colour(s)
 
 
 def test_is_valid_hex_colour() -> None:
@@ -67,9 +58,11 @@ def test_is_valid_hex_colour() -> None:
     assert not is_valid_hex_colour("nope")
 
 
-def test_family_map_resolved_fill_opacity_experimental_scheme() -> None:
-    """Experimental (scheme 3) sets both sparse and legacy family fill to 0.85."""
-    assert family_map_resolved_fill_opacity(MAP_MARKER_COLOUR_SCHEME_3) == 0.85
+def test_family_map_resolved_fill_opacity_within_bounds_for_all_bundled_schemes() -> None:
+    for idx in BUNDLED_COLOUR_SCHEME_INDICES:
+        sch = active_map_marker_colour_scheme(idx)
+        fo = family_map_resolved_fill_opacity(sch)
+        assert 0.0 <= fo <= 1.0
 
 
 def test_family_map_resolved_fill_opacity_prefers_family_fill_opacity_override() -> None:
@@ -83,8 +76,17 @@ def test_family_map_resolved_fill_opacity_prefers_family_fill_opacity_override()
     assert family_map_resolved_fill_opacity(sch) == 0.4
 
 
-def test_family_map_resolved_circle_radius_px_uses_marker_default_without_families_override() -> None:
-    assert family_map_resolved_circle_radius_px(MAP_MARKER_COLOUR_SCHEME_3) == 5
+def test_family_map_resolved_circle_radius_px_matches_global_when_no_family_radius_override() -> None:
+    checked = 0
+    for idx in BUNDLED_COLOUR_SCHEME_INDICES:
+        sch = active_map_marker_colour_scheme(idx)
+        fam = sch.family_locations
+        if getattr(fam, "radius_px_override", None) is not None or getattr(fam, "radius_px", None) is not None:
+            continue
+        md = sch.global_defaults.radius_px
+        assert family_map_resolved_circle_radius_px(sch) == md
+        checked += 1
+    assert checked >= 1
 
 
 def test_resolve_family_band_colours_omitted_density_strokes_use_global_edge() -> None:

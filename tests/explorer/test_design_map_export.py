@@ -8,6 +8,9 @@ from explorer.presentation.design_map_export import (
     format_full_defaults_export,
     format_map_marker_colour_scheme_dict_py,
 )
+from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
+
+from tests.colour_scheme_test_utils import BUNDLED_COLOUR_SCHEME_INDICES
 from explorer.presentation.design_map_preview import (
     MAP_SCOPE_ALL,
     DesignMapPreviewConfig,
@@ -16,7 +19,7 @@ from explorer.presentation.design_map_preview import (
 
 
 def _sample_cfg() -> DesignMapPreviewConfig:
-    return scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
+    return scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_ALL)
 
 
 def _family_locations_block(text: str) -> str:
@@ -176,7 +179,7 @@ def test_format_full_export_is_single_expanded_scheme_block() -> None:
 
 def test_export_omits_family_fill_opacity_when_matches_global() -> None:
     """Sparse export: family map omits fill_opacity when it matches global_defaults."""
-    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
+    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_ALL)
     text = format_map_marker_colour_scheme_dict_py(cfg, "S1")
     fam_block = _family_locations_block(text)
     assert "        fill_opacity=" not in fam_block
@@ -184,7 +187,7 @@ def test_export_omits_family_fill_opacity_when_matches_global() -> None:
 
 def test_export_omits_family_density_stroke_when_all_bands_match_global() -> None:
     """Sparse export: omit density_stroke_hex when every band equals global stroke."""
-    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
+    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_ALL)
     g_stroke = cfg.marker_default_stroke_hex
     flat = replace(
         cfg,
@@ -197,8 +200,12 @@ def test_export_omits_family_density_stroke_when_all_bands_match_global() -> Non
 
 def test_export_scheme3_omits_redundant_fill_opacity_lines() -> None:
     """Sparse export: species/lifer inherit global opacity; family has no duplicate override."""
-    cfg = scheme_seed_config(3, preview_scope=MAP_SCOPE_ALL)
-    text = format_map_marker_colour_scheme_dict_py(cfg, "Ash Violet")
+    from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+
+    idx = BUNDLED_COLOUR_SCHEME_INDICES[-1]
+    sch = active_map_marker_colour_scheme(idx)
+    cfg = scheme_seed_config(idx, preview_scope=MAP_SCOPE_ALL)
+    text = format_map_marker_colour_scheme_dict_py(cfg, sch.display_name)
     sp_start = text.index("species_locations=")
     sm_start = text.index("species_map_background=")
     species_block = text[sp_start:sm_start]

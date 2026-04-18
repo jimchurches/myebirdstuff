@@ -1,10 +1,8 @@
 """Tests for Family Map Folium builder (refs #138)."""
 
-from explorer.app.streamlit.defaults import (
-    MAP_MARKER_COLOUR_SCHEME_1,
-    MAP_MARKER_COLOUR_SCHEME_3,
-    active_map_marker_colour_scheme,
-)
+import explorer.app.streamlit.defaults as streamlit_defaults
+from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.family_map_compute import FamilyLocationPin, FamilyMapBannerMetrics
 from explorer.core.family_map_folium import (
     build_family_composition_folium_map,
@@ -16,6 +14,8 @@ from explorer.core.family_map_folium import (
 from explorer.core.map_marker_colour_resolve import (
     resolve_family_highlight_stroke_hex,
 )
+
+from tests.colour_scheme_test_utils import BUNDLED_COLOUR_SCHEME_INDICES
 
 
 def _sample_pins():
@@ -43,13 +43,15 @@ def _sample_pins():
     )
 
 
-def test_active_map_marker_colour_scheme_accepts_index_3():
-    assert active_map_marker_colour_scheme(3) is MAP_MARKER_COLOUR_SCHEME_3
+def test_active_map_marker_colour_scheme_returns_bundled_constants():
+    for idx in BUNDLED_COLOUR_SCHEME_INDICES:
+        sch = active_map_marker_colour_scheme(idx)
+        assert sch is getattr(streamlit_defaults, f"MAP_MARKER_COLOUR_SCHEME_{idx}")
 
 
 def test_family_map_marker_style_highlight_uses_resolved_highlight_stroke():
     p = _sample_pins()[1]
-    sch = MAP_MARKER_COLOUR_SCHEME_1
+    sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
     fill, stroke, w = family_map_marker_style(p, style=sch)
     assert p.highlight_match
     assert stroke == resolve_family_highlight_stroke_hex(sch)
