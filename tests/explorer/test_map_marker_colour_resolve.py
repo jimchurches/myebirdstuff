@@ -34,12 +34,12 @@ def test_normalize_marker_hex_channel_fallback() -> None:
     assert normalize_marker_hex("not-a-colour", channel="edge") == MAP_MARKER_CATCHALL_STROKE_HEX
 
 
-def test_resolve_scheme_1_visit_matches_legacy_globals() -> None:
+def test_resolve_scheme_1_visit_matches_globals() -> None:
     sch = MAP_MARKER_COLOUR_SCHEME_1
     vf, ve = resolve_location_visit_colours(sch)
     gf, ge = resolve_marker_global_colours(sch)
-    assert vf == gf == "#D3D3D3"
-    assert ve == ge == "#008000"
+    assert vf == gf == "#C2D6BE"
+    assert ve == ge == "#4F8E4A"
 
 
 def test_resolve_species_map_background_colours_scheme3_distinct_from_all_locations() -> None:

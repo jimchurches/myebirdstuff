@@ -172,6 +172,8 @@ def init_and_clamp_streamlit_table_settings() -> None:
         ]
     if STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY not in st.session_state:
         st.session_state.streamlit_lifer_show_subspecies = False
+
+
 def settings_state_payload() -> dict[str, Any]:
     """Current Settings payload in config schema shape."""
     return {

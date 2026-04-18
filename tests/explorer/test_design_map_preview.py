@@ -94,10 +94,10 @@ def test_build_design_preview_map_returns_folium_with_markers() -> None:
     html = m._repr_html_()
     assert "CircleMarker" in html or "circle" in html.lower()
     assert "-35" in html  # Canberra latitude area
-    # Scheme 1 visit markers use legacy light gray fill / green edge (``defaults.py``).
+    # Scheme 1 (``defaults.py``): visit pins inherit global_defaults fill/stroke (Eucalypt palette).
     h = html.lower()
-    assert "d3d3d3" in h
-    assert "008000" in h
+    assert "c2d6be" in h
+    assert "4f8e4a" in h
 
 
 def test_all_locations_scope_has_only_default_pins() -> None:

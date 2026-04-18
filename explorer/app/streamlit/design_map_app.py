@@ -225,11 +225,9 @@ def _cluster_style_int_from_session(key: str, default: int, *, lo: int, hi: int)
         return default
 
 
-def _fill_opacity_from_session(key: str, *, legacy_key: str | None, default: float) -> float:
-    """Read slider session value; *legacy_key* supports session keys from older widget names."""
+def _fill_opacity_from_session(key: str, *, default: float) -> float:
+    """Read slider session value for circle fill opacity."""
     v = st.session_state.get(key)
-    if v is None and legacy_key is not None:
-        v = st.session_state.get(legacy_key)
     if v is None:
         return clamp_map_marker_circle_fill_opacity(None, fallback=default)
     try:
@@ -358,24 +356,18 @@ def _config_from_session() -> DesignMapPreviewConfig:
         stroke_weight_lifer=max(1, int(st.session_state.get("design_sw_lifer", st.session_state.get("design_sw_visit", 1)))),
         stroke_weight_family=max(1, int(st.session_state.get("design_sw_family", 1))),
         stroke_weight_family_highlight=max(1, int(st.session_state.get("design_sw_family_hl", 1))),
-        marker_fill_opacity_locations=_fill_opacity_from_session(
-            "design_fo_locations", legacy_key="design_fo_all", default=_mdf
-        ),
-        marker_fill_opacity_species=_fill_opacity_from_session(
-            "design_fo_species", legacy_key="design_fo_emph", default=_mdf
-        ),
+        marker_fill_opacity_locations=_fill_opacity_from_session("design_fo_locations", default=_mdf),
+        marker_fill_opacity_species=_fill_opacity_from_session("design_fo_species", default=_mdf),
         marker_fill_opacity_species_map_background=_fill_opacity_from_session(
-            "design_fo_species_map_background", legacy_key=None, default=_mdf
+            "design_fo_species_map_background", default=_mdf
         ),
         marker_fill_opacity_lifer_map_lifer=_fill_opacity_from_session(
-            "design_fo_lifer_map_lifer", legacy_key=None, default=_mdf
+            "design_fo_lifer_map_lifer", default=_mdf
         ),
         marker_fill_opacity_lifer_map_subspecies=_fill_opacity_from_session(
-            "design_fo_lifer_map_subspecies", legacy_key=None, default=_mdf
+            "design_fo_lifer_map_subspecies", default=_mdf
         ),
-        marker_fill_opacity_families=_fill_opacity_from_session(
-            "design_fo_family", legacy_key=None, default=_mdf
-        ),
+        marker_fill_opacity_families=_fill_opacity_from_session("design_fo_family", default=_mdf),
         marker_default_fill_hex=_global_fill_hex,
         marker_default_stroke_hex=_global_stroke_hex,
         marker_default_fill_opacity=_mdf,
