@@ -133,10 +133,10 @@ MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT = 2
 
 # Scheme 1 — default: red density ramp
 MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
-    display_name='Experimental',
+    display_name='Eucalypt',
     global_defaults=MapMarkerGlobalDefaults(
-        fill_hex='#D3D3D3',
-        stroke_hex='#008000',
+        fill_hex='#C2D6BE',
+        stroke_hex='#4F8E4A',
         radius_px=5,
         fill_opacity=0.88,
         stroke_weight=2,
@@ -154,23 +154,24 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
         radius_px=4,
     ),
     lifer_locations=MapMarkerLiferLocationsStyle(
-        lifer_fill_hex='#FF8700',
+        subspecies_fill_hex='#F5D08A',
+        subspecies_stroke_hex='#8CA861',
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
         density_fill_hex=(
-            '#FFF2C2',
-            '#D3D3D3',
-            '#30B06A',
-            '#05612B',
+            '#C2D6BE',
+            '#6FAE68',
+            '#E3A35C',
+            '#C4682A',
         ),
         legend_highlight_band_index=0,
         density_stroke_hex=(
-            '#23804D',
-            '#033A1A',
-            '#033A1A',
-            '#033A1A',
+            '#7A8F75',
+            '#4F8E4A',
+            '#B77A3E',
+            '#7A3F18',
         ),
-        highlight_stroke_hex='#E00000',
+        highlight_stroke_hex='#E85D04',
     ),
 )
 
