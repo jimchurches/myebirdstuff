@@ -175,7 +175,7 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
 )
 
 MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
-    display_name="Cold Current",
+    display_name="Thermal Shift",
     global_defaults=MapMarkerGlobalDefaults(
         fill_hex="#DDE6F2",
         stroke_hex="#2F5D8A",
@@ -213,14 +213,15 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
         stroke_hex="#1F4E79",
         lifer_fill_hex="#FFD166",  
         lifer_stroke_hex="#C75100",
-        last_seen_fill_hex="#06D6A0",  
+        last_seen_fill_hex="#4CCF8A",  
         last_seen_stroke_hex="#0B6E4F",
     ),
     species_map_background=MapMarkerSpeciesMapBackgroundStyle(
-        fill_hex="#F0F4F8",
-        stroke_hex="#C7D3E0",
-        radius_px=4,
-        fill_opacity=0.7,
+        fill_hex="#FFF7C2", #"#E6EEF7",
+        stroke_hex="#6A8FB8",
+        fill_opacity=0.88,
+        stroke_weight=2,
+        radius_px=3,
     ),
     lifer_locations=MapMarkerLiferLocationsStyle(
         lifer_fill_hex="#FFD166",
