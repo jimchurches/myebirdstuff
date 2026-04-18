@@ -175,75 +175,70 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
 )
 
 MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
-    display_name="Thermal Shift",
+    display_name='Thermal Shift',
     global_defaults=MapMarkerGlobalDefaults(
-        fill_hex="#DDE6F2",
-        stroke_hex="#2F5D8A",
+        fill_hex='#DDE6F2',
+        stroke_hex='#2F5D8A',
         radius_px=5,
         fill_opacity=0.88,
-        stroke_weight=2.5,
+        stroke_weight=2,
     ),
     all_locations=MapMarkerAllLocationsStyle(
-        fill_hex="#E6EEF7",
-        stroke_hex="#6A8FB8",
-        fill_opacity=0.88,
-        stroke_weight=2,
+        fill_hex='#E6EEF7',
+        stroke_hex='#6A8FB8',
         radius_px=4,
         cluster=MapMarkerClusterStyle(
-            tier_icon_hex = (
-                "#E6F1F7",
-                "#5A8FB3",
-                "#E6F1F7",
-                "#5FA8D3",
-                "#1F4E79",
-                "#5FA8D3",
-                "#4A7FB8",
-                "#0B3A66",
-                "#4A7FB8",
-            ),
+            tier_icon_hex=(
+            '#E6F1F7',
+            '#5A8FB3',
+            '#E6F1F7',
+            '#5FA8D3',
+            '#1F4E79',
+            '#5FA8D3',
+            '#4A7FB8',
+            '#0B3A66',
+            '#4A7FB8',
+        ),
             inner_fill_opacity=0.8,
             halo_opacity=0.4,
             border_opacity=0.4,
             halo_spread_px=5,
             border_width_px=0,
-        ),      
+        ),
     ),
     species_locations=MapMarkerSpeciesLocationsStyle(
-        fill_hex="#5FA8D3", 
-        stroke_hex="#1F4E79",
-        lifer_fill_hex="#FFD166",  
-        lifer_stroke_hex="#C75100",
-        last_seen_fill_hex="#4CCF8A",  
-        last_seen_stroke_hex="#0B6E4F",
+        fill_hex='#5FA8D3',
+        stroke_hex='#1F4E79',
+        lifer_fill_hex='#FFD166',
+        lifer_stroke_hex='#C75100',
+        last_seen_fill_hex='#4CCF8A',
+        last_seen_stroke_hex='#0B6E4F',
     ),
     species_map_background=MapMarkerSpeciesMapBackgroundStyle(
-        fill_hex="#FFF7C2", #"#E6EEF7",
-        stroke_hex="#6A8FB8",
-        fill_opacity=0.88,
-        stroke_weight=2,
+        fill_hex='#FFF7C2',
+        stroke_hex='#6A8FB8',
         radius_px=3,
     ),
     lifer_locations=MapMarkerLiferLocationsStyle(
-        lifer_fill_hex="#FFD166",
-        lifer_stroke_hex="#C75100",
-        subspecies_fill_hex="#8ECAE6",
-        subspecies_stroke_hex="#2F5D8A",
+        lifer_fill_hex='#FFD166',
+        lifer_stroke_hex='#C75100',
+        subspecies_fill_hex='#8ECAE6',
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
         density_fill_hex=(
-            "#A9D6E5",  # light blue
-            "#5FA8D3",  # mid blue
-            "#F8961E",  # orange
-            "#D62828",  # strong red
-        ),
-        density_stroke_hex=(
-            "#457B9D",
-            "#1D4E89",
-            "#C46A00",
-            "#7F1D1D",
+            '#A9D6E5',
+            '#5FA8D3',
+            '#F8961E',
+            '#D62828',
         ),
         legend_highlight_band_index=0,
-        highlight_stroke_hex="#D65A00",  # bright red (iOS-style visibility)
+        density_stroke_hex=(
+            '#457B9D',
+            '#1D4E89',
+            '#C46A00',
+            '#7F1D1D',
+        ),
+        highlight_stroke_hex='#D65A00',
     ),
 )
 
