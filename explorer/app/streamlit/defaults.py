@@ -185,8 +185,10 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
     ),
     all_locations=MapMarkerAllLocationsStyle(
         fill_hex="#E6EEF7",
-        stroke_hex="#4A6FA5",
-        fill_opacity=0.75,
+        stroke_hex="#6A8FB8",
+        fill_opacity=0.88,
+        stroke_weight=2,
+        radius_px=4,
         cluster=MapMarkerClusterStyle(
             tier_icon_hex = (
                 "#E6F1F7",
@@ -223,8 +225,7 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
     lifer_locations=MapMarkerLiferLocationsStyle(
         lifer_fill_hex="#FFD166",
         lifer_stroke_hex="#C75100",
-
-        subspecies_fill_hex="#8ECAE6",  # pale blue
+        subspecies_fill_hex="#8ECAE6",
         subspecies_stroke_hex="#2F5D8A",
     ),
     family_locations=MapMarkerFamilyLocationsStyle(
