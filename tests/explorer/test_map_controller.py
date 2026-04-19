@@ -101,7 +101,11 @@ def test_all_species_builds_map_with_banner():
 
 
 def test_species_filter_visit_overlay_uses_scheme_hex():
-    """Species-filtered map uses :class:`MapMarkerColourScheme` (no separate named-colour path)."""
+    """Species-filtered map uses :class:`MapMarkerColourScheme` (no separate named-colour path).
+
+    The minimal dataframe is both a species match and the lifer site for the taxon; visit-map code
+    assigns **lifer** role first, so the rendered pin uses lifer stroke/fill from the scheme.
+    """
     df = _minimal_map_df()
     sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
     r = build_species_overlay_map(
@@ -112,7 +116,7 @@ def test_species_filter_visit_overlay_uses_scheme_hex():
     assert r.warning is None
     assert r.map is not None
     html = r.map.get_root().render().lower()
-    stroke, _fill, _, _, _ = resolve_species_visit_pin(sch, "species")
+    stroke, _fill, _, _, _ = resolve_species_visit_pin(sch, "lifer")
     # Edge colour is reliably present in the rendered document; fill may be inlined differently.
     assert stroke.replace("#", "").lower() in html
 
