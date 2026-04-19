@@ -128,3 +128,22 @@ def test_subspecies_links_to_main_species():
         assert taxonomy.get_species_url("Eastern Barn Owl") == "https://ebird.org/species/easbar1"
     finally:
         taxonomy._common_to_code = None
+
+
+def test_hyphen_vs_space_locale_mismatch_jacky_winter():
+    """Spaced export name matches hyphenated taxonomy row (e.g. en_US vs en_AU) (#156)."""
+    taxonomy._common_to_code = {"Jacky-winter": "jacwin1"}
+    try:
+        assert taxonomy.get_species_url("Jacky Winter") == "https://ebird.org/species/jacwin1"
+        assert taxonomy.get_species_lifelist_url("Jacky Winter") == "https://ebird.org/lifelist?spp=jacwin1"
+    finally:
+        taxonomy._common_to_code = None
+
+
+def test_hyphen_vs_space_reverse_lookup():
+    """Hyphenated query matches spaced taxonomy row."""
+    taxonomy._common_to_code = {"Jacky Winter": "jacwin1"}
+    try:
+        assert taxonomy.get_species_url("Jacky-winter") == "https://ebird.org/species/jacwin1"
+    finally:
+        taxonomy._common_to_code = None
