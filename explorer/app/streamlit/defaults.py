@@ -141,11 +141,30 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
         stroke_weight=2,
     ),
     all_locations=MapMarkerAllLocationsStyle(
-        cluster=MapMarkerClusterStyle(),
+        cluster=MapMarkerClusterStyle(
+            tier_icon_hex=(
+                '#E3E5D6',
+                '#9AA07A',
+                '#E3E5D6',
+                '#A8C57F',
+                '#6D8C58',
+                '#A8C57F',
+                '#7FAE68',
+                '#5A8A4A',
+                '#7FAE68',
+            ),
+            inner_fill_opacity=0.8,
+            halo_opacity=0.4,
+            border_opacity=0.4,
+            halo_spread_px=5,
+            border_width_px=0,
+        ),
     ),
     species_locations=MapMarkerSpeciesLocationsStyle(
         lifer_fill_hex='#FFC600',
-        last_seen_fill_hex='#70E000',
+        lifer_stroke_hex='#3F5F45',
+        last_seen_fill_hex   = '#C47A4A',
+        last_seen_stroke_hex = '#3F5F45',
     ),
     species_map_background=MapMarkerSpeciesMapBackgroundStyle(
         fill_hex='#F6F5F4',
@@ -161,7 +180,7 @@ MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
             '#C2D6BE',
             '#6FAE68',
             '#E3A35C',
-            '#C4682A',
+            '#C86F5B',
         ),
         legend_highlight_band_index=0,
         density_stroke_hex=(
@@ -211,13 +230,14 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
         stroke_hex='#1F4E79',
         lifer_fill_hex='#FFD166',
         lifer_stroke_hex='#C75100',
-        last_seen_fill_hex='#4CCF8A',
-        last_seen_stroke_hex='#0B6E4F',
+        last_seen_fill_hex='#E58C7A',
+        last_seen_stroke_hex='#8A4B3C',
     ),
     species_map_background=MapMarkerSpeciesMapBackgroundStyle(
-        fill_hex='#FFF7C2',
+        fill_hex='#BDE3F0',
         stroke_hex='#6A8FB8',
         radius_px=3,
+        stroke_weight=1,
     ),
     lifer_locations=MapMarkerLiferLocationsStyle(
         lifer_fill_hex='#FFD166',
@@ -297,8 +317,7 @@ MAP_MARKER_COLOUR_SCHEME_3 = MapMarkerColourScheme(
         density_fill_hex=("#95A5B2", "#B78FAF", "#8D5383", "#593653"),
         legend_highlight_band_index=0,
         density_stroke_hex=("#677C8E", "#704868", "#5A3554", "#593654"),
-        highlight_stroke_hex="#E00000",
-        fill_opacity=0.85,
+        highlight_stroke_hex="#C53A32",
     ),
 )
 
