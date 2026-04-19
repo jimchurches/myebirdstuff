@@ -20,6 +20,8 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
     STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
     SESSION_SPECIES_IX_KEY,
@@ -30,6 +32,11 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_SEARCH_USER_EDITING_KEY,
     SESSION_SPECIES_WS_KEY,
     SPINNER_THEME_CSS,
+)
+from explorer.core.settings_schema_defaults import (
+    MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_MAX,
+    MAP_MARKER_COLOUR_SCHEME_MIN,
 )
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_DEFAULT,
@@ -227,14 +234,15 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
     elif st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY) not in MAP_BASEMAP_OPTIONS:
         st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
 
-    # Sidebar override (session-only): sentinel means "use default from Settings".
+    # Session sidebar basemap: concrete key only (same list as Settings). Seed from saved default.
     if STREAMLIT_MAP_BASEMAP_KEY not in st.session_state:
-        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = "__default__"
-    elif (
-        st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) not in MAP_BASEMAP_OPTIONS
-        and st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) != "__default__"
-    ):
-        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = "__default__"
+        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = st.session_state.get(
+            STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_DEFAULT
+        )
+    elif st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY) not in MAP_BASEMAP_OPTIONS:
+        st.session_state[STREAMLIT_MAP_BASEMAP_KEY] = st.session_state.get(
+            STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_DEFAULT
+        )
     if STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY not in st.session_state:
         st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = MAP_HEIGHT_PX_DEFAULT
     else:
@@ -246,6 +254,35 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
         st.session_state[STREAMLIT_MAP_HEIGHT_PX_KEY] = int(
             st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY]
         )
+
+
+def ensure_streamlit_map_marker_colour_scheme_keys() -> None:
+    """Seed persisted + sidebar map-marker palette index (``1``…``3``); refs #147."""
+    if STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY not in st.session_state:
+        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+    else:
+        try:
+            _v = int(st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY])
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = max(
+                MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _v)
+            )
+        except (TypeError, ValueError):
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+    if STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY not in st.session_state:
+        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY] = int(
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY]
+        )
+    else:
+        try:
+            _cur = int(st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY])
+            if _cur not in (1, 2, 3):
+                st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY] = int(
+                    st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY]
+                )
+        except (TypeError, ValueError):
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY] = int(
+                st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY]
+            )
 
 
 def sidebar_footer_links(*, leading_divider: bool = True) -> None:

@@ -31,18 +31,10 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
     STREAMLIT_COUNTRY_TAB_SORT_KEY,
-    STREAMLIT_DEFAULT_COLOR_KEY,
-    STREAMLIT_DEFAULT_FILL_KEY,
     STREAMLIT_HIGH_COUNT_SORT_KEY,
     STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
-    STREAMLIT_LAST_SEEN_COLOR_KEY,
-    STREAMLIT_LAST_SEEN_FILL_KEY,
-    STREAMLIT_LIFER_COLOR_KEY,
-    STREAMLIT_LIFER_FILL_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
-    STREAMLIT_SPECIES_COLOR_KEY,
-    STREAMLIT_SPECIES_FILL_KEY,
 )
 from explorer.app.streamlit.app_map_ui import (
     inject_map_folium_iframe_min_height_css,
@@ -81,7 +73,7 @@ from explorer.core.family_map_compute import (
     compute_family_map_banner_metrics,
     filter_work_to_family,
 )
-from explorer.app.streamlit.defaults import active_family_map_colour_scheme
+from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
 from explorer.core.family_map_folium import (
     build_family_composition_folium_map,
     build_family_map_banner_overlay_html,
@@ -221,7 +213,7 @@ def render_prep_spinner_and_map_tab(
                         if hl and hl_label:
                             _u = species_url_fn(hl_label)
                             hl_species_url = _u if _u else None
-                        _sch = active_family_map_colour_scheme(int(family_colour_scheme))
+                        _sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                         legend = build_family_map_legend_overlay_html_for_pins(
                             pins,
                             highlight_label=hl_label or None,
@@ -263,6 +255,7 @@ def render_prep_spinner_and_map_tab(
                     hide_nm = (
                         map_view_mode == "species" and bool(hide_non_matching_locations)
                     )
+                    _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _map_kw = {
                         **ctx,
                         "selected_species": overlay_sci,
@@ -270,14 +263,6 @@ def render_prep_spinner_and_map_tab(
                         "map_style": map_style,
                         "popup_sort_order": popup_sort_order,
                         "popup_scroll_hint": popup_scroll_hint,
-                        "lifer_color": st.session_state.get(STREAMLIT_LIFER_COLOR_KEY),
-                        "lifer_fill": st.session_state.get(STREAMLIT_LIFER_FILL_KEY),
-                        "last_seen_color": st.session_state.get(STREAMLIT_LAST_SEEN_COLOR_KEY),
-                        "last_seen_fill": st.session_state.get(STREAMLIT_LAST_SEEN_FILL_KEY),
-                        "species_color": st.session_state.get(STREAMLIT_SPECIES_COLOR_KEY),
-                        "species_fill": st.session_state.get(STREAMLIT_SPECIES_FILL_KEY),
-                        "default_color": st.session_state.get(STREAMLIT_DEFAULT_COLOR_KEY),
-                        "default_fill": st.session_state.get(STREAMLIT_DEFAULT_FILL_KEY),
                         "mark_lifer": mark_lifer,
                         "mark_last_seen": mark_last_seen,
                         "cluster_all_locations": bool(
@@ -299,18 +284,11 @@ def render_prep_spinner_and_map_tab(
                             st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)
                         ),
                         "map_height_px": int(map_height),
+                        "visit_marker_scheme": _visit_sch,
                     }
                     _render_opts_sig = (
                         popup_sort_order,
                         popup_scroll_hint,
-                        st.session_state.get(STREAMLIT_LIFER_COLOR_KEY),
-                        st.session_state.get(STREAMLIT_LIFER_FILL_KEY),
-                        st.session_state.get(STREAMLIT_LAST_SEEN_COLOR_KEY),
-                        st.session_state.get(STREAMLIT_LAST_SEEN_FILL_KEY),
-                        st.session_state.get(STREAMLIT_SPECIES_COLOR_KEY),
-                        st.session_state.get(STREAMLIT_SPECIES_FILL_KEY),
-                        st.session_state.get(STREAMLIT_DEFAULT_COLOR_KEY),
-                        st.session_state.get(STREAMLIT_DEFAULT_FILL_KEY),
                         mark_lifer,
                         mark_last_seen,
                         bool(
@@ -321,15 +299,12 @@ def render_prep_spinner_and_map_tab(
                         ),
                         bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
                         int(map_height),
+                        int(family_colour_scheme),
                     )
                     _species_selected = bool(overlay_sci)
-                    _cache_map_view_mode = map_view_mode
-                    if map_view_mode == "species" and not _species_selected:
-                        if not hide_non_matching_locations:
-                            _cache_map_view_mode = "all"
                     _ck = static_map_cache_key(
                         work_df,
-                        _cache_map_view_mode,
+                        map_view_mode,
                         date_filter_banner,
                         map_style,
                         _render_opts_sig,
@@ -393,8 +368,8 @@ def render_prep_spinner_and_map_tab(
                         map_for_folium,
                         use_container_width=True,
                         height=map_height,
-                        # ``_ck`` coerces **Species** with no pick to ``all`` so we reuse one Folium build
-                        # when the cache is valid. *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
+                        # Cache key includes *map_view_mode* so All vs Species builds stay distinct (refs #147).
+                        # *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
                         # distinct streamlit-folium component identity when the sidebar layout changes
                         # (All↔Species); see invalidation block above.
                         key=folium_st_key,

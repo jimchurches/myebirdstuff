@@ -646,26 +646,36 @@ def build_species_locations_awaiting_selection_banner_html(date_filter_status=No
 
 
 def build_lifer_locations_banner_html(
-    n_lifer_species, n_locations, date_filter_status=None, include_subspecies: bool = False
+    n_lifer_species,
+    n_locations,
+    date_filter_status=None,
+    *,
+    include_subspecies: bool = False,
+    n_subspecies_lifers: int | None = None,
 ):
-    """Banner for lifer-only map mode (refs #71)."""
+    """Banner for lifer-only map mode (refs #71).
+
+    *n_lifer_species* is always the species-lifer count (first record per base species), independent
+    of the subspecies overlay. When *include_subspecies* is true, pass *n_subspecies_lifers* from
+    data prep (taxon-level subspecies lifers), not from rendered marker categories.
+    """
     sep = _banner_sep()
     loc_w = "locations" if n_locations != 1 else "location"
-    stats = (
-        f'{n_lifer_species} lifer{"s" if n_lifer_species != 1 else ""}'
-        f'{sep}{n_locations} {loc_w}'
-    )
-    note = _banner_muted_line("Sub-species included") if include_subspecies else ""
-    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
-    if note and date_block:
-        muted_stack = f"{note}<br>{date_block}"
+    lifer_w = "lifers" if n_lifer_species != 1 else "lifer"
+    stats_core = f"{n_lifer_species} {lifer_w}{sep}{n_locations} {loc_w}"
+    if include_subspecies and n_subspecies_lifers is not None:
+        sub_w = "subspecies lifers" if n_subspecies_lifers != 1 else "subspecies lifer"
+        stats = f"{stats_core}{sep}{n_subspecies_lifers} {sub_w}"
+        title = "Lifer locations + subspecies"
     else:
-        muted_stack = note or date_block
+        stats = stats_core
+        title = "Lifer locations"
+    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
     return (
         f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
-        f'<span class="pebird-map-banner__title">Lifer locations</span>'
+        f'<span class="pebird-map-banner__title">{title}</span>'
         f'<div class="pebird-map-banner__stats">{stats}</div>'
-        f'{muted_stack}'
+        f'{date_block}'
         f'</div>'
     )
 

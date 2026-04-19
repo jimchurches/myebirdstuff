@@ -2,7 +2,7 @@
 Framework-neutral map build pipeline for the species overlay map.
 
 Streamlit (or any host) calls :func:`build_species_overlay_map` with data and options and receives
-Folium HTML; the legacy Jupyter notebook keeps its own display and widget layer instead of this path.
+Folium HTML.
 
 Implementation is split for readability:
 
@@ -22,7 +22,7 @@ from typing import Any, Dict, Hashable, MutableMapping, Optional, Tuple
 
 import pandas as pd
 
-from explorer.app.streamlit.defaults import MAP_HEIGHT_PX_DEFAULT
+from explorer.app.streamlit.defaults import MAP_HEIGHT_PX_DEFAULT, MapMarkerColourScheme
 from explorer.core.map_overlay_lifer_map import build_lifer_overlay_map
 from explorer.core.map_overlay_types import (
     BaseSpeciesFn,
@@ -56,14 +56,6 @@ def build_species_overlay_map(
     map_style: str = "default",
     popup_sort_order: str = "ascending",
     popup_scroll_hint: str = "shading",
-    lifer_color: str = "purple",
-    lifer_fill: str = "yellow",
-    last_seen_color: str = "purple",
-    last_seen_fill: str = "lightgreen",
-    species_color: str = "purple",
-    species_fill: str = "red",
-    default_color: str = "green",
-    default_fill: str = "lightgreen",
     mark_lifer: bool = True,
     mark_last_seen: bool = True,
     cluster_all_locations: bool = True,
@@ -79,6 +71,7 @@ def build_species_overlay_map(
     taxonomy_locale: str = "",
     show_subspecies_lifers: bool = False,
     map_height_px: int = MAP_HEIGHT_PX_DEFAULT,
+    visit_marker_scheme: MapMarkerColourScheme,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -98,18 +91,20 @@ def build_species_overlay_map(
     group nearby pins with Leaflet.markercluster. Ignored for species and lifer maps.
 
     *hide_non_matching_locations*: in **Species locations** view with no species selected, when
-    ``False`` the map behaves like **All locations**; when ``True`` an empty map is shown until a
-    species is chosen (performance-friendly default in the Streamlit UI).
+    ``True`` an empty map is shown until a species is chosen. When ``False`` and the view is still
+    **All locations**, the full map is shown; **Species** view with no selection is always empty (refs #147).
 
     *map_height_px*: pixel height for the Folium map pane (match Streamlit **Map height** slider).
+
+    *visit_marker_scheme*: active :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme`
+    (resolved via :mod:`explorer.core.map_marker_colour_resolve`) for **All locations**, **Species
+    locations**, and **Lifer locations** pins (colours, radii, stroke weight, fill opacities, cluster
+    tiers).
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
     if mode not in VALID_MAP_VIEWS:
         mode = "all"
-    if mode == "species" and not (selected_species or "").strip():
-        if not hide_non_matching_locations:
-            mode = "all"
 
     if mode == "lifers":
         return build_lifer_overlay_map(
@@ -121,16 +116,13 @@ def build_species_overlay_map(
             map_height_px=map_height_px,
             popup_sort_order=popup_sort_order,
             popup_scroll_hint=popup_scroll_hint,
-            lifer_color=lifer_color,
-            lifer_fill=lifer_fill,
-            species_color=species_color,
-            species_fill=species_fill,
             date_filter_status=date_filter_status,
             popup_html_cache=popup_html_cache,
             tax_loc_key=tax_loc_key,
             show_subspecies_lifers=show_subspecies_lifers,
             effective_use_full=effective_use_full,
             base_species_fn=base_species_fn,
+            visit_marker_scheme=visit_marker_scheme,
         )
 
     # Species overlay is driven by a non-empty *selected_species* (same as legacy behaviour), not only
@@ -155,14 +147,6 @@ def build_species_overlay_map(
         map_style=map_style,
         popup_sort_order=popup_sort_order,
         popup_scroll_hint=popup_scroll_hint,
-        lifer_color=lifer_color,
-        lifer_fill=lifer_fill,
-        last_seen_color=last_seen_color,
-        last_seen_fill=last_seen_fill,
-        species_color=species_color,
-        species_fill=species_fill,
-        default_color=default_color,
-        default_fill=default_fill,
         mark_lifer=mark_lifer,
         mark_last_seen=mark_last_seen,
         cluster_all_locations=cluster_all_locations,
@@ -175,4 +159,6 @@ def build_species_overlay_map(
         filtered_by_loc_cache_max=filtered_by_loc_cache_max,
         tax_loc_key=tax_loc_key,
         map_height_px=map_height_px,
+        visit_marker_scheme=visit_marker_scheme,
+        map_view_mode=mode,
     )

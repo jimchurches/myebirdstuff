@@ -81,9 +81,9 @@ def prepare_lifer_last_seen(
 class LiferSiteEntry(TypedDict):
     """One species line in a lifer-location popup (base and/or subspecies lifer semantics).
 
-    - base-level lifer: first record for the base species
+    - base-level lifer: first record for the base species (species lifer pin when present at the location)
     - taxon-level lifer: first record for the specific taxon (subspecies)
-    - both: same underlying record satisfied both
+    - entries may set both flags when the same checklist row satisfies base and taxon; the map uses one **Lifer** pin
     """
 
     scientific_name: str
@@ -154,7 +154,7 @@ def aggregate_lifer_sites(
         r = subset.iloc[0]
         sci = str(r["Scientific Name"])
         # Only treat taxon-level lifers as "subspecies lifers" when the scientific name has 3+ parts.
-        # A 2-part name duplicates the base-species lifer and must not create a spurious "Both" pin.
+        # A 2-part name duplicates the base-species lifer and must not create a spurious extra pin.
         if len(sci.strip().split()) < 3:
             continue
         com = "" if pd.isna(r.get("Common Name")) else str(r["Common Name"])
@@ -171,3 +171,22 @@ def aggregate_lifer_sites(
         for k, v in by_loc.items()
     }
     return sorted_by_loc, len(global_sci)
+
+
+def count_subspecies_lifer_taxa(
+    lifer_lookup_df: pd.DataFrame,
+    true_lifer_locations_taxon: Dict[str, Any],
+) -> int:
+    """Count distinct taxon-level lifers that are subspecies (3+ word scientific name).
+
+    Matches the rule in :func:`aggregate_lifer_sites` — from underlying prep data only, not map markers.
+    """
+    n = 0
+    for taxon in true_lifer_locations_taxon:
+        subset = lifer_lookup_df[lifer_lookup_df["_taxon"] == taxon]
+        if subset.empty:
+            continue
+        sci = str(subset.iloc[0]["Scientific Name"])
+        if len(sci.strip().split()) >= 3:
+            n += 1
+    return n

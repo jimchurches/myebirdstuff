@@ -8,13 +8,9 @@ import folium
 import pandas as pd
 from branca.element import Element
 
-from explorer.app.streamlit.defaults import (
-    MAP_CIRCLE_MARKER_RADIUS_PX,
-    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-    MAP_DEBUG_SHOW_ZOOM_LEVEL,
-    MAP_PIN_FILL_OPACITY_EMPHASIS,
-)
-from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites
+from explorer.app.streamlit.defaults import MAP_DEBUG_SHOW_ZOOM_LEVEL, MapMarkerColourScheme
+from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites, count_subspecies_lifer_taxa
+from explorer.core.map_marker_colour_resolve import resolve_lifer_overlay_pin_params
 from explorer.core.map_overlay_lifer_popups import format_lifer_popup_lines
 from explorer.core.map_overlay_theme import inject_map_overlay_theme
 from explorer.core.map_overlay_types import BaseSpeciesFn, MapOverlayResult
@@ -39,16 +35,13 @@ def build_lifer_overlay_map(
     map_height_px: int,
     popup_sort_order: str,
     popup_scroll_hint: str,
-    lifer_color: str,
-    lifer_fill: str,
-    species_color: str,
-    species_fill: str,
     date_filter_status: str,
     popup_html_cache: MutableMapping[Tuple[Any, ...], str],
     tax_loc_key: str,
     show_subspecies_lifers: bool,
     effective_use_full: bool,
     base_species_fn: BaseSpeciesFn,
+    visit_marker_scheme: MapMarkerColourScheme,
 ) -> MapOverlayResult:
     """Assemble the lifer-locations Folium map or return a user-facing *warning*."""
     if full_location_data is None or full_location_data.empty:
@@ -56,7 +49,7 @@ def build_lifer_overlay_map(
             None,
             warning="⚠️ Lifer map mode requires full location data.",
         )
-    loc_to_species, n_lifer_taxa = aggregate_lifer_sites(
+    loc_to_species, _ = aggregate_lifer_sites(
         lifer_lookup_df,
         true_lifer_locations,
         true_lifer_locations_taxon,
@@ -66,12 +59,12 @@ def build_lifer_overlay_map(
             None,
             warning="⚠️ No lifer locations found in your dataset.",
         )
+    n_species_lifers = len(true_lifer_locations)
+    n_subspecies_lifers = count_subspecies_lifer_taxa(lifer_lookup_df, true_lifer_locations_taxon)
     if show_subspecies_lifers:
         lifer_loc_ids = set(loc_to_species.keys())
-        n_lifer_count = n_lifer_taxa
     else:
         lifer_loc_ids = set(true_lifer_locations.values())
-        n_lifer_count = len(true_lifer_locations)
     loc_rows = full_location_data[full_location_data["Location ID"].isin(lifer_loc_ids)]
     if loc_rows.empty:
         return MapOverlayResult(
@@ -85,27 +78,30 @@ def build_lifer_overlay_map(
     popup_asc = popup_sort_order == "ascending"
     date_filter_status_line = date_filter_status or None
     n_locations = int(loc_rows["Location ID"].nunique())
+    le, lf, se, sp, r_lifer, r_species, stroke_w, fo_lif, fo_spec = resolve_lifer_overlay_pin_params(
+        visit_marker_scheme
+    )
     species_map.get_root().html.add_child(
         Element(
             build_lifer_locations_banner_html(
-                n_lifer_count,
+                n_species_lifers,
                 n_locations,
                 date_filter_status_line,
                 include_subspecies=bool(show_subspecies_lifers),
+                n_subspecies_lifers=n_subspecies_lifers if show_subspecies_lifers else None,
             )
         )
     )
     loc_kind_by_id: dict[Any, str] = {}
     if not show_subspecies_lifers:
-        species_map.get_root().html.add_child(
-            Element(build_legend_html([(lifer_color, lifer_fill, "Lifer")]))
-        )
+        species_map.get_root().html.add_child(Element(build_legend_html([(le, lf, "Lifer")])))
     else:
 
         def _loc_kind(entries: list[dict]) -> str:
-            for e in entries:
-                if e.get("is_base_lifer") and e.get("is_taxon_lifer"):
-                    return "both"
+            """``lifer`` = species first-seen (base lifer) at this location; ``subspecies`` = taxon lifer only.
+
+            When base and taxon lifers coincide, use a single **Lifer** pin (no double ring).
+            """
             for e in entries:
                 if e.get("is_base_lifer"):
                     return "lifer"
@@ -115,11 +111,9 @@ def build_lifer_overlay_map(
         kinds_present = set(loc_kind_by_id.values())
         legend_items = []
         if "lifer" in kinds_present:
-            legend_items.append((lifer_color, lifer_fill, "Lifer"))
+            legend_items.append((le, lf, "Lifer"))
         if "subspecies" in kinds_present:
-            legend_items.append((species_color, species_fill, "Subspecies"))
-        if "both" in kinds_present:
-            legend_items.append((lifer_color, lifer_fill, "Both"))
+            legend_items.append((se, sp, "Subspecies"))
         species_map.get_root().html.add_child(Element(build_legend_html(legend_items)))
 
     for _, row in loc_rows.iterrows():
@@ -149,60 +143,39 @@ def build_lifer_overlay_map(
             popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                color=lifer_color,
-                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                radius=r_lifer,
+                color=le,
+                weight=stroke_w,
                 fill=True,
-                fill_color=lifer_fill,
-                fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+                fill_color=lf,
+                fill_opacity=fo_lif,
                 popup=popup,
             ).add_to(species_map)
         else:
             latlng = [row["Latitude"], row["Longitude"]]
             loc_kind = loc_kind_by_id.get(lid, "lifer")
-            if loc_kind == "both":
-                outer_popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
-                folium.CircleMarker(
-                    location=latlng,
-                    radius=MAP_CIRCLE_MARKER_RADIUS_PX + 2,
-                    color=species_color,
-                    weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-                    fill=False,
-                    popup=outer_popup,
-                ).add_to(species_map)
-                inner_popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
-                folium.CircleMarker(
-                    location=latlng,
-                    radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                    color=lifer_color,
-                    weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
-                    fill=True,
-                    fill_color=lifer_fill,
-                    fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
-                    popup=inner_popup,
-                ).add_to(species_map)
-            elif loc_kind == "subspecies":
+            if loc_kind == "subspecies":
                 popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
                 folium.CircleMarker(
                     location=latlng,
-                    radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                    color=species_color,
-                    weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                    radius=r_species,
+                    color=se,
+                    weight=stroke_w,
                     fill=True,
-                    fill_color=species_fill,
-                    fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+                    fill_color=sp,
+                    fill_opacity=fo_spec,
                     popup=popup,
                 ).add_to(species_map)
             else:
                 popup = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
                 folium.CircleMarker(
                     location=latlng,
-                    radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                    color=lifer_color,
-                    weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                    radius=r_lifer,
+                    color=le,
+                    weight=stroke_w,
                     fill=True,
-                    fill_color=lifer_fill,
-                    fill_opacity=MAP_PIN_FILL_OPACITY_EMPHASIS,
+                    fill_color=lf,
+                    fill_opacity=fo_lif,
                     popup=popup,
                 ).add_to(species_map)
 

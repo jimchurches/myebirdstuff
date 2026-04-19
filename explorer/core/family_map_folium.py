@@ -2,6 +2,9 @@
 
 Kept separate from :mod:`explorer.core.map_controller` so family colours, banners, and
 legends can change without touching the all-species overlay pipeline.
+
+Band and legend hex values are resolved via :mod:`explorer.core.map_marker_colour_resolve`
+(the same module used when previewing schemes in ``explorer/app/streamlit/design_map_app.py``).
 """
 
 from __future__ import annotations
@@ -13,15 +16,27 @@ import folium
 from branca.element import Element
 
 from explorer.app.streamlit.defaults import (
-    FamilyMapColourScheme,
+    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+    MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM,
+    MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT,
+    MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX,
+    MAP_FAMILY_MAP_POPUP_MAX_WIDTH_PX,
     MAP_HEIGHT_PX_DEFAULT,
-    active_family_map_colour_scheme,
+    MapMarkerColourScheme,
+    active_map_marker_colour_scheme,
 )
 from explorer.core.family_map_compute import (
     DENSITY_BAND_LABELS,
     FamilyLocationPin,
     FamilyMapBannerMetrics,
     format_family_location_popup_html,
+)
+from explorer.core.map_marker_colour_resolve import (
+    _global_defaults,
+    family_map_resolved_circle_radius_px,
+    family_map_resolved_fill_opacity,
+    resolve_family_band_colours,
+    resolve_family_highlight_stroke_hex,
 )
 from explorer.presentation.map_renderer import (
     build_legend_html,
@@ -36,18 +51,32 @@ _FAMILY_MAP_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
 def family_map_marker_style(
     pin: FamilyLocationPin,
     *,
-    style: FamilyMapColourScheme | None = None,
+    style: MapMarkerColourScheme | None = None,
 ) -> tuple[str, str, int]:
-    """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin."""
-    s = style or active_family_map_colour_scheme()
-    fills = s.density_fill_hex
-    strokes = s.density_stroke_hex
-    idx = max(0, min(pin.density_band_index, len(fills) - 1))
-    fill = fills[idx]
-    stroke = strokes[idx]
+    """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin.
+
+    Band and highlight colours use :func:`~explorer.core.map_marker_colour_resolve.resolve_family_band_colours`
+    and :func:`~explorer.core.map_marker_colour_resolve.normalize_marker_hex`, i.e. the same per-channel
+    chain as other scheme-driven maps (band-specific hex, then ``marker_default_*``, then module defaults,
+    then catch-all — see :mod:`explorer.core.map_marker_colour_resolve`).
+    """
+    s = style or active_map_marker_colour_scheme()
+    fam = s.family_locations
+    g = _global_defaults(s)
+    md_sw = max(1, int(getattr(g, "stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)))
+    sw_band = md_sw if fam.stroke_weight is None else max(1, int(fam.stroke_weight))
+    sw_hl = md_sw if fam.highlight_stroke_weight is None else max(1, int(fam.highlight_stroke_weight))
+    fills = fam.density_fill_hex
+    n = len(fills)
+    idx = max(0, min(pin.density_band_index, n - 1)) if n else 0
+    fill_res, edge_res = resolve_family_band_colours(s, idx)
     if pin.highlight_match:
-        return fill, s.highlight_stroke_hex, s.highlight_stroke_weight
-    return fill, stroke, s.base_stroke_weight
+        return (
+            fill_res,
+            resolve_family_highlight_stroke_hex(s),
+            sw_hl,
+        )
+    return fill_res, edge_res, sw_band
 
 
 def _default_au_center() -> tuple[float, float]:
@@ -95,24 +124,27 @@ def build_family_map_legend_overlay_html_for_pins(
     *,
     highlight_label: str | None,
     highlight_species_url: str | None = None,
-    style: FamilyMapColourScheme | None = None,
+    style: MapMarkerColourScheme | None = None,
 ) -> str:
     """Build the bottom-left legend: one row per richness band that appears on the map, plus highlight.
 
     Empty bands are omitted so sparse regions get a compact legend. When *highlight_species_url*
     is set together with *highlight_label*, the species name is linked to its eBird species page.
+    Swatch colours use the same resolution as :func:`family_map_marker_style`.
     """
-    s = style or active_family_map_colour_scheme()
+    s = style or active_map_marker_colour_scheme()
+    fam = s.family_locations
     pin_list = list(pins)
     bands_present = sorted({int(p.density_band_index) for p in pin_list}) if pin_list else []
     items: list[tuple[str, str, str]] = []
     for i in bands_present:
         if 0 <= i < len(DENSITY_BAND_LABELS):
             lab = DENSITY_BAND_LABELS[i]
+            fill_r, edge_r = resolve_family_band_colours(s, i)
             items.append(
                 (
-                    s.density_stroke_hex[i],
-                    s.density_fill_hex[i],
+                    edge_r,
+                    fill_r,
                     f"{lab} species at location",
                 )
             )
@@ -121,8 +153,8 @@ def build_family_map_legend_overlay_html_for_pins(
         sw_i = max(
             0,
             min(
-                s.legend_highlight_swatch_fill_index,
-                len(s.density_fill_hex) - 1,
+                fam.legend_highlight_band_index,
+                len(fam.density_fill_hex) - 1,
             ),
         )
         url = (highlight_species_url or "").strip()
@@ -134,10 +166,11 @@ def build_family_map_legend_overlay_html_for_pins(
             )
         else:
             hl_legend = f"Highlight: {html_module.escape(hl, quote=False)}"
+        fill_hl, _ = resolve_family_band_colours(s, sw_i)
         items.append(
             (
-                s.highlight_stroke_hex,
-                s.density_fill_hex[sw_i],
+                resolve_family_highlight_stroke_hex(s),
+                fill_hl,
                 hl_legend,
             )
         )
@@ -170,8 +203,8 @@ def build_family_composition_folium_map(
     and ``fit_bounds_max_zoom_highlight`` (closer zoom allowed than ``fit_bounds_max_zoom``).
     If none match, falls back to all pins.
 
-    *colour_scheme_index* ``1`` or ``2`` selects the sidebar palette; ``None`` uses
-    :func:`~explorer.app.streamlit.defaults.active_family_map_colour_scheme` defaults.
+    *colour_scheme_index* ``1``, ``2``, or ``3`` selects the sidebar palette; ``None`` uses
+    :func:`~explorer.app.streamlit.defaults.active_map_marker_colour_scheme` defaults.
     """
     pin_list = list(pins)
     if pin_list:
@@ -199,7 +232,7 @@ def build_family_composition_folium_map(
 
     loc_fn = location_page_url_fn or (lambda _lid: None)
     sp_fn = species_url_fn or (lambda _c: None)
-    style = active_family_map_colour_scheme(colour_scheme_index)
+    style = active_map_marker_colour_scheme(colour_scheme_index)
 
     # Draw non-highlighted first, then highlighted so highlights sit on top.
     normal = [p for p in pin_list if not p.highlight_match]
@@ -219,18 +252,16 @@ def build_family_composition_folium_map(
         popup_body = f'<div class="pebird-map-popup">{inner}</div>'
         folium.CircleMarker(
             location=(pin.latitude, pin.longitude),
-            radius=style.circle_marker_radius_px,
+            radius=family_map_resolved_circle_radius_px(style),
             color=stroke,
             weight=sw,
             fill=True,
             fill_color=fill,
-            fill_opacity=style.circle_marker_fill_opacity,
-            popup=folium.Popup(popup_body, max_width=style.popup_max_width_px),
+            fill_opacity=family_map_resolved_fill_opacity(style),
+            popup=folium.Popup(popup_body, max_width=MAP_FAMILY_MAP_POPUP_MAX_WIDTH_PX),
         ).add_to(m)
 
-    # Family-map-only initial viewport:
-    # - fit relevant pins with edge padding (all family pins, or highlight-only when requested)
-    # - cap how far fitBounds may zoom in (family-wide vs species-highlight use different caps)
+    # Family-map-only initial viewport (not part of colour schemes; see ``MAP_FAMILY_MAP_*`` in defaults).
     if pin_list:
         if fit_bounds_highlight_only:
             hl_pins = [p for p in pin_list if p.highlight_match]
@@ -240,11 +271,11 @@ def build_family_composition_folium_map(
             _bounds_src = pin_list
             _species_framed = False
         bounds = [[p.latitude, p.longitude] for p in _bounds_src]
-        pad = int(style.fit_bounds_padding_px)
+        pad = int(MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX)
         _mz = int(
-            style.fit_bounds_max_zoom_highlight
+            MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT
             if _species_framed
-            else style.fit_bounds_max_zoom
+            else MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM
         )
         m.fit_bounds(
             bounds,

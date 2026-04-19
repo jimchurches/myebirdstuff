@@ -10,6 +10,16 @@ Primary **Personal eBird Explorer** UI. Implementation modules live in this dire
 streamlit run explorer/app/streamlit/app.py
 ```
 
+### Map marker design utility (developers only)
+
+A **separate** Streamlit entry point draws dummy Folium markers for every map role so you can tune colours and geometry and export paste-ready ``MapMarkerColourScheme`` snippets. It is **not** linked from the main app (no eBird data required). Run:
+
+```bash
+streamlit run explorer/app/streamlit/design_map_app.py
+```
+
+See **[docs/development.md](../../../docs/development.md#map-marker-colour-design-utility-developers)** for the file map (preview module, hex resolver, ``defaults.py``).
+
 **Landing (no CSV yet):** If disk resolution finds no file and this browser session has no cached upload yet, the app shows title + copy + **file uploader in the main column**. The **sidebar** still shows a small text footer: **GitHub** · **eBird** · **Instagram**, and a line below with **Explorer docs** (link to `docs/explorer/README.md` on GitHub; no icons — reads better in a narrow sidebar). After CSV load, the **Map** sidebar fills in above that footer — there is no control to swap CSV without a new session / refresh (loading APIs stay in `_load_dataframe` for future work).
 
 **Sidebar footer:** `streamlit_ui_constants` defines `GITHUB_REPO_URL`, `EBIRD_PROFILE_URL`, and `INSTAGRAM_PROFILE_URL`; `explorer_readme_github_url()` (see `explorer.core.repo_git`) builds the **Explorer docs** URL to `docs/explorer/README.md` on GitHub for the **current git branch** when running from a checkout, otherwise **`main`**. Set **`EXPLORER_README_GITHUB_BRANCH`** (e.g. in Streamlit secrets) when the deployed app has no `.git` but should link to a branch other than `main`. `sidebar_footer_links()` renders GitHub / eBird / Instagram as middot-separated links and **Explorer docs** on a second line. *Other common patterns* if you want to change it: put links only on **Settings → About**; use a **shields.io** badge in markdown; add **“Fork me on GitHub”** ribbon (CSS, more prominent); or a **footer line** in the main area with `st.caption` under specific tabs (repeats unless hoisted).

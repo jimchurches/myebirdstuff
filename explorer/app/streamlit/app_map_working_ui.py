@@ -38,22 +38,25 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_TAXONOMY_LOCALE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_SPECIES_HIDE_ONLY_KEY,
-    STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
     STREAMLIT_FAMILY_MAP_FAMILY_KEY,
     STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
     DEFAULT_TAXONOMY_LOCALE,
 )
 from explorer.app.streamlit.app_map_ui import (
     ensure_streamlit_map_basemap_height_keys,
+    ensure_streamlit_map_marker_colour_scheme_keys,
     inject_spinner_theme_css,
     species_searchbox_fragment,
 )
 from explorer.app.streamlit.app_settings_state import apply_pending_map_cluster_toggle
 from explorer.app.streamlit.app_settings_state import apply_pending_map_basemap_override
 from explorer.app.streamlit.app_settings_state import apply_pending_map_height_override
+from explorer.app.streamlit.app_settings_state import apply_pending_map_marker_colour_scheme
 from explorer.app.streamlit.defaults import (
-    FAMILY_MAP_COLOUR_SCHEME_1,
-    FAMILY_MAP_COLOUR_SCHEME_2,
+    MAP_MARKER_COLOUR_SCHEME_1,
+    MAP_MARKER_COLOUR_SCHEME_2,
+    MAP_MARKER_COLOUR_SCHEME_3,
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
     MAP_DATE_FILTER_DEFAULT,
@@ -112,10 +115,12 @@ class MapWorkingContext:
 def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     """Map sidebar widgets, working set + species search, Folium cache invalidation on All↔Species."""
     ensure_streamlit_map_basemap_height_keys()
+    ensure_streamlit_map_marker_colour_scheme_keys()
 
     apply_pending_map_cluster_toggle(st.session_state)
     apply_pending_map_basemap_override(st.session_state)
     apply_pending_map_height_override(st.session_state)
+    apply_pending_map_marker_colour_scheme(st.session_state)
 
     inject_spinner_theme_css()
 
@@ -124,8 +129,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         saved_basemap = st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_OPTIONS[0])
         if saved_basemap not in MAP_BASEMAP_OPTIONS:
             saved_basemap = MAP_BASEMAP_OPTIONS[0]
-        override = st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY, "__default__")
-        map_style = override if override in MAP_BASEMAP_OPTIONS else saved_basemap
+        override = st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY, saved_basemap)
+        if override not in MAP_BASEMAP_OPTIONS:
+            override = saved_basemap
+        map_style = override
 
         # Renamed label (was "Selected species"); keep existing sessions valid.
         if st.session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY) == "Selected species":
@@ -302,7 +309,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     else:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
 
-    if map_view_mode == "families":
+    if map_view_mode in ("all", "families"):
         from explorer.app.streamlit.app_caches import cached_family_map_bundle
         from explorer.core.family_map_compute import (
             filter_work_to_family,
@@ -310,72 +317,68 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         )
 
         with st.sidebar:
-
-            tax_loc = (
-                str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
-                or DEFAULT_TAXONOMY_LOCALE
-            )
-            bundle = cached_family_map_bundle(df_full, tax_loc)
-            fams = list(bundle.get("families") or ())
-            work = bundle.get("work")
-            base_to_common = bundle.get("base_to_common") or {}
-
-            family_name = st.selectbox(
-                "Family",
-                options=[""] + fams,
-                format_func=lambda x: "— Select a family —" if x == "" else x,
-                key=STREAMLIT_FAMILY_MAP_FAMILY_KEY,
-            )
-
-            if family_name and isinstance(work, pd.DataFrame) and not work.empty:
-                wf = filter_work_to_family(work, family_name)
-                pairs = highlight_species_choices_alphabetical(wf, base_to_common)
-                bases = [b for _lab, b in pairs]
-                family_highlight_base = st.selectbox(
-                    "Highlight species (optional)",
-                    options=[""] + bases,
-                    format_func=lambda b: "— None —" if b == "" else (base_to_common.get(b) or b),
-                    key=STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+            if map_view_mode == "families":
+                tax_loc = (
+                    str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
+                    or DEFAULT_TAXONOMY_LOCALE
                 )
-            else:
-                st.selectbox(
-                    "Highlight species (optional)",
-                    options=["— None —"],
-                    disabled=True,
-                    key=f"{STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY}__disabled",
-                )
-                family_highlight_base = ""
+                bundle = cached_family_map_bundle(df_full, tax_loc)
+                fams = list(bundle.get("families") or ())
+                work = bundle.get("work")
+                base_to_common = bundle.get("base_to_common") or {}
 
-            family_colour_scheme = int(
-                st.radio(
-                    "Colour scheme",
-                    options=[1, 2],
-                    format_func=lambda n: (
-                        FAMILY_MAP_COLOUR_SCHEME_1.display_name
-                        if n == 1
-                        else FAMILY_MAP_COLOUR_SCHEME_2.display_name
-                    ),
-                    horizontal=True,
-                    key=STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY,
-                    index=0,
-                    on_change=invalidate_folium_map_embed_cache,
+                family_name = st.selectbox(
+                    "Family",
+                    options=[""] + fams,
+                    format_func=lambda x: "— Select a family —" if x == "" else x,
+                    key=STREAMLIT_FAMILY_MAP_FAMILY_KEY,
                 )
-            )
+
+                if family_name and isinstance(work, pd.DataFrame) and not work.empty:
+                    wf = filter_work_to_family(work, family_name)
+                    pairs = highlight_species_choices_alphabetical(wf, base_to_common)
+                    bases = [b for _lab, b in pairs]
+                    family_highlight_base = st.selectbox(
+                        "Highlight species (optional)",
+                        options=[""] + bases,
+                        format_func=lambda b: "— None —" if b == "" else (base_to_common.get(b) or b),
+                        key=STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+                    )
+                else:
+                    st.selectbox(
+                        "Highlight species (optional)",
+                        options=["— None —"],
+                        disabled=True,
+                        key=f"{STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY}__disabled",
+                    )
+                    family_highlight_base = ""
+
+    _scheme_preset_labels = {
+        1: MAP_MARKER_COLOUR_SCHEME_1.display_name,
+        2: MAP_MARKER_COLOUR_SCHEME_2.display_name,
+        3: MAP_MARKER_COLOUR_SCHEME_3.display_name,
+    }
 
     with st.sidebar:
         st.divider()
         with st.expander("Basemap", expanded=False):
             st.selectbox(
                 "Basemap",
-                options=["__default__"] + list(MAP_BASEMAP_OPTIONS),
-                format_func=lambda k: (
-                    f"Use default ({MAP_BASEMAP_LABELS.get(saved_basemap, saved_basemap)})"
-                    if k == "__default__"
-                    else MAP_BASEMAP_LABELS.get(k, k)
-                ),
+                options=list(MAP_BASEMAP_OPTIONS),
+                format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
                 key=STREAMLIT_MAP_BASEMAP_KEY,
                 on_change=_on_basemap_changed,
             )
+        with st.expander("Colour schemes", expanded=False):
+            _scheme_sel = st.radio(
+                "Map marker colour scheme",
+                options=[1, 2, 3],
+                format_func=lambda n: _scheme_preset_labels[int(n)],
+                key=STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
+                on_change=invalidate_folium_map_embed_cache,
+                width="stretch",
+            )
+            family_colour_scheme = int(_scheme_sel if _scheme_sel is not None else 1)
         map_height = st.slider(
             "Map height (px)",
             min_value=MAP_HEIGHT_PX_MIN,

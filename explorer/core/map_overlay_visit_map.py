@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from collections import OrderedDict
-from typing import Any, Dict, Hashable, MutableMapping, Optional, Tuple, cast
+from typing import Any, Dict, Hashable, Literal, MutableMapping, Optional, Tuple, cast
 
 import folium
 import pandas as pd
@@ -11,14 +12,24 @@ from branca.element import Element
 from folium.plugins import MarkerCluster
 
 from explorer.app.streamlit.defaults import (
-    MAP_CIRCLE_MARKER_RADIUS_PX,
-    MAP_CIRCLE_MARKER_STROKE_WEIGHT,
     MAP_DEBUG_SHOW_ZOOM_LEVEL,
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
     MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
-    MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
-    MAP_PIN_FILL_OPACITY_EMPHASIS,
+    MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT,
+    MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT,
+    MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT,
+    MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
+    MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
+    MapMarkerColourScheme,
+    clamp_map_marker_circle_fill_opacity,
+    clamp_map_marker_circle_radius_px,
+)
+from explorer.core.map_marker_colour_resolve import (
+    is_valid_hex_colour,
+    normalize_marker_hex,
+    resolve_location_visit_colours,
+    resolve_species_visit_pin,
 )
 from explorer.core.map_overlay_theme import inject_map_overlay_theme
 from explorer.core.map_overlay_types import BaseSpeciesFn, MapOverlayResult, SpeciesUrlFn
@@ -42,6 +53,203 @@ from explorer.core.species_logic import filter_species
 from explorer.core.stats import safe_count
 
 
+def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tuple[str, str, int, int, float]:
+    """Resolved fill, edge (stroke), radius (px), stroke weight, fill opacity for **All locations** view."""
+    fill_c, edge = resolve_location_visit_colours(sch)
+    g = sch.global_defaults
+    al = sch.all_locations
+    md = int(g.radius_px)
+    loc = al.radius_px
+    radius_px = clamp_map_marker_circle_radius_px(loc if loc is not None else md)
+    sw_raw = al.stroke_weight
+    if sw_raw is None:
+        sw_raw = g.stroke_weight
+    sw = max(1, int(sw_raw))
+    md_fo = clamp_map_marker_circle_fill_opacity(
+        getattr(g, "fill_opacity", None),
+        fallback=0.88,
+    )
+    legacy_fo = float(al.fill_opacity) if al.fill_opacity is not None else md_fo
+    fo_override = al.fill_opacity_override
+    fo = (
+        clamp_map_marker_circle_fill_opacity(fo_override, fallback=legacy_fo)
+        if fo_override is not None
+        else legacy_fo
+    )
+    return fill_c, edge, radius_px, sw, fo
+
+
+def _hex_to_rgba_css(hex_str: str, alpha: float, *, channel: str) -> str:
+    """Convert ``#RRGGBB`` to ``rgba(r,g,b,a)`` for CSS (cluster icon inline styles)."""
+    h = normalize_marker_hex(hex_str, channel=channel).lstrip("#")
+    if len(h) < 6:
+        h = (h + "000000")[:6]
+    r = int(h[0:2], 16)
+    g = int(h[2:4], 16)
+    b = int(h[4:6], 16)
+    a = max(0.0, min(1.0, float(alpha)))
+    return f"rgba({r},{g},{b},{a})"
+
+
+def _marker_cluster_root_background_reset_css() -> str:
+    """CSS to clear default MarkerCluster *root* tier backgrounds.
+
+    Leaflet.markercluster styles the **root** ``.marker-cluster-small|medium|large`` with a semi-transparent
+    halo. Our ``iconCreateFunction`` must keep the stock DOM shape (**one** inner ``<div>`` wrapping
+    ``<span>``) so ``.marker-cluster div`` rules still size/center the inner disc. We paint fill, border,
+    and halo-like ring on that single inner div (``box-shadow`` ring) and make the root transparent so
+    those defaults do not stack as a third offset circle.
+    """
+    return (
+        "<style>"
+        ".leaflet-marker-icon.marker-cluster.marker-cluster-small,"
+        ".leaflet-marker-icon.marker-cluster.marker-cluster-medium,"
+        ".leaflet-marker-icon.marker-cluster.marker-cluster-large"
+        "{background:transparent!important;}"
+        "</style>"
+    )
+
+
+def _marker_cluster_icon_create_function_from_scheme(
+    sch: Any,
+) -> str | None:
+    """Return Leaflet.markercluster ``iconCreateFunction`` for configured cluster icon tier colours.
+
+    Duck-typed: ``MapMarkerColourScheme`` (reads ``all_locations.cluster.*``),
+    :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig` (flat ``marker_cluster_*`` fields),
+    or any object exposing the same attributes.
+
+    Expects nine cluster tier colours (``tier_icon_hex`` or flat ``marker_cluster_tier_icon_hex``) with nine values
+    ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
+    If unset or invalid, returns ``None`` so Folium / Leaflet.markercluster defaults apply.
+    """
+
+    def _cluster_colours_tuple() -> tuple[str, ...] | None:
+        if sch is None:
+            return None
+        al = getattr(sch, "all_locations", None)
+        if al is not None:
+            cl = getattr(al, "cluster", None)
+            if cl is not None:
+                v = getattr(cl, "tier_icon_hex", None)
+                if v is not None:
+                    t = tuple(v) if isinstance(v, (tuple, list)) else None
+                    if t is not None and len(t) == 9:
+                        return t
+        vals = getattr(sch, "marker_cluster_tier_icon_hex", None)
+        if vals is None:
+            return None
+        t = tuple(vals) if isinstance(vals, (tuple, list)) else None
+        return t if t is not None and len(t) == 9 else None
+
+    def _resolve_cluster_colours() -> tuple[list[str], list[str], list[str]] | None:
+        raw_tuple = _cluster_colours_tuple()
+        if raw_tuple is None:
+            return None
+        vals = raw_tuple
+        try:
+            raw = tuple(str(vals[i]) for i in range(9))
+        except Exception:
+            return None
+        if not all(is_valid_hex_colour(x) for x in raw):
+            return None
+        fills = [
+            normalize_marker_hex(raw[0], channel="fill"),
+            normalize_marker_hex(raw[3], channel="fill"),
+            normalize_marker_hex(raw[6], channel="fill"),
+        ]
+        borders = [
+            normalize_marker_hex(raw[1], channel="edge"),
+            normalize_marker_hex(raw[4], channel="edge"),
+            normalize_marker_hex(raw[7], channel="edge"),
+        ]
+        halos = [
+            normalize_marker_hex(raw[2], channel="fill"),
+            normalize_marker_hex(raw[5], channel="fill"),
+            normalize_marker_hex(raw[8], channel="fill"),
+        ]
+        return fills, borders, halos
+
+    if sch is None:
+        return None
+    col = _resolve_cluster_colours()
+    if col is None:
+        return None
+    fills, borders, halos = col
+
+    def _o(nested_attr: str, flat_attr: str, default: float) -> float:
+        al = getattr(sch, "all_locations", None)
+        if al is not None:
+            cl = getattr(al, "cluster", None)
+            if cl is not None:
+                v = getattr(cl, nested_attr, None)
+                if v is not None:
+                    try:
+                        return max(0.0, min(1.0, float(v)))
+                    except (TypeError, ValueError):
+                        pass
+        v = getattr(sch, flat_attr, None)
+        if v is None:
+            return default
+        try:
+            return max(0.0, min(1.0, float(v)))
+        except (TypeError, ValueError):
+            return default
+
+    def _oi(nested_attr: str, flat_attr: str, default: int, *, hi: int) -> int:
+        al = getattr(sch, "all_locations", None)
+        if al is not None:
+            cl = getattr(al, "cluster", None)
+            if cl is not None:
+                v = getattr(cl, nested_attr, None)
+                if v is not None:
+                    try:
+                        return max(0, min(hi, int(v)))
+                    except (TypeError, ValueError):
+                        pass
+        v = getattr(sch, flat_attr, None)
+        if v is None:
+            return default
+        try:
+            return max(0, min(hi, int(v)))
+        except (TypeError, ValueError):
+            return default
+
+    inner_a = _o("inner_fill_opacity", "marker_cluster_inner_fill_opacity", MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT)
+    halo_a = _o("halo_opacity", "marker_cluster_halo_opacity", MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT)
+    border_a = _o("border_opacity", "marker_cluster_border_opacity", MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT)
+    spread = _oi("halo_spread_px", "marker_cluster_halo_spread_px", MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT, hi=24)
+    bw = _oi("border_width_px", "marker_cluster_border_width_px", MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT, hi=8)
+
+    fills_rgba = [_hex_to_rgba_css(fills[i], inner_a, channel="fill") for i in range(3)]
+    borders_rgba = [_hex_to_rgba_css(borders[i], border_a, channel="edge") for i in range(3)]
+    halos_rgba = [_hex_to_rgba_css(halos[i], halo_a, channel="fill") for i in range(3)]
+    fills_js = json.dumps(fills_rgba)
+    borders_js = json.dumps(borders_rgba)
+    halos_js = json.dumps(halos_rgba)
+    # One inner <div> only (same as plugin default HTML). Halo is a box-shadow ring; nested divs break
+    # .marker-cluster div { width/height/margin } and look offset / triple-stacked.
+    return (
+        "function(cluster) {"
+        "var count = cluster.getChildCount();"
+        "var i = (count < 10) ? 0 : (count < 100) ? 1 : 2;"
+        f"var fillsRgba = {fills_js};"
+        f"var bordersRgba = {borders_js};"
+        f"var halosRgba = {halos_js};"
+        f"var bw = {int(bw)};"
+        f"var spread = {int(spread)};"
+        "var style = 'background-color:' + fillsRgba[i] + ';border:' + bw + 'px solid ' + bordersRgba[i] + ';"
+        "box-shadow:0 0 0 ' + spread + 'px ' + halosRgba[i] + ';';"
+        "var sizeClass = (count < 10) ? 'marker-cluster-small' : (count < 100) ? 'marker-cluster-medium' : 'marker-cluster-large';"
+        "return new L.DivIcon({"
+        "html: '<div style=\"' + style + '\"><span>' + count + '</span></div>',"
+        "className: 'marker-cluster ' + sizeClass,"
+        "iconSize: new L.Point(40, 40)"
+        "});"
+        "}"
+    )
+
+
 def build_visit_overlay_map(
     *,
     df: pd.DataFrame,
@@ -61,14 +269,6 @@ def build_visit_overlay_map(
     map_style: str,
     popup_sort_order: str,
     popup_scroll_hint: str,
-    lifer_color: str,
-    lifer_fill: str,
-    last_seen_color: str,
-    last_seen_fill: str,
-    species_color: str,
-    species_fill: str,
-    default_color: str,
-    default_fill: str,
     mark_lifer: bool,
     mark_last_seen: bool,
     cluster_all_locations: bool,
@@ -81,6 +281,8 @@ def build_visit_overlay_map(
     filtered_by_loc_cache_max: int,
     tax_loc_key: str,
     map_height_px: int,
+    visit_marker_scheme: MapMarkerColourScheme,
+    map_view_mode: str = "all",
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode)."""
     if selected_species:
@@ -107,7 +309,8 @@ def build_visit_overlay_map(
     popup_ascending = popup_sort_order == "ascending"
     date_filter_status_line = date_filter_status or None
 
-    if not selected_species and hide_non_matching_locations:
+    _mv = (map_view_mode or "all").strip().lower()
+    if not selected_species and (hide_non_matching_locations or _mv == "species"):
         if effective_location_data.empty:
             lat, lon = -25.0, 134.0
         else:
@@ -137,14 +340,22 @@ def build_visit_overlay_map(
         species_map.get_root().html.add_child(
             Element(build_all_species_banner_html(tc, ts, ti, date_filter_status_line))
         )
+        _fill, _edge, _radius_px, _stroke_w, _fill_op = _all_locations_marker_params_from_scheme(
+            visit_marker_scheme
+        )
+        legend_pair = (_edge, _fill)
         species_map.get_root().html.add_child(
-            Element(build_legend_html([(default_color, default_fill, "All locations")]))
+            Element(build_legend_html([(legend_pair[0], legend_pair[1], "All locations")]))
         )
 
         marker_cluster: Optional[MarkerCluster] = None
         if cluster_all_locations:
+            icon_fn = _marker_cluster_icon_create_function_from_scheme(visit_marker_scheme)
+            if icon_fn is not None:
+                species_map.get_root().html.add_child(Element(_marker_cluster_root_background_reset_css()))
             marker_cluster = MarkerCluster(
                 name="All locations",
+                icon_create_function=icon_fn,
                 options={
                     "maxClusterRadius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
                     "disableClusteringAtZoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
@@ -168,12 +379,12 @@ def build_visit_overlay_map(
             popup_html = popup_html_cache[popup_key]
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
-                color=default_color,
-                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                radius=_radius_px,
+                color=_edge,
+                weight=_stroke_w,
                 fill=True,
-                fill_color=default_fill,
-                fill_opacity=MAP_PIN_FILL_OPACITY_ALL_LOCATIONS,
+                fill_color=_fill,
+                fill_opacity=_fill_op,
                 popup=folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX),
             ).add_to(pin_parent)
 
@@ -282,14 +493,19 @@ def build_visit_overlay_map(
             elif row["has_species_match"]:
                 pin_types_present.add("Species")
             else:
-                pin_types_present.add("Other")
-        legend_order = [
-            ("Lifer", lifer_color, lifer_fill),
-            ("Last seen", last_seen_color, last_seen_fill),
-            ("Species", species_color, species_fill),
-            ("Other", default_color, default_fill),
+                pin_types_present.add("Locations")
+        _legend_roles: list[tuple[str, Literal["lifer", "last_seen", "species", "default"]]] = [
+            ("Species", "species"),
+            ("Locations", "default"),
+            ("Lifer", "lifer"),
+            ("Last seen", "last_seen"),
         ]
-        legend_items = [(c, f, label) for label, c, f in legend_order if label in pin_types_present]
+        legend_items = []
+        for label, role in _legend_roles:
+            if label not in pin_types_present:
+                continue
+            e, f, _, _, _ = resolve_species_visit_pin(visit_marker_scheme, role)
+            legend_items.append((e, f, label))
         species_map.get_root().html.add_child(Element(build_legend_html(legend_items)))
 
         for _, row in location_data_local.iterrows():
@@ -325,20 +541,24 @@ def build_visit_overlay_map(
             popup_html = popup_html_cache[popup_key]
             popup_content = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
 
+            visit_role: Literal["lifer", "last_seen", "species", "default"]
             if row["is_lifer"]:
-                color, fill, fill_opacity = lifer_color, lifer_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
+                visit_role = "lifer"
             elif row["is_last_seen"]:
-                color, fill, fill_opacity = last_seen_color, last_seen_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
+                visit_role = "last_seen"
             elif row["has_species_match"]:
-                color, fill, fill_opacity = species_color, species_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
+                visit_role = "species"
             else:
-                color, fill, fill_opacity = default_color, default_fill, MAP_PIN_FILL_OPACITY_EMPHASIS
+                visit_role = "default"
+            color, fill, radius_px, stroke_w, fill_opacity = resolve_species_visit_pin(
+                visit_marker_scheme, visit_role
+            )
 
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
-                radius=MAP_CIRCLE_MARKER_RADIUS_PX,
+                radius=radius_px,
                 color=color,
-                weight=MAP_CIRCLE_MARKER_STROKE_WEIGHT,
+                weight=stroke_w,
                 fill=True,
                 fill_color=fill,
                 fill_opacity=fill_opacity,

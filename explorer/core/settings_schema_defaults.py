@@ -26,14 +26,10 @@ MAP_HEIGHT_PX_MIN = 440
 MAP_HEIGHT_PX_MAX = 1200
 # All-locations map only: group nearby pins (Leaflet.markercluster). Species / lifer maps never cluster.
 MAP_CLUSTER_ALL_LOCATIONS_DEFAULT = True
-MAP_DEFAULT_COLOR_DEFAULT = "green"
-MAP_DEFAULT_FILL_DEFAULT = "lightgray"
-MAP_SPECIES_COLOR_DEFAULT = "purple"
-MAP_SPECIES_FILL_DEFAULT = "red"
-MAP_LIFER_COLOR_DEFAULT = "purple"
-MAP_LIFER_FILL_DEFAULT = "yellow"
-MAP_LAST_SEEN_COLOR_DEFAULT = "purple"
-MAP_LAST_SEEN_FILL_DEFAULT = "lightgreen"
+# Bundled map-marker palette index (``1``…``3``); see ``active_map_marker_colour_scheme`` in defaults.
+MAP_MARKER_COLOUR_SCHEME_DEFAULT = 1
+MAP_MARKER_COLOUR_SCHEME_MIN = 1
+MAP_MARKER_COLOUR_SCHEME_MAX = 3
 
 TABLES_RANKINGS_TOP_N_DEFAULT = 200
 TABLES_RANKINGS_TOP_N_MIN = 10
@@ -56,30 +52,6 @@ MAINTENANCE_CLOSE_LOCATION_METERS_MAX = 250
 
 TAXONOMY_LOCALE_DEFAULT = "en_AU"
 
-# Allowed pin / selectbox colours (settings + session clamping).
-MAP_PIN_COLOUR_ALLOWLIST: tuple[str, ...] = (
-    "white",
-    "black",
-    "red",
-    "lime",
-    "blue",
-    "yellow",
-    "cyan",
-    "magenta",
-    "orange",
-    "purple",
-    "pink",
-    "lightgreen",
-    "lightblue",
-    "gray",
-    "lightgray",
-    "darkgray",
-    "coral",
-    "gold",
-    "green",
-)
-
-
 def build_persisted_settings_defaults_dict() -> dict[str, Any]:
     """Full default payload matching :class:`StreamlitSettingsConfig` (embedded YAML)."""
     return {
@@ -92,14 +64,7 @@ def build_persisted_settings_defaults_dict() -> dict[str, Any]:
             "basemap": MAP_BASEMAP_DEFAULT,
             "map_height_px": MAP_HEIGHT_PX_DEFAULT,
             "cluster_all_locations": MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-            "default_color": MAP_DEFAULT_COLOR_DEFAULT,
-            "default_fill": MAP_DEFAULT_FILL_DEFAULT,
-            "species_color": MAP_SPECIES_COLOR_DEFAULT,
-            "species_fill": MAP_SPECIES_FILL_DEFAULT,
-            "lifer_color": MAP_LIFER_COLOR_DEFAULT,
-            "lifer_fill": MAP_LIFER_FILL_DEFAULT,
-            "last_seen_color": MAP_LAST_SEEN_COLOR_DEFAULT,
-            "last_seen_fill": MAP_LAST_SEEN_FILL_DEFAULT,
+            "map_marker_colour_scheme": MAP_MARKER_COLOUR_SCHEME_DEFAULT,
         },
         "tables_lists": {
             "rankings_top_n": TABLES_RANKINGS_TOP_N_DEFAULT,

@@ -127,7 +127,8 @@ EXPORT_MAP_HTML_BTN_KEY = "export_map_html_btn"
 # Family map tab widget keys (refs #138). Highlight key is suffixed with selected family in the UI.
 STREAMLIT_FAMILY_MAP_FAMILY_KEY = "streamlit_family_map_family"
 STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY = "streamlit_family_map_highlight"
-STREAMLIT_FAMILY_MAP_COLOUR_SCHEME_KEY = "streamlit_family_map_colour_scheme"
+# Session key string kept for backwards compatibility with saved browser sessions.
+STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY = "streamlit_family_map_colour_scheme"
 
 # Checklist stats payload keys (used by fragments).
 YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
@@ -164,18 +165,11 @@ STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY = "_streamlit_map_basemap_apply_from_set
 STREAMLIT_MAP_BASEMAP_SAVED_KEY = "streamlit_map_basemap_saved"
 STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY = "_streamlit_map_height_apply_from_settings_pending"
 STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY = "streamlit_map_height_px_saved"
+# Map marker palette (1–3): persisted default + sidebar radio; Settings → Save defers apply (refs #147).
+STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY = "_streamlit_map_marker_colour_scheme_apply_pending"
+STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY = "streamlit_map_marker_colour_scheme_saved"
 
 SESSION_PREV_EFFECTIVE_BASEMAP_KEY = "_streamlit_prev_effective_basemap"
-
-STREAMLIT_DEFAULT_COLOR_KEY = "streamlit_default_color"
-STREAMLIT_SPECIES_COLOR_KEY = "streamlit_species_color"
-STREAMLIT_LIFER_COLOR_KEY = "streamlit_lifer_color"
-STREAMLIT_LAST_SEEN_COLOR_KEY = "streamlit_last_seen_color"
-
-STREAMLIT_DEFAULT_FILL_KEY = "streamlit_default_fill"
-STREAMLIT_SPECIES_FILL_KEY = "streamlit_species_fill"
-STREAMLIT_LIFER_FILL_KEY = "streamlit_lifer_fill"
-STREAMLIT_LAST_SEEN_FILL_KEY = "streamlit_last_seen_fill"
 
 STREAMLIT_TAXONOMY_LOCALE_KEY = "streamlit_taxonomy_locale"
 STREAMLIT_RANKINGS_TOP_N_KEY = "streamlit_rankings_top_n"
@@ -229,16 +223,9 @@ SETTINGS_SESSION_KEYS = (
     STREAMLIT_MARK_LAST_SEEN_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
-    STREAMLIT_DEFAULT_COLOR_KEY,
-    STREAMLIT_DEFAULT_FILL_KEY,
-    STREAMLIT_SPECIES_COLOR_KEY,
-    STREAMLIT_SPECIES_FILL_KEY,
-    STREAMLIT_LIFER_COLOR_KEY,
-    STREAMLIT_LIFER_FILL_KEY,
-    STREAMLIT_LAST_SEEN_COLOR_KEY,
-    STREAMLIT_LAST_SEEN_FILL_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
     STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
