@@ -13,7 +13,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from explorer.app.streamlit.defaults import debug_defaults_enabled
+from explorer.app.streamlit.defaults import debug_defaults_enabled  # noqa: E402
 
 
 def main() -> None:

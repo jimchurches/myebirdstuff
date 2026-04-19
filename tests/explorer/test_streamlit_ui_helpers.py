@@ -25,14 +25,28 @@ class _StubSessionState(dict):
 class _SidebarStub:
     """Capture ``st.sidebar`` divider/markdown used by map chrome tests."""
 
-    def __init__(self) -> None:
+    def __init__(self, stub_session) -> None:
+        self._stub_session = stub_session
         self.markdown_calls: list[tuple[tuple, dict]] = []
+        self.caption_calls: list[str] = []
+        self.radio_calls: list[tuple] = []
 
     def divider(self) -> None:
         return None
 
+    def caption(self, label: str) -> None:
+        self.caption_calls.append(label)
+
     def markdown(self, *args, **kwargs):
         self.markdown_calls.append((args, kwargs))
+
+    def radio(self, label: str, options, key=None, horizontal: bool = False, **kwargs):
+        self.radio_calls.append((label, tuple(options), key, horizontal, kwargs))
+        if key is not None and key in self._stub_session:
+            v = self._stub_session[key]
+            if v in options:
+                return v
+        return options[0] if options else None
 
 
 def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -64,7 +78,7 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         stub.error_calls.append(msg)
 
     stub.error = error
-    stub.sidebar = _SidebarStub()
+    stub.sidebar = _SidebarStub(stub.session_state)
 
     def fragment(fn):
         return fn
@@ -253,8 +267,18 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
         species_selected_sci="Turdus migratorius",
         hide_non_matching_locations=True,
     )
+    empty_awaiting_species = static_map_cache_key(
+        df,
+        "species",
+        "",
+        "default",
+        ro,
+        taxonomy_locale="en_AU",
+        hide_non_matching_locations=True,
+    )
     assert no_species != with_species
     assert with_species != hide_on
+    assert empty_awaiting_species != no_species
 
 
 # --- app_data_loading / app_map_ui / streamlit_theme (refs #98; UI-surface regressions) ---
@@ -358,7 +382,9 @@ def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_st
     st = streamlit_stub
     st.session_state.clear()
     ensure_streamlit_map_basemap_height_keys()
+    assert st.session_state["streamlit_map_basemap_saved"] == MAP_BASEMAP_DEFAULT
     assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
+    assert st.session_state["streamlit_map_height_px_saved"] == MAP_HEIGHT_PX_DEFAULT
     assert st.session_state["streamlit_map_height_px"] == MAP_HEIGHT_PX_DEFAULT
 
     st.session_state["streamlit_map_basemap"] = "__not_a_real_basemap__"
@@ -366,8 +392,8 @@ def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_st
     assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
 
 
-def test_inject_spinner_theme_css_idempotent(streamlit_stub) -> None:
-    from explorer.app.streamlit.app_constants import SPINNER_THEME_CSS, SPINNER_THEME_CSS_INJECTED_KEY
+def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
+    from explorer.app.streamlit.app_constants import SPINNER_THEME_CSS
     from explorer.app.streamlit.app_map_ui import inject_spinner_theme_css
 
     st = streamlit_stub
@@ -375,10 +401,10 @@ def test_inject_spinner_theme_css_idempotent(streamlit_stub) -> None:
     inject_spinner_theme_css()
     assert len(st.html_calls) == 1
     assert st.html_calls[0] == SPINNER_THEME_CSS.strip()
-    assert st.session_state[SPINNER_THEME_CSS_INJECTED_KEY] is True
     st.html_calls.clear()
     inject_spinner_theme_css()
-    assert st.html_calls == []
+    assert len(st.html_calls) == 1
+    assert st.html_calls[0] == SPINNER_THEME_CSS.strip()
 
 
 def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit_stub) -> None:
@@ -403,10 +429,10 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
 
     from explorer.app.streamlit import streamlit_theme
 
-    streamlit_stub.markdown_calls.clear()
+    streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css()
-    assert streamlit_stub.markdown_calls
-    style_blob = streamlit_stub.markdown_calls[-1][0][0]
+    assert streamlit_stub.html_calls
+    style_blob = streamlit_stub.html_calls[-1]
     assert "<style>" in style_blob
     assert CHECKLIST_STATS_TABLE_CSS in style_blob
     assert streamlit_theme.CHECKLIST_STATS_HTML_TAB_SURFACE_CSS in style_blob
@@ -424,15 +450,40 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
 def test_inject_streamlit_checklist_css_appends_extra_css(streamlit_stub) -> None:
     from explorer.app.streamlit import streamlit_theme
 
-    streamlit_stub.markdown_calls.clear()
+    streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css("/*extra-tab*/")
-    style_blob = streamlit_stub.markdown_calls[-1][0][0]
+    style_blob = streamlit_stub.html_calls[-1]
     assert "/*extra-tab*/" in style_blob
+
+
+def test_inject_main_tab_panel_top_compact_css_emits_selectors(streamlit_stub) -> None:
+    from explorer.app.streamlit import streamlit_theme
+
+    streamlit_stub.html_calls.clear()
+    streamlit_theme.inject_main_tab_panel_top_compact_css()
+    assert streamlit_stub.html_calls
+    blob = streamlit_stub.html_calls[-1]
+    assert "<style>" in blob and "</style>" in blob
+    assert '[data-baseweb="tab-panel"]' in blob
+    assert 'div[role="tabpanel"]' in blob
+    assert "padding-top:" in blob
+
+
+def test_inject_app_header_css_emits_pebird_header(streamlit_stub) -> None:
+    from explorer.app.streamlit import streamlit_theme
+
+    streamlit_stub.html_calls.clear()
+    streamlit_theme.inject_app_header_css()
+    blob = streamlit_stub.html_calls[-1]
+    assert ".pebird-app-header" in blob
+    assert "h1" in blob and "p" in blob
+    assert "margin-bottom" in blob and "padding-bottom" in blob
 
 
 def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) -> None:
     from explorer.app.streamlit.app_map_ui import sidebar_footer_links
     from explorer.app.streamlit.streamlit_ui_constants import (
+        BUY_ME_A_COFFEE_URL,
         EBIRD_PROFILE_URL,
         GITHUB_REPO_URL,
         INSTAGRAM_PROFILE_URL,
@@ -451,3 +502,5 @@ def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) 
     assert EBIRD_PROFILE_URL in combined
     assert INSTAGRAM_PROFILE_URL in combined
     assert fixed_docs in combined
+    assert BUY_ME_A_COFFEE_URL in combined
+    assert "Buy me a coffee</a>" in combined

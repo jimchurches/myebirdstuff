@@ -93,6 +93,31 @@ Preserve cache correctness.
 
 ---
 
+### 5.5. Code as if you are being mentored (and graded)
+
+Assume an experienced teacher/mentor is reviewing every change for **readability, discoverability, and maintainability**.
+
+Act like you are writing for:
+
+- a Year 12 student who is learning good engineering habits, and
+- a future maintainer who did not write the code.
+
+Expectations (the “marking rubric”):
+
+- Prefer **clear names** over abbreviations (`date_filter_status_line` not `dfs`).
+- Keep **functions small** and single-purpose; split large modules when they become hard to navigate.
+- Make invariants obvious (e.g. document hidden/workframe columns like `_base`, `_family` at the point they are introduced).
+- Avoid “magic”: centralize shared strings/keys/constants, avoid clever indirection unless it pays for itself.
+- Choose the simplest design that keeps the UI thin and the logic testable.
+- Optimise only when necessary, and do it transparently (measure → change → re-check).
+
+Mindset:
+
+> Write Python the way a highly regarded engineer who loves teaching would want it written:
+> neat, easy to read, efficient where it matters, and easy to follow.
+
+---
+
 ### 6. Avoid unnecessary dependencies
 
 Do not introduce:
@@ -170,6 +195,8 @@ Do not duplicate HTML in UI code — use shared formatters.
 ### Defaults
 
 - **`explorer/app/streamlit/defaults.py`** — **Developer tweakables**: map cluster options, pin **size / stroke / opacity**, legend dot sizes, theme hex, basemap list, map height slider bounds, layout widths, temporary map debug (live zoom). Edit here to change look/behaviour without hunting core modules.
+
+- **Map marker design utility** — separate Streamlit app (not user-facing): `streamlit run explorer/app/streamlit/design_map_app.py`. Previews roles and exports scheme dicts; see [development.md](development.md#map-marker-colour-design-utility-developers).
 
 - **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner text and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
 

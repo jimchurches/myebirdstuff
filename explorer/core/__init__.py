@@ -1,9 +1,64 @@
-# Personal eBird Explorer — dataset loading and utilities (``explorer.core`` + ``explorer.presentation``).
+"""Compatibility façade for the ``explorer.core`` *package* (the ``explorer/core/`` directory).
+
+This file is **not** “core domain logic only.” It exports two different layers:
+
+**1. Domain / data (eager imports)** — Submodules alongside this file: loading and
+cleaning data, stats, working sets, taxonomy, species logic, checklist payloads, etc.
+Examples: ``load_dataset``, ``compute_rankings``, :class:`WorkingSet`.
+
+**2. Presentation (re-exported)** — HTML builders, rankings tables, map helpers, and
+maintenance formatters from :mod:`explorer.presentation`, plus several map-related
+names loaded lazily from :mod:`explorer.presentation.map_renderer` and
+:mod:`explorer.core.map_controller` (see ``_LAZY_IMPORTS``). Examples:
+``rankings_table``, ``create_map``, ``format_checklist_stats_bundle``.
+
+**Why both appear here** — Older scripts and notebooks used ``from explorer.core import …``
+for a single import surface. That convenience blurs layering for newcomers.
+
+**What to do in new code**
+
+- Import **domain** from the specific submodule, e.g.
+  ``from explorer.core.stats import compute_rankings``,
+  ``from explorer.core.map_prep import prepare_all_locations_map_context``,
+  ``from explorer.core.family_map_compute import build_family_location_pins``.
+- Import **HTML / Folium / table rendering** from :mod:`explorer.presentation` (or
+  ``explorer.presentation.<module>``) explicitly.
+- Treat this module as a **backward-compatible barrel**, not the definition of
+  “what core means.”
+
+Optional heavy stacks (Whoosh, Folium) load only when lazy names are accessed.
+"""
 
 from __future__ import annotations
 
 import importlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+# IDE / static-analysis friendliness:
+# ``explorer.core`` exposes some symbols lazily via ``__getattr__``. At runtime this keeps optional
+# stacks (Folium, Whoosh) from being imported unless needed, but some editors cannot “jump to
+# definition” for lazy names. The TYPE_CHECKING block below makes those names visible to type
+# checkers and many IDEs without changing runtime imports.
+if TYPE_CHECKING:  # pragma: no cover
+    from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
+    from explorer.presentation.checklist_stats_display import (
+        format_checklist_stats_bundle,
+        format_rankings_tab_html,
+    )
+    from explorer.presentation.map_renderer import (
+        build_all_species_banner_html,
+        build_legend_html,
+        build_location_popup_html,
+        build_species_banner_html,
+        build_visit_info_html,
+        classify_locations,
+        create_map,
+        format_sighting_row,
+        format_visit_time,
+        pin_legend_item,
+        popup_scroll_script,
+        resolve_lifer_last_seen,
+    )
 
 from explorer.core.constants import (
     COUNTRY_TAB_SORT_ALPHABETICAL,
@@ -64,10 +119,6 @@ from explorer.presentation.maintenance_display import (
 # Whoosh / Folium are heavy optional stacks for search + map UIs. Lazy-load so
 # lightweight imports do not require whoosh or folium installed.
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
-    "whoosh_common_name_suggestions": (
-        "explorer.core.species_search",
-        "whoosh_common_name_suggestions",
-    ),
     "MapOverlayResult": ("explorer.core.map_controller", "MapOverlayResult"),
     "build_species_overlay_map": (
         "explorer.core.map_controller",
@@ -169,5 +220,4 @@ __all__ = [
     "format_map_maintenance_html",
     "format_sex_notation_maintenance_html",
     "format_incomplete_checklists_maintenance_html",
-    "whoosh_common_name_suggestions",
 ]

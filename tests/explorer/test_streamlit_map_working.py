@@ -16,7 +16,7 @@ pytest.importorskip("streamlit", reason="explorer.app.streamlit.map_working is f
 
 from explorer.core.data_loader import load_dataset  # noqa: E402
 
-from explorer.app.streamlit.map_working import (
+from explorer.app.streamlit.map_working import (  # noqa: E402
     date_bounds_from_df,
     date_inception_to_today_default,
     folium_map_to_html_bytes,

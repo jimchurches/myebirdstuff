@@ -16,7 +16,8 @@ same way.
 ``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
 include a narrow leading **Rank** column with soft accent styling (refs `#83`). **Species: Not seen in
 the past year** is the last expander under Interesting Lists; it lists countable species with no
-observation in the trailing twelve months and is not Top-N–capped (refs `#106`; geographic filters are `#108`).
+observation in the trailing twelve months on the **full export** and is not Top-N–capped (refs `#106`).
+A hint points to the **Country** tab for the in-country, working-set–scoped variant (refs `#108`).
 """
 
 from __future__ import annotations

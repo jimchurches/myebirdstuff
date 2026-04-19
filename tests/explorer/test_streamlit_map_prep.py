@@ -5,10 +5,13 @@ from collections import OrderedDict
 import pandas as pd
 import pytest
 
+from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.map_controller import build_species_overlay_map
 from explorer.core.species_logic import base_species_for_lifer
 from explorer.core.map_prep import (
     data_signature_for_caches,
+    mean_center_from_location_data,
     prepare_all_locations_map_context,
 )
 
@@ -47,6 +50,7 @@ def test_prepare_all_locations_map_context_matches_controller_contract():
         species_url_fn=None,
         base_species_fn=base_species_for_lifer,
         map_view_mode="all",
+        visit_marker_scheme=active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT),
     )
     assert r.warning is None
     assert r.map is not None
@@ -62,3 +66,17 @@ def test_prepare_empty_raises():
 def test_data_signature_for_caches():
     df = _tiny_df()
     assert data_signature_for_caches(df, "disk") == ("disk", 1, "S1")
+
+
+def test_mean_center_from_location_data():
+    df = _tiny_df()
+    ctx = prepare_all_locations_map_context(df)
+    c = mean_center_from_location_data(ctx["effective_location_data"])
+    assert c is not None
+    assert c[0] == pytest.approx(-35.0)
+    assert c[1] == pytest.approx(149.0)
+
+
+def test_mean_center_from_location_data_empty_returns_none():
+    assert mean_center_from_location_data(pd.DataFrame()) is None
+    assert mean_center_from_location_data(None) is None

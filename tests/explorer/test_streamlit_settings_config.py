@@ -41,14 +41,10 @@ def test_write_sparse_preserves_unknown_keys(tmp_path):
             "popup_scroll_hint": "shading",
             "mark_lifer": True,
             "mark_last_seen": True,
-            "default_color": "green",
-            "default_fill": "lightgreen",
-            "species_color": "purple",
-            "species_fill": "red",
-            "lifer_color": "purple",
-            "lifer_fill": "yellow",
-            "last_seen_color": "purple",
-            "last_seen_fill": "lightgreen",
+            "basemap": "default",
+            "map_height_px": 720,
+            "cluster_all_locations": True,
+            "map_marker_colour_scheme": 2,
         },
         "tables_lists": {"rankings_top_n": 200, "rankings_visible_rows": 16},
         "yearly_summary": {"recent_column_count": 10},
@@ -61,6 +57,7 @@ def test_write_sparse_preserves_unknown_keys(tmp_path):
     raw = yaml.safe_load(p.read_text(encoding="utf-8"))
     assert raw["custom"]["keep"] is True
     assert raw["map_display"]["popup_sort_order"] == "descending"
+    assert raw["map_display"]["map_marker_colour_scheme"] == 2
     assert "tables_lists" not in raw  # defaults omitted
 
 
@@ -84,14 +81,10 @@ def test_config_path_yaml_roundtrip(tmp_path):
             "popup_scroll_hint": "shading",
             "mark_lifer": True,
             "mark_last_seen": True,
-            "default_color": "green",
-            "default_fill": "lightgreen",
-            "species_color": "purple",
-            "species_fill": "red",
-            "lifer_color": "purple",
-            "lifer_fill": "yellow",
-            "last_seen_color": "purple",
-            "last_seen_fill": "lightgreen",
+            "basemap": "default",
+            "map_height_px": 720,
+            "cluster_all_locations": True,
+            "map_marker_colour_scheme": 2,
         },
         "tables_lists": {"rankings_top_n": 200, "rankings_visible_rows": 16},
         "yearly_summary": {"recent_column_count": 10},
@@ -110,4 +103,5 @@ def test_config_path_yaml_roundtrip(tmp_path):
     cfg, warn = load_settings_from_config_path(str(p))
     assert warn is None
     assert cfg["map_display"]["popup_sort_order"] == "descending"
+    assert cfg["map_display"]["map_marker_colour_scheme"] == 2
 

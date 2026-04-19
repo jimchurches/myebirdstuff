@@ -25,11 +25,16 @@ CHECKLIST_STATS_TOP_N_TABLE_LIMIT = 200
 
 SPECIES_SEARCH_MAX_OPTIONS = 12
 SPECIES_SEARCH_MIN_QUERY_LEN = 3
-SPECIES_SEARCH_DEBOUNCE_MS = 400
+SPECIES_SEARCH_DEBOUNCE_MS = 500
 SPECIES_SEARCH_PLACEHOLDER = "Type species name…"
-SPECIES_SEARCH_CAPTION = (
-    "Type at least three letters. Searches common and scientific names."
-)
+# Map sidebar “Search tips” expander: paragraphs separated by blank lines; rendered with ``st.caption``.
+SPECIES_SEARCH_CAPTION = """Start typing to search for a species.
+
+You can use common names, scientific names, or family groups (e.g. Australasian Robins).
+
+Tip: "Show only selected species" defaults to on for performance; turn it off to see all locations with the selected species highlighted."""
+# Sidebar expander title (Map → Species locations); body is SPECIES_SEARCH_CAPTION.
+SPECIES_SEARCH_HELP_EXPANDER_LABEL = "Search tips"
 SPECIES_SEARCH_EDIT_AFTER_SUBMIT = "option"
 SPECIES_SEARCH_RERUN_SCOPE = "fragment"
 
@@ -78,11 +83,13 @@ CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
 
 CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE = 5
 CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS = 750
-CHECKLIST_STATS_SPINNER_EMOJI_INDENT_REM = 2.75
 
 # ---------------------------------------------------------------------------
 # Sidebar footer
 # ---------------------------------------------------------------------------
+
+# GitHub / eBird / Instagram / Explorer docs — outline pill + export button use the same (refs #127).
+SIDEBAR_FOOTER_LINK_HEX = "#868e96"
 
 GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
 EBIRD_PROFILE_URL = "https://ebird.org/profile/MjkxNDYyNQ"
@@ -98,3 +105,7 @@ def explorer_readme_github_url() -> str:
 
     return explorer_readme_github_page_url(GITHUB_REPO_URL)
 INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
+
+# Optional “Support this project” (Buy Me a Coffee). Override or hide with env ``STREAMLIT_BUYMEACOFFEE_URL``
+# (set to ``""`` in the environment to hide the block when the constant would otherwise show; refs #127).
+BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/jimchurches"

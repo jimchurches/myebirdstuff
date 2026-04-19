@@ -79,7 +79,7 @@ Streamlit UI
 | species_logic | Filtering + countable species rules |
 | stats | Rankings, summaries, country stats |
 | working_set | Rebuild filtered dataset |
-| map_controller | Map orchestration |
+| map_controller | Map orchestration (entry point; see `map_overlay_*` under `explorer/core/`) |
 | map_renderer | Folium + popup rendering |
 | taxonomy | eBird taxonomy lookup |
 | duplicate_checks | Maintenance checks |
@@ -117,6 +117,15 @@ Streamlit UI
 # Design Principles
 
 ## Data
+
+## Imports and layering (discoverability)
+
+- **Prefer explicit submodule imports in new code**: e.g. `from explorer.core.stats import yearly_summary_stats`.
+- Treat `explorer.core` (the package entry module `explorer/core/__init__.py`) as a **compatibility barrel**.
+  It re-exports some presentation helpers and uses **lazy imports** for optional heavy stacks.
+- If your IDE can’t jump to definitions for lazy names, import from the defining module directly
+  (for example `explorer.presentation.map_renderer`) or search for the name in
+  `explorer/core/__init__.py` under `_LAZY_IMPORTS`.
 
 - Dataset is static during runtime
 - No mutation of main dataframe
@@ -160,6 +169,38 @@ explorer/app/streamlit/defaults.py
 ```
 
 **Fixed UI strings and URLs** (tab names, spinner emoji strip, footer links) live in `explorer/app/streamlit/streamlit_ui_constants.py`. **Persisted settings schema defaults** (YAML-backed) live in `explorer/core/settings_schema_defaults.py`.
+
+### Map marker colour schemes (data model and usage)
+
+Presets are **frozen dataclasses** in `explorer/core/map_marker_scheme_model.py`: a top-level `MapMarkerColourScheme` bundles `global_defaults` (default fill/stroke hex, radius, fill opacity, stroke weight) plus nested styles for each map mode — e.g. `all_locations` (visit pins + optional `cluster` tier colours), `species_locations`, `species_map_background`, `lifer_locations`, `family_locations` (required `density_fill_hex` + `legend_highlight_band_index`; optional `density_stroke_hex`, radii, stroke weights, highlight stroke, fill opacity — unset fields inherit globals per `map_marker_colour_resolve`). Popup width and initial `fit_bounds` for the **family-locations** map are **not** part of the colour scheme; they live as `MAP_FAMILY_MAP_*` constants in `explorer/app/streamlit/defaults.py` (see `explorer/core/family_map_folium.py`).
+
+**Where presets live:** `explorer/app/streamlit/defaults.py` as `MAP_MARKER_COLOUR_SCHEME_1` (etc.). The active index is `MAP_MARKER_ACTIVE_COLOUR_SCHEME`; `active_map_marker_colour_scheme(index)` returns the scheme used by the app and tests. New slots require wiring in that helper.
+
+**Resolution:** `explorer/core/map_marker_colour_resolve.py` turns scheme + optional overrides into concrete Folium colours and geometry. Per-channel rules are documented there (fill/stroke independently: role-specific hex, then globals, then scheme defaults / catch-all). Call sites include species-filtered visit pins (`resolve_species_visit_pin` — roles such as species emphasis, lifer, last-seen, background), lifer-locations map (`resolve_lifer_overlay_pin_params` — lifer vs subspecies), and family density bands (`resolve_family_band_colours`). Folium builders under `explorer/core/` (e.g. `map_overlay_visit_map.py`, `family_map_folium.py`) consume those helpers so the design utility and production maps stay aligned.
+
+Omitted or `None` per-collection fields are intended to **inherit** `global_defaults` where the model allows it (including optional `family_locations.fill_opacity`); the design utility’s export tab emits sparse Python to match (see `explorer/presentation/design_map_export.py`).
+
+### Map marker colour design utility (developers)
+
+The main explorer does **not** expose this in the product UI; it is a **developer-only** Streamlit app for building and sanity-checking `MapMarkerColourScheme` presets in `explorer/app/streamlit/defaults.py` before merge.
+
+**Run** (repository root):
+
+```
+streamlit run explorer/app/streamlit/design_map_app.py
+```
+
+| Piece | Location |
+|-------|----------|
+| Streamlit UI (sliders, export) | `explorer/app/streamlit/design_map_app.py` |
+| Dummy Folium preview map | `explorer/presentation/design_map_preview.py` |
+| Paste-ready export | `explorer/presentation/design_map_export.py` |
+| Hierarchical hex resolution (shared with production maps that use schemes) | `explorer/core/map_marker_colour_resolve.py` |
+| Preset dataclasses / registration | `explorer/app/streamlit/defaults.py` |
+
+**All locations — MarkerCluster “cluster icons”:** the plugin expects the same DOM as its default `iconCreateFunction` — **one** inner `<div>` wrapping the count `<span>`. Extra nested divs interact badly with `.marker-cluster div { … }` sizing rules and look offset or triple-stacked. Custom colours in this repo use that single inner div: **fill** = `background-color`, **border** = `border`, **halo** = a `box-shadow` ring, and the default tier background on the icon root is cleared so it does not add another coloured layer. Hex tier colours sit on `MapMarkerClusterStyle` under **`all_locations.cluster`**; optional **opacity** and **spread/width** fields there (`inner_fill_opacity`, `halo_opacity`, `border_opacity`, `halo_spread_px`, `border_width_px`; defaults `MAP_MARKER_CLUSTER_*_DEFAULT` in `defaults.py`) approximate the plugin’s semi-transparent rgba layers without nested divs. Implementation: `explorer/core/map_overlay_visit_map.py`.
+
+> The website [Coolors](https://coolors.co/?home) is an excellent resource when working on colour schemes.
 
 ---
 
