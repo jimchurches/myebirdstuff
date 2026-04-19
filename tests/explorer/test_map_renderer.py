@@ -447,6 +447,8 @@ def test_build_location_popup_html_visits_only():
     assert "My Park" in html
     assert "ebird.org/lifelist/L12345" in html
     assert "Visited:" in html
+    assert "pebird-map-popup__visited-block" in html
+    assert "pebird-map-popup__visit-dates" in html
     assert "Seen:" not in html
     assert "popup-scroll-wrapper" in html
 

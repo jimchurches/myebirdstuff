@@ -295,9 +295,18 @@ def format_family_location_popup_html(
     esc_title = html_module.escape(title)
     if location_page_url and str(location_page_url).strip():
         esc_href = html_module.escape(str(location_page_url).strip(), quote=True)
-        head = f'<div style="font-weight:600;margin-bottom:0.35em;"><a href="{esc_href}" target="_blank" rel="noopener noreferrer">{esc_title}</a></div>'
+        head = (
+            '<div class="pebird-map-popup__heading-row" style="margin-bottom:4px;">'
+            f'<a class="pebird-map-popup__location-heading" href="{esc_href}" '
+            f'target="_blank" rel="noopener noreferrer">{esc_title}</a>'
+            "</div>"
+        )
     else:
-        head = f'<div style="font-weight:600;margin-bottom:0.35em;">{esc_title}</div>'
+        head = (
+            '<div class="pebird-map-popup__heading-row" style="margin-bottom:4px;">'
+            f'<span class="pebird-map-popup__location-heading">{esc_title}</span>'
+            "</div>"
+        )
     lines: list[str] = []
     url_map = species_url_by_common or {}
     for name in pin.common_name_lines:

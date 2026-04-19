@@ -125,6 +125,21 @@ def map_popup_theme_stylesheet() -> str:
   font-size: inherit;
   line-height: inherit;
 }}
+/* Family map / no-URL title: match linked ``.pebird-map-popup__location-heading`` colour (#158). */
+.pebird-map-popup span.pebird-map-popup__location-heading {{
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}}
+/* All-locations visit list: tight gap between section label and date links (#158). */
+.pebird-map-popup__visited-block .pebird-map-popup__section-label {{
+  margin: 0 0 0.15em 0;
+}}
+.pebird-map-popup__visit-dates {{
+  margin: 0;
+  padding: 0;
+}}
 .pebird-map-popup__obs-count {{
   color: {EXPLORER_UI_MUTED};
   font-weight: 400;
@@ -486,7 +501,7 @@ def build_location_popup_html(
     lifer_heading_html: str = (
         '<div class="pebird-map-popup__section-label">Lifers (first recorded here):</div>'
     ),
-    location_heading_margin_px: int = 6,
+    location_heading_margin_px: int = 4,
 ):
     """Build the full popup HTML for a single map marker.
 
@@ -504,6 +519,8 @@ def build_location_popup_html(
             (used by the lifer-map popup simplification; refs #104).
         lifer_heading_html: Optional heading HTML prepended when *lifer_species_html*
             is provided. Pass ``""`` to omit the heading (used by lifer-map popups).
+        location_heading_margin_px: Gap below the location title row (default ``4``). Species-map
+            popups use ``6`` via :func:`build_species_map_location_popup_html` (#158).
 
     Returns:
         Complete popup HTML string with scroll wrapper.
@@ -523,7 +540,10 @@ def build_location_popup_html(
     else:
         extra_section = ""
     visited_section = (
-        f'<div class="pebird-map-popup__section-label">Visited:</div><br>{visit_info_html}'
+        '<div class="pebird-map-popup__visited-block">'
+        '<div class="pebird-map-popup__section-label">Visited:</div>'
+        f'<div class="pebird-map-popup__visit-dates">{visit_info_html}</div>'
+        "</div>"
         if show_visit_history
         else ""
     )
