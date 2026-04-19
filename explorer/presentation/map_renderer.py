@@ -80,7 +80,14 @@ def map_popup_theme_stylesheet() -> str:
   max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px));
   vertical-align: top;
 }}
-.pebird-map-popup__heading-row,
+.pebird-map-popup__heading-row {{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  /* Leaflet's close control sits top-right; long titles must not run under it. */
+  padding-right: 2rem;
+}}
 .pebird-map-popup__scroll {{
   width: fit-content;
   max-width: 100%;
@@ -117,8 +124,13 @@ def map_popup_theme_stylesheet() -> str:
   color: {EXPLORER_UI_PRIMARY_GREEN};
   text-decoration: none;
 }}
-/* Location title link: heavier than body links (refs #70). */
+/* Location title link: heavier than body links (refs #70). Block + full row width so wrapping
+   respects the popup box (inline + fit-content chain was letting long names spill past the card). */
 .pebird-map-popup a.pebird-map-popup__location-heading {{
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   font-weight: 600;
   overflow-wrap: anywhere;
   word-break: break-word;
