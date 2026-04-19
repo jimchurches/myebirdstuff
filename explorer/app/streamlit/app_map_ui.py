@@ -404,7 +404,7 @@ def species_searchbox_fragment() -> None:
         _search,
         key=_species_searchbox_widget_key(),
         placeholder=SPECIES_SEARCH_PLACEHOLDER,
-        label="Species",
+        label=None,
         default=search_default,
         default_searchterm=default_searchterm,
         debounce=SPECIES_SEARCH_DEBOUNCE_MS,

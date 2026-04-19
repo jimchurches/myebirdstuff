@@ -285,11 +285,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
 
         with st.sidebar:
             st.markdown("**Species**")
-            with st.expander(SPECIES_SEARCH_HELP_EXPANDER_LABEL, expanded=False):
-                # Match Yearly Summary helper line (``st.caption`` for “Showing results…”).
-                for _para in (p.strip() for p in SPECIES_SEARCH_CAPTION.split("\n\n")):
-                    if _para:
-                        st.caption(_para)
             species_searchbox_fragment()
             if STREAMLIT_SPECIES_HIDE_ONLY_KEY not in st.session_state:
                 st.session_state[STREAMLIT_SPECIES_HIDE_ONLY_KEY] = MAP_SPECIES_HIDE_ONLY_DEFAULT
@@ -297,6 +292,11 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 "Show only selected species",
                 key=STREAMLIT_SPECIES_HIDE_ONLY_KEY,
             )
+            with st.expander(SPECIES_SEARCH_HELP_EXPANDER_LABEL, expanded=False):
+                # Match Yearly Summary helper line (``st.caption`` for “Showing results…”).
+                for _para in (p.strip() for p in SPECIES_SEARCH_CAPTION.split("\n\n")):
+                    if _para:
+                        st.caption(_para)
 
         species_pick_common = st.session_state.get(SESSION_SPECIES_PICK_KEY)
         if species_pick_common:

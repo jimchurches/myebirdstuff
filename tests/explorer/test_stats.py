@@ -5,6 +5,7 @@ import pandas as pd
 from explorer.core.stats import (
     checklist_country_keys,
     country_summary_stats,
+    format_observed_count_for_map_popup,
     safe_count,
     longest_streak,
     region_column,
@@ -41,6 +42,28 @@ class TestSafeCount:
 
     def test_plain_int(self):
         assert safe_count(42) == 42
+
+
+# ---------------------------------------------------------------------------
+# format_observed_count_for_map_popup
+# ---------------------------------------------------------------------------
+
+class TestFormatObservedCountForMapPopup:
+    def test_x_is_lowercase_x(self):
+        assert format_observed_count_for_map_popup("X") == "x"
+        assert format_observed_count_for_map_popup(" x ") == "x"
+
+    def test_numeric_strings(self):
+        assert format_observed_count_for_map_popup("5") == "5"
+        assert format_observed_count_for_map_popup(0) == "0"
+        assert format_observed_count_for_map_popup("0") == "0"
+
+    def test_missing_or_unparseable_not_zero(self):
+        assert format_observed_count_for_map_popup(None) == "unknown"
+        assert format_observed_count_for_map_popup(float("nan")) == "unknown"
+        assert format_observed_count_for_map_popup("") == "unknown"
+        assert format_observed_count_for_map_popup("   ") == "unknown"
+        assert format_observed_count_for_map_popup("nope") == "unknown"
 
 
 # ---------------------------------------------------------------------------

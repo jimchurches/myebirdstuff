@@ -20,7 +20,7 @@ import pandas as pd
 from branca.element import MacroElement
 from folium.template import Template
 
-from explorer.core.stats import safe_count
+from explorer.core.stats import format_observed_count_for_map_popup
 from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_DEFAULT,
@@ -47,6 +47,11 @@ EXPLORER_UI_MUTED = "rgba(26, 46, 34, 0.55)"
 # ``<details>`` ▶/▼ in map popups. Lighter than ``EXPLORER_UI_MUTED``; revert to that constant if preferred.
 EXPLORER_UI_POPUP_DETAILS_CHEVRON = "rgba(26, 46, 34, 0.36)"
 EXPLORER_UI_BORDER_PANEL = "rgba(31, 111, 84, 0.18)"
+
+# Species-map location popup: leave <details> open only for short lists so the popup stays scannable.
+# Per species section: open when this many observation rows or fewer (not number of taxa at the pin).
+SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS = 3
+SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS = 1
 
 
 def map_popup_theme_stylesheet() -> str:
@@ -75,7 +80,14 @@ def map_popup_theme_stylesheet() -> str:
   max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px));
   vertical-align: top;
 }}
-.pebird-map-popup__heading-row,
+.pebird-map-popup__heading-row {{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  /* Leaflet's close control sits top-right; long titles must not run under it. */
+  padding-right: 2rem;
+}}
 .pebird-map-popup__scroll {{
   width: fit-content;
   max-width: 100%;
@@ -112,8 +124,13 @@ def map_popup_theme_stylesheet() -> str:
   color: {EXPLORER_UI_PRIMARY_GREEN};
   text-decoration: none;
 }}
-/* Location title link: heavier than body links (refs #70). */
+/* Location title link: heavier than body links (refs #70). Block + full row width so wrapping
+   respects the popup box (inline + fit-content chain was letting long names spill past the card). */
 .pebird-map-popup a.pebird-map-popup__location-heading {{
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   font-weight: 600;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -124,6 +141,21 @@ def map_popup_theme_stylesheet() -> str:
   color: {EXPLORER_UI_TEXT_COLOR};
   font-size: inherit;
   line-height: inherit;
+}}
+/* Family map / no-URL title: match linked ``.pebird-map-popup__location-heading`` colour (#158). */
+.pebird-map-popup span.pebird-map-popup__location-heading {{
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}}
+/* All-locations visit list: tight gap between section label and date links (#158). */
+.pebird-map-popup__visited-block .pebird-map-popup__section-label {{
+  margin: 0 0 0.15em 0;
+}}
+.pebird-map-popup__visit-dates {{
+  margin: 0;
+  padding: 0;
 }}
 .pebird-map-popup__obs-count {{
   color: {EXPLORER_UI_MUTED};
@@ -298,6 +330,18 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   font-weight: 400;
   margin: 0;
 }}
+/* Species map only: secondary stats (first/last seen, high count) below the primary summary line (#162). */
+.pebird-map-banner__stats-secondary {{
+  font-size: calc(1em - 3px);
+}}
+/* Families map: optional line under family metrics when a species is highlighted (matches species-map wording). */
+.pebird-map-banner__family-selected-summary {{
+  display: block;
+  font-size: calc(1em - 2px);
+  font-weight: 400;
+  color: {EXPLORER_UI_MUTED};
+  margin-top: 6px;
+}}
 .pebird-map-banner__stats a {{
   color: inherit;
   text-decoration: none;
@@ -373,7 +417,8 @@ def format_sighting_row(r):
     else:
         date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
         time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
-    text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
+    count_disp = format_observed_count_for_map_popup(r.get("Count"))
+    text = f"{date_str} {time_str} — {r['Common Name']} ({count_disp})"
     cid = str(r.get("Submission ID", "") or "").strip()
     checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
     media_html = ""
@@ -400,7 +445,7 @@ def format_species_map_sighting_row(r: pd.Series) -> str:
         date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r.get("Date")) else "unknown"
         time_str = str(r["Time"]) if pd.notna(r.get("Time")) else "unknown"
         link_text = f"{date_str} {time_str}"
-    n = safe_count(r.get("Count"))
+    n = format_observed_count_for_map_popup(r.get("Count"))
     cid = str(r.get("Submission ID", "") or "").strip()
     checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
     media_html = ""
@@ -413,7 +458,7 @@ def format_species_map_sighting_row(r: pd.Series) -> str:
         '<div class="pebird-map-popup__obs-line">'
         f'<a href="{esc_attr(checklist_url)}" target="_blank" rel="noopener noreferrer">'
         f"{esc_text(link_text)}</a> "
-        f'<span class="pebird-map-popup__obs-count">(Observed: {n})</span>{media_html}'
+        f'<span class="pebird-map-popup__obs-count">(Observed: {esc_text(n)})</span>{media_html}'
         f"</div>"
     )
 
@@ -421,26 +466,35 @@ def format_species_map_sighting_row(r: pd.Series) -> str:
 def build_species_seen_sections_html(species_sightings: pd.DataFrame, *, ascending: bool) -> str:
     """Group *species_sightings* by ``Common Name``; one ``<details>`` block per taxon (refs #145).
 
-    Multiple taxa: sections start **collapsed**. A single taxon: that section has the HTML ``open``
-    attribute so observations show immediately.
+    The summary line matches the visit list pattern, ``Name: (n)``, where *n* is the number of
+    observation rows for that species at this pin (not the sum of ``Count``).
+
+    Each section gets the HTML ``open`` attribute when that species has at most
+    :data:`SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS` rows at this location. Longer
+    lists start collapsed so the popup is not filled with one species' history.
     """
     if species_sightings.empty or "Common Name" not in species_sightings.columns:
         return ""
     work = species_sightings.copy()
     work["Common Name"] = work["Common Name"].fillna("Unknown")
     names = sorted(work["Common Name"].unique(), key=lambda x: str(x).lower())
-    n_taxa = len(names)
     parts: list[str] = []
     for common_name in names:
         sub = work[work["Common Name"] == common_name]
         if "datetime" in sub.columns:
             sub = sub.sort_values("datetime", ascending=ascending)
+        n_obs = len(sub)
         rows = "".join(format_species_map_sighting_row(r) for _, r in sub.iterrows())
-        esc_name = esc_text(str(common_name))
-        open_attr = " open" if n_taxa == 1 else ""
+        # Match ``Visited: (n)`` on the visit list: observation count = rows at this pin, not sum(Count).
+        summary_label = esc_text(f"{common_name}: ({n_obs})")
+        open_attr = (
+            " open"
+            if n_obs <= SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS
+            else ""
+        )
         parts.append(
             f'<details class="pebird-map-popup__species-seen"{open_attr}>'
-            f'<summary class="pebird-map-popup__section-label">{esc_name}:</summary>'
+            f'<summary class="pebird-map-popup__section-label">{summary_label}</summary>'
             f'<div class="pebird-map-popup__obs-list">{rows}</div>'
             f"</details>"
         )
@@ -482,7 +536,7 @@ def build_location_popup_html(
     lifer_heading_html: str = (
         '<div class="pebird-map-popup__section-label">Lifers (first recorded here):</div>'
     ),
-    location_heading_margin_px: int = 6,
+    location_heading_margin_px: int = 4,
 ):
     """Build the full popup HTML for a single map marker.
 
@@ -500,6 +554,8 @@ def build_location_popup_html(
             (used by the lifer-map popup simplification; refs #104).
         lifer_heading_html: Optional heading HTML prepended when *lifer_species_html*
             is provided. Pass ``""`` to omit the heading (used by lifer-map popups).
+        location_heading_margin_px: Gap below the location title row (default ``4``). Species-map
+            popups use ``6`` via :func:`build_species_map_location_popup_html` (#158).
 
     Returns:
         Complete popup HTML string with scroll wrapper.
@@ -519,7 +575,10 @@ def build_location_popup_html(
     else:
         extra_section = ""
     visited_section = (
-        f'<div class="pebird-map-popup__section-label">Visited:</div><br>{visit_info_html}'
+        '<div class="pebird-map-popup__visited-block">'
+        '<div class="pebird-map-popup__section-label">Visited:</div>'
+        f'<div class="pebird-map-popup__visit-dates">{visit_info_html}</div>'
+        "</div>"
         if show_visit_history
         else ""
     )
@@ -549,6 +608,10 @@ def build_species_map_location_popup_html(
 ) -> str:
     """Popup for **species-matching** markers on the species map: species sections first, visits in ``<details>``.
 
+    Species ``<details>`` blocks use :data:`SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS` rows per
+    taxon; the visit list uses :data:`SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS` for when to leave
+    that block open.
+
     Non-matching pins use :func:`build_location_popup_html` without species sections (refs #145).
     """
     loc_url = f"https://ebird.org/lifelist/{loc_id}"
@@ -561,8 +624,13 @@ def build_species_map_location_popup_html(
     summary_text = f"Visited: ({visit_record_count})"
     esc_summary = esc_text(summary_text)
     inner_visits = visit_info_html if (visit_info_html and str(visit_info_html).strip()) else ""
+    visits_open = (
+        " open"
+        if visit_record_count <= SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS
+        else ""
+    )
     details_block = (
-        f'<details class="pebird-map-popup__all-visits">'
+        f'<details class="pebird-map-popup__all-visits"{visits_open}>'
         f'<summary class="pebird-map-popup__section-label">{esc_summary}</summary>'
         f'<div class="pebird-map-popup__visit-list-inner">{inner_visits}</div>'
         f"</details>"
@@ -589,6 +657,15 @@ _LEGEND_POSITION = "position:fixed;bottom:10px;left:10px;z-index:1000;"
 def _banner_sep() -> str:
     """Muted separator between stat clauses (aligned with app chrome)."""
     return '<span class="pebird-map-banner__sep" aria-hidden="true">·</span>'
+
+
+def checklist_individual_stats_banner_fragment(n_checklists: int, n_individuals: int) -> str:
+    """HTML fragment for the species-map primary stats line (checklists and individuals)."""
+    sep_dot = _banner_sep()
+    return (
+        f'{n_checklists} checklist{"s" if n_checklists != 1 else ""}'
+        f'{sep_dot}{n_individuals} individual{"s" if n_individuals != 1 else ""}'
+    )
 
 
 def _banner_muted_line(text: str | None) -> str:
@@ -724,11 +801,8 @@ def build_species_banner_html(
         if species_url
         else title_esc
     )
+    line2 = checklist_individual_stats_banner_fragment(n_checklists, n_individuals)
     sep_dot = _banner_sep()
-    line2 = (
-        f'{n_checklists} checklist{"s" if n_checklists != 1 else ""}'
-        f'{sep_dot}{n_individuals} individual{"s" if n_individuals != 1 else ""}'
-    )
     line3_parts = []
     if first_seen_date:
         line3_parts.append(f"First seen: {_maybe_link(first_seen_date, first_seen_checklist_url)}")
@@ -741,7 +815,11 @@ def build_species_banner_html(
     return (
         f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
         f'<span class="pebird-map-banner__title">{title_html}</span>'
-        f'<div class="pebird-map-banner__stats">{line2}<br>{line3}<br>{line4}</div>'
+        f'<div class="pebird-map-banner__stats">'
+        f'<span class="pebird-map-banner__stats-primary">{line2}</span><br>'
+        f'<span class="pebird-map-banner__stats-secondary">{line3}</span><br>'
+        f'<span class="pebird-map-banner__stats-secondary">{line4}</span>'
+        f'</div>'
         f'{date_block}'
         f'</div>'
     )

@@ -39,6 +39,40 @@ def safe_count(x):
         return 0
 
 
+def format_observed_count_for_map_popup(raw) -> str:
+    """Format a ``Count`` cell for map marker popups (species / all-locations ``Seen:`` lines).
+
+    :func:`safe_count` maps ``X`` and unparseable values to ``0`` so checklist and
+    species totals stay consistent with eBird. For **display**, we must not show
+    ``Observed: 0`` when the export meant "present but uncounted" or the value
+    was missing — use ``x`` or ``unknown`` instead. A literal ``0`` in the data
+    still renders as ``0``.
+
+    Aggregations are unchanged; only popup HTML should call this.
+    """
+    if raw is None:
+        return "unknown"
+    try:
+        if pd.isna(raw):
+            return "unknown"
+    except TypeError:
+        pass
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return "unknown"
+        if s.upper() == "X":
+            return "x"
+        try:
+            return str(int(s, 10))
+        except ValueError:
+            return "unknown"
+    try:
+        return str(int(raw))
+    except (ValueError, TypeError):
+        return "unknown"
+
+
 # ---------------------------------------------------------------------------
 # Region helpers
 # ---------------------------------------------------------------------------
