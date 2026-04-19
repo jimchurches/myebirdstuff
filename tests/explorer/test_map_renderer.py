@@ -153,6 +153,21 @@ def test_format_species_map_sighting_row_media():
     assert 'title="media"' in html
 
 
+def test_format_species_map_sighting_row_count_x_not_zero():
+    row = pd.Series({
+        "Date": pd.Timestamp("2022-01-17"),
+        "Time": "23:59",
+        "Common Name": "Some Bird",
+        "Count": "X",
+        "Submission ID": "SCHK",
+        "ML Catalog Numbers": None,
+        "datetime": pd.Timestamp("2022-01-17 23:59"),
+    })
+    html = format_species_map_sighting_row(row)
+    assert "(Observed: x)" in html
+    assert "(Observed: 0)" not in html
+
+
 def test_build_species_seen_sections_two_common_names():
     df = pd.DataFrame({
         "Common Name": ["Grey Teal", "Pacific Golden Plover", "Grey Teal"],

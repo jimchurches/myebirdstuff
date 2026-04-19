@@ -20,7 +20,7 @@ import pandas as pd
 from branca.element import MacroElement
 from folium.template import Template
 
-from explorer.core.stats import safe_count
+from explorer.core.stats import format_observed_count_for_map_popup
 from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_DEFAULT,
@@ -400,7 +400,8 @@ def format_sighting_row(r):
     else:
         date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r["Date"]) else "unknown"
         time_str = str(r["Time"]) if pd.notna(r["Time"]) else "unknown"
-    text = f"{date_str} {time_str} — {r['Common Name']} ({r['Count']})"
+    count_disp = format_observed_count_for_map_popup(r.get("Count"))
+    text = f"{date_str} {time_str} — {r['Common Name']} ({count_disp})"
     cid = str(r.get("Submission ID", "") or "").strip()
     checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
     media_html = ""
@@ -427,7 +428,7 @@ def format_species_map_sighting_row(r: pd.Series) -> str:
         date_str = r["Date"].strftime("%Y-%m-%d") if pd.notna(r.get("Date")) else "unknown"
         time_str = str(r["Time"]) if pd.notna(r.get("Time")) else "unknown"
         link_text = f"{date_str} {time_str}"
-    n = safe_count(r.get("Count"))
+    n = format_observed_count_for_map_popup(r.get("Count"))
     cid = str(r.get("Submission ID", "") or "").strip()
     checklist_url = f"https://ebird.org/checklist/{cid}" if cid else "#"
     media_html = ""
@@ -440,7 +441,7 @@ def format_species_map_sighting_row(r: pd.Series) -> str:
         '<div class="pebird-map-popup__obs-line">'
         f'<a href="{esc_attr(checklist_url)}" target="_blank" rel="noopener noreferrer">'
         f"{esc_text(link_text)}</a> "
-        f'<span class="pebird-map-popup__obs-count">(Observed: {n})</span>{media_html}'
+        f'<span class="pebird-map-popup__obs-count">(Observed: {esc_text(n)})</span>{media_html}'
         f"</div>"
     )
 
