@@ -207,6 +207,8 @@ def render_prep_spinner_and_map_tab(
                             wf,
                             highlight_base_species=hl or None,
                         )
+                        base_to_common = bundle.get("base_to_common") or {}
+                        hl_label = (base_to_common.get(hl) or hl) if hl else ""
                         sel_counts = (
                             selected_species_checklist_individual_counts(wf, hl)
                             if hl and metrics
@@ -217,12 +219,11 @@ def render_prep_spinner_and_map_tab(
                                 metrics,
                                 selected_species_n_checklists=sel_counts[0] if sel_counts else None,
                                 selected_species_n_individuals=sel_counts[1] if sel_counts else None,
+                                selected_species_display_name=hl_label or None,
                             )
                             if metrics
                             else ""
                         )
-                        base_to_common = bundle.get("base_to_common") or {}
-                        hl_label = (base_to_common.get(hl) or hl) if hl else ""
                         hl_species_url = None
                         if hl and hl_label:
                             _u = species_url_fn(hl_label)

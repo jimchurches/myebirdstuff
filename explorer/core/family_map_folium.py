@@ -98,13 +98,15 @@ def build_family_map_banner_overlay_html(
     *,
     selected_species_n_checklists: int | None = None,
     selected_species_n_individuals: int | None = None,
+    selected_species_display_name: str | None = None,
 ) -> str:
     """Return HTML for the fixed top-right banner: family title plus taxonomy / recording summary.
 
     Reuses the shared ``pebird-map-banner`` layout used on other maps.
 
     When *selected_species_n_checklists* and *selected_species_n_individuals* are both set (species
-    highlight active), a third line repeats the species-map primary stats for continuity.
+    highlight active), a third line repeats the species-map primary stats for continuity. When
+    *selected_species_display_name* is non-empty, it is shown as ``Name: N checklists · M individuals``.
     """
     title = html_module.escape(metrics.family_name, quote=False)
     stats = html_module.escape(
@@ -115,10 +117,15 @@ def build_family_map_banner_overlay_html(
     )
     extra = ""
     if selected_species_n_checklists is not None and selected_species_n_individuals is not None:
-        inner = checklist_individual_stats_banner_fragment(
+        frag = checklist_individual_stats_banner_fragment(
             selected_species_n_checklists,
             selected_species_n_individuals,
         )
+        dn = (selected_species_display_name or "").strip()
+        if dn:
+            inner = f"{html_module.escape(dn, quote=False)}: {frag}"
+        else:
+            inner = frag
         extra = f'<span class="pebird-map-banner__family-selected-summary">{inner}</span>'
     return (
         f'<div class="pebird-map-banner" style="{_FAMILY_MAP_BANNER_POSITION}">'
