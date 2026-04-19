@@ -107,6 +107,23 @@ def test_family_map_banner_percent_omits_when_taxonomy_total_is_zero():
     assert "%" not in banner
 
 
+def test_family_map_banner_optional_selected_species_summary_line():
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="Whistlers",
+            total_species_taxonomy=12,
+            species_recorded_user=5,
+            locations_with_records=2,
+        ),
+        selected_species_n_checklists=4,
+        selected_species_n_individuals=9,
+    )
+    assert "12 in taxonomy" in banner
+    assert "pebird-map-banner__family-selected-summary" in banner
+    assert "4 checklists" in banner
+    assert "9 individuals" in banner
+
+
 def test_build_family_map_empty_pins_still_returns_map():
     m = build_family_composition_folium_map(())
     html = m._repr_html_()

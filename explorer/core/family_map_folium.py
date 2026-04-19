@@ -40,6 +40,7 @@ from explorer.core.map_marker_colour_resolve import (
 )
 from explorer.presentation.map_renderer import (
     build_legend_html,
+    checklist_individual_stats_banner_fragment,
     create_map,
     map_overlay_theme_stylesheet,
     map_popup_width_fix_script,
@@ -92,10 +93,18 @@ def _family_map_banner_recorded_clause(metrics: FamilyMapBannerMetrics) -> str:
     return f"{u} recorded"
 
 
-def build_family_map_banner_overlay_html(metrics: FamilyMapBannerMetrics) -> str:
+def build_family_map_banner_overlay_html(
+    metrics: FamilyMapBannerMetrics,
+    *,
+    selected_species_n_checklists: int | None = None,
+    selected_species_n_individuals: int | None = None,
+) -> str:
     """Return HTML for the fixed top-right banner: family title plus taxonomy / recording summary.
 
     Reuses the shared ``pebird-map-banner`` layout used on other maps.
+
+    When *selected_species_n_checklists* and *selected_species_n_individuals* are both set (species
+    highlight active), a third line repeats the species-map primary stats for continuity.
     """
     title = html_module.escape(metrics.family_name, quote=False)
     stats = html_module.escape(
@@ -104,10 +113,18 @@ def build_family_map_banner_overlay_html(metrics: FamilyMapBannerMetrics) -> str
         f"{metrics.locations_with_records} locations",
         quote=False,
     )
+    extra = ""
+    if selected_species_n_checklists is not None and selected_species_n_individuals is not None:
+        inner = checklist_individual_stats_banner_fragment(
+            selected_species_n_checklists,
+            selected_species_n_individuals,
+        )
+        extra = f'<span class="pebird-map-banner__family-selected-summary">{inner}</span>'
     return (
         f'<div class="pebird-map-banner" style="{_FAMILY_MAP_BANNER_POSITION}">'
         f'<span class="pebird-map-banner__title">{title}</span>'
         f'<div class="pebird-map-banner__stats">{stats}</div>'
+        f"{extra}"
         f"</div>"
     )
 

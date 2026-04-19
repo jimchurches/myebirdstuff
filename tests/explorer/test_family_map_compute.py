@@ -18,6 +18,7 @@ from explorer.core.family_map_compute import (
     highlight_species_choices_alphabetical,
     merge_taxonomy_detail_for_family_map,
     prepare_family_map_work_frame,
+    selected_species_checklist_individual_counts,
     taxonomy_species_count_for_family,
 )
 
@@ -100,6 +101,18 @@ def test_taxonomy_species_count_for_family():
     assert taxonomy_species_count_for_family(tax, "G1") == 3
     assert taxonomy_species_count_for_family(tax, "G2") == 1
     assert taxonomy_species_count_for_family(tax, "None") == 0
+
+
+def test_selected_species_checklist_individual_counts_matches_filter_species():
+    """Highlight totals use the same species filter as the species map (base + subspecies rows)."""
+    df = _tiny_export_rows()
+    work = prepare_family_map_work_frame(df, _base_to_family_stub())
+    wf = filter_work_to_family(work, "Whistlers and Allies")
+    # Rufous: two rows, one checklist (Submission ID C)
+    assert selected_species_checklist_individual_counts(wf, "pachycephala rufiventris") == (1, 2)
+    # Golden Whistler (Eastern) subspecies → base pachycephala pectoralis
+    assert selected_species_checklist_individual_counts(wf, "pachycephala pectoralis") == (1, 1)
+    assert selected_species_checklist_individual_counts(wf, "") is None
 
 
 def test_banner_metrics():

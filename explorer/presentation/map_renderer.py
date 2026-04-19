@@ -317,6 +317,14 @@ def map_banner_and_legend_theme_stylesheet() -> str:
 .pebird-map-banner__stats-secondary {{
   font-size: calc(1em - 3px);
 }}
+/* Families map: optional line under family metrics when a species is highlighted (matches species-map wording). */
+.pebird-map-banner__family-selected-summary {{
+  display: block;
+  font-size: calc(1em - 2px);
+  font-weight: 400;
+  color: {EXPLORER_UI_MUTED};
+  margin-top: 6px;
+}}
 .pebird-map-banner__stats a {{
   color: inherit;
   text-decoration: none;
@@ -615,6 +623,15 @@ def _banner_sep() -> str:
     return '<span class="pebird-map-banner__sep" aria-hidden="true">·</span>'
 
 
+def checklist_individual_stats_banner_fragment(n_checklists: int, n_individuals: int) -> str:
+    """HTML fragment for the species-map primary stats line (checklists and individuals)."""
+    sep_dot = _banner_sep()
+    return (
+        f'{n_checklists} checklist{"s" if n_checklists != 1 else ""}'
+        f'{sep_dot}{n_individuals} individual{"s" if n_individuals != 1 else ""}'
+    )
+
+
 def _banner_muted_line(text: str | None) -> str:
     if not text:
         return ""
@@ -748,11 +765,8 @@ def build_species_banner_html(
         if species_url
         else title_esc
     )
+    line2 = checklist_individual_stats_banner_fragment(n_checklists, n_individuals)
     sep_dot = _banner_sep()
-    line2 = (
-        f'{n_checklists} checklist{"s" if n_checklists != 1 else ""}'
-        f'{sep_dot}{n_individuals} individual{"s" if n_individuals != 1 else ""}'
-    )
     line3_parts = []
     if first_seen_date:
         line3_parts.append(f"First seen: {_maybe_link(first_seen_date, first_seen_checklist_url)}")

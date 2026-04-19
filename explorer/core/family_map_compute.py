@@ -20,7 +20,8 @@ from typing import Iterable
 
 import pandas as pd
 
-from explorer.core.species_logic import countable_species_vectorized
+from explorer.core.species_logic import countable_species_vectorized, filter_species
+from explorer.core.stats import safe_count
 
 UNMAPPED_FAMILY_LABEL = "Unmapped"
 
@@ -131,6 +132,29 @@ def taxonomy_species_count_for_family(taxonomy_merged: pd.DataFrame, family_name
     if sub.empty or "base_species" not in sub.columns:
         return 0
     return int(sub["base_species"].nunique())
+
+
+def selected_species_checklist_individual_counts(
+    work_family: pd.DataFrame,
+    highlight_base_species: str,
+) -> tuple[int, int] | None:
+    """Checklist and individual totals for the highlighted base species, same rules as the species map.
+
+    Uses :func:`~explorer.core.species_logic.filter_species` on *work_family* so subspecies rows
+    roll up to the base. Returns ``None`` when *highlight_base_species* is empty or there are no
+    matching rows.
+    """
+    hb = (highlight_base_species or "").strip().lower()
+    if not hb:
+        return None
+    if work_family is None or getattr(work_family, "empty", True):
+        return None
+    sub = filter_species(work_family, hb)
+    if sub.empty:
+        return None
+    n_ck = int(sub["Submission ID"].nunique())
+    n_ind = int(sub["Count"].apply(safe_count).sum())
+    return (n_ck, n_ind)
 
 
 def compute_family_map_banner_metrics(
