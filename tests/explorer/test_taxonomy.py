@@ -131,7 +131,11 @@ def test_subspecies_links_to_main_species():
 
 
 def test_hyphen_vs_space_locale_mismatch_jacky_winter():
-    """Spaced export name matches hyphenated taxonomy row (e.g. en_US vs en_AU) (#156)."""
+    """Spaced name from UI/export resolves when the loaded taxonomy only has a hyphenated key.
+
+    Mirrors locale skew: export wording can differ from the common-name column in the CSV
+    loaded for URLs (hyphen vs space, and letter case after hyphens).
+    """
     taxonomy._common_to_code = {"Jacky-winter": "jacwin1"}
     try:
         assert taxonomy.get_species_url("Jacky Winter") == "https://ebird.org/species/jacwin1"

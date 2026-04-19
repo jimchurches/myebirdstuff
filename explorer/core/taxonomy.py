@@ -75,7 +75,7 @@ def _hyphen_space_lookup_variants(name: str) -> tuple[str, ...]:
 
     eBird uses different conventions by locale (e.g. *en_US* ``Jacky-winter`` vs *en_AU*
     ``Jacky Winter``). Checklist exports follow the observer's regional names, which may not
-    match :func:`load_taxonomy`'s locale — try both forms before giving up (#156).
+    match :func:`load_taxonomy`'s locale, so we try both separator forms before giving up.
 
     Note: swapping ``' '`` → ``'-'`` preserves per-word casing, so ``Jacky Winter`` becomes
     ``Jacky-Winter`` while the CSV may use ``Jacky-winter``; :func:`_code_for_common_name`
@@ -91,7 +91,12 @@ def _hyphen_space_lookup_variants(name: str) -> tuple[str, ...]:
 
 
 def _normalize_common_name_for_lookup(name: str) -> str:
-    """Collapse hyphen vs space and case differences for fuzzy species-name matching (#156)."""
+    """Collapse hyphen vs space and case so two spellings of the same name compare equal.
+
+    Needed when naive space-to-hyphen substitution yields the wrong letter case after a
+    hyphen (e.g. ``Jacky-Winter``) while the taxonomy row uses eBird's casing (e.g.
+    ``Jacky-winter``), or when locale and export strings disagree on spaces vs hyphens.
+    """
     s = str(name).strip().replace("-", " ")
     while "  " in s:
         s = s.replace("  ", " ")
