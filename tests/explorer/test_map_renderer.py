@@ -181,12 +181,37 @@ def test_build_species_seen_sections_two_common_names():
         "ML Catalog Numbers": [None, None, None],
     })
     html = build_species_seen_sections_html(df, ascending=True)
-    assert html.count('<details class="pebird-map-popup__species-seen">') == 2
-    assert '<details class="pebird-map-popup__species-seen" open>' not in html
-    assert 'pebird-map-popup__section-label">Grey Teal:</summary>' in html
-    assert 'pebird-map-popup__section-label">Pacific Golden Plover:</summary>' in html
+    assert html.count('<details class="pebird-map-popup__species-seen" open>') == 2
+    assert 'pebird-map-popup__section-label">Grey Teal: (2)</summary>' in html
+    assert 'pebird-map-popup__section-label">Pacific Golden Plover: (1)</summary>' in html
     assert "pebird-map-popup__obs-list" in html
     assert html.index("Grey Teal") < html.index("Pacific Golden Plover")
+
+
+def test_build_species_seen_sections_many_observations_collapsed():
+    df = pd.DataFrame({
+        "Common Name": ["Red Wattlebird"] * 4,
+        "datetime": [pd.Timestamp(f"2025-01-{i:02d} 08:00") for i in range(1, 5)],
+        "Count": [1, 1, 1, 1],
+        "Submission ID": ["S1", "S2", "S3", "S4"],
+        "ML Catalog Numbers": [None, None, None, None],
+    })
+    html = build_species_seen_sections_html(df, ascending=True)
+    assert '<details class="pebird-map-popup__species-seen" open>' not in html
+    assert 'pebird-map-popup__section-label">Red Wattlebird: (4)</summary>' in html
+
+
+def test_build_species_seen_sections_three_observations_still_open():
+    df = pd.DataFrame({
+        "Common Name": ["Red Wattlebird"] * 3,
+        "datetime": [pd.Timestamp(f"2025-01-{i:02d} 08:00") for i in range(1, 4)],
+        "Count": [1, 1, 1],
+        "Submission ID": ["S1", "S2", "S3"],
+        "ML Catalog Numbers": [None, None, None],
+    })
+    html = build_species_seen_sections_html(df, ascending=True)
+    assert '<details class="pebird-map-popup__species-seen" open>' in html
+    assert 'pebird-map-popup__section-label">Red Wattlebird: (3)</summary>' in html
 
 
 def test_build_species_map_location_popup_html_collapsed_visits():
@@ -207,11 +232,33 @@ def test_build_species_map_location_popup_html_collapsed_visits():
         popup_ascending=True,
     )
     assert '<details class="pebird-map-popup__species-seen" open>' in html
+    assert '<details class="pebird-map-popup__all-visits" open>' not in html
     assert "details" in html and "pebird-map-popup__all-visits" in html
     assert "Visited: (3)" in html
     assert visit_fragment in html
     # Species map uses <summary>, not the standalone Visited block from build_location_popup_html.
     assert '<div class="pebird-map-popup__section-label">Visited:</div>' not in html
+
+
+def test_build_species_map_location_popup_html_visits_open_when_single_checklist():
+    species_df = pd.DataFrame({
+        "Common Name": ["Bird X"],
+        "datetime": [pd.Timestamp("2025-06-01 12:00")],
+        "Count": [5],
+        "Submission ID": ["SID1"],
+        "ML Catalog Numbers": [None],
+    })
+    visit_fragment = '<a href="https://ebird.org/checklist/V1">2025-01-01</a>'
+    html = build_species_map_location_popup_html(
+        "Hotspot",
+        "L99",
+        species_df,
+        visit_fragment,
+        visit_record_count=1,
+        popup_ascending=True,
+    )
+    assert '<details class="pebird-map-popup__all-visits" open>' in html
+    assert "Visited: (1)" in html
 
 
 # ---------------------------------------------------------------------------

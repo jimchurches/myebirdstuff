@@ -48,6 +48,11 @@ EXPLORER_UI_MUTED = "rgba(26, 46, 34, 0.55)"
 EXPLORER_UI_POPUP_DETAILS_CHEVRON = "rgba(26, 46, 34, 0.36)"
 EXPLORER_UI_BORDER_PANEL = "rgba(31, 111, 84, 0.18)"
 
+# Species-map location popup: leave <details> open only for short lists so the popup stays scannable.
+# Per species section: open when this many observation rows or fewer (not number of taxa at the pin).
+SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS = 3
+SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS = 1
+
 
 def map_popup_theme_stylesheet() -> str:
     """Return a ``<style>`` block for Leaflet popups (injected once per map via ``branca.element.Element``).
@@ -449,26 +454,35 @@ def format_species_map_sighting_row(r: pd.Series) -> str:
 def build_species_seen_sections_html(species_sightings: pd.DataFrame, *, ascending: bool) -> str:
     """Group *species_sightings* by ``Common Name``; one ``<details>`` block per taxon (refs #145).
 
-    Multiple taxa: sections start **collapsed**. A single taxon: that section has the HTML ``open``
-    attribute so observations show immediately.
+    The summary line matches the visit list pattern, ``Name: (n)``, where *n* is the number of
+    observation rows for that species at this pin (not the sum of ``Count``).
+
+    Each section gets the HTML ``open`` attribute when that species has at most
+    :data:`SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS` rows at this location. Longer
+    lists start collapsed so the popup is not filled with one species' history.
     """
     if species_sightings.empty or "Common Name" not in species_sightings.columns:
         return ""
     work = species_sightings.copy()
     work["Common Name"] = work["Common Name"].fillna("Unknown")
     names = sorted(work["Common Name"].unique(), key=lambda x: str(x).lower())
-    n_taxa = len(names)
     parts: list[str] = []
     for common_name in names:
         sub = work[work["Common Name"] == common_name]
         if "datetime" in sub.columns:
             sub = sub.sort_values("datetime", ascending=ascending)
+        n_obs = len(sub)
         rows = "".join(format_species_map_sighting_row(r) for _, r in sub.iterrows())
-        esc_name = esc_text(str(common_name))
-        open_attr = " open" if n_taxa == 1 else ""
+        # Match ``Visited: (n)`` on the visit list: observation count = rows at this pin, not sum(Count).
+        summary_label = esc_text(f"{common_name}: ({n_obs})")
+        open_attr = (
+            " open"
+            if n_obs <= SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS
+            else ""
+        )
         parts.append(
             f'<details class="pebird-map-popup__species-seen"{open_attr}>'
-            f'<summary class="pebird-map-popup__section-label">{esc_name}:</summary>'
+            f'<summary class="pebird-map-popup__section-label">{summary_label}</summary>'
             f'<div class="pebird-map-popup__obs-list">{rows}</div>'
             f"</details>"
         )
@@ -582,6 +596,10 @@ def build_species_map_location_popup_html(
 ) -> str:
     """Popup for **species-matching** markers on the species map: species sections first, visits in ``<details>``.
 
+    Species ``<details>`` blocks use :data:`SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS` rows per
+    taxon; the visit list uses :data:`SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS` for when to leave
+    that block open.
+
     Non-matching pins use :func:`build_location_popup_html` without species sections (refs #145).
     """
     loc_url = f"https://ebird.org/lifelist/{loc_id}"
@@ -594,8 +612,13 @@ def build_species_map_location_popup_html(
     summary_text = f"Visited: ({visit_record_count})"
     esc_summary = esc_text(summary_text)
     inner_visits = visit_info_html if (visit_info_html and str(visit_info_html).strip()) else ""
+    visits_open = (
+        " open"
+        if visit_record_count <= SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS
+        else ""
+    )
     details_block = (
-        f'<details class="pebird-map-popup__all-visits">'
+        f'<details class="pebird-map-popup__all-visits"{visits_open}>'
         f'<summary class="pebird-map-popup__section-label">{esc_summary}</summary>'
         f'<div class="pebird-map-popup__visit-list-inner">{inner_visits}</div>'
         f"</details>"
