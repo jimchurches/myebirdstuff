@@ -355,6 +355,8 @@ def test_build_species_banner_html_full():
     assert "20-Feb-2026</a>" in html
     assert 'High count: <a href="https://ebird.org/checklist/S3"' in html
     assert "05-Mar-2025</a> (8)" in html
+    assert "pebird-map-banner__stats-primary" in html
+    assert html.count("pebird-map-banner__stats-secondary") == 2
 
 
 def test_build_species_banner_html_no_dates():

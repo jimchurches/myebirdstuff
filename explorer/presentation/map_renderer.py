@@ -298,6 +298,10 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   font-weight: 400;
   margin: 0;
 }}
+/* Species map only: secondary stats (first/last seen, high count) below the primary summary line (#162). */
+.pebird-map-banner__stats-secondary {{
+  font-size: calc(1em - 3px);
+}}
 .pebird-map-banner__stats a {{
   color: inherit;
   text-decoration: none;
@@ -741,7 +745,11 @@ def build_species_banner_html(
     return (
         f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
         f'<span class="pebird-map-banner__title">{title_html}</span>'
-        f'<div class="pebird-map-banner__stats">{line2}<br>{line3}<br>{line4}</div>'
+        f'<div class="pebird-map-banner__stats">'
+        f'<span class="pebird-map-banner__stats-primary">{line2}</span><br>'
+        f'<span class="pebird-map-banner__stats-secondary">{line3}</span><br>'
+        f'<span class="pebird-map-banner__stats-secondary">{line4}</span>'
+        f'</div>'
         f'{date_block}'
         f'</div>'
     )
