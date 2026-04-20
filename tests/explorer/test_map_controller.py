@@ -212,7 +212,7 @@ def test_species_view_no_selection_hide_only_empty_map():
     assert r.warning is None
     assert r.map is not None
     html = r.map._repr_html_()
-    assert "Select a species in the sidebar" in html
+    assert "Select a species in the sidebar to load the map data" in html
     assert "All species" not in html
     assert "All locations" not in html
 
@@ -229,7 +229,7 @@ def test_species_view_no_selection_empty_even_when_hide_filter_off():
     assert r.warning is None
     assert r.map is not None
     html = r.map._repr_html_()
-    assert "Select a species in the sidebar" in html
+    assert "Select a species in the sidebar to load the map data" in html
     assert "All species" not in html
 
 

@@ -280,7 +280,7 @@ def render_prep_spinner_and_map_tab(
                             default_zoom=int(MAP_SPECIES_DEFAULT_ZOOM),
                             default_viewport_recipe=blank_viewport_recipe,
                         )
-                        map_hint_text = "Select a family in the sidebar to load the map."
+                        map_hint_text = "Select a family in the sidebar to load the map data"
                         result_warning = None
                     elif fam not in fams or work is None or getattr(work, "empty", True):
                         result_map = build_family_composition_folium_map(
@@ -365,6 +365,8 @@ def render_prep_spinner_and_map_tab(
                         (species_pick_common or "").strip() if map_view_mode == "species" else ""
                     )
                     overlay_sci = (species_pick_sci or "").strip() if map_view_mode == "species" else ""
+                    if map_view_mode == "species" and not overlay_sci:
+                        map_hint_text = "Select a species in the sidebar to load the map data"
                     hide_nm = (
                         map_view_mode == "species" and bool(hide_non_matching_locations)
                     )

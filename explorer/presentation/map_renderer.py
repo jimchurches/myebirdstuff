@@ -716,7 +716,7 @@ def build_species_locations_awaiting_selection_banner_html(date_filter_status=No
     return (
         f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
         f'<span class="pebird-map-banner__title">Species locations</span>'
-        f'<div class="pebird-map-banner__stats">Select a species in the sidebar to show pins.</div>'
+        f'<div class="pebird-map-banner__stats">Select a species in the sidebar to load the map data</div>'
         f'{date_block}'
         f'</div>'
     )

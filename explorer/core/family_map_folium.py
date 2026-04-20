@@ -233,6 +233,7 @@ def build_family_composition_folium_map(
     :func:`~explorer.app.streamlit.defaults.active_map_marker_colour_scheme` defaults.
     """
     pin_list = list(pins)
+    zoom_start = default_zoom
     if pin_list:
         if fit_bounds_highlight_only:
             hl_only = [p for p in pin_list if p.highlight_match]
@@ -245,8 +246,24 @@ def build_family_composition_folium_map(
         )
     else:
         center = default_center if default_center is not None else _default_au_center()
+        # Blank map: apply cached All-locations ``center_zoom`` recipe (e.g. COG) when present.
+        if isinstance(default_viewport_recipe, dict):
+            _mode = str(default_viewport_recipe.get("mode", "")).strip().lower()
+            if _mode == "center_zoom":
+                c = default_viewport_recipe.get("center")
+                if isinstance(c, (list, tuple)) and len(c) == 2:
+                    try:
+                        center = (float(c[0]), float(c[1]))
+                    except (TypeError, ValueError):
+                        pass
+                z = default_viewport_recipe.get("zoom")
+                if z is not None:
+                    try:
+                        zoom_start = int(z)
+                    except (TypeError, ValueError):
+                        pass
 
-    m = create_map(center, map_style, height_px=height_px, zoom_start=default_zoom)
+    m = create_map(center, map_style, height_px=height_px, zoom_start=zoom_start)
     m.get_root().html.add_child(Element(map_overlay_theme_stylesheet()))
     m.get_root().html.add_child(Element(map_popup_width_fix_script()))
 
