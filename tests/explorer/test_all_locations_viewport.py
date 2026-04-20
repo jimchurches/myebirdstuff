@@ -4,6 +4,9 @@ import pandas as pd
 
 from explorer.core.all_locations_viewport import (
     ALL_LOCATIONS_FOCUS_ALL,
+    ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+    ALL_LOCATIONS_FRAMING_FIT_ALL,
+    all_locations_scope_option_values,
     coordinate_pairs_for_viewport,
     filter_location_rows_by_focus_country,
     location_id_to_country_map,
@@ -96,3 +99,16 @@ def test_coordinate_pairs_for_viewport_no_country_map():
 def test_mean_center_from_pairs():
     assert mean_center_from_pairs([[0.0, 0.0], [2.0, 4.0]]) == (1.0, 2.0)
     assert mean_center_from_pairs([]) is None
+
+
+def test_all_locations_scope_option_values_order():
+    df = pd.DataFrame(
+        {
+            "Location ID": ["a", "b"],
+            "Country": ["US", "NZ"],
+        }
+    )
+    opts = all_locations_scope_option_values(df)
+    assert opts[0] == ALL_LOCATIONS_FRAMING_FIT_ALL
+    assert opts[1] == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY
+    assert set(opts[2:]) == {"NZ", "US"}

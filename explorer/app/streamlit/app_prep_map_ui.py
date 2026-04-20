@@ -34,10 +34,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_HIGH_COUNT_SORT_KEY,
     STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-    STREAMLIT_ALL_LOCATIONS_FOCUS_KEY,
-    STREAMLIT_ALL_LOCATIONS_FRAMING_KEY,
-    STREAMLIT_ALL_LOCATIONS_PRESERVED_VIEW_KEY,
-    STREAMLIT_ALL_LOCATIONS_RESET_NONCE_KEY,
+    STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
 )
 from explorer.app.streamlit.app_map_ui import (
@@ -65,8 +62,8 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 )
 from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_summary_session_inputs
 from explorer.core.all_locations_viewport import (
+    ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
     ALL_LOCATIONS_FRAMING_FIT_ALL,
-    ALL_LOCATIONS_FRAMING_LAST_VIEWED,
     location_id_to_country_map,
 )
 from explorer.core.map_controller import build_species_overlay_map
@@ -89,43 +86,6 @@ from explorer.core.family_map_folium import (
     build_family_map_banner_overlay_html,
     build_family_map_legend_overlay_html_for_pins,
 )
-
-
-def _preserved_view_from_st_folium_out(out: Any) -> tuple[tuple[float, float], int] | None:
-    """Centre + zoom from streamlit-folium return dict (``zoom`` + ``bounds``)."""
-    if not isinstance(out, dict):
-        return None
-    z_raw = out.get("zoom")
-    b = out.get("bounds")
-    if z_raw is None or b is None or not isinstance(b, dict):
-        return None
-    # Folium may leave zoom as a non-scalar in defaults; ignore until Leaflet reports a level.
-    if isinstance(z_raw, (dict, list)):
-        return None
-    try:
-        zi = int(z_raw)
-    except (TypeError, ValueError):
-        return None
-    sw = b.get("_southWest") or {}
-    ne = b.get("_northEast") or {}
-    try:
-        lat0 = float(sw["lat"])
-        lat1 = float(ne["lat"])
-        lng0 = float(sw["lng"])
-        lng1 = float(ne["lng"])
-    except (KeyError, TypeError, ValueError):
-        return None
-    return ((lat0 + lat1) / 2.0, (lng0 + lng1) / 2.0), zi
-
-
-def _preserved_view_is_plausible(pv: tuple[tuple[float, float], int]) -> bool:
-    """Drop bogus viewport snapshots (e.g. whole-world bounds) that would replace a good fit."""
-    (lat, lon), z = pv
-    if z < 1 or z > 22:
-        return False
-    if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
-        return False
-    return True
 
 
 def render_prep_spinner_and_map_tab(
@@ -201,14 +161,11 @@ def render_prep_spinner_and_map_tab(
                 st.session_state[POPUP_HTML_CACHE_KEY] = {}
                 st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
                 st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
-                st.session_state.pop(STREAMLIT_ALL_LOCATIONS_PRESERVED_VIEW_KEY, None)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None
             map_for_folium = None
             folium_st_key: str | None = None
-            folium_center_for_embed: tuple[float, float] | None = None
-            folium_zoom_for_embed: int | None = None
             capture_all_locations_view = False
             try:
                 ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
@@ -353,43 +310,24 @@ def render_prep_spinner_and_map_tab(
                         "visit_marker_scheme": _visit_sch,
                     }
                     if capture_all_locations_view:
-                        _al_fr = str(
+                        _valid = {
+                            ALL_LOCATIONS_FRAMING_FIT_ALL,
+                            ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+                        } | set(location_id_to_country_map(ctx["df"]).values())
+                        _scope = str(
                             st.session_state.get(
-                                STREAMLIT_ALL_LOCATIONS_FRAMING_KEY,
+                                STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
                                 ALL_LOCATIONS_FRAMING_FIT_ALL,
                             )
                             or ALL_LOCATIONS_FRAMING_FIT_ALL
                         ).strip()
-                        _al_fc = str(
-                            st.session_state.get(STREAMLIT_ALL_LOCATIONS_FOCUS_KEY, "") or ""
-                        ).strip()
-                        _map_kw["all_locations_framing"] = _al_fr
-                        _map_kw["all_locations_focus_country"] = _al_fc
+                        if _scope not in _valid:
+                            _scope = ALL_LOCATIONS_FRAMING_FIT_ALL
+                            st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = _scope
+                        _map_kw["all_locations_scope"] = _scope
                         _map_kw["all_locations_location_country"] = location_id_to_country_map(
                             ctx["df"]
                         )
-                        _pv = st.session_state.get(STREAMLIT_ALL_LOCATIONS_PRESERVED_VIEW_KEY)
-                        if _al_fr == ALL_LOCATIONS_FRAMING_LAST_VIEWED and isinstance(
-                            _pv, tuple
-                        ) and len(_pv) == 2:
-                            _ll, _zz = _pv
-                            if (
-                                isinstance(_ll, (tuple, list))
-                                and len(_ll) == 2
-                                and _zz is not None
-                            ):
-                                try:
-                                    _map_kw["all_locations_preserved_center_zoom"] = (
-                                        (float(_ll[0]), float(_ll[1])),
-                                        int(_zz),
-                                    )
-                                    folium_center_for_embed = (
-                                        float(_ll[0]),
-                                        float(_ll[1]),
-                                    )
-                                    folium_zoom_for_embed = int(_zz)
-                                except (TypeError, ValueError):
-                                    pass
                     _render_opts_sig = (
                         popup_sort_order,
                         popup_scroll_hint,
@@ -406,19 +344,13 @@ def render_prep_spinner_and_map_tab(
                         int(family_colour_scheme),
                         str(
                             st.session_state.get(
-                                STREAMLIT_ALL_LOCATIONS_FRAMING_KEY,
+                                STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
                                 ALL_LOCATIONS_FRAMING_FIT_ALL,
                             )
                             or ALL_LOCATIONS_FRAMING_FIT_ALL
                         )
                         if capture_all_locations_view
                         else "",
-                        str(st.session_state.get(STREAMLIT_ALL_LOCATIONS_FOCUS_KEY, "") or "")
-                        if capture_all_locations_view
-                        else "",
-                        int(st.session_state.get(STREAMLIT_ALL_LOCATIONS_RESET_NONCE_KEY, 0))
-                        if capture_all_locations_view
-                        else 0,
                     )
                     _species_selected = bool(overlay_sci)
                     _ck = static_map_cache_key(
@@ -483,39 +415,14 @@ def render_prep_spinner_and_map_tab(
                             "`requirements.txt` at the repo root."
                         )
                         st.stop()
-                    # Only request bounds/zoom from the component in "Last viewed" mode; otherwise
-                    # keep returned_objects=[] like pre-#166 (avoids a post-load snap). Only persist
-                    # session when framing is Last viewed so Show all / My centre are not overwritten.
-                    _framing_now = str(
-                        st.session_state.get(
-                            STREAMLIT_ALL_LOCATIONS_FRAMING_KEY,
-                            ALL_LOCATIONS_FRAMING_FIT_ALL,
-                        )
-                        or ALL_LOCATIONS_FRAMING_FIT_ALL
-                    ).strip()
-                    _needs_folium_bounds = (
-                        capture_all_locations_view
-                        and _framing_now == ALL_LOCATIONS_FRAMING_LAST_VIEWED
+                    st_folium(
+                        map_for_folium,
+                        use_container_width=True,
+                        height=map_height,
+                        key=folium_st_key,
+                        returned_objects=[],
+                        return_on_hover=False,
                     )
-                    _folium_returned_objs = (
-                        ["zoom", "bounds"] if _needs_folium_bounds else []
-                    )
-                    _folium_kw: dict[str, Any] = {
-                        "use_container_width": True,
-                        "height": map_height,
-                        "key": folium_st_key,
-                        "returned_objects": _folium_returned_objs,
-                        "return_on_hover": False,
-                    }
-                    if _needs_folium_bounds and folium_center_for_embed is not None:
-                        _folium_kw["center"] = folium_center_for_embed
-                    if _needs_folium_bounds and folium_zoom_for_embed is not None:
-                        _folium_kw["zoom"] = folium_zoom_for_embed
-                    _folium_out = st_folium(map_for_folium, **_folium_kw)
-                    if _needs_folium_bounds:
-                        _pv_new = _preserved_view_from_st_folium_out(_folium_out)
-                        if _pv_new is not None and _preserved_view_is_plausible(_pv_new):
-                            st.session_state[STREAMLIT_ALL_LOCATIONS_PRESERVED_VIEW_KEY] = _pv_new
 
         _spinner_emoji_placeholder.empty()
         _has_map_export = bool(st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY))

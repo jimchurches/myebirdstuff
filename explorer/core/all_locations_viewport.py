@@ -10,12 +10,12 @@ from typing import Hashable
 
 import pandas as pd
 
+from explorer.core.region_display import map_focus_key_for_display
 from explorer.core.stats import checklist_country_keys
 
-# Framing mode strings (Streamlit session and map overlay API).
+# Map area / viewport mode (Streamlit session values and map overlay API).
 ALL_LOCATIONS_FRAMING_FIT_ALL = "fit_all"
 ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY = "centre_of_gravity"
-ALL_LOCATIONS_FRAMING_LAST_VIEWED = "preserve_view"
 
 # Focus: empty string means all locations (no country filter).
 ALL_LOCATIONS_FOCUS_ALL = ""
@@ -51,12 +51,24 @@ def location_id_to_country_map(df: pd.DataFrame) -> dict[Hashable, str]:
 
 
 def sorted_country_labels_from_work(df: pd.DataFrame) -> list[str]:
-    """Unique country labels from *df*, sorted case-insensitively, for Focus UI."""
-    m = location_id_to_country_map(df)
-    if not m:
+    """Unique region keys from *df* (excluding ``_UNKNOWN``), sorted by display name."""
+    return sorted_country_keys_by_display_name(df)
+
+
+def sorted_country_keys_by_display_name(df: pd.DataFrame) -> list[str]:
+    """Distinct map-focus keys from *df*, sorted by :func:`map_focus_key_for_display` (case-insensitive)."""
+    keys = set(location_id_to_country_map(df).values())
+    if not keys:
         return []
-    labels = sorted(set(m.values()), key=lambda x: str(x).lower())
-    return labels
+    return sorted(keys, key=lambda k: map_focus_key_for_display(k).lower())
+
+
+def all_locations_scope_option_values(df: pd.DataFrame) -> list[str]:
+    """Selectbox options: All locations, My centre, then countries/regions from *df* (filtered data)."""
+    return [
+        ALL_LOCATIONS_FRAMING_FIT_ALL,
+        ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+    ] + sorted_country_keys_by_display_name(df)
 
 
 def filter_location_rows_by_focus_country(

@@ -73,10 +73,8 @@ def build_species_overlay_map(
     show_subspecies_lifers: bool = False,
     map_height_px: int = MAP_HEIGHT_PX_DEFAULT,
     visit_marker_scheme: MapMarkerColourScheme,
-    all_locations_framing: str | None = None,
-    all_locations_focus_country: str = "",
+    all_locations_scope: str | None = None,
     all_locations_location_country: dict[Hashable, str] | None = None,
-    all_locations_preserved_center_zoom: tuple[tuple[float, float], int] | None = None,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -166,8 +164,6 @@ def build_species_overlay_map(
         map_height_px=map_height_px,
         visit_marker_scheme=visit_marker_scheme,
         map_view_mode=mode,
-        all_locations_framing=all_locations_framing or ALL_LOCATIONS_FRAMING_FIT_ALL,
-        all_locations_focus_country=all_locations_focus_country,
+        all_locations_scope=all_locations_scope or ALL_LOCATIONS_FRAMING_FIT_ALL,
         all_locations_location_country=all_locations_location_country,
-        all_locations_preserved_center_zoom=all_locations_preserved_center_zoom,
     )

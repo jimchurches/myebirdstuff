@@ -32,7 +32,6 @@ from explorer.app.streamlit.defaults import (
 from explorer.core.all_locations_viewport import (
     ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
     ALL_LOCATIONS_FRAMING_FIT_ALL,
-    ALL_LOCATIONS_FRAMING_LAST_VIEWED,
     coordinate_pairs_for_viewport,
     mean_center_from_pairs,
 )
@@ -299,10 +298,8 @@ def build_visit_overlay_map(
     map_height_px: int,
     visit_marker_scheme: MapMarkerColourScheme,
     map_view_mode: str = "all",
-    all_locations_framing: str = ALL_LOCATIONS_FRAMING_FIT_ALL,
-    all_locations_focus_country: str = "",
+    all_locations_scope: str = ALL_LOCATIONS_FRAMING_FIT_ALL,
     all_locations_location_country: dict[Hashable, str] | None = None,
-    all_locations_preserved_center_zoom: tuple[tuple[float, float], int] | None = None,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode)."""
     if selected_species:
@@ -331,28 +328,30 @@ def build_visit_overlay_map(
     all_loc_pairs: list[list[float]] = []
     if not selected_species and _mv == "all":
         loc_c = all_locations_location_country or {}
-        fc = (all_locations_focus_country or "").strip()
-        all_loc_pairs = coordinate_pairs_for_viewport(
-            effective_location_data,
-            location_id_to_country=loc_c,
-            focus_country=fc,
-        )
-        if fc and not all_loc_pairs:
+        scope = (all_locations_scope or ALL_LOCATIONS_FRAMING_FIT_ALL).strip()
+        if scope == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY:
             all_loc_pairs = coordinate_pairs_for_viewport(
                 effective_location_data,
                 location_id_to_country=loc_c,
                 focus_country="",
             )
-        fn_al = (all_locations_framing or ALL_LOCATIONS_FRAMING_FIT_ALL).strip().lower()
-        if fn_al == ALL_LOCATIONS_FRAMING_LAST_VIEWED and all_locations_preserved_center_zoom:
-            latlon, zsnap = all_locations_preserved_center_zoom
-            map_center = [float(latlon[0]), float(latlon[1])]
-            create_zoom = int(zsnap)
-        elif fn_al == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY:
             mc = mean_center_from_pairs(all_loc_pairs)
             if mc:
                 map_center = [mc[0], mc[1]]
             create_zoom = MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM
+        else:
+            fc = "" if scope == ALL_LOCATIONS_FRAMING_FIT_ALL else scope
+            all_loc_pairs = coordinate_pairs_for_viewport(
+                effective_location_data,
+                location_id_to_country=loc_c,
+                focus_country=fc,
+            )
+            if fc and not all_loc_pairs:
+                all_loc_pairs = coordinate_pairs_for_viewport(
+                    effective_location_data,
+                    location_id_to_country=loc_c,
+                    focus_country="",
+                )
 
     popup_ascending = popup_sort_order == "ascending"
     date_filter_status_line = date_filter_status or None
@@ -443,12 +442,8 @@ def build_visit_overlay_map(
         if marker_cluster is not None:
             marker_cluster.add_to(species_map)
 
-        fnv = (all_locations_framing or ALL_LOCATIONS_FRAMING_FIT_ALL).strip().lower()
-        preserve_snapshot = all_locations_preserved_center_zoom is not None
-        should_fit = fnv in (
-            ALL_LOCATIONS_FRAMING_FIT_ALL,
-            ALL_LOCATIONS_FRAMING_LAST_VIEWED,
-        ) and not (fnv == ALL_LOCATIONS_FRAMING_LAST_VIEWED and preserve_snapshot)
+        scope_fit = (all_locations_scope or ALL_LOCATIONS_FRAMING_FIT_ALL).strip()
+        should_fit = scope_fit != ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY and bool(all_loc_pairs)
         if should_fit and all_loc_pairs:
             pad = int(MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX)
             max_z = int(MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM)
