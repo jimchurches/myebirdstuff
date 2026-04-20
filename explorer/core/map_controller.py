@@ -75,6 +75,9 @@ def build_species_overlay_map(
     visit_marker_scheme: MapMarkerColourScheme,
     all_locations_scope: str | None = None,
     all_locations_location_country: dict[Hashable, str] | None = None,
+    species_blank_default_center: tuple[float, float] | None = None,
+    species_blank_default_zoom: int | None = None,
+    species_blank_viewport_recipe: dict[str, Any] | None = None,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -166,4 +169,7 @@ def build_species_overlay_map(
         map_view_mode=mode,
         all_locations_scope=all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED,
         all_locations_location_country=all_locations_location_country,
+        species_blank_default_center=species_blank_default_center,
+        species_blank_default_zoom=species_blank_default_zoom,
+        species_blank_viewport_recipe=species_blank_viewport_recipe,
     )

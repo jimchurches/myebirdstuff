@@ -77,6 +77,14 @@ MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH = 0.99
 # disable the rule (quantiles only).
 MAP_ALL_LOCATIONS_FOCUSED_MIN_OBSERVATIONS_PER_COUNTRY = 20
 
+# Species-locations map: default blank view and species-fit viewport guards (behaviour only).
+MAP_SPECIES_DEFAULT_CENTER_LAT = -35.2809  # Canberra
+MAP_SPECIES_DEFAULT_CENTER_LON = 149.13
+MAP_SPECIES_DEFAULT_ZOOM = 5
+MAP_SPECIES_FIT_BOUNDS_PADDING_PX = 48
+MAP_SPECIES_FIT_BOUNDS_MAX_ZOOM = 7
+MAP_SPECIES_SINGLE_POINT_ZOOM = 8
+
 # Character shown for Macaulay Library media links in map popups (refs #145).
 # Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).
 MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
