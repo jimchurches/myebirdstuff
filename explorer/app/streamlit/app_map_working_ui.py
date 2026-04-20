@@ -30,6 +30,11 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_ALL_LOCATIONS_FOCUS_KEY,
+    STREAMLIT_ALL_LOCATIONS_FRAMING_KEY,
+    STREAMLIT_ALL_LOCATIONS_PRESERVED_VIEW_KEY,
+    STREAMLIT_ALL_LOCATIONS_RESET_NONCE_KEY,
+    STREAMLIT_ALL_LOCATIONS_RESET_VIEW_BTN_KEY,
     STREAMLIT_MAP_DATE_FILTER_KEY,
     STREAMLIT_MAP_DATE_RANGE_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
@@ -74,6 +79,13 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_CAPTION,
     SPECIES_SEARCH_HELP_EXPANDER_LABEL,
 )
+from explorer.core.all_locations_viewport import (
+    ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+    ALL_LOCATIONS_FRAMING_FIT_ALL,
+    ALL_LOCATIONS_FRAMING_LAST_VIEWED,
+    sorted_country_labels_from_work,
+)
+from explorer.core.region_display import map_focus_key_for_display
 from explorer.core.species_search import (
     SPECIES_WHOOSH_INDEX_VERSION,
     build_ram_species_whoosh_index,
@@ -214,6 +226,40 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
                 help="Clusters nearby pins at low zoom. Session-only (save in Settings to persist).",
             )
+            _framing_labels = {
+                ALL_LOCATIONS_FRAMING_FIT_ALL: "Show all locations",
+                ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY: "My centre",
+                ALL_LOCATIONS_FRAMING_LAST_VIEWED: "Last viewed",
+            }
+            st.selectbox(
+                "Location framing",
+                options=[
+                    ALL_LOCATIONS_FRAMING_FIT_ALL,
+                    ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+                    ALL_LOCATIONS_FRAMING_LAST_VIEWED,
+                ],
+                format_func=lambda v: _framing_labels.get(v, v),
+                key=STREAMLIT_ALL_LOCATIONS_FRAMING_KEY,
+            )
+            _focus_countries = sorted_country_labels_from_work(df_full)
+            st.selectbox(
+                "Focus",
+                options=[""] + _focus_countries,
+                format_func=lambda c: (
+                    "All locations" if c == "" else map_focus_key_for_display(c)
+                ),
+                key=STREAMLIT_ALL_LOCATIONS_FOCUS_KEY,
+            )
+            if st.button(
+                "Reset view",
+                key=STREAMLIT_ALL_LOCATIONS_RESET_VIEW_BTN_KEY,
+                help="Clear saved pan/zoom for “Last viewed” and re-apply the current framing mode.",
+            ):
+                st.session_state.pop(STREAMLIT_ALL_LOCATIONS_PRESERVED_VIEW_KEY, None)
+                st.session_state[STREAMLIT_ALL_LOCATIONS_RESET_NONCE_KEY] = int(
+                    st.session_state.get(STREAMLIT_ALL_LOCATIONS_RESET_NONCE_KEY, 0)
+                ) + 1
+                invalidate_folium_map_embed_cache()
 
     # Working set is still date-filtered for checklist stats and other tabs.
     # Family map ignores date filtering (v1), but we preserve the date filter controls and state.

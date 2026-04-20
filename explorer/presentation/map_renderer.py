@@ -1085,6 +1085,7 @@ def create_map(
     map_style="default",
     *,
     height_px: int | float | None = None,
+    zoom_start: int | None = None,
 ):
     """Create a folium Map centred on *map_center* with the given tile style.
 
@@ -1094,12 +1095,14 @@ def create_map(
     *height_px*: pixel height for the map pane. Folium defaults to ``100%``, which
     depends on parent layout; inside ``streamlit-folium`` that can collapse to a thin
     strip. Pass the same value as the Streamlit **Map height** slider when embedding.
+
+    *zoom_start*: optional initial zoom level (defaults to ``5`` when omitted).
     """
     # Default initial zoom for first render. Lower = more zoomed out.
-    zoom_start = 5
+    z = 5 if zoom_start is None else int(zoom_start)
     h = float(height_px if height_px is not None else MAP_HEIGHT_PX_DEFAULT)
     h = max(float(MAP_HEIGHT_PX_MIN), min(float(MAP_HEIGHT_PX_MAX), h))
-    common = {"location": map_center, "zoom_start": zoom_start, "height": h, "width": "100%"}
+    common = {"location": map_center, "zoom_start": z, "height": h, "width": "100%"}
     if map_style == "google":
         return folium.Map(
             tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",

@@ -56,6 +56,15 @@ MAP_FAMILY_MAP_POPUP_MAX_WIDTH_PX = 320
 MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX = 48
 MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM = 6
 MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT = 8
+
+# All-locations map: viewport behaviour (fit_bounds / centre / preserve); not colour-scheme settings.
+MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX = 48
+MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM = 6
+# When centre-of-gravity framing is selected, fixed initial zoom (not fit_bounds).
+MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM = 5
+# Single-location (or degenerate) extent: avoid fitBounds zooming in too far.
+MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM = 9
+
 # Character shown for Macaulay Library media links in map popups (refs #145).
 # Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).
 MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
