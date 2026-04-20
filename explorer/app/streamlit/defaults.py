@@ -43,7 +43,7 @@ MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
 MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS = False
 
 # Debug-only map overlay (live zoom readout). Listed in :func:`debug_defaults_enabled` for CI warnings.
-MAP_DEBUG_SHOW_ZOOM_LEVEL = True
+MAP_DEBUG_SHOW_ZOOM_LEVEL = False
 
 # ---------------------------------------------------------------------------
 # Pin geometry — Folium ``CircleMarker`` + legend sample dots; popup width
