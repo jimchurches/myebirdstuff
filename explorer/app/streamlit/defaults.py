@@ -85,6 +85,12 @@ MAP_SPECIES_FIT_BOUNDS_PADDING_PX = 48
 MAP_SPECIES_FIT_BOUNDS_MAX_ZOOM = 7
 MAP_SPECIES_SINGLE_POINT_ZOOM = 8
 
+# Lifer-locations map: initial fit_bounds (not colour-scheme settings). Framing uses base-species
+# lifer pins only; subspecies-only pins do not affect bounds (refs #105).
+MAP_LIFER_MAP_FIT_BOUNDS_PADDING_PX = 48
+MAP_LIFER_MAP_FIT_BOUNDS_MAX_ZOOM = 6
+MAP_LIFER_MAP_SINGLE_POINT_ZOOM = 9
+
 # Character shown for Macaulay Library media links in map popups (refs #145).
 # Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).
 MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"

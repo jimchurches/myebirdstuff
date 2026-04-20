@@ -320,6 +320,8 @@ def test_lifer_map_mode_builds_banner():
     )
     assert r.warning is None
     assert r.map is not None
+    html_root = r.map.get_root().render()
+    assert "fitBounds(" in html_root
     html = r.map._repr_html_()
     assert "Lifer locations" in html
     assert "+ subspecies" not in html
@@ -340,6 +342,9 @@ def test_lifer_map_mode_builds_banner():
     assert r2.warning is None
     assert r2.map is not None
     html2 = r2.map.get_root().render()
+    assert "fitBounds(" in html2
+    # Subspecies toggle does not change framing (base lifer extent only); bounds call should match.
+    assert html_root.split("fitBounds(", 1)[1].split(");", 1)[0] == html2.split("fitBounds(", 1)[1].split(");", 1)[0]
     assert "Lifer locations + subspecies" in html2
     assert "0 subspecies lifers" in html2.lower()
     assert "Visited:" not in html2

@@ -8,7 +8,13 @@ import folium
 import pandas as pd
 from branca.element import Element
 
-from explorer.app.streamlit.defaults import MAP_DEBUG_SHOW_ZOOM_LEVEL, MapMarkerColourScheme
+from explorer.app.streamlit.defaults import (
+    MAP_DEBUG_SHOW_ZOOM_LEVEL,
+    MAP_LIFER_MAP_FIT_BOUNDS_MAX_ZOOM,
+    MAP_LIFER_MAP_FIT_BOUNDS_PADDING_PX,
+    MAP_LIFER_MAP_SINGLE_POINT_ZOOM,
+    MapMarkerColourScheme,
+)
 from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites, count_subspecies_lifer_taxa
 from explorer.core.map_marker_colour_resolve import resolve_lifer_overlay_pin_params
 from explorer.core.map_overlay_lifer_popups import format_lifer_popup_lines
@@ -23,6 +29,11 @@ from explorer.presentation.map_renderer import (
     popup_scroll_script,
 )
 from explorer.presentation.map_ui_constants import MAP_POPUP_MAX_WIDTH_PX
+
+
+def _epsilon_bounds_around_point(lat: float, lon: float, delta: float = 0.02) -> list[list[float]]:
+    """Tiny bounding box so Leaflet ``fitBounds`` has non-zero extent for a single pin."""
+    return [[lat - delta, lon - delta], [lat + delta, lon + delta]]
 
 
 def build_lifer_overlay_map(
@@ -61,6 +72,18 @@ def build_lifer_overlay_map(
         )
     n_species_lifers = len(true_lifer_locations)
     n_subspecies_lifers = count_subspecies_lifer_taxa(lifer_lookup_df, true_lifer_locations_taxon)
+    # Viewport framing: base-species lifer locations only (never subspecies-only sites).
+    base_lifer_loc_ids = set(true_lifer_locations.values())
+    loc_rows_framing = full_location_data[
+        full_location_data["Location ID"].isin(base_lifer_loc_ids)
+    ].drop_duplicates(subset=["Location ID"], keep="first")
+    framing_pairs: list[list[float]] = []
+    for _, row in loc_rows_framing.iterrows():
+        la, lo = float(row["Latitude"]), float(row["Longitude"])
+        if pd.isna(la) or pd.isna(lo):
+            continue
+        framing_pairs.append([la, lo])
+
     if show_subspecies_lifers:
         lifer_loc_ids = set(loc_to_species.keys())
     else:
@@ -71,7 +94,13 @@ def build_lifer_overlay_map(
             None,
             warning="⚠️ No lifer locations match your location table.",
         )
-    map_center = [loc_rows["Latitude"].mean(), loc_rows["Longitude"].mean()]
+    if framing_pairs:
+        map_center = [
+            sum(p[0] for p in framing_pairs) / len(framing_pairs),
+            sum(p[1] for p in framing_pairs) / len(framing_pairs),
+        ]
+    else:
+        map_center = [loc_rows["Latitude"].mean(), loc_rows["Longitude"].mean()]
     species_map = create_map(map_center, map_style, height_px=map_height_px)
     inject_map_overlay_theme(species_map)
     add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
@@ -178,6 +207,20 @@ def build_lifer_overlay_map(
                     fill_opacity=fo_lif,
                     popup=popup,
                 ).add_to(species_map)
+
+    # Initial viewport follows base lifer extent only; subspecies toggle does not change these bounds.
+    if framing_pairs:
+        pad = int(MAP_LIFER_MAP_FIT_BOUNDS_PADDING_PX)
+        max_z = int(MAP_LIFER_MAP_FIT_BOUNDS_MAX_ZOOM)
+        if len(framing_pairs) == 1:
+            la, lo = float(framing_pairs[0][0]), float(framing_pairs[0][1])
+            species_map.fit_bounds(
+                _epsilon_bounds_around_point(la, lo),
+                padding=(pad, pad),
+                max_zoom=int(MAP_LIFER_MAP_SINGLE_POINT_ZOOM),
+            )
+        else:
+            species_map.fit_bounds(framing_pairs, padding=(pad, pad), max_zoom=max_z)
 
     scroll_popup_script = popup_scroll_script(popup_scroll_hint, popup_asc)
     species_map.get_root().html.add_child(Element(scroll_popup_script))
