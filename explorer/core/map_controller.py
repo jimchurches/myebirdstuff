@@ -30,7 +30,7 @@ from explorer.core.map_overlay_types import (
     SpeciesUrlFn,
     VALID_MAP_VIEWS,
 )
-from explorer.core.all_locations_viewport import ALL_LOCATIONS_FRAMING_FIT_ALL
+from explorer.core.all_locations_viewport import ALL_LOCATIONS_SCOPE_FOCUSED
 from explorer.core.map_overlay_visit_map import build_visit_overlay_map
 from explorer.core.species_logic import base_species_for_lifer
 
@@ -164,6 +164,6 @@ def build_species_overlay_map(
         map_height_px=map_height_px,
         visit_marker_scheme=visit_marker_scheme,
         map_view_mode=mode,
-        all_locations_scope=all_locations_scope or ALL_LOCATIONS_FRAMING_FIT_ALL,
+        all_locations_scope=all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED,
         all_locations_location_country=all_locations_location_country,
     )

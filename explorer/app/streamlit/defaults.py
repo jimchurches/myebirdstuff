@@ -43,7 +43,7 @@ MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
 MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS = False
 
 # Debug-only map overlay (live zoom readout). Listed in :func:`debug_defaults_enabled` for CI warnings.
-MAP_DEBUG_SHOW_ZOOM_LEVEL = False
+MAP_DEBUG_SHOW_ZOOM_LEVEL = True
 
 # ---------------------------------------------------------------------------
 # Pin geometry — Folium ``CircleMarker`` + legend sample dots; popup width
@@ -67,7 +67,15 @@ MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM = 6
 # When centre-of-gravity framing is selected, fixed initial zoom (not fit_bounds).
 MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM = 5
 # Single-location (or degenerate) extent: avoid fitBounds zooming in too far.
-MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM = 9
+MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM = 6
+# "Focused" map focus: trim fit_bounds inputs to lat/lon inside these quantiles (each axis
+# independently). Symmetric 98% ≈ 1st–99th percentiles. Dev-only tunable (not user settings).
+MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW = 0.01
+MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH = 0.99
+# In addition to quantile trimming, include every pin whose map country key has at least this many
+# species rows in the current working *df* (same checklist rows as the explorer). Set to 0 to
+# disable the rule (quantiles only).
+MAP_ALL_LOCATIONS_FOCUSED_MIN_OBSERVATIONS_PER_COUNTRY = 20
 
 # Character shown for Macaulay Library media links in map popups (refs #145).
 # Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).

@@ -78,6 +78,7 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 from explorer.core.all_locations_viewport import (
     ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
     ALL_LOCATIONS_FRAMING_FIT_ALL,
+    ALL_LOCATIONS_SCOPE_FOCUSED,
     all_locations_scope_option_values,
 )
 from explorer.core.region_display import map_focus_key_for_display
@@ -254,19 +255,26 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             _scope_opts = all_locations_scope_option_values(work_df)
             _cur_scope = st.session_state.get(STREAMLIT_ALL_LOCATIONS_SCOPE_KEY)
             if _cur_scope not in _scope_opts:
-                st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = ALL_LOCATIONS_FRAMING_FIT_ALL
+                st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = ALL_LOCATIONS_SCOPE_FOCUSED
             st.selectbox(
-                "Map area",
+                "Map focus",
                 options=_scope_opts,
                 format_func=lambda v: (
                     "All locations"
                     if v == ALL_LOCATIONS_FRAMING_FIT_ALL
-                    else "My centre"
+                    else "Focused"
+                    if v == ALL_LOCATIONS_SCOPE_FOCUSED
+                    else "My activity centre"
                     if v == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY
                     else map_focus_key_for_display(v)
                 ),
                 key=STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
             )
+            if st.session_state.get(STREAMLIT_ALL_LOCATIONS_SCOPE_KEY) == ALL_LOCATIONS_SCOPE_FOCUSED:
+                st.caption(
+                    "Focused view shows your main birding regions. "
+                    "Smaller or infrequent locations may be hidden."
+                )
 
     hide_non_matching_locations = False
     species_pick_common: str | None = None

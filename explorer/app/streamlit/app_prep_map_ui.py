@@ -64,6 +64,7 @@ from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_sum
 from explorer.core.all_locations_viewport import (
     ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
     ALL_LOCATIONS_FRAMING_FIT_ALL,
+    ALL_LOCATIONS_SCOPE_FOCUSED,
     location_id_to_country_map,
 )
 from explorer.core.map_controller import build_species_overlay_map
@@ -312,17 +313,18 @@ def render_prep_spinner_and_map_tab(
                     if capture_all_locations_view:
                         _valid = {
                             ALL_LOCATIONS_FRAMING_FIT_ALL,
+                            ALL_LOCATIONS_SCOPE_FOCUSED,
                             ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
                         } | set(location_id_to_country_map(ctx["df"]).values())
                         _scope = str(
                             st.session_state.get(
                                 STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
-                                ALL_LOCATIONS_FRAMING_FIT_ALL,
+                                ALL_LOCATIONS_SCOPE_FOCUSED,
                             )
-                            or ALL_LOCATIONS_FRAMING_FIT_ALL
+                            or ALL_LOCATIONS_SCOPE_FOCUSED
                         ).strip()
                         if _scope not in _valid:
-                            _scope = ALL_LOCATIONS_FRAMING_FIT_ALL
+                            _scope = ALL_LOCATIONS_SCOPE_FOCUSED
                             st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = _scope
                         _map_kw["all_locations_scope"] = _scope
                         _map_kw["all_locations_location_country"] = location_id_to_country_map(
@@ -345,9 +347,9 @@ def render_prep_spinner_and_map_tab(
                         str(
                             st.session_state.get(
                                 STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
-                                ALL_LOCATIONS_FRAMING_FIT_ALL,
+                                ALL_LOCATIONS_SCOPE_FOCUSED,
                             )
-                            or ALL_LOCATIONS_FRAMING_FIT_ALL
+                            or ALL_LOCATIONS_SCOPE_FOCUSED
                         )
                         if capture_all_locations_view
                         else "",

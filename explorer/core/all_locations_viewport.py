@@ -13,8 +13,10 @@ import pandas as pd
 from explorer.core.region_display import map_focus_key_for_display
 from explorer.core.stats import checklist_country_keys
 
-# Map area / viewport mode (Streamlit session values and map overlay API).
+# Map focust / viewport mode (Streamlit session values and map overlay API).
 ALL_LOCATIONS_FRAMING_FIT_ALL = "fit_all"
+# Default scope: quantile-trimmed bounds plus optional full inclusion of well-sampled countries.
+ALL_LOCATIONS_SCOPE_FOCUSED = "focused"
 ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY = "centre_of_gravity"
 
 # Focus: empty string means all locations (no country filter).
@@ -64,11 +66,117 @@ def sorted_country_keys_by_display_name(df: pd.DataFrame) -> list[str]:
 
 
 def all_locations_scope_option_values(df: pd.DataFrame) -> list[str]:
-    """Selectbox options: All locations, My centre, then countries/regions from *df* (filtered data)."""
+    """Selectbox order: All locations, Focused (trimmed), My activity centre, then countries."""
     return [
         ALL_LOCATIONS_FRAMING_FIT_ALL,
+        ALL_LOCATIONS_SCOPE_FOCUSED,
         ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
     ] + sorted_country_keys_by_display_name(df)
+
+
+def trim_coordinate_pairs_to_central_extent(
+    pairs: list[list[float]],
+    *,
+    quantile_low: float = 0.025,
+    quantile_high: float = 0.975,
+    min_points_to_trim: int = 4,
+) -> list[list[float]]:
+    """Keep points whose lat/lon fall inside independent quantile bands (central ~95% by default).
+
+    If there are fewer than *min_points_to_trim* pairs, returns a copy of *pairs* unchanged.
+    If trimming would remove everything, returns a copy of *pairs*.
+    """
+    if len(pairs) < min_points_to_trim:
+        return [p[:] for p in pairs]
+    lats = [float(p[0]) for p in pairs]
+    lons = [float(p[1]) for p in pairs]
+    lat_lo = float(pd.Series(lats).quantile(quantile_low))
+    lat_hi = float(pd.Series(lats).quantile(quantile_high))
+    lon_lo = float(pd.Series(lons).quantile(quantile_low))
+    lon_hi = float(pd.Series(lons).quantile(quantile_high))
+    if lat_lo >= lat_hi or lon_lo >= lon_hi:
+        return [p[:] for p in pairs]
+    out = [
+        [la, lo]
+        for la, lo in pairs
+        if lat_lo <= float(la) <= lat_hi and lon_lo <= float(lo) <= lon_hi
+    ]
+    return out if out else [p[:] for p in pairs]
+
+
+def observation_row_counts_by_country_key(df: pd.DataFrame) -> dict[str, int]:
+    """Count species/checklist rows per map country key (same keys as :func:`location_id_to_country_map`).
+
+    Uses :func:`~explorer.core.stats.checklist_country_keys` per row; excludes ``_UNKNOWN``.
+    """
+    if df is None or df.empty:
+        return {}
+    keys = checklist_country_keys(df)
+    s = keys[keys.astype(str) != "_UNKNOWN"]
+    if s.empty:
+        return {}
+    vc = s.value_counts()
+    return {str(k): int(v) for k, v in vc.items()}
+
+
+def _lat_lon_key(lat: float, lon: float) -> tuple[float, float]:
+    return (round(float(lat), 5), round(float(lon), 5))
+
+
+def coordinate_pairs_focused_viewport(
+    effective_location_data: pd.DataFrame,
+    *,
+    location_id_to_country: dict[Hashable, str],
+    observation_counts_by_country: dict[str, int],
+    quantile_low: float,
+    quantile_high: float,
+    min_observations_full_country: int,
+) -> list[list[float]]:
+    """Bounds points for **Focused**: quantile band on all pins, plus every pin in countries with enough rows.
+
+    Rows counted in *observation_counts_by_country* should match the same export scope as *df*
+    passed to :func:`observation_row_counts_by_country_key`. Country keys must align with
+    *location_id_to_country* values. When *min_observations_full_country* is ``<= 0``, only
+    quantile trimming applies.
+    """
+    triples: list[tuple[float, float, str]] = []
+    loc_c = location_id_to_country or {}
+    for _, row in effective_location_data.iterrows():
+        lat, lon = float(row["Latitude"]), float(row["Longitude"])
+        if pd.isna(lat) or pd.isna(lon):
+            continue
+        lid = row["Location ID"]
+        c_raw = loc_c.get(lid, "")
+        c = str(c_raw).strip() if c_raw is not None and str(c_raw).strip() else ""
+        triples.append((lat, lon, c))
+    if not triples:
+        return []
+    full_pairs = [[t[0], t[1]] for t in triples]
+    trimmed = trim_coordinate_pairs_to_central_extent(
+        full_pairs,
+        quantile_low=quantile_low,
+        quantile_high=quantile_high,
+    )
+    if min_observations_full_country <= 0 or not observation_counts_by_country:
+        return trimmed
+
+    high = {
+        k
+        for k, n in observation_counts_by_country.items()
+        if n >= min_observations_full_country and str(k).strip() and str(k) != "_UNKNOWN"
+    }
+    if not high:
+        return trimmed
+
+    seen: set[tuple[float, float]] = {_lat_lon_key(p[0], p[1]) for p in trimmed}
+    out: list[list[float]] = [p[:] for p in trimmed]
+    for la, lo, c in triples:
+        if c in high:
+            key = _lat_lon_key(la, lo)
+            if key not in seen:
+                seen.add(key)
+                out.append([la, lo])
+    return out
 
 
 def filter_location_rows_by_focus_country(
