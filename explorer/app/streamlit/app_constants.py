@@ -155,6 +155,8 @@ STREAMLIT_MARK_LAST_SEEN_KEY = "streamlit_mark_last_seen"
 # All-locations map only (species / lifer maps never cluster).
 # Runtime: sidebar toggle; map build + cache signature.
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
+# All locations map: single control — fit all / centre of gravity / per-country fit (refs #166).
+STREAMLIT_ALL_LOCATIONS_SCOPE_KEY = "streamlit_all_locations_scope"
 # Settings → Apply map settings: defer syncing this key until next run (before sidebar widget; refs Streamlit widget rules).
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY = "_streamlit_map_cluster_apply_from_settings_pending"
 # Persisted default: Settings form + Save settings / YAML (may differ from runtime after sidebar).

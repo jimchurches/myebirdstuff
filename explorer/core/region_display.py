@@ -38,3 +38,23 @@ def state_for_display(country_code, state_code):
     code = f"{country_s}-{state_s}"
     sub = pycountry.subdivisions.get(code=code)
     return sub.name if sub else state_s
+
+
+def map_focus_key_for_display(key) -> str:
+    """Label for the All locations **Focus** dropdown.
+
+    Internal keys come from :func:`~explorer.core.stats.checklist_country_keys` (ISO alpha-2,
+    full ``Country`` cell text, or ``_R:…`` state-only markers). ISO codes are expanded to
+    common country names via pycountry when available; everything else is shown as-is.
+    """
+    if key is None or (isinstance(key, float) and pd.isna(key)):
+        return ""
+    s = str(key).strip()
+    if not s:
+        return ""
+    if s.startswith("_R:"):
+        tail = s[3:].strip()
+        return tail if tail else s
+    if len(s) == 2 and s.isalpha():
+        return country_for_display(s)
+    return s

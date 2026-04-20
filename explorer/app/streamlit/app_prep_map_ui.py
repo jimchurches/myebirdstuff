@@ -34,6 +34,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_HIGH_COUNT_SORT_KEY,
     STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
 )
 from explorer.app.streamlit.app_map_ui import (
@@ -60,6 +61,12 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     SIDEBAR_FOOTER_LINK_HEX,
 )
 from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_summary_session_inputs
+from explorer.core.all_locations_viewport import (
+    ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+    ALL_LOCATIONS_FRAMING_FIT_ALL,
+    ALL_LOCATIONS_SCOPE_FOCUSED,
+    location_id_to_country_map,
+)
 from explorer.core.map_controller import build_species_overlay_map
 from explorer.core.map_prep import (
     data_signature_for_caches,
@@ -160,6 +167,7 @@ def render_prep_spinner_and_map_tab(
             map_hint_text: str | None = None
             map_for_folium = None
             folium_st_key: str | None = None
+            capture_all_locations_view = False
             try:
                 ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
             except ValueError as e:
@@ -270,6 +278,7 @@ def render_prep_spinner_and_map_tab(
                     hide_nm = (
                         map_view_mode == "species" and bool(hide_non_matching_locations)
                     )
+                    capture_all_locations_view = map_view_mode == "all" and not overlay_sci
                     _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _map_kw = {
                         **ctx,
@@ -301,6 +310,26 @@ def render_prep_spinner_and_map_tab(
                         "map_height_px": int(map_height),
                         "visit_marker_scheme": _visit_sch,
                     }
+                    if capture_all_locations_view:
+                        _valid = {
+                            ALL_LOCATIONS_FRAMING_FIT_ALL,
+                            ALL_LOCATIONS_SCOPE_FOCUSED,
+                            ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+                        } | set(location_id_to_country_map(ctx["df"]).values())
+                        _scope = str(
+                            st.session_state.get(
+                                STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
+                                ALL_LOCATIONS_SCOPE_FOCUSED,
+                            )
+                            or ALL_LOCATIONS_SCOPE_FOCUSED
+                        ).strip()
+                        if _scope not in _valid:
+                            _scope = ALL_LOCATIONS_SCOPE_FOCUSED
+                            st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = _scope
+                        _map_kw["all_locations_scope"] = _scope
+                        _map_kw["all_locations_location_country"] = location_id_to_country_map(
+                            ctx["df"]
+                        )
                     _render_opts_sig = (
                         popup_sort_order,
                         popup_scroll_hint,
@@ -315,6 +344,15 @@ def render_prep_spinner_and_map_tab(
                         bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
                         int(map_height),
                         int(family_colour_scheme),
+                        str(
+                            st.session_state.get(
+                                STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
+                                ALL_LOCATIONS_SCOPE_FOCUSED,
+                            )
+                            or ALL_LOCATIONS_SCOPE_FOCUSED
+                        )
+                        if capture_all_locations_view
+                        else "",
                     )
                     _species_selected = bool(overlay_sci)
                     _ck = static_map_cache_key(
@@ -383,10 +421,6 @@ def render_prep_spinner_and_map_tab(
                         map_for_folium,
                         use_container_width=True,
                         height=map_height,
-                        # Cache key includes *map_view_mode* so All vs Species builds stay distinct (refs #147).
-                        # *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
-                        # distinct streamlit-folium component identity when the sidebar layout changes
-                        # (All↔Species); see invalidation block above.
                         key=folium_st_key,
                         returned_objects=[],
                         return_on_hover=False,
