@@ -213,6 +213,8 @@ def build_family_composition_folium_map(
     fit_bounds_highlight_only: bool = False,
     colour_scheme_index: int | None = None,
     default_center: tuple[float, float] | None = None,
+    default_zoom: int | None = None,
+    default_viewport_recipe: dict[str, object] | None = None,
 ) -> folium.Map:
     """Draw the family-composition map: markers, injected banner/legend HTML, and initial ``fit_bounds``.
 
@@ -231,6 +233,7 @@ def build_family_composition_folium_map(
     :func:`~explorer.app.streamlit.defaults.active_map_marker_colour_scheme` defaults.
     """
     pin_list = list(pins)
+    zoom_start = default_zoom
     if pin_list:
         if fit_bounds_highlight_only:
             hl_only = [p for p in pin_list if p.highlight_match]
@@ -243,8 +246,24 @@ def build_family_composition_folium_map(
         )
     else:
         center = default_center if default_center is not None else _default_au_center()
+        # Blank map: apply cached All-locations ``center_zoom`` recipe (e.g. COG) when present.
+        if isinstance(default_viewport_recipe, dict):
+            _mode = str(default_viewport_recipe.get("mode", "")).strip().lower()
+            if _mode == "center_zoom":
+                c = default_viewport_recipe.get("center")
+                if isinstance(c, (list, tuple)) and len(c) == 2:
+                    try:
+                        center = (float(c[0]), float(c[1]))
+                    except (TypeError, ValueError):
+                        pass
+                z = default_viewport_recipe.get("zoom")
+                if z is not None:
+                    try:
+                        zoom_start = int(z)
+                    except (TypeError, ValueError):
+                        pass
 
-    m = create_map(center, map_style, height_px=height_px)
+    m = create_map(center, map_style, height_px=height_px, zoom_start=zoom_start)
     m.get_root().html.add_child(Element(map_overlay_theme_stylesheet()))
     m.get_root().html.add_child(Element(map_popup_width_fix_script()))
 
@@ -306,6 +325,30 @@ def build_family_composition_folium_map(
             padding=(pad, pad),
             max_zoom=_mz,
         )
+    elif isinstance(default_viewport_recipe, dict) and str(default_viewport_recipe.get("mode", "")).strip().lower() == "fit_bounds":
+        _pairs_raw = default_viewport_recipe.get("pairs")
+        _pairs = _pairs_raw if isinstance(_pairs_raw, list) else []
+        _pairs = [
+            [float(p[0]), float(p[1])]
+            for p in _pairs
+            if isinstance(p, (list, tuple)) and len(p) == 2
+        ]
+        if _pairs:
+            _pad = int(default_viewport_recipe.get("padding_px", MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX))
+            if len(_pairs) == 1:
+                la, lo = float(_pairs[0][0]), float(_pairs[0][1])
+                d = 0.02
+                m.fit_bounds(
+                    [[la - d, lo - d], [la + d, lo + d]],
+                    padding=(_pad, _pad),
+                    max_zoom=int(default_viewport_recipe.get("single_point_zoom", MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM)),
+                )
+            else:
+                m.fit_bounds(
+                    _pairs,
+                    padding=(_pad, _pad),
+                    max_zoom=int(default_viewport_recipe.get("max_zoom", MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM)),
+                )
 
     return m
 

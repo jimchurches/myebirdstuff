@@ -30,6 +30,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
     STREAMLIT_MAP_DATE_FILTER_KEY,
     STREAMLIT_MAP_DATE_RANGE_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
@@ -74,6 +75,13 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_CAPTION,
     SPECIES_SEARCH_HELP_EXPANDER_LABEL,
 )
+from explorer.core.all_locations_viewport import (
+    ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+    ALL_LOCATIONS_FRAMING_FIT_ALL,
+    ALL_LOCATIONS_SCOPE_FOCUSED,
+    all_locations_scope_option_values,
+)
+from explorer.core.region_display import map_focus_key_for_display
 from explorer.core.species_search import (
     SPECIES_WHOOSH_INDEX_VERSION,
     build_ram_species_whoosh_index,
@@ -241,6 +249,32 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             ),
         )
     work_df = ws.df
+
+    if map_view_mode == "all":
+        with st.sidebar:
+            _scope_opts = all_locations_scope_option_values(work_df)
+            _cur_scope = st.session_state.get(STREAMLIT_ALL_LOCATIONS_SCOPE_KEY)
+            if _cur_scope not in _scope_opts:
+                st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = ALL_LOCATIONS_SCOPE_FOCUSED
+            st.selectbox(
+                "Map focus",
+                options=_scope_opts,
+                format_func=lambda v: (
+                    "All locations"
+                    if v == ALL_LOCATIONS_FRAMING_FIT_ALL
+                    else "Focused"
+                    if v == ALL_LOCATIONS_SCOPE_FOCUSED
+                    else "My activity centre"
+                    if v == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY
+                    else map_focus_key_for_display(v)
+                ),
+                key=STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
+            )
+            if st.session_state.get(STREAMLIT_ALL_LOCATIONS_SCOPE_KEY) == ALL_LOCATIONS_SCOPE_FOCUSED:
+                st.caption(
+                    "Focused view shows your main birding regions. "
+                    "Smaller or infrequent locations may be hidden."
+                )
 
     hide_non_matching_locations = False
     species_pick_common: str | None = None

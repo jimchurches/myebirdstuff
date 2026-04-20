@@ -34,6 +34,9 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_HIGH_COUNT_SORT_KEY,
     STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
+    STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY,
+    STREAMLIT_MAP_DATE_FILTER_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
 )
 from explorer.app.streamlit.app_map_ui import (
@@ -60,6 +63,17 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     SIDEBAR_FOOTER_LINK_HEX,
 )
 from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_summary_session_inputs
+from explorer.core.all_locations_viewport import (
+    ALL_LOCATIONS_FOCUS_ALL,
+    ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+    ALL_LOCATIONS_FRAMING_FIT_ALL,
+    ALL_LOCATIONS_SCOPE_FOCUSED,
+    coordinate_pairs_focused_viewport,
+    coordinate_pairs_for_viewport,
+    location_id_to_country_map,
+    mean_center_from_pairs,
+    observation_row_counts_by_country_key,
+)
 from explorer.core.map_controller import build_species_overlay_map
 from explorer.core.map_prep import (
     data_signature_for_caches,
@@ -74,7 +88,19 @@ from explorer.core.family_map_compute import (
     filter_work_to_family,
     selected_species_checklist_individual_counts,
 )
-from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+from explorer.app.streamlit.defaults import (
+    MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM,
+    MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM,
+    MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX,
+    MAP_ALL_LOCATIONS_FOCUSED_MIN_OBSERVATIONS_PER_COUNTRY,
+    MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH,
+    MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW,
+    MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM,
+    MAP_SPECIES_DEFAULT_CENTER_LAT,
+    MAP_SPECIES_DEFAULT_CENTER_LON,
+    MAP_SPECIES_DEFAULT_ZOOM,
+    active_map_marker_colour_scheme,
+)
 from explorer.core.family_map_folium import (
     build_family_composition_folium_map,
     build_family_map_banner_overlay_html,
@@ -160,12 +186,80 @@ def render_prep_spinner_and_map_tab(
             map_hint_text: str | None = None
             map_for_folium = None
             folium_st_key: str | None = None
+            capture_all_locations_view = False
             try:
                 ctx = prepare_all_locations_map_context(work_df, full_df=df_full)
             except ValueError as e:
                 map_warning_text = str(e)
                 st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
             else:
+                # Blank-map viewport recipe (session-only): same framing recipe as all-data All locations
+                # for non-country scopes, so Species/Families blank maps match the initial data framing.
+                _seed_recipe = {
+                    "mode": "center_zoom",
+                    "center": [float(MAP_SPECIES_DEFAULT_CENTER_LAT), float(MAP_SPECIES_DEFAULT_CENTER_LON)],
+                    "zoom": int(MAP_SPECIES_DEFAULT_ZOOM),
+                }
+                _cached_recipe = st.session_state.get(STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY)
+                blank_viewport_recipe = _cached_recipe if isinstance(_cached_recipe, dict) else _seed_recipe
+
+                _date_filter_on = bool(st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False))
+                if map_view_mode == "all" and not _date_filter_on:
+                    _scope = str(
+                        st.session_state.get(
+                            STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
+                            ALL_LOCATIONS_SCOPE_FOCUSED,
+                        )
+                        or ALL_LOCATIONS_SCOPE_FOCUSED
+                    ).strip()
+                    _allowed_scopes = {
+                        ALL_LOCATIONS_FRAMING_FIT_ALL,
+                        ALL_LOCATIONS_SCOPE_FOCUSED,
+                        ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+                    }
+                    if _scope in _allowed_scopes:
+                        _loc_c = location_id_to_country_map(ctx["df"])
+                        _pairs: list[list[float]] = []
+                        if _scope == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY:
+                            _pairs = coordinate_pairs_for_viewport(
+                                ctx["effective_location_data"],
+                                location_id_to_country=_loc_c,
+                                focus_country=ALL_LOCATIONS_FOCUS_ALL,
+                            )
+                            _mc = mean_center_from_pairs(_pairs)
+                            if _mc is not None:
+                                blank_viewport_recipe = {
+                                    "mode": "center_zoom",
+                                    "center": [float(_mc[0]), float(_mc[1])],
+                                    "zoom": int(MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM),
+                                }
+                        elif _scope == ALL_LOCATIONS_SCOPE_FOCUSED:
+                            _min_c = int(MAP_ALL_LOCATIONS_FOCUSED_MIN_OBSERVATIONS_PER_COUNTRY)
+                            _obs_by_c = observation_row_counts_by_country_key(ctx["df"]) if _min_c > 0 else {}
+                            _pairs = coordinate_pairs_focused_viewport(
+                                ctx["effective_location_data"],
+                                location_id_to_country=_loc_c,
+                                observation_counts_by_country=_obs_by_c,
+                                quantile_low=MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW,
+                                quantile_high=MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH,
+                                min_observations_full_country=_min_c,
+                            )
+                        else:
+                            _pairs = coordinate_pairs_for_viewport(
+                                ctx["effective_location_data"],
+                                location_id_to_country=_loc_c,
+                                focus_country=ALL_LOCATIONS_FOCUS_ALL,
+                            )
+                        if _scope != ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY and _pairs:
+                            blank_viewport_recipe = {
+                                "mode": "fit_bounds",
+                                "pairs": [[float(p[0]), float(p[1])] for p in _pairs],
+                                "padding_px": int(MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX),
+                                "max_zoom": int(MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM),
+                                "single_point_zoom": int(MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM),
+                            }
+                        st.session_state[STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY] = blank_viewport_recipe
+
                 if map_view_mode == "families":
                     fam = (family_name or "").strip()
                     hl = (family_highlight_base or "").strip().lower()
@@ -183,8 +277,10 @@ def render_prep_spinner_and_map_tab(
                             height_px=int(map_height),
                             colour_scheme_index=int(family_colour_scheme),
                             default_center=fam_default_center,
+                            default_zoom=int(MAP_SPECIES_DEFAULT_ZOOM),
+                            default_viewport_recipe=blank_viewport_recipe,
                         )
-                        map_hint_text = "Select a family in the sidebar to load the map."
+                        map_hint_text = "Select a family in the sidebar to load the map data"
                         result_warning = None
                     elif fam not in fams or work is None or getattr(work, "empty", True):
                         result_map = build_family_composition_folium_map(
@@ -193,6 +289,8 @@ def render_prep_spinner_and_map_tab(
                             height_px=int(map_height),
                             colour_scheme_index=int(family_colour_scheme),
                             default_center=fam_default_center,
+                            default_zoom=int(MAP_SPECIES_DEFAULT_ZOOM),
+                            default_viewport_recipe=blank_viewport_recipe,
                         )
                         map_hint_text = "No family data available (taxonomy may not have loaded)."
                         result_warning = None
@@ -267,9 +365,12 @@ def render_prep_spinner_and_map_tab(
                         (species_pick_common or "").strip() if map_view_mode == "species" else ""
                     )
                     overlay_sci = (species_pick_sci or "").strip() if map_view_mode == "species" else ""
+                    if map_view_mode == "species" and not overlay_sci:
+                        map_hint_text = "Select a species in the sidebar to load the map data"
                     hide_nm = (
                         map_view_mode == "species" and bool(hide_non_matching_locations)
                     )
+                    capture_all_locations_view = map_view_mode == "all" and not overlay_sci
                     _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _map_kw = {
                         **ctx,
@@ -300,7 +401,30 @@ def render_prep_spinner_and_map_tab(
                         ),
                         "map_height_px": int(map_height),
                         "visit_marker_scheme": _visit_sch,
+                        "species_blank_default_center": tuple(blank_viewport_recipe.get("center", [MAP_SPECIES_DEFAULT_CENTER_LAT, MAP_SPECIES_DEFAULT_CENTER_LON])),
+                        "species_blank_default_zoom": int(blank_viewport_recipe.get("zoom", MAP_SPECIES_DEFAULT_ZOOM)),
+                        "species_blank_viewport_recipe": blank_viewport_recipe,
                     }
+                    if capture_all_locations_view:
+                        _valid = {
+                            ALL_LOCATIONS_FRAMING_FIT_ALL,
+                            ALL_LOCATIONS_SCOPE_FOCUSED,
+                            ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+                        } | set(location_id_to_country_map(ctx["df"]).values())
+                        _scope = str(
+                            st.session_state.get(
+                                STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
+                                ALL_LOCATIONS_SCOPE_FOCUSED,
+                            )
+                            or ALL_LOCATIONS_SCOPE_FOCUSED
+                        ).strip()
+                        if _scope not in _valid:
+                            _scope = ALL_LOCATIONS_SCOPE_FOCUSED
+                            st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = _scope
+                        _map_kw["all_locations_scope"] = _scope
+                        _map_kw["all_locations_location_country"] = location_id_to_country_map(
+                            ctx["df"]
+                        )
                     _render_opts_sig = (
                         popup_sort_order,
                         popup_scroll_hint,
@@ -315,6 +439,15 @@ def render_prep_spinner_and_map_tab(
                         bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)),
                         int(map_height),
                         int(family_colour_scheme),
+                        str(
+                            st.session_state.get(
+                                STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
+                                ALL_LOCATIONS_SCOPE_FOCUSED,
+                            )
+                            or ALL_LOCATIONS_SCOPE_FOCUSED
+                        )
+                        if capture_all_locations_view
+                        else "",
                     )
                     _species_selected = bool(overlay_sci)
                     _ck = static_map_cache_key(
@@ -383,10 +516,6 @@ def render_prep_spinner_and_map_tab(
                         map_for_folium,
                         use_container_width=True,
                         height=map_height,
-                        # Cache key includes *map_view_mode* so All vs Species builds stay distinct (refs #147).
-                        # *map_view_mode* + *FOLIUM_MAP_MOUNT_NONCE_KEY* force a
-                        # distinct streamlit-folium component identity when the sidebar layout changes
-                        # (All↔Species); see invalidation block above.
                         key=folium_st_key,
                         returned_objects=[],
                         return_on_hover=False,

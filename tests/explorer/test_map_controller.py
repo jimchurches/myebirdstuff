@@ -5,7 +5,12 @@ from dataclasses import replace
 
 import pandas as pd
 
-from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+from explorer.app.streamlit.defaults import (
+    MAP_SPECIES_DEFAULT_CENTER_LAT,
+    MAP_SPECIES_DEFAULT_CENTER_LON,
+    MAP_SPECIES_DEFAULT_ZOOM,
+    active_map_marker_colour_scheme,
+)
 from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
 from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
@@ -207,7 +212,7 @@ def test_species_view_no_selection_hide_only_empty_map():
     assert r.warning is None
     assert r.map is not None
     html = r.map._repr_html_()
-    assert "Select a species in the sidebar" in html
+    assert "Select a species in the sidebar to load the map data" in html
     assert "All species" not in html
     assert "All locations" not in html
 
@@ -224,8 +229,64 @@ def test_species_view_no_selection_empty_even_when_hide_filter_off():
     assert r.warning is None
     assert r.map is not None
     html = r.map._repr_html_()
-    assert "Select a species in the sidebar" in html
+    assert "Select a species in the sidebar to load the map data" in html
     assert "All species" not in html
+
+
+def test_species_view_no_selection_uses_fixed_default_center_and_zoom():
+    df = _minimal_map_df()
+    # Deliberately offset dataset from default blank-map centre to verify fixed viewport values are used.
+    df["Latitude"] = [-10.0]
+    df["Longitude"] = [110.0]
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        map_view_mode="species",
+        hide_non_matching_locations=False,
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map.get_root().render()
+    assert f"center: [{float(MAP_SPECIES_DEFAULT_CENTER_LAT)}, {float(MAP_SPECIES_DEFAULT_CENTER_LON)}]" in html
+    assert f"\"zoom\": {int(MAP_SPECIES_DEFAULT_ZOOM)}" in html
+
+
+def test_species_selection_applies_fit_bounds_to_species_extent():
+    df = pd.DataFrame(
+        {
+            "Submission ID": ["S1", "S2", "S3"],
+            "Date": [pd.Timestamp("2025-01-01")] * 3,
+            "Time": ["06:15", "06:20", "06:25"],
+            "datetime": [
+                pd.Timestamp("2025-01-01 06:15"),
+                pd.Timestamp("2025-01-01 06:20"),
+                pd.Timestamp("2025-01-01 06:25"),
+            ],
+            "Count": [1, 2, 3],
+            "Location ID": ["L1", "L2", "L3"],
+            "Location": ["A", "B", "C"],
+            "Scientific Name": ["Anas gracilis", "Anas gracilis", "Cygnus atratus"],
+            "Common Name": ["Grey Teal", "Grey Teal", "Black Swan"],
+            "Latitude": [-35.0, -33.0, -12.0],
+            "Longitude": [149.0, 151.0, 131.0],
+            "Protocol": ["Traveling"] * 3,
+            "Duration (Min)": [30, 30, 30],
+            "Distance Traveled (km)": [1.5, 1.5, 1.5],
+            "All Obs Reported": [1, 1, 1],
+            "Number of Observers": [2, 2, 2],
+        }
+    )
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="Anas gracilis",
+        selected_common_name="Grey Teal",
+        map_view_mode="species",
+        hide_non_matching_locations=False,
+    )
+    assert r.warning is None
+    assert r.map is not None
+    html = r.map.get_root().render()
+    assert "fitBounds(" in html
 
 
 def test_lifer_map_mode_uses_visit_marker_scheme_when_provided():
@@ -259,6 +320,8 @@ def test_lifer_map_mode_builds_banner():
     )
     assert r.warning is None
     assert r.map is not None
+    html_root = r.map.get_root().render()
+    assert "fitBounds(" in html_root
     html = r.map._repr_html_()
     assert "Lifer locations" in html
     assert "+ subspecies" not in html
@@ -279,6 +342,9 @@ def test_lifer_map_mode_builds_banner():
     assert r2.warning is None
     assert r2.map is not None
     html2 = r2.map.get_root().render()
+    assert "fitBounds(" in html2
+    # Subspecies toggle does not change framing (base lifer extent only); bounds call should match.
+    assert html_root.split("fitBounds(", 1)[1].split(");", 1)[0] == html2.split("fitBounds(", 1)[1].split(");", 1)[0]
     assert "Lifer locations + subspecies" in html2
     assert "0 subspecies lifers" in html2.lower()
     assert "Visited:" not in html2

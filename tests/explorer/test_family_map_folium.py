@@ -188,3 +188,20 @@ def test_build_family_map_banner_element_html_escapes():
     h = build_family_map_banner_element_html('Birds & more <script>')
     assert "&amp;" in h or "Birds" in h
     assert "<script>" not in h or "&lt;" in h
+
+
+def test_blank_family_map_applies_center_zoom_recipe_over_default_center():
+    """Blank map uses All-locations ``center_zoom`` recipe (e.g. COG), not only ``default_center``."""
+    m = build_family_composition_folium_map(
+        (),
+        default_center=(-10.0, 110.0),
+        default_zoom=5,
+        default_viewport_recipe={
+            "mode": "center_zoom",
+            "center": [-33.0, 151.0],
+            "zoom": 7,
+        },
+    )
+    html = m.get_root().render()
+    assert "-33" in html and "151" in html
+    assert '"zoom": 7' in html or '"zoom": 7,' in html

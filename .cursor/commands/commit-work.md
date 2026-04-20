@@ -130,6 +130,8 @@ Do not write vague messages like:
 - tweaks
 - WIP
 
+NOTE: 'WIP' may be added to the heading or text if the user is clear the commit is to capture work in progress or WIP
+
 ---
 
 ## Step 6 — Commit

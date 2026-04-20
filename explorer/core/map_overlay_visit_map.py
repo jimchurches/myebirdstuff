@@ -12,18 +12,41 @@ from branca.element import Element
 from folium.plugins import MarkerCluster
 
 from explorer.app.streamlit.defaults import (
+    MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM,
+    MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM,
+    MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX,
+    MAP_ALL_LOCATIONS_FOCUSED_MIN_OBSERVATIONS_PER_COUNTRY,
+    MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH,
+    MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW,
+    MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM,
     MAP_DEBUG_SHOW_ZOOM_LEVEL,
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+    MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
     MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
     MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT,
     MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT,
     MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT,
     MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
     MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
+    MAP_SPECIES_DEFAULT_CENTER_LAT,
+    MAP_SPECIES_DEFAULT_CENTER_LON,
+    MAP_SPECIES_DEFAULT_ZOOM,
+    MAP_SPECIES_FIT_BOUNDS_MAX_ZOOM,
+    MAP_SPECIES_FIT_BOUNDS_PADDING_PX,
+    MAP_SPECIES_SINGLE_POINT_ZOOM,
     MapMarkerColourScheme,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
+)
+from explorer.core.all_locations_viewport import (
+    ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+    ALL_LOCATIONS_FRAMING_FIT_ALL,
+    ALL_LOCATIONS_SCOPE_FOCUSED,
+    coordinate_pairs_focused_viewport,
+    coordinate_pairs_for_viewport,
+    mean_center_from_pairs,
+    observation_row_counts_by_country_key,
 )
 from explorer.core.map_marker_colour_resolve import (
     is_valid_hex_colour,
@@ -51,6 +74,11 @@ from explorer.presentation.map_renderer import (
 from explorer.presentation.map_ui_constants import MAP_POPUP_MAX_WIDTH_PX
 from explorer.core.species_logic import filter_species
 from explorer.core.stats import safe_count
+
+
+def _epsilon_bounds_around_point(lat: float, lon: float, delta: float = 0.02) -> list[list[float]]:
+    """Tiny bounding box so Leaflet ``fitBounds`` has non-zero extent for a single pin."""
+    return [[lat - delta, lon - delta], [lat + delta, lon + delta]]
 
 
 def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tuple[str, str, int, int, float]:
@@ -283,6 +311,11 @@ def build_visit_overlay_map(
     map_height_px: int,
     visit_marker_scheme: MapMarkerColourScheme,
     map_view_mode: str = "all",
+    all_locations_scope: str = ALL_LOCATIONS_SCOPE_FOCUSED,
+    all_locations_location_country: dict[Hashable, str] | None = None,
+    species_blank_default_center: tuple[float, float] | None = None,
+    species_blank_default_zoom: int | None = None,
+    species_blank_viewport_recipe: dict[str, Any] | None = None,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode)."""
     if selected_species:
@@ -306,20 +339,96 @@ def build_visit_overlay_map(
             effective_location_data["Longitude"].mean(),
         ]
 
+    _mv = (map_view_mode or "all").strip().lower()
+    create_zoom: int | None = None
+    all_loc_pairs: list[list[float]] = []
+    if not selected_species and _mv == "all":
+        loc_c = all_locations_location_country or {}
+        scope = (all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED).strip()
+        if scope == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY:
+            all_loc_pairs = coordinate_pairs_for_viewport(
+                effective_location_data,
+                location_id_to_country=loc_c,
+                focus_country="",
+            )
+            mc = mean_center_from_pairs(all_loc_pairs)
+            if mc:
+                map_center = [mc[0], mc[1]]
+            create_zoom = MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM
+        elif scope == ALL_LOCATIONS_SCOPE_FOCUSED:
+            _min_c = int(MAP_ALL_LOCATIONS_FOCUSED_MIN_OBSERVATIONS_PER_COUNTRY)
+            _obs_by_c = (
+                observation_row_counts_by_country_key(df)
+                if _min_c > 0
+                else {}
+            )
+            all_loc_pairs = coordinate_pairs_focused_viewport(
+                effective_location_data,
+                location_id_to_country=loc_c,
+                observation_counts_by_country=_obs_by_c,
+                quantile_low=MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW,
+                quantile_high=MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH,
+                min_observations_full_country=_min_c,
+            )
+        else:
+            fc = "" if scope == ALL_LOCATIONS_FRAMING_FIT_ALL else scope
+            all_loc_pairs = coordinate_pairs_for_viewport(
+                effective_location_data,
+                location_id_to_country=loc_c,
+                focus_country=fc,
+            )
+            if fc and not all_loc_pairs:
+                all_loc_pairs = coordinate_pairs_for_viewport(
+                    effective_location_data,
+                    location_id_to_country=loc_c,
+                    focus_country="",
+                )
+
     popup_ascending = popup_sort_order == "ascending"
     date_filter_status_line = date_filter_status or None
 
-    _mv = (map_view_mode or "all").strip().lower()
     if not selected_species and (hide_non_matching_locations or _mv == "species"):
-        if effective_location_data.empty:
-            lat, lon = -25.0, 134.0
-        else:
-            lat = float(effective_location_data["Latitude"].mean())
-            lon = float(effective_location_data["Longitude"].mean())
-            if pd.isna(lat) or pd.isna(lon):
-                lat, lon = -25.0, 134.0
-        map_center_empty = [lat, lon]
-        species_map = create_map(map_center_empty, map_style, height_px=map_height_px)
+        c_lat = float(MAP_SPECIES_DEFAULT_CENTER_LAT)
+        c_lon = float(MAP_SPECIES_DEFAULT_CENTER_LON)
+        if species_blank_default_center is not None and len(species_blank_default_center) == 2:
+            c_lat = float(species_blank_default_center[0])
+            c_lon = float(species_blank_default_center[1])
+        z = int(MAP_SPECIES_DEFAULT_ZOOM) if species_blank_default_zoom is None else int(
+            species_blank_default_zoom
+        )
+        map_center_empty = [c_lat, c_lon]
+        species_map = create_map(
+            map_center_empty,
+            map_style,
+            height_px=map_height_px,
+            zoom_start=z,
+        )
+        _recipe = species_blank_viewport_recipe if isinstance(species_blank_viewport_recipe, dict) else {}
+        _mode = str(_recipe.get("mode", "")).strip().lower()
+        if _mode == "fit_bounds":
+            _pairs_raw = _recipe.get("pairs")
+            _pairs = _pairs_raw if isinstance(_pairs_raw, list) else []
+            _pairs = [
+                [float(p[0]), float(p[1])]
+                for p in _pairs
+                if isinstance(p, (list, tuple)) and len(p) == 2
+            ]
+            if _pairs:
+                _pad = int(_recipe.get("padding_px", MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX))
+                if len(_pairs) == 1:
+                    la, lo = float(_pairs[0][0]), float(_pairs[0][1])
+                    b = _epsilon_bounds_around_point(la, lo)
+                    species_map.fit_bounds(
+                        b,
+                        padding=(_pad, _pad),
+                        max_zoom=int(_recipe.get("single_point_zoom", MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM)),
+                    )
+                else:
+                    species_map.fit_bounds(
+                        _pairs,
+                        padding=(_pad, _pad),
+                        max_zoom=int(_recipe.get("max_zoom", MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM)),
+                    )
         inject_map_overlay_theme(species_map)
         add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
         species_map.get_root().html.add_child(
@@ -331,7 +440,12 @@ def build_visit_overlay_map(
         species_map.get_root().html.add_child(Element(scroll_popup_script))
         return MapOverlayResult(species_map, None)
 
-    species_map = create_map(map_center, map_style, height_px=map_height_px)
+    species_map = create_map(
+        map_center,
+        map_style,
+        height_px=map_height_px,
+        zoom_start=create_zoom,
+    )
     inject_map_overlay_theme(species_map)
     add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
 
@@ -359,6 +473,7 @@ def build_visit_overlay_map(
                 options={
                     "maxClusterRadius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
                     "disableClusteringAtZoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+                    "removeOutsideVisibleBounds": MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
                     "spiderfyOnMaxZoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
                     "zoomToBoundsOnClick": True,
                 },
@@ -390,6 +505,22 @@ def build_visit_overlay_map(
 
         if marker_cluster is not None:
             marker_cluster.add_to(species_map)
+
+        scope_fit = (all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED).strip()
+        should_fit = scope_fit != ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY and bool(all_loc_pairs)
+        if should_fit and all_loc_pairs:
+            pad = int(MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX)
+            max_z = int(MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM)
+            if len(all_loc_pairs) == 1:
+                la, lo = float(all_loc_pairs[0][0]), float(all_loc_pairs[0][1])
+                b = _epsilon_bounds_around_point(la, lo)
+                species_map.fit_bounds(
+                    b,
+                    padding=(pad, pad),
+                    max_zoom=int(MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM),
+                )
+            else:
+                species_map.fit_bounds(all_loc_pairs, padding=(pad, pad), max_zoom=max_z)
 
     else:
         if selected_species not in filtered_by_loc_cache:
@@ -564,6 +695,33 @@ def build_visit_overlay_map(
                 fill_opacity=fill_opacity,
                 popup=popup_content,
             ).add_to(species_map)
+
+        # Follow the selected species extent only; background/context pins may be off-screen.
+        species_pairs: list[list[float]] = []
+        for _, row in location_data_local.iterrows():
+            if not bool(row.get("has_species_match", False)):
+                continue
+            la = float(row["Latitude"])
+            lo = float(row["Longitude"])
+            if pd.isna(la) or pd.isna(lo):
+                continue
+            species_pairs.append([la, lo])
+        if species_pairs:
+            pad = int(MAP_SPECIES_FIT_BOUNDS_PADDING_PX)
+            if len(species_pairs) == 1:
+                la, lo = float(species_pairs[0][0]), float(species_pairs[0][1])
+                b = _epsilon_bounds_around_point(la, lo)
+                species_map.fit_bounds(
+                    b,
+                    padding=(pad, pad),
+                    max_zoom=int(MAP_SPECIES_SINGLE_POINT_ZOOM),
+                )
+            else:
+                species_map.fit_bounds(
+                    species_pairs,
+                    padding=(pad, pad),
+                    max_zoom=int(MAP_SPECIES_FIT_BOUNDS_MAX_ZOOM),
+                )
 
     scroll_popup_script = popup_scroll_script(popup_scroll_hint, popup_sort_order == "ascending")
     species_map.get_root().html.add_child(Element(scroll_popup_script))
