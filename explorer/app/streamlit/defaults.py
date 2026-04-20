@@ -37,6 +37,10 @@ from explorer.core.map_marker_scheme_model import (
 MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX = 40
 MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 9
 MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
+# When True (plugin default), markers outside the viewport are removed for performance; after
+# programmatic ``fitBounds`` some markers can fail to appear until the user zooms/pans. False keeps
+# all cluster children in the layer so the map matches expectations (refs #166).
+MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS = False
 
 # Debug-only map overlay (live zoom readout). Listed in :func:`debug_defaults_enabled` for CI warnings.
 MAP_DEBUG_SHOW_ZOOM_LEVEL = False

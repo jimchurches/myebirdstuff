@@ -19,6 +19,7 @@ from explorer.app.streamlit.defaults import (
     MAP_DEBUG_SHOW_ZOOM_LEVEL,
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+    MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
     MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
     MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT,
     MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT,
@@ -410,6 +411,7 @@ def build_visit_overlay_map(
                 options={
                     "maxClusterRadius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
                     "disableClusteringAtZoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+                    "removeOutsideVisibleBounds": MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
                     "spiderfyOnMaxZoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
                     "zoomToBoundsOnClick": True,
                 },
