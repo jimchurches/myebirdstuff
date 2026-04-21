@@ -45,7 +45,7 @@ def build_species_overlay_map(
     records_by_loc: Dict[Hashable, pd.DataFrame],
     effective_location_data: pd.DataFrame,
     effective_records_by_loc: Dict[Hashable, pd.DataFrame],
-    effective_totals: Tuple[int, int, int],
+    effective_totals: Tuple[int, int, int, int],
     effective_use_full: bool,
     lifer_lookup_df: pd.DataFrame,
     true_lifer_locations: Dict[str, Any],
@@ -99,6 +99,9 @@ def build_species_overlay_map(
     *hide_non_matching_locations*: in **Species locations** view with no species selected, when
     ``True`` an empty map is shown until a species is chosen. When ``False`` and the view is still
     **All locations**, the full map is shown; **Species** view with no selection is always empty (refs #147).
+
+    *effective_totals*: ``(n_locations, n_checklists, n_species, n_individuals)`` for the all-locations
+    banner (refs #167); from :func:`explorer.core.map_prep.prepare_all_locations_map_context`.
 
     *map_height_px*: pixel height for the Folium map pane (match Streamlit **Map height** slider).
 

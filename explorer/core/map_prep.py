@@ -65,6 +65,7 @@ def prepare_all_locations_map_context(
     total_checklists = int(work["Submission ID"].nunique())
     total_individuals = int(work["Count"].apply(safe_count).sum())
     total_species = int(countable_species_vectorized(work).dropna().nunique())
+    n_locations = int(location_data["Location ID"].nunique())
 
     prep = prepare_lifer_last_seen(full, base_species_fn=base_species_for_lifer)
 
@@ -74,7 +75,7 @@ def prepare_all_locations_map_context(
         "records_by_loc": records_by_loc,
         "effective_location_data": location_data,
         "effective_records_by_loc": records_by_loc,
-        "effective_totals": (total_checklists, total_species, total_individuals),
+        "effective_totals": (n_locations, total_checklists, total_species, total_individuals),
         "effective_use_full": False,
         "lifer_lookup_df": prep.lifer_lookup_df,
         "true_lifer_locations": prep.true_lifer_locations,
