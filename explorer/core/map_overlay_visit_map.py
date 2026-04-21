@@ -58,7 +58,7 @@ from explorer.core.map_overlay_theme import inject_map_overlay_theme
 from explorer.core.map_overlay_types import BaseSpeciesFn, MapOverlayResult, SpeciesUrlFn
 from explorer.presentation.map_renderer import (
     add_zoom_level_debug_overlay,
-    build_all_species_banner_html,
+    build_all_locations_banner_html,
     build_legend_html,
     build_location_popup_html,
     build_species_banner_html,
@@ -285,7 +285,7 @@ def build_visit_overlay_map(
     records_by_loc: Dict[Hashable, pd.DataFrame],
     effective_location_data: pd.DataFrame,
     effective_records_by_loc: Dict[Hashable, pd.DataFrame],
-    effective_totals: Tuple[int, int, int],
+    effective_totals: Tuple[int, int, int, int],
     effective_use_full: bool,
     lifer_lookup_df: pd.DataFrame,
     true_lifer_locations: Dict[str, Any],
@@ -450,9 +450,9 @@ def build_visit_overlay_map(
     add_zoom_level_debug_overlay(species_map, enabled=MAP_DEBUG_SHOW_ZOOM_LEVEL)
 
     if not selected_species:
-        tc, ts, ti = effective_totals
+        nl, tc, ts, ti = effective_totals
         species_map.get_root().html.add_child(
-            Element(build_all_species_banner_html(tc, ts, ti, date_filter_status_line))
+            Element(build_all_locations_banner_html(nl, tc, ts, ti, date_filter_status_line))
         )
         _fill, _edge, _radius_px, _stroke_w, _fill_op = _all_locations_marker_params_from_scheme(
             visit_marker_scheme

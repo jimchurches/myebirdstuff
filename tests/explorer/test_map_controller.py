@@ -64,7 +64,7 @@ def _common_kwargs(df, *, visit_marker_scheme=None):
         records_by_loc=records_by_loc,
         effective_location_data=location_data,
         effective_records_by_loc=records_by_loc,
-        effective_totals=(df["Submission ID"].nunique(), 1, 3),
+        effective_totals=(df["Location ID"].nunique(), df["Submission ID"].nunique(), 1, 3),
         effective_use_full=False,
         lifer_lookup_df=prep.lifer_lookup_df,
         true_lifer_locations=prep.true_lifer_locations,
@@ -91,7 +91,7 @@ def test_no_sightings_returns_warning():
     assert "Xyz abcensis" in r.warning
 
 
-def test_all_species_builds_map_with_banner():
+def test_all_locations_builds_map_with_banner():
     df = _minimal_map_df()
     r = build_species_overlay_map(
         **_common_kwargs(df),
@@ -100,7 +100,8 @@ def test_all_species_builds_map_with_banner():
     assert r.warning is None
     assert r.map is not None
     html = r.map._repr_html_()
-    assert "All species" in html
+    assert "1 location" in html
+    assert "All locations" in html  # banner title + legend label
     assert "1 checklist" in html
     assert "Date filter" not in html
 

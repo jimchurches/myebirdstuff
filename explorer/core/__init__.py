@@ -46,7 +46,7 @@ if TYPE_CHECKING:  # pragma: no cover
         format_rankings_tab_html,
     )
     from explorer.presentation.map_renderer import (
-        build_all_species_banner_html,
+        build_all_locations_banner_html,
         build_legend_html,
         build_location_popup_html,
         build_species_banner_html,
@@ -129,9 +129,9 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "format_sighting_row": ("explorer.presentation.map_renderer", "format_sighting_row"),
     "popup_scroll_script": ("explorer.presentation.map_renderer", "popup_scroll_script"),
     "pin_legend_item": ("explorer.presentation.map_renderer", "pin_legend_item"),
-    "build_all_species_banner_html": (
+    "build_all_locations_banner_html": (
         "explorer.presentation.map_renderer",
-        "build_all_species_banner_html",
+        "build_all_locations_banner_html",
     ),
     "build_species_banner_html": ("explorer.presentation.map_renderer", "build_species_banner_html"),
     "build_legend_html": ("explorer.presentation.map_renderer", "build_legend_html"),
@@ -188,7 +188,7 @@ __all__ = [
     "format_sighting_row",
     "popup_scroll_script",
     "pin_legend_item",
-    "build_all_species_banner_html",
+    "build_all_locations_banner_html",
     "build_species_banner_html",
     "build_legend_html",
     "build_visit_info_html",

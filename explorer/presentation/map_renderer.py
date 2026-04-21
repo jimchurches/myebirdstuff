@@ -330,6 +330,24 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   font-weight: 400;
   margin: 0;
 }}
+/* All-locations map: match family-map banner hierarchy — title (green) + body-colour main line + muted smaller line (#167). */
+.pebird-map-banner__all-locations-primary {{
+  display: block;
+  font-size: inherit;
+  font-weight: 400;
+  color: {EXPLORER_UI_TEXT_COLOR};
+  margin: 0;
+  line-height: 1.35;
+}}
+/* Same rhythm as ``__family-selected-summary`` under family main stats (refs family map banner). */
+.pebird-map-banner__all-locations-details {{
+  display: block;
+  font-size: calc(1em - 2px);
+  font-weight: 400;
+  color: {EXPLORER_UI_MUTED};
+  margin-top: 6px;
+  line-height: 1.35;
+}}
 /* Species map only: secondary stats (first/last seen, high count) below the primary summary line (#162). */
 .pebird-map-banner__stats-secondary {{
   font-size: calc(1em - 3px);
@@ -686,16 +704,25 @@ def pin_legend_item(color, fill, label):
     )
 
 
-def build_all_species_banner_html(
-    total_checklists, total_species, total_individuals, date_filter_status=None
+def build_all_locations_banner_html(
+    n_locations,
+    total_checklists,
+    total_species,
+    total_individuals,
+    date_filter_status=None,
 ):
-    """Return the HTML overlay banner for the all-species map view.
+    """Return the HTML overlay banner for the **All locations** map (landing map).
+
+    Same hierarchy as the family-map banner: green ``__title``, main stats in body text, secondary
+    line muted and slightly smaller (refs #167).
 
     If date_filter_status is provided (e.g. "Date filter: Off" or "Date filter: 2026-01-01 to 2026-12-31"),
-    it is shown as a second line in the banner, smaller and lighter so it is less prominent.
+    it is shown below, smaller and lighter so it is less prominent.
     """
     sep = _banner_sep()
-    stats = (
+    loc_w = "locations" if n_locations != 1 else "location"
+    primary_line = f"{n_locations} {loc_w}"
+    details_line = (
         f'{total_checklists} checklist{"s" if total_checklists != 1 else ""}'
         f'{sep}{total_species} species'
         f'{sep}{total_individuals} individual{"s" if total_individuals != 1 else ""}'
@@ -703,8 +730,11 @@ def build_all_species_banner_html(
     date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
     return (
         f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
-        f'<span class="pebird-map-banner__title">All species</span>'
-        f'<div class="pebird-map-banner__stats">{stats}</div>'
+        f'<span class="pebird-map-banner__title">All locations</span>'
+        f'<div class="pebird-map-banner__stats">'
+        f'<span class="pebird-map-banner__all-locations-primary">{primary_line}</span>'
+        f'<span class="pebird-map-banner__all-locations-details">{details_line}</span>'
+        f"</div>"
         f'{date_block}'
         f'</div>'
     )

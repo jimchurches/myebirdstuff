@@ -8,7 +8,7 @@ from explorer.presentation.map_renderer import (
     build_species_map_location_popup_html,
     build_species_seen_sections_html,
     build_visit_info_html,
-    build_all_species_banner_html,
+    build_all_locations_banner_html,
     build_species_banner_html,
     build_legend_html,
     build_location_popup_html,
@@ -340,25 +340,29 @@ def test_pin_legend_item_is_single_span():
 
 
 # ---------------------------------------------------------------------------
-# build_all_species_banner_html
+# build_all_locations_banner_html
 # ---------------------------------------------------------------------------
 
-def test_build_all_species_banner_html_content():
-    html = build_all_species_banner_html(42, 100, 5000)
-    assert "All species" in html
-    assert "42 checklists" in html
+def test_build_all_locations_banner_html_content():
+    html = build_all_locations_banner_html(728, 7452, 100, 467_889)
+    assert 'class="pebird-map-banner__title">All locations</span>' in html
+    assert "728 locations" in html
+    assert "pebird-map-banner__all-locations-primary" in html
+    assert "pebird-map-banner__all-locations-details" in html
+    assert "7452 checklists" in html
     assert "100 species" in html
-    assert "5000 individuals" in html
+    assert "467889 individuals" in html
 
 
-def test_build_all_species_banner_html_singular():
-    html = build_all_species_banner_html(1, 1, 1)
+def test_build_all_locations_banner_html_singular():
+    html = build_all_locations_banner_html(1, 1, 1, 1)
+    assert "1 location" in html
     assert "1 checklist" in html
     assert "1 individual" in html
 
 
-def test_build_all_species_banner_html_is_div():
-    html = build_all_species_banner_html(10, 20, 30)
+def test_build_all_locations_banner_html_is_div():
+    html = build_all_locations_banner_html(10, 20, 30, 40)
     assert html.startswith("<div")
     assert html.endswith("</div>")
 
