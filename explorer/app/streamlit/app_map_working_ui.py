@@ -270,10 +270,16 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 ),
                 key=STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
             )
-            if st.session_state.get(STREAMLIT_ALL_LOCATIONS_SCOPE_KEY) == ALL_LOCATIONS_SCOPE_FOCUSED:
+            _scope_sel = st.session_state.get(STREAMLIT_ALL_LOCATIONS_SCOPE_KEY)
+            if _scope_sel == ALL_LOCATIONS_SCOPE_FOCUSED:
                 st.caption(
                     "Focused view shows your main birding regions. "
                     "Smaller or infrequent locations may be hidden."
+                )
+            elif _scope_sel == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY:
+                st.caption(
+                    "Centres the map on the middle of the places you've birded. "
+                    "You may need to zoom out to see more locations."
                 )
 
     hide_non_matching_locations = False
