@@ -233,7 +233,7 @@ def render_settings_tab(
                 value=bool(st.session_state.get(STREAMLIT_MARK_LAST_SEEN_KEY, True)),
             )
             cluster_all_locations_w = st.toggle(
-                "Group nearby pins — default (All locations map)",
+                "Group nearby markers",
                 value=bool(
                     st.session_state.get(
                         STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
