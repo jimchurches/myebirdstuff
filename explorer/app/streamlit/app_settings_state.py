@@ -332,8 +332,9 @@ def settings_data_path_html(
     data_abs_path: str | None,
     source_label: str | None,
     repo_root: str,
+    config_yaml_abs_path: str | None = None,
 ) -> str:
-    """Read-only Settings block: file name, optional disk path, loaded-by category."""
+    """Read-only Settings block: file name, optional disk path, loaded-by, optional config path."""
     if not data_basename:
         return (
             '<div class="ebird-data-path-block">'
@@ -359,6 +360,13 @@ def settings_data_path_html(
     rows.append(
         f"<p><strong>Data file loaded by:</strong> {html.escape(loaded_by, quote=False)}</p>"
     )
+
+    cfg = (config_yaml_abs_path or "").strip()
+    if cfg:
+        rows.append(
+            "<p><strong>Configuration file path:</strong> "
+            f"<code>{html.escape(cfg, quote=False)}</code></p>"
+        )
 
     return f'<div class="ebird-data-path-block">{"".join(rows)}</div>'
 

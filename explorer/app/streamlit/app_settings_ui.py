@@ -166,12 +166,14 @@ def render_settings_tab(
                     st.session_state[SETTINGS_FLASH_RESET_KEY] = True
 
             settings_persistence_flash_banners()
-            st.caption(
-                "Use **Apply map settings** and **Apply table settings** before **Save settings**. "
-                "Taxonomy still applies immediately in-session. Save writes your current applied preferences "
-                "to your configuration file."
-            )
-            st.caption(f"Configuration file: {settings_yaml_path}")
+
+        st.caption(
+            "Sidebar changes are session-only.\n\n"
+            "Use **Apply map settings** & **Apply table settings** to update the current Explorer defaults.\n\n"
+            "Use **Save settings** to save your current Explorer defaults to your configuration file "
+            "(if configured).\n\n"
+            "Use **Reset to defaults** to start again."
+        )
 
         st.divider()
         st.subheader("Map display")
@@ -424,6 +426,7 @@ def render_settings_tab(
                 data_abs_path=data_abs_path,
                 source_label=source_label,
                 repo_root=REPO_ROOT,
+                config_yaml_abs_path=settings_yaml_path or None,
             ),
             unsafe_allow_html=True,
         )
