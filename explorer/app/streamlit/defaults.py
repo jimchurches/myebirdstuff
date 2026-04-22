@@ -293,7 +293,7 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
             '#C46A00',
             '#7F1D1D',
         ),
-        highlight_stroke_hex='#D65A00',
+        highlight_stroke_hex='#E8A91A',
     ),
 )
 
