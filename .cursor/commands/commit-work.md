@@ -148,6 +148,8 @@ git commit -m "<first line>" -m "Refs: #..."
 
 If no issue references exist, use a single `-m` with just the summary line.
 
+**Footer tags (e.g. `Made-with: Cursor`):** A `prepare-commit-msg` hook (or similar) may append lines such as `Made-with: Cursor` after the message you pass to `git commit`. **That is intentional here and always OK.** Do not warn the user about it, suggest amending the commit to strip it, or call it out as an error in Step 7 — you can ignore it entirely.
+
 ---
 
 ## Step 7 — Final output
