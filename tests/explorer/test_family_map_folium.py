@@ -126,6 +126,26 @@ def test_family_map_banner_optional_selected_species_summary_line():
     assert "9 individuals" in banner
 
 
+def test_family_map_banner_selected_species_name_links_when_url_provided():
+    """Banner species label uses the same eBird link pattern as the family map legend."""
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="Whistlers",
+            total_species_taxonomy=12,
+            species_recorded_user=5,
+            locations_with_records=2,
+        ),
+        selected_species_n_checklists=4,
+        selected_species_n_individuals=9,
+        selected_species_display_name="Golden Whistler",
+        selected_species_url="https://ebird.org/species/goldenwhi1",
+    )
+    assert 'href="https://ebird.org/species/goldenwhi1"' in banner
+    assert 'target="_blank"' in banner
+    assert 'rel="noopener noreferrer"' in banner
+    assert "Golden Whistler</a>:" in banner
+
+
 def test_family_map_banner_selected_species_display_name_escapes_html():
     banner = build_family_map_banner_overlay_html(
         FamilyMapBannerMetrics(
@@ -140,6 +160,23 @@ def test_family_map_banner_selected_species_display_name_escapes_html():
     )
     assert "A &amp; B &lt;test&gt;:" in banner
     assert "<test>" not in banner
+
+
+def test_family_map_banner_selected_species_link_escapes_name_and_href():
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="F",
+            total_species_taxonomy=1,
+            species_recorded_user=1,
+            locations_with_records=1,
+        ),
+        selected_species_n_checklists=1,
+        selected_species_n_individuals=2,
+        selected_species_display_name="A & B",
+        selected_species_url='https://ebird.org/species/x?q=1&foo=2',
+    )
+    assert "A &amp; B</a>:" in banner
+    assert "q=1&amp;foo=2" in banner
 
 
 def test_build_family_map_empty_pins_still_returns_map():

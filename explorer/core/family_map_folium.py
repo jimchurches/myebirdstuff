@@ -99,6 +99,7 @@ def build_family_map_banner_overlay_html(
     selected_species_n_checklists: int | None = None,
     selected_species_n_individuals: int | None = None,
     selected_species_display_name: str | None = None,
+    selected_species_url: str | None = None,
 ) -> str:
     """Return HTML for the fixed top-right banner: family title plus taxonomy / recording summary.
 
@@ -107,6 +108,7 @@ def build_family_map_banner_overlay_html(
     When *selected_species_n_checklists* and *selected_species_n_individuals* are both set (species
     highlight active), a third line repeats the species-map primary stats for continuity. When
     *selected_species_display_name* is non-empty, it is shown as ``Name: N checklists · M individuals``.
+    If *selected_species_url* is set (same eBird species URL as the legend), the name is linked.
     """
     title = html_module.escape(metrics.family_name, quote=False)
     stats = html_module.escape(
@@ -123,7 +125,16 @@ def build_family_map_banner_overlay_html(
         )
         dn = (selected_species_display_name or "").strip()
         if dn:
-            inner = f"{html_module.escape(dn, quote=False)}: {frag}"
+            dn_esc = html_module.escape(dn, quote=False)
+            url = (selected_species_url or "").strip()
+            if url:
+                href = html_module.escape(url, quote=True)
+                name_html = (
+                    f'<a href="{href}" target="_blank" rel="noopener noreferrer">{dn_esc}</a>'
+                )
+            else:
+                name_html = dn_esc
+            inner = f"{name_html}: {frag}"
         else:
             inner = frag
         extra = f'<span class="pebird-map-banner__family-selected-summary">{inner}</span>'
