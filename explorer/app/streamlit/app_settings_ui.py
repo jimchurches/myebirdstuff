@@ -176,9 +176,8 @@ def render_settings_tab(
         st.divider()
         st.subheader("Map display")
         st.caption(
-            "Popup behaviour, mark toggles, and default clustering for the All locations map (saved when you "
-            "**Save settings**) are batched here; click **Apply map settings** for one rerun. "
-            "For a quick on/off without changing your saved default, use the **Map** sidebar toggle."
+            "These settings apply to your current session. Click **Apply map settings** to update the maps now. "
+            "If a configuration file is set up (see Explorer docs), **Save settings** will store your preferences."
         )
         _popup_sort_opts = ["ascending", "descending"]
         _popup_scroll_opts = ["shading", "chevron", "both"]
@@ -295,8 +294,8 @@ def render_settings_tab(
         st.divider()
         st.subheader("Tables & Lists")
         st.caption(
-            "Rankings, yearly column window, country ordering, high-count behaviour, and maintenance search radius — "
-            "click **Apply table settings** for one rerun."
+            "These settings apply to your current session. Click **Apply table settings** to update the tables. "
+            "If a configuration file is set up (see Explorer docs), **Save settings** will store your preferences."
         )
         _country_sort_opts = [
             COUNTRY_TAB_SORT_ALPHABETICAL,

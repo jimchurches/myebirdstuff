@@ -369,14 +369,11 @@ def settings_taxonomy_help_markdown() -> str:
         "https://support.ebird.org/en/support/solutions/articles/48000804865-bird-names-in-ebird"
     )
     return (
-        "Used for species names in links, tables, popups and elsewhere. "
-        "Update based on the locale of input data.\n\n"
-        "Match the language and region you use for common names in "
-        "**My eBird → Preferences** "
-        "(e.g. English (Australia) → `en_AU`). "
-        "This field is the same eBird **locale** code the "
-        "taxonomy API accepts for common-name spellings. "
-        f"[Bird names in eBird]({help_url}) — how regional names are chosen."
+        "Controls how species names are displayed across the app (maps, tables, and links).\n\n"
+        "Choose a locale that matches your eBird preferences for common names "
+        "(e.g. English (Australia) → en_AU).\n\n"
+        "If unsure, use the same setting as your eBird account.\n\n"
+        f"More information: [Bird names in eBird]({help_url})"
     )
 
 
