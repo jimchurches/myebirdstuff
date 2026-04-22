@@ -190,7 +190,7 @@ def render_settings_tab(
 
         with st.form("ebird_map_settings_batch"):
             basemap_default_w = st.selectbox(
-                "Basemap — default",
+                "Basemap",
                 options=list(MAP_BASEMAP_OPTIONS),
                 format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
                 index=list(MAP_BASEMAP_OPTIONS).index(
