@@ -288,9 +288,16 @@ def build_family_composition_folium_map(
     sp_fn = species_url_fn or (lambda _c: None)
     style = active_map_marker_colour_scheme(colour_scheme_index)
 
-    # Draw non-highlighted first, then highlighted so highlights sit on top.
-    normal = [p for p in pin_list if not p.highlight_match]
-    highlighted = [p for p in pin_list if p.highlight_match]
+    # Draw low-density to high-density so denser markers sit on top.
+    # Keep highlight matches as a final pass so selected species remains visually prominent.
+    normal = sorted(
+        (p for p in pin_list if not p.highlight_match),
+        key=lambda p: int(p.density_band_index),
+    )
+    highlighted = sorted(
+        (p for p in pin_list if p.highlight_match),
+        key=lambda p: int(p.density_band_index),
+    )
     for pin in normal + highlighted:
         fill, stroke, sw = family_map_marker_style(pin, style=style)
         url_map: dict[str, str] = {}

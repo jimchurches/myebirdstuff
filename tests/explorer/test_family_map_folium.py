@@ -227,6 +227,47 @@ def test_build_family_map_banner_element_html_escapes():
     assert "<script>" not in h or "&lt;" in h
 
 
+def test_family_map_draw_order_is_low_to_high_with_highlights_last():
+    pins = (
+        FamilyLocationPin(
+            location_id="L_high_non_hl",
+            location_name="High Non-highlight",
+            latitude=-31.0,
+            longitude=141.0,
+            distinct_base_species_count=8,
+            density_band_index=2,
+            common_name_lines=("H",),
+            highlight_match=False,
+        ),
+        FamilyLocationPin(
+            location_id="L_low_non_hl",
+            location_name="Low Non-highlight",
+            latitude=-32.0,
+            longitude=142.0,
+            distinct_base_species_count=1,
+            density_band_index=0,
+            common_name_lines=("L",),
+            highlight_match=False,
+        ),
+        FamilyLocationPin(
+            location_id="L_hl",
+            location_name="Highlighted",
+            latitude=-33.0,
+            longitude=143.0,
+            distinct_base_species_count=3,
+            density_band_index=1,
+            common_name_lines=("X",),
+            highlight_match=True,
+        ),
+    )
+    html = build_family_composition_folium_map(pins).get_root().render()
+    i_low = html.find("[-32.0, 142.0]")
+    i_high = html.find("[-31.0, 141.0]")
+    i_hl = html.find("[-33.0, 143.0]")
+    assert i_low != -1 and i_high != -1 and i_hl != -1
+    assert i_low < i_high < i_hl
+
+
 def test_blank_family_map_applies_center_zoom_recipe_over_default_center():
     """Blank map uses All-locations ``center_zoom`` recipe (e.g. COG), not only ``default_center``."""
     m = build_family_composition_folium_map(
