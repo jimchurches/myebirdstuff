@@ -218,9 +218,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
 
         if map_view_mode == "all":
             st.toggle(
-                "Group nearby pins",
+                "Group nearby markers",
                 key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-                help="Clusters nearby pins at low zoom. Session-only (save in Settings to persist).",
+                help="Clusters nearby markers at low zoom. Session-only (save in Settings to persist).",
             )
 
     # Working set is still date-filtered for checklist stats and other tabs.
