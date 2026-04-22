@@ -32,6 +32,7 @@ import streamlit as st
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_FILL_HEX,
     MAP_MARKER_CATCHALL_STROKE_HEX,
+    family_map_has_highlight_halo,
 )
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_LABELS,
@@ -47,6 +48,7 @@ from explorer.app.streamlit.defaults import (
     MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT,
     MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
     MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
+    MAP_MARKER_ACTIVE_COLOUR_SCHEME,
     active_map_marker_colour_scheme,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
@@ -71,6 +73,9 @@ from explorer.app.streamlit.design_map_constants import (
     H_CLUSTER_SMALL_FILL,
     H_CLUSTER_SMALL_HALO,
     H_FO_FAMILY,
+    H_FO_FAM_HALO,
+    H_O_FAM_HALO_EDGE,
+    H_CB_FAM_HALO_PREVIEW,
     H_FO_LIFER_MAP_LIFER,
     H_FO_LIFER_MAP_SUBSPECIES,
     H_FO_LOCATIONS,
@@ -82,6 +87,8 @@ from explorer.app.streamlit.design_map_constants import (
     H_HEX_DE,
     H_HEX_DF,
     H_HEX_FAM_HL,
+    H_HEX_FAM_HALO_EDGE,
+    H_HEX_FAM_HALO_FILL,
     H_HEX_FF,
     H_HEX_FS,
     H_HEX_LML_E,
@@ -99,6 +106,7 @@ from explorer.app.streamlit.design_map_constants import (
     H_PRESET,
     H_RADIUS_DEFAULT,
     H_RADIUS_FAMILIES,
+    H_RADIUS_FAM_HALO_DELTA,
     H_SW_GLOBAL,
     H_RADIUS_LIFER_MAP_LIFER,
     H_RADIUS_LIFER_MAP_SUBSPECIES,
@@ -107,6 +115,7 @@ from explorer.app.streamlit.design_map_constants import (
     H_RADIUS_SPECIES_MAP_LOCATIONS,
     H_SW_FAM,
     H_SW_FAM_HL,
+    H_SW_FAM_HALO,
     H_SW_LIFER,
     H_SW_SPECIES,
     H_SW_SPECIES_MAP_LOCATIONS,
@@ -283,7 +292,26 @@ def _seed_controls_from_scheme(scheme_index: int) -> None:
     for i in range(4):
         st.session_state[f"design_hex_ff{i}"] = cfg.family_fill_hex[i]
         st.session_state[f"design_hex_fs{i}"] = cfg.family_stroke_hex[i]
-    st.session_state["design_hex_fam_hl"] = cfg.family_highlight_stroke_hex
+    st.session_state["design_hex_fam_hl"] = (
+        cfg.family_highlight_stroke_hex if cfg.family_highlight_stroke_hex is not None else ""
+    )
+    sch = active_map_marker_colour_scheme(scheme_index)
+    halo_on = family_map_has_highlight_halo(sch)
+    st.session_state["design_fam_halo_enabled"] = halo_on
+    if halo_on:
+        st.session_state["design_hex_fam_halo_fill"] = cfg.family_highlight_halo_fill_hex
+        st.session_state["design_hex_fam_halo_edge"] = cfg.family_highlight_halo_stroke_hex
+        st.session_state["design_radius_fam_halo_delta"] = int(cfg.family_highlight_halo_radius_delta_px)
+        st.session_state["design_fo_fam_halo"] = float(cfg.family_highlight_halo_fill_opacity)
+        st.session_state["design_o_fam_halo_edge"] = float(cfg.family_highlight_halo_stroke_opacity)
+        st.session_state["design_sw_fam_halo"] = int(cfg.family_highlight_halo_stroke_weight)
+    else:
+        st.session_state["design_hex_fam_halo_fill"] = ""
+        st.session_state["design_hex_fam_halo_edge"] = ""
+        st.session_state["design_radius_fam_halo_delta"] = 2
+        st.session_state["design_fo_fam_halo"] = 0.95
+        st.session_state["design_o_fam_halo_edge"] = 1.0
+        st.session_state["design_sw_fam_halo"] = int(cfg.marker_default_stroke_weight)
     st.session_state["design_legend_hl_swatch_ix"] = int(cfg.legend_highlight_band_index)
     cc = cfg.marker_cluster_tier_icon_hex
     if cc is not None and len(cc) == 9:
@@ -412,8 +440,23 @@ def _config_from_session() -> DesignMapPreviewConfig:
         family_stroke_hex=tuple(
             _hex_from_session(f"design_hex_fs{i}", fallback=_global_stroke_hex) for i in range(4)
         ),
-        family_highlight_stroke_hex=_hex_from_session(
-            "design_hex_fam_hl", fallback=_global_stroke_hex
+        family_highlight_halo_fill_hex=_hex_from_session(
+            "design_hex_fam_halo_fill", fallback=_global_fill_hex
+        ),
+        family_highlight_halo_stroke_hex=_hex_from_session(
+            "design_hex_fam_halo_edge", fallback=_global_stroke_hex
+        ),
+        family_highlight_halo_radius_delta_px=max(
+            0, int(st.session_state.get("design_radius_fam_halo_delta", 2))
+        ),
+        family_highlight_halo_fill_opacity=_fill_opacity_from_session(
+            "design_fo_fam_halo", default=0.95
+        ),
+        family_highlight_halo_stroke_opacity=_fill_opacity_from_session(
+            "design_o_fam_halo_edge", default=1.0
+        ),
+        family_highlight_halo_stroke_weight=max(
+            1, int(st.session_state.get("design_sw_fam_halo", st.session_state.get("design_sw_family", 1)))
         ),
         legend_highlight_band_index=max(
             0, min(3, int(st.session_state.get("design_legend_hl_swatch_ix", 0)))
@@ -434,6 +477,12 @@ def _config_from_session() -> DesignMapPreviewConfig:
         marker_cluster_border_width_px=_cluster_style_int_from_session(
             "design_cluster_border_w", MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT, lo=0, hi=8
         ),
+        family_highlight_stroke_hex=(
+            _hex_from_session("design_hex_fam_hl", fallback=_global_stroke_hex)
+            if str(st.session_state.get("design_hex_fam_hl", "")).strip()
+            else None
+        ),
+        family_highlight_halo_enabled=bool(st.session_state.get("design_fam_halo_enabled", False)),
     )
 
 
@@ -447,7 +496,7 @@ def _config_for_export() -> DesignMapPreviewConfig:
     cfg = _config_from_session()
     if cfg.marker_cluster_tier_icon_hex is not None:
         return cfg
-    pick = int(st.session_state.get("design_scheme_pick", 1))
+    pick = int(st.session_state.get("design_scheme_pick", int(MAP_MARKER_ACTIVE_COLOUR_SCHEME)))
     sch = active_map_marker_colour_scheme(pick)
     if sch.all_locations.cluster.tier_icon_hex is None:
         return cfg
@@ -476,6 +525,8 @@ def main() -> None:
     st.title("Map marker design")
     st.caption(
         "Preview visit-map and family-map **CircleMarker** styles on a fixed Canberra view (zoom 5). "
+        "Sidebar controls are the source of truth for the preview map (after **Update map**). "
+        "**Load preset** / initial load copies the chosen scheme from ``defaults.py`` into the controls. "
         "Adjust the sidebar, then click **Update map** to render — edits do not redraw until then."
     )
 
@@ -484,12 +535,13 @@ def main() -> None:
     if "design_preview_scope" not in st.session_state:
         st.session_state["design_preview_scope"] = MAP_SCOPE_ALL
     if not st.session_state.get(_K_SEEDED):
-        st.session_state["design_scheme_pick"] = 1
-        _seed_controls_from_scheme(1)
+        _initial_pick = int(MAP_MARKER_ACTIVE_COLOUR_SCHEME)
+        st.session_state["design_scheme_pick"] = _initial_pick
+        _seed_controls_from_scheme(_initial_pick)
         st.session_state[_K_SEEDED] = True
     if _K_EXPORT_NAME not in st.session_state:
         st.session_state[_K_EXPORT_NAME] = active_map_marker_colour_scheme(
-            int(st.session_state.get("design_scheme_pick", 1))
+            int(st.session_state.get("design_scheme_pick", int(MAP_MARKER_ACTIVE_COLOUR_SCHEME)))
         ).display_name
 
     _scope_options = tuple(PREVIEW_SCOPE_LABELS.keys())
@@ -508,7 +560,7 @@ def main() -> None:
             "Changing the preset reloads all controls from ``defaults.py``, including MarkerCluster hex fields."
         )
         if st.button("Load preset into controls", use_container_width=True):
-            _seed_controls_from_scheme(int(st.session_state.get("design_scheme_pick", 1)))
+            _seed_controls_from_scheme(int(st.session_state.get("design_scheme_pick", int(MAP_MARKER_ACTIVE_COLOUR_SCHEME))))
             st.rerun()
         if st.button("Shuffle positions", use_container_width=True):
             st.session_state[_K_POS_SEED] = int(st.session_state.get(_K_POS_SEED, 42)) + 1
@@ -828,6 +880,44 @@ def main() -> None:
                 help=H_SW_FAM_HL,
             )
             _hex_text_input("Edge", key="design_hex_fam_hl", help=H_HEX_FAM_HL)
+            st.markdown("**Species highlight halo**")
+            st.checkbox(
+                "Preview halo ring",
+                key="design_fam_halo_enabled",
+                help=H_CB_FAM_HALO_PREVIEW,
+            )
+            st.slider(
+                "Radius delta (px)",
+                min_value=0,
+                max_value=8,
+                key="design_radius_fam_halo_delta",
+                help=H_RADIUS_FAM_HALO_DELTA,
+            )
+            st.slider(
+                "Fill opacity",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.01,
+                key="design_fo_fam_halo",
+                help=H_FO_FAM_HALO,
+            )
+            st.slider(
+                "Edge opacity",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.01,
+                key="design_o_fam_halo_edge",
+                help=H_O_FAM_HALO_EDGE,
+            )
+            st.slider(
+                "Edge weight",
+                min_value=1,
+                max_value=8,
+                key="design_sw_fam_halo",
+                help=H_SW_FAM_HALO,
+            )
+            _hex_text_input("Fill", key="design_hex_fam_halo_fill", help=H_HEX_FAM_HALO_FILL)
+            _hex_text_input("Edge", key="design_hex_fam_halo_edge", help=H_HEX_FAM_HALO_EDGE)
 
         st.divider()
         st.subheader("Map frame")

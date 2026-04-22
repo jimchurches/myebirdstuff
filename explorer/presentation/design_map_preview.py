@@ -35,9 +35,15 @@ from explorer.core.map_overlay_visit_map import (
 from explorer.core.family_map_compute import DENSITY_BAND_LABELS
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_STROKE_HEX,
+    family_map_has_highlight_halo,
+    family_map_resolved_highlight_halo_fill_opacity,
+    family_map_resolved_highlight_halo_radius_px,
+    family_map_resolved_highlight_halo_stroke_opacity,
+    family_map_resolved_highlight_halo_stroke_weight,
     normalize_marker_hex,
     resolve_family_band_colours,
-    resolve_family_highlight_stroke_hex,
+    resolve_family_highlight_halo_fill_hex,
+    resolve_family_highlight_halo_stroke_hex,
     resolve_last_seen_colours,
     resolve_lifer_map_lifer_colours,
     resolve_lifer_map_subspecies_colours,
@@ -217,7 +223,12 @@ class DesignMapPreviewConfig:
     # Family density bands 0..3
     family_fill_hex: tuple[str, str, str, str]
     family_stroke_hex: tuple[str, str, str, str]
-    family_highlight_stroke_hex: str
+    family_highlight_halo_fill_hex: str
+    family_highlight_halo_stroke_hex: str
+    family_highlight_halo_radius_delta_px: int
+    family_highlight_halo_fill_opacity: float
+    family_highlight_halo_stroke_opacity: float
+    family_highlight_halo_stroke_weight: int
     # Swatch fill for the family-map highlight legend row (mirrors ``family_locations.legend_highlight_band_index``).
     legend_highlight_band_index: int
     # Optional MarkerCluster icon colours as:
@@ -229,6 +240,11 @@ class DesignMapPreviewConfig:
     marker_cluster_border_opacity: float
     marker_cluster_halo_spread_px: int
     marker_cluster_border_width_px: int
+    # ``None`` = species-highlight edge follows each band's density stroke (export omits ``highlight_stroke_hex``).
+    family_highlight_stroke_hex: str | None = None
+    # Production family map uses ``family_map_has_highlight_halo`` on the preset. The design Streamlit app
+    # additionally drives preview + sparse export via session (e.g. **Preview halo ring** / ``design_fam_halo_enabled``).
+    family_highlight_halo_enabled: bool = False
 
 
 # Bottom-left legend: species map order matches ``map_overlay_visit_map`` (refs #147): Species → Locations → Lifer → Last seen;
@@ -331,9 +347,14 @@ def _design_legend_items(cfg: DesignMapPreviewConfig, rows: tuple[PreviewMarkerR
             items.append(entry)
     if kinds_present & {"family_0", "family_1", "family_2", "family_3"}:
         sw_i = max(0, min(int(cfg.legend_highlight_band_index), len(cfg.family_fill_hex) - 1))
+        hl_edge = (
+            normalize_hex_colour(cfg.family_highlight_stroke_hex)
+            if cfg.family_highlight_stroke_hex is not None
+            else normalize_hex_colour(cfg.family_stroke_hex[sw_i])
+        )
         items.append(
             (
-                normalize_hex_colour(cfg.family_highlight_stroke_hex),
+                hl_edge,
                 normalize_hex_colour(cfg.family_fill_hex[sw_i]),
                 "Highlight: preview",
             )
@@ -366,9 +387,9 @@ def _popup_text(kind: str, cfg: DesignMapPreviewConfig, *, copy_index: int) -> s
         bi = int(kind[-1])
         base = f"{DENSITY_BAND_LABELS[bi]} species at location"
         if copy_index == 0:
-            return f"{base} — highlight stroke (cluster)"
+            return f"{base} — highlight stroke+halo (cluster)"
         if copy_index == 2:
-            return f"{base} — highlight stroke (spread)"
+            return f"{base} — highlight stroke+halo (spread)"
         return base
     return kind
 
@@ -519,7 +540,11 @@ def build_design_preview_map(
                 stroke = normalize_hex_colour(cfg.family_stroke_hex[bi])
                 fill_c = normalize_hex_colour(cfg.family_fill_hex[bi])
                 if _family_highlight_copy(copy_index):
-                    stroke = normalize_hex_colour(cfg.family_highlight_stroke_hex)
+                    stroke = (
+                        normalize_hex_colour(cfg.family_highlight_stroke_hex)
+                        if cfg.family_highlight_stroke_hex is not None
+                        else normalize_hex_colour(cfg.family_stroke_hex[bi])
+                    )
                     sw = max(1, int(cfg.stroke_weight_family_highlight))
                 else:
                     sw = max(1, int(cfg.stroke_weight_family))
@@ -538,6 +563,24 @@ def build_design_preview_map(
             if fill:
                 kw["fill_color"] = fill_c
                 kw["fill_opacity"] = fo
+            if (
+                cfg.family_highlight_halo_enabled
+                and kind.startswith("family_")
+                and _family_highlight_copy(copy_index)
+            ):
+                folium.CircleMarker(
+                    location=loc,
+                    radius=max(
+                        1,
+                        int(radius_px + max(0, int(cfg.family_highlight_halo_radius_delta_px))),
+                    ),
+                    color=normalize_hex_colour(cfg.family_highlight_halo_stroke_hex),
+                    weight=max(1, int(cfg.family_highlight_halo_stroke_weight)),
+                    opacity=max(0.0, min(1.0, cfg.family_highlight_halo_stroke_opacity)),
+                    fill=True,
+                    fill_color=normalize_hex_colour(cfg.family_highlight_halo_fill_hex),
+                    fill_opacity=max(0.0, min(1.0, cfg.family_highlight_halo_fill_opacity)),
+                ).add_to(m)
             folium.CircleMarker(**kw).add_to(m)
 
     if cfg.preview_scope in (MAP_SCOPE_ALL, MAP_SCOPE_ALL_LOCATIONS):
@@ -584,7 +627,13 @@ def scheme_seed_config(
     ll = sch.lifer_locations
     fam = sch.family_locations
     cl = al.cluster
-    hl_stroke = resolve_family_highlight_stroke_hex(sch)
+    raw_hl = getattr(fam, "highlight_stroke_hex", None)
+    if raw_hl is not None and str(raw_hl).strip():
+        hl_stroke_cfg = normalize_marker_hex(str(raw_hl), channel="edge")
+    else:
+        hl_stroke_cfg = None
+    hl_halo_fill = resolve_family_highlight_halo_fill_hex(sch)
+    hl_halo_stroke = resolve_family_highlight_halo_stroke_hex(sch)
 
     def _int_or_fb(v: object, fallback: int) -> int:
         try:
@@ -743,7 +792,15 @@ def scheme_seed_config(
         last_seen_fill_hex=ls_fill,
         family_fill_hex=fills,
         family_stroke_hex=strokes,
-        family_highlight_stroke_hex=hl_stroke,
+        family_highlight_halo_fill_hex=hl_halo_fill,
+        family_highlight_halo_stroke_hex=hl_halo_stroke,
+        family_highlight_halo_radius_delta_px=max(
+            0,
+            int(family_map_resolved_highlight_halo_radius_px(sch) - rf),
+        ),
+        family_highlight_halo_fill_opacity=family_map_resolved_highlight_halo_fill_opacity(sch),
+        family_highlight_halo_stroke_opacity=family_map_resolved_highlight_halo_stroke_opacity(sch),
+        family_highlight_halo_stroke_weight=family_map_resolved_highlight_halo_stroke_weight(sch),
         legend_highlight_band_index=max(0, min(int(fam.legend_highlight_band_index), 3)),
         marker_cluster_tier_icon_hex=_optional_cluster_tier_icon_hex(),
         marker_cluster_inner_fill_opacity=_inner_fo,
@@ -751,4 +808,6 @@ def scheme_seed_config(
         marker_cluster_border_opacity=_border_o,
         marker_cluster_halo_spread_px=_halo_sp,
         marker_cluster_border_width_px=_bw,
+        family_highlight_stroke_hex=hl_stroke_cfg,
+        family_highlight_halo_enabled=family_map_has_highlight_halo(sch),
     )

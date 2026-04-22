@@ -33,9 +33,17 @@ from explorer.core.family_map_compute import (
 )
 from explorer.core.map_marker_colour_resolve import (
     _global_defaults,
+    family_map_has_highlight_halo,
+    family_map_resolved_highlight_halo_fill_opacity,
+    family_map_resolved_highlight_halo_radius_px,
+    family_map_resolved_highlight_halo_stroke_opacity,
+    family_map_resolved_highlight_halo_stroke_weight,
     family_map_resolved_circle_radius_px,
     family_map_resolved_fill_opacity,
     resolve_family_band_colours,
+    resolve_family_highlight_halo_fill_hex,
+    resolve_family_highlight_halo_stroke_hex,
+    family_map_resolved_highlight_pin_stroke_hex,
     resolve_family_highlight_stroke_hex,
 )
 from explorer.presentation.map_renderer import (
@@ -56,10 +64,9 @@ def family_map_marker_style(
 ) -> tuple[str, str, int]:
     """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin.
 
-    Band and highlight colours use :func:`~explorer.core.map_marker_colour_resolve.resolve_family_band_colours`
-    and :func:`~explorer.core.map_marker_colour_resolve.normalize_marker_hex`, i.e. the same per-channel
-    chain as other scheme-driven maps (band-specific hex, then ``marker_default_*``, then module defaults,
-    then catch-all — see :mod:`explorer.core.map_marker_colour_resolve`).
+    Band colours use :func:`~explorer.core.map_marker_colour_resolve.resolve_family_band_colours`.
+    Species-highlight stroke uses :func:`~explorer.core.map_marker_colour_resolve.family_map_resolved_highlight_pin_stroke_hex`
+    (explicit ``highlight_stroke_hex`` else that band's density edge, not ``global_defaults`` alone).
     """
     s = style or active_map_marker_colour_scheme()
     fam = s.family_locations
@@ -74,7 +81,7 @@ def family_map_marker_style(
     if pin.highlight_match:
         return (
             fill_res,
-            resolve_family_highlight_stroke_hex(s),
+            family_map_resolved_highlight_pin_stroke_hex(s, idx),
             sw_hl,
         )
     return fill_res, edge_res, sw_band
@@ -311,6 +318,17 @@ def build_family_composition_folium_map(
             species_url_by_common=url_map or None,
         )
         popup_body = f'<div class="pebird-map-popup">{inner}</div>'
+        if pin.highlight_match and family_map_has_highlight_halo(style):
+            folium.CircleMarker(
+                location=(pin.latitude, pin.longitude),
+                radius=family_map_resolved_highlight_halo_radius_px(style),
+                color=resolve_family_highlight_halo_stroke_hex(style),
+                weight=family_map_resolved_highlight_halo_stroke_weight(style),
+                opacity=family_map_resolved_highlight_halo_stroke_opacity(style),
+                fill=True,
+                fill_color=resolve_family_highlight_halo_fill_hex(style),
+                fill_opacity=family_map_resolved_highlight_halo_fill_opacity(style),
+            ).add_to(m)
         folium.CircleMarker(
             location=(pin.latitude, pin.longitude),
             radius=family_map_resolved_circle_radius_px(style),

@@ -11,6 +11,7 @@ from explorer.app.streamlit.defaults import (
 from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_STROKE_HEX,
+    family_map_resolved_highlight_halo_stroke_opacity,
     normalize_marker_hex,
     resolve_location_visit_colours,
 )
@@ -24,6 +25,12 @@ from explorer.presentation.design_map_preview import (
 )
 
 from tests.colour_scheme_test_utils import BUNDLED_COLOUR_SCHEME_INDICES
+
+
+def test_scheme_seed_family_halo_enabled_only_when_preset_defines_halo() -> None:
+    assert not scheme_seed_config(1).family_highlight_halo_enabled
+    assert scheme_seed_config(2).family_highlight_halo_enabled
+    assert not scheme_seed_config(3).family_highlight_halo_enabled
 
 
 def test_clamp_map_marker_circle_radius_px() -> None:
@@ -83,7 +90,6 @@ def _expected_cluster_inner_fill_opacity(sch) -> float:
 def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
     from explorer.core.map_marker_colour_resolve import (
         resolve_family_band_colours,
-        resolve_family_highlight_stroke_hex,
         resolve_last_seen_colours,
         resolve_lifer_map_lifer_colours,
         resolve_lifer_map_subspecies_colours,
@@ -99,7 +105,11 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
             ef, es = resolve_family_band_colours(sch, i)
             assert cfg.family_fill_hex[i] == ef
             assert cfg.family_stroke_hex[i] == es
-        assert cfg.family_highlight_stroke_hex == resolve_family_highlight_stroke_hex(sch)
+        raw_hl = getattr(sch.family_locations, "highlight_stroke_hex", None)
+        if raw_hl is not None and str(raw_hl).strip():
+            assert cfg.family_highlight_stroke_hex == normalize_marker_hex(str(raw_hl), channel="edge")
+        else:
+            assert cfg.family_highlight_stroke_hex is None
         vf, ve = resolve_location_visit_colours(sch)
         assert cfg.default_fill_hex == vf
         assert cfg.default_stroke_hex == ve
@@ -121,6 +131,9 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
         lsf, lse = resolve_last_seen_colours(sch)
         assert cfg.last_seen_fill_hex == lsf
         assert cfg.last_seen_stroke_hex == lse
+        assert cfg.family_highlight_halo_stroke_opacity == family_map_resolved_highlight_halo_stroke_opacity(
+            sch
+        )
         assert cfg.marker_cluster_tier_icon_hex == _expected_marker_cluster_tier_icon_hex(sch)
         assert cfg.marker_cluster_inner_fill_opacity == _expected_cluster_inner_fill_opacity(sch)
 

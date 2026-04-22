@@ -243,3 +243,24 @@ def test_export_emits_marker_cluster_tier_icon_hex_when_configured() -> None:
     assert "'#a16207'" in text
     assert "'#16a34a'" in text
     assert "'#166534'" in text
+
+
+def test_export_omits_family_highlight_halo_when_disabled_even_if_fields_set() -> None:
+    """Sparse export: no ``highlight_halo_*`` lines when ``family_highlight_halo_enabled`` is false."""
+    cfg = scheme_seed_config(2, preview_scope=MAP_SCOPE_ALL)
+    assert cfg.family_highlight_halo_enabled
+    cfg_off = replace(cfg, family_highlight_halo_enabled=False)
+    text = format_map_marker_colour_scheme_dict_py(cfg_off, "No halo export")
+    fam_block = _family_locations_block(text)
+    assert "highlight_halo_" not in fam_block
+
+
+def test_export_emits_family_highlight_halo_when_enabled() -> None:
+    """Thermal-style seed with halo enabled emits non-empty ``highlight_halo_*`` sparse lines."""
+    cfg = scheme_seed_config(2, preview_scope=MAP_SCOPE_ALL)
+    assert cfg.family_highlight_halo_enabled
+    text = format_map_marker_colour_scheme_dict_py(cfg, "Thermal")
+    fam_block = _family_locations_block(text)
+    assert "highlight_halo_fill_hex=" in fam_block
+    assert "highlight_halo_stroke_hex=" in fam_block
+    assert "highlight_halo_radius_delta_px=" in fam_block

@@ -293,7 +293,13 @@ MAP_MARKER_COLOUR_SCHEME_2 = MapMarkerColourScheme(
             '#C46A00',
             '#7F1D1D',
         ),
-        highlight_stroke_hex='#E8A91A',
+        highlight_halo_radius_delta_px=3,
+        highlight_stroke_weight=1,
+        highlight_halo_fill_hex='#FFF4D6',
+        highlight_halo_stroke_hex='#E5B710',
+        highlight_halo_fill_opacity=0.3,
+        highlight_halo_stroke_opacity=0.8,
+        highlight_halo_stroke_weight=1,
     ),
 )
 

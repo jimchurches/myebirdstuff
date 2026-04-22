@@ -1,5 +1,7 @@
 """Tests for Family Map Folium builder (refs #138)."""
 
+from dataclasses import replace
+
 import explorer.app.streamlit.defaults as streamlit_defaults
 from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
 from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
@@ -12,7 +14,8 @@ from explorer.core.family_map_folium import (
     family_map_marker_style,
 )
 from explorer.core.map_marker_colour_resolve import (
-    resolve_family_highlight_stroke_hex,
+    family_map_resolved_highlight_pin_stroke_hex,
+    resolve_family_band_colours,
 )
 
 from tests.colour_scheme_test_utils import BUNDLED_COLOUR_SCHEME_INDICES
@@ -54,7 +57,25 @@ def test_family_map_marker_style_highlight_uses_resolved_highlight_stroke():
     sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
     fill, stroke, w = family_map_marker_style(p, style=sch)
     assert p.highlight_match
-    assert stroke == resolve_family_highlight_stroke_hex(sch)
+    assert stroke == family_map_resolved_highlight_pin_stroke_hex(sch, p.density_band_index)
+    assert w == max(1, int(sch.global_defaults.stroke_weight))
+
+
+def test_family_map_marker_style_highlight_omitted_highlight_stroke_uses_band_edge():
+    """No ``highlight_stroke_hex``: inner pin edge matches that band's density edge (not global)."""
+    p = _sample_pins()[1]
+    base = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
+    sch = replace(
+        base,
+        family_locations=replace(
+            base.family_locations,
+            highlight_stroke_hex=None,
+        ),
+    )
+    _, band_edge = resolve_family_band_colours(sch, p.density_band_index)
+    fill, stroke, w = family_map_marker_style(p, style=sch)
+    assert stroke == band_edge
+    assert fill == resolve_family_band_colours(sch, p.density_band_index)[0]
     assert w == max(1, int(sch.global_defaults.stroke_weight))
 
 
@@ -266,6 +287,25 @@ def test_family_map_draw_order_is_low_to_high_with_highlights_last():
     i_hl = html.find("[-33.0, 143.0]")
     assert i_low != -1 and i_high != -1 and i_hl != -1
     assert i_low < i_high < i_hl
+
+
+def test_build_family_map_renders_highlight_halo_marker() -> None:
+    pins = _sample_pins()
+    m = build_family_composition_folium_map(pins, colour_scheme_index=2)
+    html = m._repr_html_().lower()
+    # Thermal Shift halo fill/stroke from ``defaults.py`` (``MAP_MARKER_COLOUR_SCHEME_2``).
+    assert "fff4d6" in html
+    assert "e5b710" in html
+    # 2 pins + 1 extra halo marker for highlighted pin.
+    assert html.count("circlemarker") >= 3
+
+
+def test_build_family_map_without_halo_settings_draws_no_extra_halo_marker() -> None:
+    pins = _sample_pins()
+    m = build_family_composition_folium_map(pins, colour_scheme_index=1)
+    html = m._repr_html_().lower()
+    # 2 pins only (no extra halo marker when scheme omits halo options).
+    assert html.count("circlemarker") == 2
 
 
 def test_blank_family_map_applies_center_zoom_recipe_over_default_center():
