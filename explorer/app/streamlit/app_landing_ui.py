@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import os
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +17,11 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_data_loading import load_dataframe
 from explorer.app.streamlit.app_map_ui import sidebar_footer_links
+from explorer.app.streamlit.streamlit_ui_constants import explorer_readme_github_url
 from explorer.app.streamlit.streamlit_theme import inject_app_header_css
 
 _APP_LOGO_SVG = Path(REPO_ROOT) / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
+_HOSTED_NOTICE_ENV_KEY = "STREAMLIT_SHOW_HOSTED_PERFORMANCE_NOTICE"
 
 APP_TAGLINE = "Your eBird data, made visible, navigable, and ready to explore"
 
@@ -65,6 +68,28 @@ def title_with_logo() -> None:
     inject_app_header_css()
 
 
+def _env_flag_true(key: str) -> bool:
+    """Boolean env flag parser (true/1/yes/on)."""
+    raw = str(os.environ.get(key, "")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def show_hosted_performance_notice() -> bool:
+    """Show hosted landing note only when explicitly enabled by environment."""
+    return _env_flag_true(_HOSTED_NOTICE_ENV_KEY)
+
+
+def hosted_performance_notice_markdown() -> str:
+    """Landing note for hosted environments: set expectations and point to local setup docs."""
+    docs_url = explorer_readme_github_url()
+    return (
+        "Explorer is fully usable here, but free Streamlit hosting can be slow. "
+        "Running locally usually gives the best experience. "
+        f"See [Explorer docs]({docs_url}) for local setup. "
+        "If there is enough interest and support, hosting may move to a more capable platform later."
+    )
+
+
 def load_dataframe_after_landing(
     upload_cache: Any,
 ) -> tuple[Any, Any, str, Any, str] | None:
@@ -83,6 +108,8 @@ def load_dataframe_after_landing(
     if df_full is None:
         with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
             title_with_logo()
+            if show_hosted_performance_notice():
+                st.info(hosted_performance_notice_markdown(), icon="ℹ️")
             st.markdown("Upload your **My eBird Data** CSV to open the map and tabs.")
             uploaded = st.file_uploader(
                 "eBird export (CSV)",
