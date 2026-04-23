@@ -147,8 +147,6 @@ def load_dataframe_after_landing(
         with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
             title_with_logo()
             inject_landing_typography_css()
-            if show_hosted_performance_notice():
-                st.info(hosted_performance_notice_markdown(), icon="ℹ️")
             st.markdown("Upload your `My eBird Data CSV` to open the map and tabs.")
             uploaded = st.file_uploader(
                 " ",
@@ -187,6 +185,8 @@ Tip: If species names look wrong, check `Settings -> Taxonomy` after loading.
                     "If you’re running Explorer locally, you can load data automatically from a configured file. "
                     f"See [Explorer docs]({explorer_readme_github_url()}) for details."
                 )
+                if show_hosted_performance_notice():
+                    st.info(hosted_performance_notice_markdown(), icon="ℹ️")
         sidebar_footer_links()
         if df_full is None:
             return None
