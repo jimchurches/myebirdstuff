@@ -87,6 +87,15 @@ def inject_landing_typography_css() -> None:
   color: #1a2e22;
   margin: 0.35rem 0 0.7rem 0;
 }
+/* Match .pebird-landing-instructions h3/h4: stronger call-to-action than body pitch. */
+.st-key-ebird_landing_main .pebird-landing-upload-prompt {
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0.55rem 0 0.35rem 0;
+  color: #1a2e22;
+  max-width: min(100%, 60rem);
+}
 .st-key-ebird_landing_main [data-testid="stMarkdownContainer"] code,
 .st-key-ebird_landing_main [data-testid="stCaptionContainer"] code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -199,7 +208,10 @@ def load_dataframe_after_landing(
                 st.markdown("<div style='height:0.35rem;'></div>", unsafe_allow_html=True)
                 st.info(hosted_performance_notice_markdown(), icon="ℹ️")
                 st.markdown("<div style='height:0.35rem;'></div>", unsafe_allow_html=True)
-            st.markdown("Upload your eBird data to begin.")
+            st.markdown(
+                '<p class="pebird-landing-upload-prompt">Upload your eBird data to begin</p>',
+                unsafe_allow_html=True,
+            )
             uploaded = st.file_uploader(
                 " ",
                 type=["csv"],
@@ -228,7 +240,7 @@ def load_dataframe_after_landing(
 <li>Upload the CSV here (file name usually <code>MyEBirdData.csv</code>)</li>
 </ol>
 
-<h4>Taxononmy</h4>
+<h4>Taxonomy</h4>
 <p>
 Species names come from the configured taxonomy; you can configure the taxonomy options on the
 <code>Settings</code> tab once the full application has loaded. The default is <code>en_AU</code>.

@@ -57,6 +57,8 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 
     stub = types.ModuleType("streamlit")
     stub.session_state = _StubSessionState()
+    # Dict-like secrets for tests (e.g. hosted notice flag); matches ``key in st.secrets`` usage.
+    stub.secrets: dict[str, str] = {}
 
     stub.html_calls: list[str] = []
 
@@ -145,6 +147,7 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
         "explorer.app.streamlit.checklist_stats_streamlit_html",
         "explorer.app.streamlit.rankings_streamlit_html",
         "explorer.app.streamlit.maintenance_streamlit_html",
+        "explorer.app.streamlit.app_landing_ui",
     ]:
         _drop_submodule(name)
     return sys.modules["streamlit"]
@@ -375,6 +378,32 @@ def test_load_dataframe_falls_back_to_upload_cache(streamlit_stub, monkeypatch: 
     assert prov and "Upload:" in prov and "cached.csv" in prov
 
 
+def test_load_dataframe_upload_cache_error_surfaces_st_error(
+    streamlit_stub, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Session upload-cache replay uses the same error path as a fresh upload."""
+    from explorer.app.streamlit import app_data_loading
+
+    def _fail(_src):
+        raise ValueError("forced cache load failure")
+
+    monkeypatch.setattr(app_data_loading, "load_dataset", _fail)
+    monkeypatch.setattr(
+        app_data_loading,
+        "build_explorer_candidate_dirs",
+        lambda repo_root, cwd: (["/tmp"], ["x"]),
+    )
+    monkeypatch.setattr(
+        app_data_loading,
+        "resolve_ebird_data_file",
+        lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError()),
+    )
+
+    df, *_rest = app_data_loading.load_dataframe(upload_cache=(b"not-valid-csv", "cached.csv"))
+    assert df is None
+    assert any("Could not load CSV" in msg for msg in streamlit_stub.error_calls)
+
+
 def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_stub) -> None:
     from explorer.app.streamlit.app_map_ui import ensure_streamlit_map_basemap_height_keys
     from explorer.app.streamlit.defaults import MAP_BASEMAP_DEFAULT, MAP_HEIGHT_PX_DEFAULT
@@ -504,3 +533,67 @@ def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) 
     assert fixed_docs in combined
     assert BUY_ME_A_COFFEE_URL in combined
     assert "Buy me a coffee</a>" in combined
+
+
+_HOSTED_NOTICE_ENV_KEY = "STREAMLIT_SHOW_HOSTED_PERFORMANCE_NOTICE"
+
+
+def _reload_app_landing_ui() -> types.ModuleType:
+    _drop_submodule("explorer.app.streamlit.app_landing_ui")
+    return importlib.import_module("explorer.app.streamlit.app_landing_ui")
+
+
+def _landing_ui_with_clean_flag(streamlit_stub, monkeypatch: pytest.MonkeyPatch):
+    """Fresh ``app_landing_ui`` import with no secret/env flag set."""
+    monkeypatch.delenv(_HOSTED_NOTICE_ENV_KEY, raising=False)
+    streamlit_stub.secrets = {}
+    return _reload_app_landing_ui()
+
+
+def test_hosted_notice_flag_off_when_unset(streamlit_stub, monkeypatch) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is False
+    assert landing.show_hosted_performance_notice() is False
+
+
+@pytest.mark.parametrize("value", ("1", "true", "TRUE", "yes", "YES", "on", "ON", "  true  "))
+def test_hosted_notice_flag_on_from_env(streamlit_stub, monkeypatch, value: str) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, value)
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is True
+    assert landing.show_hosted_performance_notice() is True
+
+
+@pytest.mark.parametrize("value", ("0", "false", "FALSE", "no", "off", "maybe", ""))
+def test_hosted_notice_flag_off_from_env(streamlit_stub, monkeypatch, value: str) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, value)
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is False
+
+
+def test_hosted_notice_flag_on_from_secrets(streamlit_stub, monkeypatch) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    streamlit_stub.secrets[_HOSTED_NOTICE_ENV_KEY] = "true"
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is True
+    assert landing.show_hosted_performance_notice() is True
+
+
+def test_hosted_notice_secrets_take_precedence_over_env(streamlit_stub, monkeypatch) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    streamlit_stub.secrets[_HOSTED_NOTICE_ENV_KEY] = "false"
+    monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, "true")
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is False
+
+
+def test_hosted_notice_env_fallback_when_secrets_unavailable(streamlit_stub, monkeypatch) -> None:
+    class _SecretsUnavailable:
+        def __contains__(self, item: object) -> bool:
+            raise OSError("secrets backend unavailable")
+
+        def __getitem__(self, item: object) -> str:
+            raise OSError("secrets backend unavailable")
+
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    monkeypatch.setattr(streamlit_stub, "secrets", _SecretsUnavailable(), raising=False)
+    monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, "true")
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is True
