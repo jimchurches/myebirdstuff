@@ -27,13 +27,11 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
   - Candidate focus within that issue: species search rerun behaviour, map HTML generation, and cache-hit rates on real datasets.
   - Reason to defer: functional baseline is test-green; optimization fits your Beta 3 focus.
 
-- [ ] **Reduce integration PR blast radius for future releases**.
-  - Process improvement: smaller batched merges from `beta-next` to reduce verification load and risk concentration.
-  - Reason to defer: no immediate functional defect; delivery workflow improvement.
+- [x] **Reduce integration PR blast radius for future releases**.
+  - **Done (process intent):** Beta 2 / PR #126 scale was a deliberate one-off; going forward, smaller feature/polish PRs and less monolithic promotion from `beta-next` → `main` where practical.
 
-- [ ] **Rationalize experimental/design-map scheme evolution docs**.
-  - Clarify which map marker schemes are production defaults vs design utility experiments.
-  - Reason to defer: documentation/maintenance clarity rather than release blocker.
+- [x] **Rationalize experimental/design-map scheme evolution docs**.
+  - **Resolved:** All three `MAP_MARKER_COLOUR_SCHEME_*` presets in `defaults.py` are **production** ship quality (none are experimental placeholders). The map marker **design utility** is **developer-only** (faster iteration than editing the full app); see `docs/development.md` § *Map marker colour design utility (developers)*. `defaults.py` remains the place for code-aware tuning.
 
 - [ ] **Testing strategy follow-ups (signal over coverage %)**.
   - Prefer **targeted unit tests** for pure logic and hot paths (e.g. table-driven cases for `explorer/core/species_family.py`, which is under-covered vs core map/stats modules) when fixing bugs or touching fragile behaviour — not broad HTML/Streamlit wiring coverage for statistics alone.
@@ -45,6 +43,5 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
 
 - [ ] `perf: profile species search + map render latency on realistic datasets`
 - [ ] `process: split beta-next integration into smaller release candidates`
-- [ ] `docs: clarify production vs experimental map marker schemes/design utility`
 - [ ] `test: targeted unit tests for explorer/core/species_family.py (table-driven; bug-driven)`
 
