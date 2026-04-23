@@ -217,7 +217,7 @@ def render_settings_tab(
                 _cur_scheme = MAP_MARKER_COLOUR_SCHEME_DEFAULT
             with st.expander("Colour schemes", expanded=False):
                 colour_scheme_default_w = st.radio(
-                    "Map marker colour scheme — default",
+                    "Map marker colour scheme",
                     options=[1, 2, 3],
                     index=[1, 2, 3].index(_cur_scheme),
                     format_func=lambda n: _scheme_preset_labels[int(n)],
