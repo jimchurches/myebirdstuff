@@ -1,6 +1,6 @@
 # PR #126 Pre-Merge Checklist (Beta 2)
 
-Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing locally (`473 passed`).
+Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing locally (`pytest tests/`).
 
 ## Must Address Before Merging to `main` (Beta 2)
 
@@ -10,6 +10,7 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
 
 - [x] **Run targeted manual smoke test on hosted notice flag path** (`explorer/app/streamlit/app_landing_ui.py`).
   - **Done (manual):** Verified with local `.streamlit/secrets.toml` and on Streamlit Community Cloud — `STREAMLIT_SHOW_HOSTED_PERFORMANCE_NOTICE` via `st.secrets` and env fallback; banner behaves as desired.
+  - **Automated:** `tests/explorer/test_streamlit_ui_helpers.py` (`test_hosted_notice_*`) covers env truthy/falsey values, secrets-on, secrets-over-env, and env fallback when `st.secrets` access fails.
 
 - [x] **Run a release smoke pass for critical app flows after large refactor merge**.
   - **Done (manual UI):** Landing CSV load; map modes (All locations / Species / Family / Lifers); species search select and clear; Settings save/apply for basemap and map height; export map HTML and footer links — exercised repeatedly; Explorer looks solid for release.
