@@ -88,10 +88,12 @@ def map_popup_theme_stylesheet() -> str:
   /* Leaflet's close control sits top-right; long titles must not run under it. */
   padding-right: 2rem;
 }}
+/* Full width of the popup card so wheel events scroll visits instead of the map (#175). */
 .pebird-map-popup__scroll {{
-  width: fit-content;
-  max-width: 100%;
+  display: block;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
 }}
 .pebird-map-popup {{
