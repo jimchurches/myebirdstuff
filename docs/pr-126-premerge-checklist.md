@@ -23,7 +23,8 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
 ## Defer to Beta 3 (Create Follow-Up Issues)
 
 - [ ] **Performance profiling and tuning for map rendering/search paths**.
-  - Candidate focus: species search rerun behavior, map HTML generation, and cache-hit rates in real user datasets.
+  - **Tracked in [#179](https://github.com/jimchurches/myebirdstuff/issues/179)** (Explorer responsiveness + benchmark instrumentation — superset of map/search tuning).
+  - Candidate focus within that issue: species search rerun behaviour, map HTML generation, and cache-hit rates on real datasets.
   - Reason to defer: functional baseline is test-green; optimization fits your Beta 3 focus.
 
 - [ ] **Reduce integration PR blast radius for future releases**.
