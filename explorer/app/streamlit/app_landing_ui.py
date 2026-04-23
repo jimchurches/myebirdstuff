@@ -69,8 +69,17 @@ def title_with_logo() -> None:
 
 
 def _env_flag_true(key: str) -> bool:
-    """Boolean env flag parser (true/1/yes/on)."""
-    raw = str(os.environ.get(key, "")).strip().lower()
+    """Boolean flag parser from environment or Streamlit secrets (true/1/yes/on)."""
+    raw: str = ""
+    try:
+        # Streamlit Community Cloud commonly provides config via ``st.secrets``.
+        if key in st.secrets:
+            raw = str(st.secrets[key]).strip()
+    except Exception:
+        # Keep landing resilient if secrets backend is unavailable in local/dev runs.
+        raw = ""
+    if not raw:
+        raw = str(os.environ.get(key, "")).strip()
     return raw in {"1", "true", "yes", "on"}
 
 
