@@ -21,9 +21,9 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
     - export map HTML and footer links
   - Why now: PR #126 is a large integration delta (84 files; major Streamlit decomposition + map logic movement). Automated tests pass, but release confidence still needs UI smoke coverage.
 
-- [ ] **Decide whether AI workflow files should ship in Beta 2 branch merge**.
-  - New files include `.cursor/commands/*` and expanded assistant guidance docs.
-  - Why now: not runtime code, but impacts repo hygiene and contributor experience on `main`. Confirm intentional inclusion vs follow-up cleanup.
+- [x] **Decide whether AI workflow files should ship in Beta 2 branch merge**.
+  - **Decision:** Ship with Beta 2 — intentional developer-only repo maintenance (`.cursor/commands/*`, expanded assistant guidance such as `docs/AI_CONTEXT.md`). No runtime or end-user impact.
+  - **PR:** No need to call this out in the PR description unless you want a single line for other contributors.
 
 ## Defer to Beta 3 (Create Follow-Up Issues)
 
