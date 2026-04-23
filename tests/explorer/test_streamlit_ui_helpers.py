@@ -378,6 +378,32 @@ def test_load_dataframe_falls_back_to_upload_cache(streamlit_stub, monkeypatch: 
     assert prov and "Upload:" in prov and "cached.csv" in prov
 
 
+def test_load_dataframe_upload_cache_error_surfaces_st_error(
+    streamlit_stub, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Session upload-cache replay uses the same error path as a fresh upload."""
+    from explorer.app.streamlit import app_data_loading
+
+    def _fail(_src):
+        raise ValueError("forced cache load failure")
+
+    monkeypatch.setattr(app_data_loading, "load_dataset", _fail)
+    monkeypatch.setattr(
+        app_data_loading,
+        "build_explorer_candidate_dirs",
+        lambda repo_root, cwd: (["/tmp"], ["x"]),
+    )
+    monkeypatch.setattr(
+        app_data_loading,
+        "resolve_ebird_data_file",
+        lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError()),
+    )
+
+    df, *_rest = app_data_loading.load_dataframe(upload_cache=(b"not-valid-csv", "cached.csv"))
+    assert df is None
+    assert any("Could not load CSV" in msg for msg in streamlit_stub.error_calls)
+
+
 def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_stub) -> None:
     from explorer.app.streamlit.app_map_ui import ensure_streamlit_map_basemap_height_keys
     from explorer.app.streamlit.defaults import MAP_BASEMAP_DEFAULT, MAP_HEIGHT_PX_DEFAULT
