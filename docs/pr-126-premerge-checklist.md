@@ -8,9 +8,8 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
   - ~~Current heading is `Taxononmy` and should be `Taxonomy`.~~ Fixed: landing heading now reads `Taxonomy`.
   - Why now: visible polish issue on first-load UX.
 
-- [ ] **Run targeted manual smoke test on hosted notice flag path** (`explorer/app/streamlit/app_landing_ui.py`).
-  - Validate both `st.secrets` and env fallback behavior for `STREAMLIT_SHOW_HOSTED_PERFORMANCE_NOTICE`.
-  - Why now: this is release-facing behavior on hosted deployments and was introduced through a WIP/follow-up sequence.
+- [x] **Run targeted manual smoke test on hosted notice flag path** (`explorer/app/streamlit/app_landing_ui.py`).
+  - **Done (manual):** Verified with local `.streamlit/secrets.toml` and on Streamlit Community Cloud — `STREAMLIT_SHOW_HOSTED_PERFORMANCE_NOTICE` via `st.secrets` and env fallback; banner behaves as desired.
 
 - [x] **Run a release smoke pass for critical app flows after large refactor merge**.
   - **Done (manual UI):** Landing CSV load; map modes (All locations / Species / Family / Lifers); species search select and clear; Settings save/apply for basemap and map height; export map HTML and footer links — exercised repeatedly; Explorer looks solid for release.
