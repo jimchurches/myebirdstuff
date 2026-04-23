@@ -80,6 +80,7 @@ def _env_flag_true(key: str) -> bool:
         raw = ""
     if not raw:
         raw = str(os.environ.get(key, "")).strip()
+    raw = raw.lower()
     return raw in {"1", "true", "yes", "on"}
 
 
