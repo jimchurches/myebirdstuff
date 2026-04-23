@@ -11,6 +11,7 @@ import streamlit as st
 from explorer.app.streamlit.app_constants import (
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
+    REPO_ROOT,
     FILTERED_BY_LOC_CACHE_KEY,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
     FOLIUM_STATIC_MAP_CACHE_KEY,
@@ -42,6 +43,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
     STREAMLIT_FAMILY_MAP_FAMILY_KEY,
     STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+    SETTINGS_CONFIG_SOURCE_KEY,
     DEFAULT_TAXONOMY_LOCALE,
 )
 from explorer.app.streamlit.app_map_ui import (
@@ -71,6 +73,7 @@ from explorer.app.streamlit.map_working import (
     date_inception_to_today_default,
     streamlit_working_set_and_status,
 )
+from explorer.core.explorer_paths import settings_yaml_path_for_source
 from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_CAPTION,
     SPECIES_SEARCH_HELP_EXPANDER_LABEL,
@@ -184,7 +187,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             date_filter_on_effective = st.toggle(
                 "Date filter",
                 key=STREAMLIT_MAP_DATE_FILTER_KEY,
-                help="Turn on to limit the map and checklist stats to a date range.",
+                help="Filters the map to a selected date range.",
             )
             if not date_filter_on_effective:
                 date_range_sel = None
@@ -218,9 +221,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
 
         if map_view_mode == "all":
             st.toggle(
-                "Group nearby pins",
+                "Group nearby markers",
                 key=STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-                help="Clusters nearby pins at low zoom. Session-only (save in Settings to persist).",
+                help="Groups nearby markers when zoomed out to reduce clutter.",
             )
 
     # Working set is still date-filtered for checklist stats and other tabs.
@@ -419,13 +422,19 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 width="stretch",
             )
             family_colour_scheme = int(_scheme_sel if _scheme_sel is not None else 1)
+        _src = str(st.session_state.get(SETTINGS_CONFIG_SOURCE_KEY, "") or "").strip()
+        _map_height_help = (
+            "Changes the map height for this session. Save a default in Settings if needed."
+            if settings_yaml_path_for_source(REPO_ROOT, _src)
+            else "Changes the map height."
+        )
         map_height = st.slider(
             "Map height (px)",
             min_value=MAP_HEIGHT_PX_MIN,
             max_value=MAP_HEIGHT_PX_MAX,
             step=MAP_HEIGHT_PX_STEP,
             key=STREAMLIT_MAP_HEIGHT_PX_KEY,
-            help="Session-only quick adjust. Set a saved default under Settings -> Map display.",
+            help=_map_height_help,
         )
 
     prev_effective = st.session_state.get(SESSION_PREV_EFFECTIVE_BASEMAP_KEY)

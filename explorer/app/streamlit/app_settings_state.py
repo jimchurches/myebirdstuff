@@ -332,8 +332,9 @@ def settings_data_path_html(
     data_abs_path: str | None,
     source_label: str | None,
     repo_root: str,
+    config_yaml_abs_path: str | None = None,
 ) -> str:
-    """Read-only Settings block: file name, optional disk path, loaded-by category."""
+    """Read-only Settings block: file name, optional disk path, loaded-by, optional config path."""
     if not data_basename:
         return (
             '<div class="ebird-data-path-block">'
@@ -360,6 +361,13 @@ def settings_data_path_html(
         f"<p><strong>Data file loaded by:</strong> {html.escape(loaded_by, quote=False)}</p>"
     )
 
+    cfg = (config_yaml_abs_path or "").strip()
+    if cfg:
+        rows.append(
+            "<p><strong>Configuration file path:</strong> "
+            f"<code>{html.escape(cfg, quote=False)}</code></p>"
+        )
+
     return f'<div class="ebird-data-path-block">{"".join(rows)}</div>'
 
 
@@ -369,14 +377,11 @@ def settings_taxonomy_help_markdown() -> str:
         "https://support.ebird.org/en/support/solutions/articles/48000804865-bird-names-in-ebird"
     )
     return (
-        "Used for species names in links, tables, popups and elsewhere. "
-        "Update based on the locale of input data.\n\n"
-        "Match the language and region you use for common names in "
-        "**My eBird → Preferences** "
-        "(e.g. English (Australia) → `en_AU`). "
-        "This field is the same eBird **locale** code the "
-        "taxonomy API accepts for common-name spellings. "
-        f"[Bird names in eBird]({help_url}) — how regional names are chosen."
+        "Controls how species names are displayed across the app (maps, tables, and links).\n\n"
+        "Choose a locale that matches your eBird preferences for common names "
+        "(e.g. English (Australia) → en_AU).\n\n"
+        "If unsure, use the same setting as your eBird account.\n\n"
+        f"More information: [Bird names in eBird]({help_url})"
     )
 
 

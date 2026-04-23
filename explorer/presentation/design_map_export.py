@@ -210,6 +210,10 @@ def format_map_marker_colour_scheme_dict_py(
     fo_fam = float(cfg.marker_fill_opacity_families)
     sw_fam = int(cfg.stroke_weight_family)
     sw_hl = int(cfg.stroke_weight_family_highlight)
+    halo_delta = max(0, int(cfg.family_highlight_halo_radius_delta_px))
+    halo_fo = float(cfg.family_highlight_halo_fill_opacity)
+    halo_so = float(cfg.family_highlight_halo_stroke_opacity)
+    halo_sw = int(cfg.family_highlight_halo_stroke_weight)
     fam_lines: list[str] = [
         "    family_locations=MapMarkerFamilyLocationsStyle(",
         f"        density_fill_hex={_fmt_hex_tuple(cfg.family_fill_hex)},",
@@ -221,10 +225,25 @@ def format_map_marker_colour_scheme_dict_py(
         fam_lines.append(f"        radius_px_override={rf},")
     if sw_fam != md_sw:
         fam_lines.append(f"        stroke_weight={sw_fam},")
-    if _hex_differs(cfg.family_highlight_stroke_hex, g_stroke):
+    if cfg.family_highlight_stroke_hex is not None and _hex_differs(
+        cfg.family_highlight_stroke_hex, g_stroke
+    ):
         fam_lines.append(f"        highlight_stroke_hex={cfg.family_highlight_stroke_hex!r},")
     if sw_hl != md_sw:
         fam_lines.append(f"        highlight_stroke_weight={sw_hl},")
+    if cfg.family_highlight_halo_enabled:
+        if _hex_differs(cfg.family_highlight_halo_fill_hex, g_fill):
+            fam_lines.append(f"        highlight_halo_fill_hex={cfg.family_highlight_halo_fill_hex!r},")
+        if _hex_differs(cfg.family_highlight_halo_stroke_hex, g_stroke):
+            fam_lines.append(f"        highlight_halo_stroke_hex={cfg.family_highlight_halo_stroke_hex!r},")
+        if halo_delta != 2:
+            fam_lines.append(f"        highlight_halo_radius_delta_px={halo_delta},")
+        if _opacity_overrides_default(halo_fo, 0.95):
+            fam_lines.append(f"        highlight_halo_fill_opacity={_fmt_float(halo_fo)},")
+        if _opacity_overrides_default(halo_so, 1.0):
+            fam_lines.append(f"        highlight_halo_stroke_opacity={_fmt_float(halo_so)},")
+        if halo_sw != md_sw:
+            fam_lines.append(f"        highlight_halo_stroke_weight={halo_sw},")
     if _opacity_overrides_default(fo_fam, md_fo):
         fam_lines.append(f"        fill_opacity={_fmt_float(fo_fam)},")
     fam_lines.append("    ),")

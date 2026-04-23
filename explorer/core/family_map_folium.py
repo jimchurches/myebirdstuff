@@ -33,9 +33,17 @@ from explorer.core.family_map_compute import (
 )
 from explorer.core.map_marker_colour_resolve import (
     _global_defaults,
+    family_map_has_highlight_halo,
+    family_map_resolved_highlight_halo_fill_opacity,
+    family_map_resolved_highlight_halo_radius_px,
+    family_map_resolved_highlight_halo_stroke_opacity,
+    family_map_resolved_highlight_halo_stroke_weight,
     family_map_resolved_circle_radius_px,
     family_map_resolved_fill_opacity,
     resolve_family_band_colours,
+    resolve_family_highlight_halo_fill_hex,
+    resolve_family_highlight_halo_stroke_hex,
+    family_map_resolved_highlight_pin_stroke_hex,
     resolve_family_highlight_stroke_hex,
 )
 from explorer.presentation.map_renderer import (
@@ -56,10 +64,9 @@ def family_map_marker_style(
 ) -> tuple[str, str, int]:
     """Return ``(fill_hex, stroke_hex, stroke_weight)`` for a composition pin.
 
-    Band and highlight colours use :func:`~explorer.core.map_marker_colour_resolve.resolve_family_band_colours`
-    and :func:`~explorer.core.map_marker_colour_resolve.normalize_marker_hex`, i.e. the same per-channel
-    chain as other scheme-driven maps (band-specific hex, then ``marker_default_*``, then module defaults,
-    then catch-all — see :mod:`explorer.core.map_marker_colour_resolve`).
+    Band colours use :func:`~explorer.core.map_marker_colour_resolve.resolve_family_band_colours`.
+    Species-highlight stroke uses :func:`~explorer.core.map_marker_colour_resolve.family_map_resolved_highlight_pin_stroke_hex`
+    (explicit ``highlight_stroke_hex`` else that band's density edge, not ``global_defaults`` alone).
     """
     s = style or active_map_marker_colour_scheme()
     fam = s.family_locations
@@ -74,7 +81,7 @@ def family_map_marker_style(
     if pin.highlight_match:
         return (
             fill_res,
-            resolve_family_highlight_stroke_hex(s),
+            family_map_resolved_highlight_pin_stroke_hex(s, idx),
             sw_hl,
         )
     return fill_res, edge_res, sw_band
@@ -99,6 +106,7 @@ def build_family_map_banner_overlay_html(
     selected_species_n_checklists: int | None = None,
     selected_species_n_individuals: int | None = None,
     selected_species_display_name: str | None = None,
+    selected_species_url: str | None = None,
 ) -> str:
     """Return HTML for the fixed top-right banner: family title plus taxonomy / recording summary.
 
@@ -107,6 +115,7 @@ def build_family_map_banner_overlay_html(
     When *selected_species_n_checklists* and *selected_species_n_individuals* are both set (species
     highlight active), a third line repeats the species-map primary stats for continuity. When
     *selected_species_display_name* is non-empty, it is shown as ``Name: N checklists · M individuals``.
+    If *selected_species_url* is set (same eBird species URL as the legend), the name is linked.
     """
     title = html_module.escape(metrics.family_name, quote=False)
     stats = html_module.escape(
@@ -123,7 +132,16 @@ def build_family_map_banner_overlay_html(
         )
         dn = (selected_species_display_name or "").strip()
         if dn:
-            inner = f"{html_module.escape(dn, quote=False)}: {frag}"
+            dn_esc = html_module.escape(dn, quote=False)
+            url = (selected_species_url or "").strip()
+            if url:
+                href = html_module.escape(url, quote=True)
+                name_html = (
+                    f'<a href="{href}" target="_blank" rel="noopener noreferrer">{dn_esc}</a>'
+                )
+            else:
+                name_html = dn_esc
+            inner = f"{name_html}: {frag}"
         else:
             inner = frag
         extra = f'<span class="pebird-map-banner__family-selected-summary">{inner}</span>'
@@ -277,9 +295,16 @@ def build_family_composition_folium_map(
     sp_fn = species_url_fn or (lambda _c: None)
     style = active_map_marker_colour_scheme(colour_scheme_index)
 
-    # Draw non-highlighted first, then highlighted so highlights sit on top.
-    normal = [p for p in pin_list if not p.highlight_match]
-    highlighted = [p for p in pin_list if p.highlight_match]
+    # Draw low-density to high-density so denser markers sit on top.
+    # Keep highlight matches as a final pass so selected species remains visually prominent.
+    normal = sorted(
+        (p for p in pin_list if not p.highlight_match),
+        key=lambda p: int(p.density_band_index),
+    )
+    highlighted = sorted(
+        (p for p in pin_list if p.highlight_match),
+        key=lambda p: int(p.density_band_index),
+    )
     for pin in normal + highlighted:
         fill, stroke, sw = family_map_marker_style(pin, style=style)
         url_map: dict[str, str] = {}
@@ -293,6 +318,17 @@ def build_family_composition_folium_map(
             species_url_by_common=url_map or None,
         )
         popup_body = f'<div class="pebird-map-popup">{inner}</div>'
+        if pin.highlight_match and family_map_has_highlight_halo(style):
+            folium.CircleMarker(
+                location=(pin.latitude, pin.longitude),
+                radius=family_map_resolved_highlight_halo_radius_px(style),
+                color=resolve_family_highlight_halo_stroke_hex(style),
+                weight=family_map_resolved_highlight_halo_stroke_weight(style),
+                opacity=family_map_resolved_highlight_halo_stroke_opacity(style),
+                fill=True,
+                fill_color=resolve_family_highlight_halo_fill_hex(style),
+                fill_opacity=family_map_resolved_highlight_halo_fill_opacity(style),
+            ).add_to(m)
         folium.CircleMarker(
             location=(pin.latitude, pin.longitude),
             radius=family_map_resolved_circle_radius_px(style),

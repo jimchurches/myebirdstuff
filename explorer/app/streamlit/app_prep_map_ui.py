@@ -312,20 +312,21 @@ def render_prep_spinner_and_map_tab(
                             if hl and metrics
                             else None
                         )
+                        hl_species_url = None
+                        if hl and hl_label:
+                            _u = species_url_fn(hl_label)
+                            hl_species_url = _u if _u else None
                         banner = (
                             build_family_map_banner_overlay_html(
                                 metrics,
                                 selected_species_n_checklists=sel_counts[0] if sel_counts else None,
                                 selected_species_n_individuals=sel_counts[1] if sel_counts else None,
                                 selected_species_display_name=hl_label or None,
+                                selected_species_url=hl_species_url,
                             )
                             if metrics
                             else ""
                         )
-                        hl_species_url = None
-                        if hl and hl_label:
-                            _u = species_url_fn(hl_label)
-                            hl_species_url = _u if _u else None
                         _sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                         legend = build_family_map_legend_overlay_html_for_pins(
                             pins,

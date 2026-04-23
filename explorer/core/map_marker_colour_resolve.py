@@ -416,14 +416,111 @@ def resolve_last_seen_colours(sch: Any) -> tuple[str, str]:
     return normalize_marker_hex(fill, channel="fill"), normalize_marker_hex(stroke, channel="edge")
 
 
-def resolve_family_highlight_stroke_hex(sch: Any) -> str:
-    """Family-map highlight pin edge colour: explicit ``highlight_stroke_hex`` or ``global_defaults.stroke_hex``."""
-    g = _global_defaults(sch)
+def family_map_resolved_highlight_pin_stroke_hex(sch: Any, density_band_index: int) -> str:
+    """Family-map species-highlight pin edge: explicit ``highlight_stroke_hex`` else that band's density edge.
+
+    When ``highlight_stroke_hex`` is omitted, the highlight marker keeps the same edge colour as a
+    non-highlight pin at that richness band (``resolve_family_band_colours``), not ``global_defaults``.
+    """
     fam = getattr(sch, "family_locations", sch)
     raw = getattr(fam, "highlight_stroke_hex", None)
     if raw is not None and str(raw).strip():
         return normalize_marker_hex(str(raw), channel="edge")
+    fills = getattr(fam, "density_fill_hex", None) or ()
+    n = len(fills)
+    bi = max(0, min(int(density_band_index), n - 1)) if n else 0
+    _, edge = resolve_family_band_colours(sch, bi)
+    return edge
+
+
+def resolve_family_highlight_stroke_hex(sch: Any) -> str:
+    """Family-map highlight *legend* swatch edge: explicit ``highlight_stroke_hex`` else band edge at ``legend_highlight_band_index``."""
+    fam = getattr(sch, "family_locations", sch)
+    sw_i = max(0, min(int(fam.legend_highlight_band_index), len(fam.density_fill_hex) - 1))
+    return family_map_resolved_highlight_pin_stroke_hex(sch, sw_i)
+
+
+def resolve_family_highlight_halo_fill_hex(sch: Any) -> str:
+    """Family-map highlight halo fill colour: explicit halo fill or ``global_defaults.fill_hex``."""
+    g = _global_defaults(sch)
+    fam = getattr(sch, "family_locations", sch)
+    raw = getattr(fam, "highlight_halo_fill_hex", None)
+    if raw is not None and str(raw).strip():
+        return normalize_marker_hex(str(raw), channel="fill")
+    return normalize_marker_hex(getattr(g, "fill_hex", None), channel="fill")
+
+
+def family_map_has_highlight_halo(sch: Any) -> bool:
+    """True when family highlight halo is explicitly configured on the scheme."""
+    fam = getattr(sch, "family_locations", sch)
+
+    def _hex_set(raw: object) -> bool:
+        return raw is not None and bool(str(raw).strip())
+
+    def _num_set(raw: object) -> bool:
+        return raw is not None
+
+    return any(
+        (
+            _hex_set(getattr(fam, "highlight_halo_fill_hex", None)),
+            _hex_set(getattr(fam, "highlight_halo_stroke_hex", None)),
+            _num_set(getattr(fam, "highlight_halo_radius_delta_px", None)),
+            _num_set(getattr(fam, "highlight_halo_fill_opacity", None)),
+            _num_set(getattr(fam, "highlight_halo_stroke_opacity", None)),
+            _num_set(getattr(fam, "highlight_halo_stroke_weight", None)),
+        )
+    )
+
+
+def resolve_family_highlight_halo_stroke_hex(sch: Any) -> str:
+    """Family-map highlight halo edge colour: explicit halo stroke or ``global_defaults.stroke_hex``."""
+    g = _global_defaults(sch)
+    fam = getattr(sch, "family_locations", sch)
+    raw = getattr(fam, "highlight_halo_stroke_hex", None)
+    if raw is not None and str(raw).strip():
+        return normalize_marker_hex(str(raw), channel="edge")
     return normalize_marker_hex(getattr(g, "stroke_hex", None), channel="edge")
+
+
+def family_map_resolved_highlight_halo_radius_px(sch: Any) -> int:
+    """Family highlight halo radius: base family radius plus optional delta (clamped)."""
+    fam = getattr(sch, "family_locations", sch)
+    base = family_map_resolved_circle_radius_px(sch)
+    delta_raw = getattr(fam, "highlight_halo_radius_delta_px", None)
+    if delta_raw is None:
+        return clamp_map_marker_circle_radius_px(base + 2)
+    try:
+        delta = int(delta_raw)
+    except (TypeError, ValueError):
+        return clamp_map_marker_circle_radius_px(base + 2)
+    return clamp_map_marker_circle_radius_px(base + max(0, delta))
+
+
+def family_map_resolved_highlight_halo_fill_opacity(sch: Any) -> float:
+    """Family highlight halo fill opacity, defaulting to 0.95 for high-contrast focus."""
+    fam = getattr(sch, "family_locations", sch)
+    raw = getattr(fam, "highlight_halo_fill_opacity", None)
+    return clamp_map_marker_circle_fill_opacity(raw, fallback=0.95)
+
+
+def family_map_resolved_highlight_halo_stroke_opacity(sch: Any) -> float:
+    """Family highlight halo stroke opacity (Leaflet path ``opacity``); unset defaults to 1.0."""
+    fam = getattr(sch, "family_locations", sch)
+    raw = getattr(fam, "highlight_halo_stroke_opacity", None)
+    return clamp_map_marker_circle_fill_opacity(raw, fallback=1.0)
+
+
+def family_map_resolved_highlight_halo_stroke_weight(sch: Any) -> int:
+    """Family highlight halo edge weight: explicit halo value, else global stroke weight."""
+    g = _global_defaults(sch)
+    fam = getattr(sch, "family_locations", sch)
+    raw = getattr(fam, "highlight_halo_stroke_weight", None)
+    if raw is None:
+        raw = getattr(g, "stroke_weight", MAP_CIRCLE_MARKER_STROKE_WEIGHT)
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return max(1, int(MAP_CIRCLE_MARKER_STROKE_WEIGHT))
 
 
 def resolve_family_band_colours(sch: Any, index: int) -> tuple[str, str]:

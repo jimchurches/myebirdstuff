@@ -12,10 +12,11 @@ Nested dataclasses for :class:`MapMarkerColourScheme`.
   ``MapMarkerLiferLocationsStyle``, ``fill_opacity`` / ``lifer_*_fill_opacity`` may be omitted (``None``) to
   inherit ``global_defaults.fill_opacity`` in resolution.
 - **Family map:** ``density_fill_hex`` and ``legend_highlight_band_index`` are required. ``density_stroke_hex``,
-  ``radius_px``, ``stroke_weight``, ``highlight_stroke_hex``, ``highlight_stroke_weight``, and ``fill_opacity``
-  may be omitted (``None``) to inherit the matching field from ``global_defaults`` (see
-  :mod:`explorer.core.map_marker_colour_resolve`). Optional ``*_override_*`` fields follow the same pattern
-  as other collections.
+    ``radius_px``, ``stroke_weight``, ``highlight_stroke_hex`` (omit to keep the highlight pin's edge on
+    the same density-band edge as non-highlight pins), ``highlight_stroke_weight``, ``fill_opacity``,
+  and optional species-highlight **halo** fields (``highlight_halo_*``) may be omitted (``None``) to inherit
+  or disable per :mod:`explorer.core.map_marker_colour_resolve`. Optional ``*_override_*`` fields follow the
+  same pattern as other collections.
 - **Flat overrides:** :class:`SchemeColourOverrides` uses short keys layered on the scheme.
 
 ``explorer.app.streamlit.defaults`` builds the three bundled presets from these types.
@@ -130,6 +131,12 @@ class MapMarkerFamilyLocationsStyle:
     stroke_weight: int | None = None
     highlight_stroke_hex: str | None = None
     highlight_stroke_weight: int | None = None
+    highlight_halo_fill_hex: str | None = None
+    highlight_halo_stroke_hex: str | None = None
+    highlight_halo_radius_delta_px: int | None = None
+    highlight_halo_fill_opacity: float | None = None
+    highlight_halo_stroke_opacity: float | None = None
+    highlight_halo_stroke_weight: int | None = None
     fill_opacity: float | None = None
     radius_px_override: int | None = None
     fill_opacity_override: float | None = None

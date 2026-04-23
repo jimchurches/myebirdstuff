@@ -166,19 +166,20 @@ def render_settings_tab(
                     st.session_state[SETTINGS_FLASH_RESET_KEY] = True
 
             settings_persistence_flash_banners()
-            st.caption(
-                "Use **Apply map settings** and **Apply table settings** before **Save settings**. "
-                "Taxonomy still applies immediately in-session. Save writes your current applied preferences "
-                "to your configuration file."
-            )
-            st.caption(f"Configuration file: {settings_yaml_path}")
+
+        st.caption(
+            "Sidebar changes are session-only.\n\n"
+            "Use **Apply map settings** & **Apply table settings** to update the current Explorer defaults.\n\n"
+            "Use **Save settings** to save your current Explorer defaults to your configuration file "
+            "(if configured).\n\n"
+            "Use **Reset to defaults** to start again."
+        )
 
         st.divider()
         st.subheader("Map display")
         st.caption(
-            "Popup behaviour, mark toggles, and default clustering for the All locations map (saved when you "
-            "**Save settings**) are batched here; click **Apply map settings** for one rerun. "
-            "For a quick on/off without changing your saved default, use the **Map** sidebar toggle."
+            "These settings apply to your current session. Click **Apply map settings** to update the maps now. "
+            "If a configuration file is set up (see Explorer docs), **Save settings** will store your preferences."
         )
         _popup_sort_opts = ["ascending", "descending"]
         _popup_scroll_opts = ["shading", "chevron", "both"]
@@ -191,7 +192,7 @@ def render_settings_tab(
 
         with st.form("ebird_map_settings_batch"):
             basemap_default_w = st.selectbox(
-                "Basemap — default",
+                "Basemap",
                 options=list(MAP_BASEMAP_OPTIONS),
                 format_func=lambda k: MAP_BASEMAP_LABELS.get(k, k),
                 index=list(MAP_BASEMAP_OPTIONS).index(
@@ -201,7 +202,7 @@ def render_settings_tab(
                     else MAP_BASEMAP_DEFAULT
                 ),
                 help=(
-                    "Your default map background. The Map sidebar can temporarily override this for the current session."
+                    "Sets the default map background. Use the Map sidebar to change it for this session."
                 ),
             )
             _scheme_preset_labels = {
@@ -216,13 +217,13 @@ def render_settings_tab(
                 _cur_scheme = MAP_MARKER_COLOUR_SCHEME_DEFAULT
             with st.expander("Colour schemes", expanded=False):
                 colour_scheme_default_w = st.radio(
-                    "Map marker colour scheme — default",
+                    "Map marker colour scheme",
                     options=[1, 2, 3],
                     index=[1, 2, 3].index(_cur_scheme),
                     format_func=lambda n: _scheme_preset_labels[int(n)],
                     help=(
-                        "Saved default for visit, species, lifer, and family maps. "
-                        "The Map sidebar control can override for the current session only until you apply or save here."
+                        "Sets the default colour scheme for all maps. "
+                        "Use the Map sidebar to change it for the current session."
                     ),
                 )
             mark_lifer_w = st.toggle(
@@ -234,7 +235,7 @@ def render_settings_tab(
                 value=bool(st.session_state.get(STREAMLIT_MARK_LAST_SEEN_KEY, True)),
             )
             cluster_all_locations_w = st.toggle(
-                "Group nearby pins — default (All locations map)",
+                "Group nearby markers",
                 value=bool(
                     st.session_state.get(
                         STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY,
@@ -242,11 +243,8 @@ def render_settings_tab(
                     )
                 ),
                 help=(
-                    "When on, nearby checklist locations are combined into clusters at low zoom; "
-                    "zoom in or click a cluster to see individual pins. "
-                    "Species and lifer maps always show one pin per location. "
-                    "This value is written to your config when you **Save settings** and used on the next load. "
-                    "**Apply map settings** also updates the map now. Use the **Map** sidebar for a session-only toggle."
+                    "Groups nearby markers into clusters when zoomed out to reduce clutter. "
+                    "Use the Map sidebar to change this for the current session."
                 ),
             )
             map_height_default_w = st.slider(
@@ -258,7 +256,7 @@ def render_settings_tab(
                 ),
                 step=MAP_HEIGHT_PX_STEP,
                 help=(
-                    "Saved default map height. The Map sidebar slider remains a quick session-only override."
+                    "Sets the default map height. You can adjust for the current session in the Map sidebar."
                 ),
             )
             popup_sort_w = st.selectbox(
@@ -295,8 +293,8 @@ def render_settings_tab(
         st.divider()
         st.subheader("Tables & Lists")
         st.caption(
-            "Rankings, yearly column window, country ordering, high-count behaviour, and maintenance search radius — "
-            "click **Apply table settings** for one rerun."
+            "These settings apply to your current session. Click **Apply table settings** to update the tables. "
+            "If a configuration file is set up (see Explorer docs), **Save settings** will store your preferences."
         )
         _country_sort_opts = [
             COUNTRY_TAB_SORT_ALPHABETICAL,
@@ -378,11 +376,11 @@ def render_settings_tab(
                 ),
                 index=_idx_tb,
                 help=(
-                    "For species with multiple checklists at the same high count, choose which checklist row is shown."
+                    "When multiple checklists share the highest count for a species, choose which one to show."
                 ),
             )
             cl = st.slider(
-                "Close location (m)",
+                "Nearby location detection distance (m)",
                 min_value=MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
                 max_value=MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
                 value=int(
@@ -391,10 +389,7 @@ def render_settings_tab(
                     )
                 ),
                 step=1,
-                help=(
-                    "Locations within this distance (metres), excluding exact duplicate coordinates, "
-                    "are listed under **Maintenance → Location Maintenance → Close locations**."
-                ),
+                help="Sets the distance used to identify nearby or duplicate locations.",
             )
             apply_tables = st.form_submit_button("Apply table settings", width="stretch")
 
@@ -425,6 +420,7 @@ def render_settings_tab(
                 data_abs_path=data_abs_path,
                 source_label=source_label,
                 repo_root=REPO_ROOT,
+                config_yaml_abs_path=settings_yaml_path or None,
             ),
             unsafe_allow_html=True,
         )

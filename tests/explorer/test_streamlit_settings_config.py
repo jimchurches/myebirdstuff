@@ -105,3 +105,29 @@ def test_config_path_yaml_roundtrip(tmp_path):
     assert cfg["map_display"]["popup_sort_order"] == "descending"
     assert cfg["map_display"]["map_marker_colour_scheme"] == 2
 
+
+def test_settings_data_path_html_includes_config_path_when_given():
+    from explorer.app.streamlit.app_settings_state import settings_data_path_html
+
+    html_out = settings_data_path_html(
+        data_basename="MyEBirdData.csv",
+        data_abs_path="/data/MyEBirdData.csv",
+        source_label="config_secret",
+        repo_root="/repo",
+        config_yaml_abs_path="/repo/config/config_secret.yaml",
+    )
+    assert "Configuration file path:" in html_out
+    assert "/repo/config/config_secret.yaml" in html_out
+
+
+def test_settings_data_path_html_omits_config_path_when_not_passed():
+    from explorer.app.streamlit.app_settings_state import settings_data_path_html
+
+    html_out = settings_data_path_html(
+        data_basename="MyEBirdData.csv",
+        data_abs_path="/data/MyEBirdData.csv",
+        source_label="cwd",
+        repo_root="/repo",
+    )
+    assert "Configuration file path:" not in html_out
+
