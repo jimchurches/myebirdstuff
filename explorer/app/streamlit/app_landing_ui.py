@@ -81,6 +81,12 @@ def inject_landing_typography_css() -> None:
 .st-key-ebird_landing_main h3 {
   line-height: 1.25;
 }
+.st-key-ebird_landing_main .pebird-landing-pitch {
+  font-size: 1.02rem;
+  line-height: 1.48;
+  color: #1a2e22;
+  margin: 0.35rem 0 0.7rem 0;
+}
 .st-key-ebird_landing_main [data-testid="stMarkdownContainer"] code,
 .st-key-ebird_landing_main [data-testid="stCaptionContainer"] code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -90,6 +96,41 @@ def inject_landing_typography_css() -> None:
   background: rgba(31, 111, 84, 0.10);
   padding: 0.08em 0.34em;
   border-radius: 0.22rem;
+}
+/* Keep upload and hosted-info panels readable on wide screens. */
+.st-key-ebird_landing_main [data-testid="stFileUploader"],
+.st-key-ebird_landing_main [data-testid="stAlert"] {
+  max-width: min(100%, 60rem);
+}
+.st-key-ebird_landing_main .pebird-landing-instructions {
+  max-width: min(100%, 60rem);
+  font-size: 0.94rem;
+  line-height: 1.45;
+  color: rgba(26, 46, 34, 0.88);
+}
+.st-key-ebird_landing_main .pebird-landing-instructions h3 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 0.55rem 0 0.2rem 0;
+  color: #1a2e22;
+}
+.st-key-ebird_landing_main .pebird-landing-instructions ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.45rem;
+  padding-left: 0;
+  list-style-position: inside;
+}
+.st-key-ebird_landing_main .pebird-landing-instructions li {
+  margin: 0.16rem 0;
+}
+.st-key-ebird_landing_main .pebird-landing-instructions h4 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 0.55rem 0 0.2rem 0;
+  color: #1a2e22;
+}
+.st-key-ebird_landing_main .pebird-landing-instructions p {
+  margin: 0.1rem 0 0.45rem 0;
 }
 </style>"""
     )
@@ -120,8 +161,8 @@ def hosted_performance_notice_markdown() -> str:
     """Landing note for hosted environments: set expectations and point to local setup docs."""
     docs_url = explorer_readme_github_url()
     return (
-        "**Running on free Streamlit hosting**\n\n"
-        "Explorer works here, but performance can be slow at times.\n\n"
+        "Explorer works here, but performance can be slow at times on this free hosted platform "
+        "(Streamlit Community Cloud).\n\n"
         "- Best experience: run locally  \n"
         f"- Setup guide: [Explorer docs]({docs_url})  \n"
         "- Future: may move to faster hosting with community support"
@@ -147,7 +188,18 @@ def load_dataframe_after_landing(
         with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
             title_with_logo()
             inject_landing_typography_css()
-            st.markdown("Upload your `My eBird Data CSV` to open the map and tabs.")
+            st.markdown(
+                '<p class="pebird-landing-pitch">'
+                "Load your eBird data to explore your locations, species, and records across maps, "
+                "tables, and rich summaries."
+                "</p>",
+                unsafe_allow_html=True,
+            )
+            if show_hosted_performance_notice():
+                st.markdown("<div style='height:0.35rem;'></div>", unsafe_allow_html=True)
+                st.info(hosted_performance_notice_markdown(), icon="ℹ️")
+                st.markdown("<div style='height:0.35rem;'></div>", unsafe_allow_html=True)
+            st.markdown("Upload your eBird data to begin.")
             uploaded = st.file_uploader(
                 " ",
                 type=["csv"],
@@ -165,28 +217,34 @@ def load_dataframe_after_landing(
 
             if df_full is None:
                 st.markdown(
+                    f"""
+<div class="pebird-landing-instructions">
+<h3>Get your eBird data</h3>
+<ol>
+<li>Go to eBird -> <a href="https://ebird.org/downloadMyData" target="_blank" rel="noopener noreferrer"><code>Download My Data</code></a></li>
+<li>Under <code>My eBird Observations</code>, select <code>Request My Observations</code></li>
+<li>Wait for the email (usually a few minutes)</li>
+<li>Download and unzip the file</li>
+<li>Upload the CSV here (file name usually <code>MyEBirdData.csv</code>)</li>
+</ol>
+
+<h4>Taxononmy</h4>
+<p>
+Species names come from the configured taxonomy; you can configure the taxonomy options on the
+<code>Settings</code> tab once the full application has loaded. The default is <code>en_AU</code>.
+</p>
+
+<h4>Configuration file</h4>
+<p>
+If you’re running Explorer locally, you can load data automatically from a configured file.
+See <a href="{explorer_readme_github_url()}"
+target="_blank" rel="noopener noreferrer">Explorer docs</a> for details.
+</p>
+</div>
                     """
-Upload your eBird data to get started.
-
-### Get your eBird data
-
-1. Go to eBird -> [`Download My Data`](https://ebird.org/downloadMyData)
-2. Under `My eBird Observations`, select `Request My Observations`
-3. Wait for the email (usually a few minutes)
-4. Download and unzip the file
-5. Upload the CSV here (file name usually `MyEBirdData.csv`)
-
-Tip: If species names look wrong, check `Settings -> Taxonomy` after loading.
-                    """
+                    ,
+                    unsafe_allow_html=True,
                 )
-                st.caption(
-                    "Species names come from the configured taxonomy; you can configure the taxonomy options "
-                    "on the `Settings` tab once the full application has loaded. The default is `en_AU`.\n\n"
-                    "If you’re running Explorer locally, you can load data automatically from a configured file. "
-                    f"See [Explorer docs]({explorer_readme_github_url()}) for details."
-                )
-                if show_hosted_performance_notice():
-                    st.info(hosted_performance_notice_markdown(), icon="ℹ️")
         sidebar_footer_links()
         if df_full is None:
             return None
