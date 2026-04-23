@@ -228,7 +228,7 @@ def load_dataframe_after_landing(
 <li>Upload the CSV here (file name usually <code>MyEBirdData.csv</code>)</li>
 </ol>
 
-<h4>Taxononmy</h4>
+<h4>Taxonomy</h4>
 <p>
 Species names come from the configured taxonomy; you can configure the taxonomy options on the
 <code>Settings</code> tab once the full application has loaded. The default is <code>en_AU</code>.

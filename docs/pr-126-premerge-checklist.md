@@ -4,8 +4,8 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
 
 ## Must Address Before Merging to `main` (Beta 2)
 
-- [ ] **Fix landing-page typo in user-facing copy** (`explorer/app/streamlit/app_landing_ui.py`).
-  - Current heading is `Taxononmy` and should be `Taxonomy`.
+- [x] **Fix landing-page typo in user-facing copy** (`explorer/app/streamlit/app_landing_ui.py`).
+  - ~~Current heading is `Taxononmy` and should be `Taxonomy`.~~ Fixed: landing heading now reads `Taxonomy`.
   - Why now: visible polish issue on first-load UX.
 
 - [ ] **Run targeted manual smoke test on hosted notice flag path** (`explorer/app/streamlit/app_landing_ui.py`).
