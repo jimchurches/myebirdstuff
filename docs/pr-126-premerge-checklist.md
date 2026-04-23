@@ -12,14 +12,9 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
   - Validate both `st.secrets` and env fallback behavior for `STREAMLIT_SHOW_HOSTED_PERFORMANCE_NOTICE`.
   - Why now: this is release-facing behavior on hosted deployments and was introduced through a WIP/follow-up sequence.
 
-- [ ] **Run a release smoke pass for critical app flows after large refactor merge**.
-  - Minimum suggested checks:
-    - load CSV from landing page
-    - switch between All locations / Species / Family / Lifers map modes
-    - species search select + clear behavior
-    - Settings save/apply for basemap + map height
-    - export map HTML and footer links
-  - Why now: PR #126 is a large integration delta (84 files; major Streamlit decomposition + map logic movement). Automated tests pass, but release confidence still needs UI smoke coverage.
+- [x] **Run a release smoke pass for critical app flows after large refactor merge**.
+  - **Done (manual UI):** Landing CSV load; map modes (All locations / Species / Family / Lifers); species search select and clear; Settings save/apply for basemap and map height; export map HTML and footer links — exercised repeatedly; Explorer looks solid for release.
+  - Automated tests were already green; this item satisfied release confidence via repeated hands-on passes (PR #126 large refactor).
 
 - [x] **Decide whether AI workflow files should ship in Beta 2 branch merge**.
   - **Decision:** Ship with Beta 2 — intentional developer-only repo maintenance (`.cursor/commands/*`, expanded assistant guidance such as `docs/AI_CONTEXT.md`). No runtime or end-user impact.
