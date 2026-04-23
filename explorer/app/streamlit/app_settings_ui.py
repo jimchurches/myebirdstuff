@@ -202,7 +202,7 @@ def render_settings_tab(
                     else MAP_BASEMAP_DEFAULT
                 ),
                 help=(
-                    "Your default map background. The Map sidebar can temporarily override this for the current session."
+                    "Sets the default map background. Use the Map sidebar to change it for this session."
                 ),
             )
             _scheme_preset_labels = {
@@ -222,8 +222,8 @@ def render_settings_tab(
                     index=[1, 2, 3].index(_cur_scheme),
                     format_func=lambda n: _scheme_preset_labels[int(n)],
                     help=(
-                        "Saved default for visit, species, lifer, and family maps. "
-                        "The Map sidebar control can override for the current session only until you apply or save here."
+                        "Sets the default colour scheme for all maps. "
+                        "Use the Map sidebar to change it for the current session."
                     ),
                 )
             mark_lifer_w = st.toggle(
@@ -243,11 +243,8 @@ def render_settings_tab(
                     )
                 ),
                 help=(
-                    "When on, nearby checklist locations are combined into clusters at low zoom; "
-                    "zoom in or click a cluster to see individual pins. "
-                    "Species and lifer maps always show one pin per location. "
-                    "This value is written to your config when you **Save settings** and used on the next load. "
-                    "**Apply map settings** also updates the map now. Use the **Map** sidebar for a session-only toggle."
+                    "Groups nearby markers into clusters when zoomed out to reduce clutter. "
+                    "Use the Map sidebar to change this for the current session."
                 ),
             )
             map_height_default_w = st.slider(
@@ -259,7 +256,7 @@ def render_settings_tab(
                 ),
                 step=MAP_HEIGHT_PX_STEP,
                 help=(
-                    "Saved default map height. The Map sidebar slider remains a quick session-only override."
+                    "Sets the default map height. You can adjust for the current session in the Map sidebar."
                 ),
             )
             popup_sort_w = st.selectbox(
@@ -379,11 +376,11 @@ def render_settings_tab(
                 ),
                 index=_idx_tb,
                 help=(
-                    "For species with multiple checklists at the same high count, choose which checklist row is shown."
+                    "When multiple checklists share the highest count for a species, choose which one to show."
                 ),
             )
             cl = st.slider(
-                "Close location (m)",
+                "Nearby location detection distance (m)",
                 min_value=MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
                 max_value=MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
                 value=int(
@@ -392,10 +389,7 @@ def render_settings_tab(
                     )
                 ),
                 step=1,
-                help=(
-                    "Locations within this distance (metres), excluding exact duplicate coordinates, "
-                    "are listed under **Maintenance → Location Maintenance → Close locations**."
-                ),
+                help="Sets the distance used to identify nearby or duplicate locations.",
             )
             apply_tables = st.form_submit_button("Apply table settings", width="stretch")
 

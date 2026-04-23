@@ -44,7 +44,7 @@ tracks the built-in Streamlit spinner. Iframe min-height CSS reduces streamlit-f
 triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 
 **Maintenance:** Same fragment pattern; incomplete checklists use ``cached_full_export_checklist_stats_payload``
-(aligned with Rankings Top N + high-count settings). **Close location (m)** is set under **Settings → Tables & lists**
+(aligned with Rankings Top N + high-count settings). **Nearby location detection distance (m)** is set under **Settings → Tables & lists**
 (refs #79).
 
 **Ranking & Lists:** ``cached_full_export_checklist_stats_payload`` + ``format_checklist_stats_bundle``;
