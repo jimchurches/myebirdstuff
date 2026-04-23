@@ -34,9 +34,16 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
   - Clarify which map marker schemes are production defaults vs design utility experiments.
   - Reason to defer: documentation/maintenance clarity rather than release blocker.
 
+- [ ] **Testing strategy follow-ups (signal over coverage %)**.
+  - Prefer **targeted unit tests** for pure logic and hot paths (e.g. table-driven cases for `explorer/core/species_family.py`, which is under-covered vs core map/stats modules) when fixing bugs or touching fragile behaviour — not broad HTML/Streamlit wiring coverage for statistics alone.
+  - Avoid raising **`--cov-fail-under`** just to force work; it tends to encourage noisy tests. Keep CI gate meaningful; add tests when regressions or edge cases warrant it.
+  - **E2E / browser automation** for Streamlit (Playwright, etc.) is optional and high cost — only worth it if manual smoke starts missing repeated UI regressions.
+  - **`repo_git.py`**: git-dependent; add tests only if branch/README URL logic causes real incidents (otherwise flaky or over-mocked).
+
 ## Suggested GitHub Issues to Open (Beta 3 Queue)
 
 - [ ] `perf: profile species search + map render latency on realistic datasets`
 - [ ] `process: split beta-next integration into smaller release candidates`
 - [ ] `docs: clarify production vs experimental map marker schemes/design utility`
+- [ ] `test: targeted unit tests for explorer/core/species_family.py (table-driven; bug-driven)`
 
