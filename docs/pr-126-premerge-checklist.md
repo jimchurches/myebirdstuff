@@ -33,15 +33,10 @@ Scope reviewed: `main...beta-next` (PR #126), with `ruff` + full tests passing l
 - [x] **Rationalize experimental/design-map scheme evolution docs**.
   - **Resolved:** All three `MAP_MARKER_COLOUR_SCHEME_*` presets in `defaults.py` are **production** ship quality (none are experimental placeholders). The map marker **design utility** is **developer-only** (faster iteration than editing the full app); see `docs/development.md` § *Map marker colour design utility (developers)*. `defaults.py` remains the place for code-aware tuning.
 
-- [ ] **Testing strategy follow-ups (signal over coverage %)**.
-  - Prefer **targeted unit tests** for pure logic and hot paths (e.g. table-driven cases for `explorer/core/species_family.py`, which is under-covered vs core map/stats modules) when fixing bugs or touching fragile behaviour — not broad HTML/Streamlit wiring coverage for statistics alone.
-  - Avoid raising **`--cov-fail-under`** just to force work; it tends to encourage noisy tests. Keep CI gate meaningful; add tests when regressions or edge cases warrant it.
-  - **E2E / browser automation** for Streamlit (Playwright, etc.) is optional and high cost — only worth it if manual smoke starts missing repeated UI regressions.
-  - **`repo_git.py`**: git-dependent; add tests only if branch/README URL logic causes real incidents (otherwise flaky or over-mocked).
+- [x] **Testing strategy follow-ups (signal over coverage %)**.
+  - **Tracked in [#180](https://github.com/jimchurches/myebirdstuff/issues/180)** — enhancement issue documenting targeted tests, meaningful `--cov-fail-under`, optional E2E, and `repo_git.py` guidance.
 
 ## Suggested GitHub Issues to Open (Beta 3 Queue)
 
 - [ ] `perf: profile species search + map render latency on realistic datasets`
 - [ ] `process: split beta-next integration into smaller release candidates`
-- [ ] `test: targeted unit tests for explorer/core/species_family.py (table-driven; bug-driven)`
-
