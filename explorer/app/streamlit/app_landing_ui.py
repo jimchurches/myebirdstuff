@@ -68,6 +68,33 @@ def title_with_logo() -> None:
     inject_app_header_css()
 
 
+def inject_landing_typography_css() -> None:
+    """Keep landing-page typography aligned with the rest of the app."""
+    st.html(
+        """<style>
+.st-key-ebird_landing_main [data-testid="stMarkdownContainer"],
+.st-key-ebird_landing_main [data-testid="stMarkdownContainer"] * {
+  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.st-key-ebird_landing_main h1,
+.st-key-ebird_landing_main h2,
+.st-key-ebird_landing_main h3 {
+  line-height: 1.25;
+}
+.st-key-ebird_landing_main [data-testid="stMarkdownContainer"] code,
+.st-key-ebird_landing_main [data-testid="stCaptionContainer"] code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.92em;
+  font-weight: 500;
+  color: #1f6f54;
+  background: rgba(31, 111, 84, 0.10);
+  padding: 0.08em 0.34em;
+  border-radius: 0.22rem;
+}
+</style>"""
+    )
+
+
 def _env_flag_true(key: str) -> bool:
     """Boolean flag parser from environment or Streamlit secrets (true/1/yes/on)."""
     raw: str = ""
@@ -119,13 +146,15 @@ def load_dataframe_after_landing(
     if df_full is None:
         with st.container(key=EBIRD_LANDING_MAIN_CONTAINER_KEY):
             title_with_logo()
+            inject_landing_typography_css()
             if show_hosted_performance_notice():
                 st.info(hosted_performance_notice_markdown(), icon="ℹ️")
-            st.markdown("Upload your **My eBird Data** CSV to open the map and tabs.")
+            st.markdown("Upload your `My eBird Data CSV` to open the map and tabs.")
             uploaded = st.file_uploader(
-                "eBird export (CSV)",
+                " ",
                 type=["csv"],
                 key=EBIRD_LANDING_CSV_UPLOADER_KEY,
+                label_visibility="collapsed",
                 help="Official eBird full data export (CSV).",
             )
             if uploaded is not None:
@@ -139,21 +168,24 @@ def load_dataframe_after_landing(
             if df_full is None:
                 st.markdown(
                     """
-**From eBird**
+Upload your eBird data to get started.
 
-1. Sign in: [Download My Data](https://ebird.org/downloadMyData)
-2. Under **My eBird Observations**, use **Request My Observations**.
-3. A link to your data will be sent to your email address (often a few minutes; sometimes longer).
-4. Open the email, download the **.zip** and unzip it.
-5. Upload the CSV here (in English the file name should be **MyEBirdData.csv**).
+### Get your eBird data
+
+1. Go to eBird -> [`Download My Data`](https://ebird.org/downloadMyData)
+2. Under `My eBird Observations`, select `Request My Observations`
+3. Wait for the email (usually a few minutes)
+4. Download and unzip the file
+5. Upload the CSV here (file name usually `MyEBirdData.csv`)
+
+Tip: If species names look wrong, check `Settings -> Taxonomy` after loading.
                     """
                 )
                 st.caption(
-                    "Species links default to **en_AU**; change locale under **Settings → Taxonomy** after load. "
-                    "Data still loads if names don’t match.\n\n"
-                    "This page is skipped when a CSV is already found on disk (local config path). "
-                    "Support for local files works when Streamlit is running locally; see the code repo for more information. "
-                    "Proper instructions will appear here in future releases."
+                    "Species names come from the configured taxonomy; you can configure the taxonomy options "
+                    "on the `Settings` tab once the full application has loaded. The default is `en_AU`.\n\n"
+                    "If you’re running Explorer locally, you can load data automatically from a configured file. "
+                    f"See [Explorer docs]({explorer_readme_github_url()}) for details."
                 )
         sidebar_footer_links()
         if df_full is None:
