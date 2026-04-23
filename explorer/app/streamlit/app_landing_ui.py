@@ -93,10 +93,11 @@ def hosted_performance_notice_markdown() -> str:
     """Landing note for hosted environments: set expectations and point to local setup docs."""
     docs_url = explorer_readme_github_url()
     return (
-        "Explorer is fully usable here, but free Streamlit hosting can be slow. "
-        "Running locally usually gives the best experience. "
-        f"See [Explorer docs]({docs_url}) for local setup. "
-        "If there is enough interest and support, hosting may move to a more capable platform later."
+        "**Running on free Streamlit hosting**\n\n"
+        "Explorer works here, but performance can be slow at times.\n\n"
+        "- Best experience: run locally  \n"
+        f"- Setup guide: [Explorer docs]({docs_url})  \n"
+        "- Future: may move to faster hosting with community support"
     )
 
 
