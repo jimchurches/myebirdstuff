@@ -98,6 +98,14 @@ There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder ov
 
 **Precedence (load):** A new pick from the landing uploader → **disk** (config paths + CWD) → **cached upload**. Stale upload cache is cleared when disk wins.
 
+### Performance instrumentation (Phase 0, [#179](https://github.com/jimchurches/myebirdstuff/issues/179))
+
+**Off by default.** Set **`EXPLORER_PERF=1`** in the environment (or the same key in **Streamlit secrets** on Community Cloud) to record stage timings to session state and show a **Performance / debug** expander at the bottom of the **sidebar** (recent events table + **Download metrics (JSONL)** + clear buffer).
+
+Optional **`EXPLORER_PERF_LOG=1`**: also emit one JSON object per line at **INFO** on the root logger (visible in Cloud **Logs**).
+
+Implementation: `explorer/app/streamlit/perf_instrumentation.py` (`perf_span`, `perf_fragment`); hooks in `app_data_loading.py`, `app_prep_map_ui.py`, `app.py`, and tab fragments.
+
 ## Streamlit Community Cloud
 
 **Deployed instance:** https://personal-ebird-explorer.streamlit.app

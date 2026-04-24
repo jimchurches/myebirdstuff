@@ -199,6 +199,12 @@ SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
 # Incremented once per ``main()`` run (fragment-only reruns do not execute ``main``).
 EXPLORER_MAIN_SCRIPT_RUN_ID_KEY = "_explorer_main_script_run_id"
+# Optional performance instrumentation (``EXPLORER_PERF=1``); refs #179.
+EXPLORER_PERF_EVENTS_KEY = "_explorer_perf_events"
+EXPLORER_PERF_DATASET_CTX_KEY = "_explorer_perf_dataset_ctx"
+EXPLORER_PERF_MAX_EVENTS = 2500
+EXPLORER_PERF_CLEAR_BTN_KEY = "explorer_perf_clear_buffer_btn"
+EXPLORER_PERF_DOWNLOAD_BTN_KEY = "explorer_perf_download_jsonl_btn"
 # Species search: user has changed the text away from the persisted pick (typing, clear-to-search).
 SESSION_SPECIES_SEARCH_USER_EDITING_KEY = "_streamlit_species_search_user_editing"
 # Last main-run id the species search fragment saw; used to refill the bar after tab navigation.

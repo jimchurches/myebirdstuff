@@ -74,6 +74,7 @@ from explorer.app.streamlit.map_working import (
     streamlit_working_set_and_status,
 )
 from explorer.core.explorer_paths import settings_yaml_path_for_source
+from explorer.app.streamlit.perf_instrumentation import render_explorer_perf_sidebar_panel
 from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_CAPTION,
     SPECIES_SEARCH_HELP_EXPANDER_LABEL,
@@ -450,6 +451,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         ) + 1
 
     st.session_state[SESSION_PREV_MAP_VIEW_KEY] = map_view_mode
+
+    with st.sidebar:
+        render_explorer_perf_sidebar_panel()
 
     return MapWorkingContext(
         map_style=map_style,
