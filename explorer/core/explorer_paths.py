@@ -1,8 +1,6 @@
 """
 CSV path resolution for the Personal eBird Explorer (Streamlit app).
 
-Migration plan: issue #70 (https://github.com/jimchurches/myebirdstuff/issues/70).
-
 Search order (first folder that contains the filename wins):
 
 1. ``config/config_secret.yaml`` → ``data_folder`` (if set)

@@ -6,12 +6,12 @@ Extracted from the UI layer for reuse (e.g. Streamlit); refs #69, #79.
 
 from __future__ import annotations
 
-import html as html_module
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 import pandas as pd
 
 from explorer.core.duplicate_checks import get_map_maintenance_data
+from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 
 # eBird location edit URL (merge/delete personal locations), not lifelist.
 EBIRD_LOCATION_EDIT_BASE = "https://ebird.org/mylocations/edit/"
@@ -145,10 +145,13 @@ def map_maintenance_exact_duplicates_body_html(exact_rows: List[Tuple[Any, ...]]
   <p class="maint-html-caption">None detected.</p>"""
     dup_body = ""
     for loc_name, loc_id, count, lat, lon in exact_rows:
+        loc_name_esc = esc_text(loc_name)
+        loc_id_safe = esc_attr(loc_id)
         link = (
-            f'<a href="{EBIRD_LOCATION_EDIT_BASE}{loc_id}" target="_blank">{loc_name}</a>'
+            f'<a href="{esc_attr(EBIRD_LOCATION_EDIT_BASE)}{loc_id_safe}" '
+            f'target="_blank" rel="noopener noreferrer">{loc_name_esc}</a>'
             if loc_id
-            else loc_name
+            else loc_name_esc
         )
         coords = f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"
         dup_body += f"<tr><td>{link}</td><td>{coords}</td><td>{count}</td></tr>"
@@ -169,9 +172,11 @@ def map_maintenance_close_locations_body_html(near_pairs: List[Any], threshold_m
     def _one_pair_table(pair: List[Any]) -> str:
         pair_rows = "".join(
             (
-                f'<tr class="pair-first"><td><a href="{EBIRD_LOCATION_EDIT_BASE}{lid}" target="_blank">{name}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>'
+                f'<tr class="pair-first"><td><a href="{esc_attr(EBIRD_LOCATION_EDIT_BASE)}{esc_attr(lid)}" '
+                f'target="_blank" rel="noopener noreferrer">{esc_text(name)}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>'
                 if idx == 0
-                else f'<tr class="pair-second"><td><a href="{EBIRD_LOCATION_EDIT_BASE}{lid}" target="_blank">{name}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>'
+                else f'<tr class="pair-second"><td><a href="{esc_attr(EBIRD_LOCATION_EDIT_BASE)}{esc_attr(lid)}" '
+                f'target="_blank" rel="noopener noreferrer">{esc_text(name)}</a></td><td>{f"({lat:.6f}, {lon:.6f})" if pd.notna(lat) and pd.notna(lon) else "—"}</td></tr>'
             )
             for idx, (lid, name, lat, lon) in enumerate(pair)
         )
@@ -242,19 +247,23 @@ def sex_notation_year_table_html(
     """HTML table for one year's sex-notation rows (no wrapper)."""
     rows = []
     for sid, date_str, loc, species, protocol, notation in items:
-        loc_esc = html_module.escape(loc, quote=True)
-        date_esc = html_module.escape(date_str, quote=True)
-        species_esc = html_module.escape(species, quote=True)
-        protocol_esc = html_module.escape(protocol, quote=True)
-        notation_esc = html_module.escape(notation, quote=True)
+        loc_esc = esc_text(loc)
+        date_esc = esc_text(date_str)
+        species_esc = esc_text(species)
+        protocol_esc = esc_text(protocol)
+        notation_esc = esc_text(notation)
         species_url = species_url_fn(species) if species_url_fn else None
         species_cell = (
-            f'<a href="{html_module.escape(species_url, quote=True)}" target="_blank" rel="noopener">{species_esc}</a>'
+            f'<a href="{esc_attr(species_url)}" target="_blank" rel="noopener noreferrer">{species_esc}</a>'
             if species_url
             else species_esc
         )
         url = f"https://ebird.org/checklist/{sid}" if sid else "#"
-        loc_link = f'<a href="{url}" target="_blank">{loc_esc}</a>' if url != "#" else loc_esc
+        loc_link = (
+            f'<a href="{esc_attr(url)}" target="_blank" rel="noopener noreferrer">{loc_esc}</a>'
+            if url != "#"
+            else loc_esc
+        )
         rows.append(
             f"<tr><td>{date_esc}</td><td>{protocol_esc}</td><td>{species_cell}</td>"
             f"<td>{notation_esc}</td><td>{loc_link}</td></tr>"
@@ -306,8 +315,8 @@ def incomplete_checklists_intro_html() -> str:
     Incomplete travelling and stationary checklists can occur when submitting a checklist in the eBird mobile app. The default setting is incomplete, and if you move quickly through the submission prompts you may accidentally answer "No" to the question asking whether the list is complete.<br><br>
     Incomplete checklists can certainly be intentional and acceptable (for example, when other species were present but not recorded). These checklists tables below are provided so you can review your data for checklists that may have been marked incomplete by mistake. Incidental checklists are not included.<br><br>
     References:<br>
-    <a href="https://support.ebird.org/en/support/solutions/articles/48000950859-guide-to-ebird-protocols" target="_blank">Guide to eBird Protocols</a><br>
-    <a href="https://support.ebird.org/en/support/solutions/articles/48000967748-birding-as-your-primary-purpose-and-complete-checklists" target="_blank">Birding as your 'Primary Purpose' and Complete Checklists</a>
+    <a href="https://support.ebird.org/en/support/solutions/articles/48000950859-guide-to-ebird-protocols" target="_blank" rel="noopener noreferrer">Guide to eBird Protocols</a><br>
+    <a href="https://support.ebird.org/en/support/solutions/articles/48000967748-birding-as-your-primary-purpose-and-complete-checklists" target="_blank" rel="noopener noreferrer">Birding as your 'Primary Purpose' and Complete Checklists</a>
   </div>"""
 
 
@@ -315,10 +324,12 @@ def incomplete_checklists_year_table_html(year: Any, items: List[Tuple[Any, ...]
     """HTML table for one year's incomplete checklist rows (no wrapper)."""
     rows = []
     for sid, date_str, loc in items:
-        loc_esc = html_module.escape(loc, quote=True)
-        date_esc = html_module.escape(date_str, quote=True)
+        loc_esc = esc_text(loc)
+        date_esc = esc_text(date_str)
         url = f"https://ebird.org/checklist/{sid}" if sid else "#"
-        rows.append(f'<tr><td>{date_esc}</td><td><a href="{url}" target="_blank">{loc_esc}</a></td></tr>')
+        rows.append(
+            f'<tr><td>{date_esc}</td><td><a href="{esc_attr(url)}" target="_blank" rel="noopener noreferrer">{loc_esc}</a></td></tr>'
+        )
     table_body = "".join(rows)
     return (
         f'<table class="{MAINTENANCE_TABLE_CLASSES}"><thead><tr><th>Date</th><th>Location</th></tr></thead>'

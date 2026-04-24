@@ -1,4 +1,4 @@
-"""YAML-backed settings model for Streamlit explorer UI (refs #70)."""
+"""Load, validate, and persist the explorer’s YAML settings (map, rankings, maintenance, etc.)."""
 
 from __future__ import annotations
 
@@ -12,20 +12,19 @@ from explorer.core.settings_schema_defaults import (
     MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
     MAINTENANCE_CLOSE_LOCATION_METERS_MAX,
     MAINTENANCE_CLOSE_LOCATION_METERS_MIN,
-    MAP_DEFAULT_COLOR_DEFAULT,
-    MAP_DEFAULT_FILL_DEFAULT,
-    MAP_LAST_SEEN_COLOR_DEFAULT,
-    MAP_LAST_SEEN_FILL_DEFAULT,
-    MAP_LIFER_COLOR_DEFAULT,
-    MAP_LIFER_FILL_DEFAULT,
+    MAP_BASEMAP_DEFAULT,
+    MAP_HEIGHT_PX_DEFAULT,
+    MAP_HEIGHT_PX_MIN,
+    MAP_HEIGHT_PX_MAX,
+    MAP_BASEMAP_OPTIONS,
     MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_MAX,
+    MAP_MARKER_COLOUR_SCHEME_MIN,
     MAP_MARK_LAST_SEEN_DEFAULT,
     MAP_MARK_LIFER_DEFAULT,
-    MAP_PIN_COLOUR_ALLOWLIST,
     MAP_POPUP_SCROLL_HINT_DEFAULT,
     MAP_POPUP_SORT_ORDER_DEFAULT,
-    MAP_SPECIES_COLOR_DEFAULT,
-    MAP_SPECIES_FILL_DEFAULT,
     SETTINGS_SCHEMA_VERSION,
     TABLES_RANKINGS_TOP_N_DEFAULT,
     TABLES_RANKINGS_TOP_N_MAX,
@@ -54,15 +53,18 @@ class MapDisplayConfig(BaseModel):
     )
     mark_lifer: bool = MAP_MARK_LIFER_DEFAULT
     mark_last_seen: bool = MAP_MARK_LAST_SEEN_DEFAULT
+    basemap: str = MAP_BASEMAP_DEFAULT
+    map_height_px: int = Field(
+        default=MAP_HEIGHT_PX_DEFAULT,
+        ge=MAP_HEIGHT_PX_MIN,
+        le=MAP_HEIGHT_PX_MAX,
+    )
     cluster_all_locations: bool = MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
-    default_color: str = Field(default=MAP_DEFAULT_COLOR_DEFAULT)
-    default_fill: str = Field(default=MAP_DEFAULT_FILL_DEFAULT)
-    species_color: str = Field(default=MAP_SPECIES_COLOR_DEFAULT)
-    species_fill: str = Field(default=MAP_SPECIES_FILL_DEFAULT)
-    lifer_color: str = Field(default=MAP_LIFER_COLOR_DEFAULT)
-    lifer_fill: str = Field(default=MAP_LIFER_FILL_DEFAULT)
-    last_seen_color: str = Field(default=MAP_LAST_SEEN_COLOR_DEFAULT)
-    last_seen_fill: str = Field(default=MAP_LAST_SEEN_FILL_DEFAULT)
+    map_marker_colour_scheme: int = Field(
+        default=MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+        ge=MAP_MARKER_COLOUR_SCHEME_MIN,
+        le=MAP_MARKER_COLOUR_SCHEME_MAX,
+    )
 
 
 class TablesListsConfig(BaseModel):
@@ -147,19 +149,16 @@ def _validate_settings_mapping(raw: Any) -> tuple[dict[str, Any], str | None]:
         return defaults_dict(), f"Invalid settings YAML; using defaults. {e.errors()[0].get('msg', '')}"
 
     data = cfg.model_dump()
-    # Guard user-edited colors with explicit allowlist.
-    for key in (
-        "default_color",
-        "default_fill",
-        "species_color",
-        "species_fill",
-        "lifer_color",
-        "lifer_fill",
-        "last_seen_color",
-        "last_seen_fill",
-    ):
-        if data["map_display"][key] not in MAP_PIN_COLOUR_ALLOWLIST:
-            data["map_display"][key] = defaults_dict()["map_display"][key]
+    # Guard user-edited basemap with explicit allowlist (same keys as Streamlit defaults).
+    if data["map_display"].get("basemap") not in MAP_BASEMAP_OPTIONS:
+        data["map_display"]["basemap"] = MAP_BASEMAP_DEFAULT
+    try:
+        _msc = int(data["map_display"].get("map_marker_colour_scheme", MAP_MARKER_COLOUR_SCHEME_DEFAULT))
+        data["map_display"]["map_marker_colour_scheme"] = max(
+            MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _msc)
+        )
+    except (TypeError, ValueError):
+        data["map_display"]["map_marker_colour_scheme"] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
     return data, None
 
 

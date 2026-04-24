@@ -1,7 +1,6 @@
 """Tests for explorer.core.path_resolution.find_data_file."""
 
 import os
-import pytest
 import tempfile
 
 from explorer.core.path_resolution import find_data_file

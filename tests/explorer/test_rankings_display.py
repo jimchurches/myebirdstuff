@@ -1,7 +1,5 @@
 """Unit tests for explorer.presentation.rankings_display (rankings table HTML builders)."""
 
-import pytest
-
 from explorer.presentation.rankings_display import (
     rankings_scroll_wrapper,
     rankings_table,
@@ -62,6 +60,22 @@ def test_rankings_table_location_5col_one_row_structure():
     assert "3</td>" in out
     assert "12</td>" in out
     assert "location-cols-tbl" in out
+
+
+def test_rankings_table_location_5col_preserves_link_html_in_cells():
+    """Stats formatters emit pre-built ``<a>`` HTML; cells must not be HTML-escaped (refs #117)."""
+    loc = '<a href="https://ebird.org/lifelist/L1" target="_blank">Pelagic</a>'
+    when = '<a href="https://ebird.org/checklist/S1" target="_blank">14 Dec 2024</a>'
+    row = (loc, "NSW", "AU", when, "523 min")
+    out = rankings_table_location_5col(
+        "Longest",
+        ["Location", "State", "Country", "Visited date/time", "Time"],
+        [row],
+        leading_rank_column=True,
+    )
+    assert 'href="https://ebird.org/lifelist/L1"' in out
+    assert 'href="https://ebird.org/checklist/S1"' in out
+    assert "&lt;a href" not in out
 
 
 def test_rankings_table_location_5col_leading_rank_column():

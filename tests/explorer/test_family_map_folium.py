@@ -1,0 +1,325 @@
+"""Tests for Family Map Folium builder (refs #138)."""
+
+from dataclasses import replace
+
+import explorer.app.streamlit.defaults as streamlit_defaults
+from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
+from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
+from explorer.core.family_map_compute import FamilyLocationPin, FamilyMapBannerMetrics
+from explorer.core.family_map_folium import (
+    build_family_composition_folium_map,
+    build_family_map_banner_element_html,
+    build_family_map_banner_overlay_html,
+    build_family_map_legend_overlay_html_for_pins,
+    family_map_marker_style,
+)
+from explorer.core.map_marker_colour_resolve import (
+    family_map_resolved_highlight_pin_stroke_hex,
+    resolve_family_band_colours,
+)
+
+from tests.colour_scheme_test_utils import BUNDLED_COLOUR_SCHEME_INDICES
+
+
+def _sample_pins():
+    return (
+        FamilyLocationPin(
+            location_id="L1",
+            location_name="Site One",
+            latitude=-35.0,
+            longitude=149.0,
+            distinct_base_species_count=2,
+            density_band_index=1,
+            common_name_lines=("A", "B"),
+            highlight_match=False,
+        ),
+        FamilyLocationPin(
+            location_id="L2",
+            location_name="Site Two",
+            latitude=-34.0,
+            longitude=150.0,
+            distinct_base_species_count=1,
+            density_band_index=0,
+            common_name_lines=("C",),
+            highlight_match=True,
+        ),
+    )
+
+
+def test_active_map_marker_colour_scheme_returns_bundled_constants():
+    for idx in BUNDLED_COLOUR_SCHEME_INDICES:
+        sch = active_map_marker_colour_scheme(idx)
+        assert sch is getattr(streamlit_defaults, f"MAP_MARKER_COLOUR_SCHEME_{idx}")
+
+
+def test_family_map_marker_style_highlight_uses_resolved_highlight_stroke():
+    p = _sample_pins()[1]
+    sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
+    fill, stroke, w = family_map_marker_style(p, style=sch)
+    assert p.highlight_match
+    assert stroke == family_map_resolved_highlight_pin_stroke_hex(sch, p.density_band_index)
+    assert w == max(1, int(sch.global_defaults.stroke_weight))
+
+
+def test_family_map_marker_style_highlight_omitted_highlight_stroke_uses_band_edge():
+    """No ``highlight_stroke_hex``: inner pin edge matches that band's density edge (not global)."""
+    p = _sample_pins()[1]
+    base = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
+    sch = replace(
+        base,
+        family_locations=replace(
+            base.family_locations,
+            highlight_stroke_hex=None,
+        ),
+    )
+    _, band_edge = resolve_family_band_colours(sch, p.density_band_index)
+    fill, stroke, w = family_map_marker_style(p, style=sch)
+    assert stroke == band_edge
+    assert fill == resolve_family_band_colours(sch, p.density_band_index)[0]
+    assert w == max(1, int(sch.global_defaults.stroke_weight))
+
+
+def test_build_family_composition_folium_map_html_contains_markers():
+    pins = _sample_pins()
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="Whistlers",
+            total_species_taxonomy=12,
+            species_recorded_user=5,
+            locations_with_records=2,
+        )
+    )
+    legend = build_family_map_legend_overlay_html_for_pins(
+        pins,
+        highlight_label="Rufous Whistler",
+        highlight_species_url="https://ebird.org/species/goldenwhi1",
+    )
+    m = build_family_composition_folium_map(
+        pins,
+        banner_html=banner,
+        legend_html=legend,
+        location_page_url_fn=lambda lid: f"https://ebird.org/hotspot/{lid}" if lid else None,
+        species_url_fn=lambda c: f"https://ebird.org/species/x/{c}" if c == "A" else None,
+    )
+    html = m._repr_html_()
+    assert "Site One" in html
+    assert "Site Two" in html
+    assert "CircleMarker" in html or "circle" in html.lower()
+    assert "Whistlers" in html
+    assert "12 in taxonomy" in html
+    assert "5 recorded (42%)" in html
+    # Legend is embedded in the Folium iframe; link href is HTML-entity encoded in ``_repr_html_``.
+    assert "goldenwhi1" in html and "Rufous Whistler" in html
+    assert "fitBounds" in html
+    assert "maxZoom" in html and "6" in html
+
+
+def test_family_map_banner_percent_omits_when_taxonomy_total_is_zero():
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="X",
+            total_species_taxonomy=0,
+            species_recorded_user=3,
+            locations_with_records=1,
+        )
+    )
+    assert "0 in taxonomy" in banner
+    assert "3 recorded" in banner
+    assert "%" not in banner
+
+
+def test_family_map_banner_optional_selected_species_summary_line():
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="Whistlers",
+            total_species_taxonomy=12,
+            species_recorded_user=5,
+            locations_with_records=2,
+        ),
+        selected_species_n_checklists=4,
+        selected_species_n_individuals=9,
+        selected_species_display_name="Golden Whistler",
+    )
+    assert "12 in taxonomy" in banner
+    assert "pebird-map-banner__family-selected-summary" in banner
+    assert "Golden Whistler:" in banner
+    assert "4 checklists" in banner
+    assert "9 individuals" in banner
+
+
+def test_family_map_banner_selected_species_name_links_when_url_provided():
+    """Banner species label uses the same eBird link pattern as the family map legend."""
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="Whistlers",
+            total_species_taxonomy=12,
+            species_recorded_user=5,
+            locations_with_records=2,
+        ),
+        selected_species_n_checklists=4,
+        selected_species_n_individuals=9,
+        selected_species_display_name="Golden Whistler",
+        selected_species_url="https://ebird.org/species/goldenwhi1",
+    )
+    assert 'href="https://ebird.org/species/goldenwhi1"' in banner
+    assert 'target="_blank"' in banner
+    assert 'rel="noopener noreferrer"' in banner
+    assert "Golden Whistler</a>:" in banner
+
+
+def test_family_map_banner_selected_species_display_name_escapes_html():
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="F",
+            total_species_taxonomy=1,
+            species_recorded_user=1,
+            locations_with_records=1,
+        ),
+        selected_species_n_checklists=1,
+        selected_species_n_individuals=2,
+        selected_species_display_name="A & B <test>",
+    )
+    assert "A &amp; B &lt;test&gt;:" in banner
+    assert "<test>" not in banner
+
+
+def test_family_map_banner_selected_species_link_escapes_name_and_href():
+    banner = build_family_map_banner_overlay_html(
+        FamilyMapBannerMetrics(
+            family_name="F",
+            total_species_taxonomy=1,
+            species_recorded_user=1,
+            locations_with_records=1,
+        ),
+        selected_species_n_checklists=1,
+        selected_species_n_individuals=2,
+        selected_species_display_name="A & B",
+        selected_species_url='https://ebird.org/species/x?q=1&foo=2',
+    )
+    assert "A &amp; B</a>:" in banner
+    assert "q=1&amp;foo=2" in banner
+
+
+def test_build_family_map_empty_pins_still_returns_map():
+    m = build_family_composition_folium_map(())
+    html = m._repr_html_()
+    assert "folium" in html.lower() or "map" in html.lower()
+
+
+def test_build_family_map_empty_pins_uses_default_center_when_given():
+    m = build_family_composition_folium_map((), default_center=(-33.8, 151.2))
+    html = m._repr_html_()
+    assert "-33.8" in html and "151.2" in html
+
+
+def test_fit_bounds_highlight_only_uses_highlight_pins():
+    pins = _sample_pins()
+    m_all = build_family_composition_folium_map(pins, fit_bounds_highlight_only=False)
+    m_hl = build_family_composition_folium_map(pins, fit_bounds_highlight_only=True)
+    h_all = m_all._repr_html_()
+    h_hl = m_hl._repr_html_()
+    assert "fitBounds" in h_all and "fitBounds" in h_hl
+    assert "[[-35.0, 149.0], [-34.0, 150.0]]" in h_all
+    assert "[[-34.0, 150.0]]" in h_hl
+    assert '&quot;maxZoom&quot;: 8' in h_hl
+    assert '&quot;maxZoom&quot;: 6' in h_all
+
+
+def test_fit_bounds_highlight_no_matches_uses_family_max_zoom():
+    """Species-highlight mode but no matching pins: frame all pins, cap zoom like family view."""
+    p = FamilyLocationPin(
+        location_id="L1",
+        location_name="Only",
+        latitude=-35.0,
+        longitude=149.0,
+        distinct_base_species_count=1,
+        density_band_index=0,
+        common_name_lines=("X",),
+        highlight_match=False,
+    )
+    m = build_family_composition_folium_map((p,), fit_bounds_highlight_only=True)
+    h = m._repr_html_()
+    assert '&quot;maxZoom&quot;: 6' in h
+
+
+def test_build_family_map_banner_element_html_escapes():
+    h = build_family_map_banner_element_html('Birds & more <script>')
+    assert "&amp;" in h or "Birds" in h
+    assert "<script>" not in h or "&lt;" in h
+
+
+def test_family_map_draw_order_is_low_to_high_with_highlights_last():
+    pins = (
+        FamilyLocationPin(
+            location_id="L_high_non_hl",
+            location_name="High Non-highlight",
+            latitude=-31.0,
+            longitude=141.0,
+            distinct_base_species_count=8,
+            density_band_index=2,
+            common_name_lines=("H",),
+            highlight_match=False,
+        ),
+        FamilyLocationPin(
+            location_id="L_low_non_hl",
+            location_name="Low Non-highlight",
+            latitude=-32.0,
+            longitude=142.0,
+            distinct_base_species_count=1,
+            density_band_index=0,
+            common_name_lines=("L",),
+            highlight_match=False,
+        ),
+        FamilyLocationPin(
+            location_id="L_hl",
+            location_name="Highlighted",
+            latitude=-33.0,
+            longitude=143.0,
+            distinct_base_species_count=3,
+            density_band_index=1,
+            common_name_lines=("X",),
+            highlight_match=True,
+        ),
+    )
+    html = build_family_composition_folium_map(pins).get_root().render()
+    i_low = html.find("[-32.0, 142.0]")
+    i_high = html.find("[-31.0, 141.0]")
+    i_hl = html.find("[-33.0, 143.0]")
+    assert i_low != -1 and i_high != -1 and i_hl != -1
+    assert i_low < i_high < i_hl
+
+
+def test_build_family_map_renders_highlight_halo_marker() -> None:
+    pins = _sample_pins()
+    m = build_family_composition_folium_map(pins, colour_scheme_index=2)
+    html = m._repr_html_().lower()
+    # Thermal Shift halo fill/stroke from ``defaults.py`` (``MAP_MARKER_COLOUR_SCHEME_2``).
+    assert "fff4d6" in html
+    assert "e5b710" in html
+    # 2 pins + 1 extra halo marker for highlighted pin.
+    assert html.count("circlemarker") >= 3
+
+
+def test_build_family_map_without_halo_settings_draws_no_extra_halo_marker() -> None:
+    pins = _sample_pins()
+    m = build_family_composition_folium_map(pins, colour_scheme_index=1)
+    html = m._repr_html_().lower()
+    # 2 pins only (no extra halo marker when scheme omits halo options).
+    assert html.count("circlemarker") == 2
+
+
+def test_blank_family_map_applies_center_zoom_recipe_over_default_center():
+    """Blank map uses All-locations ``center_zoom`` recipe (e.g. COG), not only ``default_center``."""
+    m = build_family_composition_folium_map(
+        (),
+        default_center=(-10.0, 110.0),
+        default_zoom=5,
+        default_viewport_recipe={
+            "mode": "center_zoom",
+            "center": [-33.0, 151.0],
+            "zoom": 7,
+        },
+    )
+    html = m.get_root().render()
+    assert "-33" in html and "151" in html
+    assert '"zoom": 7' in html or '"zoom": 7,' in html

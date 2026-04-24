@@ -1,9 +1,9 @@
 """
-eBird taxonomy lookup for species links (refs #56).
+eBird taxonomy lookup for building species and lifelist URLs from common names.
 
-Fetches the eBird taxonomy once and provides COMMON_NAME -> SPECIES_CODE
-for CATEGORY == "species" only. Used to build eBird species and lifelist URLs.
-No API key required. Offline or API failure: lookup returns None; the UI continues.
+Fetches the taxonomy CSV once and provides COMMON_NAME -> SPECIES_CODE for CATEGORY == "species"
+only, so map and rankings links stay consistent with eBird’s site. No API key required.
+Offline or API failure: lookup returns None; callers continue without links.
 
 Locale: pass locale to load_taxonomy() so common names match your eBird export
 (e.g. "en_AU" for Australian English: Grey Teal, Willie Wagtail, Common Starling).
@@ -70,6 +70,52 @@ def load_taxonomy(locale: str | None = None) -> bool:
     return True
 
 
+def _hyphen_space_lookup_variants(name: str) -> tuple[str, ...]:
+    """Alternate spellings swapping spaces and hyphens between word parts.
+
+    eBird uses different conventions by locale (e.g. *en_US* ``Jacky-winter`` vs *en_AU*
+    ``Jacky Winter``). Checklist exports follow the observer's regional names, which may not
+    match :func:`load_taxonomy`'s locale, so we try both separator forms before giving up.
+
+    Note: swapping ``' '`` → ``'-'`` preserves per-word casing, so ``Jacky Winter`` becomes
+    ``Jacky-Winter`` while the CSV may use ``Jacky-winter``; :func:`_code_for_common_name`
+    falls back to normalized matching when direct key lookups miss.
+    """
+    key = str(name).strip()
+    alts: list[str] = []
+    if " " in key:
+        alts.append(key.replace(" ", "-"))
+    if "-" in key:
+        alts.append(key.replace("-", " "))
+    return tuple(alts)
+
+
+def _normalize_common_name_for_lookup(name: str) -> str:
+    """Collapse hyphen vs space and case so two spellings of the same name compare equal.
+
+    Needed when naive space-to-hyphen substitution yields the wrong letter case after a
+    hyphen (e.g. ``Jacky-Winter``) while the taxonomy row uses eBird's casing (e.g.
+    ``Jacky-winter``), or when locale and export strings disagree on spaces vs hyphens.
+    """
+    s = str(name).strip().replace("-", " ")
+    while "  " in s:
+        s = s.replace("  ", " ")
+    return s.casefold()
+
+
+def _code_by_normalized_common_name(common_name: str) -> str | None:
+    """Linear scan: same species may differ only by hyphen/spaces/casing in the CSV vs query."""
+    if _common_to_code is None:
+        return None
+    target = _normalize_common_name_for_lookup(common_name)
+    if not target:
+        return None
+    for k, code in _common_to_code.items():
+        if _normalize_common_name_for_lookup(k) == target:
+            return code
+    return None
+
+
 def _base_common_name(common_name: str) -> str | None:
     """Strip trailing ' (Subspecies)' from common name so subspecies link to main species page.
 
@@ -95,9 +141,25 @@ def _code_for_common_name(common_name: str) -> str | None:
     code = _common_to_code.get(key)
     if code:
         return code
+    for alt in _hyphen_space_lookup_variants(key):
+        code = _common_to_code.get(alt)
+        if code:
+            return code
+    code = _code_by_normalized_common_name(key)
+    if code:
+        return code
     base = _base_common_name(common_name)
     if base:
-        return _common_to_code.get(base)
+        code = _common_to_code.get(base)
+        if code:
+            return code
+        for alt in _hyphen_space_lookup_variants(base):
+            code = _common_to_code.get(alt)
+            if code:
+                return code
+        code = _code_by_normalized_common_name(base)
+        if code:
+            return code
     return None
 
 

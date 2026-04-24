@@ -6,7 +6,7 @@ labels: bug
 assignees: ''
 ---
 
-The following is a guide on how to give developer(s) enough information to find, reproduce and fix a reported bug.  Treat this as a guide and not perscriptive; we will understand if not all information is included on a simple bug that is easy to find/explain for example.
+The following is a guide on how to give developer(s) enough information to find, reproduce and fix a reported bug.  Treat this as a guide and not prescriptive; we will understand if not all information is included on a simple bug that is easy to find/explain for example.
 
 Feel free to remove text below that is not required.  Clear and consice is better than verbose and cluttered.
 

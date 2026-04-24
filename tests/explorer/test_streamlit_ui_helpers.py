@@ -25,14 +25,28 @@ class _StubSessionState(dict):
 class _SidebarStub:
     """Capture ``st.sidebar`` divider/markdown used by map chrome tests."""
 
-    def __init__(self) -> None:
+    def __init__(self, stub_session) -> None:
+        self._stub_session = stub_session
         self.markdown_calls: list[tuple[tuple, dict]] = []
+        self.caption_calls: list[str] = []
+        self.radio_calls: list[tuple] = []
 
     def divider(self) -> None:
         return None
 
+    def caption(self, label: str) -> None:
+        self.caption_calls.append(label)
+
     def markdown(self, *args, **kwargs):
         self.markdown_calls.append((args, kwargs))
+
+    def radio(self, label: str, options, key=None, horizontal: bool = False, **kwargs):
+        self.radio_calls.append((label, tuple(options), key, horizontal, kwargs))
+        if key is not None and key in self._stub_session:
+            v = self._stub_session[key]
+            if v in options:
+                return v
+        return options[0] if options else None
 
 
 def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -43,6 +57,8 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 
     stub = types.ModuleType("streamlit")
     stub.session_state = _StubSessionState()
+    # Dict-like secrets for tests (e.g. hosted notice flag); matches ``key in st.secrets`` usage.
+    stub.secrets: dict[str, str] = {}
 
     stub.html_calls: list[str] = []
 
@@ -64,7 +80,7 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         stub.error_calls.append(msg)
 
     stub.error = error
-    stub.sidebar = _SidebarStub()
+    stub.sidebar = _SidebarStub(stub.session_state)
 
     def fragment(fn):
         return fn
@@ -131,6 +147,7 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
         "explorer.app.streamlit.checklist_stats_streamlit_html",
         "explorer.app.streamlit.rankings_streamlit_html",
         "explorer.app.streamlit.maintenance_streamlit_html",
+        "explorer.app.streamlit.app_landing_ui",
     ]:
         _drop_submodule(name)
     return sys.modules["streamlit"]
@@ -253,8 +270,18 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
         species_selected_sci="Turdus migratorius",
         hide_non_matching_locations=True,
     )
+    empty_awaiting_species = static_map_cache_key(
+        df,
+        "species",
+        "",
+        "default",
+        ro,
+        taxonomy_locale="en_AU",
+        hide_non_matching_locations=True,
+    )
     assert no_species != with_species
     assert with_species != hide_on
+    assert empty_awaiting_species != no_species
 
 
 # --- app_data_loading / app_map_ui / streamlit_theme (refs #98; UI-surface regressions) ---
@@ -351,6 +378,32 @@ def test_load_dataframe_falls_back_to_upload_cache(streamlit_stub, monkeypatch: 
     assert prov and "Upload:" in prov and "cached.csv" in prov
 
 
+def test_load_dataframe_upload_cache_error_surfaces_st_error(
+    streamlit_stub, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Session upload-cache replay uses the same error path as a fresh upload."""
+    from explorer.app.streamlit import app_data_loading
+
+    def _fail(_src):
+        raise ValueError("forced cache load failure")
+
+    monkeypatch.setattr(app_data_loading, "load_dataset", _fail)
+    monkeypatch.setattr(
+        app_data_loading,
+        "build_explorer_candidate_dirs",
+        lambda repo_root, cwd: (["/tmp"], ["x"]),
+    )
+    monkeypatch.setattr(
+        app_data_loading,
+        "resolve_ebird_data_file",
+        lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError()),
+    )
+
+    df, *_rest = app_data_loading.load_dataframe(upload_cache=(b"not-valid-csv", "cached.csv"))
+    assert df is None
+    assert any("Could not load CSV" in msg for msg in streamlit_stub.error_calls)
+
+
 def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_stub) -> None:
     from explorer.app.streamlit.app_map_ui import ensure_streamlit_map_basemap_height_keys
     from explorer.app.streamlit.defaults import MAP_BASEMAP_DEFAULT, MAP_HEIGHT_PX_DEFAULT
@@ -358,7 +411,9 @@ def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_st
     st = streamlit_stub
     st.session_state.clear()
     ensure_streamlit_map_basemap_height_keys()
+    assert st.session_state["streamlit_map_basemap_saved"] == MAP_BASEMAP_DEFAULT
     assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
+    assert st.session_state["streamlit_map_height_px_saved"] == MAP_HEIGHT_PX_DEFAULT
     assert st.session_state["streamlit_map_height_px"] == MAP_HEIGHT_PX_DEFAULT
 
     st.session_state["streamlit_map_basemap"] = "__not_a_real_basemap__"
@@ -366,8 +421,8 @@ def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_st
     assert st.session_state["streamlit_map_basemap"] == MAP_BASEMAP_DEFAULT
 
 
-def test_inject_spinner_theme_css_idempotent(streamlit_stub) -> None:
-    from explorer.app.streamlit.app_constants import SPINNER_THEME_CSS, SPINNER_THEME_CSS_INJECTED_KEY
+def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
+    from explorer.app.streamlit.app_constants import SPINNER_THEME_CSS
     from explorer.app.streamlit.app_map_ui import inject_spinner_theme_css
 
     st = streamlit_stub
@@ -375,10 +430,10 @@ def test_inject_spinner_theme_css_idempotent(streamlit_stub) -> None:
     inject_spinner_theme_css()
     assert len(st.html_calls) == 1
     assert st.html_calls[0] == SPINNER_THEME_CSS.strip()
-    assert st.session_state[SPINNER_THEME_CSS_INJECTED_KEY] is True
     st.html_calls.clear()
     inject_spinner_theme_css()
-    assert st.html_calls == []
+    assert len(st.html_calls) == 1
+    assert st.html_calls[0] == SPINNER_THEME_CSS.strip()
 
 
 def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit_stub) -> None:
@@ -403,10 +458,10 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
 
     from explorer.app.streamlit import streamlit_theme
 
-    streamlit_stub.markdown_calls.clear()
+    streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css()
-    assert streamlit_stub.markdown_calls
-    style_blob = streamlit_stub.markdown_calls[-1][0][0]
+    assert streamlit_stub.html_calls
+    style_blob = streamlit_stub.html_calls[-1]
     assert "<style>" in style_blob
     assert CHECKLIST_STATS_TABLE_CSS in style_blob
     assert streamlit_theme.CHECKLIST_STATS_HTML_TAB_SURFACE_CSS in style_blob
@@ -424,15 +479,40 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
 def test_inject_streamlit_checklist_css_appends_extra_css(streamlit_stub) -> None:
     from explorer.app.streamlit import streamlit_theme
 
-    streamlit_stub.markdown_calls.clear()
+    streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css("/*extra-tab*/")
-    style_blob = streamlit_stub.markdown_calls[-1][0][0]
+    style_blob = streamlit_stub.html_calls[-1]
     assert "/*extra-tab*/" in style_blob
+
+
+def test_inject_main_tab_panel_top_compact_css_emits_selectors(streamlit_stub) -> None:
+    from explorer.app.streamlit import streamlit_theme
+
+    streamlit_stub.html_calls.clear()
+    streamlit_theme.inject_main_tab_panel_top_compact_css()
+    assert streamlit_stub.html_calls
+    blob = streamlit_stub.html_calls[-1]
+    assert "<style>" in blob and "</style>" in blob
+    assert '[data-baseweb="tab-panel"]' in blob
+    assert 'div[role="tabpanel"]' in blob
+    assert "padding-top:" in blob
+
+
+def test_inject_app_header_css_emits_pebird_header(streamlit_stub) -> None:
+    from explorer.app.streamlit import streamlit_theme
+
+    streamlit_stub.html_calls.clear()
+    streamlit_theme.inject_app_header_css()
+    blob = streamlit_stub.html_calls[-1]
+    assert ".pebird-app-header" in blob
+    assert "h1" in blob and "p" in blob
+    assert "margin-bottom" in blob and "padding-bottom" in blob
 
 
 def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) -> None:
     from explorer.app.streamlit.app_map_ui import sidebar_footer_links
     from explorer.app.streamlit.streamlit_ui_constants import (
+        BUY_ME_A_COFFEE_URL,
         EBIRD_PROFILE_URL,
         GITHUB_REPO_URL,
         INSTAGRAM_PROFILE_URL,
@@ -451,3 +531,69 @@ def test_sidebar_footer_links_include_profile_urls(streamlit_stub, monkeypatch) 
     assert EBIRD_PROFILE_URL in combined
     assert INSTAGRAM_PROFILE_URL in combined
     assert fixed_docs in combined
+    assert BUY_ME_A_COFFEE_URL in combined
+    assert "Buy me a coffee</a>" in combined
+
+
+_HOSTED_NOTICE_ENV_KEY = "STREAMLIT_SHOW_HOSTED_PERFORMANCE_NOTICE"
+
+
+def _reload_app_landing_ui() -> types.ModuleType:
+    _drop_submodule("explorer.app.streamlit.app_landing_ui")
+    return importlib.import_module("explorer.app.streamlit.app_landing_ui")
+
+
+def _landing_ui_with_clean_flag(streamlit_stub, monkeypatch: pytest.MonkeyPatch):
+    """Fresh ``app_landing_ui`` import with no secret/env flag set."""
+    monkeypatch.delenv(_HOSTED_NOTICE_ENV_KEY, raising=False)
+    streamlit_stub.secrets = {}
+    return _reload_app_landing_ui()
+
+
+def test_hosted_notice_flag_off_when_unset(streamlit_stub, monkeypatch) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is False
+    assert landing.show_hosted_performance_notice() is False
+
+
+@pytest.mark.parametrize("value", ("1", "true", "TRUE", "yes", "YES", "on", "ON", "  true  "))
+def test_hosted_notice_flag_on_from_env(streamlit_stub, monkeypatch, value: str) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, value)
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is True
+    assert landing.show_hosted_performance_notice() is True
+
+
+@pytest.mark.parametrize("value", ("0", "false", "FALSE", "no", "off", "maybe", ""))
+def test_hosted_notice_flag_off_from_env(streamlit_stub, monkeypatch, value: str) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, value)
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is False
+
+
+def test_hosted_notice_flag_on_from_secrets(streamlit_stub, monkeypatch) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    streamlit_stub.secrets[_HOSTED_NOTICE_ENV_KEY] = "true"
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is True
+    assert landing.show_hosted_performance_notice() is True
+
+
+def test_hosted_notice_secrets_take_precedence_over_env(streamlit_stub, monkeypatch) -> None:
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    streamlit_stub.secrets[_HOSTED_NOTICE_ENV_KEY] = "false"
+    monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, "true")
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is False
+
+
+def test_hosted_notice_env_fallback_when_secrets_unavailable(streamlit_stub, monkeypatch) -> None:
+    class _SecretsUnavailable:
+        def __contains__(self, item: object) -> bool:
+            raise OSError("secrets backend unavailable")
+
+        def __getitem__(self, item: object) -> str:
+            raise OSError("secrets backend unavailable")
+
+    landing = _landing_ui_with_clean_flag(streamlit_stub, monkeypatch)
+    monkeypatch.setattr(streamlit_stub, "secrets", _SecretsUnavailable(), raising=False)
+    monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, "true")
+    assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is True
