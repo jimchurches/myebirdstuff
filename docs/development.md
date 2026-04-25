@@ -206,24 +206,42 @@ streamlit run explorer/app/streamlit/design_map_app.py
 
 # Testing
 
-## Running tests
+## Testing workflow
 
 ```
 pytest tests/ -v
 ```
 
-Optional coverage:
+Optional coverage (same package scope used by CI):
 
 ```
-pytest tests/ -v --cov=explorer
+pytest tests/ -v --cov=explorer --cov-report=term-missing
 ```
 
----
+### Signal-over-coverage policy
 
-## Scope
+- Use automated tests where they catch real regressions:
+  - pure logic and data transforms,
+  - hot paths used across tabs/maps,
+  - bug fixes and edge-case handling.
+- Prefer focused, table-driven tests for fragile logic (for example family/taxonomy grouping logic when touched).
+- Avoid broad Streamlit wiring or HTML-heavy snapshot tests when they mostly inflate coverage without meaningful failure signal.
+- Keep CI coverage gates as baseline protection only; do not chase percentage increases for their own sake.
 
-- Unit tests for core modules
-- Integration fixture available
+### Current scope
+
+- Unit tests for `explorer/core` and presentation helpers under `tests/explorer/`.
+- Integration fixture coverage for realistic eBird exports (see `tests/fixtures/ebird_integration_fixture_notes.md`).
+- Focused guardrail tests for CI/runtime behavior (for example debug defaults and selected script checks).
+
+### Optional higher-cost testing
+
+- Browser E2E automation for Streamlit is optional and should be added only if manual smoke repeatedly misses impactful UI regressions.
+- For git-dependent behavior in `explorer/core/repo_git.py`, add/expand tests when there is an incident-driven need; avoid brittle over-mocking for low-value paths.
+- Minimal Playwright example tests live in `tests/explorer/test_streamlit_map_e2e.py` (map banner/legend/focus smoke checks). Local setup:
+  - `pip install playwright`
+  - `python -m playwright install chromium`
+  - `pytest tests/explorer/test_streamlit_map_e2e.py -v`
 
 ---
 
@@ -262,6 +280,24 @@ Avoid adding new dependencies unless necessary.
 - Keep caching correct
 - Document new behaviour
 - Keep config handling consistent
+
+---
+
+# Performance Instrumentation Guardrails
+
+Performance instrumentation from #179 is intentionally kept in the codebase (off by default) so
+regressions can be diagnosed quickly without re-adding scaffolding.
+
+- Keep the current perf switches and payload shape stable where practical:
+  - `EXPLORER_PERF` enables session buffering/sidebar panel
+  - `EXPLORER_PERF_LOG` mirrors events to logs as JSONL
+- Avoid renaming/removing existing stage names unless there is a clear reason. If a rename is needed,
+  document old -> new mapping in the PR/issue so historical comparisons stay meaningful.
+- When changing known expensive paths (map build/embed, working-set rebuild, heavy tab rendering),
+  update instrumentation in the touched area (`perf_span`, `perf_fragment`, `perf_record_point`).
+- Instrumentation should remain lightweight and optional: no behaviour changes when disabled.
+- For map/perf-related changes, run at least one focused before/after journey and include key stage
+  medians or representative timings in issue/PR notes.
 
 ---
 

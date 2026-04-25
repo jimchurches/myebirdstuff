@@ -65,17 +65,17 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 **eBird taxonomy:** Fetched once per browser session after CSV load (cached by locale). Default locale is **en_AU**; set `STREAMLIT_EBIRD_TAXONOMY_LOCALE` or `EBIRD_TAXONOMY_LOCALE` for the first-visit default, or change **Settings → Taxonomy**. The value is an eBird **locale** code (e.g. `en_AU`) — same idea as **My eBird → Preferences** for common names; [Bird names in eBird](https://support.ebird.org/en/support/solutions/articles/48000804865-bird-names-in-ebird) explains regional naming. The **taxonomy** CSV endpoint is fetched without an API key; some other reference endpoints require a key. If the fetch fails (offline, etc.), species links are skipped. Streamlit does not expose the browser language to Python.
 
-**Map panning / grey flash:** The app calls `st_folium(..., returned_objects=[], return_on_hover=False)` so panning does not trigger a full Streamlit rerun (the default would return bounds/zoom and redraw the iframe). Pin **popups** still work in the browser; only server-side “read what was clicked” is disabled.
+**Map panning / grey flash:** The map is a static **HTML iframe** (same bytes as **Export map HTML**), so panning does not talk to the server. Pin **popups** still work in the browser. The design map tool (`design_map_app.py`) still uses `st_folium` where needed.
 
 **Performance (refs #70):** **All locations** and **Lifer locations** Folium maps are **cached** in session for the same dataset + date filter + basemap so switching between those views reuses the built map (changing the date filter or CSV invalidates the cache). **Selected species** uses the **streamlit-searchbox** component inside a **`@st.fragment`** with **fragment-scoped reruns** and **debounced** input so typing in the species search does not grey out the whole app. The **Show only selected species** toggle lives **outside** the fragment so the map updates immediately when you change it.
 
 **Map banners / legend:** Fixed overlays use the same **theme tokens** as the Streamlit app (primary green titles, panel gradient, borders) via injected CSS in ``map_overlay_theme_stylesheet`` (`explorer/presentation/map_renderer.py`; refs #70).
 
-**Map height:** The Folium iframe uses a **fixed pixel height** (streamlit-folium). Use the sidebar slider **Map height (px)** (default 720). The app passes a `key` that includes the height so the component **remounts** when you change the slider (streamlit-folium otherwise keeps the same internal identity and ignores the new height). Changing height may reset pan/zoom on the map.
+**Map height:** The Folium iframe uses a **fixed pixel height** via `st.components.v1.html`. Use the sidebar slider **Map height (px)** (default 720). The app passes a `st.container` **key** that includes the height so the map **remounts** when you change the slider. Changing height may reset pan/zoom on the map.
 
 **Map sidebar (controls):** **Map view** — `All locations` | `Selected species` | `Lifer locations`. **Date filter** (non–Lifer views) — **Date filter** toggle and **date range** when on (off = all-time; **Lifer locations** ignores the map date filter but remembers your date-filter choice in session for the other views). **Lifer locations** — captions and **Show subspecies lifers** where applicable. **Group nearby pins** — Leaflet clustering on the **All locations** map (session-only; persist default under **Settings → Map display** + **Save settings**). **Selected species** — `streamlit-searchbox` + Whoosh; **Show only selected species** toggle. **Basemap** and **Map height (px)** sit below. **Export map HTML** — `st.download_button` at the bottom (bytes from `folium.Map.get_root().render()`). **Taxonomy locale** for species links: **Settings → Taxonomy**.
 
-**Tabs:** The main area uses a classic tab order (`Map`, `Checklist Statistics`, …). **Checklist Statistics** is shared section HTML (`checklist_stats_streamlit_tab_sections_html`) with theme-scoped CSS injected via `inject_streamlit_checklist_css()` in `streamlit_theme.py` (default **green** zebra + accents; flip `USE_EBIRD_BLUE_HTML_TAB_THEME` there for **eBird-blue** across checklist-style HTML tabs). **Map** uses **map_controller** + Folium. On each full rerun, **prep** work (checklist stats payload, full-export prep, sync helpers, rankings bundle) runs in a **`st.spinner` above the main tab row** (same bird-emoji strip as the Map tab); the **Map** tab Folium build + `st_folium` uses a **second** `st.spinner` inside the Map panel. Several data tabs use `@st.fragment` for partial reruns (Country, Yearly, Maintenance, Rankings, …).
+**Tabs:** The main area uses a classic tab order (`Map`, `Checklist Statistics`, …). **Checklist Statistics** is shared section HTML (`checklist_stats_streamlit_tab_sections_html`) with theme-scoped CSS injected via `inject_streamlit_checklist_css()` in `streamlit_theme.py` (default **green** zebra + accents; flip `USE_EBIRD_BLUE_HTML_TAB_THEME` there for **eBird-blue** across checklist-style HTML tabs). **Map** uses **map_controller** + Folium. On each full rerun, **prep** work (checklist stats payload, full-export prep, sync helpers, rankings bundle) runs in a **`st.spinner` above the main tab row** (same bird-emoji strip as the Map tab); the **Map** tab Folium build + iframe embed uses a **second** `st.spinner` inside the Map panel. Several data tabs use `@st.fragment` for partial reruns (Country, Yearly, Maintenance, Rankings, …).
 
 ## Data loading
 
@@ -97,6 +97,14 @@ Disk search is **first folder that contains the CSV**, in this order:
 There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder override; use config files, CWD, or upload.
 
 **Precedence (load):** A new pick from the landing uploader → **disk** (config paths + CWD) → **cached upload**. Stale upload cache is cleared when disk wins.
+
+### Performance instrumentation (Phase 0, [#179](https://github.com/jimchurches/myebirdstuff/issues/179))
+
+**Off by default.** Set **`EXPLORER_PERF=1`** in the environment (or the same key in **Streamlit secrets** on Community Cloud) to record stage timings to session state and show a **Performance / debug** expander at the bottom of the **sidebar** (recent events table + **Download metrics (JSONL)** + clear buffer).
+
+Optional **`EXPLORER_PERF_LOG=1`**: also emit one JSON object per line at **INFO** on the root logger (visible in Cloud **Logs**).
+
+Implementation: `explorer/app/streamlit/perf_instrumentation.py` (`perf_span`, `perf_fragment`); hooks in `app_data_loading.py`, `app_prep_map_ui.py`, `app.py`, and tab fragments.
 
 ## Streamlit Community Cloud
 

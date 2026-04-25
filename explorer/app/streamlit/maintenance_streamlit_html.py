@@ -27,6 +27,7 @@ from explorer.app.streamlit.app_constants import (
     MAINTENANCE_TAB_SYNC_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
+from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 
 # Same wrapper class as Checklist Statistics + Country HTML tabs (typography, tables, links).
@@ -57,18 +58,19 @@ def sync_maintenance_tab_session_inputs(
 @st.fragment
 def run_maintenance_streamlit_tab_fragment() -> None:
     """Maintenance tab; expander interactions avoid full-app reruns where possible."""
-    data = st.session_state.get(MAINTENANCE_TAB_SYNC_KEY)
-    if not data:
-        return
-    tax = (st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY) or "").strip() or DEFAULT_TAXONOMY_LOCALE
-    species_url_fn = cached_species_url_fn(tax)
-    render_maintenance_streamlit_tab(
-        data["loc_df"],
-        close_location_meters=int(data["close_location_meters"]),
-        incomplete_by_year=data["incomplete_by_year"],
-        sex_notation_by_year=data["sex_notation_by_year"],
-        species_url_fn=species_url_fn,
-    )
+    with perf_fragment("maintenance"):
+        data = st.session_state.get(MAINTENANCE_TAB_SYNC_KEY)
+        if not data:
+            return
+        tax = (st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY) or "").strip() or DEFAULT_TAXONOMY_LOCALE
+        species_url_fn = cached_species_url_fn(tax)
+        render_maintenance_streamlit_tab(
+            data["loc_df"],
+            close_location_meters=int(data["close_location_meters"]),
+            incomplete_by_year=data["incomplete_by_year"],
+            sex_notation_by_year=data["sex_notation_by_year"],
+            species_url_fn=species_url_fn,
+        )
 
 
 def render_maintenance_streamlit_tab(
