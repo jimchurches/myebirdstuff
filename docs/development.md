@@ -265,6 +265,24 @@ Avoid adding new dependencies unless necessary.
 
 ---
 
+# Performance Instrumentation Guardrails
+
+Performance instrumentation from #179 is intentionally kept in the codebase (off by default) so
+regressions can be diagnosed quickly without re-adding scaffolding.
+
+- Keep the current perf switches and payload shape stable where practical:
+  - `EXPLORER_PERF` enables session buffering/sidebar panel
+  - `EXPLORER_PERF_LOG` mirrors events to logs as JSONL
+- Avoid renaming/removing existing stage names unless there is a clear reason. If a rename is needed,
+  document old -> new mapping in the PR/issue so historical comparisons stay meaningful.
+- When changing known expensive paths (map build/embed, working-set rebuild, heavy tab rendering),
+  update instrumentation in the touched area (`perf_span`, `perf_fragment`, `perf_record_point`).
+- Instrumentation should remain lightweight and optional: no behaviour changes when disabled.
+- For map/perf-related changes, run at least one focused before/after journey and include key stage
+  medians or representative timings in issue/PR notes.
+
+---
+
 # Configuration
 
 - YAML configs for data paths

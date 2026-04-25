@@ -34,8 +34,9 @@ Streamlit does not expose the browser language to Python.
 match Country / Yearly (refs #70).
 
 **Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** wraps checklist prep, tab syncs,
-Folium **build**, ``st_folium`` in the Map tab, then clears the bird-emoji strip (refs #124) so the explorer spinner
-tracks the built-in Streamlit spinner. Iframe min-height CSS reduces streamlit-folium letterboxing. Partial
+Folium **build**, serialized HTML in the Map tab (iframe ``srcdoc`` + export), then clears the bird-emoji strip
+(refs #124) so the explorer spinner tracks the built-in Streamlit spinner. Iframe min-height CSS reduces
+letterboxing. Partial
 ``@st.fragment`` reruns do not use this spinner. Implementation: :mod:`explorer.app.streamlit.app_prep_map_ui`
 (refs #130).
 
@@ -106,6 +107,10 @@ from explorer.app.streamlit.app_landing_ui import (  # noqa: E402
     title_with_logo,
 )
 from explorer.app.streamlit.app_map_working_ui import render_map_sidebar_and_working_set  # noqa: E402
+from explorer.app.streamlit.perf_instrumentation import (  # noqa: E402
+    perf_set_dataset_context,
+    perf_span,
+)
 from explorer.app.streamlit.app_prep_map_ui import render_prep_spinner_and_map_tab  # noqa: E402
 from explorer.app.streamlit.app_settings_ui import render_settings_tab  # noqa: E402
 from explorer.app.streamlit.app_settings_state import (  # noqa: E402
@@ -186,6 +191,7 @@ def main() -> None:
     st.session_state[EXPLORER_MAIN_SCRIPT_RUN_ID_KEY] = int(
         st.session_state.get(EXPLORER_MAIN_SCRIPT_RUN_ID_KEY, 0)
     ) + 1
+    perf_set_dataset_context(df_full)
 
     st.session_state[SETTINGS_CONFIG_SOURCE_KEY] = source_label or ""
     settings_yaml_path = settings_yaml_path_for_source(REPO_ROOT, source_label or "")
@@ -214,7 +220,8 @@ def main() -> None:
         str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
         or DEFAULT_TAXONOMY_LOCALE
     )
-    species_url_fn = cached_species_url_fn(tax_locale_effective)
+    with perf_span("taxonomy.cached_species_url_fn"):
+        species_url_fn = cached_species_url_fn(tax_locale_effective)
     popup_sort_order = st.session_state.streamlit_popup_sort_order
     popup_scroll_hint = st.session_state.streamlit_popup_scroll_hint
     mark_lifer = bool(st.session_state.streamlit_mark_lifer)

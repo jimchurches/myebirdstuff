@@ -231,6 +231,20 @@ Optimise incrementally — do not redesign architecture.
 
 ---
 
+## Performance Instrumentation (do not remove casually)
+
+Instrumentation added in #179 is part of the developer toolkit and should stay available:
+
+- `EXPLORER_PERF=1` enables performance event capture + sidebar debug panel.
+- `EXPLORER_PERF_LOG=1` also emits JSONL records to logs.
+- Keep instrumentation off by default and low-overhead when disabled.
+- Do not remove or broadly rename stage keys without a clear reason; preserving continuity helps
+  compare new runs with historical issue data.
+- When touching expensive paths, add/update nearby `perf_span` / `perf_fragment` /
+  `perf_record_point` calls so before/after benchmarks remain possible.
+
+---
+
 ## Testing
 
 ### Streamlit / Core Logic
