@@ -102,6 +102,28 @@ def test_folium_map_to_html_bytes() -> None:
     assert b"<!doctype html>" in low or b"<html" in low
 
 
+def test_embed_folium_html_bytes_iframe_delegates_to_components_html(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple] = []
+
+    def _fake_html(
+        html: str,
+        width: int | None = None,
+        height: int | None = None,
+        scrolling: bool = False,
+    ) -> None:
+        calls.append((html, width, height, scrolling))
+
+    monkeypatch.setattr("streamlit.components.v1.html", _fake_html)
+    from explorer.app.streamlit.map_working import embed_folium_html_bytes_iframe
+
+    embed_folium_html_bytes_iframe(b"<!doctype html><p>hi</p>", height=300, scrolling=False)
+    assert len(calls) == 1
+    assert "<p>hi</p>" in calls[0][0]
+    assert calls[0][1] is None
+    assert calls[0][2] == 300
+    assert calls[0][3] is False
+
+
 def test_folium_map_to_html_bytes_repeated_on_deepcopy_pristine() -> None:
     """``render()`` mutates the in-memory map; session cache must only ``render`` copies (refs #179)."""
     import copy
