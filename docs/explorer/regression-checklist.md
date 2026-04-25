@@ -3,6 +3,7 @@
 Run before merging refactor branches to `main`.
 
 ## Startup
+- **Release / build id:** When cutting a GitHub release, bump [`explorer/app/streamlit/explorer_build_version.txt`](../../explorer/app/streamlit/explorer_build_version.txt) to match the tag (see Explorer README — optional update notice).
 - Streamlit app launches locally
 - Streamlit app loads successfully
 - Dataset loads successfully

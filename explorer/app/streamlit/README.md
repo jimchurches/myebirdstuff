@@ -98,6 +98,10 @@ There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder ov
 
 **Precedence (load):** A new pick from the landing uploader → **disk** (config paths + CWD) → **cached upload**. Stale upload cache is cleared when disk wins.
 
+### Optional GitHub release notice ([#189](https://github.com/jimchurches/myebirdstuff/issues/189))
+
+When the page host is **not** Streamlit Community Cloud (hostname does not end with `.streamlit.app`), the app may call GitHub’s public **`releases/latest`** API **at most once per 24 hours** (process cache) and show a short, non-blocking hint if a **newer** release exists than the committed id in [`explorer_build_version.txt`](explorer_build_version.txt). Offline or HTTP errors are ignored (no user-facing errors). Set **`EXPLORER_UPDATE_CHECK=0`** or **`1`** in the environment or Streamlit secrets to force-disable or force-enable. In **`config/config.yaml`** or **`config/config_secret.yaml`**, **`check_for_updates: false`** opts out.
+
 ### Performance instrumentation (Phase 0, [#179](https://github.com/jimchurches/myebirdstuff/issues/179))
 
 **Off by default.** Set **`EXPLORER_PERF=1`** in the environment (or the same key in **Streamlit secrets** on Community Cloud) to record stage timings to session state and show a **Performance / debug** expander at the bottom of the **sidebar** (recent events table + **Download metrics (JSONL)** + clear buffer).

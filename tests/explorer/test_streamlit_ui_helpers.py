@@ -96,6 +96,25 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     stub.cache_data = cache_data
     stub.cache_resource = cache_data
 
+    class _ContextUrl:
+        __slots__ = ("hostname",)
+
+        def __init__(self, hostname: str = "localhost") -> None:
+            self.hostname = hostname
+
+    class _ContextStub:
+        def __init__(self) -> None:
+            self.url = _ContextUrl()
+
+    stub.context = _ContextStub()
+
+    stub.info_calls: list[tuple[tuple, dict]] = []
+
+    def info(*args, **kwargs):
+        stub.info_calls.append((args, kwargs))
+
+    stub.info = info
+
     components_v1 = types.ModuleType("streamlit.components.v1")
     components_v1.html_calls: list[dict] = []
 
@@ -148,6 +167,8 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
         "explorer.app.streamlit.rankings_streamlit_html",
         "explorer.app.streamlit.maintenance_streamlit_html",
         "explorer.app.streamlit.app_landing_ui",
+        "explorer.app.streamlit.explorer_update_notice",
+        "explorer.app.streamlit.explorer_build_version",
     ]:
         _drop_submodule(name)
     return sys.modules["streamlit"]
@@ -597,3 +618,68 @@ def test_hosted_notice_env_fallback_when_secrets_unavailable(streamlit_stub, mon
     monkeypatch.setattr(streamlit_stub, "secrets", _SecretsUnavailable(), raising=False)
     monkeypatch.setenv(_HOSTED_NOTICE_ENV_KEY, "true")
     assert landing._env_flag_true(_HOSTED_NOTICE_ENV_KEY) is True
+
+
+def _reload_explorer_update_notice() -> types.ModuleType:
+    _drop_submodule("explorer.app.streamlit.explorer_update_notice")
+    _drop_submodule("explorer.app.streamlit.explorer_build_version")
+    return importlib.import_module("explorer.app.streamlit.explorer_update_notice")
+
+
+def test_should_offer_update_check_false_on_streamlit_cloud_host(
+    streamlit_stub, monkeypatch, tmp_path: Path
+) -> None:
+    un = _reload_explorer_update_notice()
+    streamlit_stub.context.url.hostname = "personal-ebird-explorer.streamlit.app"
+    monkeypatch.delenv("EXPLORER_UPDATE_CHECK", raising=False)
+    root = str(tmp_path)
+    (tmp_path / "config").mkdir(parents=True, exist_ok=True)
+    assert un.should_offer_explorer_update_check(root) is False
+
+
+def test_should_offer_update_check_force_on_overrides_cloud_host(
+    streamlit_stub, monkeypatch, tmp_path: Path
+) -> None:
+    un = _reload_explorer_update_notice()
+    streamlit_stub.context.url.hostname = "x.streamlit.app"
+    monkeypatch.setenv("EXPLORER_UPDATE_CHECK", "1")
+    root = str(tmp_path)
+    (tmp_path / "config").mkdir(parents=True, exist_ok=True)
+    assert un.should_offer_explorer_update_check(root) is True
+
+
+def test_should_offer_update_check_yaml_opt_out(streamlit_stub, monkeypatch, tmp_path: Path) -> None:
+    un = _reload_explorer_update_notice()
+    streamlit_stub.context.url.hostname = "localhost"
+    monkeypatch.delenv("EXPLORER_UPDATE_CHECK", raising=False)
+    cfg = tmp_path / "config"
+    cfg.mkdir(parents=True, exist_ok=True)
+    (cfg / "config.yaml").write_text("check_for_updates: false\n", encoding="utf-8")
+    assert un.should_offer_explorer_update_check(str(tmp_path)) is False
+
+
+def test_sidebar_footer_links_shows_update_notice_when_remote_newer(
+    streamlit_stub, monkeypatch, tmp_path: Path
+) -> None:
+    _drop_submodule("explorer.app.streamlit.explorer_update_notice")
+    _drop_submodule("explorer.app.streamlit.explorer_build_version")
+    _drop_submodule("explorer.app.streamlit.app_map_ui")
+    un = importlib.import_module("explorer.app.streamlit.explorer_update_notice")
+    monkeypatch.setattr(
+        un,
+        "_fetch_github_latest_release_uncached",
+        lambda: (
+            "2099-12-31",
+            "https://github.com/jimchurches/myebirdstuff/releases/tag/2099-12-31",
+        ),
+    )
+    monkeypatch.setattr(un, "EXPLORER_BUILD_VERSION", "2020-01-01")
+    streamlit_stub.context.url.hostname = "localhost"
+    monkeypatch.delenv("EXPLORER_UPDATE_CHECK", raising=False)
+    from explorer.app.streamlit.app_map_ui import sidebar_footer_links
+
+    streamlit_stub.sidebar.markdown_calls.clear()
+    sidebar_footer_links()
+    combined = " ".join(str(c[0][0]) for c in streamlit_stub.sidebar.markdown_calls)
+    assert "New version available" in combined
+    assert "2099-12-31" in combined
