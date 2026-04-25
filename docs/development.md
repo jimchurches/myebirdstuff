@@ -206,24 +206,42 @@ streamlit run explorer/app/streamlit/design_map_app.py
 
 # Testing
 
-## Running tests
+## Testing workflow
 
 ```
 pytest tests/ -v
 ```
 
-Optional coverage:
+Optional coverage (same package scope used by CI):
 
 ```
-pytest tests/ -v --cov=explorer
+pytest tests/ -v --cov=explorer --cov-report=term-missing
 ```
 
----
+### Signal-over-coverage policy
 
-## Scope
+- Use automated tests where they catch real regressions:
+  - pure logic and data transforms,
+  - hot paths used across tabs/maps,
+  - bug fixes and edge-case handling.
+- Prefer focused, table-driven tests for fragile logic (for example family/taxonomy grouping logic when touched).
+- Avoid broad Streamlit wiring or HTML-heavy snapshot tests when they mostly inflate coverage without meaningful failure signal.
+- Keep CI coverage gates as baseline protection only; do not chase percentage increases for their own sake.
 
-- Unit tests for core modules
-- Integration fixture available
+### Current scope
+
+- Unit tests for `explorer/core` and presentation helpers under `tests/explorer/`.
+- Integration fixture coverage for realistic eBird exports (see `tests/fixtures/ebird_integration_fixture_notes.md`).
+- Focused guardrail tests for CI/runtime behavior (for example debug defaults and selected script checks).
+
+### Optional higher-cost testing
+
+- Browser E2E automation for Streamlit is optional and should be added only if manual smoke repeatedly misses impactful UI regressions.
+- For git-dependent behavior in `explorer/core/repo_git.py`, add/expand tests when there is an incident-driven need; avoid brittle over-mocking for low-value paths.
+- Minimal Playwright example tests live in `tests/explorer/test_streamlit_map_e2e.py` (map banner/legend/focus smoke checks). Local setup:
+  - `pip install playwright`
+  - `python -m playwright install chromium`
+  - `pytest tests/explorer/test_streamlit_map_e2e.py -v`
 
 ---
 
