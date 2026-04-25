@@ -27,6 +27,24 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      - name: Explorer build version file (format)
+        run: python scripts/verify_explorer_build_version.py
+
+      - name: Release calendar day (Australia/Sydney, main only)
+        id: release_today
+        if: |
+          (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: echo "date=$(TZ=Australia/Sydney date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Embedded build matches release day and not behind GitHub latest (main only)
+        if: |
+          (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        env:
+          RELEASE_TODAY: ${{ steps.release_today.outputs.date }}
+        run: python scripts/verify_explorer_build_not_behind_github_latest.py
+
       - name: Ensure gitignored config files are not tracked
         run: |
           set -euo pipefail
