@@ -30,6 +30,12 @@ jobs:
       - name: Explorer build version file (format)
         run: python scripts/verify_explorer_build_version.py
 
+      - name: Embedded build not behind GitHub latest (main only)
+        if: |
+          (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: python scripts/verify_explorer_build_not_behind_github_latest.py
+
       - name: Ensure gitignored config files are not tracked
         run: |
           set -euo pipefail
