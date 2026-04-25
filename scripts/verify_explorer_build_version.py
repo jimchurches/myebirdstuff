@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -11,6 +12,13 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 _VERSION_FILE = _REPO_ROOT / "explorer" / "app" / "streamlit" / "explorer_build_version.txt"
+_BASE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_SUFFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.(?:[2-9]|[1-9]\d+)$")
+
+
+def _is_valid_build_version(value: str) -> bool:
+    """Standalone format check (keeps repo-hygiene job independent of heavy imports)."""
+    return bool(_BASE_RE.match(value) or _SUFFIX_RE.match(value))
 
 
 def main() -> int:
@@ -21,9 +29,7 @@ def main() -> int:
     if not raw:
         print("ERROR: explorer_build_version.txt is empty", file=sys.stderr)
         return 1
-    from explorer.core.explorer_release_version import explorer_build_version_is_valid_format  # noqa: E402
-
-    if not explorer_build_version_is_valid_format(raw):
+    if not _is_valid_build_version(raw):
         print(
             "ERROR: explorer_build_version.txt must be YYYY-MM-DD or YYYY-MM-DD.N with N >= 2 "
             f"(got {raw!r})",
