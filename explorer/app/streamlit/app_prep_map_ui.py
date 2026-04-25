@@ -3,10 +3,15 @@
 The ``with tab_map`` / ``st_folium`` block stays nested inside the sidebar ``st.spinner`` so loading
 indicators stay aligned with Streamlit’s spinner (refs #124). Partial ``@st.fragment`` reruns do not
 use this path.
+
+:func:`folium_map_to_html_bytes` and ``st_folium`` both end up calling Folium/Branca full-document
+``render()``, which mutates the in-memory map tree. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY`
+therefore must keep a never-rendered map object; we deep-copy for export and for embed (refs #179).
 """
 
 from __future__ import annotations
 
+import copy
 from collections import OrderedDict
 from typing import Any, Callable
 
@@ -545,7 +550,9 @@ def render_prep_spinner_and_map_tab(
                     else:
                         perf_record_point("prep.map_html_cache_miss")
                         with perf_span("prep.folium_map_to_html_bytes"):
-                            st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(result_map)
+                            st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(
+                                copy.deepcopy(result_map)
+                            )
                         if isinstance(_cached_for_html, dict):
                             _cached_for_html["html_bytes"] = st.session_state[EXPLORER_MAP_HTML_BYTES_KEY]
                             _map_cache_store(_ck, _cached_for_html)
@@ -574,7 +581,7 @@ def render_prep_spinner_and_map_tab(
                         st.stop()
                     with perf_span("prep.st_folium_embed"):
                         st_folium(
-                            map_for_folium,
+                            copy.deepcopy(map_for_folium),
                             use_container_width=True,
                             height=map_height,
                             key=folium_st_key,

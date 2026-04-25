@@ -100,3 +100,18 @@ def test_folium_map_to_html_bytes() -> None:
     b = folium_map_to_html_bytes(m)
     low = b.lower()
     assert b"<!doctype html>" in low or b"<html" in low
+
+
+def test_folium_map_to_html_bytes_repeated_on_deepcopy_pristine() -> None:
+    """``render()`` mutates the in-memory map; session cache must only ``render`` copies (refs #179)."""
+    import copy
+
+    import folium
+
+    m = folium.Map(location=[-35.0, 149.0], zoom_start=4)
+    folium.Marker([-35.0, 149.0]).add_to(m)
+    pristine = copy.deepcopy(m)
+    b1 = folium_map_to_html_bytes(copy.deepcopy(pristine))
+    b2 = folium_map_to_html_bytes(copy.deepcopy(pristine))
+    assert len(b1) > 400 and len(b2) > 400
+    assert b1[:200] == b2[:200]
