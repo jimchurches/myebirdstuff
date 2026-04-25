@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Fail when embedded Explorer build id is older than GitHub ``releases/latest`` (refs #189).
+"""Main-branch gate for ``explorer_build_version.txt`` (refs #189).
+
+When ``RELEASE_TODAY`` is set (``YYYY-MM-DD``, from CI), the embedded id’s **calendar base date**
+must match it exactly (so bare ``YYYY-MM-DD`` or same-day ``YYYY-MM-DD.N`` with ``N >= 2``).
+
+Always checks GitHub ``releases/latest``: the embedded id must **not** be strictly older than that
+tag (after parsing / ``Beta`` normalization).
 
 Loads :mod:`explorer.core.explorer_release_version` by file path so this script does not import
 ``explorer.core`` (which eagerly pulls ``pandas`` via ``explorer.core.__init__``).
@@ -9,6 +15,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -19,6 +27,7 @@ _VERSION_FILE = _REPO_ROOT / "explorer" / "app" / "streamlit" / "explorer_build_
 _GITHUB_LATEST_API = "https://api.github.com/repos/jimchurches/myebirdstuff/releases/latest"
 _HTTP_TIMEOUT_SEC = 15.0
 _HTTP_USER_AGENT = "myebirdstuff-ci-explorer-build-vs-latest (+https://github.com/jimchurches/myebirdstuff)"
+_RELEASE_TODAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _load_explorer_release_version_module():
@@ -40,12 +49,35 @@ def main() -> int:
     if not embedded:
         print("ERROR: explorer_build_version.txt is empty", file=sys.stderr)
         return 1
-    if mod.parse_explorer_release_tuple(embedded) is None:
+    tup = mod.parse_explorer_release_tuple(embedded)
+    if tup is None:
         print(
             f"ERROR: explorer_build_version.txt is not a valid release id: {embedded!r}",
             file=sys.stderr,
         )
         return 1
+    y, mo, d, _rev = tup
+    base_yyyy_mm_dd = f"{y:04d}-{mo:02d}-{d:02d}"
+
+    release_today = str(os.environ.get("RELEASE_TODAY", "")).strip()
+    if release_today:
+        if not _RELEASE_TODAY_RE.match(release_today):
+            print(
+                f"ERROR: RELEASE_TODAY must be YYYY-MM-DD (got {release_today!r})",
+                file=sys.stderr,
+            )
+            return 1
+        if base_yyyy_mm_dd != release_today:
+            print(
+                "ERROR: explorer_build_version.txt calendar date must match RELEASE_TODAY "
+                f"(Australia/Sydney calendar day in CI).\n"
+                f"  embedded base: {base_yyyy_mm_dd!r}\n"
+                f"  RELEASE_TODAY: {release_today!r}\n"
+                "Set explorer/app/streamlit/explorer_build_version.txt to today's date "
+                "(or same-day .N with N >= 2).",
+                file=sys.stderr,
+            )
+            return 1
 
     req = urllib.request.Request(
         _GITHUB_LATEST_API,
@@ -90,7 +122,10 @@ def main() -> int:
         )
         return 1
 
-    print(f"OK: embedded {embedded!r} is not behind GitHub latest {tag!r}")
+    msg = f"OK: embedded {embedded!r} is not behind GitHub latest {tag!r}"
+    if release_today:
+        msg += f"; base date matches RELEASE_TODAY {release_today!r}"
+    print(msg)
     return 0
 
 

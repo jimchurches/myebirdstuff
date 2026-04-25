@@ -3,7 +3,7 @@
 Run before merging refactor branches to `main`.
 
 ## Startup
-- **Release / build id:** When cutting a GitHub release, bump [`explorer/app/streamlit/explorer_build_version.txt`](../../explorer/app/streamlit/explorer_build_version.txt) to match the tag (see Explorer README — optional update notice). Before merging to **`main`**, CI fails if this file is still behind GitHub’s latest release tag.
+- **Release / build id:** When cutting a GitHub release, bump [`explorer/app/streamlit/explorer_build_version.txt`](../../explorer/app/streamlit/explorer_build_version.txt) to match the tag (see Explorer README — optional update notice). Before merging to **`main`**, CI requires the embedded **base date** to match **today (Australia/Sydney)** and the id must **not** be behind GitHub’s latest release tag.
 - Streamlit app launches locally
 - Streamlit app loads successfully
 - Dataset loads successfully
