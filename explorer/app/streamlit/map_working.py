@@ -1,5 +1,5 @@
 """
-Working DataFrame + date filter for the Streamlit map (refs #70).
+Working DataFrame + date filter for the Streamlit map.
 
 Wraps :func:`explorer.core.working_set.rebuild_working_set_from_date_filter`
 with Streamlit-friendly semantics: *All locations* vs *Lifer locations*, optional **Date filter** (range) vs all-time.
@@ -57,7 +57,7 @@ def streamlit_working_set_and_status(
     Return ``(working_set, date_filter_status)`` for map banners.
 
     *map_view_mode* — ``\"all\"`` | ``\"species\"`` | ``\"lifers\"``.
-    ``\"species\"`` uses the same date filter as ``\"all\"`` (refs #70).
+    ``\"species\"`` uses the same date filter as ``\"all\"``.
     Lifer mode forces all-time data and returns status ``\"Lifer view uses all-time data\"``.
 
     *date_filter_on* — when ``True`` (and *map_view_mode* is ``all``), apply *date_range*; when ``False``, no filter.

@@ -1,13 +1,13 @@
-"""Sidebar prep spinner (checklist / rankings / tab sync + map build) and Map tab Folium embed (refs #130).
+"""Sidebar prep spinner (checklist / rankings / tab sync + map build) and Map tab Folium embed.
 
 The map tab is nested inside the sidebar ``st.spinner`` so loading indicators stay aligned with
-Streamlit’s spinner (refs #124). Partial ``@st.fragment`` reruns do not use this path.
+Streamlit’s spinner. Partial ``@st.fragment`` reruns do not use this path.
 
 A single :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` call (on a
 **deep-copied** map) feeds both **Export map HTML** and the live iframe via
 :func:`~explorer.app.streamlit.map_working.embed_folium_html_bytes_iframe` — one render per miss,
 cached ``html_bytes`` on hit. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY` still stores an
-unrendered Folium :class:`folium.Map` for the LRU (refs #179, #185).
+unrendered Folium :class:`folium.Map` for the LRU.
 """
 
 from __future__ import annotations
@@ -436,7 +436,7 @@ def render_prep_spinner_and_map_tab(
                                 MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
                             )
                         ),
-                        # Banner: context + counts only; date filter stays in sidebar (refs #150).
+                        # Banner: context + counts only; date filter remains in the sidebar.
                         "date_filter_status": "",
                         "species_url_fn": species_url_fn,
                         "base_species_fn": base_species_for_lifer,

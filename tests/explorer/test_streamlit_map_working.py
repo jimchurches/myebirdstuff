@@ -125,7 +125,7 @@ def test_embed_folium_html_bytes_iframe_delegates_to_components_html(monkeypatch
 
 
 def test_folium_map_to_html_bytes_repeated_on_deepcopy_pristine() -> None:
-    """``render()`` mutates the in-memory map; session cache must only ``render`` copies (refs #179)."""
+    """``render()`` mutates the in-memory map; session cache must only ``render`` copies."""
     import copy
 
     import folium
