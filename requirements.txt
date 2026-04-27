@@ -4,7 +4,7 @@
 # - Streamlit app runtime
 #
 # Note: Streamlit currently requires pandas<3, so this repo targets pandas 2.x.
-pandas>=2.0,<4
+pandas>=3.0.2,<4
 
 # Core deps
 folium>=0.15
