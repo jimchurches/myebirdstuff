@@ -3,11 +3,11 @@
 The map tab is nested inside the sidebar ``st.spinner`` so loading indicators stay aligned with
 Streamlit’s spinner. Partial ``@st.fragment`` reruns do not use this path.
 
-A single :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` call (on a
-**deep-copied** map) feeds both **Export map HTML** and the live iframe via
-:func:`~explorer.app.streamlit.map_working.embed_folium_html_bytes_iframe` — one render per miss,
-cached ``html_bytes`` on hit. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY` still stores an
-unrendered Folium :class:`folium.Map` for the LRU.
+**Export map HTML** uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
+**deep-copied** map (``branca`` mutates on render), with ``html_bytes`` cached on hit. The live map
+uses **streamlit-folium** ``st_folium`` (``use_container_width=True``) so Leaflet markers, popups,
+and overlay sizing match behaviour on ``main``. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY` still
+stores an unrendered Folium :class:`folium.Map` for the LRU.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ from explorer.app.streamlit.checklist_stats_streamlit_html import (
 )
 from explorer.app.streamlit.country_stats_streamlit_html import sync_country_tab_session_inputs
 from explorer.app.streamlit.maintenance_streamlit_html import sync_maintenance_tab_session_inputs
-from explorer.app.streamlit.map_working import embed_folium_html_bytes_iframe, folium_map_to_html_bytes
+from explorer.app.streamlit.map_working import folium_map_to_html_bytes
 from explorer.app.streamlit.rankings_streamlit_html import (
     build_rankings_tab_bundle,
     sync_rankings_tab_session_inputs,
@@ -571,14 +571,25 @@ def render_prep_spinner_and_map_tab(
                     if map_hint_text:
                         st.info(map_hint_text)
                     inject_map_folium_iframe_min_height_css(map_height)
-                    _map_bytes = bytes(st.session_state[EXPLORER_MAP_HTML_BYTES_KEY])
-                    with st.container(key=folium_st_key):
-                        with perf_span("prep.map_iframe_embed"):
-                            embed_folium_html_bytes_iframe(
-                                _map_bytes,
-                                height=map_height,
-                                scrolling=True,
-                            )
+                    try:
+                        from streamlit_folium import st_folium
+                    except ImportError:
+                        st.error(
+                            "Missing **streamlit-folium** (needed to embed the Folium map). "
+                            "Locally: `pip install -r requirements.txt`. "
+                            "**Streamlit Community Cloud:** set app **Python requirements** to "
+                            "`requirements.txt` at the repo root."
+                        )
+                        st.stop()
+                    with perf_span("prep.map_iframe_embed"):
+                        st_folium(
+                            result_map,
+                            use_container_width=True,
+                            height=int(map_height),
+                            key=folium_st_key,
+                            returned_objects=[],
+                            return_on_hover=False,
+                        )
 
         _spinner_emoji_placeholder.empty()
         _has_map_export = bool(st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY))

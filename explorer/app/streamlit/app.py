@@ -34,8 +34,9 @@ Streamlit does not expose the browser language to Python.
 match Country / Yearly (refs #70).
 
 **Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** wraps checklist prep, tab syncs,
-Folium **build**, serialized HTML in the Map tab (iframe ``srcdoc`` + export), then clears the bird-emoji strip
-(refs #124) so the explorer spinner tracks the built-in Streamlit spinner. Iframe min-height CSS reduces
+Folium **build**, serialized HTML cached for export plus **streamlit-folium** embed in the Map tab,
+then clears the bird-emoji strip (refs #124) so the explorer spinner tracks the built-in Streamlit spinner.
+Iframe min-height CSS reduces
 letterboxing. Partial
 ``@st.fragment`` reruns do not use this spinner. Implementation: :mod:`explorer.app.streamlit.app_prep_map_ui`
 (refs #130).
