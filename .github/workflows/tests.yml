@@ -33,14 +33,18 @@ jobs:
       - name: Release calendar day (Australia/Sydney, main only)
         id: release_today
         if: |
-          (github.event_name == 'pull_request' && github.base_ref == 'main') ||
-          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+          (
+            (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+            (github.event_name == 'push' && github.ref == 'refs/heads/main')
+          ) && !(github.event_name == 'pull_request' && github.actor == 'dependabot[bot]')
         run: echo "date=$(TZ=Australia/Sydney date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
       - name: Embedded build matches release day and not behind GitHub latest (main only)
         if: |
-          (github.event_name == 'pull_request' && github.base_ref == 'main') ||
-          (github.event_name == 'push' && github.ref == 'refs/heads/main')
+          (
+            (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+            (github.event_name == 'push' && github.ref == 'refs/heads/main')
+          ) && !(github.event_name == 'pull_request' && github.actor == 'dependabot[bot]')
         env:
           RELEASE_TODAY: ${{ steps.release_today.outputs.date }}
         run: python scripts/verify_explorer_build_not_behind_github_latest.py
