@@ -299,6 +299,15 @@ regressions can be diagnosed quickly without re-adding scaffolding.
 - For map/perf-related changes, run at least one focused before/after journey and include key stage
   medians or representative timings in issue/PR notes.
 
+### Explorer E2E (Playwright) and perf guardrails
+
+- **Smoke + journeys** (fixture CSV via temp `config`): `pip install playwright` ·
+  `python -m playwright install chromium` ·  
+  `pytest tests/explorer/test_streamlit_map_e2e.py tests/explorer/test_streamlit_journeys_e2e.py -m e2e -v`
+- **Opt-in perf + JSONL capture** (sets ``EXPLORER_PERF_LOG_FILE`` in the test fixture):  
+  `pytest tests/explorer/test_map_perf_e2e.py --perf -v`  
+  Loose ceilings live in **`benchmarks/map_perf/stage_ceilings.json`** (see **`benchmarks/map_perf/README.md`**).
+
 ---
 
 # Configuration

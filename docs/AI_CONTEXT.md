@@ -236,7 +236,7 @@ Optimise incrementally — do not redesign architecture.
 Instrumentation added in #179 is part of the developer toolkit and should stay available:
 
 - `EXPLORER_PERF=1` enables performance event capture + sidebar debug panel.
-- `EXPLORER_PERF_LOG=1` also emits JSONL records to logs.
+- `EXPLORER_PERF_LOG=1` also emits JSONL records to logs; `EXPLORER_PERF_LOG_FILE=/path/to/file.jsonl` appends the same records (useful for subprocess tests).
 - Keep instrumentation off by default and low-overhead when disabled.
 - Do not remove or broadly rename stage keys without a clear reason; preserving continuity helps
   compare new runs with historical issue data.

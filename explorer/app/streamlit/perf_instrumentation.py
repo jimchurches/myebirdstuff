@@ -2,6 +2,9 @@
 
 Enable with environment variable ``EXPLORER_PERF=1`` (or ``true`` / ``yes`` / ``on``) or the same
 key in Streamlit **Secrets** on Community Cloud. Off by default; no session churn when disabled.
+
+Set ``EXPLORER_PERF_LOG_FILE`` to append each event as JSON Lines to a writable path (same payload
+as the sidebar download buffer).
 """
 
 from __future__ import annotations
@@ -29,6 +32,8 @@ from explorer.core.repo_git import github_blob_ref_for_readme
 
 PERF_ENV_KEY = "EXPLORER_PERF"
 PERF_LOG_ENV_KEY = "EXPLORER_PERF_LOG"
+# Append-only JSONL path (same records as sidebar buffer). Reliable for subprocess E2E; empty = off.
+PERF_LOG_FILE_ENV_KEY = "EXPLORER_PERF_LOG_FILE"
 _LOG = logging.getLogger(__name__)
 
 
@@ -49,6 +54,22 @@ def explorer_perf_enabled() -> bool:
 def explorer_perf_log_json_lines() -> bool:
     raw = _secrets_raw(PERF_LOG_ENV_KEY) or str(os.environ.get(PERF_LOG_ENV_KEY, "")).strip()
     return raw.lower() in {"1", "true", "yes", "on"}
+
+
+def _secrets_or_env_trim(key: str) -> str:
+    return _secrets_raw(key) or str(os.environ.get(key, "")).strip()
+
+
+def _append_perf_log_file(rec: dict[str, Any]) -> None:
+    """When ``EXPLORER_PERF_LOG_FILE`` is set, append one JSON object per line (local / tests)."""
+    path = _secrets_or_env_trim(PERF_LOG_FILE_ENV_KEY)
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as fp:
+            fp.write(json.dumps(rec, default=str) + "\n")
+    except OSError:
+        pass
 
 
 def _main_run_id() -> int | None:
@@ -112,6 +133,7 @@ def _append_event(rec: dict[str, Any]) -> None:
     events.append(rec)
     _trim_events(events)
     st.session_state[EXPLORER_PERF_EVENTS_KEY] = events
+    _append_perf_log_file(rec)
     if explorer_perf_log_json_lines():
         try:
             _LOG.info(json.dumps(rec, default=str))

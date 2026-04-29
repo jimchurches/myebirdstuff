@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -56,6 +57,28 @@ def test_perf_span_records_when_enabled(mock_st: MagicMock, monkeypatch: pytest.
     assert row["session_warmth"] == "warm"
     assert row["extra"] == {"k": "v"}
     assert row["elapsed_ms"] >= 0.0
+
+
+def test_perf_log_file_appends_jsonl(
+    mock_st: MagicMock, monkeypatch: pytest.MonkeyPatch, tmp_path,
+) -> None:
+    log_path = tmp_path / "out.jsonl"
+    monkeypatch.setenv("EXPLORER_PERF", "1")
+    monkeypatch.setenv("EXPLORER_PERF_LOG_FILE", str(log_path))
+
+    mock_st.session_state[EXPLORER_MAIN_SCRIPT_RUN_ID_KEY] = 1
+    mock_st.session_state[EBIRD_DATA_SIG_KEY] = "sig-file"
+
+    from explorer.app.streamlit import perf_instrumentation as p
+
+    with p.perf_span("unit.file_probe"):
+        pass
+
+    text = log_path.read_text(encoding="utf-8").strip()
+    assert text
+    record = json.loads(text.splitlines()[0])
+    assert record["stage"] == "unit.file_probe"
+    assert record["dataset_sig"] == "sig-file"
 
 
 def test_perf_fragment_records(mock_st: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
