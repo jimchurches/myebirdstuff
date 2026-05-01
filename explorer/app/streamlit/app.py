@@ -123,6 +123,7 @@ from explorer.app.streamlit.app_settings_state import (  # noqa: E402
 )
 from explorer.app.streamlit.streamlit_theme import (  # noqa: E402
     inject_main_tab_panel_top_compact_css,
+    inject_streamlit_chrome_theme_tokens_css,
 )
 from explorer.app.streamlit.checklist_stats_streamlit_html import (  # noqa: E402
     run_checklist_stats_streamlit_fragment,
@@ -170,6 +171,7 @@ def _run_non_map_data_tab_fragments(
 
 def main() -> None:
     st.set_page_config(page_title="Personal eBird Explorer (Streamlit)", layout="wide")
+    inject_streamlit_chrome_theme_tokens_css()
 
     if STREAMLIT_TAXONOMY_LOCALE_KEY not in st.session_state:
         st.session_state[STREAMLIT_TAXONOMY_LOCALE_KEY] = (
