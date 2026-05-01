@@ -1,7 +1,8 @@
-"""Sidebar prep spinner (checklist / rankings / tab sync + map build) and Map tab Folium embed.
+"""Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab Folium embed.
 
-The map tab is nested inside the sidebar ``st.spinner`` so loading indicators stay aligned with
-Streamlit’s spinner. Partial ``@st.fragment`` reruns do not use this path.
+Map build and ``st_folium`` run under the first spinner so the map can render before heavy
+checklist/rankings caches (~refs #179). Tab session sync runs in a second spinner so other tabs get
+payloads before fragments run. Partial ``@st.fragment`` reruns do not use this path.
 
 **Export map HTML** uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
 **deep-copied** map (``branca`` mutates on render), with ``html_bytes`` cached on hit. The live map
@@ -64,9 +65,10 @@ from explorer.app.streamlit.rankings_streamlit_html import (
     sync_rankings_tab_session_inputs,
 )
 from explorer.app.streamlit.streamlit_ui_constants import (
-    CHECKLIST_STATS_SPINNER_TEXT,
     MAP_EXPORT_HTML_FILENAME,
+    MAP_PREP_SPINNER_TEXT,
     SIDEBAR_FOOTER_LINK_HEX,
+    TAB_PREP_SPINNER_TEXT,
 )
 from explorer.app.streamlit.perf_instrumentation import perf_record_point, perf_span
 from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_summary_session_inputs
@@ -171,51 +173,11 @@ def render_prep_spinner_and_map_tab(
     mark_last_seen: bool,
     species_url_fn: Callable[..., str],
 ) -> None:
-    """Run checklist prep inside the sidebar spinner, then render Folium in the Map tab."""
+    """Run map prep first (spinner), then heavy tab caches + session sync (second spinner)."""
     with st.sidebar:
         sidebar_bottom_slot_start()
-        with st.spinner(CHECKLIST_STATS_SPINNER_TEXT):
+        with st.spinner(MAP_PREP_SPINNER_TEXT):
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
-            with perf_span("prep.cache_checklist_stats"):
-                checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
-            with perf_span("prep.cache_maint_rankings_sex_notation"):
-                top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))
-                hc_sort = str(st.session_state.get(STREAMLIT_HIGH_COUNT_SORT_KEY))
-                hc_tb = str(st.session_state.get(STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY))
-                if df_full is not None and not df_full.empty:
-                    maint_full_payload = cached_full_export_checklist_stats_payload(
-                        df_full, top_n, hc_sort, hc_tb, tax_locale_effective
-                    )
-                    rankings_bundle = build_rankings_tab_bundle(
-                        df_full,
-                        country_sort=st.session_state.get(STREAMLIT_COUNTRY_TAB_SORT_KEY),
-                        taxonomy_locale=tax_locale_effective,
-                        high_count_sort=hc_sort,
-                        high_count_tie_break=hc_tb,
-                    )
-                else:
-                    maint_full_payload = None
-                    rankings_bundle = {}
-                sex_notation_by_year: dict = (
-                    {} if df_full.empty else cached_sex_notation_by_year(df_full)
-                )
-
-            with perf_span("prep.tab_session_sync"):
-                sync_checklist_stats_tab_session_inputs(checklist_payload)
-                sync_rankings_tab_session_inputs(rankings_bundle)
-                loc_maint = full_location_data_for_maintenance(df_full)
-                incomplete_maint: dict = {}
-                if maint_full_payload is not None:
-                    incomplete_maint = maint_full_payload.incomplete_by_year or {}
-                sync_maintenance_tab_session_inputs(
-                    loc_maint,
-                    close_location_meters=int(st.session_state.get(STREAMLIT_CLOSE_LOCATION_METERS_KEY)),
-                    incomplete_by_year=incomplete_maint,
-                    sex_notation_by_year=sex_notation_by_year,
-                )
-                sync_yearly_summary_session_inputs(checklist_payload)
-                sync_country_tab_session_inputs(checklist_payload)
-
             with perf_span("prep.data_signature"):
                 prov_plain = provenance or ""
                 sig = data_signature_for_caches(df_full, prov_plain)
@@ -590,6 +552,47 @@ def render_prep_spinner_and_map_tab(
                             returned_objects=[],
                             return_on_hover=False,
                         )
+
+        with st.spinner(TAB_PREP_SPINNER_TEXT):
+            with perf_span("prep.cache_checklist_stats"):
+                checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
+            with perf_span("prep.cache_maint_rankings_sex_notation"):
+                top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))
+                hc_sort = str(st.session_state.get(STREAMLIT_HIGH_COUNT_SORT_KEY))
+                hc_tb = str(st.session_state.get(STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY))
+                if df_full is not None and not df_full.empty:
+                    maint_full_payload = cached_full_export_checklist_stats_payload(
+                        df_full, top_n, hc_sort, hc_tb, tax_locale_effective
+                    )
+                    rankings_bundle = build_rankings_tab_bundle(
+                        df_full,
+                        country_sort=st.session_state.get(STREAMLIT_COUNTRY_TAB_SORT_KEY),
+                        taxonomy_locale=tax_locale_effective,
+                        high_count_sort=hc_sort,
+                        high_count_tie_break=hc_tb,
+                    )
+                else:
+                    maint_full_payload = None
+                    rankings_bundle = {}
+                sex_notation_by_year: dict = (
+                    {} if df_full.empty else cached_sex_notation_by_year(df_full)
+                )
+
+            with perf_span("prep.tab_session_sync"):
+                sync_checklist_stats_tab_session_inputs(checklist_payload)
+                sync_rankings_tab_session_inputs(rankings_bundle)
+                loc_maint = full_location_data_for_maintenance(df_full)
+                incomplete_maint: dict = {}
+                if maint_full_payload is not None:
+                    incomplete_maint = maint_full_payload.incomplete_by_year or {}
+                sync_maintenance_tab_session_inputs(
+                    loc_maint,
+                    close_location_meters=int(st.session_state.get(STREAMLIT_CLOSE_LOCATION_METERS_KEY)),
+                    incomplete_by_year=incomplete_maint,
+                    sex_notation_by_year=sex_notation_by_year,
+                )
+                sync_yearly_summary_session_inputs(checklist_payload)
+                sync_country_tab_session_inputs(checklist_payload)
 
         _spinner_emoji_placeholder.empty()
         _has_map_export = bool(st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY))
