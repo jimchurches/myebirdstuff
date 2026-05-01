@@ -22,6 +22,48 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 APP_ENTRYPOINT = REPO_ROOT / "explorer" / "app" / "streamlit" / "app.py"
 INTEGRATION_FIXTURE_CSV = REPO_ROOT / "tests" / "fixtures" / "ebird_integration_fixture.csv"
 
+# Optional: absolute path to ``MyEBirdData.csv`` — copied into pytest ``tmp_path`` (default: integration fixture).
+EXPLORER_E2E_DATASET_CSV_ENV = "EXPLORER_E2E_DATASET_CSV"
+EXPLORER_E2E_HTTP_TIMEOUT_ENV = "EXPLORER_E2E_HTTP_TIMEOUT_S"
+EXPLORER_E2E_MAP_TIMEOUT_MS_ENV = "EXPLORER_E2E_MAP_TIMEOUT_MS"
+
+
+def resolve_e2e_dataset_csv_source() -> Path:
+    """Return integration fixture path, or a real export when ``EXPLORER_E2E_DATASET_CSV`` is set."""
+    import os
+
+    raw = str(os.environ.get(EXPLORER_E2E_DATASET_CSV_ENV, "")).strip()
+    if not raw:
+        return INTEGRATION_FIXTURE_CSV
+    p = Path(raw).expanduser().resolve()
+    if not p.is_file():
+        pytest.fail(f"{EXPLORER_E2E_DATASET_CSV_ENV} must point to an existing file (got {p})")
+    return p
+
+
+def e2e_http_ready_timeout_s() -> float:
+    """Streamlit HTTP readiness: longer when ``EXPLORER_E2E_DATASET_CSV`` points at a large export."""
+    import os
+
+    raw = str(os.environ.get(EXPLORER_E2E_HTTP_TIMEOUT_ENV, "")).strip()
+    if raw:
+        return max(15.0, float(raw))
+    if str(os.environ.get(EXPLORER_E2E_DATASET_CSV_ENV, "")).strip():
+        return 120.0
+    return 45.0
+
+
+def e2e_map_markup_timeout_ms() -> int:
+    """Wait for Folium banner in frames; large datasets need more than 45s on first load."""
+    import os
+
+    raw = str(os.environ.get(EXPLORER_E2E_MAP_TIMEOUT_MS_ENV, "")).strip()
+    if raw:
+        return max(5_000, int(float(raw)))
+    if str(os.environ.get(EXPLORER_E2E_DATASET_CSV_ENV, "")).strip():
+        return 180_000
+    return 45_000
+
 
 def free_tcp_port() -> int:
     import socket
@@ -52,11 +94,13 @@ def wait_for_pebird_map_markup(
     page: Any,
     *,
     must_contain: Sequence[str],
-    timeout_ms: int = 45000,
+    timeout_ms: int | None = None,
 ) -> str:
     """Return frame HTML that contains ``pebird-map-banner`` and all *must_contain* substrings."""
     import time
 
+    if timeout_ms is None:
+        timeout_ms = e2e_map_markup_timeout_ms()
     deadline = time.time() + timeout_ms / 1000.0
     last_hint = ""
     while time.time() < deadline:
