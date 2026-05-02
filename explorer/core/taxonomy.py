@@ -7,6 +7,12 @@ Offline or API failure: lookup returns None; callers continue without links.
 
 Locale: pass locale to load_taxonomy() so common names match your eBird export
 (e.g. "en_AU" for Australian English: Grey Teal, Willie Wagtail, Common Starling).
+
+For any locale **other than** ``en_US``, we also merge in the ``en_US`` common names for the
+same species codes. eBird uses different English names in different regions (e.g. *en_AU*
+``Grey Ternlet`` vs *en_US* ``Gray Noddy``, or *en_AU* ``Black Petrel`` vs *en_US*
+``Parkinson's Petrel``). Checklist rows may use either wording; merging avoids missing links.
+
 API reference: https://documenter.getpostman.com/view/664302/S1ENwy59
 """
 
@@ -21,6 +27,38 @@ _TAXONOMY_BASE = "https://api.ebird.org/v2/ref/taxonomy/ebird"
 _common_to_code: dict[str, str] | None = None
 
 
+def _taxonomy_csv_to_lookup(raw: str) -> dict[str, str] | None:
+    """Parse taxonomy CSV body into common_name -> species_code for category ``species`` only."""
+    reader = csv.DictReader(io.StringIO(raw))
+    if not reader.fieldnames:
+        return None
+    field_lower = {f.strip().lower(): f for f in reader.fieldnames}
+    common_key = field_lower.get("common_name") or field_lower.get("common name")
+    code_key = field_lower.get("species_code") or field_lower.get("species code")
+    category_key = field_lower.get("category")
+    if not common_key or not code_key or not category_key:
+        return None
+    lookup: dict[str, str] = {}
+    for row in reader:
+        cat = (row.get(category_key) or "").strip().lower()
+        if cat != "species":
+            continue
+        common = (row.get(common_key) or "").strip()
+        code = (row.get(code_key) or "").strip()
+        if common and code:
+            lookup[common] = code
+    return lookup
+
+
+def _fetch_taxonomy_csv(url: str) -> str | None:
+    try:
+        req = Request(url, headers={"Accept": "text/csv"})
+        with urlopen(req, timeout=30) as resp:
+            return resp.read().decode("utf-8", errors="replace")
+    except (URLError, OSError, TimeoutError):
+        return None
+
+
 def load_taxonomy(locale: str | None = None) -> bool:
     """Fetch eBird taxonomy and build common name -> species_code lookup (species only).
 
@@ -32,41 +70,33 @@ def load_taxonomy(locale: str | None = None) -> bool:
         locale: Optional locale code so common names match your eBird export.
             Examples: "en_AU" (Australian), "en_GB" (British), "" or None for API default (en_US).
             See eBird API 2.0 reference for supported codes.
+            Non-``en_US`` locales load that CSV and merge **en_US** names so alternate regional
+            labels for the same species code still resolve (see module docstring).
 
     Returns:
         True if taxonomy loaded and cache is populated, False otherwise.
     """
     global _common_to_code
     _common_to_code = None
-    url = _TAXONOMY_BASE
-    if locale and str(locale).strip():
-        url = f"{_TAXONOMY_BASE}?{urlencode({'locale': locale.strip()})}"
-    try:
-        req = Request(url, headers={"Accept": "text/csv"})
-        with urlopen(req, timeout=30) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
-    except (URLError, OSError, TimeoutError):
+    loc_clean = str(locale).strip() if locale else ""
+    primary_url = _TAXONOMY_BASE
+    if loc_clean:
+        primary_url = f"{_TAXONOMY_BASE}?{urlencode({'locale': loc_clean})}"
+    raw_primary = _fetch_taxonomy_csv(primary_url)
+    if raw_primary is None:
         return False
-    reader = csv.DictReader(io.StringIO(raw))
-    if not reader.fieldnames:
+    primary_lookup = _taxonomy_csv_to_lookup(raw_primary)
+    if primary_lookup is None:
         return False
-    # Normalize column names (API may use COMMON_NAME or common_name, etc.)
-    field_lower = {f.strip().lower(): f for f in reader.fieldnames}
-    common_key = field_lower.get("common_name") or field_lower.get("common name")
-    code_key = field_lower.get("species_code") or field_lower.get("species code")
-    category_key = field_lower.get("category")
-    if not common_key or not code_key or not category_key:
-        return False
-    lookup = {}
-    for row in reader:
-        cat = (row.get(category_key) or "").strip().lower()
-        if cat != "species":
-            continue
-        common = (row.get(common_key) or "").strip()
-        code = (row.get(code_key) or "").strip()
-        if common and code:
-            lookup[common] = code
-    _common_to_code = lookup
+    if loc_clean and loc_clean.lower() != "en_us":
+        us_url = f"{_TAXONOMY_BASE}?{urlencode({'locale': 'en_US'})}"
+        raw_us = _fetch_taxonomy_csv(us_url)
+        if raw_us:
+            us_lookup = _taxonomy_csv_to_lookup(raw_us)
+            if us_lookup:
+                _common_to_code = {**us_lookup, **primary_lookup}
+                return True
+    _common_to_code = primary_lookup
     return True
 
 
