@@ -65,6 +65,8 @@ for map controls, export, and footer links (refs #70). Map sidebar + working set
 (refs #131). **Settings** tab body lives in :mod:`explorer.app.streamlit.app_settings_ui`
 (refs #118). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
+
+**Orchestration:** Phase boundaries for ``main()`` live in :mod:`explorer.app.streamlit.app_orchestration` (GitHub #200).
 """
 
 from __future__ import annotations
@@ -78,211 +80,43 @@ _REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__fil
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-from collections import OrderedDict
-
-import streamlit as st
-
-from explorer.presentation.checklist_stats_display import (  # noqa: E402
-    COUNTRY_TAB_SORT_ALPHABETICAL,
-)
-from explorer.core.explorer_paths import settings_yaml_path_for_source  # noqa: E402
-from explorer.app.streamlit.app_caches import (  # noqa: E402
-    cached_species_url_fn,
-)
-from explorer.app.streamlit.app_constants import (  # noqa: E402
-    DEFAULT_TAXONOMY_LOCALE,
-    EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
-    FILTERED_BY_LOC_CACHE_KEY,
-    POPUP_HTML_CACHE_KEY,
-    REPO_ROOT,
-    SETTINGS_BASELINE_KEY,
-    SETTINGS_CONFIG_PATH_KEY,
-    SETTINGS_CONFIG_SOURCE_KEY,
-    SETTINGS_LOADED_FROM_KEY,
-    SETTINGS_WARNED_KEY,
-    SESSION_UPLOAD_CACHE_KEY,
-    STREAMLIT_TAXONOMY_LOCALE_KEY,
-)
 from explorer.app.streamlit.app_landing_ui import (  # noqa: E402
     load_dataframe_after_landing,
-    title_with_logo,
 )
 from explorer.app.streamlit.app_map_working_ui import render_map_sidebar_and_working_set  # noqa: E402
-from explorer.app.streamlit.perf_instrumentation import (  # noqa: E402
-    perf_set_dataset_context,
-    perf_span,
+from explorer.app.streamlit.app_orchestration import (  # noqa: E402
+    bootstrap_session_after_csv_load,
+    bootstrap_streamlit_page,
+    build_taxonomy_popup_assets,
+    coerce_session_upload_cache,
+    init_session_defaults_before_data_load,
+    render_dashboard_shell,
 )
-from explorer.app.streamlit.app_prep_map_ui import render_prep_spinner_and_map_tab  # noqa: E402
-from explorer.app.streamlit.app_settings_ui import render_settings_tab  # noqa: E402
-from explorer.app.streamlit.app_settings_state import (  # noqa: E402
-    apply_settings_payload_to_state,
-    env_taxonomy_locale,
-    init_and_clamp_streamlit_table_settings,
-    load_settings_yaml_via_module,
-    settings_state_payload,
-)
-from explorer.app.streamlit.streamlit_theme import (  # noqa: E402
-    inject_main_tab_panel_top_compact_css,
-    inject_streamlit_chrome_theme_tokens_css,
-)
-from explorer.app.streamlit.checklist_stats_streamlit_html import (  # noqa: E402
-    run_checklist_stats_streamlit_fragment,
-)
-from explorer.app.streamlit.country_stats_streamlit_html import (  # noqa: E402
-    run_country_tab_streamlit_fragment,
-)
-from explorer.app.streamlit.maintenance_streamlit_html import (  # noqa: E402
-    run_maintenance_streamlit_tab_fragment,
-)
-from explorer.app.streamlit.rankings_streamlit_html import (  # noqa: E402
-    run_rankings_streamlit_tab_fragment,
-)
-from explorer.app.streamlit.streamlit_ui_constants import (  # noqa: E402
-    NOTEBOOK_MAIN_TAB_LABELS,
-)
-from explorer.app.streamlit.yearly_summary_streamlit_html import (  # noqa: E402
-    run_yearly_summary_streamlit_fragment,
-)
-
-
-def _run_non_map_data_tab_fragments(
-    tab_checklist,
-    tab_rankings,
-    tab_yearly,
-    tab_country,
-    tab_maint,
-) -> None:
-    """Checklist, Rankings, Yearly, Country, Maintenance tabs (refs #118)."""
-    with tab_checklist:
-        run_checklist_stats_streamlit_fragment()
-
-    with tab_rankings:
-        run_rankings_streamlit_tab_fragment()
-
-    with tab_yearly:
-        run_yearly_summary_streamlit_fragment()
-
-    with tab_country:
-        run_country_tab_streamlit_fragment()
-
-    with tab_maint:
-        run_maintenance_streamlit_tab_fragment()
-
-
 def main() -> None:
-    st.set_page_config(page_title="Personal eBird Explorer (Streamlit)", layout="wide")
-    inject_streamlit_chrome_theme_tokens_css()
+    """Thin orchestration entrypoint; see :mod:`explorer.app.streamlit.app_orchestration` for phase docs."""
+    bootstrap_streamlit_page()
+    init_session_defaults_before_data_load()
 
-    if STREAMLIT_TAXONOMY_LOCALE_KEY not in st.session_state:
-        st.session_state[STREAMLIT_TAXONOMY_LOCALE_KEY] = (
-            env_taxonomy_locale() or DEFAULT_TAXONOMY_LOCALE
-        )
-    if "streamlit_country_tab_sort" not in st.session_state:
-        st.session_state.streamlit_country_tab_sort = COUNTRY_TAB_SORT_ALPHABETICAL
-
-    upload_cache = st.session_state.get(SESSION_UPLOAD_CACHE_KEY)
-    if upload_cache is not None and not (
-        isinstance(upload_cache, tuple) and len(upload_cache) == 2 and isinstance(upload_cache[0], bytes)
-    ):
-        upload_cache = None
-
+    upload_cache = coerce_session_upload_cache()
     loaded = load_dataframe_after_landing(upload_cache)
     if loaded is None:
         return
     df_full, provenance, source_label, data_abs_path, data_basename = loaded
 
-    st.session_state[EXPLORER_MAIN_SCRIPT_RUN_ID_KEY] = int(
-        st.session_state.get(EXPLORER_MAIN_SCRIPT_RUN_ID_KEY, 0)
-    ) + 1
-    perf_set_dataset_context(df_full)
-
-    st.session_state[SETTINGS_CONFIG_SOURCE_KEY] = source_label or ""
-    settings_yaml_path = settings_yaml_path_for_source(REPO_ROOT, source_label or "")
-    st.session_state[SETTINGS_CONFIG_PATH_KEY] = settings_yaml_path or ""
-    if settings_yaml_path and st.session_state.get(SETTINGS_LOADED_FROM_KEY) != settings_yaml_path:
-        cfg_data, cfg_warn = load_settings_yaml_via_module(settings_yaml_path)
-        if cfg_warn and not st.session_state.get(SETTINGS_WARNED_KEY):
-            st.warning(cfg_warn)
-            st.session_state[SETTINGS_WARNED_KEY] = True
-        apply_settings_payload_to_state(cfg_data)
-        st.session_state[SETTINGS_LOADED_FROM_KEY] = settings_yaml_path
-        st.session_state[SETTINGS_BASELINE_KEY] = settings_state_payload()
-
-    init_and_clamp_streamlit_table_settings()
-    if SETTINGS_BASELINE_KEY not in st.session_state:
-        st.session_state[SETTINGS_BASELINE_KEY] = settings_state_payload()
-
-    if POPUP_HTML_CACHE_KEY not in st.session_state:
-        st.session_state[POPUP_HTML_CACHE_KEY] = {}
-    if FILTERED_BY_LOC_CACHE_KEY not in st.session_state:
-        st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
+    bootstrap_session_after_csv_load(df_full, source_label=source_label)
 
     mw = render_map_sidebar_and_working_set(df_full)
+    tax = build_taxonomy_popup_assets()
 
-    tax_locale_effective = (
-        str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
-        or DEFAULT_TAXONOMY_LOCALE
-    )
-    with perf_span("taxonomy.cached_species_url_fn"):
-        species_url_fn = cached_species_url_fn(tax_locale_effective)
-    popup_sort_order = st.session_state.streamlit_popup_sort_order
-    popup_scroll_hint = st.session_state.streamlit_popup_scroll_hint
-    mark_lifer = bool(st.session_state.streamlit_mark_lifer)
-    mark_last_seen = bool(st.session_state.streamlit_mark_last_seen)
-
-    title_with_logo()
-
-    # Main tabs: plain ``st.tabs`` (no ``key`` / ``on_change``).
-    (
-        tab_map,
-        tab_checklist,
-        tab_rankings,
-        tab_yearly,
-        tab_country,
-        tab_maint,
-        tab_settings,
-    ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
-
-    inject_main_tab_panel_top_compact_css()
-
-    render_prep_spinner_and_map_tab(
-        tab_map=tab_map,
-        work_df=mw.work_df,
+    render_dashboard_shell(
         df_full=df_full,
         provenance=provenance,
-        tax_locale_effective=tax_locale_effective,
-        map_height=mw.map_height,
-        map_style=mw.map_style,
-        map_view_mode=mw.map_view_mode,
-        is_lifer_view=mw.is_lifer_view,
-        date_filter_banner=mw.date_filter_banner,
-        species_pick_common=mw.species_pick_common,
-        species_pick_sci=mw.species_pick_sci,
-        family_name=mw.family_name,
-        family_highlight_base=mw.family_highlight_base,
-        family_colour_scheme=mw.family_colour_scheme,
-        hide_non_matching_locations=mw.hide_non_matching_locations,
-        popup_sort_order=popup_sort_order,
-        popup_scroll_hint=popup_scroll_hint,
-        mark_lifer=mark_lifer,
-        mark_last_seen=mark_last_seen,
-        species_url_fn=species_url_fn,
+        source_label=source_label,
+        data_abs_path=data_abs_path,
+        data_basename=data_basename,
+        mw=mw,
+        tax=tax,
     )
-
-    _run_non_map_data_tab_fragments(
-        tab_checklist,
-        tab_rankings,
-        tab_yearly,
-        tab_country,
-        tab_maint,
-    )
-
-    with tab_settings:
-        render_settings_tab(
-            data_basename=data_basename,
-            data_abs_path=data_abs_path,
-            source_label=source_label,
-        )
 
 
 if __name__ == "__main__":
