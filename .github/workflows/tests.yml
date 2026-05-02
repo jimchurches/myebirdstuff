@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       run_e2e:
-        description: "Run optional Streamlit Playwright E2E example tests"
+        description: "Run optional Streamlit Playwright E2E (map smoke + map journeys)"
         required: false
         default: "false"
 
@@ -197,4 +197,4 @@ jobs:
         run: python -m playwright install chromium
 
       - name: Run optional e2e marker tests
-        run: pytest tests/explorer/test_streamlit_map_e2e.py -m e2e -v
+        run: pytest tests/explorer/test_streamlit_map_e2e.py tests/explorer/test_streamlit_journeys_e2e.py -m e2e -v

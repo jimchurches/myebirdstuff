@@ -295,9 +295,26 @@ regressions can be diagnosed quickly without re-adding scaffolding.
   document old -> new mapping in the PR/issue so historical comparisons stay meaningful.
 - When changing known expensive paths (map build/embed, working-set rebuild, heavy tab rendering),
   update instrumentation in the touched area (`perf_span`, `perf_fragment`, `perf_record_point`).
+- Map prep uses **two** sidebar spinners (map + Folium first, then checklist/rankings/maint caches and
+  tab sync) so large exports can show the map before the heaviest non-map work finishes (#179).
 - Instrumentation should remain lightweight and optional: no behaviour changes when disabled.
 - For map/perf-related changes, run at least one focused before/after journey and include key stage
   medians or representative timings in issue/PR notes.
+
+### Explorer E2E (Playwright) and perf guardrails
+
+- **Smoke + journeys** (fixture CSV via temp `config`): `pip install playwright` ·
+  `python -m playwright install chromium` ·  
+  `pytest tests/explorer/test_streamlit_map_e2e.py tests/explorer/test_streamlit_journeys_e2e.py -m e2e -v`
+- **Opt-in perf + JSONL capture** (sets ``EXPLORER_PERF_LOG_FILE`` in the test fixture):  
+  `pytest tests/explorer/test_map_perf_e2e.py --perf -v`  
+  Loose ceilings live in **`benchmarks/map_perf/stage_ceilings.json`** (see **`benchmarks/map_perf/README.md`**).
+- **Your real export instead of the tiny integration fixture** — copy is written under pytest’s temp dir (your file is not modified):  
+  `export EXPLORER_E2E_DATASET_CSV=/path/to/MyEBirdData.csv`  
+  When that variable is set, tests use longer **HTTP** (120s) and **map banner** (180s) waits. Override with ``EXPLORER_E2E_HTTP_TIMEOUT_S`` and ``EXPLORER_E2E_MAP_TIMEOUT_MS`` if needed.
+- **Keep perf JSONL after the perf test** (optional):  
+  `export EXPLORER_E2E_PERF_JSONL_ARCHIVE=/path/to/last_run.jsonl`  
+  then run **`pytest … --perf`**; archive **`benchmarks/map_perf/snapshots/last_run.jsonl`** is gitignored. Feed it to **`scripts/snapshot_explorer_perf_log.py`** for a dated JSON snapshot.
 
 ---
 

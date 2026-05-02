@@ -8,7 +8,10 @@ rules. Changing only the surface CSS here rethemes every tab; local extra CSS bl
 Primary ``st.tabs`` in the main column (Map, Checklist Statistics, …) are styled via
 :data:`MAIN_TAB_STRIP_NAV_CSS` (refs #149): muted inactive grey-green, primary green when selected,
 ``0.9375rem`` labels, weight 500/400. Tab **labels** render inside ``stMarkdownContainer``; **size** and
-**colour** need rules on that node with ``!important``. Nested tabs inside a panel use the same rules.
+**colour** need rules on that node with ``!important``. The moving **tab underline** uses Base Web’s
+``tab-highlight`` node; :func:`inject_streamlit_chrome_theme_tokens_css` sets ``--st-primary-color`` and
+that highlight so sidebar toggles/sliders and main tabs stay green when ``.streamlit/config.toml`` is not
+loaded (Streamlit’s fallback primary is red). Nested tabs inside a panel use the same rules.
 
 The app title + tagline (``pebird-app-header`` in :mod:`~explorer.app.streamlit.app_landing_ui`) use
 :data:`MAIN_APP_HEADER_CSS`: dark green title and muted tagline aligned with the tab palette (#149).
@@ -99,6 +102,23 @@ _MAIN_APP_HEADER_TITLE_HEX = "#1f3d2b"
 # Align tagline with tab inactive muted so title → subtitle → tabs read as one system.
 _MAIN_APP_HEADER_TAGLINE_HEX = _MAIN_TAB_INACTIVE_MUTED_HEX
 
+# One-shot session key so reruns do not stack duplicate ``<style>`` nodes.
+_STREAMLIT_CHROME_THEME_TOKENS_SESSION_KEY = "_explorer_streamlit_chrome_theme_tokens_v1"
+
+STREAMLIT_CHROME_THEME_TOKENS_CSS = f"""
+/* When ``streamlit run`` cwd omits ``.streamlit/config.toml``, Streamlit uses a red default primary.
+   Re-assert CSS variables so toggles, sliders, links, and tab chrome match ``THEME_PRIMARY_HEX``. */
+.stApp,
+[data-testid="stAppViewContainer"],
+section[data-testid="stSidebar"],
+section[data-testid="stMain"] {{
+  --st-primary-color: {THEME_PRIMARY_HEX} !important;
+}}
+section[data-testid="stMain"] [data-testid="stTabs"] [data-baseweb="tab-highlight"] {{
+  background-color: {THEME_PRIMARY_HEX} !important;
+}}
+"""
+
 MAIN_APP_HEADER_CSS = f"""
 section[data-testid="stMain"] .pebird-app-header {{
   /* Tuck primary tab strip closer to tagline; logo row unchanged (flex, no vertical shift of image). */
@@ -113,6 +133,14 @@ section[data-testid="stMain"] .pebird-app-header p {{
   color: {_MAIN_APP_HEADER_TAGLINE_HEX} !important;
 }}
 """
+
+
+def inject_streamlit_chrome_theme_tokens_css() -> None:
+    """Set ``--st-primary-color`` and tab highlight so chrome matches theme when config.toml is missing."""
+    if st.session_state.get(_STREAMLIT_CHROME_THEME_TOKENS_SESSION_KEY):
+        return
+    st.session_state[_STREAMLIT_CHROME_THEME_TOKENS_SESSION_KEY] = True
+    st.html(f"<style>{STREAMLIT_CHROME_THEME_TOKENS_CSS}</style>")
 
 
 def inject_main_tab_panel_top_compact_css() -> None:

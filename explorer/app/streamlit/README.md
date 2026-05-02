@@ -110,6 +110,8 @@ When the page host is **not** Streamlit Community Cloud (hostname does not end w
 
 Optional **`EXPLORER_PERF_LOG=1`**: also emit one JSON object per line at **INFO** on the root logger (visible in Cloud **Logs**).
 
+Optional **`EXPLORER_PERF_LOG_FILE=/absolute/or/relative/path.jsonl`**: append the same JSON objects (one line each) to a file — useful for local subprocess tooling; off when unset.
+
 Implementation: `explorer/app/streamlit/perf_instrumentation.py` (`perf_span`, `perf_fragment`); hooks in `app_data_loading.py`, `app_prep_map_ui.py`, `app.py`, and tab fragments.
 
 ## Streamlit Community Cloud
