@@ -50,7 +50,7 @@ def test_load_taxonomy_success_builds_lookup():
 
 
 def test_load_taxonomy_with_locale_requests_url_with_param():
-    """When locale is passed, the request URL includes locale query parameter."""
+    """When a non-en_US locale is passed, we fetch that locale and en_US, then merge."""
     csv_data = _make_csv([{"common_name": "Grey Teal", "species_code": "grtea", "category": "species"}])
     resp = MagicMock()
     resp.read.return_value = csv_data.encode("utf-8")
@@ -59,9 +59,25 @@ def test_load_taxonomy_with_locale_requests_url_with_param():
     cm.__exit__ = MagicMock(return_value=False)
     with patch("explorer.core.taxonomy.urlopen", return_value=cm) as m_urlopen:
         taxonomy.load_taxonomy(locale="en_AU")
-    call_args = m_urlopen.call_args[0][0]
-    assert "locale=en_AU" in call_args.full_url
+    assert m_urlopen.call_count == 2
+    urls = [c[0][0].full_url for c in m_urlopen.call_args_list]
+    assert any("locale=en_AU" in u for u in urls)
+    assert any("locale=en_US" in u for u in urls)
     assert taxonomy.get_species_url("Grey Teal") == "https://ebird.org/species/grtea"
+
+
+def test_load_taxonomy_en_us_fetches_once():
+    """en_US is the merge source; loading it directly only needs one request."""
+    csv_data = _make_csv([{"common_name": "Gray Teal", "species_code": "gretea1", "category": "species"}])
+    resp = MagicMock()
+    resp.read.return_value = csv_data.encode("utf-8")
+    cm = MagicMock()
+    cm.__enter__ = MagicMock(return_value=resp)
+    cm.__exit__ = MagicMock(return_value=False)
+    with patch("explorer.core.taxonomy.urlopen", return_value=cm) as m_urlopen:
+        taxonomy.load_taxonomy(locale="en_US")
+    assert m_urlopen.call_count == 1
+    assert "locale=en_US" in m_urlopen.call_args[0][0].full_url
 
 
 def test_load_taxonomy_network_failure_returns_false():
@@ -90,21 +106,45 @@ def test_get_species_url_empty_name_returns_none():
         taxonomy._common_to_code = None
 
 
-def test_exact_match_required_after_locale_load():
-    """With locale set, API returns names that match export; exact match is sufficient."""
-    # Simulate API returning en_AU names (Grey Teal, Willie Wagtail, Common Starling)
+def test_merged_lookup_includes_en_us_alternate_spellings():
+    """After en_AU + en_US merge, both regional labels for the same code resolve (e.g. Gray vs Grey Teal)."""
     taxonomy._common_to_code = {
-        "Grey Teal": "grtea",
-        "Willie Wagtail": "wilwag",
+        "Grey Teal": "gretea1",
+        "Gray Teal": "gretea1",
+        "Willie Wagtail": "wilwag1",
         "Common Starling": "eursta",
     }
     try:
-        assert taxonomy.get_species_url("Grey Teal") == "https://ebird.org/species/grtea"
-        assert taxonomy.get_species_url("Willie Wagtail") == "https://ebird.org/species/wilwag"
+        assert taxonomy.get_species_url("Grey Teal") == "https://ebird.org/species/gretea1"
+        assert taxonomy.get_species_url("Gray Teal") == "https://ebird.org/species/gretea1"
+        assert taxonomy.get_species_url("Willie Wagtail") == "https://ebird.org/species/wilwag1"
         assert taxonomy.get_species_url("Common Starling") == "https://ebird.org/species/eursta"
-        assert taxonomy.get_species_url("Gray Teal") is None  # US spelling not in en_AU lookup
     finally:
         taxonomy._common_to_code = None
+
+
+def test_load_taxonomy_en_au_merges_en_us_alternate_names():
+    """regional + US names for the same species code both link (refs #201, e.g. Gray Noddy / Grey Ternlet)."""
+    au_csv = _make_csv(
+        [{"common_name": "Grey Ternlet", "species_code": "grynod1", "category": "species"}]
+    )
+    us_csv = _make_csv(
+        [{"common_name": "Gray Noddy", "species_code": "grynod1", "category": "species"}]
+    )
+    ctxs = []
+    for body in (au_csv, us_csv):
+        r = MagicMock()
+        r.read.return_value = body.encode("utf-8")
+        c = MagicMock()
+        c.__enter__ = MagicMock(return_value=r)
+        c.__exit__ = MagicMock(return_value=False)
+        ctxs.append(c)
+    with patch("explorer.core.taxonomy.urlopen", side_effect=ctxs) as m_urlopen:
+        ok = taxonomy.load_taxonomy(locale="en_AU")
+    assert ok is True
+    assert m_urlopen.call_count == 2
+    assert taxonomy.get_species_url("Gray Noddy") == "https://ebird.org/species/grynod1"
+    assert taxonomy.get_species_url("Grey Ternlet") == "https://ebird.org/species/grynod1"
 
 
 def test_get_species_and_lifelist_urls_single_lookup():
