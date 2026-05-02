@@ -78,6 +78,7 @@ def build_species_overlay_map(
     species_blank_default_center: tuple[float, float] | None = None,
     species_blank_default_zoom: int | None = None,
     species_blank_viewport_recipe: dict[str, Any] | None = None,
+    go_to_gps_pin: tuple[float, float] | None = None,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -175,4 +176,5 @@ def build_species_overlay_map(
         species_blank_default_center=species_blank_default_center,
         species_blank_default_zoom=species_blank_default_zoom,
         species_blank_viewport_recipe=species_blank_viewport_recipe,
+        go_to_gps_pin=go_to_gps_pin,
     )

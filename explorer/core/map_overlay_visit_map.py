@@ -19,6 +19,7 @@ from explorer.app.streamlit.defaults import (
     MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH,
     MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW,
     MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM,
+    MAP_GO_TO_GPS_MAX_ZOOM,
     MAP_DEBUG_SHOW_ZOOM_LEVEL,
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
@@ -79,6 +80,27 @@ from explorer.core.stats import safe_count
 def _epsilon_bounds_around_point(lat: float, lon: float, delta: float = 0.02) -> list[list[float]]:
     """Tiny bounding box so Leaflet ``fitBounds`` has non-zero extent for a single pin."""
     return [[lat - delta, lon - delta], [lat + delta, lon + delta]]
+
+
+def _apply_go_to_gps_pin_view(map_obj: folium.Map, pin: tuple[float, float]) -> None:
+    """Centre map on a temporary red pin (Google-style glyph; refs #199 comments)."""
+    lat = float(pin[0])
+    lon = float(pin[1])
+    folium.Marker(
+        location=[lat, lon],
+        popup=folium.Popup(
+            "<div style='font-size:13px'><strong>Temporary GPS marker</strong></div>",
+            max_width=MAP_POPUP_MAX_WIDTH_PX,
+        ),
+        icon=folium.Icon(color="red", icon="map-marker", prefix="fa"),
+    ).add_to(map_obj)
+    pad = int(MAP_SPECIES_FIT_BOUNDS_PADDING_PX)
+    b = _epsilon_bounds_around_point(lat, lon)
+    map_obj.fit_bounds(
+        b,
+        padding=(pad, pad),
+        max_zoom=int(MAP_GO_TO_GPS_MAX_ZOOM),
+    )
 
 
 def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tuple[str, str, int, int, float]:
@@ -316,6 +338,7 @@ def build_visit_overlay_map(
     species_blank_default_center: tuple[float, float] | None = None,
     species_blank_default_zoom: int | None = None,
     species_blank_viewport_recipe: dict[str, Any] | None = None,
+    go_to_gps_pin: tuple[float, float] | None = None,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode)."""
     if selected_species:
@@ -438,6 +461,8 @@ def build_visit_overlay_map(
             popup_scroll_hint, popup_sort_order == "ascending"
         )
         species_map.get_root().html.add_child(Element(scroll_popup_script))
+        if go_to_gps_pin:
+            _apply_go_to_gps_pin_view(species_map, go_to_gps_pin)
         return MapOverlayResult(species_map, None)
 
     species_map = create_map(
@@ -508,7 +533,9 @@ def build_visit_overlay_map(
 
         scope_fit = (all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED).strip()
         should_fit = scope_fit != ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY and bool(all_loc_pairs)
-        if should_fit and all_loc_pairs:
+        if go_to_gps_pin:
+            _apply_go_to_gps_pin_view(species_map, go_to_gps_pin)
+        elif should_fit and all_loc_pairs:
             pad = int(MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX)
             max_z = int(MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM)
             if len(all_loc_pairs) == 1:
@@ -706,7 +733,9 @@ def build_visit_overlay_map(
             if pd.isna(la) or pd.isna(lo):
                 continue
             species_pairs.append([la, lo])
-        if species_pairs:
+        if go_to_gps_pin:
+            _apply_go_to_gps_pin_view(species_map, go_to_gps_pin)
+        elif species_pairs:
             pad = int(MAP_SPECIES_FIT_BOUNDS_PADDING_PX)
             if len(species_pairs) == 1:
                 la, lo = float(species_pairs[0][0]), float(species_pairs[0][1])
