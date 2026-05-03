@@ -24,6 +24,9 @@ data_folder: "/path/to/eBird/data/folder"
 # Destination path for the deploy helper script.
 deploy_destination: "/path/to/eBirdChecklistNameFromGPS/eBirdChecklistNameFromGPS.py"
 
+# When running Explorer locally: if false, skip the optional “new version on GitHub” notice (refs #189).
+# check_for_updates: true
+
 # Optional. The Streamlit Explorer writes this section when you save settings in the UI.
 # explorer_settings:
 #   version: 1

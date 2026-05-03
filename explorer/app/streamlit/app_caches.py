@@ -127,6 +127,7 @@ def static_map_cache_key(
     species_selected_sci: str = "",
     species_selected_common: str = "",
     hide_non_matching_locations: bool = False,
+    go_to_gps_pin: tuple[float, float] | None = None,
 ) -> tuple:
     """Stable key for Folium map reuse (session holds one cached map; same key → skip rebuild).
 
@@ -140,6 +141,12 @@ def static_map_cache_key(
     tax = (taxonomy_locale or "").strip()
     sci = (species_selected_sci or "").strip()
     common = (species_selected_common or "").strip()
+    gps_sig = ""
+    if go_to_gps_pin is not None and len(go_to_gps_pin) == 2:
+        try:
+            gps_sig = f"{float(go_to_gps_pin[0]):.6f},{float(go_to_gps_pin[1]):.6f}"
+        except (TypeError, ValueError):
+            gps_sig = ""
     return (
         map_view_mode,
         date_filter_banner,
@@ -151,4 +158,5 @@ def static_map_cache_key(
         sci,
         common,
         bool(hide_non_matching_locations),
+        gps_sig,
     )

@@ -72,6 +72,8 @@ You will also need to update environment-specific settings, including:
 - the path to your Python installation (used by the GPS script)  
 - any OS-specific path handling (macOS vs Windows)  
 
+The JSON in the repo uses **placeholder paths** (`/Users/you/...` on macOS and `C:\Users\you\...` on Windows) for the `store` steps that set `pythonPath` and `scriptPath`. After you import a macro into UI.Vision, edit those values to match your machine (same idea as `config_template.yaml` using `/Users/you/`).
+
 The incidental checklist macro has more configurable options than the location naming macro.
 
 These settings are defined near the top of each macro and are intended to be easy to adjust.
