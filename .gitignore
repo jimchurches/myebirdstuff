@@ -27,3 +27,8 @@ htmlcov/
 
 # Local Explorer perf snapshots (machine-specific JSON; archive via scripts/snapshot_explorer_perf_log.py)
 benchmarks/map_perf/snapshots/
+
+# Local-only real eBird export used for #205 perf investigation (never committed)
+# Scoped to MyEBirdData*.csv so the tracked tests/fixtures/ebird_integration_fixture.csv stays committed.
+MyEBirdData*.csv
+tests/fixtures/MyEBirdData*.csv
