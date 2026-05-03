@@ -27,4 +27,4 @@ pytest-cov>=4,<8
 Pygments>=2.20.0
 
 # Linting (CI + local; ruff checks explorer/ — see ruff.toml)
-ruff>=0.8,<1
+ruff>=0.15.12,<1
