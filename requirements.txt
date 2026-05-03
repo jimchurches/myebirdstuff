@@ -9,7 +9,7 @@ pandas>=2.0,<4
 # Core deps
 folium>=0.15
 whoosh
-scikit-learn>=1.3,<2
+scikit-learn>=1.8.0,<2
 pycountry>=23.12.11
 PyYAML>=6.0.3,<7
 
