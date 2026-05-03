@@ -6,9 +6,9 @@ payloads before fragments run. Partial ``@st.fragment`` reruns do not use this p
 
 **Export map HTML** uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
 **deep-copied** map (``branca`` mutates on render), with ``html_bytes`` cached on hit. The live map
-uses **streamlit-folium** ``st_folium`` (``use_container_width=True``) so Leaflet markers, popups,
-and overlay sizing match behaviour on ``main``. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY` still
-stores an unrendered Folium :class:`folium.Map` for the LRU.
+uses **streamlit-folium** ``st_folium`` with a **deep copy** of the cached map so embed rendering
+cannot strip layers from the session cache (same mutation hazard as HTML export). Session
+:data:`FOLIUM_STATIC_MAP_CACHE_KEY` still stores an unrendered Folium :class:`folium.Map` for the LRU.
 """
 
 from __future__ import annotations
@@ -46,6 +46,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_MAP_DATE_FILTER_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
 )
+from explorer.app.streamlit.app_go_to_gps_ui import go_to_gps_pin_from_session
 from explorer.app.streamlit.app_map_ui import (
     inject_map_folium_iframe_min_height_css,
     inject_sidebar_outline_download_button_css,
@@ -382,6 +383,7 @@ def render_prep_spinner_and_map_tab(
                         map_view_mode == "species" and bool(hide_non_matching_locations)
                     )
                     capture_all_locations_view = map_view_mode == "all" and not overlay_sci
+                    _go_pin = go_to_gps_pin_from_session()
                     _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _map_kw = {
                         **ctx,
@@ -415,6 +417,7 @@ def render_prep_spinner_and_map_tab(
                         "species_blank_default_center": tuple(blank_viewport_recipe.get("center", [MAP_SPECIES_DEFAULT_CENTER_LAT, MAP_SPECIES_DEFAULT_CENTER_LON])),
                         "species_blank_default_zoom": int(blank_viewport_recipe.get("zoom", MAP_SPECIES_DEFAULT_ZOOM)),
                         "species_blank_viewport_recipe": blank_viewport_recipe,
+                        "go_to_gps_pin": _go_pin,
                     }
                     if capture_all_locations_view:
                         _valid = {
@@ -471,6 +474,7 @@ def render_prep_spinner_and_map_tab(
                         species_selected_sci=overlay_sci if _species_selected else "",
                         species_selected_common=overlay_common if _species_selected else "",
                         hide_non_matching_locations=bool(hide_nm),
+                        go_to_gps_pin=_go_pin,
                     )
                     _cached = _map_cache_lookup(_ck)
                     if isinstance(_cached, dict) and _cached.get("map") is not None:
@@ -544,8 +548,10 @@ def render_prep_spinner_and_map_tab(
                         )
                         st.stop()
                     with perf_span("prep.map_iframe_embed"):
+                        # Deep copy: ``st_folium`` / Folium render paths mutate in memory; mutating the
+                        # cached ``folium.Map`` causes intermittent empty maps on subsequent cache hits.
                         st_folium(
-                            result_map,
+                            copy.deepcopy(result_map),
                             use_container_width=True,
                             height=int(map_height),
                             key=folium_st_key,

@@ -212,6 +212,10 @@ SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY = "_streamlit_species_search_last_main_
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
 # Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
+# Go to GPS — session-only temporary marker (refs #199); never persisted to YAML.
+SESSION_GO_TO_GPS_PIN_KEY = "_session_go_to_gps_pin"
+STREAMLIT_GO_TO_GPS_DRAFT_LAT_TEXT_KEY = "_streamlit_go_to_gps_draft_lat_txt"
+STREAMLIT_GO_TO_GPS_DRAFT_LON_TEXT_KEY = "_streamlit_go_to_gps_draft_lon_txt"
 SETTINGS_CONFIG_PATH_KEY = "_streamlit_settings_yaml_path"
 SETTINGS_CONFIG_SOURCE_KEY = "_streamlit_settings_source_label"
 SETTINGS_LOADED_FROM_KEY = "_streamlit_settings_loaded_from_path"

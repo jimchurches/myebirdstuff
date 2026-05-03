@@ -304,6 +304,18 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
     assert with_species != hide_on
     assert empty_awaiting_species != no_species
 
+    base_all = static_map_cache_key(df, "all", "", "default", ro, taxonomy_locale="en_AU")
+    all_with_gps = static_map_cache_key(
+        df,
+        "all",
+        "",
+        "default",
+        ro,
+        taxonomy_locale="en_AU",
+        go_to_gps_pin=(-33.0, 151.0),
+    )
+    assert base_all != all_with_gps
+
 
 # --- app_data_loading / app_map_ui / streamlit_theme (refs #98; UI-surface regressions) ---
 

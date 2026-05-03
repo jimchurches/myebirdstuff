@@ -84,6 +84,8 @@ MAP_SPECIES_DEFAULT_ZOOM = 5
 MAP_SPECIES_FIT_BOUNDS_PADDING_PX = 48
 MAP_SPECIES_FIT_BOUNDS_MAX_ZOOM = 7
 MAP_SPECIES_SINGLE_POINT_ZOOM = 8
+# Go to GPS temporary pin: fitBounds max zoom (session-only marker; refs #199).
+MAP_GO_TO_GPS_MAX_ZOOM = 10
 
 # Lifer-locations map: initial fit_bounds (not colour-scheme settings). Framing uses base-species
 # lifer pins only; subspecies-only pins do not affect bounds (refs #105).
