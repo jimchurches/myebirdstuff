@@ -120,6 +120,38 @@ from explorer.core.family_map_folium import (
 
 _MAP_RENDER_CACHE_MAX_ENTRIES = 6
 
+# Live-iframe embed mode for the Map tab. Default keeps the well-tested ``st_folium`` widget that
+# parity-matches ``main`` (#190). Set ``EXPLORER_MAP_EMBED=components_html`` (env or Streamlit
+# secret) for #205 investigation: reuse the already-cached ``html_bytes`` via
+# ``streamlit.components.v1.html`` so warm reruns skip the extra ``st_folium`` render pass. The
+# value is **not** persisted in session settings; it is intentionally a developer/perf knob.
+_MAP_EMBED_MODE_ENV_KEY = "EXPLORER_MAP_EMBED"
+_MAP_EMBED_MODE_ST_FOLIUM = "st_folium"
+_MAP_EMBED_MODE_COMPONENTS_HTML = "components_html"
+_MAP_EMBED_MODE_DEFAULT = _MAP_EMBED_MODE_ST_FOLIUM
+_MAP_EMBED_MODE_VALID = {_MAP_EMBED_MODE_ST_FOLIUM, _MAP_EMBED_MODE_COMPONENTS_HTML}
+
+
+def _selected_map_embed_mode() -> str:
+    """Return the live-iframe embed mode for the Map tab (#205 investigation switch).
+
+    Reads ``EXPLORER_MAP_EMBED`` from Streamlit secrets first, then process env. Unknown values
+    fall back to the safe default so the switch can never silently render an undefined mode.
+    """
+    import os
+
+    raw = ""
+    try:
+        if _MAP_EMBED_MODE_ENV_KEY in st.secrets:
+            raw = str(st.secrets[_MAP_EMBED_MODE_ENV_KEY]).strip().lower()
+    except Exception:
+        raw = ""
+    if not raw:
+        raw = str(os.environ.get(_MAP_EMBED_MODE_ENV_KEY, "")).strip().lower()
+    if raw in _MAP_EMBED_MODE_VALID:
+        return raw
+    return _MAP_EMBED_MODE_DEFAULT
+
 
 def _map_cache_lookup(cache_key: tuple[Any, ...]) -> dict[str, Any] | None:
     """Session map cache lookup with backward compatibility for old single-entry payloads."""
@@ -537,27 +569,49 @@ def render_prep_spinner_and_map_tab(
                     if map_hint_text:
                         st.info(map_hint_text)
                     inject_map_folium_iframe_min_height_css(map_height)
-                    try:
-                        from streamlit_folium import st_folium
-                    except ImportError:
-                        st.error(
-                            "Missing **streamlit-folium** (needed to embed the Folium map). "
-                            "Locally: `pip install -r requirements.txt`. "
-                            "**Streamlit Community Cloud:** set app **Python requirements** to "
-                            "`requirements.txt` at the repo root."
-                        )
-                        st.stop()
-                    with perf_span("prep.map_iframe_embed"):
-                        # Deep copy: ``st_folium`` / Folium render paths mutate in memory; mutating the
-                        # cached ``folium.Map`` causes intermittent empty maps on subsequent cache hits.
-                        st_folium(
-                            copy.deepcopy(result_map),
-                            use_container_width=True,
-                            height=int(map_height),
-                            key=folium_st_key,
-                            returned_objects=[],
-                            return_on_hover=False,
-                        )
+                    embed_mode = _selected_map_embed_mode()
+                    if embed_mode == _MAP_EMBED_MODE_COMPONENTS_HTML:
+                        # #205 experiment C: reuse the already-cached html_bytes via
+                        # ``components.html`` so warm reruns skip ``st_folium``'s extra render
+                        # pass. Known #190 risk surface — banner/legend sizing and popup
+                        # anchoring must stay parity-matched to the ``st_folium`` path.
+                        from streamlit.components.v1 import html as _components_html
+
+                        with perf_span(
+                            "prep.map_iframe_embed",
+                            extra={"embed_mode": _MAP_EMBED_MODE_COMPONENTS_HTML},
+                        ):
+                            _components_html(
+                                st.session_state[EXPLORER_MAP_HTML_BYTES_KEY].decode("utf-8"),
+                                height=int(map_height),
+                                scrolling=False,
+                            )
+                    else:
+                        try:
+                            from streamlit_folium import st_folium
+                        except ImportError:
+                            st.error(
+                                "Missing **streamlit-folium** (needed to embed the Folium map). "
+                                "Locally: `pip install -r requirements.txt`. "
+                                "**Streamlit Community Cloud:** set app **Python requirements** to "
+                                "`requirements.txt` at the repo root."
+                            )
+                            st.stop()
+                        with perf_span(
+                            "prep.map_iframe_embed",
+                            extra={"embed_mode": _MAP_EMBED_MODE_ST_FOLIUM},
+                        ):
+                            # Deep copy: ``st_folium`` / Folium render paths mutate in memory;
+                            # mutating the cached ``folium.Map`` causes intermittent empty maps
+                            # on subsequent cache hits.
+                            st_folium(
+                                copy.deepcopy(result_map),
+                                use_container_width=True,
+                                height=int(map_height),
+                                key=folium_st_key,
+                                returned_objects=[],
+                                return_on_hover=False,
+                            )
 
         with st.spinner(TAB_PREP_SPINNER_TEXT):
             with perf_span("prep.cache_checklist_stats"):

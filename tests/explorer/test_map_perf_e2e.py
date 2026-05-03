@@ -13,6 +13,7 @@ Events are captured via ``EXPLORER_PERF_LOG_FILE`` (JSONL); guardrails read
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -92,3 +93,63 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
         if obs > cap:
             failures.append(f"{stage}: {obs:.1f}ms > ceiling {cap:.1f}ms")
     assert not failures, "Perf ceilings exceeded:\n" + "\n".join(failures)
+
+
+def test_map_embed_lifer_view_visual_parity_screenshot(
+    streamlit_perf_url_and_logfile: tuple[str, Path],
+) -> None:
+    """Capture full-page screenshots of the Lifer view for visual parity across embed modes.
+
+    Guards the #190 regression surface for the #205 ``EXPLORER_MAP_EMBED=components_html``
+    experiment: in that mode the live iframe is embedded via ``streamlit.components.v1.html``
+    rather than ``streamlit-folium``. The original #190 symptoms (banner/legend shrunk,
+    popups detached from markers) were caught visually rather than programmatically; this
+    test makes that visual check repeatable and side-by-side comparable.
+
+    Reads the active embed mode from the same ``EXPLORER_MAP_EMBED`` env var that
+    ``app_prep_map_ui`` honours and saves a screenshot under
+    ``benchmarks/map_perf/snapshots/issue-205-batch-1/`` named by mode + dataset label so
+    the same test can be run twice (once per mode) and the outputs compared by eye.
+    """
+    url, _log = streamlit_perf_url_and_logfile
+    embed_mode = (
+        os.environ.get("EXPLORER_MAP_EMBED", "st_folium").strip().lower() or "st_folium"
+    )
+    dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
+
+    with launch_chromium_or_skip() as browser:
+        page = browser.new_page(viewport={"width": 1400, "height": 900})
+        page.goto(url, wait_until="domcontentloaded")
+        page.get_by_text("Personal eBird Explorer").wait_for(timeout=20000)
+
+        wait_for_pebird_map_markup(
+            page,
+            must_contain=['class="pebird-map-banner__title">All locations</span>'],
+        )
+        choose_map_view_mode(page, "Lifer locations")
+        wait_for_pebird_map_markup(
+            page,
+            must_contain=['class="pebird-map-banner__title">Lifer locations</span>'],
+        )
+
+        # Confirm the Lifer overlay actually painted SVG markers in some frame; if not, the
+        # embed mode is broken in a way no visual diff would forgive.
+        map_frame = None
+        for frame in list(page.frames):
+            try:
+                if frame.locator(".leaflet-interactive").count() > 0:
+                    map_frame = frame
+                    break
+            except Exception:
+                continue
+        assert map_frame is not None, (
+            f"no frame contained .leaflet-interactive markers (embed_mode={embed_mode!r})"
+        )
+
+        # Brief settle so any fit-bounds animation finishes before the screenshot.
+        page.wait_for_timeout(1500)
+
+        out_dir = REPO_ROOT / "benchmarks" / "map_perf" / "snapshots" / "issue-205-batch-1"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"lifer-{embed_mode}-{dataset_label}.png"
+        page.screenshot(path=str(out_path), full_page=True)
