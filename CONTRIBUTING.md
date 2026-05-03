@@ -19,7 +19,7 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
 ## How to contribute
 
 1. **Issues** — For bugs, describe what you expected, what happened, and how to reproduce (OS, Python version, and steps). For features or larger changes, opening an issue first helps align on scope.
-2. **Pull requests** — Fork the repo, create a branch from the target default branch (e.g. `main`), and open a PR when the change is ready for review.
+2. **Pull requests** — Fork the repo, create a branch from the target default branch (normally `beta-next`; use `main` only for explicit hotfixes), and open a PR when the change is ready for review.
 3. **Commits & PRs** — Prefer small, reviewable changes. In the PR description, explain **what** changed and **why** (and note any trade-offs). Link related issues when applicable.
 
 ---
@@ -36,6 +36,11 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
   Optional coverage (matches CI’s package scope):  
   `pytest tests/ -v --cov=explorer --cov-report=term-missing`  
   More detail: [docs/development.md — Testing workflow](docs/development.md#testing-workflow).
+  Test strategy for this repo is **signal over percentage**:
+  - Add focused tests for pure logic, hot paths, and regression-prone behavior.
+  - Prefer small table-driven tests when touching fragile transformations (for example family grouping logic).
+  - Avoid broad UI wiring/HTML snapshot tests that mostly increase coverage without catching meaningful breakage.
+  - Treat coverage as a baseline safety guardrail, not the optimization target.
 - **Lint:**  
   `ruff check explorer/`  
   (same as CI; `ruff` is in `requirements.txt`, rules in `ruff.toml` — currently Pyflakes + pycodestyle, with line-length and import-order left for a later pass).
@@ -45,6 +50,7 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
 ## Project conventions
 
 - **Design and modules** — See [docs/development.md](docs/development.md) (architecture, separation of UI vs core logic, Streamlit notes). **Map/theme tweakables** (clustering, pin size/opacity, colours) live in [`explorer/app/streamlit/defaults.py`](explorer/app/streamlit/defaults.py). Fixed UI strings, URLs, and spinner emoji lists live in [`explorer/app/streamlit/streamlit_ui_constants.py`](explorer/app/streamlit/streamlit_ui_constants.py). Persisted settings schema defaults live in [`explorer/core/settings_schema_defaults.py`](explorer/core/settings_schema_defaults.py). See [docs/AI_CONTEXT.md — Defaults](docs/AI_CONTEXT.md#defaults).
+- **Performance instrumentation** — Keep #179 instrumentation in place (off by default) and avoid breaking stage continuity unless needed. See [docs/development.md — Performance Instrumentation Guardrails](docs/development.md#performance-instrumentation-guardrails) and [docs/AI_CONTEXT.md — Performance Instrumentation](docs/AI_CONTEXT.md#performance-instrumentation-do-not-remove-casually).
 - **AI-assisted work** — If you use AI tools, follow **[docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)** (AI Coding Rules and related sections).
 - **Secrets** — Do not commit API keys, tokens, or personal paths. Use local config patterns described in the explorer docs (e.g. `config/config_template.yaml` and gitignored secret files). When in doubt, ask before adding something that could leak private data.
 

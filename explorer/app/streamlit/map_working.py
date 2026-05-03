@@ -1,5 +1,5 @@
 """
-Working DataFrame + date filter for the Streamlit map (refs #70).
+Working DataFrame + date filter for the Streamlit map.
 
 Wraps :func:`explorer.core.working_set.rebuild_working_set_from_date_filter`
 with Streamlit-friendly semantics: *All locations* vs *Lifer locations*, optional **Date filter** (range) vs all-time.
@@ -57,7 +57,7 @@ def streamlit_working_set_and_status(
     Return ``(working_set, date_filter_status)`` for map banners.
 
     *map_view_mode* — ``\"all\"`` | ``\"species\"`` | ``\"lifers\"``.
-    ``\"species\"`` uses the same date filter as ``\"all\"`` (refs #70).
+    ``\"species\"`` uses the same date filter as ``\"all\"``.
     Lifer mode forces all-time data and returns status ``\"Lifer view uses all-time data\"``.
 
     *date_filter_on* — when ``True`` (and *map_view_mode* is ``all``), apply *date_range*; when ``False``, no filter.
@@ -120,9 +120,32 @@ def streamlit_working_set_and_status(
 
 
 def folium_map_to_html_bytes(m: Any) -> bytes:
-    """Serialize a Folium map to UTF-8 HTML bytes for ``st.download_button``."""
+    """Serialize a Folium map to UTF-8 HTML bytes for download or iframe ``srcdoc``.
+
+    ``branca`` full-document ``render()`` mutates the in-memory map; callers that keep a long-lived
+    :class:`folium.Map` in session cache must pass a **copy** of the map here (not the cached
+    object).
+    """
     root = m.get_root()
     html = root.render()
     if isinstance(html, bytes):
         return html
     return str(html).encode("utf-8")
+
+
+def embed_folium_html_bytes_iframe(
+    html_bytes: bytes,
+    *,
+    height: int,
+    scrolling: bool = True,
+) -> None:
+    """Render pre-serialized Folium full-page HTML in the app via :func:`streamlit.components.v1.html`.
+
+    Streamlit’s HTML iframe (``srcdoc=…``) matches what ``st_folium`` ultimately ships to the
+    client; the same *bytes* used for **Export map HTML** can be passed here for one render per
+    run (or zero when ``html_bytes`` is served from the map HTML cache).
+    """
+    import streamlit.components.v1 as components
+
+    s = html_bytes.decode("utf-8")
+    components.html(s, width=None, height=int(height), scrolling=scrolling)

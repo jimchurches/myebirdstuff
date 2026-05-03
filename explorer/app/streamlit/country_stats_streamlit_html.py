@@ -13,6 +13,7 @@ the selected country only; data matches the filtered working set (refs #108).
 
 from __future__ import annotations
 
+from collections import OrderedDict
 import streamlit as st
 
 from explorer.core.checklist_stats_compute import ChecklistStatsPayload
@@ -39,6 +40,10 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
+from explorer.app.streamlit.perf_instrumentation import perf_fragment
+
+_COUNTRY_NOT_SEEN_CACHE_KEY = "_streamlit_country_not_seen_html_cache"
+_COUNTRY_NOT_SEEN_CACHE_MAX_ENTRIES = 20
 
 _COUNTRY_TAB_EXTRA_CSS = (
     """
@@ -127,38 +132,39 @@ def render_country_stats_streamlit_html(
 
     recent_n = get_yearly_recent_column_count()
     n_years = len(years_list)
-    if n_years > recent_n:
-        show_full = bool(
-            st.session_state.get(STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY, False)
-        )
-        if show_full:
+    with perf_fragment("country.yearly_table_render"):
+        if n_years > recent_n:
+            show_full = bool(
+                st.session_state.get(STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY, False)
+            )
+            if show_full:
+                table_html = format_country_yearly_table_html(
+                    selected,
+                    years_list,
+                    rows,
+                    inline_statistic_links=False,
+                )
+            else:
+                y_slice = yearly_streamlit_year_window_slice(
+                    years_list,
+                    show_full_history=False,
+                    recent_count=recent_n,
+                )
+                years_recent = years_list[y_slice]
+                rows_recent = slice_yearly_table_rows(rows, years_list, y_slice)
+                table_html = format_country_yearly_table_html(
+                    selected,
+                    years_recent,
+                    rows_recent,
+                    inline_statistic_links=False,
+                )
+        else:
             table_html = format_country_yearly_table_html(
                 selected,
                 years_list,
                 rows,
                 inline_statistic_links=False,
             )
-        else:
-            y_slice = yearly_streamlit_year_window_slice(
-                years_list,
-                show_full_history=False,
-                recent_count=recent_n,
-            )
-            years_recent = years_list[y_slice]
-            rows_recent = slice_yearly_table_rows(rows, years_list, y_slice)
-            table_html = format_country_yearly_table_html(
-                selected,
-                years_recent,
-                rows_recent,
-                inline_statistic_links=False,
-            )
-    else:
-        table_html = format_country_yearly_table_html(
-            selected,
-            years_list,
-            rows,
-            inline_statistic_links=False,
-        )
 
     inner = f"{links_html}{table_html}" if links_html else table_html
     st.markdown(
@@ -198,15 +204,37 @@ def _render_country_not_seen_recently_expander(
 
     with st.container(key=STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY):
         with st.expander(expander_title, expanded=False, key=STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY):
-            inner = rankings_not_seen_recently_table(
-                expander_title,
-                ["Species", "Last seen", "Days since"],
-                rows,
-                include_heading=False,
-                scroll_hint=RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT,
-                visible_rows=visible_rows,
-                link_urls_fn=link_urls_fn,
+            # Cache rendered HTML by country/locale/visible rows to avoid repeated heavy table formatting.
+            key_rows = tuple(tuple(r) if isinstance(r, (list, tuple)) else (r,) for r in rows)
+            cache_key = (
+                selected_country_key,
+                loc or "",
+                int(visible_rows),
+                key_rows,
             )
+            cached = st.session_state.get(_COUNTRY_NOT_SEEN_CACHE_KEY)
+            if not isinstance(cached, OrderedDict):
+                cached = OrderedDict()
+            inner = cached.get(cache_key)
+            if inner is None:
+                with perf_fragment("country.not_seen_recently_table"):
+                    inner = rankings_not_seen_recently_table(
+                        expander_title,
+                        ["Species", "Last seen", "Days since"],
+                        rows,
+                        include_heading=False,
+                        scroll_hint=RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT,
+                        visible_rows=visible_rows,
+                        link_urls_fn=link_urls_fn,
+                    )
+                cached[cache_key] = inner
+                cached.move_to_end(cache_key)
+                while len(cached) > _COUNTRY_NOT_SEEN_CACHE_MAX_ENTRIES:
+                    cached.popitem(last=False)
+                st.session_state[_COUNTRY_NOT_SEEN_CACHE_KEY] = cached
+            else:
+                cached.move_to_end(cache_key)
+                st.session_state[_COUNTRY_NOT_SEEN_CACHE_KEY] = cached
             st.markdown(
                 f'<div class="streamlit-checklist-html-ab">{inner}</div>',
                 unsafe_allow_html=True,
@@ -224,9 +252,10 @@ def run_country_tab_streamlit_fragment() -> None:
 
     Full app reruns still call :func:`sync_country_tab_session_inputs`.
     """
-    payload = st.session_state.get(COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY)
-    country_sort = st.session_state.streamlit_country_tab_sort
-    render_country_stats_streamlit_html(
-        payload,
-        country_sort=country_sort,
-    )
+    with perf_fragment("country"):
+        payload = st.session_state.get(COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY)
+        country_sort = st.session_state.streamlit_country_tab_sort
+        render_country_stats_streamlit_html(
+            payload,
+            country_sort=country_sort,
+        )

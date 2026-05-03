@@ -17,6 +17,7 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_data_loading import load_dataframe
 from explorer.app.streamlit.app_map_ui import sidebar_footer_links
+from explorer.app.streamlit.explorer_update_notice import render_explorer_update_notice_landing
 from explorer.app.streamlit.streamlit_ui_constants import explorer_readme_github_url
 from explorer.app.streamlit.streamlit_theme import inject_app_header_css
 
@@ -208,6 +209,7 @@ def load_dataframe_after_landing(
                 st.markdown("<div style='height:0.35rem;'></div>", unsafe_allow_html=True)
                 st.info(hosted_performance_notice_markdown(), icon="ℹ️")
                 st.markdown("<div style='height:0.35rem;'></div>", unsafe_allow_html=True)
+            render_explorer_update_notice_landing(REPO_ROOT)
             st.markdown(
                 '<p class="pebird-landing-upload-prompt">Upload your eBird data to begin</p>',
                 unsafe_allow_html=True,
@@ -257,7 +259,7 @@ target="_blank" rel="noopener noreferrer">Explorer docs</a> for details.
                     ,
                     unsafe_allow_html=True,
                 )
-        sidebar_footer_links()
+        sidebar_footer_links(show_explorer_update_notice=False)
         if df_full is None:
             return None
 

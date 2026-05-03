@@ -40,13 +40,13 @@
     },
     {
       "Command": "store",
-      "Target": "/Users/jameschurches/.pyenv/shims/python3",
+      "Target": "/Users/you/.pyenv/shims/python3",
       "Value": "pythonPath",
       "Description": "Store value macOS Python path into variable 'pythonPath'"
     },
     {
       "Command": "store",
-      "Target": "\"/Users/jameschurches/Library/Application Support/eBirdChecklistNameFromGPS/script/eBirdChecklistNameFromGPS.py\"",
+      "Target": "\"/Users/you/Library/Application Support/eBirdChecklistNameFromGPS/script/eBirdChecklistNameFromGPS.py\"",
       "Value": "scriptPath",
       "Description": "Store 'macOS' relevent script path into variable 'scriptPath'. Update as required"
     },
@@ -64,7 +64,7 @@
     },
     {
       "Command": "store",
-      "Target": "\"C:\\Users\\James\\Documents\\eBirdChecklistNameFromGPS\\eBirdChecklistNameFromGPS.py\"",
+      "Target": "\"C:\\Users\\you\\Documents\\eBirdChecklistNameFromGPS\\eBirdChecklistNameFromGPS.py\"",
       "Value": "scriptPath",
       "Description": "Store Windows releven script path into variable 'scriptPath'.  Update as required"
     },

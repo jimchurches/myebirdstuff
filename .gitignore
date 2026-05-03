@@ -21,3 +21,9 @@ _ruff_local/
 # pytest-cov / coverage.py
 .coverage
 htmlcov/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+
+# Local Explorer perf snapshots (machine-specific JSON; archive via scripts/snapshot_explorer_perf_log.py)
+benchmarks/map_perf/snapshots/

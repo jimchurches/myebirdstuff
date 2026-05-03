@@ -46,6 +46,7 @@ from explorer.app.streamlit.app_constants import (
     SETTINGS_CONFIG_SOURCE_KEY,
     DEFAULT_TAXONOMY_LOCALE,
 )
+from explorer.app.streamlit.app_go_to_gps_ui import render_go_to_gps_sidebar_expander
 from explorer.app.streamlit.app_map_ui import (
     ensure_streamlit_map_basemap_height_keys,
     ensure_streamlit_map_marker_colour_scheme_keys,
@@ -74,6 +75,7 @@ from explorer.app.streamlit.map_working import (
     streamlit_working_set_and_status,
 )
 from explorer.core.explorer_paths import settings_yaml_path_for_source
+from explorer.app.streamlit.perf_instrumentation import render_explorer_perf_sidebar_panel
 from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_CAPTION,
     SPECIES_SEARCH_HELP_EXPANDER_LABEL,
@@ -284,6 +286,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                     "Centres the map on the middle of the places you've birded. "
                     "You may need to zoom out to see more locations."
                 )
+            render_go_to_gps_sidebar_expander()
 
     hide_non_matching_locations = False
     species_pick_common: str | None = None
@@ -340,6 +343,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 for _para in (p.strip() for p in SPECIES_SEARCH_CAPTION.split("\n\n")):
                     if _para:
                         st.caption(_para)
+            render_go_to_gps_sidebar_expander()
 
         species_pick_common = st.session_state.get(SESSION_SPECIES_PICK_KEY)
         if species_pick_common:
@@ -450,6 +454,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         ) + 1
 
     st.session_state[SESSION_PREV_MAP_VIEW_KEY] = map_view_mode
+
+    with st.sidebar:
+        render_explorer_perf_sidebar_panel()
 
     return MapWorkingContext(
         map_style=map_style,
