@@ -4,25 +4,25 @@
 # - Streamlit app runtime
 #
 # Note: Streamlit currently requires pandas<3, so this repo targets pandas 2.x.
-pandas>=2.0,<4
+pandas>=3.0.2,<4
 
 # Core deps
-folium>=0.15
+folium>=0.20.0
 whoosh
 scikit-learn>=1.8.0,<2
-pycountry>=23.12.11
+pycountry>=26.2.16
 PyYAML>=6.0.3,<7
 
 # Streamlit app deps
-streamlit>=1.40
+streamlit>=1.57.0
 watchdog>=6.0.0,<7  # efficient file watching on reload (Streamlit falls back to polling without it)
-streamlit-folium>=0.20.0
+streamlit-folium>=0.27.2
 streamlit-searchbox>=0.1.24
-pydantic>=2,<3
+pydantic>=2.13.3,<3
 
 # Testing
 pytest
-pytest-cov>=4,<8
+pytest-cov>=7.1.0,<8
 # Transitive (e.g. rich, pytest); Pygments <2.20 affected by CVE-2026-4539 (ReDoS).
 Pygments>=2.20.0
 
