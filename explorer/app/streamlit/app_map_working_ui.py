@@ -279,7 +279,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             if _scope_sel == ALL_LOCATIONS_SCOPE_FOCUSED:
                 st.caption(
                     "Focused view shows your main birding regions. "
-                    "Smaller or infrequent locations may be hidden."
+                    "Other locations may be outside the current view; zoom or pan to find them."
                 )
             elif _scope_sel == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY:
                 st.caption(
