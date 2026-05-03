@@ -33,6 +33,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY,
     YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY,
 )
+from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 
 
@@ -57,6 +58,11 @@ def _yearly_wrap_markdown(inner: str) -> str:
 @st.fragment
 def run_yearly_summary_streamlit_fragment() -> None:
     """Yearly Summary UI; widget interactions here avoid rerunning the whole app where possible."""
+    with perf_fragment("yearly_summary"):
+        _run_yearly_summary_streamlit_fragment_inner()
+
+
+def _run_yearly_summary_streamlit_fragment_inner() -> None:
     inject_streamlit_checklist_css()
 
     payload: Optional[ChecklistStatsPayload] = st.session_state.get(YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY)

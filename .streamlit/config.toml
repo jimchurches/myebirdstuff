@@ -12,5 +12,9 @@ backgroundColor = "#FAFCFA"
 secondaryBackgroundColor = "#EEF4F0"
 textColor = "#1A2E22"
 
+# Sidebar widgets (toggle, slider) use this when set; otherwise some hosts inherit main theme only.
+[theme.sidebar]
+primaryColor = "#1F6F54"
+
 [browser]
 gatherUsageStats = false

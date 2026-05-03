@@ -1,0 +1,15 @@
+{
+  "_comment": "Loose millis caps for opt-in pytest --perf; not micro-benchmarks (see benchmarks/map_perf/README.md).",
+  "schema_version": 1,
+  "fixture_dataset": "tests/fixtures/ebird_integration_fixture.csv",
+  "max_elapsed_ms": {
+    "dataset.load": 180000,
+    "prep.map_context_prepare": 180000,
+    "prep.build_species_overlay_map": 180000,
+    "prep.cached_family_map_bundle": 180000,
+    "prep.family_map_composition_with_pins": 180000,
+    "prep.folium_map_to_html_bytes": 240000,
+    "prep.map_iframe_embed": 120000,
+    "taxonomy.cached_species_url_fn": 60000
+  }
+}

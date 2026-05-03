@@ -14,6 +14,7 @@ from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
     EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
+    REPO_ROOT,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
     FOLIUM_STATIC_MAP_CACHE_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
@@ -33,6 +34,7 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_WS_KEY,
     SPINNER_THEME_CSS,
 )
+from explorer.app.streamlit.explorer_update_notice import render_explorer_update_notice_sidebar
 from explorer.core.settings_schema_defaults import (
     MAP_MARKER_COLOUR_SCHEME_DEFAULT,
     MAP_MARKER_COLOUR_SCHEME_MAX,
@@ -285,10 +287,14 @@ def ensure_streamlit_map_marker_colour_scheme_keys() -> None:
             )
 
 
-def sidebar_footer_links(*, leading_divider: bool = True) -> None:
+def sidebar_footer_links(
+    *, leading_divider: bool = True, show_explorer_update_notice: bool = True
+) -> None:
     """Small centred sidebar footer: GitHub, eBird, Instagram + Explorer README + optional support (refs #127)."""
     if leading_divider:
         st.sidebar.divider()
+    if show_explorer_update_notice:
+        render_explorer_update_notice_sidebar(REPO_ROOT)
     link_style = f"color:{SIDEBAR_FOOTER_LINK_HEX};text-decoration:none;"
     sep = '<span style="opacity:0.45;margin:0 0.55em;" aria-hidden="true">·</span>'
     st.sidebar.markdown(

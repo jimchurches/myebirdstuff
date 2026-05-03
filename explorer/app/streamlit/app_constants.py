@@ -199,6 +199,12 @@ SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
 # Incremented once per ``main()`` run (fragment-only reruns do not execute ``main``).
 EXPLORER_MAIN_SCRIPT_RUN_ID_KEY = "_explorer_main_script_run_id"
+# Optional performance instrumentation (``EXPLORER_PERF=1``); refs #179.
+EXPLORER_PERF_EVENTS_KEY = "_explorer_perf_events"
+EXPLORER_PERF_DATASET_CTX_KEY = "_explorer_perf_dataset_ctx"
+EXPLORER_PERF_MAX_EVENTS = 2500
+EXPLORER_PERF_CLEAR_BTN_KEY = "explorer_perf_clear_buffer_btn"
+EXPLORER_PERF_DOWNLOAD_BTN_KEY = "explorer_perf_download_jsonl_btn"
 # Species search: user has changed the text away from the persisted pick (typing, clear-to-search).
 SESSION_SPECIES_SEARCH_USER_EDITING_KEY = "_streamlit_species_search_user_editing"
 # Last main-run id the species search fragment saw; used to refill the bar after tab navigation.
@@ -206,6 +212,10 @@ SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY = "_streamlit_species_search_last_main_
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
 # Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
+# Go to GPS — session-only temporary marker (refs #199); never persisted to YAML.
+SESSION_GO_TO_GPS_PIN_KEY = "_session_go_to_gps_pin"
+STREAMLIT_GO_TO_GPS_DRAFT_LAT_TEXT_KEY = "_streamlit_go_to_gps_draft_lat_txt"
+STREAMLIT_GO_TO_GPS_DRAFT_LON_TEXT_KEY = "_streamlit_go_to_gps_draft_lon_txt"
 SETTINGS_CONFIG_PATH_KEY = "_streamlit_settings_yaml_path"
 SETTINGS_CONFIG_SOURCE_KEY = "_streamlit_settings_source_label"
 SETTINGS_LOADED_FROM_KEY = "_streamlit_settings_loaded_from_path"

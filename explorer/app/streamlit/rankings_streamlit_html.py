@@ -43,6 +43,7 @@ from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 
 from explorer.app.streamlit.app_caches import cached_full_export_checklist_stats_payload
 from explorer.app.streamlit.app_constants import RANKINGS_TAB_BUNDLE_KEY
+from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 
@@ -501,11 +502,12 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
 @st.fragment
 def run_rankings_streamlit_tab_fragment() -> None:
     """Partial reruns when Rankings expanders/widgets change (same pattern as Country / Yearly)."""
-    bundle = st.session_state.get(RANKINGS_TAB_BUNDLE_KEY) or {}
-    if not bundle.get("rankings_sections_top_n") and not bundle.get("rankings_sections_other"):
-        st.info("Load checklist data to use Ranking & Lists.")
-        return
-    render_rankings_streamlit_tab_from_bundle(bundle)
+    with perf_fragment("ranking_lists"):
+        bundle = st.session_state.get(RANKINGS_TAB_BUNDLE_KEY) or {}
+        if not bundle.get("rankings_sections_top_n") and not bundle.get("rankings_sections_other"):
+            st.info("Load checklist data to use Ranking & Lists.")
+            return
+        render_rankings_streamlit_tab_from_bundle(bundle)
 
 
 def build_rankings_tab_bundle(
