@@ -182,7 +182,21 @@ def render_prep_spinner_and_map_tab(
             with perf_span("prep.data_signature"):
                 prov_plain = provenance or ""
                 sig = data_signature_for_caches(df_full, prov_plain)
-                if st.session_state.get(EBIRD_DATA_SIG_KEY) != sig:
+                _prev_sig = st.session_state.get(EBIRD_DATA_SIG_KEY)
+                if _prev_sig != sig:
+                    perf_record_point(
+                        "prep.data_sig_change",
+                        extra={
+                            "prev_present": _prev_sig is not None,
+                            "prev_sig": list(_prev_sig) if isinstance(_prev_sig, tuple) else _prev_sig,
+                            "new_sig": list(sig) if isinstance(sig, tuple) else sig,
+                            "map_cache_entries_before_nuke": (
+                                len(st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY])
+                                if isinstance(st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY), OrderedDict)
+                                else 0
+                            ),
+                        },
+                    )
                     st.session_state[EBIRD_DATA_SIG_KEY] = sig
                     st.session_state[POPUP_HTML_CACHE_KEY] = {}
                     st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
@@ -476,6 +490,29 @@ def render_prep_spinner_and_map_tab(
                         hide_non_matching_locations=bool(hide_nm),
                         go_to_gps_pin=_go_pin,
                     )
+                    _cache_at_lookup = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
+                    perf_record_point(
+                        "prep.map_cache_key_components",
+                        extra={
+                            "mode": map_view_mode,
+                            "k_map_view_mode": _ck[0],
+                            "k_date_filter_banner": _ck[1],
+                            "k_map_style": _ck[2],
+                            "k_render_opts_sig": list(_ck[3]),
+                            "k_n": _ck[4],
+                            "k_sid0": _ck[5],
+                            "k_tax": _ck[6],
+                            "k_sci": _ck[7],
+                            "k_common": _ck[8],
+                            "k_hide_nm": _ck[9],
+                            "k_gps_sig": _ck[10],
+                            "cache_entries_at_lookup": (
+                                len(_cache_at_lookup)
+                                if isinstance(_cache_at_lookup, OrderedDict)
+                                else (1 if isinstance(_cache_at_lookup, dict) else 0)
+                            ),
+                        },
+                    )
                     _cached = _map_cache_lookup(_ck)
                     if isinstance(_cached, dict) and _cached.get("map") is not None:
                         perf_record_point("prep.map_cache_hit", extra={"mode": map_view_mode})
@@ -494,6 +531,19 @@ def render_prep_spinner_and_map_tab(
                                     "key": _ck,
                                     "map": result_map,
                                     "warning": result_warning,
+                                },
+                            )
+                            _cache_after = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
+                            perf_record_point(
+                                "prep.map_cache_store",
+                                extra={
+                                    "mode": map_view_mode,
+                                    "site": "after_build_species_overlay_map",
+                                    "cache_entries_after_store": (
+                                        len(_cache_after)
+                                        if isinstance(_cache_after, OrderedDict)
+                                        else 0
+                                    ),
                                 },
                             )
 
