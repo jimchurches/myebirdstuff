@@ -83,6 +83,14 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
     missing = must - stages_seen
     assert not missing, f"missing expected stages {missing!r} in {sorted(stages_seen)!r}"
 
+    # #214: All → Lifer → All must hit the Folium prep cache at least once on return (before the fix,
+    # ``app_map_working_ui`` cleared the LRU on every view-mode change, so this count stayed 0).
+    cache_hits = [e for e in events if e.get("stage") == "prep.map_cache_hit"]
+    assert len(cache_hits) >= 1, (
+        "expected at least one prep.map_cache_hit in JSONL for All→Lifer→All "
+        f"(got {len(cache_hits)}); stages seen: {sorted(stages_seen)!r}"
+    )
+
     highs = max_elapsed_ms_by_stage(events)
     failures: list[str] = []
     for stage, cap in ceilings.items():
