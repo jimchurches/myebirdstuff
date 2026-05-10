@@ -349,3 +349,80 @@ def test_lifer_map_mode_builds_banner():
     assert "Lifer locations + subspecies" in html2
     assert "0 subspecies lifers" in html2.lower()
     assert "Visited:" not in html2
+
+
+def test_metrics_sink_populated_for_all_locations_view():
+    """``metrics_sink`` carries marker/popup counters back to the host (#205 batch 4 I1+I2)."""
+    df = _minimal_map_df()
+    sink: dict = {}
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        metrics_sink=sink,
+    )
+    assert r.warning is None
+    assert sink["view_path"] == "all_locations"
+    assert sink["marker_count"] == 1
+    # One location, no shared popup cache → exactly one popup is built, zero hits.
+    assert sink["popup_build_count"] == 1
+    assert sink["popup_cache_hit_count"] == 0
+    # Popup-build timing is real wall time and must be non-negative.
+    assert sink["popup_build_total_ms"] >= 0.0
+
+
+def test_metrics_sink_records_cache_hits_when_popup_cache_pre_warmed():
+    """A pre-warmed popup cache must report ``popup_cache_hit_count`` > 0 and zero builds."""
+    df = _minimal_map_df()
+    kwargs = _common_kwargs(df)
+    sink_cold: dict = {}
+    build_species_overlay_map(**kwargs, selected_species="", metrics_sink=sink_cold)
+    assert sink_cold["popup_build_count"] == 1
+    # Reuse the same caches (now warm) on a second build.
+    sink_warm: dict = {}
+    build_species_overlay_map(**kwargs, selected_species="", metrics_sink=sink_warm)
+    assert sink_warm["popup_build_count"] == 0
+    assert sink_warm["popup_cache_hit_count"] == 1
+
+
+def test_metrics_sink_populated_for_species_view():
+    df = _minimal_map_df()
+    sink: dict = {}
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="Anas gracilis",
+        selected_common_name="Grey Teal",
+        metrics_sink=sink,
+    )
+    assert r.warning is None
+    assert sink["view_path"] == "species"
+    assert sink["marker_count"] == 1
+    assert sink["popup_build_count"] == 1
+    assert sink["popup_cache_hit_count"] == 0
+    assert sink["popup_build_total_ms"] >= 0.0
+
+
+def test_metrics_sink_populated_for_lifer_view():
+    df = _minimal_map_df()
+    kwargs = _common_kwargs(df)
+    sink: dict = {}
+    r = build_species_overlay_map(
+        **kwargs,
+        selected_species="",
+        map_view_mode="lifers",
+        full_location_data=kwargs["location_data"],
+        metrics_sink=sink,
+    )
+    assert r.warning is None
+    assert sink["view_path"] == "lifer"
+    assert sink["marker_count"] == 1
+    assert sink["popup_build_count"] == 1
+    assert sink["popup_cache_hit_count"] == 0
+    assert sink["popup_build_total_ms"] >= 0.0
+
+
+def test_metrics_sink_default_none_is_a_no_op():
+    """Existing callers (no ``metrics_sink``) must continue to work unchanged."""
+    df = _minimal_map_df()
+    r = build_species_overlay_map(**_common_kwargs(df), selected_species="")
+    assert r.warning is None
+    assert r.map is not None
