@@ -140,12 +140,32 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
         )
 
         # Capture how many embed events fired during the cold load (fragment-mode-independent).
-        time.sleep(0.5)
-        cold_lines = log_file.read_text(encoding="utf-8").splitlines() if log_file.exists() else []
-        cold_embed_count = sum(
-            1 for e in parse_perf_json_objects_from_log_lines(cold_lines)
-            if e.get("stage") == "prep.map_iframe_embed"
+        # Wait until the cold load fully completes — ``prep.tab_session_sync`` fires near the
+        # end of every full script run, so its first appearance is a clean cold-load complete
+        # signal even on real CSV (where the cold pipeline takes ~10s).
+        def _count_stage_events(path: Path, stage: str) -> int:
+            if not path.exists():
+                return 0
+            return sum(
+                1
+                for e in parse_perf_json_objects_from_log_lines(
+                    path.read_text(encoding="utf-8").splitlines()
+                )
+                if e.get("stage") == stage
+            )
+
+        cold_load_deadline = time.monotonic() + 60.0
+        cold_sync_count = 0
+        while time.monotonic() < cold_load_deadline:
+            cold_sync_count = _count_stage_events(log_file, "prep.tab_session_sync")
+            if cold_sync_count >= 1:
+                break
+            time.sleep(0.5)
+        assert cold_sync_count >= 1, (
+            f"cold load never logged prep.tab_session_sync within 60s "
+            f"(fragment_mode={fragment_mode!r})"
         )
+        cold_embed_count = _count_stage_events(log_file, "prep.map_iframe_embed")
 
         # Trigger an off-map full-app rerun via the perf-debug sidebar's Clear button (calls
         # ``st.rerun()`` and changes nothing in the map cache key). The expander is a
@@ -155,14 +175,34 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
         clear_btn = sidebar.get_by_role("button", name="Clear session buffer")
         clear_btn.wait_for(timeout=10000)
         clear_btn.click()
-        # Settle: full script rerun + iframe remount take a few seconds even on the fixture.
-        page.wait_for_timeout(4000)
+
+        # Wait for the rerun to fully complete: ``prep.tab_session_sync`` fires once per full
+        # script run (it sits at the end of the prep pipeline, *outside* any ``@st.fragment``,
+        # so its count grows on every full rerun regardless of fragment mode). Polling the
+        # JSONL count avoids assuming any specific wall-clock budget — real CSV warm reruns
+        # take ~7-10s, fixture warm reruns ~1s.
+        rerun_deadline = time.monotonic() + 60.0
+        while time.monotonic() < rerun_deadline:
+            current_sync_count = _count_stage_events(log_file, "prep.tab_session_sync")
+            if current_sync_count > cold_sync_count:
+                break
+            time.sleep(0.25)
+        else:
+            current_sync_count = _count_stage_events(log_file, "prep.tab_session_sync")
+        assert current_sync_count > cold_sync_count, (
+            f"off-map rerun never logged a follow-up prep.tab_session_sync within 60s "
+            f"(fragment_mode={fragment_mode!r}, cold={cold_sync_count}, "
+            f"current={current_sync_count})"
+        )
+        # The banner is still in the DOM from the cold load, so this is mostly a sanity guard
+        # for full-pipeline-on-fragment_off; on fragment_on the iframe never re-mounts.
         wait_for_pebird_map_markup(
             page,
             must_contain=['class="pebird-map-banner__title">All locations</span>'],
         )
 
-    time.sleep(0.5)
+    # Settle for buffered JSONL writes to flush.
+    time.sleep(1.0)
     raw_lines = log_file.read_text(encoding="utf-8").splitlines() if log_file.exists() else []
     events = parse_perf_json_objects_from_log_lines(raw_lines)
     embed_events = [e for e in events if e.get("stage") == "prep.map_iframe_embed"]
@@ -170,9 +210,10 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
         f"expected at least one prep.map_iframe_embed event "
         f"(fragment_mode={fragment_mode!r}); got {len(embed_events)}"
     )
-    # Pass criterion: the journey completes (cold-load + post-rerun banner both visible).
-    # The A/B comparison itself happens by aggregating archived JSONL across modes; this
-    # assertion just guards that *something* was measured.
+    # Pass criterion: the journey completes (cold-load + post-rerun both observed via
+    # ``prep.tab_session_sync`` count growth). The A/B comparison itself happens by
+    # aggregating archived JSONL across modes; this assertion just guards that *something*
+    # was measured.
     assert cold_embed_count >= 1, (
         f"expected at least one prep.map_iframe_embed event during cold load "
         f"(fragment_mode={fragment_mode!r}); got {cold_embed_count}"
@@ -333,6 +374,16 @@ def test_map_embed_all_locations_cluster_popup_parity_screenshot(
             f"(width={banner_box['width']}, fragment_mode={fragment_mode!r}); "
             "this matches the #190 regression shape — review the screenshot"
         )
+
+        # Allow OSM (or whichever basemap) tiles to paint before the screenshot. Without this
+        # wait the screenshot can capture a still-loading iframe with a blank gray pane,
+        # which makes the side-by-side fragment_off vs fragment_on visual diff misleading
+        # even when the popup-DOM assertions all pass.
+        try:
+            map_frame.locator(".leaflet-tile-loaded").first.wait_for(timeout=8000)
+        except Exception:
+            pass
+        page.wait_for_timeout(1500)
 
         out_dir = REPO_ROOT / "benchmarks" / "map_perf" / "snapshots" / "issue-205-batch-3"
         out_dir.mkdir(parents=True, exist_ok=True)
