@@ -108,26 +108,25 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
 ) -> None:
     """Click an off-map sidebar widget that triggers a full script rerun without changing the map cache key.
 
-    #205 batch 3 W1 measurement journey: this is the path that ``EXPLORER_MAP_FRAGMENT=on`` is
-    supposed to short-circuit. The default journey (``test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling``)
-    only exercises view-mode changes — i.e. the path that *does* invalidate any fragment — so it
-    cannot measure the W1 hypothesis on its own.
+    Originally added for #205 batch 3 W1 (testing whether ``@st.fragment`` could short-circuit
+    the warm-rerun ``prep.map_iframe_embed`` cost). W1 was dropped — fragments do not isolate
+    from full-script ``st.rerun()`` calls — but the journey itself remains the canonical perf
+    measurement for **off-map** reruns: any future experiment that targets warm-rerun cost
+    needs this path covered, since the default perf E2E only exercises view-mode changes
+    (which always invalidate the map cache key).
 
-    This test lands on All-locations, opens the **Performance / debug** sidebar expander
+    The journey lands on All-locations, opens the **Performance / debug** sidebar expander
     (always present when ``EXPLORER_PERF=1``), and clicks **Clear session buffer** which calls
     ``st.rerun()``. ``st.rerun`` is a clean full-script rerun trigger that doesn't touch any
-    component of :func:`static_map_cache_key`, so the LRU should serve the All-locations entry
-    on cache hit while the embed call is paid (or, if the fragment isolates the embed, skipped).
+    component of :func:`static_map_cache_key`, so the LRU serves the All-locations entry on
+    cache hit while the embed call is paid every time (the warm-rerun shape is what future
+    experiments will A/B against).
 
-    The test does **not** assert any A/B inequality; that comes from running the same test twice
-    (once per ``EXPLORER_MAP_FRAGMENT`` mode) and comparing JSONL archives. The pass condition
-    here is that the journey completes and at least one ``prep.map_iframe_embed`` event is logged
-    after the off-map rerun.
+    Pass condition: cold-load + post-rerun both observed via ``prep.tab_session_sync`` count
+    growth, and ``prep.map_iframe_embed`` fired at least once. The A/B inequality itself comes
+    from running the same test twice across whatever experimental knob is being measured.
     """
     url, log_file = streamlit_perf_url_and_logfile
-    fragment_mode = (
-        os.environ.get("EXPLORER_MAP_FRAGMENT", "off").strip().lower() or "off"
-    )
 
     with launch_chromium_or_skip() as browser:
         page = browser.new_page(viewport={"width": 1400, "height": 900})
@@ -139,9 +138,8 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
             must_contain=['class="pebird-map-banner__title">All locations</span>'],
         )
 
-        # Capture how many embed events fired during the cold load (fragment-mode-independent).
         # Wait until the cold load fully completes — ``prep.tab_session_sync`` fires near the
-        # end of every full script run, so its first appearance is a clean cold-load complete
+        # end of every full script run, so its first appearance is a clean cold-load-complete
         # signal even on real CSV (where the cold pipeline takes ~10s).
         def _count_stage_events(path: Path, stage: str) -> int:
             if not path.exists():
@@ -162,8 +160,7 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
                 break
             time.sleep(0.5)
         assert cold_sync_count >= 1, (
-            f"cold load never logged prep.tab_session_sync within 60s "
-            f"(fragment_mode={fragment_mode!r})"
+            "cold load never logged prep.tab_session_sync within 60s"
         )
         cold_embed_count = _count_stage_events(log_file, "prep.map_iframe_embed")
 
@@ -177,10 +174,9 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
         clear_btn.click()
 
         # Wait for the rerun to fully complete: ``prep.tab_session_sync`` fires once per full
-        # script run (it sits at the end of the prep pipeline, *outside* any ``@st.fragment``,
-        # so its count grows on every full rerun regardless of fragment mode). Polling the
-        # JSONL count avoids assuming any specific wall-clock budget — real CSV warm reruns
-        # take ~7-10s, fixture warm reruns ~1s.
+        # script run (it sits at the end of the prep pipeline). Polling the JSONL count avoids
+        # assuming any specific wall-clock budget — real CSV warm reruns take ~7-10 s, fixture
+        # warm reruns ~1 s.
         rerun_deadline = time.monotonic() + 60.0
         while time.monotonic() < rerun_deadline:
             current_sync_count = _count_stage_events(log_file, "prep.tab_session_sync")
@@ -191,11 +187,8 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
             current_sync_count = _count_stage_events(log_file, "prep.tab_session_sync")
         assert current_sync_count > cold_sync_count, (
             f"off-map rerun never logged a follow-up prep.tab_session_sync within 60s "
-            f"(fragment_mode={fragment_mode!r}, cold={cold_sync_count}, "
-            f"current={current_sync_count})"
+            f"(cold={cold_sync_count}, current={current_sync_count})"
         )
-        # The banner is still in the DOM from the cold load, so this is mostly a sanity guard
-        # for full-pipeline-on-fragment_off; on fragment_on the iframe never re-mounts.
         wait_for_pebird_map_markup(
             page,
             must_contain=['class="pebird-map-banner__title">All locations</span>'],
@@ -207,16 +200,14 @@ def test_map_embed_off_map_rerun_journey_emits_perf_events(
     events = parse_perf_json_objects_from_log_lines(raw_lines)
     embed_events = [e for e in events if e.get("stage") == "prep.map_iframe_embed"]
     assert len(embed_events) >= 1, (
-        f"expected at least one prep.map_iframe_embed event "
-        f"(fragment_mode={fragment_mode!r}); got {len(embed_events)}"
+        f"expected at least one prep.map_iframe_embed event; got {len(embed_events)}"
     )
     # Pass criterion: the journey completes (cold-load + post-rerun both observed via
-    # ``prep.tab_session_sync`` count growth). The A/B comparison itself happens by
-    # aggregating archived JSONL across modes; this assertion just guards that *something*
-    # was measured.
+    # ``prep.tab_session_sync`` count growth). Any A/B comparison itself happens by
+    # aggregating archived JSONL across the experimental knob.
     assert cold_embed_count >= 1, (
-        f"expected at least one prep.map_iframe_embed event during cold load "
-        f"(fragment_mode={fragment_mode!r}); got {cold_embed_count}"
+        f"expected at least one prep.map_iframe_embed event during cold load; "
+        f"got {cold_embed_count}"
     )
 
 
@@ -230,14 +221,12 @@ _PEBIRD_BANNER_MIN_WIDTH_PX = 150.0
 def test_map_embed_all_locations_cluster_popup_parity_screenshot(
     streamlit_perf_url_and_logfile: tuple[str, Path],
 ) -> None:
-    """Capture All-locations cluster + popup parity for #205 batch 3.
+    """Capture All-locations cluster + popup parity for #205.
 
-    The I6 lesson from batch 1 (see :data:`docs/explorer/issue-205-investigation-backlog.md`):
-    the Lifer-view screenshot test missed the H1 #190 regression because the All-locations
-    cluster path's DOM (``MarkerClusterGroup`` + ``CircleMarker`` popups) differs from the
-    Lifer view. Any future map-embed experiment — including this batch's
-    ``EXPLORER_MAP_FRAGMENT`` — needs an explicit cluster + popup-attachment parity check
-    before its screenshot test is trusted.
+    The I6 lesson from batch 1: the Lifer-view screenshot test missed the H1 #190 regression
+    because the All-locations cluster path's DOM (``MarkerClusterGroup`` + ``CircleMarker``
+    popups) differs from the Lifer view. This test makes that visual surface a repeatable
+    regression check for any future map-embed experiment.
 
     Steps:
 
@@ -254,14 +243,10 @@ def test_map_embed_all_locations_cluster_popup_parity_screenshot(
        :data:`_PEBIRD_BANNER_MIN_WIDTH_PX` (the #190 regression's most visible symptom was a
        banner shrunk to a thin column).
     5. Save a full-page screenshot under
-       ``benchmarks/map_perf/snapshots/issue-205-batch-3/`` keyed by ``EXPLORER_MAP_FRAGMENT``
-       + dataset label so an A/B run produces side-by-side ``fragment_off`` / ``fragment_on``
-       images for manual visual review.
+       ``benchmarks/map_perf/snapshots/issue-205-cluster-popup-parity/`` keyed by dataset
+       label so future experiments can re-shoot side-by-side over their own A/B knob.
     """
     url, _log = streamlit_perf_url_and_logfile
-    fragment_mode = (
-        os.environ.get("EXPLORER_MAP_FRAGMENT", "off").strip().lower() or "off"
-    )
     dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
 
     with launch_chromium_or_skip() as browser:
@@ -289,8 +274,8 @@ def test_map_embed_all_locations_cluster_popup_parity_screenshot(
                 break
             page.wait_for_timeout(500)
         assert map_frame is not None, (
-            f"no frame contained .marker-cluster (fragment_mode={fragment_mode!r}); "
-            "the All-locations cluster path didn't render — would have hidden #190-style breakage"
+            "no frame contained .marker-cluster; the All-locations cluster path didn't render"
+            " — would have hidden #190-style breakage"
         )
 
         # Open a popup on the first ``L.CircleMarker`` via the Leaflet API. This is more robust
@@ -340,57 +325,50 @@ def test_map_embed_all_locations_cluster_popup_parity_screenshot(
         )
         assert result.get("found", 0) >= 1, (
             f"could not open a popup on any L.CircleMarker via the Leaflet API "
-            f"(fragment_mode={fragment_mode!r}, result={result!r})"
+            f"(result={result!r})"
         )
 
         popup_count = int(result.get("popupCount", 0))
         popup_content_count = int(result.get("popupContentCount", 0))
         popup_tip_count = int(result.get("popupTipCount", 0))
-        assert popup_count >= 1, (
-            f"openPopup did not produce a .leaflet-popup in DOM "
-            f"(fragment_mode={fragment_mode!r})"
-        )
-        assert popup_content_count >= 1, (
-            f"popup rendered without .leaflet-popup-content "
-            f"(fragment_mode={fragment_mode!r})"
-        )
+        assert popup_count >= 1, "openPopup did not produce a .leaflet-popup in DOM"
+        assert popup_content_count >= 1, "popup rendered without .leaflet-popup-content"
         # The H1 #190 detachment surface: tip missing or detached so popup floats away
         # from the underlying marker.
         assert popup_tip_count >= 1, (
-            f"popup rendered without a .leaflet-popup-tip "
-            f"(fragment_mode={fragment_mode!r}); this is the #190 detachment shape"
+            "popup rendered without a .leaflet-popup-tip; this is the #190 detachment shape"
         )
 
         # The other H1 #190 visible surface: banner shrunk to a thin column.
         banner = map_frame.locator(".pebird-map-banner").first
         assert banner.count() >= 1
         banner_box = banner.bounding_box()
-        assert banner_box is not None, (
-            f"could not measure .pebird-map-banner bounding box "
-            f"(fragment_mode={fragment_mode!r})"
-        )
+        assert banner_box is not None, "could not measure .pebird-map-banner bounding box"
         assert banner_box["width"] >= _PEBIRD_BANNER_MIN_WIDTH_PX, (
             f"pebird-map-banner shrunk below {_PEBIRD_BANNER_MIN_WIDTH_PX}px "
-            f"(width={banner_box['width']}, fragment_mode={fragment_mode!r}); "
-            "this matches the #190 regression shape — review the screenshot"
+            f"(width={banner_box['width']}); this matches the #190 regression shape — "
+            "review the screenshot"
         )
 
         # Allow OSM (or whichever basemap) tiles to paint before the screenshot. Without this
         # wait the screenshot can capture a still-loading iframe with a blank gray pane,
-        # which makes the side-by-side fragment_off vs fragment_on visual diff misleading
-        # even when the popup-DOM assertions all pass.
+        # which makes any side-by-side visual diff misleading even when the popup-DOM
+        # assertions all pass.
         try:
             map_frame.locator(".leaflet-tile-loaded").first.wait_for(timeout=8000)
         except Exception:
             pass
         page.wait_for_timeout(1500)
 
-        out_dir = REPO_ROOT / "benchmarks" / "map_perf" / "snapshots" / "issue-205-batch-3"
-        out_dir.mkdir(parents=True, exist_ok=True)
-        out_path = (
-            out_dir
-            / f"all-locations-cluster-popup-fragment_{fragment_mode}-{dataset_label}.png"
+        out_dir = (
+            REPO_ROOT
+            / "benchmarks"
+            / "map_perf"
+            / "snapshots"
+            / "issue-205-cluster-popup-parity"
         )
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"all-locations-cluster-popup-{dataset_label}.png"
         page.screenshot(path=str(out_path), full_page=True)
 
 
