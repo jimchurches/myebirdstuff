@@ -79,6 +79,7 @@ def build_species_overlay_map(
     species_blank_default_zoom: int | None = None,
     species_blank_viewport_recipe: dict[str, Any] | None = None,
     go_to_gps_pin: tuple[float, float] | None = None,
+    metrics_sink: Optional[Dict[str, Any]] = None,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -110,6 +111,20 @@ def build_species_overlay_map(
     (resolved via :mod:`explorer.core.map_marker_colour_resolve`) for **All locations**, **Species
     locations**, and **Lifer locations** pins (colours, radii, stroke weight, fill opacities, cluster
     tiers).
+
+    *metrics_sink*: optional mutable dict for the host (Streamlit / tests) to collect rebuild-cost
+    instrumentation (#205 batch 4: I1 popup-build timing/count + I2 marker count). When provided,
+    the active overlay function populates these keys before returning:
+
+    - ``view_path`` (``"all_locations"`` / ``"species"`` / ``"lifer"``)
+    - ``marker_count`` (CircleMarker calls added in this build)
+    - ``popup_build_count`` (popups built and stored in *popup_html_cache* this call)
+    - ``popup_cache_hit_count`` (popups served from *popup_html_cache* this call)
+    - ``popup_build_total_ms`` (wall time spent inside popup-HTML construction)
+
+    Host-side wiring: pass the same dict to ``perf_span("prep.build_species_overlay_map",
+    extra=metrics)`` and to this function; the span emits a single enriched event per rebuild.
+    Default ``None`` is a no-op — overlays don't import any perf module from ``explorer/app/``.
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
@@ -133,6 +148,7 @@ def build_species_overlay_map(
             effective_use_full=effective_use_full,
             base_species_fn=base_species_fn,
             visit_marker_scheme=visit_marker_scheme,
+            metrics_sink=metrics_sink,
         )
 
     # Species overlay is driven by a non-empty *selected_species* (same as legacy behaviour), not only
@@ -177,4 +193,5 @@ def build_species_overlay_map(
         species_blank_default_zoom=species_blank_default_zoom,
         species_blank_viewport_recipe=species_blank_viewport_recipe,
         go_to_gps_pin=go_to_gps_pin,
+        metrics_sink=metrics_sink,
     )
