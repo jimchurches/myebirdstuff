@@ -131,6 +131,17 @@ _MAP_EMBED_MODE_COMPONENTS_HTML = "components_html"
 _MAP_EMBED_MODE_DEFAULT = _MAP_EMBED_MODE_ST_FOLIUM
 _MAP_EMBED_MODE_VALID = {_MAP_EMBED_MODE_ST_FOLIUM, _MAP_EMBED_MODE_COMPONENTS_HTML}
 
+# Fragment-mode switch for the Map-tab live embed (#205 batch 3 W1 investigation). Default ``off``
+# keeps the existing inline call shape; ``on`` invokes the same embed body via ``@st.fragment``
+# so warm-rerun behaviour can be A/B'd cleanly. Both modes tag ``prep.map_iframe_embed`` events
+# with ``extra={"fragment_mode": ...}``. Investigation-only knob; not persisted in settings.
+_MAP_FRAGMENT_MODE_ENV_KEY = "EXPLORER_MAP_FRAGMENT"
+_MAP_FRAGMENT_MODE_OFF = "off"
+_MAP_FRAGMENT_MODE_ON = "on"
+_MAP_FRAGMENT_MODE_DEFAULT = _MAP_FRAGMENT_MODE_OFF
+_MAP_FRAGMENT_MODE_TRUTHY = {"1", "true", "yes", "on"}
+_MAP_FRAGMENT_MODE_FALSY = {"0", "false", "no", "off", ""}
+
 
 def _selected_map_embed_mode() -> str:
     """Return the live-iframe embed mode for the Map tab (#205 investigation switch).
@@ -151,6 +162,95 @@ def _selected_map_embed_mode() -> str:
     if raw in _MAP_EMBED_MODE_VALID:
         return raw
     return _MAP_EMBED_MODE_DEFAULT
+
+
+def _selected_map_fragment_mode() -> str:
+    """Return ``"on"`` or ``"off"`` for the Map-tab embed fragment switch (#205 batch 3 W1).
+
+    Reads ``EXPLORER_MAP_FRAGMENT`` from Streamlit secrets first, then process env. Accepts
+    common booleans (``1``/``0``, ``true``/``false``, ``yes``/``no``, ``on``/``off``); unknown
+    values fall back to the safe default (``off``).
+    """
+    import os
+
+    raw = ""
+    try:
+        if _MAP_FRAGMENT_MODE_ENV_KEY in st.secrets:
+            raw = str(st.secrets[_MAP_FRAGMENT_MODE_ENV_KEY]).strip().lower()
+    except Exception:
+        raw = ""
+    if not raw:
+        raw = str(os.environ.get(_MAP_FRAGMENT_MODE_ENV_KEY, "")).strip().lower()
+    if raw in _MAP_FRAGMENT_MODE_TRUTHY:
+        return _MAP_FRAGMENT_MODE_ON
+    if raw in _MAP_FRAGMENT_MODE_FALSY:
+        return _MAP_FRAGMENT_MODE_OFF
+    return _MAP_FRAGMENT_MODE_DEFAULT
+
+
+def _render_map_embed_body(
+    *,
+    folium_st_key: str,
+    map_height: int,
+    map_hint_text: str | None,
+    embed_mode: str,
+    fragment_mode: str,
+    result_map: Any,
+) -> None:
+    """Render the Map-tab live iframe (``st_folium`` or ``components.v1.html``).
+
+    Body shared by the inline call path and the ``@st.fragment``-wrapped variant
+    (:data:`_render_map_embed_fragment`) so #205 batch 3 W1 can A/B them by env switch
+    (:data:`_MAP_FRAGMENT_MODE_ENV_KEY`). ``prep.map_iframe_embed`` perf events are tagged
+    with both ``embed_mode`` and ``fragment_mode`` so JSONL splits cleanly.
+    """
+    if map_hint_text:
+        st.info(map_hint_text)
+    inject_map_folium_iframe_min_height_css(map_height)
+    if embed_mode == _MAP_EMBED_MODE_COMPONENTS_HTML:
+        # #205 experiment C: reuse the already-cached html_bytes via ``components.html``
+        # so warm reruns skip ``st_folium``'s extra render pass. Known #190 risk surface —
+        # banner/legend sizing and popup anchoring must stay parity-matched to the
+        # ``st_folium`` path.
+        from streamlit.components.v1 import html as _components_html
+
+        with perf_span(
+            "prep.map_iframe_embed",
+            extra={"embed_mode": _MAP_EMBED_MODE_COMPONENTS_HTML, "fragment_mode": fragment_mode},
+        ):
+            _components_html(
+                st.session_state[EXPLORER_MAP_HTML_BYTES_KEY].decode("utf-8"),
+                height=int(map_height),
+                scrolling=False,
+            )
+    else:
+        try:
+            from streamlit_folium import st_folium
+        except ImportError:
+            st.error(
+                "Missing **streamlit-folium** (needed to embed the Folium map). "
+                "Locally: `pip install -r requirements.txt`. "
+                "**Streamlit Community Cloud:** set app **Python requirements** to "
+                "`requirements.txt` at the repo root."
+            )
+            st.stop()
+        with perf_span(
+            "prep.map_iframe_embed",
+            extra={"embed_mode": _MAP_EMBED_MODE_ST_FOLIUM, "fragment_mode": fragment_mode},
+        ):
+            # Deep copy: ``st_folium`` / Folium render paths mutate in memory; mutating the
+            # cached ``folium.Map`` causes intermittent empty maps on subsequent cache hits.
+            st_folium(
+                copy.deepcopy(result_map),
+                use_container_width=True,
+                height=int(map_height),
+                key=folium_st_key,
+                returned_objects=[],
+                return_on_hover=False,
+            )
+
+
+_render_map_embed_fragment = st.fragment(_render_map_embed_body)
 
 
 def _map_cache_lookup(cache_key: tuple[Any, ...]) -> dict[str, Any] | None:
@@ -616,52 +716,21 @@ def render_prep_spinner_and_map_tab(
                     folium_st_key is not None
                     and st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY) is not None
                 ):
-                    if map_hint_text:
-                        st.info(map_hint_text)
-                    inject_map_folium_iframe_min_height_css(map_height)
                     embed_mode = _selected_map_embed_mode()
-                    if embed_mode == _MAP_EMBED_MODE_COMPONENTS_HTML:
-                        # #205 experiment C: reuse the already-cached html_bytes via
-                        # ``components.html`` so warm reruns skip ``st_folium``'s extra render
-                        # pass. Known #190 risk surface — banner/legend sizing and popup
-                        # anchoring must stay parity-matched to the ``st_folium`` path.
-                        from streamlit.components.v1 import html as _components_html
-
-                        with perf_span(
-                            "prep.map_iframe_embed",
-                            extra={"embed_mode": _MAP_EMBED_MODE_COMPONENTS_HTML},
-                        ):
-                            _components_html(
-                                st.session_state[EXPLORER_MAP_HTML_BYTES_KEY].decode("utf-8"),
-                                height=int(map_height),
-                                scrolling=False,
-                            )
-                    else:
-                        try:
-                            from streamlit_folium import st_folium
-                        except ImportError:
-                            st.error(
-                                "Missing **streamlit-folium** (needed to embed the Folium map). "
-                                "Locally: `pip install -r requirements.txt`. "
-                                "**Streamlit Community Cloud:** set app **Python requirements** to "
-                                "`requirements.txt` at the repo root."
-                            )
-                            st.stop()
-                        with perf_span(
-                            "prep.map_iframe_embed",
-                            extra={"embed_mode": _MAP_EMBED_MODE_ST_FOLIUM},
-                        ):
-                            # Deep copy: ``st_folium`` / Folium render paths mutate in memory;
-                            # mutating the cached ``folium.Map`` causes intermittent empty maps
-                            # on subsequent cache hits.
-                            st_folium(
-                                copy.deepcopy(result_map),
-                                use_container_width=True,
-                                height=int(map_height),
-                                key=folium_st_key,
-                                returned_objects=[],
-                                return_on_hover=False,
-                            )
+                    fragment_mode = _selected_map_fragment_mode()
+                    renderer = (
+                        _render_map_embed_fragment
+                        if fragment_mode == _MAP_FRAGMENT_MODE_ON
+                        else _render_map_embed_body
+                    )
+                    renderer(
+                        folium_st_key=folium_st_key,
+                        map_height=map_height,
+                        map_hint_text=map_hint_text,
+                        embed_mode=embed_mode,
+                        fragment_mode=fragment_mode,
+                        result_map=result_map,
+                    )
 
         with st.spinner(TAB_PREP_SPINNER_TEXT):
             with perf_span("prep.cache_checklist_stats"):
