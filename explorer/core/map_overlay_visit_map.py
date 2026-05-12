@@ -65,6 +65,7 @@ from explorer.presentation.map_renderer import (
     build_location_popup_html,
     build_species_banner_html,
     build_species_locations_awaiting_selection_banner_html,
+    build_species_lite_map_popup_html,
     build_species_map_location_popup_html,
     build_visit_info_html,
     classify_locations,
@@ -341,12 +342,15 @@ def build_visit_overlay_map(
     species_blank_viewport_recipe: dict[str, Any] | None = None,
     go_to_gps_pin: tuple[float, float] | None = None,
     metrics_sink: Optional[Dict[str, Any]] = None,
+    lite_map_popups: bool = False,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode).
 
     See :func:`explorer.core.map_controller.build_species_overlay_map` for *metrics_sink*
     semantics (#205 batch 4 I1/I2). Populated keys: ``view_path``, ``marker_count``,
     ``popup_build_count``, ``popup_cache_hit_count``, ``popup_build_total_ms``.
+
+    *lite_map_popups* (#205 W2): see :func:`explorer.core.map_controller.build_species_overlay_map`.
     """
     if selected_species:
         filtered = filter_species(df, selected_species)
@@ -416,6 +420,7 @@ def build_visit_overlay_map(
 
     popup_ascending = popup_sort_order == "ascending"
     date_filter_status_line = date_filter_status or None
+    lite_b = bool(lite_map_popups)
 
     if not selected_species and (hide_non_matching_locations or _mv == "species"):
         c_lat = float(MAP_SPECIES_DEFAULT_CENTER_LAT)
@@ -520,18 +525,26 @@ def build_visit_overlay_map(
         _p_build_ms = 0.0
         for _, row in effective_location_data.iterrows():
             _m_count += 1
-            popup_key = (row["Location ID"], "", effective_use_full, tax_loc_key)
+            popup_key = (row["Location ID"], "", effective_use_full, tax_loc_key, lite_b)
             if popup_key not in popup_html_cache:
                 _p_built += 1
                 _t_p0 = time.perf_counter()
-                base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
-                visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
-                    "datetime", ascending=popup_ascending
-                )
-                visit_info = build_visit_info_html(visit_records, format_visit_time)
-                popup_html_cache[popup_key] = build_location_popup_html(
-                    row["Location"], row["Location ID"], visit_info
-                )
+                if lite_b:
+                    popup_html_cache[popup_key] = build_location_popup_html(
+                        row["Location"],
+                        row["Location ID"],
+                        "",
+                        show_visit_history=False,
+                    )
+                else:
+                    base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
+                    visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
+                        "datetime", ascending=popup_ascending
+                    )
+                    visit_info = build_visit_info_html(visit_records, format_visit_time)
+                    popup_html_cache[popup_key] = build_location_popup_html(
+                        row["Location"], row["Location ID"], visit_info
+                    )
                 _p_build_ms += (time.perf_counter() - _t_p0) * 1000.0
             else:
                 _p_hit += 1
@@ -703,32 +716,48 @@ def build_visit_overlay_map(
             if not row["has_species_match"] and hide_non_matching_locations:
                 continue
 
-            popup_key = (loc_id, selected_species, tax_loc_key)
+            popup_key = (loc_id, selected_species, tax_loc_key, lite_b)
             if popup_key not in popup_html_cache:
                 _p_built += 1
                 _t_p0 = time.perf_counter()
-                base_records = records_by_loc.get(loc_id, pd.DataFrame())
-                visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
-                    "datetime", ascending=popup_ascending
-                )
-                visit_info = build_visit_info_html(visit_records, format_visit_time)
-                n_visits = int(len(visit_records))
-                if row["has_species_match"]:
-                    species_sightings = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(
+                if lite_b:
+                    if row["has_species_match"]:
+                        species_sightings = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(
+                            "datetime", ascending=popup_ascending
+                        )
+                        popup_html_cache[popup_key] = build_species_lite_map_popup_html(
+                            row["Location"],
+                            loc_id,
+                            species_sightings,
+                            popup_ascending=popup_ascending,
+                        )
+                    else:
+                        popup_html_cache[popup_key] = build_location_popup_html(
+                            row["Location"], loc_id, "", show_visit_history=False
+                        )
+                else:
+                    base_records = records_by_loc.get(loc_id, pd.DataFrame())
+                    visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
                         "datetime", ascending=popup_ascending
                     )
-                    popup_html_cache[popup_key] = build_species_map_location_popup_html(
-                        row["Location"],
-                        loc_id,
-                        species_sightings,
-                        visit_info,
-                        visit_record_count=n_visits,
-                        popup_ascending=popup_ascending,
-                    )
-                else:
-                    popup_html_cache[popup_key] = build_location_popup_html(
-                        row["Location"], loc_id, visit_info, ""
-                    )
+                    visit_info = build_visit_info_html(visit_records, format_visit_time)
+                    n_visits = int(len(visit_records))
+                    if row["has_species_match"]:
+                        species_sightings = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(
+                            "datetime", ascending=popup_ascending
+                        )
+                        popup_html_cache[popup_key] = build_species_map_location_popup_html(
+                            row["Location"],
+                            loc_id,
+                            species_sightings,
+                            visit_info,
+                            visit_record_count=n_visits,
+                            popup_ascending=popup_ascending,
+                        )
+                    else:
+                        popup_html_cache[popup_key] = build_location_popup_html(
+                            row["Location"], loc_id, visit_info, ""
+                        )
                 _p_build_ms += (time.perf_counter() - _t_p0) * 1000.0
             else:
                 _p_hit += 1

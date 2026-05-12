@@ -426,3 +426,58 @@ def test_metrics_sink_default_none_is_a_no_op():
     r = build_species_overlay_map(**_common_kwargs(df), selected_species="")
     assert r.warning is None
     assert r.map is not None
+
+
+def test_lite_map_popups_all_locations_omits_visit_history():
+    """#205 W2: lite mode skips ``build_visit_info_html`` / Visited block; lifelist remains."""
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        lite_map_popups=True,
+    )
+    assert r.warning is None
+    html = r.map._repr_html_()
+    assert "Visited:" not in html
+    assert "ebird.org/lifelist" in html.lower()
+
+
+def test_lite_map_popups_species_keeps_lifelist_and_one_checklist_not_full_sections():
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="Anas gracilis",
+        selected_common_name="Grey Teal",
+        lite_map_popups=True,
+    )
+    assert r.warning is None
+    html = r.map.get_root().render().lower()
+    assert "ebird.org/lifelist" in html
+    assert "ebird.org/checklist/" in html
+    assert "lite probe" in html
+    assert '<details class="pebird-map-popup__all-visits"' not in html
+
+
+def test_lite_map_popups_lifer_strips_taxon_lines_but_keeps_lifelist():
+    df = _minimal_map_df()
+    kwargs = _common_kwargs(df)
+    full_loc = kwargs["location_data"]
+    r_full = build_species_overlay_map(
+        **kwargs,
+        selected_species="",
+        map_view_mode="lifers",
+        full_location_data=full_loc,
+    )
+    r_lite = build_species_overlay_map(
+        **kwargs,
+        selected_species="",
+        map_view_mode="lifers",
+        full_location_data=full_loc,
+        lite_map_popups=True,
+    )
+    assert r_full.map is not None and r_lite.map is not None
+    full_html = r_full.map._repr_html_()
+    lite_html = r_lite.map._repr_html_()
+    assert "Grey Teal" in full_html
+    assert "Grey Teal" not in lite_html
+    assert "ebird.org/lifelist" in lite_html.lower()

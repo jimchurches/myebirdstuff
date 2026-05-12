@@ -55,12 +55,15 @@ def build_lifer_overlay_map(
     base_species_fn: BaseSpeciesFn,
     visit_marker_scheme: MapMarkerColourScheme,
     metrics_sink: Optional[Dict[str, Any]] = None,
+    lite_map_popups: bool = False,
 ) -> MapOverlayResult:
     """Assemble the lifer-locations Folium map or return a user-facing *warning*.
 
     See :func:`explorer.core.map_controller.build_species_overlay_map` for *metrics_sink*
     semantics (#205 batch 4 I1/I2). Populated keys: ``view_path``, ``marker_count``,
     ``popup_build_count``, ``popup_cache_hit_count``, ``popup_build_total_ms``.
+
+    *lite_map_popups* (#205 W2): location lifelist only — skips per-location lifer species HTML.
     """
     if full_location_data is None or full_location_data.empty:
         return MapOverlayResult(
@@ -152,6 +155,7 @@ def build_lifer_overlay_map(
             legend_items.append((se, sp, "Subspecies"))
         species_map.get_root().html.add_child(Element(build_legend_html(legend_items)))
 
+    lite_b = bool(lite_map_popups)
     # I1/I2 counters (#205 batch 4); zero-cost when ``metrics_sink is None`` other than the
     # per-cache-miss ``time.perf_counter`` pair.
     _m_count = 0
@@ -160,28 +164,38 @@ def build_lifer_overlay_map(
     _p_build_ms = 0.0
     for _, row in loc_rows.iterrows():
         lid = row["Location ID"]
-        popup_key = (lid, "__lifer_map__", effective_use_full, tax_loc_key, bool(show_subspecies_lifers))
+        popup_key = (lid, "__lifer_map__", effective_use_full, tax_loc_key, bool(show_subspecies_lifers), lite_b)
         if popup_key not in popup_html_cache:
             _p_built += 1
             _t_p0 = time.perf_counter()
-            entries = loc_to_species.get(lid, [])
-            base_entries = [e for e in entries if e.get("is_base_lifer")]
-            popup_entries = entries if show_subspecies_lifers else base_entries
-            lifer_lines = format_lifer_popup_lines(
-                entries=popup_entries,
-                lifer_lookup_df=lifer_lookup_df,
-                location_id=lid,
-                base_species_fn=base_species_fn,
-            )
-            popup_html_cache[popup_key] = build_location_popup_html(
-                row["Location"],
-                lid,
-                "",
-                lifer_species_html=lifer_lines,
-                show_visit_history=False,
-                lifer_heading_html="",
-                location_heading_margin_px=2,
-            )
+            if lite_b:
+                popup_html_cache[popup_key] = build_location_popup_html(
+                    row["Location"],
+                    lid,
+                    "",
+                    show_visit_history=False,
+                    lifer_heading_html="",
+                    location_heading_margin_px=2,
+                )
+            else:
+                entries = loc_to_species.get(lid, [])
+                base_entries = [e for e in entries if e.get("is_base_lifer")]
+                popup_entries = entries if show_subspecies_lifers else base_entries
+                lifer_lines = format_lifer_popup_lines(
+                    entries=popup_entries,
+                    lifer_lookup_df=lifer_lookup_df,
+                    location_id=lid,
+                    base_species_fn=base_species_fn,
+                )
+                popup_html_cache[popup_key] = build_location_popup_html(
+                    row["Location"],
+                    lid,
+                    "",
+                    lifer_species_html=lifer_lines,
+                    show_visit_history=False,
+                    lifer_heading_html="",
+                    location_heading_margin_px=2,
+                )
             _p_build_ms += (time.perf_counter() - _t_p0) * 1000.0
         else:
             _p_hit += 1

@@ -131,6 +131,11 @@ _MAP_EMBED_MODE_COMPONENTS_HTML = "components_html"
 _MAP_EMBED_MODE_DEFAULT = _MAP_EMBED_MODE_ST_FOLIUM
 _MAP_EMBED_MODE_VALID = {_MAP_EMBED_MODE_ST_FOLIUM, _MAP_EMBED_MODE_COMPONENTS_HTML}
 
+# #205 W2: lite map popups for perf A/B only (default off — full visit history + eBird links).
+_MAP_LITE_POPUPS_ENV_KEY = "EXPLORER_MAP_LITE_POPUPS"
+_MAP_LITE_POPUPS_TRUTHY = {"1", "true", "yes", "on"}
+_MAP_LITE_POPUPS_FALSY = {"0", "false", "no", "off", ""}
+
 
 def _selected_map_embed_mode() -> str:
     """Return the live-iframe embed mode for the Map tab (#205 investigation switch).
@@ -151,6 +156,25 @@ def _selected_map_embed_mode() -> str:
     if raw in _MAP_EMBED_MODE_VALID:
         return raw
     return _MAP_EMBED_MODE_DEFAULT
+
+
+def _selected_lite_map_popups() -> bool:
+    """Return whether #205 W2 lite popup HTML is enabled (measurement / A/B only; default off)."""
+    import os
+
+    raw = ""
+    try:
+        if _MAP_LITE_POPUPS_ENV_KEY in st.secrets:
+            raw = str(st.secrets[_MAP_LITE_POPUPS_ENV_KEY]).strip().lower()
+    except Exception:
+        raw = ""
+    if not raw:
+        raw = str(os.environ.get(_MAP_LITE_POPUPS_ENV_KEY, "")).strip().lower()
+    if raw in _MAP_LITE_POPUPS_TRUTHY:
+        return True
+    if raw in _MAP_LITE_POPUPS_FALSY:
+        return False
+    return False
 
 
 def _render_map_embed_body(
@@ -490,6 +514,7 @@ def render_prep_spinner_and_map_tab(
                     capture_all_locations_view = map_view_mode == "all" and not overlay_sci
                     _go_pin = go_to_gps_pin_from_session()
                     _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
+                    _lite_pop = _selected_lite_map_popups()
                     _map_kw = {
                         **ctx,
                         "selected_species": overlay_sci,
@@ -523,6 +548,7 @@ def render_prep_spinner_and_map_tab(
                         "species_blank_default_zoom": int(blank_viewport_recipe.get("zoom", MAP_SPECIES_DEFAULT_ZOOM)),
                         "species_blank_viewport_recipe": blank_viewport_recipe,
                         "go_to_gps_pin": _go_pin,
+                        "lite_map_popups": _lite_pop,
                     }
                     if capture_all_locations_view:
                         _valid = {
@@ -567,6 +593,7 @@ def render_prep_spinner_and_map_tab(
                         )
                         if capture_all_locations_view
                         else "",
+                        _lite_pop,
                     )
                     _species_selected = bool(overlay_sci)
                     _ck = static_map_cache_key(
@@ -615,7 +642,10 @@ def render_prep_spinner_and_map_tab(
                         # the same perf event. ``perf_span`` stamps ``extra`` by reference at
                         # finalize time, so mutations inside :func:`build_species_overlay_map`
                         # land on the emitted record.
-                        _build_metrics: dict[str, Any] = {"mode": map_view_mode}
+                        _build_metrics: dict[str, Any] = {
+                            "mode": map_view_mode,
+                            "lite_map_popups": _lite_pop,
+                        }
                         with perf_span(
                             "prep.build_species_overlay_map", extra=_build_metrics
                         ):

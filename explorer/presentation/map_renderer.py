@@ -665,6 +665,48 @@ def build_species_map_location_popup_html(
     )
 
 
+def build_species_lite_map_popup_html(
+    loc_name: str,
+    loc_id: str,
+    species_sightings: pd.DataFrame,
+    *,
+    popup_ascending: bool,
+    location_heading_margin_px: int = 6,
+) -> str:
+    """Lite species-map popup for #205 W2 measurement (not the default product experience).
+
+    Preserves the **location lifelist** eBird link (same heading as full popups) and adds at most
+    **one checklist** link for the selected species (first row after sort). Skips per-taxon HTML
+    sections and the full dated visit list so ``popup_build_total_ms`` isolates the dominant cost
+    of rich popups without discarding an eBird deep link entirely.
+    """
+    loc_url = f"https://ebird.org/lifelist/{loc_id}"
+    esc_loc = _html_module.escape(str(loc_name), quote=False)
+    loc_link = (
+        f'<a class="pebird-map-popup__location-heading" href="{loc_url}" '
+        f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'
+    )
+    inner = ""
+    if not species_sightings.empty:
+        sorted_df = species_sightings.sort_values("datetime", ascending=popup_ascending)
+        r = sorted_df.iloc[0]
+        sid = r.get("Submission ID", "")
+        if pd.notna(sid) and str(sid).strip():
+            sid_s = str(sid).strip()
+            inner = (
+                '<div class="pebird-map-popup__section-label">Selected species (lite probe)</div>'
+                f'<a href="https://ebird.org/checklist/{esc_attr(sid_s)}" '
+                f'target="_blank" rel="noopener noreferrer">eBird checklist</a>'
+            )
+    return (
+        f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
+        f'<div class="pebird-map-popup__heading-row" style="margin-bottom:{int(location_heading_margin_px)}px;">{loc_link}</div>'
+        f'<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">'
+        f"{inner}"
+        f"</div></div>"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Banner and legend HTML builders
 # ---------------------------------------------------------------------------
