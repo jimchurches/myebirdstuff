@@ -19,6 +19,10 @@ from explorer.app.streamlit.defaults import (
 from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites, count_subspecies_lifer_taxa
 from explorer.core.map_marker_colour_resolve import resolve_lifer_overlay_pin_params
 from explorer.core.map_overlay_lifer_popups import format_lifer_popup_lines
+from explorer.presentation.map_popup_fragments import (
+    get_or_set_popup_fragment,
+    lifer_lines_fragment_key,
+)
 from explorer.core.map_overlay_theme import inject_map_overlay_theme
 from explorer.core.map_overlay_types import BaseSpeciesFn, MapOverlayResult
 from explorer.presentation.map_renderer import (
@@ -56,6 +60,7 @@ def build_lifer_overlay_map(
     visit_marker_scheme: MapMarkerColourScheme,
     metrics_sink: Optional[Dict[str, Any]] = None,
     lite_map_popups: bool = False,
+    popup_fragment_cache: MutableMapping[Tuple[Any, ...], str] | None = None,
 ) -> MapOverlayResult:
     """Assemble the lifer-locations Folium map or return a user-facing *warning*.
 
@@ -181,12 +186,32 @@ def build_lifer_overlay_map(
                 entries = loc_to_species.get(lid, [])
                 base_entries = [e for e in entries if e.get("is_base_lifer")]
                 popup_entries = entries if show_subspecies_lifers else base_entries
-                lifer_lines = format_lifer_popup_lines(
-                    entries=popup_entries,
-                    lifer_lookup_df=lifer_lookup_df,
-                    location_id=lid,
-                    base_species_fn=base_species_fn,
-                )
+                if popup_fragment_cache is not None:
+                    _lk = lifer_lines_fragment_key(
+                        location_id=lid,
+                        show_subspecies_lifers=bool(show_subspecies_lifers),
+                        tax_loc_key=tax_loc_key,
+                        effective_use_full=bool(effective_use_full),
+                        lite_map_popups=bool(lite_map_popups),
+                        entries=list(popup_entries),
+                    )
+                    lifer_lines = get_or_set_popup_fragment(
+                        popup_fragment_cache,
+                        _lk,
+                        lambda: format_lifer_popup_lines(
+                            entries=popup_entries,
+                            lifer_lookup_df=lifer_lookup_df,
+                            location_id=lid,
+                            base_species_fn=base_species_fn,
+                        ),
+                    )
+                else:
+                    lifer_lines = format_lifer_popup_lines(
+                        entries=popup_entries,
+                        lifer_lookup_df=lifer_lookup_df,
+                        location_id=lid,
+                        base_species_fn=base_species_fn,
+                    )
                 popup_html_cache[popup_key] = build_location_popup_html(
                     row["Location"],
                     lid,

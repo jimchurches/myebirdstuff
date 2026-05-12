@@ -118,16 +118,18 @@ def test_map_caches_cleared_on_success():
     lids = set(df_full["Location ID"].unique())
     popup = {"k": "v"}
     filtered = __import__("collections").OrderedDict([("a", 1)])
+    frag = {"frag": "html"}
     rebuild_working_set_from_date_filter(
         df_full,
         lids,
         filter_by_date=False,
         filter_start_date="",
         filter_end_date="",
-        map_caches=(popup, filtered),
+        map_caches=(popup, filtered, frag),
     )
     assert popup == {}
     assert len(filtered) == 0
+    assert frag == {}
 
 
 def test_records_by_loc_full_respects_location_ids_with_checklists():
