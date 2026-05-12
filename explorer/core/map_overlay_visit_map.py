@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from collections import OrderedDict
 from typing import Any, Dict, Hashable, Literal, MutableMapping, Optional, Tuple, cast
 
@@ -339,8 +340,14 @@ def build_visit_overlay_map(
     species_blank_default_zoom: int | None = None,
     species_blank_viewport_recipe: dict[str, Any] | None = None,
     go_to_gps_pin: tuple[float, float] | None = None,
+    metrics_sink: Optional[Dict[str, Any]] = None,
 ) -> MapOverlayResult:
-    """Build all-locations or species-filtered overlay (not lifer-locations mode)."""
+    """Build all-locations or species-filtered overlay (not lifer-locations mode).
+
+    See :func:`explorer.core.map_controller.build_species_overlay_map` for *metrics_sink*
+    semantics (#205 batch 4 I1/I2). Populated keys: ``view_path``, ``marker_count``,
+    ``popup_build_count``, ``popup_cache_hit_count``, ``popup_build_total_ms``.
+    """
     if selected_species:
         filtered = filter_species(df, selected_species)
         if filtered.empty:
@@ -505,9 +512,18 @@ def build_visit_overlay_map(
             )
         pin_parent: folium.Map | MarkerCluster = marker_cluster if marker_cluster is not None else species_map
 
+        # I1/I2 counters (#205 batch 4); zero-cost when ``metrics_sink is None`` other than the
+        # per-cache-miss ``time.perf_counter`` pair, which is ~100 ns total per popup build.
+        _m_count = 0
+        _p_built = 0
+        _p_hit = 0
+        _p_build_ms = 0.0
         for _, row in effective_location_data.iterrows():
+            _m_count += 1
             popup_key = (row["Location ID"], "", effective_use_full, tax_loc_key)
             if popup_key not in popup_html_cache:
+                _p_built += 1
+                _t_p0 = time.perf_counter()
                 base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
                     "datetime", ascending=popup_ascending
@@ -516,6 +532,9 @@ def build_visit_overlay_map(
                 popup_html_cache[popup_key] = build_location_popup_html(
                     row["Location"], row["Location ID"], visit_info
                 )
+                _p_build_ms += (time.perf_counter() - _t_p0) * 1000.0
+            else:
+                _p_hit += 1
             popup_html = popup_html_cache[popup_key]
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
@@ -530,6 +549,13 @@ def build_visit_overlay_map(
 
         if marker_cluster is not None:
             marker_cluster.add_to(species_map)
+
+        if metrics_sink is not None:
+            metrics_sink["view_path"] = "all_locations"
+            metrics_sink["marker_count"] = _m_count
+            metrics_sink["popup_build_count"] = _p_built
+            metrics_sink["popup_cache_hit_count"] = _p_hit
+            metrics_sink["popup_build_total_ms"] = round(_p_build_ms, 3)
 
         scope_fit = (all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED).strip()
         should_fit = scope_fit != ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY and bool(all_loc_pairs)
@@ -666,6 +692,11 @@ def build_visit_overlay_map(
             legend_items.append((e, f, label))
         species_map.get_root().html.add_child(Element(build_legend_html(legend_items)))
 
+        # I1/I2 counters (#205 batch 4); same shape as the all-locations loop above.
+        _m_count = 0
+        _p_built = 0
+        _p_hit = 0
+        _p_build_ms = 0.0
         for _, row in location_data_local.iterrows():
             loc_id = row["Location ID"]
 
@@ -674,6 +705,8 @@ def build_visit_overlay_map(
 
             popup_key = (loc_id, selected_species, tax_loc_key)
             if popup_key not in popup_html_cache:
+                _p_built += 1
+                _t_p0 = time.perf_counter()
                 base_records = records_by_loc.get(loc_id, pd.DataFrame())
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
                     "datetime", ascending=popup_ascending
@@ -696,6 +729,9 @@ def build_visit_overlay_map(
                     popup_html_cache[popup_key] = build_location_popup_html(
                         row["Location"], loc_id, visit_info, ""
                     )
+                _p_build_ms += (time.perf_counter() - _t_p0) * 1000.0
+            else:
+                _p_hit += 1
             popup_html = popup_html_cache[popup_key]
             popup_content = folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX)
 
@@ -722,6 +758,14 @@ def build_visit_overlay_map(
                 fill_opacity=fill_opacity,
                 popup=popup_content,
             ).add_to(species_map)
+            _m_count += 1
+
+        if metrics_sink is not None:
+            metrics_sink["view_path"] = "species"
+            metrics_sink["marker_count"] = _m_count
+            metrics_sink["popup_build_count"] = _p_built
+            metrics_sink["popup_cache_hit_count"] = _p_hit
+            metrics_sink["popup_build_total_ms"] = round(_p_build_ms, 3)
 
         # Follow the selected species extent only; background/context pins may be off-screen.
         species_pairs: list[list[float]] = []

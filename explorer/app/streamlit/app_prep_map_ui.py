@@ -520,8 +520,17 @@ def render_prep_spinner_and_map_tab(
                         result_warning = _cached.get("warning")
                     else:
                         perf_record_point("prep.map_cache_miss", extra={"mode": map_view_mode})
-                        with perf_span("prep.build_species_overlay_map"):
-                            result = build_species_overlay_map(**_map_kw)
+                        # #205 batch 4 I1/I2: collect popup-build vs marker-count split inside
+                        # the same perf event. ``perf_span`` stamps ``extra`` by reference at
+                        # finalize time, so mutations inside :func:`build_species_overlay_map`
+                        # land on the emitted record.
+                        _build_metrics: dict[str, Any] = {"mode": map_view_mode}
+                        with perf_span(
+                            "prep.build_species_overlay_map", extra=_build_metrics
+                        ):
+                            result = build_species_overlay_map(
+                                metrics_sink=_build_metrics, **_map_kw
+                            )
                             result_map = result.map
                             result_warning = result.warning
                         if result_map is not None:

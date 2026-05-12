@@ -127,6 +127,64 @@ def sidebar_map_view_select(page: Any) -> Any:
     return sidebar.locator('[data-testid="stSelectbox"]').first
 
 
+def measure_first_paint_ms(
+    page: Any,
+    url: str,
+    *,
+    must_contain: Sequence[str] | None = None,
+    timeout_ms: int | None = None,
+) -> dict[str, float]:
+    """Time ``page.goto`` → first appearance of ``pebird-map-banner`` in any frame.
+
+    Returns ``{"goto_ms", "banner_ms"}``. ``goto_ms`` is navigation-complete wall time
+    (``page.goto(... wait_until="domcontentloaded")`` return); ``banner_ms`` is the
+    user-experienced first-paint, end-to-end (subprocess pipeline: data load → prep →
+    map build → Streamlit render → iframe DOM paint). This is I4 for #205 batch 4.
+
+    *must_contain* (optional) lets callers refine "banner observed" to a specific
+    banner (e.g. ``All locations`` vs ``Lifer locations``); default just waits for
+    *any* ``pebird-map-banner``.
+    """
+    import time
+
+    t0 = time.monotonic()
+    page.goto(url, wait_until="domcontentloaded")
+    t_goto = time.monotonic()
+    wait_for_pebird_map_markup(
+        page,
+        must_contain=list(must_contain or []),
+        timeout_ms=timeout_ms,
+    )
+    t_banner = time.monotonic()
+    return {
+        "goto_ms": round((t_goto - t0) * 1000.0, 1),
+        "banner_ms": round((t_banner - t0) * 1000.0, 1),
+    }
+
+
+def append_e2e_first_paint_record(log_file: Path, payload: dict[str, Any]) -> None:
+    """Append one ``stage="e2e.first_paint"`` JSONL record to *log_file*.
+
+    Uses the same JSONL shape as ``EXPLORER_PERF_LOG_FILE`` events so the aggregator
+    (:mod:`scripts.aggregate_perf_jsonl`) can join app-side perf events with E2E-side
+    first-paint timings. Run-side identifier (``main_run_id``) is unknown from the
+    Playwright process, so callers should embed dataset / mode labels in *payload*.
+    Synthetic event uses ``run_kind="e2e"`` and ``fragment=None``.
+    """
+    import json
+    from datetime import datetime, timezone
+
+    rec: dict[str, Any] = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "stage": "e2e.first_paint",
+        "run_kind": "e2e",
+        "fragment": None,
+    }
+    rec.update(payload)
+    with open(log_file, "a", encoding="utf-8") as fp:
+        fp.write(json.dumps(rec, default=str) + "\n")
+
+
 def choose_map_view_mode(page: Any, label: str) -> None:
     """Pick a sidebar **Map view** option (*All locations*, *Lifer locations*, …)."""
     sidebar_map_view_select(page).click()
