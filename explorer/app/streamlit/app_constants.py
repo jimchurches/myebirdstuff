@@ -102,6 +102,7 @@ DEFAULT_TAXONOMY_LOCALE = TAXONOMY_LOCALE_DEFAULT
 EBIRD_DATA_SIG_KEY = "ebird_data_sig"
 EXPLORER_MAP_HTML_BYTES_KEY = "_explorer_map_html_bytes"
 POPUP_HTML_CACHE_KEY = "popup_html_cache"
+POPUP_FRAGMENT_CACHE_KEY = "popup_fragment_cache"
 FILTERED_BY_LOC_CACHE_KEY = "filtered_by_loc_cache"
 
 # Landing page container/widget keys.

@@ -66,12 +66,18 @@ from explorer.presentation.map_renderer import (
     build_species_banner_html,
     build_species_locations_awaiting_selection_banner_html,
     build_species_map_location_popup_html,
+    build_species_seen_sections_html,
     build_visit_info_html,
     classify_locations,
     create_map,
     format_visit_time,
     popup_scroll_script,
     resolve_lifer_last_seen,
+)
+from explorer.presentation.map_popup_fragments import (
+    get_or_set_popup_fragment,
+    species_sections_fragment_key,
+    visit_list_fragment_key,
 )
 from explorer.presentation.map_ui_constants import MAP_POPUP_MAX_WIDTH_PX
 from explorer.core.species_logic import filter_species
@@ -341,12 +347,16 @@ def build_visit_overlay_map(
     species_blank_viewport_recipe: dict[str, Any] | None = None,
     go_to_gps_pin: tuple[float, float] | None = None,
     metrics_sink: Optional[Dict[str, Any]] = None,
+    popup_fragment_cache: MutableMapping[Tuple[Any, ...], str] | None = None,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode).
 
     See :func:`explorer.core.map_controller.build_species_overlay_map` for *metrics_sink*
     semantics (#205 batch 4 I1/I2). Populated keys: ``view_path``, ``marker_count``,
     ``popup_build_count``, ``popup_cache_hit_count``, ``popup_build_total_ms``.
+
+    *popup_fragment_cache* (#205 Batch A): optional session dict reusing visit-list and species-section
+    HTML across full-popup cache misses when row content is unchanged.
     """
     if selected_species:
         filtered = filter_species(df, selected_species)
@@ -528,7 +538,15 @@ def build_visit_overlay_map(
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
                     "datetime", ascending=popup_ascending
                 )
-                visit_info = build_visit_info_html(visit_records, format_visit_time)
+                if popup_fragment_cache is not None:
+                    _vkey = visit_list_fragment_key(visit_records)
+                    visit_info = get_or_set_popup_fragment(
+                        popup_fragment_cache,
+                        _vkey,
+                        lambda: build_visit_info_html(visit_records, format_visit_time),
+                    )
+                else:
+                    visit_info = build_visit_info_html(visit_records, format_visit_time)
                 popup_html_cache[popup_key] = build_location_popup_html(
                     row["Location"], row["Location ID"], visit_info
                 )
@@ -711,12 +729,33 @@ def build_visit_overlay_map(
                 visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
                     "datetime", ascending=popup_ascending
                 )
-                visit_info = build_visit_info_html(visit_records, format_visit_time)
+                if popup_fragment_cache is not None:
+                    _vkey = visit_list_fragment_key(visit_records)
+                    visit_info = get_or_set_popup_fragment(
+                        popup_fragment_cache,
+                        _vkey,
+                        lambda: build_visit_info_html(visit_records, format_visit_time),
+                    )
+                else:
+                    visit_info = build_visit_info_html(visit_records, format_visit_time)
                 n_visits = int(len(visit_records))
                 if row["has_species_match"]:
                     species_sightings = filtered_by_loc.get(loc_id, pd.DataFrame()).sort_values(
                         "datetime", ascending=popup_ascending
                     )
+                    if popup_fragment_cache is not None:
+                        _skey = species_sections_fragment_key(
+                            species_sightings, ascending=popup_ascending
+                        )
+                        _sections = get_or_set_popup_fragment(
+                            popup_fragment_cache,
+                            _skey,
+                            lambda: build_species_seen_sections_html(
+                                species_sightings, ascending=popup_ascending
+                            ),
+                        )
+                    else:
+                        _sections = None
                     popup_html_cache[popup_key] = build_species_map_location_popup_html(
                         row["Location"],
                         loc_id,
@@ -724,6 +763,7 @@ def build_visit_overlay_map(
                         visit_info,
                         visit_record_count=n_visits,
                         popup_ascending=popup_ascending,
+                        species_sections_html=_sections,
                     )
                 else:
                     popup_html_cache[popup_key] = build_location_popup_html(

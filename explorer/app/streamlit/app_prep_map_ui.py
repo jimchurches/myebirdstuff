@@ -34,6 +34,7 @@ from explorer.app.streamlit.app_constants import (
     FILTERED_BY_LOC_CACHE_KEY,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
     FOLIUM_STATIC_MAP_CACHE_KEY,
+    POPUP_FRAGMENT_CACHE_KEY,
     POPUP_HTML_CACHE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
@@ -199,6 +200,7 @@ def render_prep_spinner_and_map_tab(
                     )
                     st.session_state[EBIRD_DATA_SIG_KEY] = sig
                     st.session_state[POPUP_HTML_CACHE_KEY] = {}
+                    st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
                     st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
                     st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
 
@@ -420,6 +422,7 @@ def render_prep_spinner_and_map_tab(
                         "base_species_fn": base_species_for_lifer,
                         "taxonomy_locale": tax_locale_effective,
                         "popup_html_cache": st.session_state.get(POPUP_HTML_CACHE_KEY),
+                        "popup_fragment_cache": st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
                         "filtered_by_loc_cache": st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
                         "map_view_mode": map_view_mode,
                         "hide_non_matching_locations": hide_nm,

@@ -18,6 +18,7 @@ from explorer.app.streamlit.app_constants import (
     MAP_VIEW_LABEL_TO_MODE,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
+    POPUP_FRAGMENT_CACHE_KEY,
     POPUP_HTML_CACHE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
@@ -239,6 +240,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         map_caches=(
             st.session_state.get(POPUP_HTML_CACHE_KEY),
             st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
+            st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
         ),
     )
     if ws is None:
@@ -251,6 +253,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             map_caches=(
                 st.session_state.get(POPUP_HTML_CACHE_KEY),
                 st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
+                st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
             ),
         )
     work_df = ws.df

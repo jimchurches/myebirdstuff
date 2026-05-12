@@ -384,6 +384,26 @@ def test_metrics_sink_records_cache_hits_when_popup_cache_pre_warmed():
     assert sink_warm["popup_cache_hit_count"] == 1
 
 
+def test_popup_fragment_cache_dedupes_when_full_popup_cache_reset():
+    """Visit-list fragments persist across a full-popup cache miss (#205 Batch A)."""
+    df = _minimal_map_df()
+    frag: dict[tuple, str] = {}
+    kwargs = {**_common_kwargs(df), "popup_fragment_cache": frag}
+    sink1: dict = {}
+    build_species_overlay_map(**kwargs, selected_species="", metrics_sink=sink1)
+    n_keys = len(frag)
+    assert n_keys >= 1
+    sink2: dict = {}
+    build_species_overlay_map(
+        **{**kwargs, "popup_html_cache": {}},
+        selected_species="",
+        metrics_sink=sink2,
+    )
+    assert len(frag) == n_keys
+    assert sink2["popup_build_count"] == 1
+    assert sink2["popup_cache_hit_count"] == 0
+
+
 def test_metrics_sink_populated_for_species_view():
     df = _minimal_map_df()
     sink: dict = {}
