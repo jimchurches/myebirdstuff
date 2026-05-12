@@ -6,6 +6,28 @@ Run::
     python -m playwright install chromium
     pytest tests/explorer/test_map_perf_e2e.py --perf -v
 
+**Lite popups (W2) automated A/B:** the fixture ``streamlit_perf_url_logfile_and_lite_expected``
+runs each dependent test **twice** (``EXPLORER_MAP_LITE_POPUPS=0`` then ``=1`` in the Streamlit
+child process). See ``test_map_perf_w2_lite_journey_tags_build_extra``.
+
+**Manual app with lite popups** (from repo root)::
+
+    EXPLORER_MAP_LITE_POPUPS=1 streamlit run explorer/app/streamlit/app.py
+
+**Archive W2 JSONL locally** (6 files: 3 runs × lite off/on; directory is gitignored)::
+
+    mkdir -p benchmarks/map_perf/snapshots/issue-205-w2
+    for lite in 0 1; do for run in 1 2 3; do
+      EXPLORER_E2E_PERF_JSONL_ARCHIVE="$PWD/benchmarks/map_perf/snapshots/issue-205-w2/w2-fixture-lite${lite}-r${run}.jsonl" \\
+      EXPLORER_E2E_MAP_LITE_POPUPS=$lite \\
+        python -m pytest tests/explorer/test_map_perf_e2e.py::test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling --perf -v
+    done; done
+
+Optional perf JSONL + sidebar buffer::
+
+    EXPLORER_PERF=1 EXPLORER_PERF_LOG_FILE=$PWD/tmp/perf.jsonl EXPLORER_MAP_LITE_POPUPS=1 \\
+      streamlit run explorer/app/streamlit/app.py
+
 Events are captured via ``EXPLORER_PERF_LOG_FILE`` (JSONL); guardrails read
 ``benchmarks/map_perf/stage_ceilings.json`` (very loose ceilings).
 """
@@ -24,6 +46,7 @@ pytest.importorskip("playwright.sync_api")
 from tests.explorer.e2e_support import (
     REPO_ROOT,
     append_e2e_first_paint_record,
+    e2e_map_lite_popups_for_streamlit_child,
     choose_map_view_mode,
     launch_chromium_or_skip,
     max_elapsed_ms_by_stage,
@@ -48,13 +71,14 @@ def _load_stage_ceilings() -> dict[str, float]:
     return out
 
 
-def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
-    streamlit_perf_url_and_logfile: tuple[str, Path],
+def _run_fixture_view_mode_cycle_journey(
+    url: str,
+    log_file: Path,
+    *,
+    dataset_label: str,
+    lite_map_popups: bool,
 ) -> None:
-    url, log_file = streamlit_perf_url_and_logfile
-    ceilings = _load_stage_ceilings()
-    dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
-
+    """All → Lifer → All map view-mode cycle; records ``e2e.first_paint`` with W2 tag."""
     with launch_chromium_or_skip() as browser:
         page = browser.new_page()
         # I4 (#205 batch 4): measure end-to-end first paint *before* any other navigation work,
@@ -73,6 +97,7 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
                 "banner_ms": first_paint["banner_ms"],
                 "dataset_label": dataset_label,
                 "journey": "fixture_view_mode_cycle",
+                "lite_map_popups": lite_map_popups,
             },
         )
         choose_map_view_mode(page, "Lifer locations")
@@ -85,6 +110,21 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
             page,
             must_contain=['class="pebird-map-banner__title">All locations</span>'],
         )
+
+
+def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
+    streamlit_perf_url_and_logfile: tuple[str, Path],
+) -> None:
+    url, log_file = streamlit_perf_url_and_logfile
+    ceilings = _load_stage_ceilings()
+    dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
+
+    _run_fixture_view_mode_cycle_journey(
+        url,
+        log_file,
+        dataset_label=dataset_label,
+        lite_map_popups=e2e_map_lite_popups_for_streamlit_child() == "1",
+    )
 
     time.sleep(0.5)
     raw_lines = []
@@ -105,6 +145,57 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
         "expected at least one prep.map_cache_hit in JSONL for All→Lifer→All "
         f"(got {len(cache_hits)}); stages seen: {sorted(stages_seen)!r}"
     )
+
+    highs = max_elapsed_ms_by_stage(events)
+    failures: list[str] = []
+    for stage, cap in ceilings.items():
+        obs = highs.get(stage)
+        if obs is None:
+            continue
+        if obs > cap:
+            failures.append(f"{stage}: {obs:.1f}ms > ceiling {cap:.1f}ms")
+    assert not failures, "Perf ceilings exceeded:\n" + "\n".join(failures)
+
+
+def test_map_perf_w2_lite_journey_tags_build_extra(
+    streamlit_perf_url_logfile_and_lite_expected: tuple[str, Path, bool],
+) -> None:
+    """W2 A/B: child env forces ``EXPLORER_MAP_LITE_POPUPS``; JSONL must match on every build."""
+    url, log_file, lite_on = streamlit_perf_url_logfile_and_lite_expected
+    ceilings = _load_stage_ceilings()
+    dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
+
+    _run_fixture_view_mode_cycle_journey(
+        url,
+        log_file,
+        dataset_label=dataset_label,
+        lite_map_popups=lite_on,
+    )
+
+    time.sleep(0.5)
+    raw_lines = []
+    if log_file.exists():
+        raw_lines = log_file.read_text(encoding="utf-8").splitlines()
+    events = parse_perf_json_objects_from_log_lines(raw_lines)
+    assert len(events) >= 3, f"expected perf JSON events in Streamlit logs, got {len(events)}"
+
+    builds = [e for e in events if e.get("stage") == "prep.build_species_overlay_map"]
+    assert builds, (
+        "expected at least one prep.build_species_overlay_map in JSONL "
+        f"(lite_map_popups env={lite_on!r}); stages: "
+        f"{sorted({str(e.get('stage')) for e in events if e.get('stage')})!r}"
+    )
+    for e in builds:
+        extra = e.get("extra") or {}
+        assert extra.get("lite_map_popups") is lite_on, (
+            f"prep.build_species_overlay_map extra.lite_map_popups={extra.get('lite_map_popups')!r} "
+            f"expected {lite_on!r} for EXPLORER_MAP_LITE_POPUPS={'1' if lite_on else '0'}"
+        )
+
+    fp_events = [e for e in events if e.get("stage") == "e2e.first_paint"]
+    assert fp_events, "expected e2e.first_paint row from journey"
+    for e in fp_events:
+        assert e.get("lite_map_popups") is lite_on
 
     highs = max_elapsed_ms_by_stage(events)
     failures: list[str] = []

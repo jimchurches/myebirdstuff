@@ -26,6 +26,17 @@ INTEGRATION_FIXTURE_CSV = REPO_ROOT / "tests" / "fixtures" / "ebird_integration_
 EXPLORER_E2E_DATASET_CSV_ENV = "EXPLORER_E2E_DATASET_CSV"
 EXPLORER_E2E_HTTP_TIMEOUT_ENV = "EXPLORER_E2E_HTTP_TIMEOUT_S"
 EXPLORER_E2E_MAP_TIMEOUT_MS_ENV = "EXPLORER_E2E_MAP_TIMEOUT_MS"
+# Perf archive A/B: set to ``0`` or ``1`` so ``streamlit_perf_url_and_logfile`` forces the same
+# ``EXPLORER_MAP_LITE_POPUPS`` in the Streamlit child (default ``0`` when unset).
+EXPLORER_E2E_MAP_LITE_POPUPS_ENV = "EXPLORER_E2E_MAP_LITE_POPUPS"
+
+
+def e2e_map_lite_popups_for_streamlit_child() -> str:
+    """Return ``\"0\"`` or ``\"1\"`` for W2-style perf captures (see ``EXPLORER_E2E_MAP_LITE_POPUPS``)."""
+    import os
+
+    v = str(os.environ.get(EXPLORER_E2E_MAP_LITE_POPUPS_ENV, "")).strip()
+    return v if v in ("0", "1") else "0"
 
 
 def resolve_e2e_dataset_csv_source() -> Path:
