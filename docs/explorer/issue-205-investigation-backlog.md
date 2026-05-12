@@ -4,6 +4,13 @@
 > See [#205](https://github.com/jimchurches/myebirdstuff/issues/205) for the parent issue. Batch 1
 > notes (decisions, baseline timings) are posted as comments on that issue, not in this repo.
 
+> **Branch hygiene:** This branch is merged *from* `beta-next` whenever mainline moves (same
+> map/prep/test code as production line). Investigation-only commits—this backlog, historical
+> experiments (e.g. W1 batch-3), embed-mode flags, local JSONL baselines under
+> `benchmarks/map_perf/snapshots/`—stay here. Batch 4 probes (I1/I2 `metrics_sink`, I4 first-paint,
+> I5 `aggregate_perf_jsonl`) now also live on `beta-next` via [#217](https://github.com/jimchurches/myebirdstuff/pull/217);
+> merging `beta-next` here avoids two divergent copies of the same instrumentation.
+
 The list below is the broader menu of things worth trying. Batches are kept small (1–2 active
 experiments at a time) so we can decide *go / drop / shelve* with evidence rather than running
 everything in parallel.
@@ -22,7 +29,7 @@ stages exposed by [explorer/app/streamlit/perf_instrumentation.py](../../explore
 
 - `prep.data_signature`
 - `prep.map_context_prepare`
-- `prep.build_species_overlay_map` (rebuild path; cache miss only)
+- `prep.build_species_overlay_map` (rebuild path; cache miss only; `extra` may include `marker_count`, `popup_build_*` when streamed from `beta-next` / [#217](https://github.com/jimchurches/myebirdstuff/pull/217))
 - `prep.cached_family_map_bundle`, `prep.family_map_composition_with_pins`
 - `prep.folium_map_to_html_bytes`
 - `prep.map_iframe_embed`
