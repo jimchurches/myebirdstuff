@@ -36,6 +36,18 @@ PERF_LOG_ENV_KEY = "EXPLORER_PERF_LOG"
 PERF_LOG_FILE_ENV_KEY = "EXPLORER_PERF_LOG_FILE"
 _LOG = logging.getLogger(__name__)
 
+# Stages compared side-by-side in the sidebar when EXPLORER_PERF=1 (#221 vs Folium).
+_MAP_EMBED_COMPARE_STAGES: tuple[str, ...] = (
+    "prep.map_iframe_embed",
+    "map.experimental.payload",
+    "map.experimental.component_embed",
+)
+_MAP_EMBED_COMPARE_LABELS: dict[str, str] = {
+    "prep.map_iframe_embed": "Classic · Folium iframe (st_folium)",
+    "map.experimental.payload": "Experimental · GeoJSON + revision (Python)",
+    "map.experimental.component_embed": "Experimental · Streamlit component embed",
+}
+
 
 def _secrets_raw(key: str) -> str:
     try:
@@ -247,6 +259,58 @@ def perf_recent_summary_rows(limit: int = 40) -> list[dict[str, Any]]:
     return rows
 
 
+def perf_latest_main_run_map_embed_rows() -> list[dict[str, Any]]:
+    """Summarise Folium vs experimental map spans for the latest rerun that recorded either (#221).
+
+    Elapsed times are **Python-side** ``perf_counter`` around Streamlit embed calls, in **script
+    order** for one full run — not time-to-visible in the browser.
+    """
+    events = st.session_state.get(EXPLORER_PERF_EVENTS_KEY)
+    if not isinstance(events, list) or not events:
+        return []
+    want = frozenset(_MAP_EMBED_COMPARE_STAGES)
+    latest_rid: Any | None = None
+    for e in reversed(events):
+        if isinstance(e, dict) and e.get("stage") in want:
+            latest_rid = e.get("main_run_id")
+            break
+    if latest_rid is None:
+        return []
+    picked: list[dict[str, Any]] = []
+    order_index = {s: i for i, s in enumerate(_MAP_EMBED_COMPARE_STAGES)}
+    for e in events:
+        if not isinstance(e, dict):
+            continue
+        if e.get("main_run_id") != latest_rid:
+            continue
+        stg = e.get("stage")
+        if stg not in want:
+            continue
+        extra = e.get("extra") if isinstance(e.get("extra"), dict) else {}
+        notes_parts: list[str] = []
+        mv = extra.get("map_view_mode")
+        if mv is not None:
+            notes_parts.append(f"map_view={mv}")
+        nf = extra.get("n_features")
+        if nf is not None:
+            notes_parts.append(f"n_pins={nf}")
+        rp = extra.get("revision_prefix")
+        if rp:
+            notes_parts.append(f"rev={rp}")
+        picked.append(
+            {
+                "_order": order_index.get(str(stg), 99),
+                "step": _MAP_EMBED_COMPARE_LABELS.get(str(stg), str(stg)),
+                "elapsed_ms": e.get("elapsed_ms"),
+                "notes": "; ".join(notes_parts),
+            }
+        )
+    picked.sort(key=lambda r: int(r.get("_order", 99)))
+    for r in picked:
+        del r["_order"]
+    return picked
+
+
 def render_explorer_perf_sidebar_panel() -> None:
     """Sidebar expander: summary table + JSONL download + clear (only when perf is on)."""
     if not explorer_perf_enabled():
@@ -256,6 +320,23 @@ def render_explorer_perf_sidebar_panel() -> None:
             "Instrumentation for [issue #179](https://github.com/jimchurches/myebirdstuff/issues/179). "
             "Set `EXPLORER_PERF=1` locally or in Cloud secrets."
         )
+        map_cmp = perf_latest_main_run_map_embed_rows()
+        st.markdown("**Map embed timings (latest rerun)**")
+        if map_cmp:
+            st.caption(
+                "Python time around each embed, in script order (Folium runs before the experimental "
+                "tab on the same rerun). Not browser paint — use DevTools if you care about pixels."
+            )
+            st.dataframe(map_cmp, hide_index=True, use_container_width=True)
+        else:
+            st.info(
+                "No **map** timings in the buffer yet — only stages like `dataset.load` will appear "
+                "until Streamlit finishes a full dashboard run **after** your CSV is loaded.\n\n"
+                "**Try:** open the **Map** tab once (classic map must build successfully), set sidebar "
+                "**Map view** to **All locations** if you want experimental rows too, then change any "
+                "sidebar control (or press **R**) to force a **rerun** and reopen this expander.",
+                icon="ℹ️",
+            )
         rows = perf_recent_summary_rows(50)
         if rows:
             st.dataframe(rows, hide_index=True, use_container_width=True)

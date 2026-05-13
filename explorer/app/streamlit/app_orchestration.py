@@ -49,6 +49,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
 from explorer.app.streamlit.app_landing_ui import title_with_logo
+from explorer.app.streamlit.app_experimental_map_ui import render_map_experimental_tab
 from explorer.app.streamlit.app_prep_map_ui import render_prep_spinner_and_map_tab
 from explorer.app.streamlit.app_settings_ui import render_settings_tab
 from explorer.app.streamlit.app_settings_state import (
@@ -194,6 +195,7 @@ def render_dashboard_shell(
 
     (
         tab_map,
+        tab_map_experimental,
         tab_checklist,
         tab_rankings,
         tab_yearly,
@@ -227,6 +229,14 @@ def render_dashboard_shell(
         mark_last_seen=tax.mark_last_seen,
         species_url_fn=tax.species_url_fn,
     )
+
+    with tab_map_experimental:
+        render_map_experimental_tab(
+            work_df=mw.work_df,
+            df_full=df_full,
+            map_view_mode=mw.map_view_mode,
+            map_height=mw.map_height,
+        )
 
     run_non_map_data_tab_fragments(
         tab_checklist,

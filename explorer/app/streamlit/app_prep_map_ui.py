@@ -609,7 +609,10 @@ def render_prep_spinner_and_map_tab(
                             "`requirements.txt` at the repo root."
                         )
                         st.stop()
-                    with perf_span("prep.map_iframe_embed"):
+                    with perf_span(
+                        "prep.map_iframe_embed",
+                        extra={"embed": "folium", "map_view_mode": map_view_mode},
+                    ):
                         # Deep copy: ``st_folium`` / Folium render paths mutate in memory; mutating the
                         # cached ``folium.Map`` causes intermittent empty maps on subsequent cache hits.
                         st_folium(

@@ -27,3 +27,7 @@ htmlcov/
 
 # Local Explorer perf snapshots (machine-specific JSON; archive via scripts/snapshot_explorer_perf_log.py)
 benchmarks/map_perf/snapshots/
+
+# Streamlit custom component frontend (built assets under frontend/build are tracked)
+explorer/components/*/frontend/node_modules/
+explorer/components/*/frontend/build/**/*.map

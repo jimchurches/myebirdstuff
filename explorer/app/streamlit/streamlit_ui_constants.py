@@ -44,6 +44,7 @@ SPECIES_SEARCH_RERUN_SCOPE = "fragment"
 
 NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Map",
+    "Map (experimental)",
     "Checklist Statistics",
     "Ranking & Lists",
     "Yearly Summary",
