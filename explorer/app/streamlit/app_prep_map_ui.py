@@ -29,6 +29,7 @@ from explorer.app.streamlit.app_caches import (
 )
 from explorer.app.streamlit.app_constants import (
     EBIRD_DATA_SIG_KEY,
+    EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     EXPORT_MAP_HTML_BTN_KEY,
     FILTERED_BY_LOC_CACHE_KEY,
@@ -203,6 +204,7 @@ def render_prep_spinner_and_map_tab(
                     st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
                     st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
                     st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+                    st.session_state.pop(EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY, None)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None

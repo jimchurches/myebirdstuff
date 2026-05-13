@@ -33,7 +33,8 @@ notes) and these **guardrail ceilings**.
 ## Local snapshots (not committed — single-machine history)
 
 Capture runs with **`EXPLORER_PERF_LOG_FILE`** (see **`explorer/app/streamlit/README.md`**) pointing at a
-writable path, reproduce the journey, then archive the JSONL into **gitignored**
+writable path (the repo’s gitignored **`benchmarks/map_perf/tmp/`** is convenient), reproduce the journey,
+then archive the JSONL into **gitignored**
 
 `benchmarks/map_perf/snapshots/YYYY-MM-DDTHH-MM-SSZ_<label>.json`
 

@@ -112,6 +112,8 @@ Optional **`EXPLORER_PERF_LOG=1`**: also emit one JSON object per line at **INFO
 
 Optional **`EXPLORER_PERF_LOG_FILE=/absolute/or/relative/path.jsonl`**: append the same JSON objects (one line each) to a file — useful for local subprocess tooling; off when unset.
 
+**Experimental map (#221):** **`EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP=N`** (positive integer) caps checklist rows inlined per pin in **Map (experimental)** GeoJSON (lifelist link remains for full history). Unset = full classic parity for visit lists.
+
 Implementation: `explorer/app/streamlit/perf_instrumentation.py` (`perf_span`, `perf_fragment`); hooks in `app_data_loading.py`, `app_prep_map_ui.py`, `app.py`, and tab fragments.
 
 ## Streamlit Community Cloud

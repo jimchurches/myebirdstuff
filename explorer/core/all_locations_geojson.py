@@ -3,8 +3,11 @@
 Per-pin ``popup_v1`` is structured data for one TS template (not HTML×N). With ``records_by_location``,
 ``visited.entries`` mirrors classic visit-list rows (parallel to ``build_visit_info_html``).
 
-Warm reruns rebuild full GeoJSON + visits each Streamlit run unless we add caching (#221 spike doc **§ B**
-vs **Caching vs lazy pop-ups**). Prefer memo keyed like Folium map cache before lazy-on-open for parity UX.
+Optional ``visits_inline_max`` trims inlined checklist rows per pin (lifelist link remains); pairs with
+env ``EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP`` from Streamlit (see experimental tab).
+
+Streamlit-side payload caching (#221) avoids rebuilding GeoJSON on warm reruns when the Folium map
+cache key and revision extras match — see ``EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY``.
 """
 
 from __future__ import annotations
@@ -45,8 +48,26 @@ def _popup_payload_v1_compact(
 def _popup_payload_v1_all_locations(
     *,
     visit_entries: list[dict[str, str]],
+    visits_inline_max: int | None = None,
 ) -> dict[str, Any]:
-    """Classic All locations shape: heading uses lifelist URL in TS; ``Visited:`` checklist links."""
+    """Classic All locations shape: heading uses lifelist URL in TS; ``Visited:`` checklist links.
+
+    When *visits_inline_max* is a positive int and there are more rows, entries are truncated and
+    ``visited_truncated`` metadata explains the omission (lifelist remains the exhaustive tie-back).
+    """
+    total = len(visit_entries)
+    if (
+        visits_inline_max is not None
+        and visits_inline_max > 0
+        and total > visits_inline_max
+    ):
+        return {
+            "v": 1,
+            "visited": {"label": "Visited:", "entries": visit_entries[:visits_inline_max]},
+            "visited_truncated": True,
+            "visited_total": total,
+            "visited_omitted": total - visits_inline_max,
+        }
     return {"v": 1, "visited": {"label": "Visited:", "entries": visit_entries}}
 
 
@@ -79,6 +100,7 @@ def build_all_locations_geojson_payload(
     checklist_counts_by_location: Mapping[Hashable, int] | None = None,
     records_by_location: Mapping[Hashable, pd.DataFrame] | None = None,
     popup_visit_dates_ascending: bool = True,
+    visits_inline_max: int | None = None,
     pin_fill_hex: str = "#3388ff",
     omit_pin_colour: bool = False,
     revision_extra: str = "",
@@ -93,6 +115,9 @@ def build_all_locations_geojson_payload(
 
     When *records_by_location* is set (same mapping as Folium **All locations**), each feature's
     ``popup_v1`` includes a ``visited`` section mirroring :func:`build_location_popup_html` content.
+
+    *visits_inline_max* caps how many checklist links appear under ``visited.entries`` per pin;
+    ``None`` keeps full parity with classic (all visits inlined).
     """
     cols = {"Location ID", "Location", "Latitude", "Longitude"}
     if not cols.issubset(location_data.columns):
@@ -124,7 +149,10 @@ def build_all_locations_geojson_payload(
                 lifelist_url=lifelist_href,
             )
         else:
-            popup_v1 = _popup_payload_v1_all_locations(visit_entries=visit_entries)
+            popup_v1 = _popup_payload_v1_all_locations(
+                visit_entries=visit_entries,
+                visits_inline_max=visits_inline_max,
+            )
         props: dict[str, Any] = {
             "location_id": lid,
             "name": name,

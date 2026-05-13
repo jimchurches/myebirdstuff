@@ -10,6 +10,7 @@ import streamlit as st
 
 from explorer.app.streamlit.app_constants import (
     EBIRD_DATA_SIG_KEY,
+    EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     REPO_ROOT,
     FILTERED_BY_LOC_CACHE_KEY,
@@ -100,6 +101,7 @@ def invalidate_folium_map_embed_cache() -> None:
         st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
     ) + 1
     st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+    st.session_state.pop(EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY, None)
     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
 
 

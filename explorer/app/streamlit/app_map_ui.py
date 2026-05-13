@@ -12,6 +12,7 @@ import streamlit.components.v1 as components
 
 from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
+    EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY,
     EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     REPO_ROOT,
@@ -403,6 +404,7 @@ def species_searchbox_fragment() -> None:
             st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
         ) + 1
         st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+        st.session_state.pop(EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY, None)
         st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         st.rerun()
 

@@ -104,6 +104,38 @@ def test_build_all_locations_geojson_payload_visited_descending() -> None:
     assert entries[0]["href"] == "https://ebird.org/checklist/S222"
 
 
+def test_build_all_locations_geojson_payload_visits_inline_truncation() -> None:
+    df = pd.DataFrame(
+        {
+            "Location ID": ["L1"],
+            "Location": ["Alpha"],
+            "Latitude": [-34.0],
+            "Longitude": [150.0],
+        }
+    )
+    records = pd.DataFrame(
+        {
+            "Submission ID": ["S3", "S2", "S1"],
+            "datetime": pd.to_datetime(
+                ["2022-01-01 10:00", "2021-01-01 10:00", "2020-01-01 10:00"],
+            ),
+        }
+    )
+    _, gj = build_all_locations_geojson_payload(
+        df,
+        checklist_counts_by_location={"L1": 3},
+        records_by_location={"L1": records},
+        popup_visit_dates_ascending=True,
+        visits_inline_max=2,
+    )
+    pop = gj["features"][0]["properties"]["popup_v1"]
+    assert pop["visited_truncated"] is True
+    assert pop["visited_total"] == 3
+    assert pop["visited_omitted"] == 1
+    assert len(pop["visited"]["entries"]) == 2
+    assert pop["visited"]["entries"][0]["href"].endswith("/S1")
+
+
 def test_build_all_locations_geojson_payload_omit_pin_colour() -> None:
     df = pd.DataFrame(
         {

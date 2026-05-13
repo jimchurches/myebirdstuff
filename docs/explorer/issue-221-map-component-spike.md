@@ -81,6 +81,8 @@ They address **different** problems; **use both** when needed:
 
 **Suggested order:** Pursue **payload caching first** (same user-visible behaviour as today, targets warm **`map.experimental.payload`**). Add **lazy `visited` (or cap + lazy)** if profiling still shows pain at scale, or to trim initial transfer — complementary, not either/or.
 
+**Implemented (2026-05-13 evening):** Session cache **`EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY`** — hit skips **`prepare_all_locations_map_context`** + **`build_all_locations_geojson_payload`** when the tuple **`(static_map_cache_key(…), revision_extra_json, visits_inline_cap)`** matches; cleared alongside Folium map cache invalidation. Optional env **`EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP=N`** truncates ``visited.entries`` per pin (popup shows lifelist link for full history). Per-popup fetch without Python rerun not implemented (would need iframe-only transport).
+
 → Copy **§ B** (Performance notes — paragraph B) into a [#221](https://github.com/jimchurches/myebirdstuff/issues/221) comment when sharing results with collaborators.
 
 ### Pop-ups — agreed direction (rich eBird without “dumbing down”)
@@ -128,10 +130,10 @@ This preserves **rich tie-back to eBird** while avoiding **`popup_html × N`** s
 
 ### TODO / next (for a future “real” issue on `beta-next`)
 
-- [x] Warm-cache perf repeat — **done** (see **§ B** above): warm classic skips overlay rebuild; **`map.experimental.payload`** still ~6.3 s until **payload caching** (#221 follow-up).
-- [ ] **Python-side cache** for experimental GeoJSON/payload when revision + inputs unchanged (mirror Folium map cache idea).
+- [x] Warm-cache perf repeat — **done** (see **§ B**); session **payload cache** addresses warm **`map.experimental.payload`** rebuilds when inputs unchanged.
+- [x] **Python-side cache** — **`EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY`** (Folium **`static_map_cache_key`** + `revision_extra` + visits cap); nuked with Folium cache.
 - [ ] Browser-side sanity (DevTools / subjective) alongside Python timers.
-- [ ] Optional **lazy `visited`** (or cap + lazy) if payload/build still heavy after caching — avoid **`st_rerun` per popup**.
+- [ ] Optional **lazy `visited`** (iframe-only / no full rerun per open) if cap + cache insufficient.
 - [ ] Structured popup — extend for species/hotspot/history/Macaulay when in scope (seen/lifer).
 - [ ] Optional: cluster icon styling parity with Folium tiers (`iconCreateFunction`).
 - [ ] Decide cut-over scope vs parallel experimental tab; spike branch **does not merge** to `beta-next` per agreement — spawn **new issue(s)** when promoting.
@@ -139,6 +141,11 @@ This preserves **rich tie-back to eBird** while avoiding **`popup_html × N`** s
 ---
 
 ## Running log
+
+### 2026-05-13 (evening)
+
+- **Perf JSONL:** Archived `benchmarks/map_perf/tmp/explorer_perf.jsonl` → **`benchmarks/map_perf/snapshots/2026-05-13T22-57-46Z_issue221-visit-list-cold-warm.json`** via **`scripts/snapshot_explorer_perf_log.py`**; **`benchmarks/map_perf/tmp/`** gitignored; removed duplicate JSONL from **`tmp/`**.
+- **Experimental map:** Session-state **payload cache** (same key inputs as Folium **All locations** cache path + cluster bundle + visits cap); **`EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP`** for truncated visit lists + TS lifelist hint.
 
 ### 2026-05-13 (later)
 

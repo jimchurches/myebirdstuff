@@ -211,6 +211,8 @@ SESSION_SPECIES_SEARCH_USER_EDITING_KEY = "_streamlit_species_search_user_editin
 # Last main-run id the species search fragment saw; used to refill the bar after tab navigation.
 SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY = "_streamlit_species_search_last_main_run_id"
 FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
+# Experimental All locations GeoJSON + revision (#221); drop alongside Folium map cache invalidation.
+EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY = "_explorer_experimental_all_locations_payload_v1"
 # Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
 # Go to GPS — session-only temporary marker (refs #199); never persisted to YAML.

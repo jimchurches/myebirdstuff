@@ -43,6 +43,9 @@ interface PopupPayloadV1 {
     label?: string;
     entries?: PopupLinkV1[];
   };
+  visited_truncated?: boolean;
+  visited_total?: number;
+  visited_omitted?: number;
 }
 
 interface MapArgs {
@@ -123,7 +126,14 @@ function parsePopupV1(raw: unknown): PopupPayloadV1 | null {
       }));
     visited = { label: vLabel, entries };
   }
-  return { v: 1, summary_lines, links, visited };
+  const visited_truncated = o.visited_truncated === true;
+  const visited_total =
+    typeof o.visited_total === "number" && Number.isFinite(o.visited_total) ? o.visited_total : undefined;
+  const visited_omitted =
+    typeof o.visited_omitted === "number" && Number.isFinite(o.visited_omitted)
+      ? o.visited_omitted
+      : undefined;
+  return { v: 1, summary_lines, links, visited, visited_truncated, visited_total, visited_omitted };
 }
 
 /** Classic All locations card: lifelist heading + scrollable ``Visited:`` links (``map_popup_models``). */
@@ -131,6 +141,7 @@ function popupHtmlVisitedLayout(
   name: string,
   lifelistUrl: string,
   visited: NonNullable<PopupPayloadV1["visited"]>,
+  trunc?: Pick<PopupPayloadV1, "visited_truncated" | "visited_total" | "visited_omitted">,
 ): string {
   const label = visited.label?.trim() || "Visited:";
   const entries = visited.entries ?? [];
@@ -159,7 +170,18 @@ function popupHtmlVisitedLayout(
         `</div>`;
     }
   }
-  html += `</div></div></div>`;
+  html += `</div>`;
+  if (trunc?.visited_truncated && (trunc.visited_omitted ?? 0) > 0 && hl) {
+    const total = trunc.visited_total ?? entries.length + (trunc.visited_omitted ?? 0);
+    const omit = trunc.visited_omitted ?? 0;
+    html +=
+      `<div style="margin-top:8px;color:#555;font-size:12px;line-height:1.35;">` +
+      `${escapeHtml(String(entries.length))} of ${escapeHtml(String(total))} checklists shown.` +
+      ` <a href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer">Open lifelist</a>` +
+      ` for full history (${escapeHtml(String(omit))} more).` +
+      `</div>`;
+  }
+  html += `</div></div>`;
   return html;
 }
 
@@ -169,7 +191,15 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   const lifelistUrl = String(props?.lifelist_url ?? "");
   const popup = parsePopupV1(props?.popup_v1);
   if (popup?.visited) {
-    return popupHtmlVisitedLayout(name, lifelistUrl, popup.visited);
+    const trunc =
+      popup.visited_truncated === true
+        ? {
+            visited_truncated: true,
+            visited_total: popup.visited_total,
+            visited_omitted: popup.visited_omitted,
+          }
+        : undefined;
+    return popupHtmlVisitedLayout(name, lifelistUrl, popup.visited, trunc);
   }
   if (popup) {
     let html = `<div class="pebird-map-popup" style="font-family:system-ui,sans-serif;font-size:13px;">`;

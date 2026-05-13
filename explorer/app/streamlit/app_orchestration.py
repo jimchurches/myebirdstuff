@@ -236,6 +236,14 @@ def render_dashboard_shell(
             df_full=df_full,
             map_view_mode=mw.map_view_mode,
             map_height=mw.map_height,
+            date_filter_banner=mw.date_filter_banner,
+            map_style=mw.map_style,
+            popup_sort_order=tax.popup_sort_order,
+            popup_scroll_hint=tax.popup_scroll_hint,
+            mark_lifer=tax.mark_lifer,
+            mark_last_seen=tax.mark_last_seen,
+            family_colour_scheme=int(mw.family_colour_scheme),
+            taxonomy_locale=tax.tax_locale_effective,
         )
 
     run_non_map_data_tab_fragments(
