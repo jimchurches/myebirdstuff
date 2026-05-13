@@ -28,8 +28,11 @@ EXPLORER_E2E_HTTP_TIMEOUT_ENV = "EXPLORER_E2E_HTTP_TIMEOUT_S"
 EXPLORER_E2E_MAP_TIMEOUT_MS_ENV = "EXPLORER_E2E_MAP_TIMEOUT_MS"
 # Perf archive A/B: set to ``0`` or ``1`` so ``streamlit_perf_url_and_logfile`` forces the same
 # ``EXPLORER_MAP_LITE_POPUPS`` in the Streamlit child (default ``0`` when unset).
+# Note: ``streamlit_perf_url_logfile_and_lite_expected`` always sets lazy popups **off** in the child
+# so W2 lite A/B stays isolated from Batch B lazy.
 EXPLORER_E2E_MAP_LITE_POPUPS_ENV = "EXPLORER_E2E_MAP_LITE_POPUPS"
-# Optional: force ``EXPLORER_MAP_LAZY_POPUPS`` in the perf Streamlit child (default ``0``).
+# Optional: force ``EXPLORER_MAP_LAZY_POPUPS`` in the perf Streamlit child for the **default**
+# perf fixture (default ``0``). The dedicated lazy A/B fixture parametrizes lazy directly.
 EXPLORER_E2E_MAP_LAZY_POPUPS_ENV = "EXPLORER_E2E_MAP_LAZY_POPUPS"
 
 

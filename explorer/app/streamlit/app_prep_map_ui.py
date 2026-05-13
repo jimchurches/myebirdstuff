@@ -724,10 +724,11 @@ def render_prep_spinner_and_map_tab(
                         st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = bytes(_cached_html)
                     else:
                         perf_record_point("prep.map_html_cache_miss")
-                        with perf_span("prep.folium_map_to_html_bytes"):
-                            st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(
-                                copy.deepcopy(result_map)
-                            )
+                        _folium_html_extra: dict[str, Any] = {}
+                        with perf_span("prep.folium_map_to_html_bytes", extra=_folium_html_extra):
+                            _html_b = folium_map_to_html_bytes(copy.deepcopy(result_map))
+                            st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = _html_b
+                            _folium_html_extra["html_bytes_len"] = len(_html_b)
                         if isinstance(_cached_for_html, dict):
                             _cached_for_html["html_bytes"] = st.session_state[EXPLORER_MAP_HTML_BYTES_KEY]
                             _map_cache_store(_ck, _cached_for_html)

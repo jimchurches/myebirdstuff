@@ -83,7 +83,8 @@ def streamlit_perf_url_logfile_and_lite_expected(tmp_path, request) -> tuple[str
         "EXPLORER_PERF": "1",
         "EXPLORER_PERF_LOG_FILE": str(log_file),
         "EXPLORER_MAP_LITE_POPUPS": request.param,
-        "EXPLORER_MAP_LAZY_POPUPS": e2e_map_lazy_popups_for_streamlit_child(),
+        # Isolate W2 from lazy popups (lite mode disables lazy in the app).
+        "EXPLORER_MAP_LAZY_POPUPS": "0",
     }
     csv_src = resolve_e2e_dataset_csv_source()
     with temporary_ebird_csv_config(REPO_ROOT, tmp_path, csv_src):
@@ -94,5 +95,39 @@ def streamlit_perf_url_logfile_and_lite_expected(tmp_path, request) -> tuple[str
             wait_for_http_ready(url, timeout_s=e2e_http_ready_timeout_s())
             try:
                 yield url, log_file, lite_on
+            finally:
+                _archive_perf_jsonl_if_requested(log_file)
+
+
+@pytest.fixture(params=["0", "1"])
+def streamlit_perf_url_logfile_and_lazy_expected(tmp_path, request) -> tuple[str, Path, bool]:
+    """Same as ``streamlit_perf_url_and_logfile`` but forces ``EXPLORER_MAP_LAZY_POPUPS`` off/on.
+
+    Runs each dependent test **twice** (param ``"0"`` then ``"1"``). **Lite is always off** so
+    lazy mode is not suppressed by W2 (``lite_map_popups`` disables lazy in the overlay).
+
+    JSONL ``prep.build_species_overlay_map`` and ``e2e.first_paint`` must show
+    ``extra["lazy_map_popups"]`` matching the boolean; compare ``prep.folium_map_to_html_bytes``
+    ``extra["html_bytes_len"]`` across archives for payload size (#205 Batch B).
+    """
+    port = free_tcp_port()
+    url = f"http://127.0.0.1:{port}"
+    log_file = tmp_path / "explorer_perf.jsonl"
+    lazy_on = request.param == "1"
+    env_extra = {
+        "EXPLORER_PERF": "1",
+        "EXPLORER_PERF_LOG_FILE": str(log_file),
+        "EXPLORER_MAP_LITE_POPUPS": "0",
+        "EXPLORER_MAP_LAZY_POPUPS": request.param,
+    }
+    csv_src = resolve_e2e_dataset_csv_source()
+    with temporary_ebird_csv_config(REPO_ROOT, tmp_path, csv_src):
+        with streamlit_http_server(cwd=REPO_ROOT, port=port, env_extra=env_extra, capture_stdio=False) as (
+            _proc,
+            _logs,
+        ):
+            wait_for_http_ready(url, timeout_s=e2e_http_ready_timeout_s())
+            try:
+                yield url, log_file, lazy_on
             finally:
                 _archive_perf_jsonl_if_requested(log_file)

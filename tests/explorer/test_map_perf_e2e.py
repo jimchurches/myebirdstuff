@@ -6,6 +6,11 @@ Run::
     python -m playwright install chromium
     pytest tests/explorer/test_map_perf_e2e.py --perf -v
 
+**Lazy popups (Batch B) automated A/B:** the fixture ``streamlit_perf_url_logfile_and_lazy_expected``
+runs each dependent test **twice** (``EXPLORER_MAP_LAZY_POPUPS=0`` then ``=1``; **lite always off**).
+See ``test_map_perf_lazy_journey_tags_build_extra``. Compare archived JSONL with
+``aggregate_perf_jsonl`` using ``--extra-key html_bytes_len`` on ``prep.folium_map_to_html_bytes``.
+
 **Lite popups (W2) automated A/B:** the fixture ``streamlit_perf_url_logfile_and_lite_expected``
 runs each dependent test **twice** (``EXPLORER_MAP_LITE_POPUPS=0`` then ``=1`` in the Streamlit
 child process). See ``test_map_perf_w2_lite_journey_tags_build_extra``.
@@ -13,6 +18,14 @@ child process). See ``test_map_perf_w2_lite_journey_tags_build_extra``.
 **Manual app with lite popups** (from repo root)::
 
     EXPLORER_MAP_LITE_POPUPS=1 streamlit run explorer/app/streamlit/app.py
+
+**Archive lazy JSONL locally** (example: 3 runs × lazy off/on; directory is gitignored)::
+
+    mkdir -p benchmarks/map_perf/snapshots/issue-205-lazy
+    for lazy in 0 1; do for run in 1 2 3; do
+      EXPLORER_E2E_PERF_JSONL_ARCHIVE="$PWD/benchmarks/map_perf/snapshots/issue-205-lazy/fixture-lazy${lazy}-r${run}.jsonl" \\
+        python -m pytest tests/explorer/test_map_perf_e2e.py::test_map_perf_lazy_journey_tags_build_extra --perf -v
+    done; done
 
 **Archive W2 JSONL locally** (6 files: 3 runs × lite off/on; directory is gitignored)::
 
@@ -169,13 +182,12 @@ def test_map_perf_w2_lite_journey_tags_build_extra(
     ceilings = _load_stage_ceilings()
     dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
 
-    lazy_on = e2e_map_lazy_popups_for_streamlit_child() == "1"
     _run_fixture_view_mode_cycle_journey(
         url,
         log_file,
         dataset_label=dataset_label,
         lite_map_popups=lite_on,
-        lazy_map_popups=lazy_on,
+        lazy_map_popups=False,
     )
 
     time.sleep(0.5)
@@ -197,15 +209,85 @@ def test_map_perf_w2_lite_journey_tags_build_extra(
             f"prep.build_species_overlay_map extra.lite_map_popups={extra.get('lite_map_popups')!r} "
             f"expected {lite_on!r} for EXPLORER_MAP_LITE_POPUPS={'1' if lite_on else '0'}"
         )
-        assert extra.get("lazy_map_popups") is lazy_on, (
+        assert extra.get("lazy_map_popups") is False, (
             f"prep.build_species_overlay_map extra.lazy_map_popups={extra.get('lazy_map_popups')!r} "
-            f"expected {lazy_on!r} for EXPLORER_MAP_LAZY_POPUPS={'1' if lazy_on else '0'}"
+            f"expected False (W2 fixture forces lazy off)"
         )
 
     fp_events = [e for e in events if e.get("stage") == "e2e.first_paint"]
     assert fp_events, "expected e2e.first_paint row from journey"
     for e in fp_events:
         assert e.get("lite_map_popups") is lite_on
+        assert e.get("lazy_map_popups") is False
+
+    highs = max_elapsed_ms_by_stage(events)
+    failures: list[str] = []
+    for stage, cap in ceilings.items():
+        obs = highs.get(stage)
+        if obs is None:
+            continue
+        if obs > cap:
+            failures.append(f"{stage}: {obs:.1f}ms > ceiling {cap:.1f}ms")
+    assert not failures, "Perf ceilings exceeded:\n" + "\n".join(failures)
+
+
+def test_map_perf_lazy_journey_tags_build_extra(
+    streamlit_perf_url_logfile_and_lazy_expected: tuple[str, Path, bool],
+) -> None:
+    """Batch B A/B: child env forces ``EXPLORER_MAP_LAZY_POPUPS`` (lite off); JSONL tags builds + HTML size.
+
+    Use archived JSONL + ``aggregate_perf_jsonl`` with ``--extra-key html_bytes_len`` on
+    ``prep.folium_map_to_html_bytes`` to compare default vs lazy serialized map size.
+    """
+    url, log_file, lazy_on = streamlit_perf_url_logfile_and_lazy_expected
+    ceilings = _load_stage_ceilings()
+    dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
+
+    _run_fixture_view_mode_cycle_journey(
+        url,
+        log_file,
+        dataset_label=dataset_label,
+        lite_map_popups=False,
+        lazy_map_popups=lazy_on,
+    )
+
+    time.sleep(0.5)
+    raw_lines = []
+    if log_file.exists():
+        raw_lines = log_file.read_text(encoding="utf-8").splitlines()
+    events = parse_perf_json_objects_from_log_lines(raw_lines)
+    assert len(events) >= 3, f"expected perf JSON events in Streamlit logs, got {len(events)}"
+
+    builds = [e for e in events if e.get("stage") == "prep.build_species_overlay_map"]
+    assert builds, (
+        "expected at least one prep.build_species_overlay_map in JSONL "
+        f"(lazy_map_popups env={lazy_on!r}); stages: "
+        f"{sorted({str(e.get('stage')) for e in events if e.get('stage')})!r}"
+    )
+    for e in builds:
+        extra = e.get("extra") or {}
+        assert extra.get("lite_map_popups") is False, (
+            f"prep.build_species_overlay_map extra.lite_map_popups={extra.get('lite_map_popups')!r} "
+            "expected False (lazy fixture forces lite off)"
+        )
+        assert extra.get("lazy_map_popups") is lazy_on, (
+            f"prep.build_species_overlay_map extra.lazy_map_popups={extra.get('lazy_map_popups')!r} "
+            f"expected {lazy_on!r} for EXPLORER_MAP_LAZY_POPUPS={'1' if lazy_on else '0'}"
+        )
+
+    folium_rows = [e for e in events if e.get("stage") == "prep.folium_map_to_html_bytes"]
+    assert folium_rows, "expected at least one prep.folium_map_to_html_bytes (cold HTML generation)"
+    for e in folium_rows:
+        extra = e.get("extra") or {}
+        n = extra.get("html_bytes_len")
+        assert isinstance(n, int) and n > 500, (
+            f"expected extra.html_bytes_len positive int on folium_map_to_html_bytes, got {n!r}"
+        )
+
+    fp_events = [e for e in events if e.get("stage") == "e2e.first_paint"]
+    assert fp_events, "expected e2e.first_paint row from journey"
+    for e in fp_events:
+        assert e.get("lite_map_popups") is False
         assert e.get("lazy_map_popups") is lazy_on
 
     highs = max_elapsed_ms_by_stage(events)
