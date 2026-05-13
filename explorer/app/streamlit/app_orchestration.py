@@ -39,6 +39,7 @@ from explorer.app.streamlit.app_constants import (
     FILTERED_BY_LOC_CACHE_KEY,
     POPUP_FRAGMENT_CACHE_KEY,
     POPUP_HTML_CACHE_KEY,
+    POPUP_PAYLOAD_CACHE_KEY,
     REPO_ROOT,
     SETTINGS_BASELINE_KEY,
     SETTINGS_CONFIG_PATH_KEY,
@@ -135,6 +136,8 @@ def bootstrap_session_after_csv_load(df_full: Any, *, source_label: str | None) 
         st.session_state[POPUP_HTML_CACHE_KEY] = {}
     if POPUP_FRAGMENT_CACHE_KEY not in st.session_state:
         st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
+    if POPUP_PAYLOAD_CACHE_KEY not in st.session_state:
+        st.session_state[POPUP_PAYLOAD_CACHE_KEY] = {}
     if FILTERED_BY_LOC_CACHE_KEY not in st.session_state:
         st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
 

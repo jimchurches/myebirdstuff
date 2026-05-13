@@ -34,6 +34,8 @@ EXPLORER_E2E_MAP_LITE_POPUPS_ENV = "EXPLORER_E2E_MAP_LITE_POPUPS"
 # Optional: force ``EXPLORER_MAP_LAZY_POPUPS`` in the perf Streamlit child for the **default**
 # perf fixture (default ``0``). The dedicated lazy A/B fixture parametrizes lazy directly.
 EXPLORER_E2E_MAP_LAZY_POPUPS_ENV = "EXPLORER_E2E_MAP_LAZY_POPUPS"
+# Optional: force ``EXPLORER_MAP_STRUCTURED_POPUPS`` in the perf Streamlit child (default ``0``).
+EXPLORER_E2E_MAP_STRUCTURED_POPUPS_ENV = "EXPLORER_E2E_MAP_STRUCTURED_POPUPS"
 
 
 def e2e_map_lite_popups_for_streamlit_child() -> str:
@@ -49,6 +51,14 @@ def e2e_map_lazy_popups_for_streamlit_child() -> str:
     import os
 
     v = str(os.environ.get(EXPLORER_E2E_MAP_LAZY_POPUPS_ENV, "")).strip()
+    return v if v in ("0", "1") else "0"
+
+
+def e2e_map_structured_popups_for_streamlit_child() -> str:
+    """Return ``\"0\"`` or ``\"1\"`` for Batch C structured popups (see ``EXPLORER_E2E_MAP_STRUCTURED_POPUPS``)."""
+    import os
+
+    v = str(os.environ.get(EXPLORER_E2E_MAP_STRUCTURED_POPUPS_ENV, "")).strip()
     return v if v in ("0", "1") else "0"
 
 

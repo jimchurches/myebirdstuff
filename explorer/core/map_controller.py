@@ -82,6 +82,8 @@ def build_species_overlay_map(
     metrics_sink: Optional[Dict[str, Any]] = None,
     lite_map_popups: bool = False,
     lazy_map_popups: bool = False,
+    structured_map_popups: bool = False,
+    structured_popup_payload_cache: MutableMapping[Tuple[Any, ...], dict[str, Any]] | None = None,
     popup_fragment_cache: MutableMapping[Tuple[Any, ...], str] | None = None,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
@@ -121,8 +123,8 @@ def build_species_overlay_map(
 
     - ``view_path`` (``"all_locations"`` / ``"species"`` / ``"lifer"``)
     - ``marker_count`` (CircleMarker calls added in this build)
-    - ``popup_build_count`` (popups built and stored in *popup_html_cache* this call)
-    - ``popup_cache_hit_count`` (popups served from *popup_html_cache* this call)
+    - ``popup_build_count`` (popups built and stored in *popup_html_cache* or *structured_popup_payload_cache* this call)
+    - ``popup_cache_hit_count`` (popups served from those caches this call)
     - ``popup_build_total_ms`` (wall time spent inside popup-HTML construction)
 
     Host-side wiring: pass the same dict to ``perf_span("prep.build_species_overlay_map",
@@ -136,6 +138,12 @@ def build_species_overlay_map(
     *lazy_map_popups* (#205 Batch B): **All locations** only — tiny per-marker popup stubs with
     full rich HTML filled on ``popupopen`` (default ``False``). Ignored when *lite_map_popups* is
     ``True``.
+
+    *structured_map_popups* (#205 Batch C): **All locations** only — deferred stub + field-level
+    JSON payloads rendered on ``popupopen`` (smaller map HTML than inlining visit HTML). Pass a
+    session *structured_popup_payload_cache* from the host (same clear semantics as *popup_html_cache*).
+    When both lazy and structured are on, structured payloads are used. Ignored when *lite_map_popups*
+    is ``True``.
 
     *popup_fragment_cache* (#205 Batch A): optional session mapping from content keys to
     pre-built visit-list / species-section / lifer-line HTML fragments, reused when full
@@ -213,5 +221,7 @@ def build_species_overlay_map(
         metrics_sink=metrics_sink,
         lite_map_popups=lite_map_popups,
         lazy_map_popups=lazy_map_popups,
+        structured_map_popups=structured_map_popups,
+        structured_popup_payload_cache=structured_popup_payload_cache,
         popup_fragment_cache=popup_fragment_cache,
     )

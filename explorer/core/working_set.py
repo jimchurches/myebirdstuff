@@ -64,8 +64,8 @@ def rebuild_working_set_from_date_filter(
     whoosh_index
         If set, the Whoosh index is cleared and repopulated with ``species_list``.
     map_caches
-        If set, ``(popup_html_cache, filtered_by_loc_cache [, popup_fragment_cache])``; each dict
-        passed is ``.clear()`` on success (third entry optional).
+        If set, ``(popup_html_cache, filtered_by_loc_cache [, popup_fragment_cache [, popup_payload_cache]])``;
+        each dict passed is ``.clear()`` on success (optional 3rd/4th entries).
 
     Returns
     -------
@@ -122,6 +122,8 @@ def rebuild_working_set_from_date_filter(
         filtered_cache.clear()
         if len(map_caches) > 2 and map_caches[2] is not None:
             map_caches[2].clear()
+        if len(map_caches) > 3 and map_caches[3] is not None:
+            map_caches[3].clear()
 
     if whoosh_index is not None:
         from whoosh.query import Every

@@ -20,6 +20,7 @@ from explorer.app.streamlit.app_constants import (
     PERSIST_MAP_DATE_RANGE_KEY,
     POPUP_FRAGMENT_CACHE_KEY,
     POPUP_HTML_CACHE_KEY,
+    POPUP_PAYLOAD_CACHE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
     SESSION_PREV_MAP_VIEW_KEY,
@@ -241,6 +242,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             st.session_state.get(POPUP_HTML_CACHE_KEY),
             st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
             st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
+            st.session_state.get(POPUP_PAYLOAD_CACHE_KEY),
         ),
     )
     if ws is None:
@@ -254,6 +256,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 st.session_state.get(POPUP_HTML_CACHE_KEY),
                 st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
                 st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
+                st.session_state.get(POPUP_PAYLOAD_CACHE_KEY),
             ),
         )
     work_df = ws.df

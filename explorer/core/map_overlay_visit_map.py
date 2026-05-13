@@ -84,6 +84,7 @@ from explorer.presentation.map_lazy_popups import (
     add_lazy_all_locations_popup_bridge,
     all_locations_lazy_popup_stub,
 )
+from explorer.presentation.map_structured_popups import build_all_locations_popup_payload
 from explorer.presentation.map_ui_constants import MAP_POPUP_MAX_WIDTH_PX
 from explorer.core.species_logic import filter_species
 from explorer.core.stats import safe_count
@@ -354,6 +355,8 @@ def build_visit_overlay_map(
     metrics_sink: Optional[Dict[str, Any]] = None,
     lite_map_popups: bool = False,
     lazy_map_popups: bool = False,
+    structured_map_popups: bool = False,
+    structured_popup_payload_cache: MutableMapping[Tuple[Any, ...], dict[str, Any]] | None = None,
     popup_fragment_cache: MutableMapping[Tuple[Any, ...], str] | None = None,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode).
@@ -368,6 +371,12 @@ def build_visit_overlay_map(
     *lazy_map_popups* (#205 Batch B): **All locations** only — markers get a tiny stub; full HTML is
     injected on ``popupopen`` via client script. Ignored when *lite_map_popups* is on (lite HTML is
     already small) or when a species filter is active.
+
+    *structured_map_popups* (#205 Batch C / C1): **All locations** only — same stub + deferred bridge
+    as Batch B, but map-level data holds field-level ``al1`` payloads rendered client-side (smaller
+    ``html_bytes`` than inlining visit-list HTML). When ``True``, pass a session-level
+    *structured_popup_payload_cache* (same role as *popup_html_cache*). Takes precedence over Batch B
+    when both are enabled (shared transport, structured values). Ignored when *lite_map_popups* is on.
     """
     if selected_species:
         filtered = filter_species(df, selected_species)
@@ -439,6 +448,8 @@ def build_visit_overlay_map(
     date_filter_status_line = date_filter_status or None
     lite_b = bool(lite_map_popups)
     lazy_b = bool(lazy_map_popups) and (not selected_species) and (not lite_b)
+    structured_b = bool(structured_map_popups) and (not selected_species) and (not lite_b)
+    deferred_b = lazy_b or structured_b
 
     if not selected_species and (hide_non_matching_locations or _mv == "species"):
         c_lat = float(MAP_SPECIES_DEFAULT_CENTER_LAT)
@@ -541,46 +552,70 @@ def build_visit_overlay_map(
         _p_built = 0
         _p_hit = 0
         _p_build_ms = 0.0
-        _lazy_by_id: dict[str, str] = {}
+        _deferred_by_id: dict[str, Any] = {}
+        _sp_payload = structured_popup_payload_cache
+        if structured_b and _sp_payload is None:
+            _sp_payload = {}
         for _, row in effective_location_data.iterrows():
             _m_count += 1
-            popup_key = (row["Location ID"], "", effective_use_full, tax_loc_key, lite_b)
-            if popup_key not in popup_html_cache:
-                _p_built += 1
-                _t_p0 = time.perf_counter()
-                if lite_b:
-                    popup_html_cache[popup_key] = build_location_popup_html(
-                        row["Location"],
-                        row["Location ID"],
-                        "",
-                        show_visit_history=False,
-                    )
-                else:
+            popup_key = (row["Location ID"], "", effective_use_full, tax_loc_key, lite_b, structured_b)
+            if structured_b:
+                if popup_key not in _sp_payload:
+                    _p_built += 1
+                    _t_p0 = time.perf_counter()
                     base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
                     visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
                         "datetime", ascending=popup_ascending
                     )
-                    if popup_fragment_cache is not None:
-                        _vkey = visit_list_fragment_key(visit_records)
-                        visit_info = get_or_set_popup_fragment(
-                            popup_fragment_cache,
-                            _vkey,
-                            lambda: build_visit_info_html(visit_records, format_visit_time),
-                        )
-                    else:
-                        visit_info = build_visit_info_html(visit_records, format_visit_time)
-                    popup_html_cache[popup_key] = build_location_popup_html(
-                        row["Location"], row["Location ID"], visit_info
+                    _sp_payload[popup_key] = build_all_locations_popup_payload(
+                        row["Location"],
+                        row["Location ID"],
+                        visit_records,
+                        format_visit_time,
                     )
-                _p_build_ms += (time.perf_counter() - _t_p0) * 1000.0
-            else:
-                _p_hit += 1
-            popup_html = popup_html_cache[popup_key]
-            if lazy_b:
-                _lazy_by_id[str(row["Location ID"])] = popup_html
+                    _p_build_ms += (time.perf_counter() - _t_p0) * 1000.0
+                else:
+                    _p_hit += 1
+                _pl = _sp_payload[popup_key]
+                _deferred_by_id[str(row["Location ID"])] = _pl
                 _popup_body = all_locations_lazy_popup_stub(row["Location ID"])
             else:
-                _popup_body = popup_html
+                if popup_key not in popup_html_cache:
+                    _p_built += 1
+                    _t_p0 = time.perf_counter()
+                    if lite_b:
+                        popup_html_cache[popup_key] = build_location_popup_html(
+                            row["Location"],
+                            row["Location ID"],
+                            "",
+                            show_visit_history=False,
+                        )
+                    else:
+                        base_records = effective_records_by_loc.get(row["Location ID"], pd.DataFrame())
+                        visit_records = base_records.drop_duplicates(subset=["Submission ID"]).sort_values(
+                            "datetime", ascending=popup_ascending
+                        )
+                        if popup_fragment_cache is not None:
+                            _vkey = visit_list_fragment_key(visit_records)
+                            visit_info = get_or_set_popup_fragment(
+                                popup_fragment_cache,
+                                _vkey,
+                                lambda: build_visit_info_html(visit_records, format_visit_time),
+                            )
+                        else:
+                            visit_info = build_visit_info_html(visit_records, format_visit_time)
+                        popup_html_cache[popup_key] = build_location_popup_html(
+                            row["Location"], row["Location ID"], visit_info
+                        )
+                    _p_build_ms += (time.perf_counter() - _t_p0) * 1000.0
+                else:
+                    _p_hit += 1
+                popup_html = popup_html_cache[popup_key]
+                if lazy_b:
+                    _deferred_by_id[str(row["Location ID"])] = popup_html
+                    _popup_body = all_locations_lazy_popup_stub(row["Location ID"])
+                else:
+                    _popup_body = popup_html
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
                 radius=_radius_px,
@@ -595,8 +630,8 @@ def build_visit_overlay_map(
         if marker_cluster is not None:
             marker_cluster.add_to(species_map)
 
-        if lazy_b and _lazy_by_id:
-            add_lazy_all_locations_popup_bridge(species_map, _lazy_by_id)
+        if deferred_b and _deferred_by_id:
+            add_lazy_all_locations_popup_bridge(species_map, _deferred_by_id)
 
         if metrics_sink is not None:
             metrics_sink["view_path"] = "all_locations"

@@ -526,6 +526,71 @@ def test_lazy_map_popups_disabled_when_lite_popups_on():
     assert "Visited:" not in html
 
 
+def test_structured_map_popups_all_locations_uses_stub_and_payload_kind():
+    """#205 Batch C: All locations — deferred bridge with ``al1`` payloads (not inlined visit HTML)."""
+    df = _minimal_map_df()
+    payload_cache: dict = {}
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        structured_map_popups=True,
+        structured_popup_payload_cache=payload_cache,
+    )
+    assert r.warning is None
+    html = r.map.get_root().render()
+    assert 'data-pebird-lazy="1"' in html
+    assert "renderAl1" in html
+    assert '"k":"al1"' in html
+    assert len(payload_cache) >= 1
+
+
+def test_structured_map_popups_species_view_not_deferred():
+    df = _minimal_map_df()
+    payload_cache: dict = {}
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="Anas gracilis",
+        selected_common_name="Grey Teal",
+        structured_map_popups=True,
+        structured_popup_payload_cache=payload_cache,
+    )
+    assert r.warning is None
+    html = r.map.get_root().render()
+    assert 'data-pebird-lazy="1"' not in html
+    assert len(payload_cache) == 0
+
+
+def test_structured_map_popups_disabled_when_lite_popups_on():
+    df = _minimal_map_df()
+    payload_cache: dict = {}
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        lite_map_popups=True,
+        structured_map_popups=True,
+        structured_popup_payload_cache=payload_cache,
+    )
+    assert r.warning is None
+    html = r.map.get_root().render()
+    assert 'data-pebird-lazy="1"' not in html
+    assert len(payload_cache) == 0
+
+
+def test_structured_takes_precedence_over_lazy_payload_shape():
+    """When both flags are on, map data carries structured ``al1`` objects (Batch C over B)."""
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        lazy_map_popups=True,
+        structured_map_popups=True,
+        structured_popup_payload_cache={},
+    )
+    assert r.warning is None
+    html = r.map.get_root().render()
+    assert '"k":"al1"' in html
+
+
 def test_lite_map_popups_lifer_strips_taxon_lines_but_keeps_lifelist():
     df = _minimal_map_df()
     kwargs = _common_kwargs(df)

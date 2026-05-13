@@ -11,6 +11,11 @@ runs each dependent test **twice** (``EXPLORER_MAP_LAZY_POPUPS=0`` then ``=1``; 
 See ``test_map_perf_lazy_journey_tags_build_extra``. Compare archived JSONL with
 ``aggregate_perf_jsonl`` using ``--extra-key html_bytes_len`` on ``prep.folium_map_to_html_bytes``.
 
+**Structured / Batch C automated A/B:** ``streamlit_perf_url_logfile_and_structured_expected``
+runs each dependent test twice (``EXPLORER_MAP_STRUCTURED_POPUPS=0`` then ``=1``; **lite and lazy off**).
+See ``test_map_perf_structured_journey_tags_build_extra``. Optional parent env
+``EXPLORER_E2E_MAP_STRUCTURED_POPUPS`` feeds the default perf fixture (same pattern as lazy).
+
 **Lite popups (W2) automated A/B:** the fixture ``streamlit_perf_url_logfile_and_lite_expected``
 runs each dependent test **twice** (``EXPLORER_MAP_LITE_POPUPS=0`` then ``=1`` in the Streamlit
 child process). See ``test_map_perf_w2_lite_journey_tags_build_extra``.
@@ -61,6 +66,7 @@ from tests.explorer.e2e_support import (
     append_e2e_first_paint_record,
     e2e_map_lazy_popups_for_streamlit_child,
     e2e_map_lite_popups_for_streamlit_child,
+    e2e_map_structured_popups_for_streamlit_child,
     choose_map_view_mode,
     launch_chromium_or_skip,
     max_elapsed_ms_by_stage,
@@ -92,6 +98,7 @@ def _run_fixture_view_mode_cycle_journey(
     dataset_label: str,
     lite_map_popups: bool,
     lazy_map_popups: bool,
+    structured_map_popups: bool = False,
 ) -> None:
     """All → Lifer → All map view-mode cycle; records ``e2e.first_paint`` with W2 tag."""
     with launch_chromium_or_skip() as browser:
@@ -114,6 +121,7 @@ def _run_fixture_view_mode_cycle_journey(
                 "journey": "fixture_view_mode_cycle",
                 "lite_map_popups": lite_map_popups,
                 "lazy_map_popups": lazy_map_popups,
+                "structured_map_popups": structured_map_popups,
             },
         )
         choose_map_view_mode(page, "Lifer locations")
@@ -141,6 +149,7 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
         dataset_label=dataset_label,
         lite_map_popups=e2e_map_lite_popups_for_streamlit_child() == "1",
         lazy_map_popups=e2e_map_lazy_popups_for_streamlit_child() == "1",
+        structured_map_popups=e2e_map_structured_popups_for_streamlit_child() == "1",
     )
 
     time.sleep(0.5)
@@ -188,6 +197,7 @@ def test_map_perf_w2_lite_journey_tags_build_extra(
         dataset_label=dataset_label,
         lite_map_popups=lite_on,
         lazy_map_popups=False,
+        structured_map_popups=False,
     )
 
     time.sleep(0.5)
@@ -213,12 +223,14 @@ def test_map_perf_w2_lite_journey_tags_build_extra(
             f"prep.build_species_overlay_map extra.lazy_map_popups={extra.get('lazy_map_popups')!r} "
             f"expected False (W2 fixture forces lazy off)"
         )
+        assert extra.get("structured_map_popups") is False
 
     fp_events = [e for e in events if e.get("stage") == "e2e.first_paint"]
     assert fp_events, "expected e2e.first_paint row from journey"
     for e in fp_events:
         assert e.get("lite_map_popups") is lite_on
         assert e.get("lazy_map_popups") is False
+        assert e.get("structured_map_popups") is False
 
     highs = max_elapsed_ms_by_stage(events)
     failures: list[str] = []
@@ -249,6 +261,7 @@ def test_map_perf_lazy_journey_tags_build_extra(
         dataset_label=dataset_label,
         lite_map_popups=False,
         lazy_map_popups=lazy_on,
+        structured_map_popups=False,
     )
 
     time.sleep(0.5)
@@ -274,6 +287,10 @@ def test_map_perf_lazy_journey_tags_build_extra(
             f"prep.build_species_overlay_map extra.lazy_map_popups={extra.get('lazy_map_popups')!r} "
             f"expected {lazy_on!r} for EXPLORER_MAP_LAZY_POPUPS={'1' if lazy_on else '0'}"
         )
+        assert extra.get("structured_map_popups") is False, (
+            f"prep.build_species_overlay_map extra.structured_map_popups="
+            f"{extra.get('structured_map_popups')!r} expected False (lazy fixture forces structured off)"
+        )
 
     folium_rows = [e for e in events if e.get("stage") == "prep.folium_map_to_html_bytes"]
     assert folium_rows, "expected at least one prep.folium_map_to_html_bytes (cold HTML generation)"
@@ -289,6 +306,70 @@ def test_map_perf_lazy_journey_tags_build_extra(
     for e in fp_events:
         assert e.get("lite_map_popups") is False
         assert e.get("lazy_map_popups") is lazy_on
+        assert e.get("structured_map_popups") is False
+
+    highs = max_elapsed_ms_by_stage(events)
+    failures: list[str] = []
+    for stage, cap in ceilings.items():
+        obs = highs.get(stage)
+        if obs is None:
+            continue
+        if obs > cap:
+            failures.append(f"{stage}: {obs:.1f}ms > ceiling {cap:.1f}ms")
+    assert not failures, "Perf ceilings exceeded:\n" + "\n".join(failures)
+
+
+def test_map_perf_structured_journey_tags_build_extra(
+    streamlit_perf_url_logfile_and_structured_expected: tuple[str, Path, bool],
+) -> None:
+    """Batch C A/B: ``EXPLORER_MAP_STRUCTURED_POPUPS`` off/on (lazy and lite off); compare ``html_bytes_len``."""
+    url, log_file, structured_on = streamlit_perf_url_logfile_and_structured_expected
+    ceilings = _load_stage_ceilings()
+    dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
+
+    _run_fixture_view_mode_cycle_journey(
+        url,
+        log_file,
+        dataset_label=dataset_label,
+        lite_map_popups=False,
+        lazy_map_popups=False,
+        structured_map_popups=structured_on,
+    )
+
+    time.sleep(0.5)
+    raw_lines = []
+    if log_file.exists():
+        raw_lines = log_file.read_text(encoding="utf-8").splitlines()
+    events = parse_perf_json_objects_from_log_lines(raw_lines)
+    assert len(events) >= 3, f"expected perf JSON events in Streamlit logs, got {len(events)}"
+
+    builds = [e for e in events if e.get("stage") == "prep.build_species_overlay_map"]
+    assert builds, "expected at least one prep.build_species_overlay_map in JSONL"
+    for e in builds:
+        extra = e.get("extra") or {}
+        assert extra.get("lite_map_popups") is False
+        assert extra.get("lazy_map_popups") is False
+        assert extra.get("structured_map_popups") is structured_on, (
+            f"extra.structured_map_popups={extra.get('structured_map_popups')!r} "
+            f"expected {structured_on!r} for EXPLORER_MAP_STRUCTURED_POPUPS="
+            f"{'1' if structured_on else '0'}"
+        )
+
+    folium_rows = [e for e in events if e.get("stage") == "prep.folium_map_to_html_bytes"]
+    assert folium_rows, "expected at least one prep.folium_map_to_html_bytes (cold HTML generation)"
+    for e in folium_rows:
+        extra = e.get("extra") or {}
+        n = extra.get("html_bytes_len")
+        assert isinstance(n, int) and n > 500, (
+            f"expected extra.html_bytes_len positive int on folium_map_to_html_bytes, got {n!r}"
+        )
+
+    fp_events = [e for e in events if e.get("stage") == "e2e.first_paint"]
+    assert fp_events, "expected e2e.first_paint row from journey"
+    for e in fp_events:
+        assert e.get("lite_map_popups") is False
+        assert e.get("lazy_map_popups") is False
+        assert e.get("structured_map_popups") is structured_on
 
     highs = max_elapsed_ms_by_stage(events)
     failures: list[str] = []

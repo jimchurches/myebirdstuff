@@ -36,6 +36,7 @@ from explorer.app.streamlit.app_constants import (
     FOLIUM_STATIC_MAP_CACHE_KEY,
     POPUP_FRAGMENT_CACHE_KEY,
     POPUP_HTML_CACHE_KEY,
+    POPUP_PAYLOAD_CACHE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
     STREAMLIT_COUNTRY_TAB_SORT_KEY,
@@ -134,6 +135,8 @@ _MAP_EMBED_MODE_VALID = {_MAP_EMBED_MODE_ST_FOLIUM, _MAP_EMBED_MODE_COMPONENTS_H
 
 # #205 Batch B: lazy all-locations popups (stub markers + fill on open; default off).
 _MAP_LAZY_POPUPS_ENV_KEY = "EXPLORER_MAP_LAZY_POPUPS"
+# #205 Batch C: structured JSON payloads in the deferred bridge (All locations only; default off).
+_MAP_STRUCTURED_POPUPS_ENV_KEY = "EXPLORER_MAP_STRUCTURED_POPUPS"
 
 # #205 W2: lite map popups for perf A/B only (default off — full visit history + eBird links).
 _MAP_LITE_POPUPS_ENV_KEY = "EXPLORER_MAP_LITE_POPUPS"
@@ -193,6 +196,25 @@ def _selected_lazy_map_popups() -> bool:
         raw = ""
     if not raw:
         raw = str(os.environ.get(_MAP_LAZY_POPUPS_ENV_KEY, "")).strip().lower()
+    if raw in _MAP_LITE_POPUPS_TRUTHY:
+        return True
+    if raw in _MAP_LITE_POPUPS_FALSY:
+        return False
+    return False
+
+
+def _selected_structured_map_popups() -> bool:
+    """Return whether #205 Batch C structured All-locations popup payloads are on (default off)."""
+    import os
+
+    raw = ""
+    try:
+        if _MAP_STRUCTURED_POPUPS_ENV_KEY in st.secrets:
+            raw = str(st.secrets[_MAP_STRUCTURED_POPUPS_ENV_KEY]).strip().lower()
+    except Exception:
+        raw = ""
+    if not raw:
+        raw = str(os.environ.get(_MAP_STRUCTURED_POPUPS_ENV_KEY, "")).strip().lower()
     if raw in _MAP_LITE_POPUPS_TRUTHY:
         return True
     if raw in _MAP_LITE_POPUPS_FALSY:
@@ -338,6 +360,7 @@ def render_prep_spinner_and_map_tab(
                     st.session_state[EBIRD_DATA_SIG_KEY] = sig
                     st.session_state[POPUP_HTML_CACHE_KEY] = {}
                     st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
+                    st.session_state[POPUP_PAYLOAD_CACHE_KEY] = {}
                     st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
                     st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
 
@@ -540,6 +563,7 @@ def render_prep_spinner_and_map_tab(
                     _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _lite_pop = _selected_lite_map_popups()
                     _lazy_pop = _selected_lazy_map_popups()
+                    _struct_pop = _selected_structured_map_popups()
                     _map_kw = {
                         **ctx,
                         "selected_species": overlay_sci,
@@ -562,6 +586,7 @@ def render_prep_spinner_and_map_tab(
                         "taxonomy_locale": tax_locale_effective,
                         "popup_html_cache": st.session_state.get(POPUP_HTML_CACHE_KEY),
                         "popup_fragment_cache": st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
+                        "structured_popup_payload_cache": st.session_state.get(POPUP_PAYLOAD_CACHE_KEY),
                         "filtered_by_loc_cache": st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
                         "map_view_mode": map_view_mode,
                         "hide_non_matching_locations": hide_nm,
@@ -576,6 +601,7 @@ def render_prep_spinner_and_map_tab(
                         "go_to_gps_pin": _go_pin,
                         "lite_map_popups": _lite_pop,
                         "lazy_map_popups": _lazy_pop,
+                        "structured_map_popups": _struct_pop,
                     }
                     if capture_all_locations_view:
                         _valid = {
@@ -622,6 +648,7 @@ def render_prep_spinner_and_map_tab(
                         else "",
                         _lite_pop,
                         _lazy_pop,
+                        _struct_pop,
                     )
                     _species_selected = bool(overlay_sci)
                     _ck = static_map_cache_key(
@@ -674,6 +701,7 @@ def render_prep_spinner_and_map_tab(
                             "mode": map_view_mode,
                             "lite_map_popups": _lite_pop,
                             "lazy_map_popups": _lazy_pop,
+                            "structured_map_popups": _struct_pop,
                         }
                         with perf_span(
                             "prep.build_species_overlay_map", extra=_build_metrics
