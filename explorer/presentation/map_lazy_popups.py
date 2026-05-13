@@ -54,7 +54,7 @@ class LazyAllLocationsPopupBridge(MacroElement):
                 if (typeof raw !== "string") { return; }
                 var tmp = document.createElement("div");
                 tmp.innerHTML = raw;
-                var stub = tmp.querySelector("[data-pebird-lazy=\"1\"]");
+                var stub = tmp.querySelector('[data-pebird-lazy="1"]');
                 if (!stub) { return; }
                 var lid = stub.getAttribute("data-location-id");
                 if (!lid || !Object.prototype.hasOwnProperty.call(DATA, lid)) { return; }

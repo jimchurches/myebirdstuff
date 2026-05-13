@@ -490,6 +490,9 @@ def test_lazy_map_popups_all_locations_uses_stub_and_injects_payload():
     html = r.map.get_root().render()
     assert 'data-pebird-lazy="1"' in html
     assert "popupopen" in html
+    # Regression: Jinja eating `\"` produced invalid JS and blank maps (#205 lazy).
+    assert "querySelector('[data-pebird-lazy=\"1\"]')" in html
+    assert 'querySelector("[data-pebird-lazy="' not in html
     # Rich copy still shipped for on-open injection (escaped inside JSON / script-safe).
     assert "Visited:" in html
 
