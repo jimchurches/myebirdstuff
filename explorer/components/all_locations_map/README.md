@@ -42,6 +42,6 @@ Classic Folium builds large HTML popups in Python. The component approach keeps 
 
 **Current payload:** `feature.properties.popup_v1` with `v: 1`. With **`records_by_location`** (production experimental tab), **`visited`** holds `{ label: "Visited:", entries: [{label,href}] }` — classic All locations checklist list + lifelist heading link in TS. Without per-location rows (minimal tests), **`summary_lines`** + **`links`** compact fallback.
 
-Popup width aims for Folium parity (`MAP_POPUP_MAX_WIDTH_PX` = 420 in `defaults.py`).
+Popup width aims for Folium parity (`MAP_POPUP_MAX_WIDTH_PX` = 420 in `defaults.py`). Popup **styling** mirrors production: `frontend/src/AllLocationsMapPopup.css` tracks `map_popup_theme_stylesheet` in `explorer/presentation/map_renderer.py`; visit-card HTML structure tracks `assemble_location_popup_html` / `LocationPopupModel` in `map_popup_models.py`. Shrink-to-content width uses the same logic as `map_popup_width_fix_script` on `popupopen`.
 
 This avoids regressing the “rich tie-back” story while staying faster than `popup_html × N` on the server.

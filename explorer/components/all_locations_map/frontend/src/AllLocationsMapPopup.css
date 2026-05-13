@@ -1,0 +1,131 @@
+/**
+ * Mirrors ``map_popup_theme_stylesheet`` in explorer/presentation/map_renderer.py
+ * so experimental Leaflet popups match production All locations (#221 parity).
+ * Keep MAP_POPUP_MAX_WIDTH_PX in sync with explorer/app/streamlit/defaults.py (420).
+ */
+:root {
+  --pebird-map-popup-max-width: 420px;
+  --pebird-font-stack: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pebird-ui-text: #1a2e22;
+  --pebird-ui-primary-green: #1f6f54;
+  --pebird-ui-muted: rgba(26, 46, 34, 0.55);
+}
+
+.leaflet-popup .leaflet-popup-content-wrapper,
+.leaflet-popup .leaflet-popup-content {
+  width: fit-content !important;
+  max-width: min(var(--pebird-map-popup-max-width), calc(100vw - 40px)) !important;
+  box-sizing: border-box !important;
+}
+
+.leaflet-popup-content .pebird-map-popup,
+.leaflet-popup-content .pebird-map-popup * {
+  box-sizing: border-box;
+}
+
+.leaflet-popup-content .pebird-map-popup {
+  display: inline-block;
+  width: max-content;
+  max-width: min(var(--pebird-map-popup-max-width), calc(100vw - 40px));
+  vertical-align: top;
+}
+
+.pebird-map-popup__heading-row {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-right: 2rem;
+}
+
+.pebird-map-popup__scroll {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.pebird-map-popup {
+  font-family: var(--pebird-font-stack);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--pebird-ui-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.pebird-map-popup b {
+  font-weight: 600;
+}
+
+.pebird-map-popup a {
+  color: var(--pebird-ui-primary-green);
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.pebird-map-popup a:hover {
+  text-decoration: underline;
+}
+
+.pebird-map-popup .pebird-map-popup__section-label {
+  font-weight: 400;
+  color: var(--pebird-ui-text);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.pebird-map-popup span.pebird-map-popup__location-heading {
+  color: var(--pebird-ui-primary-green);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pebird-map-popup a.pebird-map-popup__location-heading {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pebird-map-popup__visited-block .pebird-map-popup__section-label {
+  margin: 0 0 0.15em 0;
+}
+
+.pebird-map-popup__visit-dates {
+  margin: 0;
+  padding: 0;
+}
+
+/* Compact / secondary lines (no dedicated class in Python — matches muted stats styling). */
+.pebird-map-popup__summary-line {
+  display: block;
+  margin: 0;
+  color: var(--pebird-ui-muted);
+  font-weight: 400;
+}
+
+.pebird-map-popup__heading-row + .pebird-map-popup__summary-line {
+  margin-top: 0.2rem;
+}
+
+.pebird-map-popup__summary-line + .pebird-map-popup__summary-line {
+  margin-top: 0.12rem;
+}
+
+.pebird-map-popup__trunc-hint {
+  margin-top: 0.55rem;
+  color: var(--pebird-ui-muted);
+  font-size: calc(1em - 2px);
+  line-height: 1.35;
+}
+
+.pebird-map-popup__trunc-hint a {
+  font-weight: 400;
+}

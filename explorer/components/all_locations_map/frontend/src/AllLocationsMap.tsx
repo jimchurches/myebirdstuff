@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "leaflet.markercluster/dist/leaflet.markercluster.js";
+import "./AllLocationsMapPopup.css";
 import {
   ComponentProps,
   Streamlit,
@@ -28,6 +29,50 @@ interface CircleMarkerStylePayload {
 
 /** Folium `MAP_POPUP_MAX_WIDTH_PX` (`explorer/app/streamlit/defaults.py`). */
 const POPUP_MAX_WIDTH_PX = 420;
+
+/** Default gap below location title row — matches ``build_location_popup_html(..., location_heading_margin_px=4)``. */
+const POPUP_LOCATION_HEADING_MARGIN_PX = 4;
+
+/** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (``map_popup_width_fix_script``). */
+function capPopupInnerWidthPx(): number {
+  return Math.min(POPUP_MAX_WIDTH_PX, Math.max(80, window.innerWidth - 40));
+}
+
+function shrinkPebirdLeafletPopups(): void {
+  const pops = document.querySelectorAll(".leaflet-popup-pane .leaflet-popup");
+  const cap = capPopupInnerWidthPx();
+  pops.forEach((pop) => {
+    const content = pop.querySelector(".leaflet-popup-content") as HTMLElement | null;
+    const wrap = pop.querySelector(".leaflet-popup-content-wrapper") as HTMLElement | null;
+    const inner = pop.querySelector(".pebird-map-popup") as HTMLElement | null;
+    if (!content || !wrap || !inner) {
+      return;
+    }
+    content.style.removeProperty("width");
+    content.style.removeProperty("white-space");
+    wrap.style.removeProperty("width");
+
+    let innerPx = Math.ceil(inner.scrollWidth);
+    if (innerPx < 2) {
+      innerPx = Math.ceil(inner.getBoundingClientRect().width);
+    }
+    const target = Math.min(innerPx, cap);
+    content.style.setProperty("width", `${target}px`, "important");
+    content.style.setProperty("max-width", `${cap}px`, "important");
+    wrap.style.setProperty("width", `${target}px`, "important");
+    wrap.style.setProperty("max-width", `${cap}px`, "important");
+  });
+}
+
+function scheduleShrinkPebirdLeafletPopups(): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => shrinkPebirdLeafletPopups());
+  });
+  const delays = [0, 30, 80, 150, 260, 400];
+  for (let k = 0; k < delays.length; k++) {
+    window.setTimeout(shrinkPebirdLeafletPopups, delays[k]);
+  }
+}
 
 /** Structured popup from Python (`explorer/core/all_locations_geojson.py`) — extend for classic parity. */
 interface PopupLinkV1 {
@@ -136,7 +181,7 @@ function parsePopupV1(raw: unknown): PopupPayloadV1 | null {
   return { v: 1, summary_lines, links, visited, visited_truncated, visited_total, visited_omitted };
 }
 
-/** Classic All locations card: lifelist heading + scrollable ``Visited:`` links (``map_popup_models``). */
+/** Classic All locations card — DOM mirrors ``assemble_location_popup_html`` / ``LocationPopupModel`` (``map_popup_models``). */
 function popupHtmlVisitedLayout(
   name: string,
   lifelistUrl: string,
@@ -145,44 +190,47 @@ function popupHtmlVisitedLayout(
 ): string {
   const label = visited.label?.trim() || "Visited:";
   const entries = visited.entries ?? [];
-  let html =
-    `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;font-family:system-ui,sans-serif;font-size:13px;">` +
-    `<div style="margin-bottom:4px;">`;
   const hl = lifelistUrl.trim();
-  if (hl) {
-    html += `<a href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer" style="font-weight:600;color:#0066cc;text-decoration:underline;">${escapeHtml(
-      name,
-    )}</a>`;
-  } else {
-    html += `<strong>${escapeHtml(name)}</strong>`;
-  }
-  html +=
-    `</div>` +
-    `<div style="max-height:300px;overflow-y:auto;">` +
-    `<div style="font-weight:600;margin-bottom:4px;">${escapeHtml(label)}</div>` +
-    `<div class="pebird-map-popup__visit-dates">`;
+  const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
+  const locHeading =
+    hl.length > 0
+      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+
+  const visitAnchors: string[] = [];
   for (const e of entries) {
     const href = e.href?.trim() ?? "";
     const linkLabel = e.label?.trim() || href;
     if (href) {
-      html += `<div style="margin:0 0 5px 0;line-height:1.35;">` +
-        `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel)}</a>` +
-        `</div>`;
+      visitAnchors.push(
+        `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel)}</a>`,
+      );
     }
   }
-  html += `</div>`;
+  const visitInner = visitAnchors.join("<br>");
+
+  let truncBlock = "";
   if (trunc?.visited_truncated && (trunc.visited_omitted ?? 0) > 0 && hl) {
     const total = trunc.visited_total ?? entries.length + (trunc.visited_omitted ?? 0);
     const omit = trunc.visited_omitted ?? 0;
-    html +=
-      `<div style="margin-top:8px;color:#555;font-size:12px;line-height:1.35;">` +
-      `${escapeHtml(String(entries.length))} of ${escapeHtml(String(total))} checklists shown.` +
-      ` <a href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer">Open lifelist</a>` +
-      ` for full history (${escapeHtml(String(omit))} more).` +
+    truncBlock =
+      `<div class="pebird-map-popup__trunc-hint">` +
+      `${escapeHtml(String(entries.length))} of ${escapeHtml(String(total))} checklists shown. ` +
+      `<a href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer">Open lifelist</a> ` +
+      `for full history (${escapeHtml(String(omit))} more).` +
       `</div>`;
   }
-  html += `</div></div>`;
-  return html;
+
+  return (
+    `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">` +
+    `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>` +
+    `<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">` +
+    `<div class="pebird-map-popup__visited-block">` +
+    `<div class="pebird-map-popup__section-label">${escapeHtml(label)}</div>` +
+    `<div class="pebird-map-popup__visit-dates">${visitInner}</div>` +
+    `</div>${truncBlock}` +
+    `</div></div>`
+  );
 }
 
 /** Single Leaflet popup layout for structured `popup_v1` (+ legacy fallback). */
@@ -202,31 +250,42 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
     return popupHtmlVisitedLayout(name, lifelistUrl, popup.visited, trunc);
   }
   if (popup) {
-    let html = `<div class="pebird-map-popup" style="font-family:system-ui,sans-serif;font-size:13px;">`;
-    html += `<strong>${escapeHtml(name)}</strong>`;
+    const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
+    const hl = lifelistUrl.trim();
+    const locHeading =
+      hl.length > 0
+        ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+        : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+    let html =
+      `<div class="pebird-map-popup">` +
+      `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>`;
     for (const line of popup.summary_lines ?? []) {
-      html += `<br/><span style="color:#444;">${escapeHtml(line)}</span>`;
+      html += `<span class="pebird-map-popup__summary-line">${escapeHtml(line)}</span>`;
     }
     for (const link of popup.links ?? []) {
       const href = link.href?.trim() ?? "";
       const label = link.label?.trim() || "Link";
       if (href) {
-        html += `<br/><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+        html += `<span class="pebird-map-popup__summary-line"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(
           label,
-        )}</a>`;
+        )}</a></span>`;
       }
     }
     html += "</div>";
     return html;
   }
   const visits = props?.visit_checklists;
-  const url = String(props?.lifelist_url ?? "");
-  let legacy = `<div style="font-family:system-ui,sans-serif;font-size:13px;"><strong>${escapeHtml(name)}</strong>`;
+  const url = String(props?.lifelist_url ?? "").trim();
+  const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
+  const locHeading =
+    url.length > 0
+      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+  let legacy =
+    `<div class="pebird-map-popup">` +
+    `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>`;
   if (visits != null && visits !== "") {
-    legacy += `<br/><span style="color:#444;">Checklists: ${escapeHtml(String(visits))}</span>`;
-  }
-  if (url) {
-    legacy += `<br/><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Lifelist</a>`;
+    legacy += `<span class="pebird-map-popup__summary-line">Checklists: ${escapeHtml(String(visits))}</span>`;
   }
   legacy += "</div>";
   return legacy;
@@ -292,6 +351,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
         attributionControl: true,
       });
       mapRef.current = map;
+      map.on("popupopen", scheduleShrinkPebirdLeafletPopups);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
