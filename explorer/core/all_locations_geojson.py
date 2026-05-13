@@ -1,9 +1,10 @@
 """GeoJSON payload + revision string for the experimental All locations map (#221).
 
-Per-pin ``popup_v1`` carries structured popup data (summary lines + links) so the iframe renders one
-template instead of Python emitting HTML×N. Extend fields toward :mod:`explorer.core.map_prep` /
-``build_species_overlay_map`` inputs; defer heavy sections via lazy-on-open when warranted — see
-``docs/explorer/issue-221-map-component-spike.md``.
+Per-pin ``popup_v1`` is structured data for one TS template (not HTML×N). With ``records_by_location``,
+``visited.entries`` mirrors classic visit-list rows (parallel to ``build_visit_info_html``).
+
+Warm reruns rebuild full GeoJSON + visits each Streamlit run unless we add caching (#221 spike doc **§ B**
+vs **Caching vs lazy pop-ups**). Prefer memo keyed like Folium map cache before lazy-on-open for parity UX.
 """
 
 from __future__ import annotations

@@ -44,30 +44,44 @@ Spike first; measurement second.
 - **Frontend:** `explorer/components/all_locations_map/` — Leaflet, **`leaflet.markercluster`**, defaults aligned with `defaults.py` (radius 40, disable clustering from zoom 9, `removeOutsideVisibleBounds` false); respects sidebar **cluster all locations** toggle.
 - **Warm reruns:** Component skips full marker/cluster rebuild when `revision` unchanged (browser console log).
 - **Instrumentation:** With **`EXPLORER_PERF=1`**, sidebar **Performance / debug** shows map-specific spans — Folium `prep.map_iframe_embed` vs experimental payload + component embed; times are **Python-side**, **serial script order** (not simultaneous loads, not browser paint).
-- **Pop-ups (spike slice):** Each feature includes **`popup_v1`** — structured `summary_lines` + `links` rendered by one TS template (parity with current experimental popup content so far; extend toward classic richness via `map_prep` / overlay builders).
+- **Pop-ups (spike slice):** Each feature includes **`popup_v1`** — with **`records_by_loc`** wired from the experimental tab, **`visited`** mirrors classic **All locations** (`build_visit_info_html` semantics: deduped checklist links + sort order from sidebar popup sort). Compact **`summary_lines` + `links`** fallback remains when no per-location rows are passed (tests). Seen/lifer species blocks deferred.
 
-### One-off performance note (real export — cold run, JSONL)
+### Performance notes (real export, JSONL — All locations, ~5721 pins)
 
-From a captured **`explorer_perf_events.jsonl`** on spike (`main_run_id` 1, cold): **All locations**, ~**46k** checklist rows, **5721** map pins (markers/popups built per pin on classic path).
+Two regimes matter: **compact GeoJSON** (early spike, lifelist + checklist count only) vs **full structured visit lists** per pin (current spike slice). Always capture **`EXPLORER_PERF=1`** with optional **`EXPLORER_PERF_LOG_FILE`** (see `explorer/app/streamlit/README.md`); example archive path used in spike: `benchmarks/map_perf/tmp/explorer_perf.jsonl`.
 
-**Classic (host-side, split spans — same rerun):**
+#### A — Early spike (compact `popup_v1`, cold `main_run_id` 1)
 
-| Stage | ~ms | Comment |
-|--------|-----|--------|
-| `prep.build_species_overlay_map` | **~7111** | Dominated by **`popup_build_total_ms` ~6505** — thousands of **rich HTML popups** built in Python |
-| `prep.folium_map_to_html_bytes` | **~3275** | Serialising Folium → HTML |
-| `prep.map_iframe_embed` | **~6900** | `st_folium` + **`deepcopy(result_map)`** — heavy at this size |
+~**46k** rows, **5721** pins. Experimental payload stayed ~**1.6 s** because GeoJSON carried minimal popup fields.
 
-**Experimental (same rerun):**
+**Classic (cold):** `prep.build_species_overlay_map` dominated by **`popup_build_total_ms`** (~5.5–6.5 s) + Folium HTML serialise + **`prep.map_iframe_embed`** (~6–7 s).
 
-| Stage | ~ms | Comment |
-|--------|-----|--------|
-| `map.experimental.payload` | **~1597** | Context + GeoJSON + revision |
-| `map.experimental.component_embed` | **~14** | Passing JSON into component — **does not** include tiles / Leaflet paint |
+**Experimental (cold):** **`map.experimental.payload`** ~**1.5–1.6 s**, **`map.experimental.component_embed`** ~**14–25 ms** (Python only — not tiles / browser paint).
 
-**How to read it:** Strong evidence the **Folium + HTML popup + st_folium** pipeline is vastly heavier **on the server/session path** than **compact GeoJSON + component**. Not claim “whole UX is 500× faster”: browser tile/load isn’t in the ~14 ms line; classic totals exclude optional overlap with other prep work.
+#### B — After visit-list parity (structured **`visited.entries`** per pin, 2026-05-13)
 
-**Also on that file:** `prep.cache_checklist_stats` (~31 s) and rankings/maint prep (~36 s) — map isn’t the only runway on a full rerun.
+Same dataset scale (~46k rows, 5721 locations, ~7605 unique checklists). **`map.experimental.payload` rises to ~6.0–6.3 s** (cold and warm): Python rebuilds **full GeoJSON including every checklist row** each Streamlit rerun — cost moves from **HTML×N** into **structured JSON×N** + hashing/revision.
+
+**Cold (`main_run_id` 1):** Classic still pays **`prep.build_species_overlay_map`** (**`popup_build_total_ms`** ~5.5 s) + **`prep.folium_map_to_html_bytes`** ~2.9 s + **`prep.map_iframe_embed`** ~6.2 s; experimental **`map.experimental.payload`** ~**6.0 s**, **`map.experimental.component_embed`** ~**23 ms**.
+
+**Warm (`main_run_id` ≥3, map HTML cache hit):** Classic **`prep.map_cache_hit`** / **`prep.map_html_cache_hit`** — overlay **not** rebuilt; **`prep.map_iframe_embed`** remains ~**6.15–6.25 s** every rerun. Experimental **`map.experimental.payload`** still ~**6.25–6.32 s** (no Python-side reuse yet), **`map.experimental.component_embed`** ~**23–25 ms**.
+
+**How to read B:** Visit parity eroded the “tiny experimental payload” advantage on warm reruns: Folium **reuses cached map HTML**, while experimental **recomputes the whole payload** each run — roughly **parity with iframe embed cost alone**, not an automatic win. **`fragment.country`** warm ~**4.6–5.2 s** on the same reruns — map is not the only large slice.
+
+**Cold non-map runway (unchanged):** `prep.cache_checklist_stats` ~**28 s**, `prep.cache_maint_rankings_sex_notation` ~**33 s** → warm drops to **~50–210 ms** each.
+
+### Caching vs lazy pop-ups (strategy)
+
+They address **different** problems; **use both** when needed:
+
+| Lever | What it fixes | UX impact |
+|--------|----------------|-----------|
+| **Cache structured payload** (e.g. memo by stable key / same **`revision`** + inputs as Folium map cache) | Warm reruns recomputing ~6 s of GeoJSON + visit rows when **nothing relevant changed** | None if invalidation matches data/settings |
+| **Lazy / on-open detail** | Bytes + Python work for **pins never opened**; caps worst-case payload | Small delay or extra step on open **only if** implemented without a **full Streamlit rerun per click** |
+
+**Suggested order:** Pursue **payload caching first** (same user-visible behaviour as today, targets warm **`map.experimental.payload`**). Add **lazy `visited` (or cap + lazy)** if profiling still shows pain at scale, or to trim initial transfer — complementary, not either/or.
+
+→ Copy **§ B** (Performance notes — paragraph B) into a [#221](https://github.com/jimchurches/myebirdstuff/issues/221) comment when sharing results with collaborators.
 
 ### Pop-ups — agreed direction (rich eBird without “dumbing down”)
 
@@ -110,19 +124,25 @@ This preserves **rich tie-back to eBird** while avoiding **`popup_html × N`** s
 
 **Implemented slice**
 
-- **`popup_v1`** on each GeoJSON feature (`explorer/core/all_locations_geojson.py`): structured `summary_lines` + `links[]`; TS renders one template (`AllLocationsMap.tsx`). Extend toward `map_prep` / `build_species_overlay_map` data sources without shipping HTML per pin.
+- **`popup_v1`** on each GeoJSON feature (`explorer/core/all_locations_geojson.py`): production path **`visited.entries`** (classic visit list); compact **`summary_lines` + `links`** when `records_by_location` omitted. TS: `AllLocationsMap.tsx`. Seen/lifer sections later.
 
 ### TODO / next (for a future “real” issue on `beta-next`)
 
-- [ ] Warm-cache perf repeat (popup cache hits; compare again).
+- [x] Warm-cache perf repeat — **done** (see **§ B** above): warm classic skips overlay rebuild; **`map.experimental.payload`** still ~6.3 s until **payload caching** (#221 follow-up).
+- [ ] **Python-side cache** for experimental GeoJSON/payload when revision + inputs unchanged (mirror Folium map cache idea).
 - [ ] Browser-side sanity (DevTools / subjective) alongside Python timers.
-- [ ] Structured rich popup schema + TS template — **v1** encodes summary lines + links; extend fields for full classic parity (species/hotspot/history/Macaulay rows).
+- [ ] Optional **lazy `visited`** (or cap + lazy) if payload/build still heavy after caching — avoid **`st_rerun` per popup**.
+- [ ] Structured popup — extend for species/hotspot/history/Macaulay when in scope (seen/lifer).
 - [ ] Optional: cluster icon styling parity with Folium tiers (`iconCreateFunction`).
 - [ ] Decide cut-over scope vs parallel experimental tab; spike branch **does not merge** to `beta-next` per agreement — spawn **new issue(s)** when promoting.
 
 ---
 
 ## Running log
+
+### 2026-05-13 (later)
+
+- **Perf (visit-list parity):** Documented **§ B** in Status snapshot — structured visits pushed **`map.experimental.payload`** to ~**6.3 s** cold/warm; warm classic uses cached Folium HTML but **`prep.map_iframe_embed`** ~**6.2 s**; **caching vs lazy** strategy subsection added (prefer cache first, then lazy if needed).
 
 ### 2026-05-13
 

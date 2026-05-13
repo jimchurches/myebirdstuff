@@ -1,4 +1,11 @@
-"""Experimental All locations map tab — Streamlit custom component spike (#221)."""
+"""Experimental All locations map tab — Streamlit custom component spike (#221).
+
+``map.experimental.payload`` spans include GeoJSON build + ``records_by_loc`` visit-list shaping when
+using structured ``popup_v1``. Warm reruns can spend multi‑seconds here (~≈ Folium ``map_iframe_embed``
+alone when classic map HTML is cached) — see ``docs/explorer/issue-221-map-component-spike.md``
+(**Performance § B**) for measured JSONL; next mitigation likely **Python-side payload caching**, then
+optional **lazy ``visited``** if still heavy.
+"""
 
 from __future__ import annotations
 
