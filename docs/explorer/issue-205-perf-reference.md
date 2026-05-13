@@ -67,6 +67,7 @@ Then point `aggregate_perf_jsonl` at the directory containing that file (see com
 | --- | --- | --- |
 | **Batch A** — popup fragment cache + presentation models | Reuse visit-list / species-section / lifer-line HTML fragments on full `popup_html_cache` misses when row content is unchanged (same rich HTML as before). | On (session cache; no env flag). |
 | **Batch B** — `EXPLORER_MAP_LAZY_POPUPS` | **All locations** only: tiny marker popup stubs; full HTML still built server-side and swapped in on Leaflet `popupopen`. Ignored when W2 lite popups are on. | Off (env / Streamlit secret). |
+| **Batch C** — `EXPLORER_MAP_STRUCTURED_POPUPS` | **All locations** only: same stub + `popupopen` bridge as Batch B, but map-level data holds **field-level `al1` JSON** rendered by `renderAl1` (smaller `html_bytes_len` than inlining visit-list HTML). Ignored when W2 lite is on; **wins over Batch B** when both env flags are set. | Off (env / Streamlit secret). |
 
 **Manual smoke (maintainer)**  
 Popup behaviour looks correct after basic use; **no clear subjective win on “map loads faster”** on its own — useful mainly when combined with metrics and A/B on larger datasets.
@@ -112,6 +113,7 @@ python scripts/aggregate_perf_jsonl.py /tmp \
   --extra-key popup_build_total_ms \
   --extra-key lite_map_popups \
   --extra-key lazy_map_popups \
+  --extra-key structured_map_popups \
   --extra-key banner_ms \
   --extra-key goto_ms \
   --extra-key html_bytes_len
@@ -161,6 +163,41 @@ lazy-off.jsonl   e2e.first_paint                  banner_ms.med ≈ 6739
 lazy-on.jsonl    e2e.first_paint                  banner_ms.med ≈ 6303
 ```
 
+### Batch C (structured `al1`) vs default — fixture **n = 3** × two modes (2026-05-13)
+
+**Recorded:** darwin · Python 3.12.3 · branch [`205-investigation-main`](https://github.com/jimchurches/myebirdstuff/tree/205-investigation-main) (workspace with Batch C + perf harness) · **Dataset:** `tests/fixtures/ebird_integration_fixture.csv` · **Journey:** `test_map_perf_structured_journey_tags_build_extra` (`EXPLORER_MAP_STRUCTURED_POPUPS` **0** vs **1**; lazy and lite **off**).
+
+The same afternoon, **lazy** **0/1** was re-recorded **3 runs per mode** on the same machine into the same directory so byte sizes are comparable to the historic lazy A/B story.
+
+| Mode (fixture) | `prep.folium_map_to_html_bytes` **`html_bytes_len.med`** (each run’s median of its events; then median of 3 runs) | `e2e.first_paint` **`banner_ms`**: median of the three per-run values |
+| --- | --- | --- |
+| Default (structured **off**, lazy **off**) | **45 521** | **6 369** |
+| **Batch C** structured **on** | **43 762** (**~3.9% smaller** than default) | **6 486** (no clear win vs default — **noise**) |
+| Lazy **on** (lite off; same directory) | **51 674** (**~13% larger** than default — same shape as the lazy vs default summary earlier in this doc) | **6 156** |
+
+**Read across**
+
+- **Achieved here:** structured payloads **shrink** `html_bytes_len` vs **eager** popups and vs **Batch B lazy** on the integration fixture — the original reason Batch C was proposed after lazy A/B.
+- **Not achieved / unknown:** **First paint** and perceived speed did **not** show a convincing median improvement in these 3× runs; **real `MyEBirdData.csv`** (multiple runs) plus **beta-next** (no structured flag) subjective comparison remain the next validation steps.
+- **Automated A/B:** `streamlit_perf_url_logfile_and_structured_expected` + `EXPLORER_E2E_MAP_STRUCTURED_POPUPS` mirror the lazy/W2 perf fixtures.
+
+**Reproduce** (archives are gitignored under `benchmarks/map_perf/snapshots/`):
+
+```bash
+mkdir -p benchmarks/map_perf/snapshots/issue-205-batch-c-2026-05-12
+for run in 1 2 3; do
+  EXPLORER_E2E_PERF_JSONL_ARCHIVE="$PWD/benchmarks/map_perf/snapshots/issue-205-batch-c-2026-05-12/fixture-struct0-r${run}.jsonl" \
+    python -m pytest 'tests/explorer/test_map_perf_e2e.py::test_map_perf_structured_journey_tags_build_extra[0]' --perf -v
+  EXPLORER_E2E_PERF_JSONL_ARCHIVE="$PWD/benchmarks/map_perf/snapshots/issue-205-batch-c-2026-05-12/fixture-struct1-r${run}.jsonl" \
+    python -m pytest 'tests/explorer/test_map_perf_e2e.py::test_map_perf_structured_journey_tags_build_extra[1]' --perf -v
+done
+python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots/issue-205-batch-c-2026-05-12 \
+  --glob 'fixture-struct*.jsonl' \
+  --stage prep.folium_map_to_html_bytes \
+  --stage e2e.first_paint \
+  --extra-key html_bytes_len --extra-key banner_ms --extra-key structured_map_popups
+```
+
 ### Legacy *n* = 1 table (older `issue-205-doc-e2e` capture; illustrative only)
 
 ```
@@ -177,6 +214,7 @@ issue-205-doc-e2e.jsonl      prep.map_iframe_embed                     1        
 
 - **Batch A** (fragment cache): backend-only speedup when popups miss the full HTML cache; behaviour unchanged — strongest candidate to port if we want investigation value on `beta-next` without UX flags.
 - **Batch B** (lazy popups): optional flag; **fixture A/B (`a6e2e46`) did not show smaller `html_bytes_len`** — treat as UX / architecture unless **real CSV** runs show a win; “smaller payload” likely needs **structured data + client templates** later, not inlined full HTML JSON.
+- **Batch C** (structured `EXPLORER_MAP_STRUCTURED_POPUPS`): **2026-05-13 fixture capture** (`issue-205-batch-c-2026-05-12`) shows **~4% smaller `html_bytes_len`** vs default and vs lazy-on; **first paint** on the same **n = 3** runs did **not** show a clear median win — validate on **real CSV** before merge decisions.
 
 ## Related references (elsewhere)
 

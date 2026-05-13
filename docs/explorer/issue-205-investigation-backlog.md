@@ -42,7 +42,7 @@ stages exposed by [explorer/app/streamlit/perf_instrumentation.py](../../explore
 
 ## TODO — `beta-next` vs `205-investigation-main` (roll-up tracker)
 
-Keep this list current when you merge or decide to stay experimental. **Last reviewed:** 2026-05-13 (`origin/beta-next` @ `924c022`, investigation @ `888275d`).
+Keep this list current when you merge or decide to stay experimental. **Last reviewed:** 2026-05-13 (`origin/beta-next` @ `924c022`; investigation includes Batch C spike + perf harness; fixture **n = 3** structured A/B summarized in [`issue-205-perf-reference.md`](issue-205-perf-reference.md)).
 
 | Item | On `beta-next`? | Promote? | Notes |
 | --- | --- | --- | --- |
@@ -53,7 +53,7 @@ Keep this list current when you merge or decide to stay experimental. **Last rev
 | **Batch B** — `EXPLORER_MAP_LAZY_POPUPS` + `map_lazy_popups.py` | **No** | **Not yet** | Fixture metrics: **`html_bytes_len` not improved** (often worse). Keep on investigation until **Batch C** or real-CSV proof. |
 | **`html_bytes_len` on `prep.folium_map_to_html_bytes`** | **No** | **Optional** | Small telemetry win for lazy/HTML A/Bs; ship with Batch A PR or separately. |
 | **Lazy A/B E2E** (`streamlit_perf_url_logfile_and_lazy_expected`, W2 isolates lazy) | **No** | **Optional** | Nice for regression + archives; not required for production. |
-| **Batch C** — structured popup payload + thin client render | **No** | **Investigate here first** | Next step if we want **smaller** map HTML than “full HTML in JSON.” |
+| **Batch C** — structured popup payload + thin client render | **No** | **Investigate here first** | **Fixture (n = 3):** `html_bytes_len.med` **~43.8 KB** structured **on** vs **~45.5 KB** default (**~3.9% smaller**); lazy-on **~51.7 KB** same shape as prior lazy A/B. **`e2e.first_paint`** median not clearly better — need **real CSV**. See perf reference § Batch C. |
 
 **Was Batch A a “win”?**  
 It is **not** a dramatic “map feels instant” change by itself — it is an **incremental server-side efficiency**: fewer repeated fragment HTML builds when the session already knows the visit list / species sections. Think of it as **payoff for moving toward structured popups**, not the end state. It **does** deserve `beta-next` on **risk/reward** (same pixels, less wasted work).
@@ -82,7 +82,7 @@ It is **not** a dramatic “map feels instant” change by itself — it is an *
 | H2 | Persistent client iframe, data-only updates | Most of the cost is *re-mounting* the Leaflet map; if it stays mounted and we only push diff'd GeoJSON, reruns become trivial. | Order-of-magnitude gain for warm reruns. | New component boundary; needs careful Streamlit↔component messaging. Significant build effort. | First-paint timing + per-rerun delta when only a filter changes. | Working spike on a save-branch + recommendation. | backlog |
 | H3 | Partial Folium → GeoJSON overlay for the *selected species only* | The base map could be cached once; only the species overlay changes on most interactions. | Skips full Folium rebuild when only species selection changes. | Two-layer architecture; risk of overlay/base drift in popups + cluster behaviour. | Stage timings split between "base map build" and "overlay update". | Spike result + go/no-go on #205. | backlog |
 | H4 | Pre-render multiple map variants on first load | All / Lifer / Family-blank maps are predictable. Pre-building them in the cold prep window may erase the first-switch wait. | Removes the first "All → Lifer" wait users notice. | Larger memory footprint; longer cold start. | Compare cold prep time vs first-switch time on real CSV. | Recommendation on the trade-off. | backlog |
-| **C1** | **Batch C** — structured popup payload + thin client template (All locations first) | Lazy Batch B still embeds **full** popup HTML in JSON → **`html_bytes_len` often increases** (fixture A/B). **Field-level** JSON + one small render function can shrink bytes and parse cost. | Smaller map HTML + path to faster open; complements Batch A server work. | Must preserve **eBird** links, visit table behaviour, accessibility; parity tests + E2E. | `html_bytes_len`, lazy vs C1 A/B, cluster popup parity. | Spike on **`205-investigation-main`**; promote pieces with Batch A if clean. | **batch 1 (investigation)** |
+| **C1** | **Batch C** — structured popup payload + thin client template (All locations first) | Lazy Batch B still embeds **full** popup HTML in JSON → **`html_bytes_len` often increases** (fixture A/B). **Field-level** JSON + one small render function can shrink bytes and parse cost. | Smaller map HTML + path to faster open; complements Batch A server work. | Must preserve **eBird** links, visit table behaviour, accessibility; parity tests + E2E. | `html_bytes_len`, lazy vs C1 A/B, cluster popup parity. | Spike on **`205-investigation-main`**: ``EXPLORER_MAP_STRUCTURED_POPUPS`` + :mod:`explorer.presentation.map_structured_popups`; promote after A/B. | **spike (code landed)** |
 
 ## Outside the current Streamlit shell
 
