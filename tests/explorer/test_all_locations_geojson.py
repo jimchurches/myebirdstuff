@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import pandas as pd
 
+from explorer.core.all_locations_experimental_marker_style import (
+    experimental_default_scheme_circle_marker_props,
+)
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
 
 
@@ -36,6 +39,29 @@ def test_build_all_locations_geojson_payload_stable_revision() -> None:
     assert gj1["features"][0]["geometry"]["coordinates"] == [150.0, -34.0]
     assert gj1["features"][0]["properties"]["lifelist_url"] == "https://ebird.org/lifelist/L1"
     assert gj1["features"][0]["properties"]["visit_checklists"] == 3
+    assert gj1["features"][0]["properties"]["colour"] == "#abc123"
+
+
+def test_build_all_locations_geojson_payload_omit_pin_colour() -> None:
+    df = pd.DataFrame(
+        {
+            "Location ID": ["L1"],
+            "Location": ["Alpha"],
+            "Latitude": [-34.0],
+            "Longitude": [150.0],
+        }
+    )
+    _, gj = build_all_locations_geojson_payload(df, omit_pin_colour=True)
+    assert "colour" not in gj["features"][0]["properties"]
+
+
+def test_experimental_default_scheme_circle_marker_props_matches_folium_resolver() -> None:
+    d = experimental_default_scheme_circle_marker_props()
+    assert {"fill_hex", "stroke_hex", "radius_px", "stroke_weight", "fill_opacity"}.issubset(d.keys())
+    assert str(d["fill_hex"]).startswith("#")
+    assert str(d["stroke_hex"]).startswith("#")
+    assert int(d["radius_px"]) >= 1
+    assert int(d["stroke_weight"]) >= 1
 
 
 def test_build_all_locations_geojson_payload_revision_extra_changes_revision() -> None:

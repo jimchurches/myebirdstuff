@@ -34,6 +34,7 @@ def render_all_locations_map_component(
     height: int,
     key: str,
     cluster_options: dict | None = None,
+    circle_marker_style: dict | None = None,
 ) -> None:
     """Render the iframe component or show build instructions when ``frontend/build`` is absent."""
     fn = _component_callable()
@@ -48,5 +49,6 @@ def render_all_locations_map_component(
         geojson=geojson,
         height=int(height),
         cluster_options=cluster_options if cluster_options is not None else {},
+        circle_marker_style=circle_marker_style if circle_marker_style is not None else {},
         key=key,
     )

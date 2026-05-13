@@ -7,19 +7,18 @@ from typing import Any
 
 import streamlit as st
 
-from explorer.app.streamlit.app_constants import (
-    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
-)
+from explorer.app.streamlit.app_constants import STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY
 from explorer.app.streamlit.defaults import (
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
     MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
     MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
-    active_map_marker_colour_scheme,
 )
 from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.components.all_locations_map import render_all_locations_map_component
+from explorer.core.all_locations_experimental_marker_style import (
+    experimental_default_scheme_circle_marker_props,
+)
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
 from explorer.core.map_prep import prepare_all_locations_map_context
 from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
@@ -33,8 +32,8 @@ def render_map_experimental_tab(
     map_height: int,
 ) -> None:
     st.caption(
-        "**Map (experimental)** — Leaflet + marker clustering (#221 spike). Uses the same **cluster "
-        "all locations** sidebar toggle as the classic Map. Open DevTools for revision-unchanged logs."
+        "**Map (experimental)** — Leaflet + clustering (#221). Cluster toggle matches classic Map; "
+        "**pin colours/radius** match preset **1** (Eucalypt) — sidebar marker scheme not applied here yet."
     )
     if map_view_mode != "all":
         st.info('Switch **Map view** in the sidebar to **All locations** to try this prototype.')
@@ -49,13 +48,8 @@ def render_map_experimental_tab(
             loc_df = ctx["location_data"]
             work = ctx["df"]
             counts = work.groupby("Location ID")["Submission ID"].nunique()
-            raw_ix = st.session_state.get(STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY)
-            try:
-                scheme_ix = int(raw_ix) if raw_ix is not None else None
-            except (TypeError, ValueError):
-                scheme_ix = None
-            scheme = active_map_marker_colour_scheme(scheme_ix)
-            pin_hex = str(scheme.global_defaults.fill_hex)
+
+            circle_style = experimental_default_scheme_circle_marker_props()
 
             cluster_opts: dict[str, Any] = {
                 "enabled": bool(
@@ -69,11 +63,12 @@ def render_map_experimental_tab(
                 "spiderfy_on_max_zoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
                 "remove_outside_visible_bounds": MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
             }
+            revision_bundle = {"circle_marker": circle_style, "cluster": cluster_opts}
             revision, geojson = build_all_locations_geojson_payload(
                 loc_df,
                 checklist_counts_by_location=counts.to_dict(),
-                pin_fill_hex=pin_hex,
-                revision_extra=json.dumps(cluster_opts, sort_keys=True),
+                omit_pin_colour=True,
+                revision_extra=json.dumps(revision_bundle, sort_keys=True),
             )
     except ValueError as e:
         st.warning(str(e))
@@ -87,6 +82,7 @@ def render_map_experimental_tab(
             "revision_prefix": revision[:12],
             "n_features": len(geojson.get("features", [])),
             "cluster_enabled": cluster_opts.get("enabled"),
+            "marker_preset": "scheme_1_eucalypt",
         },
     ):
         render_all_locations_map_component(
@@ -94,5 +90,6 @@ def render_map_experimental_tab(
             geojson=geojson,
             height=map_height,
             cluster_options=cluster_opts,
+            circle_marker_style=circle_style,
             key="explorer_all_locations_map_component_v1",
         )

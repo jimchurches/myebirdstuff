@@ -22,6 +22,7 @@ def build_all_locations_geojson_payload(
     *,
     checklist_counts_by_location: Mapping[Hashable, int] | None = None,
     pin_fill_hex: str = "#3388ff",
+    omit_pin_colour: bool = False,
     revision_extra: str = "",
 ) -> tuple[str, dict[str, Any]]:
     """Return ``(revision, geojson_dict)`` for the Leaflet Streamlit component.
@@ -29,6 +30,8 @@ def build_all_locations_geojson_payload(
     *revision* changes when the sorted feature set (coordinates, ids, labels, visit counts) changes.
     Pass *revision_extra* (e.g. JSON of cluster options) so iframe behaviour can bump the revision
     without changing GeoJSON geometry.
+    When *omit_pin_colour* is True, ``colour`` is omitted from features so the iframe applies
+    ``circle_marker_style`` from Streamlit (resolved Folium-equivalent pin styling).
     """
     cols = {"Location ID", "Location", "Latitude", "Longitude"}
     if not cols.issubset(location_data.columns):
@@ -48,17 +51,19 @@ def build_all_locations_geojson_payload(
         visits_val: int | str = ""
         if checklist_counts_by_location is not None:
             visits_val = int(checklist_counts_by_location.get(row["Location ID"], 0))
+        props: dict[str, Any] = {
+            "location_id": lid,
+            "name": name,
+            "lifelist_url": _lifelist_url(lid),
+            "visit_checklists": visits_val,
+        }
+        if not omit_pin_colour:
+            props["colour"] = pin_fill_hex
         features.append(
             {
                 "type": "Feature",
                 "geometry": {"type": "Point", "coordinates": [lon_f, lat_f]},
-                "properties": {
-                    "location_id": lid,
-                    "name": name,
-                    "lifelist_url": _lifelist_url(lid),
-                    "colour": pin_fill_hex,
-                    "visit_checklists": visits_val,
-                },
+                "properties": props,
             }
         )
 

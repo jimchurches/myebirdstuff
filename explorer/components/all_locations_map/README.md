@@ -23,6 +23,8 @@ Clustering uses **Leaflet.markercluster** with defaults aligned to `explorer/app
 
 The sidebar **cluster all locations** toggle is passed as `cluster_options.enabled`; full cluster JSON is mixed into the GeoJSON **revision** hash so toggling clustering bumps revision and reloads the overlay.
 
+**Pins:** `circle_marker_style` comes from Python via `_all_locations_marker_params_from_scheme(MAP_MARKER_COLOUR_SCHEME_1)` — same CircleMarker fill/stroke/radius/weight/opacity as classic Folium **All locations** for **preset 1 (Eucalypt)** only in this spike (sidebar marker-scheme radio not applied).
+
 ## Pop-ups / eBird richness (design)
 
 Classic Folium builds large HTML popups in Python. The component approach keeps **the same facts and URLs**

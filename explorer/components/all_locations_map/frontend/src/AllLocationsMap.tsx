@@ -18,6 +18,14 @@ interface ClusterOptionsPayload {
   remove_outside_visible_bounds?: boolean;
 }
 
+interface CircleMarkerStylePayload {
+  fill_hex?: string;
+  stroke_hex?: string;
+  radius_px?: number;
+  stroke_weight?: number;
+  fill_opacity?: number;
+}
+
 interface MapArgs {
   revision: string;
   geojson: {
@@ -30,6 +38,7 @@ interface MapArgs {
   };
   height: number;
   cluster_options?: ClusterOptionsPayload;
+  circle_marker_style?: CircleMarkerStylePayload;
 }
 
 /** Matches Folium all-locations defaults from explorer.app.streamlit.defaults. */
@@ -61,6 +70,44 @@ function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function isHex6(s: string | undefined): boolean {
+  return typeof s === "string" && /^#[0-9a-fA-F]{6}$/.test(s);
+}
+
+/** Folium-equivalent CircleMarker options from Python or legacy GeoJSON ``colour``. */
+function resolvedCircleStyles(
+  cm: CircleMarkerStylePayload | undefined,
+  featureColour: string | undefined,
+): Pick<L.CircleMarkerOptions, "radius" | "weight" | "color" | "fillColor" | "fillOpacity"> {
+  const fillHex = isHex6(cm?.fill_hex)
+    ? cm!.fill_hex!
+    : isHex6(featureColour)
+      ? featureColour!
+      : "#3388ff";
+  const strokeHex = isHex6(cm?.stroke_hex) ? cm!.stroke_hex! : "#1c2630";
+  const radius =
+    typeof cm?.radius_px === "number" && Number.isFinite(cm.radius_px) && cm.radius_px > 0
+      ? cm.radius_px
+      : 7;
+  const weight =
+    typeof cm?.stroke_weight === "number" &&
+    Number.isFinite(cm.stroke_weight) &&
+    cm.stroke_weight >= 1
+      ? cm.stroke_weight
+      : 1;
+  let fillOp = 0.88;
+  if (typeof cm?.fill_opacity === "number" && Number.isFinite(cm.fill_opacity)) {
+    fillOp = Math.min(1, Math.max(0, cm.fill_opacity));
+  }
+  return {
+    radius,
+    weight,
+    color: strokeHex,
+    fillColor: fillHex,
+    fillOpacity: fillOp,
+  };
 }
 
 function AllLocationsMap(props: ComponentProps): React.ReactElement {
@@ -126,14 +173,15 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
 
     const gjLayer = L.geoJSON(gj, {
       pointToLayer(feature, latlng) {
-        const c = feature.properties?.colour as string | undefined;
+        const featureColour = feature.properties?.colour as string | undefined;
+        const rs = resolvedCircleStyles(args.circle_marker_style, featureColour);
         const opts: L.CircleMarkerOptions = {
-          radius: 7,
+          radius: rs.radius,
           stroke: true,
-          weight: 1,
-          color: "#1c2630",
-          fillColor: c && /^#[0-9a-fA-F]{6}$/.test(c) ? c : "#3388ff",
-          fillOpacity: 0.88,
+          weight: rs.weight,
+          color: rs.color,
+          fillColor: rs.fillColor,
+          fillOpacity: rs.fillOpacity,
         };
         return L.circleMarker(latlng, opts);
       },
@@ -167,7 +215,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
     }
 
     map.invalidateSize();
-  }, [args.revision, args.geojson, args.height, args.cluster_options]);
+  }, [args.revision, args.geojson, args.height, args.cluster_options, args.circle_marker_style]);
 
   const h = Number(args.height) || 420;
   return (
