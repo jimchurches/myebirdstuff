@@ -51,10 +51,18 @@ class LazyAllLocationsPopupBridge(MacroElement):
                 var popup = e.popup;
                 if (!popup || typeof popup.getContent !== "function") { return; }
                 var raw = popup.getContent();
-                if (typeof raw !== "string") { return; }
-                var tmp = document.createElement("div");
-                tmp.innerHTML = raw;
-                var stub = tmp.querySelector('[data-pebird-lazy="1"]');
+                var stub = null;
+                if (typeof raw === "string") {
+                    var tmp = document.createElement("div");
+                    tmp.innerHTML = raw;
+                    stub = tmp.querySelector('[data-pebird-lazy="1"]');
+                } else if (raw && raw.nodeType === 1) {
+                    if (raw.getAttribute && raw.getAttribute("data-pebird-lazy") === "1") {
+                        stub = raw;
+                    } else if (raw.querySelector) {
+                        stub = raw.querySelector('[data-pebird-lazy="1"]');
+                    }
+                }
                 if (!stub) { return; }
                 var lid = stub.getAttribute("data-location-id");
                 if (!lid || !Object.prototype.hasOwnProperty.call(DATA, lid)) { return; }
