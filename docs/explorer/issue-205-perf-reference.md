@@ -119,7 +119,49 @@ python scripts/aggregate_perf_jsonl.py /tmp \
 
 (`html_bytes_len` is present on **`prep.folium_map_to_html_bytes`** from 2026-05-13; use it for lazy vs default payload comparisons.)
 
-Output (same run as above; **illustrative**, machine-specific):
+### Lazy vs default — **plain summary** (fixture, lazy fixes landed)
+
+**Recorded:** 2026-05-13 · **Git:** `a6e2e46` · **Dataset:** `tests/fixtures/ebird_integration_fixture.csv` · **Journey:** `test_map_perf_lazy_journey_tags_build_extra` (automated; **lite off** each time).
+
+**Important:** *one* pytest run per mode (**n = 1**). Timings and sizes are **machine-specific**; treat this as a **hint**, not a proof.
+
+| Question | What the numbers said (this capture) |
+| --- | --- |
+| **Is the map HTML file smaller with lazy?** | **No here.** `prep.folium_map_to_html_bytes` **`html_bytes_len`** median was **~45.5 KB** (lazy **off**) vs **~51.7 KB** (lazy **on**). Lazy still ships **all** full popup HTML inside a **JSON blob** for the bridge, so total size can **go up** on small/medium datasets. |
+| **Did the map appear faster (first banner)?** | **Maybe a little** in this single run: **`e2e.first_paint`** **~6.7 s** vs **~6.3 s** — difference is small and could be **noise**; repeat 3× per mode locally if you want confidence. |
+| **Was Folium “HTML generation” much faster?** | **No.** ~**11–12 ms** per event on the fixture — noise-level. |
+
+**Bottom line (dumbed down)**
+
+- **Lazy popups are not showing a clear “load faster / smaller map” win** on this **fixture** run; the **byte size** of the generated HTML actually **increased**.
+- **UX:** fine if you’re happy with on-open injection; that’s separate from perf.
+- **Before merging lazy to a mainline for performance:** re-run the same pairing on your **real MyEBirdData CSV** (several runs each), watch **`html_bytes_len`** and **`e2e.first_paint`**. If HTML stays **larger** with lazy, the *current* lazy design is **not** a download-size optimization — a later step would be **lighter JSON + client rendering**, not “same HTML in a big object”.
+- **Archives** (gitignored): `benchmarks/map_perf/snapshots/issue-205-lazy-a6e2e46/lazy-off.jsonl` and `lazy-on.jsonl`. Reproduce:
+
+```bash
+mkdir -p benchmarks/map_perf/snapshots/issue-205-lazy-a6e2e46
+EXPLORER_E2E_PERF_JSONL_ARCHIVE="$PWD/benchmarks/map_perf/snapshots/issue-205-lazy-a6e2e46/lazy-off.jsonl" \
+  python -m pytest 'tests/explorer/test_map_perf_e2e.py::test_map_perf_lazy_journey_tags_build_extra[0]' --perf -v
+EXPLORER_E2E_PERF_JSONL_ARCHIVE="$PWD/benchmarks/map_perf/snapshots/issue-205-lazy-a6e2e46/lazy-on.jsonl" \
+  python -m pytest 'tests/explorer/test_map_perf_e2e.py::test_map_perf_lazy_journey_tags_build_extra[1]' --perf -v
+python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots/issue-205-lazy-a6e2e46 \
+  --glob '*.jsonl' \
+  --stage prep.folium_map_to_html_bytes \
+  --stage e2e.first_paint \
+  --stage prep.build_species_overlay_map \
+  --extra-key html_bytes_len --extra-key lazy_map_popups --extra-key banner_ms --extra-key goto_ms
+```
+
+Output (same capture as above; columns trimmed for reading):
+
+```
+lazy-off.jsonl   prep.folium_map_to_html_bytes   html_bytes_len.med ≈ 45521
+lazy-on.jsonl    prep.folium_map_to_html_bytes   html_bytes_len.med ≈ 51674
+lazy-off.jsonl   e2e.first_paint                  banner_ms.med ≈ 6739
+lazy-on.jsonl    e2e.first_paint                  banner_ms.med ≈ 6303
+```
+
+### Legacy *n* = 1 table (older `issue-205-doc-e2e` capture; illustrative only)
 
 ```
 group                        stage                                n_runs   total_events    med_evt/run         med_ms         p95_ms         max_ms marker_count.med marker_count.max popup_build_count.med popup_build_count.max popup_cache_hit_count.med popup_cache_hit_count.max popup_build_total_ms.med popup_build_total_ms.max lite_map_popups.med lite_map_popups.max lazy_map_popups.med lazy_map_popups.max  banner_ms.med  banner_ms.max    goto_ms.med    goto_ms.max
@@ -134,7 +176,7 @@ issue-205-doc-e2e.jsonl      prep.map_iframe_embed                     1        
 **Merge-back hygiene (for later)**
 
 - **Batch A** (fragment cache): backend-only speedup when popups miss the full HTML cache; behaviour unchanged — strongest candidate to port if we want investigation value on `beta-next` without UX flags.
-- **Batch B** (lazy popups): optional flag; UX validated casually on experimental branch; port only if we want the **smaller initial Folium payload** on All locations and accept the client-side open path.
+- **Batch B** (lazy popups): optional flag; **fixture A/B (`a6e2e46`) did not show smaller `html_bytes_len`** — treat as UX / architecture unless **real CSV** runs show a win; “smaller payload” likely needs **structured data + client templates** later, not inlined full HTML JSON.
 
 ## Related references (elsewhere)
 
