@@ -46,6 +46,64 @@ def test_build_all_locations_geojson_payload_stable_revision() -> None:
     assert pop["links"] == [{"label": "Lifelist", "href": "https://ebird.org/lifelist/L1"}]
 
 
+def test_build_all_locations_geojson_payload_visited_section_matches_records() -> None:
+    df = pd.DataFrame(
+        {
+            "Location ID": ["L1"],
+            "Location": ["Alpha"],
+            "Latitude": [-34.0],
+            "Longitude": [150.0],
+        }
+    )
+    records = pd.DataFrame(
+        {
+            "Submission ID": ["S222", "S111"],
+            "datetime": pd.to_datetime(["2021-06-15 08:00", "2020-01-10 12:00"]),
+        }
+    )
+    counts = {"L1": 2}
+    _, gj = build_all_locations_geojson_payload(
+        df,
+        checklist_counts_by_location=counts,
+        records_by_location={"L1": records},
+        popup_visit_dates_ascending=True,
+    )
+    pop = gj["features"][0]["properties"]["popup_v1"]
+    assert pop["v"] == 1
+    visited = pop["visited"]
+    assert visited["label"] == "Visited:"
+    entries = visited["entries"]
+    assert len(entries) == 2
+    assert entries[0]["href"] == "https://ebird.org/checklist/S111"
+    assert "2020-01-10" in entries[0]["label"]
+    assert entries[1]["href"] == "https://ebird.org/checklist/S222"
+
+
+def test_build_all_locations_geojson_payload_visited_descending() -> None:
+    df = pd.DataFrame(
+        {
+            "Location ID": ["L1"],
+            "Location": ["Alpha"],
+            "Latitude": [-34.0],
+            "Longitude": [150.0],
+        }
+    )
+    records = pd.DataFrame(
+        {
+            "Submission ID": ["S222", "S111"],
+            "datetime": pd.to_datetime(["2021-06-15 08:00", "2020-01-10 12:00"]),
+        }
+    )
+    _, gj = build_all_locations_geojson_payload(
+        df,
+        checklist_counts_by_location={"L1": 2},
+        records_by_location={"L1": records},
+        popup_visit_dates_ascending=False,
+    )
+    entries = gj["features"][0]["properties"]["popup_v1"]["visited"]["entries"]
+    assert entries[0]["href"] == "https://ebird.org/checklist/S222"
+
+
 def test_build_all_locations_geojson_payload_omit_pin_colour() -> None:
     df = pd.DataFrame(
         {

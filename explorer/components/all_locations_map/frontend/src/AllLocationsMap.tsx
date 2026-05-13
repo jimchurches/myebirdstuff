@@ -39,6 +39,10 @@ interface PopupPayloadV1 {
   v: 1;
   summary_lines?: string[];
   links?: PopupLinkV1[];
+  visited?: {
+    label?: string;
+    entries?: PopupLinkV1[];
+  };
 }
 
 interface MapArgs {
@@ -105,13 +109,68 @@ function parsePopupV1(raw: unknown): PopupPayloadV1 | null {
       label: typeof item.label === "string" ? item.label : "",
       href: typeof item.href === "string" ? item.href : "",
     }));
-  return { v: 1, summary_lines, links };
+  let visited: PopupPayloadV1["visited"];
+  const visRaw = o.visited;
+  if (visRaw && typeof visRaw === "object") {
+    const vo = visRaw as Record<string, unknown>;
+    const vLabel = typeof vo.label === "string" ? vo.label : "Visited:";
+    const entRaw = Array.isArray(vo.entries) ? vo.entries : [];
+    const entries: PopupLinkV1[] = entRaw
+      .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+      .map((item) => ({
+        label: typeof item.label === "string" ? item.label : "",
+        href: typeof item.href === "string" ? item.href : "",
+      }));
+    visited = { label: vLabel, entries };
+  }
+  return { v: 1, summary_lines, links, visited };
+}
+
+/** Classic All locations card: lifelist heading + scrollable ``Visited:`` links (``map_popup_models``). */
+function popupHtmlVisitedLayout(
+  name: string,
+  lifelistUrl: string,
+  visited: NonNullable<PopupPayloadV1["visited"]>,
+): string {
+  const label = visited.label?.trim() || "Visited:";
+  const entries = visited.entries ?? [];
+  let html =
+    `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;font-family:system-ui,sans-serif;font-size:13px;">` +
+    `<div style="margin-bottom:4px;">`;
+  const hl = lifelistUrl.trim();
+  if (hl) {
+    html += `<a href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer" style="font-weight:600;color:#0066cc;text-decoration:underline;">${escapeHtml(
+      name,
+    )}</a>`;
+  } else {
+    html += `<strong>${escapeHtml(name)}</strong>`;
+  }
+  html +=
+    `</div>` +
+    `<div style="max-height:300px;overflow-y:auto;">` +
+    `<div style="font-weight:600;margin-bottom:4px;">${escapeHtml(label)}</div>` +
+    `<div class="pebird-map-popup__visit-dates">`;
+  for (const e of entries) {
+    const href = e.href?.trim() ?? "";
+    const linkLabel = e.label?.trim() || href;
+    if (href) {
+      html += `<div style="margin:0 0 5px 0;line-height:1.35;">` +
+        `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel)}</a>` +
+        `</div>`;
+    }
+  }
+  html += `</div></div></div>`;
+  return html;
 }
 
 /** Single Leaflet popup layout for structured `popup_v1` (+ legacy fallback). */
 function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): string {
   const name = String(props?.name ?? "Location");
+  const lifelistUrl = String(props?.lifelist_url ?? "");
   const popup = parsePopupV1(props?.popup_v1);
+  if (popup?.visited) {
+    return popupHtmlVisitedLayout(name, lifelistUrl, popup.visited);
+  }
   if (popup) {
     let html = `<div class="pebird-map-popup" style="font-family:system-ui,sans-serif;font-size:13px;">`;
     html += `<strong>${escapeHtml(name)}</strong>`;

@@ -15,6 +15,8 @@ from typing import Any
 
 import pandas as pd
 
+from explorer.presentation.map_renderer import build_visit_popup_entry_rows, format_visit_time
+
 
 def _lifelist_url(location_id: str) -> str:
     lid = str(location_id).strip()
@@ -23,12 +25,12 @@ def _lifelist_url(location_id: str) -> str:
     return f"https://ebird.org/lifelist/{lid}"
 
 
-def _popup_payload_v1(
+def _popup_payload_v1_compact(
     *,
     visit_checklists: int | str,
     lifelist_url: str,
 ) -> dict[str, Any]:
-    """Structured popup blob rendered by ``AllLocationsMap.tsx`` (schema version 1)."""
+    """Fallback popup when per-location visit rows are unavailable (tests / minimal callers)."""
     summary_lines: list[str] = []
     if visit_checklists != "":
         summary_lines.append(f"Checklists: {visit_checklists}")
@@ -39,10 +41,43 @@ def _popup_payload_v1(
     return {"v": 1, "summary_lines": summary_lines, "links": links}
 
 
+def _popup_payload_v1_all_locations(
+    *,
+    visit_entries: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Classic All locations shape: heading uses lifelist URL in TS; ``Visited:`` checklist links."""
+    return {"v": 1, "visited": {"label": "Visited:", "entries": visit_entries}}
+
+
+def _visit_entries_for_location(
+    records_by_location: Mapping[Hashable, pd.DataFrame] | None,
+    location_id: Hashable,
+    *,
+    popup_visit_dates_ascending: bool,
+) -> list[dict[str, str]] | None:
+    """Return structured visit rows, or ``None`` to fall back to compact popup."""
+    if records_by_location is None:
+        return None
+    base = records_by_location.get(location_id, pd.DataFrame())
+    if base.empty or "Submission ID" not in base.columns:
+        return []
+    vr = base.drop_duplicates(subset=["Submission ID"])
+    if vr.empty:
+        return []
+    ascending = popup_visit_dates_ascending
+    if "datetime" in vr.columns:
+        vr = vr.sort_values("datetime", ascending=ascending)
+    elif "Date" in vr.columns:
+        vr = vr.sort_values("Date", ascending=ascending)
+    return build_visit_popup_entry_rows(vr, format_visit_time)
+
+
 def build_all_locations_geojson_payload(
     location_data: pd.DataFrame,
     *,
     checklist_counts_by_location: Mapping[Hashable, int] | None = None,
+    records_by_location: Mapping[Hashable, pd.DataFrame] | None = None,
+    popup_visit_dates_ascending: bool = True,
     pin_fill_hex: str = "#3388ff",
     omit_pin_colour: bool = False,
     revision_extra: str = "",
@@ -54,6 +89,9 @@ def build_all_locations_geojson_payload(
     without changing GeoJSON geometry.
     When *omit_pin_colour* is True, ``colour`` is omitted from features so the iframe applies
     ``circle_marker_style`` from Streamlit (resolved Folium-equivalent pin styling).
+
+    When *records_by_location* is set (same mapping as Folium **All locations**), each feature's
+    ``popup_v1`` includes a ``visited`` section mirroring :func:`build_location_popup_html` content.
     """
     cols = {"Location ID", "Location", "Latitude", "Longitude"}
     if not cols.issubset(location_data.columns):
@@ -74,15 +112,24 @@ def build_all_locations_geojson_payload(
         if checklist_counts_by_location is not None:
             visits_val = int(checklist_counts_by_location.get(row["Location ID"], 0))
         lifelist_href = _lifelist_url(lid)
+        visit_entries = _visit_entries_for_location(
+            records_by_location,
+            row["Location ID"],
+            popup_visit_dates_ascending=popup_visit_dates_ascending,
+        )
+        if visit_entries is None:
+            popup_v1: dict[str, Any] = _popup_payload_v1_compact(
+                visit_checklists=visits_val,
+                lifelist_url=lifelist_href,
+            )
+        else:
+            popup_v1 = _popup_payload_v1_all_locations(visit_entries=visit_entries)
         props: dict[str, Any] = {
             "location_id": lid,
             "name": name,
             "lifelist_url": lifelist_href,
             "visit_checklists": visits_val,
-            "popup_v1": _popup_payload_v1(
-                visit_checklists=visits_val,
-                lifelist_url=lifelist_href,
-            ),
+            "popup_v1": popup_v1,
         }
         if not omit_pin_colour:
             props["colour"] = pin_fill_hex

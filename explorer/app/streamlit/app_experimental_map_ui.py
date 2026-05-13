@@ -7,7 +7,10 @@ from typing import Any
 
 import streamlit as st
 
-from explorer.app.streamlit.app_constants import STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY
+from explorer.app.streamlit.app_constants import (
+    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+    STREAMLIT_POPUP_SORT_ORDER_KEY,
+)
 from explorer.app.streamlit.defaults import (
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
@@ -64,9 +67,13 @@ def render_map_experimental_tab(
                 "remove_outside_visible_bounds": MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
             }
             revision_bundle = {"circle_marker": circle_style, "cluster": cluster_opts}
+            popup_sort = str(st.session_state.get(STREAMLIT_POPUP_SORT_ORDER_KEY, "ascending"))
+            popup_visit_dates_ascending = popup_sort != "descending"
             revision, geojson = build_all_locations_geojson_payload(
                 loc_df,
                 checklist_counts_by_location=counts.to_dict(),
+                records_by_location=ctx["records_by_loc"],
+                popup_visit_dates_ascending=popup_visit_dates_ascending,
                 omit_pin_colour=True,
                 revision_extra=json.dumps(revision_bundle, sort_keys=True),
             )

@@ -550,6 +550,29 @@ def build_visit_info_html(visit_records, format_time_fn):
     )
 
 
+def build_visit_popup_entry_rows(visit_records: pd.DataFrame, format_time_fn) -> list[dict[str, str]]:
+    """Structured checklist rows for the experimental All locations map (#221).
+
+    Same logical rows as :func:`build_visit_info_html`; *visit_records* must already be
+    deduplicated by ``Submission ID`` and sorted like the Folium overlay loop.
+    Each item is ``{"label": <visit time text>, "href": <checklist URL>}``.
+    """
+    if visit_records.empty:
+        return []
+    rows: list[dict[str, str]] = []
+    for _, r in visit_records.iterrows():
+        cid = str(r.get("Submission ID", "") or "").strip()
+        if not cid:
+            continue
+        rows.append(
+            {
+                "label": str(format_time_fn(r)),
+                "href": f"https://ebird.org/checklist/{cid}",
+            }
+        )
+    return rows
+
+
 def build_location_popup_html(
     loc_name,
     loc_id,

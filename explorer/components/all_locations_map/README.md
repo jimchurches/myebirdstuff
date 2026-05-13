@@ -38,7 +38,7 @@ Classic Folium builds large HTML popups in Python. The component approach keeps 
 
 **Typical session:** Many pins on map (~7k possible), few popups opened (tens to low hundreds). Prefer embedding **compact** structured data for every pin; reserve lazy loading for sections that are large or rarely viewed — **re-measure on this architecture** (the classic Folium “lazy popup” experiment showed little gain because bottlenecks differed).
 
-**Current payload:** `feature.properties.popup_v1` with `v: 1`, `summary_lines`, `links[{label,href}]` — see `explorer/core/all_locations_geojson.py` and `AllLocationsMap.tsx`. Extend alongside `map_prep` / `build_species_overlay_map` inputs without shipping HTML per pin.
+**Current payload:** `feature.properties.popup_v1` with `v: 1`. With **`records_by_location`** (production experimental tab), **`visited`** holds `{ label: "Visited:", entries: [{label,href}] }` — classic All locations checklist list + lifelist heading link in TS. Without per-location rows (minimal tests), **`summary_lines`** + **`links`** compact fallback.
 
 Popup width aims for Folium parity (`MAP_POPUP_MAX_WIDTH_PX` = 420 in `defaults.py`).
 
