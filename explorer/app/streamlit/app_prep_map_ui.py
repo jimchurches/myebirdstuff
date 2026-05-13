@@ -132,6 +132,9 @@ _MAP_EMBED_MODE_COMPONENTS_HTML = "components_html"
 _MAP_EMBED_MODE_DEFAULT = _MAP_EMBED_MODE_ST_FOLIUM
 _MAP_EMBED_MODE_VALID = {_MAP_EMBED_MODE_ST_FOLIUM, _MAP_EMBED_MODE_COMPONENTS_HTML}
 
+# #205 Batch B: lazy all-locations popups (stub markers + fill on open; default off).
+_MAP_LAZY_POPUPS_ENV_KEY = "EXPLORER_MAP_LAZY_POPUPS"
+
 # #205 W2: lite map popups for perf A/B only (default off — full visit history + eBird links).
 _MAP_LITE_POPUPS_ENV_KEY = "EXPLORER_MAP_LITE_POPUPS"
 _MAP_LITE_POPUPS_TRUTHY = {"1", "true", "yes", "on"}
@@ -171,6 +174,25 @@ def _selected_lite_map_popups() -> bool:
         raw = ""
     if not raw:
         raw = str(os.environ.get(_MAP_LITE_POPUPS_ENV_KEY, "")).strip().lower()
+    if raw in _MAP_LITE_POPUPS_TRUTHY:
+        return True
+    if raw in _MAP_LITE_POPUPS_FALSY:
+        return False
+    return False
+
+
+def _selected_lazy_map_popups() -> bool:
+    """Return whether #205 Batch B lazy All-locations popups are on (default off)."""
+    import os
+
+    raw = ""
+    try:
+        if _MAP_LAZY_POPUPS_ENV_KEY in st.secrets:
+            raw = str(st.secrets[_MAP_LAZY_POPUPS_ENV_KEY]).strip().lower()
+    except Exception:
+        raw = ""
+    if not raw:
+        raw = str(os.environ.get(_MAP_LAZY_POPUPS_ENV_KEY, "")).strip().lower()
     if raw in _MAP_LITE_POPUPS_TRUTHY:
         return True
     if raw in _MAP_LITE_POPUPS_FALSY:
@@ -517,6 +539,7 @@ def render_prep_spinner_and_map_tab(
                     _go_pin = go_to_gps_pin_from_session()
                     _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _lite_pop = _selected_lite_map_popups()
+                    _lazy_pop = _selected_lazy_map_popups()
                     _map_kw = {
                         **ctx,
                         "selected_species": overlay_sci,
@@ -552,6 +575,7 @@ def render_prep_spinner_and_map_tab(
                         "species_blank_viewport_recipe": blank_viewport_recipe,
                         "go_to_gps_pin": _go_pin,
                         "lite_map_popups": _lite_pop,
+                        "lazy_map_popups": _lazy_pop,
                     }
                     if capture_all_locations_view:
                         _valid = {
@@ -597,6 +621,7 @@ def render_prep_spinner_and_map_tab(
                         if capture_all_locations_view
                         else "",
                         _lite_pop,
+                        _lazy_pop,
                     )
                     _species_selected = bool(overlay_sci)
                     _ck = static_map_cache_key(
@@ -648,6 +673,7 @@ def render_prep_spinner_and_map_tab(
                         _build_metrics: dict[str, Any] = {
                             "mode": map_view_mode,
                             "lite_map_popups": _lite_pop,
+                            "lazy_map_popups": _lazy_pop,
                         }
                         with perf_span(
                             "prep.build_species_overlay_map", extra=_build_metrics

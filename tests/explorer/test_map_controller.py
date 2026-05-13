@@ -478,6 +478,51 @@ def test_lite_map_popups_species_keeps_lifelist_and_one_checklist_not_full_secti
     assert '<details class="pebird-map-popup__all-visits"' not in html
 
 
+def test_lazy_map_popups_all_locations_uses_stub_and_injects_payload():
+    """#205 Batch B: All locations — tiny marker popup + client fill map (full HTML still built server-side)."""
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        lazy_map_popups=True,
+    )
+    assert r.warning is None
+    html = r.map.get_root().render()
+    assert 'data-pebird-lazy="1"' in html
+    assert "popupopen" in html
+    # Rich copy still shipped for on-open injection (escaped inside JSON / script-safe).
+    assert "Visited:" in html
+
+
+def test_lazy_map_popups_species_view_not_stubbed():
+    """Lazy mode applies to All locations only — species pins keep eager popups."""
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="Anas gracilis",
+        selected_common_name="Grey Teal",
+        lazy_map_popups=True,
+    )
+    assert r.warning is None
+    html = r.map.get_root().render()
+    assert 'data-pebird-lazy="1"' not in html
+
+
+def test_lazy_map_popups_disabled_when_lite_popups_on():
+    """Lite HTML is already small; lazy is ignored (see ``app_prep_map_ui`` / overlay contract)."""
+    df = _minimal_map_df()
+    r = build_species_overlay_map(
+        **_common_kwargs(df),
+        selected_species="",
+        lite_map_popups=True,
+        lazy_map_popups=True,
+    )
+    assert r.warning is None
+    html = r.map.get_root().render()
+    assert 'data-pebird-lazy="1"' not in html
+    assert "Visited:" not in html
+
+
 def test_lite_map_popups_lifer_strips_taxon_lines_but_keeps_lifelist():
     df = _minimal_map_df()
     kwargs = _common_kwargs(df)

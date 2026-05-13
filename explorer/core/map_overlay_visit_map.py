@@ -80,6 +80,10 @@ from explorer.presentation.map_popup_fragments import (
     species_sections_fragment_key,
     visit_list_fragment_key,
 )
+from explorer.presentation.map_lazy_popups import (
+    add_lazy_all_locations_popup_bridge,
+    all_locations_lazy_popup_stub,
+)
 from explorer.presentation.map_ui_constants import MAP_POPUP_MAX_WIDTH_PX
 from explorer.core.species_logic import filter_species
 from explorer.core.stats import safe_count
@@ -349,6 +353,7 @@ def build_visit_overlay_map(
     go_to_gps_pin: tuple[float, float] | None = None,
     metrics_sink: Optional[Dict[str, Any]] = None,
     lite_map_popups: bool = False,
+    lazy_map_popups: bool = False,
     popup_fragment_cache: MutableMapping[Tuple[Any, ...], str] | None = None,
 ) -> MapOverlayResult:
     """Build all-locations or species-filtered overlay (not lifer-locations mode).
@@ -359,6 +364,10 @@ def build_visit_overlay_map(
 
     *popup_fragment_cache* (#205 Batch A): optional session dict reusing visit-list and species-section
     HTML across full-popup cache misses when row content is unchanged.
+
+    *lazy_map_popups* (#205 Batch B): **All locations** only — markers get a tiny stub; full HTML is
+    injected on ``popupopen`` via client script. Ignored when *lite_map_popups* is on (lite HTML is
+    already small) or when a species filter is active.
     """
     if selected_species:
         filtered = filter_species(df, selected_species)
@@ -429,6 +438,7 @@ def build_visit_overlay_map(
     popup_ascending = popup_sort_order == "ascending"
     date_filter_status_line = date_filter_status or None
     lite_b = bool(lite_map_popups)
+    lazy_b = bool(lazy_map_popups) and (not selected_species) and (not lite_b)
 
     if not selected_species and (hide_non_matching_locations or _mv == "species"):
         c_lat = float(MAP_SPECIES_DEFAULT_CENTER_LAT)
@@ -531,6 +541,7 @@ def build_visit_overlay_map(
         _p_built = 0
         _p_hit = 0
         _p_build_ms = 0.0
+        _lazy_by_id: dict[str, str] = {}
         for _, row in effective_location_data.iterrows():
             _m_count += 1
             popup_key = (row["Location ID"], "", effective_use_full, tax_loc_key, lite_b)
@@ -565,6 +576,11 @@ def build_visit_overlay_map(
             else:
                 _p_hit += 1
             popup_html = popup_html_cache[popup_key]
+            if lazy_b:
+                _lazy_by_id[str(row["Location ID"])] = popup_html
+                _popup_body = all_locations_lazy_popup_stub(row["Location ID"])
+            else:
+                _popup_body = popup_html
             folium.CircleMarker(
                 location=[row["Latitude"], row["Longitude"]],
                 radius=_radius_px,
@@ -573,11 +589,14 @@ def build_visit_overlay_map(
                 fill=True,
                 fill_color=_fill,
                 fill_opacity=_fill_op,
-                popup=folium.Popup(popup_html, max_width=MAP_POPUP_MAX_WIDTH_PX),
+                popup=folium.Popup(_popup_body, max_width=MAP_POPUP_MAX_WIDTH_PX),
             ).add_to(pin_parent)
 
         if marker_cluster is not None:
             marker_cluster.add_to(species_map)
+
+        if lazy_b and _lazy_by_id:
+            add_lazy_all_locations_popup_bridge(species_map, _lazy_by_id)
 
         if metrics_sink is not None:
             metrics_sink["view_path"] = "all_locations"

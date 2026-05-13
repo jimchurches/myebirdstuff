@@ -11,6 +11,7 @@ import pytest
 from tests.explorer.e2e_support import (
     REPO_ROOT,
     e2e_http_ready_timeout_s,
+    e2e_map_lazy_popups_for_streamlit_child,
     e2e_map_lite_popups_for_streamlit_child,
     free_tcp_port,
     resolve_e2e_dataset_csv_source,
@@ -55,6 +56,7 @@ def streamlit_perf_url_and_logfile(tmp_path):
         "EXPLORER_PERF_LOG_FILE": str(log_file),
         # W2 A/B: default ``0``; set ``EXPLORER_E2E_MAP_LITE_POPUPS=1`` when archiving lite-on runs.
         "EXPLORER_MAP_LITE_POPUPS": e2e_map_lite_popups_for_streamlit_child(),
+        "EXPLORER_MAP_LAZY_POPUPS": e2e_map_lazy_popups_for_streamlit_child(),
     }
     csv_src = resolve_e2e_dataset_csv_source()
     with temporary_ebird_csv_config(REPO_ROOT, tmp_path, csv_src):
@@ -81,6 +83,7 @@ def streamlit_perf_url_logfile_and_lite_expected(tmp_path, request) -> tuple[str
         "EXPLORER_PERF": "1",
         "EXPLORER_PERF_LOG_FILE": str(log_file),
         "EXPLORER_MAP_LITE_POPUPS": request.param,
+        "EXPLORER_MAP_LAZY_POPUPS": e2e_map_lazy_popups_for_streamlit_child(),
     }
     csv_src = resolve_e2e_dataset_csv_source()
     with temporary_ebird_csv_config(REPO_ROOT, tmp_path, csv_src):

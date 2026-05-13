@@ -29,6 +29,8 @@ EXPLORER_E2E_MAP_TIMEOUT_MS_ENV = "EXPLORER_E2E_MAP_TIMEOUT_MS"
 # Perf archive A/B: set to ``0`` or ``1`` so ``streamlit_perf_url_and_logfile`` forces the same
 # ``EXPLORER_MAP_LITE_POPUPS`` in the Streamlit child (default ``0`` when unset).
 EXPLORER_E2E_MAP_LITE_POPUPS_ENV = "EXPLORER_E2E_MAP_LITE_POPUPS"
+# Optional: force ``EXPLORER_MAP_LAZY_POPUPS`` in the perf Streamlit child (default ``0``).
+EXPLORER_E2E_MAP_LAZY_POPUPS_ENV = "EXPLORER_E2E_MAP_LAZY_POPUPS"
 
 
 def e2e_map_lite_popups_for_streamlit_child() -> str:
@@ -36,6 +38,14 @@ def e2e_map_lite_popups_for_streamlit_child() -> str:
     import os
 
     v = str(os.environ.get(EXPLORER_E2E_MAP_LITE_POPUPS_ENV, "")).strip()
+    return v if v in ("0", "1") else "0"
+
+
+def e2e_map_lazy_popups_for_streamlit_child() -> str:
+    """Return ``\"0\"`` or ``\"1\"`` for lazy-popup perf / E2E (see ``EXPLORER_E2E_MAP_LAZY_POPUPS``)."""
+    import os
+
+    v = str(os.environ.get(EXPLORER_E2E_MAP_LAZY_POPUPS_ENV, "")).strip()
     return v if v in ("0", "1") else "0"
 
 

@@ -46,6 +46,7 @@ pytest.importorskip("playwright.sync_api")
 from tests.explorer.e2e_support import (
     REPO_ROOT,
     append_e2e_first_paint_record,
+    e2e_map_lazy_popups_for_streamlit_child,
     e2e_map_lite_popups_for_streamlit_child,
     choose_map_view_mode,
     launch_chromium_or_skip,
@@ -77,6 +78,7 @@ def _run_fixture_view_mode_cycle_journey(
     *,
     dataset_label: str,
     lite_map_popups: bool,
+    lazy_map_popups: bool,
 ) -> None:
     """All → Lifer → All map view-mode cycle; records ``e2e.first_paint`` with W2 tag."""
     with launch_chromium_or_skip() as browser:
@@ -98,6 +100,7 @@ def _run_fixture_view_mode_cycle_journey(
                 "dataset_label": dataset_label,
                 "journey": "fixture_view_mode_cycle",
                 "lite_map_popups": lite_map_popups,
+                "lazy_map_popups": lazy_map_popups,
             },
         )
         choose_map_view_mode(page, "Lifer locations")
@@ -124,6 +127,7 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
         log_file,
         dataset_label=dataset_label,
         lite_map_popups=e2e_map_lite_popups_for_streamlit_child() == "1",
+        lazy_map_popups=e2e_map_lazy_popups_for_streamlit_child() == "1",
     )
 
     time.sleep(0.5)
@@ -165,11 +169,13 @@ def test_map_perf_w2_lite_journey_tags_build_extra(
     ceilings = _load_stage_ceilings()
     dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
 
+    lazy_on = e2e_map_lazy_popups_for_streamlit_child() == "1"
     _run_fixture_view_mode_cycle_journey(
         url,
         log_file,
         dataset_label=dataset_label,
         lite_map_popups=lite_on,
+        lazy_map_popups=lazy_on,
     )
 
     time.sleep(0.5)
@@ -191,11 +197,16 @@ def test_map_perf_w2_lite_journey_tags_build_extra(
             f"prep.build_species_overlay_map extra.lite_map_popups={extra.get('lite_map_popups')!r} "
             f"expected {lite_on!r} for EXPLORER_MAP_LITE_POPUPS={'1' if lite_on else '0'}"
         )
+        assert extra.get("lazy_map_popups") is lazy_on, (
+            f"prep.build_species_overlay_map extra.lazy_map_popups={extra.get('lazy_map_popups')!r} "
+            f"expected {lazy_on!r} for EXPLORER_MAP_LAZY_POPUPS={'1' if lazy_on else '0'}"
+        )
 
     fp_events = [e for e in events if e.get("stage") == "e2e.first_paint"]
     assert fp_events, "expected e2e.first_paint row from journey"
     for e in fp_events:
         assert e.get("lite_map_popups") is lite_on
+        assert e.get("lazy_map_popups") is lazy_on
 
     highs = max_elapsed_ms_by_stage(events)
     failures: list[str] = []
