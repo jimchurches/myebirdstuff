@@ -8,13 +8,13 @@ with Streamlit-friendly semantics: *All locations* vs *Lifer locations*, optiona
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, MutableMapping, Optional, Set, Tuple
+from typing import Any, Optional, Set, Tuple
 
 import pandas as pd
 
 from explorer.core.working_set import WorkingSet, rebuild_working_set_from_date_filter
 
-MapCaches = Tuple[dict, MutableMapping[Any, Any]]
+MapCaches = Tuple[Any, ...]
 
 
 def location_ids_with_checklists(df: pd.DataFrame) -> Set[Any]:

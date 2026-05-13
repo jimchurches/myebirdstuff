@@ -80,6 +80,7 @@ def build_species_overlay_map(
     species_blank_viewport_recipe: dict[str, Any] | None = None,
     go_to_gps_pin: tuple[float, float] | None = None,
     metrics_sink: Optional[Dict[str, Any]] = None,
+    popup_fragment_cache: MutableMapping[Tuple[Any, ...], str] | None = None,
 ) -> MapOverlayResult:
     """Build the Folium map for all-species, one-species, or lifer-locations overlay.
 
@@ -125,6 +126,10 @@ def build_species_overlay_map(
     Host-side wiring: pass the same dict to ``perf_span("prep.build_species_overlay_map",
     extra=metrics)`` and to this function; the span emits a single enriched event per rebuild.
     Default ``None`` is a no-op — overlays don't import any perf module from ``explorer/app/``.
+
+    *popup_fragment_cache* (#205 Batch A): optional session mapping from content keys to
+    pre-built visit-list / species-section / lifer-line HTML fragments, reused when full
+    popup keys miss but row content is unchanged.
     """
     tax_loc_key = (taxonomy_locale or "").strip()
     mode = (map_view_mode or "all").strip().lower()
@@ -149,6 +154,7 @@ def build_species_overlay_map(
             base_species_fn=base_species_fn,
             visit_marker_scheme=visit_marker_scheme,
             metrics_sink=metrics_sink,
+            popup_fragment_cache=popup_fragment_cache,
         )
 
     # Species overlay is driven by a non-empty *selected_species* (same as legacy behaviour), not only
@@ -194,4 +200,5 @@ def build_species_overlay_map(
         species_blank_viewport_recipe=species_blank_viewport_recipe,
         go_to_gps_pin=go_to_gps_pin,
         metrics_sink=metrics_sink,
+        popup_fragment_cache=popup_fragment_cache,
     )

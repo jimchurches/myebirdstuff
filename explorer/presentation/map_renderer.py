@@ -21,15 +21,24 @@ from branca.element import MacroElement
 from folium.template import Template
 
 from explorer.core.stats import format_observed_count_for_map_popup
-from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_DEFAULT,
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
     MAP_LEGEND_PIN_BORDER_PX,
     MAP_LEGEND_PIN_DOT_PX,
+)
+from explorer.presentation.stats_html_helpers import esc_attr, esc_text
+from explorer.presentation.map_ui_constants import (
     MAP_POPUP_MACAULAY_LINK_SYMBOL,
     MAP_POPUP_MAX_WIDTH_PX,
+    SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS,
+)
+from explorer.presentation.map_popup_models import (
+    LocationPopupModel,
+    SpeciesMapLocationPopupModel,
+    assemble_location_popup_html,
+    assemble_species_map_location_popup_html,
 )
 
 # ---------------------------------------------------------------------------
@@ -47,11 +56,6 @@ EXPLORER_UI_MUTED = "rgba(26, 46, 34, 0.55)"
 # ``<details>`` ▶/▼ in map popups. Lighter than ``EXPLORER_UI_MUTED``; revert to that constant if preferred.
 EXPLORER_UI_POPUP_DETAILS_CHEVRON = "rgba(26, 46, 34, 0.36)"
 EXPLORER_UI_BORDER_PANEL = "rgba(31, 111, 84, 0.18)"
-
-# Species-map location popup: leave <details> open only for short lists so the popup stays scannable.
-# Per species section: open when this many observation rows or fewer (not number of taxa at the pin).
-SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS = 3
-SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS = 1
 
 
 def map_popup_theme_stylesheet() -> str:
@@ -580,40 +584,17 @@ def build_location_popup_html(
     Returns:
         Complete popup HTML string with scroll wrapper.
     """
-    loc_url = f"https://ebird.org/lifelist/{loc_id}"
-    esc_loc = _html_module.escape(str(loc_name), quote=False)
-    loc_link = (
-        f'<a class="pebird-map-popup__location-heading" href="{loc_url}" '
-        f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'
+    m = LocationPopupModel(
+        loc_name=str(loc_name),
+        loc_id=str(loc_id),
+        visit_info_html=visit_info_html,
+        sightings_html=sightings_html,
+        lifer_species_html=lifer_species_html,
+        show_visit_history=show_visit_history,
+        lifer_heading_html=lifer_heading_html,
+        location_heading_margin_px=int(location_heading_margin_px),
     )
-    if lifer_species_html:
-        extra_section = f"{lifer_heading_html}{lifer_species_html}" if lifer_heading_html else lifer_species_html
-    elif sightings_html:
-        extra_section = (
-            f'<div class="pebird-map-popup__section-label">Seen:</div>{sightings_html}'
-        )
-    else:
-        extra_section = ""
-    visited_section = (
-        '<div class="pebird-map-popup__visited-block">'
-        '<div class="pebird-map-popup__section-label">Visited:</div>'
-        f'<div class="pebird-map-popup__visit-dates">{visit_info_html}</div>'
-        "</div>"
-        if show_visit_history
-        else ""
-    )
-    # If both sections are present, add a separator line break.
-    if visited_section and extra_section:
-        inner_html = visited_section + "<br>" + extra_section
-    else:
-        inner_html = visited_section + extra_section
-    return (
-        f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
-        f'<div class="pebird-map-popup__heading-row" style="margin-bottom:{int(location_heading_margin_px)}px;">{loc_link}</div>'
-        f'<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">'
-        f"{inner_html}"
-        f'</div></div>'
-    )
+    return assemble_location_popup_html(m)
 
 
 def build_species_map_location_popup_html(
@@ -625,6 +606,7 @@ def build_species_map_location_popup_html(
     visit_record_count: int,
     popup_ascending: bool,
     location_heading_margin_px: int = 6,
+    species_sections_html: str | None = None,
 ) -> str:
     """Popup for **species-matching** markers on the species map: species sections first, visits in ``<details>``.
 
@@ -633,36 +615,25 @@ def build_species_map_location_popup_html(
     that block open.
 
     Non-matching pins use :func:`build_location_popup_html` without species sections (refs #145).
+
+    *species_sections_html* optionally supplies pre-built species ``<details>`` HTML (must match
+    ``build_species_seen_sections_html`` for the same *species_sightings* and *popup_ascending*) for
+    fragment reuse across full-popup misses (#205 Batch A).
     """
-    loc_url = f"https://ebird.org/lifelist/{loc_id}"
-    esc_loc = _html_module.escape(str(loc_name), quote=False)
-    loc_link = (
-        f'<a class="pebird-map-popup__location-heading" href="{loc_url}" '
-        f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'
+    sections_html = (
+        species_sections_html
+        if species_sections_html is not None
+        else build_species_seen_sections_html(species_sightings, ascending=popup_ascending)
     )
-    sections_html = build_species_seen_sections_html(species_sightings, ascending=popup_ascending)
-    summary_text = f"Visited: ({visit_record_count})"
-    esc_summary = esc_text(summary_text)
-    inner_visits = visit_info_html if (visit_info_html and str(visit_info_html).strip()) else ""
-    visits_open = (
-        " open"
-        if visit_record_count <= SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS
-        else ""
+    m = SpeciesMapLocationPopupModel(
+        loc_name=str(loc_name),
+        loc_id=str(loc_id),
+        species_sections_html=sections_html,
+        visit_info_html=visit_info_html,
+        visit_record_count=int(visit_record_count),
+        location_heading_margin_px=int(location_heading_margin_px),
     )
-    details_block = (
-        f'<details class="pebird-map-popup__all-visits"{visits_open}>'
-        f'<summary class="pebird-map-popup__section-label">{esc_summary}</summary>'
-        f'<div class="pebird-map-popup__visit-list-inner">{inner_visits}</div>'
-        f"</details>"
-    )
-    inner_html = sections_html + details_block
-    return (
-        f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
-        f'<div class="pebird-map-popup__heading-row" style="margin-bottom:{int(location_heading_margin_px)}px;">{loc_link}</div>'
-        f'<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">'
-        f"{inner_html}"
-        f"</div></div>"
-    )
+    return assemble_species_map_location_popup_html(m)
 
 
 # ---------------------------------------------------------------------------
