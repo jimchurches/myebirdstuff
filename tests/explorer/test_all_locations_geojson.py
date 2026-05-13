@@ -40,6 +40,10 @@ def test_build_all_locations_geojson_payload_stable_revision() -> None:
     assert gj1["features"][0]["properties"]["lifelist_url"] == "https://ebird.org/lifelist/L1"
     assert gj1["features"][0]["properties"]["visit_checklists"] == 3
     assert gj1["features"][0]["properties"]["colour"] == "#abc123"
+    pop = gj1["features"][0]["properties"]["popup_v1"]
+    assert pop["v"] == 1
+    assert pop["summary_lines"] == ["Checklists: 3"]
+    assert pop["links"] == [{"label": "Lifelist", "href": "https://ebird.org/lifelist/L1"}]
 
 
 def test_build_all_locations_geojson_payload_omit_pin_colour() -> None:

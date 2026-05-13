@@ -1,4 +1,10 @@
-"""GeoJSON payload + revision string for the experimental All locations map (#221)."""
+"""GeoJSON payload + revision string for the experimental All locations map (#221).
+
+Per-pin ``popup_v1`` carries structured popup data (summary lines + links) so the iframe renders one
+template instead of Python emitting HTML×N. Extend fields toward :mod:`explorer.core.map_prep` /
+``build_species_overlay_map`` inputs; defer heavy sections via lazy-on-open when warranted — see
+``docs/explorer/issue-221-map-component-spike.md``.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +21,22 @@ def _lifelist_url(location_id: str) -> str:
     if not lid:
         return ""
     return f"https://ebird.org/lifelist/{lid}"
+
+
+def _popup_payload_v1(
+    *,
+    visit_checklists: int | str,
+    lifelist_url: str,
+) -> dict[str, Any]:
+    """Structured popup blob rendered by ``AllLocationsMap.tsx`` (schema version 1)."""
+    summary_lines: list[str] = []
+    if visit_checklists != "":
+        summary_lines.append(f"Checklists: {visit_checklists}")
+    links: list[dict[str, str]] = []
+    url = lifelist_url.strip()
+    if url:
+        links.append({"label": "Lifelist", "href": url})
+    return {"v": 1, "summary_lines": summary_lines, "links": links}
 
 
 def build_all_locations_geojson_payload(
@@ -51,11 +73,16 @@ def build_all_locations_geojson_payload(
         visits_val: int | str = ""
         if checklist_counts_by_location is not None:
             visits_val = int(checklist_counts_by_location.get(row["Location ID"], 0))
+        lifelist_href = _lifelist_url(lid)
         props: dict[str, Any] = {
             "location_id": lid,
             "name": name,
-            "lifelist_url": _lifelist_url(lid),
+            "lifelist_url": lifelist_href,
             "visit_checklists": visits_val,
+            "popup_v1": _popup_payload_v1(
+                visit_checklists=visits_val,
+                lifelist_url=lifelist_href,
+            ),
         }
         if not omit_pin_colour:
             props["colour"] = pin_fill_hex

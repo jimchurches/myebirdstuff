@@ -4,6 +4,10 @@ Prepare kwargs for :func:`map_controller.build_species_overlay_map` in **all loc
 Centralises the same dataframe signatures the Streamlit app uses so the embedded map and popups stay
 in sync with checklist prep. When a date filter applies, pass the **filtered** working frame as
 *df* and the **full** export as *full_df* for lifer / last-seen prep.
+
+Experimental All locations (#221) should derive **structured** popup fields from the same logical inputs
+this module prepares for :func:`~explorer.core.map_controller.build_species_overlay_map` — see
+:mod:`explorer.core.all_locations_geojson` (avoid shipping per-pin HTML from Python).
 """
 
 from __future__ import annotations

@@ -44,6 +44,7 @@ Spike first; measurement second.
 - **Frontend:** `explorer/components/all_locations_map/` — Leaflet, **`leaflet.markercluster`**, defaults aligned with `defaults.py` (radius 40, disable clustering from zoom 9, `removeOutsideVisibleBounds` false); respects sidebar **cluster all locations** toggle.
 - **Warm reruns:** Component skips full marker/cluster rebuild when `revision` unchanged (browser console log).
 - **Instrumentation:** With **`EXPLORER_PERF=1`**, sidebar **Performance / debug** shows map-specific spans — Folium `prep.map_iframe_embed` vs experimental payload + component embed; times are **Python-side**, **serial script order** (not simultaneous loads, not browser paint).
+- **Pop-ups (spike slice):** Each feature includes **`popup_v1`** — structured `summary_lines` + `links` rendered by one TS template (parity with current experimental popup content so far; extend toward classic richness via `map_prep` / overlay builders).
 
 ### One-off performance note (real export — cold run, JSONL)
 
@@ -78,11 +79,44 @@ Goal: keep **the same facts and links** (lifelist, species, hotspots, history, M
 
 This preserves **rich tie-back to eBird** while avoiding **`popup_html × N`** server cost. Next slice: extend payload builder toward existing popup **models** / fragments, then one rich popup component in TS.
 
+### Pop-ups — priorities and payload strategy (discussion, 2026-05-13)
+
+**Product priorities for this experiment**
+
+1. **Like-for-like functionality first** — Same information and destinations as classic All Locations (not necessarily identical HTML).
+2. **Performance second** — Measured with rich data in the experimental map vs classic; visualize results before committing to the path.
+3. **Acceptable trade-offs** — If we keep functionality but deliver it slightly differently (or a different click path to the same eBird destination) and that buys a **real** gain in design or speed, consider it.
+
+**Session shape (important for lazy vs eager)**
+
+- The map may draw **~7k** locations, but a typical session only opens **tens to low hundreds** of popups.
+- That pattern argues against paying full **heavy** popup cost for every pin—but **only if** “load on open” does **not** replace one problem with another (e.g. expensive **Streamlit full-script rerun** per popup).
+
+**Lazy vs embed everything**
+
+| Approach | When it fits |
+|----------|----------------|
+| **Embed structured data for all pins** | Payload stays compact (mostly URLs + short lines); you want zero second step after initial load. |
+| **Lazy / expand-on-open for heavy slices** | Long tables, full history, rare blocks dominate bytes or Python build time; most pins never opened. |
+
+**Default hypothesis for implementation**
+
+- Ship **all lightweight parity fields** for every pin in the initial GeoJSON (structured, not HTML): title context, **high-value links**, short summary lines.
+- Defer **heavy** sections (long tables, full history) until **popup open**, using a path that avoids **whole-app rerun per click** where possible (detail inside the iframe: extra chunk keyed by `location_id`, small `postMessage`, or a thin read-only fetch).
+
+**Note on the classic map**
+
+- We previously tried popup-on-demand on the Folium path and saw **little** difference; architecture there tied work to different bottlenecks. **Re-measure on this stack** (compact GeoJSON + component + TS template)—don’t assume that experiment transfers.
+
+**Implemented slice**
+
+- **`popup_v1`** on each GeoJSON feature (`explorer/core/all_locations_geojson.py`): structured `summary_lines` + `links[]`; TS renders one template (`AllLocationsMap.tsx`). Extend toward `map_prep` / `build_species_overlay_map` data sources without shipping HTML per pin.
+
 ### TODO / next (for a future “real” issue on `beta-next`)
 
 - [ ] Warm-cache perf repeat (popup cache hits; compare again).
 - [ ] Browser-side sanity (DevTools / subjective) alongside Python timers.
-- [ ] Structured rich popup schema + TS template (URLs parity with classic).
+- [ ] Structured rich popup schema + TS template — **v1** encodes summary lines + links; extend fields for full classic parity (species/hotspot/history/Macaulay rows).
 - [ ] Optional: cluster icon styling parity with Folium tiers (`iconCreateFunction`).
 - [ ] Decide cut-over scope vs parallel experimental tab; spike branch **does not merge** to `beta-next` per agreement — spawn **new issue(s)** when promoting.
 
@@ -92,6 +126,7 @@ This preserves **rich tie-back to eBird** while avoiding **`popup_html × N`** s
 
 ### 2026-05-13
 
+- **Pop-ups:** Captured priorities (like-for-like first, perf second), **~7k pins vs tens–low hundreds of opens per session**, hybrid **embed light / lazy heavy** strategy, and **Streamlit rerun** caveat under **Payload strategy** in the Status snapshot above; README + code comments aligned.
 - **Rules of the road:** Wide-ranging exploratory work; timebox ~few days. Commentary on [#221](https://github.com/jimchurches/myebirdstuff/issues/221) plus this file. E2E/perf when they clarify design — manual comparison between maps is acceptable for spike conclusions.
 - **Merge policy:** Spike branch not merged back to `beta-next`; success leads to **new issue(s)** for real implementation. Spike hygiene intentionally looser than prod branches; doc stays under `docs/explorer/issue-221-map-component-spike.md`.
 - **Prototype landed (branch `221-streamlit-custom-map-component-spike`):** New main tab **Map (experimental)** after **Map**. Uses `prepare_all_locations_map_context` + `build_all_locations_geojson_payload` (revision hash + GeoJSON). Frontend: `explorer/components/all_locations_map/frontend` (Leaflet + `streamlit-component-lib`); committed **`frontend/build`** for Streamlit. Component skips marker rebuild when `revision` matches (see browser console). Works when sidebar **Map view** is **All locations**; otherwise shows an info panel.

@@ -26,6 +26,21 @@ interface CircleMarkerStylePayload {
   fill_opacity?: number;
 }
 
+/** Folium `MAP_POPUP_MAX_WIDTH_PX` (`explorer/app/streamlit/defaults.py`). */
+const POPUP_MAX_WIDTH_PX = 420;
+
+/** Structured popup from Python (`explorer/core/all_locations_geojson.py`) — extend for classic parity. */
+interface PopupLinkV1 {
+  label?: string;
+  href?: string;
+}
+
+interface PopupPayloadV1 {
+  v: 1;
+  summary_lines?: string[];
+  links?: PopupLinkV1[];
+}
+
 interface MapArgs {
   revision: string;
   geojson: {
@@ -70,6 +85,62 @@ function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function parsePopupV1(raw: unknown): PopupPayloadV1 | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  if (o.v !== 1) {
+    return null;
+  }
+  const summary_lines = Array.isArray(o.summary_lines)
+    ? o.summary_lines.filter((x): x is string => typeof x === "string")
+    : undefined;
+  const linksRaw = Array.isArray(o.links) ? o.links : [];
+  const links: PopupLinkV1[] = linksRaw
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+    .map((item) => ({
+      label: typeof item.label === "string" ? item.label : "",
+      href: typeof item.href === "string" ? item.href : "",
+    }));
+  return { v: 1, summary_lines, links };
+}
+
+/** Single Leaflet popup layout for structured `popup_v1` (+ legacy fallback). */
+function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): string {
+  const name = String(props?.name ?? "Location");
+  const popup = parsePopupV1(props?.popup_v1);
+  if (popup) {
+    let html = `<div class="pebird-map-popup" style="font-family:system-ui,sans-serif;font-size:13px;">`;
+    html += `<strong>${escapeHtml(name)}</strong>`;
+    for (const line of popup.summary_lines ?? []) {
+      html += `<br/><span style="color:#444;">${escapeHtml(line)}</span>`;
+    }
+    for (const link of popup.links ?? []) {
+      const href = link.href?.trim() ?? "";
+      const label = link.label?.trim() || "Link";
+      if (href) {
+        html += `<br/><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+          label,
+        )}</a>`;
+      }
+    }
+    html += "</div>";
+    return html;
+  }
+  const visits = props?.visit_checklists;
+  const url = String(props?.lifelist_url ?? "");
+  let legacy = `<div style="font-family:system-ui,sans-serif;font-size:13px;"><strong>${escapeHtml(name)}</strong>`;
+  if (visits != null && visits !== "") {
+    legacy += `<br/><span style="color:#444;">Checklists: ${escapeHtml(String(visits))}</span>`;
+  }
+  if (url) {
+    legacy += `<br/><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Lifelist</a>`;
+  }
+  legacy += "</div>";
+  return legacy;
 }
 
 function isHex6(s: string | undefined): boolean {
@@ -186,20 +257,8 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
         return L.circleMarker(latlng, opts);
       },
       onEachFeature(feature, lyr) {
-        const name = String(feature.properties?.name ?? "Location");
-        const visits = feature.properties?.visit_checklists;
-        const url = String(feature.properties?.lifelist_url ?? "");
-        let html = `<div style="font-family:system-ui,sans-serif;font-size:13px;"><strong>${escapeHtml(
-          name,
-        )}</strong>`;
-        if (visits != null && visits !== "") {
-          html += `<br/><span style="color:#444;">Checklists: ${escapeHtml(String(visits))}</span>`;
-        }
-        if (url) {
-          html += `<br/><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Lifelist</a>`;
-        }
-        html += "</div>";
-        lyr.bindPopup(html);
+        const html = popupHtmlFromFeatureProps(feature.properties as Record<string, unknown> | undefined);
+        lyr.bindPopup(html, { maxWidth: POPUP_MAX_WIDTH_PX });
       },
     });
 

@@ -32,6 +32,14 @@ Classic Folium builds large HTML popups in Python. The component approach keeps 
 
 1. **Structured payload** — Per-pin JSON (stable IDs, display strings, link URLs).
 2. **Client templates** — One TS/HTML/CSS template renders cards matching today’s intent.
-3. **Lazy sections** — Minimal payload by default; expand tables or rare blocks on popup open if needed.
+3. **Lazy sections** — Optional: defer **heavy** chunks (long tables, full history) until the user opens a popup, if bytes or Python time dominate — provided lazy paths avoid **full Streamlit reruns per click** where possible.
+
+**Priorities (spike):** Like-for-like functionality first; performance second; small UX differences acceptable if they buy clear speed/design wins.
+
+**Typical session:** Many pins on map (~7k possible), few popups opened (tens to low hundreds). Prefer embedding **compact** structured data for every pin; reserve lazy loading for sections that are large or rarely viewed — **re-measure on this architecture** (the classic Folium “lazy popup” experiment showed little gain because bottlenecks differed).
+
+**Current payload:** `feature.properties.popup_v1` with `v: 1`, `summary_lines`, `links[{label,href}]` — see `explorer/core/all_locations_geojson.py` and `AllLocationsMap.tsx`. Extend alongside `map_prep` / `build_species_overlay_map` inputs without shipping HTML per pin.
+
+Popup width aims for Folium parity (`MAP_POPUP_MAX_WIDTH_PX` = 420 in `defaults.py`).
 
 This avoids regressing the “rich tie-back” story while staying faster than `popup_html × N` on the server.
