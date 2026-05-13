@@ -55,6 +55,76 @@ EXPLORER_E2E_PERF_JSONL_ARCHIVE="$PWD/.perf-ref-issue-205.jsonl" \
 
 Then point `aggregate_perf_jsonl` at the directory containing that file (see command above). Delete the JSONL after recording if you do not want a local artifact.
 
+---
+
+## Batch A + B experimental track — summary and E2E (2026-05-13)
+
+**Branch:** `205-investigation-main` (experimental; not the product default on `beta-next` / `main`).
+
+**What changed (high level)**
+
+| Item | Intent | Default in app |
+| --- | --- | --- |
+| **Batch A** — popup fragment cache + presentation models | Reuse visit-list / species-section / lifer-line HTML fragments on full `popup_html_cache` misses when row content is unchanged (same rich HTML as before). | On (session cache; no env flag). |
+| **Batch B** — `EXPLORER_MAP_LAZY_POPUPS` | **All locations** only: tiny marker popup stubs; full HTML still built server-side and swapped in on Leaflet `popupopen`. Ignored when W2 lite popups are on. | Off (env / Streamlit secret). |
+
+**Manual smoke (maintainer)**  
+Popup behaviour looks correct after basic use; **no clear subjective win on “map loads faster”** on its own — useful mainly when combined with metrics and A/B on larger datasets.
+
+### Full perf E2E suite (fixture CSV, default flags)
+
+Recorded on **darwin**, **Python 3.12.3**, commit **`6f70a4b`**.
+
+```bash
+python -m pytest tests/explorer/test_map_perf_e2e.py --perf -v
+```
+
+**Result:** `6 passed` in **≈ 83.5 s** wall time (includes W2 parametrized lite off/on, embed rerun journey, two screenshot parity tests).
+
+Child env unless overridden: `EXPLORER_MAP_LITE_POPUPS` / `EXPLORER_MAP_LAZY_POPUPS` from `EXPLORER_E2E_MAP_*` helpers (default **lite off, lazy off** except where the W2 test forces lite).
+
+### *n* = 1 JSONL aggregate (fixture journey only, lazy off / lite off)
+
+Archive: `EXPLORER_E2E_PERF_JSONL_ARCHIVE=/tmp/issue-205-doc-e2e.jsonl` with  
+`test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling` only.
+
+`aggregate_perf_jsonl` command:
+
+```bash
+python scripts/aggregate_perf_jsonl.py /tmp \
+  --glob 'issue-205-doc-e2e.jsonl' \
+  --stage prep.build_species_overlay_map \
+  --stage prep.folium_map_to_html_bytes \
+  --stage prep.map_iframe_embed \
+  --stage prep.map_context_prepare \
+  --stage e2e.first_paint \
+  --extra-key marker_count \
+  --extra-key popup_build_count \
+  --extra-key popup_cache_hit_count \
+  --extra-key popup_build_total_ms \
+  --extra-key lite_map_popups \
+  --extra-key lazy_map_popups \
+  --extra-key banner_ms \
+  --extra-key goto_ms
+```
+
+Output (same run as above; **illustrative**, machine-specific):
+
+```
+group                        stage                                n_runs   total_events    med_evt/run         med_ms         p95_ms         max_ms marker_count.med marker_count.max popup_build_count.med popup_build_count.max popup_cache_hit_count.med popup_cache_hit_count.max popup_build_total_ms.med popup_build_total_ms.max lite_map_popups.med lite_map_popups.max lazy_map_popups.med lazy_map_popups.max  banner_ms.med  banner_ms.max    goto_ms.med    goto_ms.max
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+issue-205-doc-e2e.jsonl      e2e.first_paint                           1              1            1.0         6465.3         6465.3         6465.3              —              —              —              —              —              —              —              —            0.0            0.0            0.0            0.0         6465.3         6465.3          108.9          108.9
+issue-205-doc-e2e.jsonl      prep.build_species_overlay_map              1              2            2.0           17.0           90.9           90.9           15.0           15.0           15.0           15.0            0.0            0.0            7.7           26.3            0.0            0.0            0.0            0.0              —              —              —              —
+issue-205-doc-e2e.jsonl      prep.folium_map_to_html_bytes              1              2            2.0           12.5           13.1           13.1              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —
+issue-205-doc-e2e.jsonl      prep.map_context_prepare                  1              3            3.0           11.9           13.9           13.9              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —
+issue-205-doc-e2e.jsonl      prep.map_iframe_embed                     1              3            3.0           24.7           29.4           29.4              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —              —
+```
+
+**Merge-back hygiene (for later)**
+
+- **Batch A** (fragment cache): backend-only speedup when popups miss the full HTML cache; behaviour unchanged — strongest candidate to port if we want investigation value on `beta-next` without UX flags.
+- **Batch B** (lazy popups): optional flag; UX validated casually on experimental branch; port only if we want the **smaller initial Folium payload** on All locations and accept the client-side open path.
+
 ## Related references (elsewhere)
 
 - W2 lite vs rich **fixture** A/B (different question than Batch A): [`issue-205-w2-lite-ab-results.md`](issue-205-w2-lite-ab-results.md)  
