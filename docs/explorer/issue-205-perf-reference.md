@@ -7,7 +7,7 @@
 | Field | Value |
 | --- | --- |
 | **Recorded** | 2026-05-12 |
-| **Git** | `205-investigation-main` @ `65a6bc2` (includes Batch A fragment cache + popup models) |
+| **Git** | App snapshot: `65a6bc2` (Batch A). Reference doc committed as `05f6447` on `205-investigation-main`. |
 | **Dataset** | Default E2E: `tests/fixtures/ebird_integration_fixture.csv` (not `EXPLORER_E2E_DATASET_CSV`) |
 | **Journey** | `test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling` — cold load, `e2e.first_paint`, All → Lifer → All |
 | **Runs** | *n = 1* (illustrative only) |
