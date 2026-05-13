@@ -140,12 +140,42 @@ This preserves **rich tie-back to eBird** while avoiding **`popup_html × N`** s
 
 ---
 
+## Milestone summary (step-by-step capture for #221)
+
+Chronological notes mirrored on [#221](https://github.com/jimchurches/myebirdstuff/issues/221); detail lives in **Running log** and **Status snapshot** above.
+
+| Step | What landed |
+|------|----------------|
+| 1 | **Experimental tab** — `Map (experimental)` after Map; GeoJSON + `revision`; Leaflet + `streamlit-component-lib`; clustering per defaults; iframe skips marker rebuild when `revision` unchanged (console log). |
+| 2 | **Markers** — Preset **1 (Eucalypt)** circle styling from Python (`circle_marker_style`); sidebar marker scheme not applied on experimental yet. |
+| 3 | **`popup_v1`** — Structured payload + TS template; compact `summary_lines` + `links` when no `records_by_location`. |
+| 4 | **Visit list parity** — `visited.entries` from `records_by_loc`, sort from sidebar popup order; TS lifelist heading + scrollable Visited block (`build_visit_info_html` semantics). |
+| 5 | **Perf §A / §B** — Compact GeoJSON ~1.6 s vs classic Folium+popup path; full visits ~**6 s** `map.experimental.payload` pre-cache (cold + warm rebuild); classic warm **`prep.map_iframe_embed` ~6.2 s** with map HTML cache hit; **`fragment.country` ~4.6–5 s** warm. |
+| 6 | **Strategy** — Prefer **session payload cache** before heavier lazy designs; optional **`EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP`** truncates inlined rows (lifelist for full history). |
+| 7 | **Payload cache** — **`EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY`** keyed like **`static_map_cache_key`** + `revision_extra` + visits cap; invalidated with Folium map cache; **`payload_cache_hit`** in perf `extra`. |
+| 8 | **Validated** — Warm reruns: **`map.experimental.payload` ~0.01 ms** when cache hits (`payload_cache_hit: true` in JSONL). **`prep.map_context_prepare` ~1.4 s** still runs for shared Map prep. |
+
+**Minimal local perf + JSONL (nothing else required):**
+
+```bash
+mkdir -p benchmarks/map_perf/tmp
+EXPLORER_PERF=1 EXPLORER_PERF_LOG_FILE="$PWD/benchmarks/map_perf/tmp/explorer_perf.jsonl" \
+  streamlit run explorer/app/streamlit/app.py
+```
+
+Optional: **`EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP=N`** (positive int). Optional: **`EXPLORER_PERF_LOG=1`** for root logger. Archive a run: **`python scripts/snapshot_explorer_perf_log.py benchmarks/map_perf/tmp/explorer_perf.jsonl --label my-label`** → **`benchmarks/map_perf/snapshots/`** (gitignored).
+
+Example archived snapshot (visit-list era, pre payload-cache): **`benchmarks/map_perf/snapshots/2026-05-13T22-57-46Z_issue221-visit-list-cold-warm.json`** — re-snapshot after big changes for local diffs.
+
+---
+
 ## Running log
 
 ### 2026-05-13 (evening)
 
 - **Perf JSONL:** Archived `benchmarks/map_perf/tmp/explorer_perf.jsonl` → **`benchmarks/map_perf/snapshots/2026-05-13T22-57-46Z_issue221-visit-list-cold-warm.json`** via **`scripts/snapshot_explorer_perf_log.py`**; **`benchmarks/map_perf/tmp/`** gitignored; removed duplicate JSONL from **`tmp/`**.
 - **Experimental map:** Session-state **payload cache** (same key inputs as Folium **All locations** cache path + cluster bundle + visits cap); **`EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP`** for truncated visit lists + TS lifelist hint.
+- **Post-cache JSONL check:** Warm **`map.experimental.payload`** ~**0.01 ms**, **`payload_cache_hit: true`**; cold miss still ~**6 s** GeoJSON build. **`prep.map_iframe_embed`** warm classic ~**6.2 s** unchanged; **`prep.map_context_prepare`** warm ~**1.4 s**. **`Milestone summary`** table + **`benchmarks/map_perf/README.md`** § typical perf command added for issue handoff.
 
 ### 2026-05-13 (later)
 

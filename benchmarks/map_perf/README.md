@@ -46,3 +46,13 @@ python scripts/snapshot_explorer_perf_log.py /path/to/perf.jsonl --label post-em
 
 The directory stays local so you can diff before/after or attach excerpts to issues without fighting
 hardware variance on other machines.
+
+### Typical command (#221 manual perf)
+
+```bash
+mkdir -p benchmarks/map_perf/tmp
+EXPLORER_PERF=1 EXPLORER_PERF_LOG_FILE="$PWD/benchmarks/map_perf/tmp/explorer_perf.jsonl" \
+  streamlit run explorer/app/streamlit/app.py
+```
+
+Optional: `EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP=N` (experimental map visit truncation). Then archive with `scripts/snapshot_explorer_perf_log.py` as above.
