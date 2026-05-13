@@ -3,6 +3,7 @@
 > Per-branch only. **This file lives on `205-investigation-main` and is not destined for `beta-next`.**
 > See [#205](https://github.com/jimchurches/myebirdstuff/issues/205) for the parent issue. Batch 1
 > notes (decisions, baseline timings) are posted as comments on that issue, not in this repo.
+> The **TODO — `beta-next` vs investigation** section below tracks promotion candidates; mirror or summarize there in [#205](https://github.com/jimchurches/myebirdstuff/issues/205) when you merge.
 
 > **Branch hygiene:** This branch is merged *from* `beta-next` whenever mainline moves (same
 > map/prep/test code as production line). Investigation-only commits—this backlog, historical
@@ -39,6 +40,29 @@ stages exposed by [explorer/app/streamlit/perf_instrumentation.py](../../explore
 
 ---
 
+## TODO — `beta-next` vs `205-investigation-main` (roll-up tracker)
+
+Keep this list current when you merge or decide to stay experimental. **Last reviewed:** 2026-05-13 (`origin/beta-next` @ `924c022`, investigation @ `888275d`).
+
+| Item | On `beta-next`? | Promote? | Notes |
+| --- | --- | --- | --- |
+| **#217** batch 4 (I1/I2 `metrics_sink`, I4 `measure_first_paint_ms` / `e2e.first_paint`, I5 `aggregate_perf_jsonl`) | **Yes** | — | Already merged. |
+| **#214 / #215** Folium LRU / view-mode cache behaviour | **Yes** | — | Already merged. |
+| **Batch A** — `popup_fragment_cache`, popup models/fragments, working-set triple clear | **No** | **Yes (recommended)** | Same rich HTML as today; skips redundant visit-list / species-section **string** rebuilds on full-popup cache misses. **Low product risk**; modest CPU win when popups dominate rebuilds (see #205 batch 4 notes). Land as a **focused PR** from investigation → `beta-next` (avoid dragging lazy + W2 in the same merge unless you want them). |
+| **W2** — `EXPLORER_MAP_LITE_POPUPS` | **No** | **Optional** | Debug / A/B only; default stays rich. Promote if you want production parity with investigation tooling. |
+| **Batch B** — `EXPLORER_MAP_LAZY_POPUPS` + `map_lazy_popups.py` | **No** | **Not yet** | Fixture metrics: **`html_bytes_len` not improved** (often worse). Keep on investigation until **Batch C** or real-CSV proof. |
+| **`html_bytes_len` on `prep.folium_map_to_html_bytes`** | **No** | **Optional** | Small telemetry win for lazy/HTML A/Bs; ship with Batch A PR or separately. |
+| **Lazy A/B E2E** (`streamlit_perf_url_logfile_and_lazy_expected`, W2 isolates lazy) | **No** | **Optional** | Nice for regression + archives; not required for production. |
+| **Batch C** — structured popup payload + thin client render | **No** | **Investigate here first** | Next step if we want **smaller** map HTML than “full HTML in JSON.” |
+
+**Was Batch A a “win”?**  
+It is **not** a dramatic “map feels instant” change by itself — it is an **incremental server-side efficiency**: fewer repeated fragment HTML builds when the session already knows the visit list / species sections. Think of it as **payoff for moving toward structured popups**, not the end state. It **does** deserve `beta-next` on **risk/reward** (same pixels, less wasted work).
+
+**Still exploring?**  
+**Yes** — lazy popups, lite mode, Batch C, H*, W* are experiments. **Batch A is the main candidate to “graduate” now** without tying you to lazy.
+
+---
+
 ## Within the current architecture (Streamlit + Folium)
 
 | # | Idea | Hypothesis | Expected gain | Risk | Measurement | Done means | Status |
@@ -58,6 +82,7 @@ stages exposed by [explorer/app/streamlit/perf_instrumentation.py](../../explore
 | H2 | Persistent client iframe, data-only updates | Most of the cost is *re-mounting* the Leaflet map; if it stays mounted and we only push diff'd GeoJSON, reruns become trivial. | Order-of-magnitude gain for warm reruns. | New component boundary; needs careful Streamlit↔component messaging. Significant build effort. | First-paint timing + per-rerun delta when only a filter changes. | Working spike on a save-branch + recommendation. | backlog |
 | H3 | Partial Folium → GeoJSON overlay for the *selected species only* | The base map could be cached once; only the species overlay changes on most interactions. | Skips full Folium rebuild when only species selection changes. | Two-layer architecture; risk of overlay/base drift in popups + cluster behaviour. | Stage timings split between "base map build" and "overlay update". | Spike result + go/no-go on #205. | backlog |
 | H4 | Pre-render multiple map variants on first load | All / Lifer / Family-blank maps are predictable. Pre-building them in the cold prep window may erase the first-switch wait. | Removes the first "All → Lifer" wait users notice. | Larger memory footprint; longer cold start. | Compare cold prep time vs first-switch time on real CSV. | Recommendation on the trade-off. | backlog |
+| **C1** | **Batch C** — structured popup payload + thin client template (All locations first) | Lazy Batch B still embeds **full** popup HTML in JSON → **`html_bytes_len` often increases** (fixture A/B). **Field-level** JSON + one small render function can shrink bytes and parse cost. | Smaller map HTML + path to faster open; complements Batch A server work. | Must preserve **eBird** links, visit table behaviour, accessibility; parity tests + E2E. | `html_bytes_len`, lazy vs C1 A/B, cluster popup parity. | Spike on **`205-investigation-main`**; promote pieces with Batch A if clean. | **batch 1 (investigation)** |
 
 ## Outside the current Streamlit shell
 
