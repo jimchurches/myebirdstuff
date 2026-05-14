@@ -27,7 +27,7 @@ The sidebar **cluster all locations** toggle is passed as `cluster_options.enabl
 
 ## Banner + legend inside the iframe (same as Folium)
 
-Folium injects ``map_overlay_theme_stylesheet`` plus banner/legend HTML **into the map document** so ``position:fixed`` anchors to the map viewport (top-right banner, bottom-left legend). The Streamlit component passes the same stylesheet, ``map_popup_width_fix_script``, ``build_all_locations_banner_html``, and ``build_legend_html`` as component args; React injects CSS/script into the iframe ``document`` and renders overlay HTML **siblings** of the Leaflet pane so chrome matches beta-next (#222).
+Folium injects ``map_overlay_theme_stylesheet`` plus banner/legend HTML **into the map document** so ``position:fixed`` anchors to the map viewport (top-right banner, bottom-left legend). The Streamlit component passes the same stylesheet, ``map_popup_width_fix_script``, ``build_all_locations_banner_html``, and ``build_legend_html`` as component args; React injects CSS/script into the iframe ``document`` and renders overlay HTML **siblings** of the Leaflet pane so chrome matches beta-next (#222). The Python stylesheet is **two** ``<style>`` blocks concatenated (popup + banner/legend); the component merges their inner CSS into one ``<style>`` node so the browser does not terminate the sheet at the first ``</style>`` token.
 
 ## Popup anchor vs iframe size
 

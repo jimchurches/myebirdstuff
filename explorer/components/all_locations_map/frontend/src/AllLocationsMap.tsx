@@ -340,6 +340,38 @@ function resolvedCircleStyles(
 const STYLE_ID = "pebird-map-overlay-theme";
 const POPUP_WIDTH_SCRIPT_ID = "pebird-map-popup-width-fix";
 
+/** Join inner CSS from every ``<style>...</style>`` block (Python concatenates popup + banner/legend sheets). */
+function extractAllStyleInnerCss(html: string): string {
+  const s = html.trim();
+  if (!s) {
+    return "";
+  }
+  const parts: string[] = [];
+  const re = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    parts.push(m[1].trim());
+  }
+  if (parts.length > 0) {
+    return parts.join("\n");
+  }
+  /* Fallback: legacy single-block strip */
+  return s
+    .replace(/^\s*<style[^>]*>\s*/i, "")
+    .replace(/\s*<\/style>\s*$/i, "")
+    .trim();
+}
+
+/** Inner JS from ``<script>...</script>`` (single block from Python). */
+function extractScriptInnerJs(html: string): string {
+  const s = html.trim();
+  if (!s) {
+    return "";
+  }
+  const m = /<script[^>]*>([\s\S]*?)<\/script>/i.exec(s);
+  return m ? m[1].trim() : s.replace(/^\s*<script[^>]*>\s*/i, "").replace(/\s*<\/script>\s*$/i, "").trim();
+}
+
 function injectHeadFragments(mapThemeCss: string, mapPopupWidthScript: string): void {
   const css = (mapThemeCss ?? "").trim();
   if (css) {
@@ -349,12 +381,12 @@ function injectHeadFragments(mapThemeCss: string, mapPopupWidthScript: string): 
       styleEl.id = STYLE_ID;
       document.head.appendChild(styleEl);
     }
-    const inner = css.replace(/^<style>\s*/i, "").replace(/\s*<\/style>\s*$/i, "");
+    const inner = extractAllStyleInnerCss(css);
     styleEl.textContent = inner;
   }
   const scr = (mapPopupWidthScript ?? "").trim();
   if (scr && !document.getElementById(POPUP_WIDTH_SCRIPT_ID)) {
-    const inner = scr.replace(/^<script>\s*/i, "").replace(/\s*<\/script>\s*$/i, "");
+    const inner = extractScriptInnerJs(scr);
     const s = document.createElement("script");
     s.id = POPUP_WIDTH_SCRIPT_ID;
     s.textContent = inner;
