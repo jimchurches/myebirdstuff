@@ -2,11 +2,11 @@
 
 Leaflet map embedded via `streamlit.components.v1`. The committed **`frontend/build`** output is what Streamlit loads at runtime.
 
-Rebuild after TS/React changes:
+Rebuild after TS/React changes (also validated on every PR by **Python CI** → *All locations map (npm build)*):
 
 ```bash
 cd explorer/components/all_locations_map/frontend
-npm install
+npm ci
 npm run build
 ```
 
@@ -23,7 +23,7 @@ Clustering uses **Leaflet.markercluster** with defaults aligned to `explorer/app
 
 The sidebar **cluster all locations** toggle is passed as `cluster_options.enabled`; full cluster JSON is mixed into the GeoJSON **revision** hash so toggling clustering bumps revision and reloads the overlay.
 
-**Pins:** `circle_marker_style` comes from Python via `_all_locations_marker_params_from_scheme(MAP_MARKER_COLOUR_SCHEME_1)` — same CircleMarker fill/stroke/radius/weight/opacity as classic Folium **All locations** for **preset 1 (Eucalypt)** only in this spike (sidebar marker-scheme radio not applied).
+**Pins:** `circle_marker_style` comes from Python via the same resolver as Folium **All locations**; the sidebar marker scheme index is honoured in production (#222).
 
 ## Pop-ups / eBird richness (design)
 
