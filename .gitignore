@@ -27,3 +27,12 @@ htmlcov/
 
 # Local Explorer perf snapshots (machine-specific JSON; archive via scripts/snapshot_explorer_perf_log.py)
 benchmarks/map_perf/snapshots/
+
+# Ad-hoc map perf temp output (local; not the curated snapshots/ tree)
+benchmarks/map_perf/tmp/
+
+# npm installs under Explorer Streamlit custom components (run npm ci in each frontend/)
+node_modules/
+
+# Personal eBird export used for local E2E / integration (optional; see docs/development.md, EXPLORER_E2E_DATASET_CSV)
+tests/fixtures/MyEBirdData.csv
