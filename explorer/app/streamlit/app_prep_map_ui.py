@@ -1,19 +1,23 @@
-"""Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab Folium embed.
+"""Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab embed.
 
-Map build and ``st_folium`` run under the first spinner so the map can render before heavy
-checklist/rankings caches (~refs #179). Tab session sync runs in a second spinner so other tabs get
-payloads before fragments run. Partial ``@st.fragment`` reruns do not use this path.
+Map build runs under the first spinner so the map can render before heavy checklist/rankings caches
+(~refs #179). **All locations** uses the Leaflet Streamlit custom component (#222); other modes use
+Folium + ``st_folium``. Tab session sync runs in a second spinner so other tabs get payloads before
+fragments run. Partial ``@st.fragment`` reruns do not use this path.
 
 **Export map HTML** uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
-**deep-copied** map (``branca`` mutates on render), with ``html_bytes`` cached on hit. The live map
-uses **streamlit-folium** ``st_folium`` with a **deep copy** of the cached map so embed rendering
-cannot strip layers from the session cache (same mutation hazard as HTML export). Session
-:data:`FOLIUM_STATIC_MAP_CACHE_KEY` still stores an unrendered Folium :class:`folium.Map` for the LRU.
+**deep-copied** Folium map (``branca`` mutates on render), with ``html_bytes`` cached on hit. The live
+Folium map uses **streamlit-folium** ``st_folium`` with a **deep copy** of the cached map so embed
+rendering cannot strip layers from the session cache. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY`
+stores unrendered Folium :class:`folium.Map` entries for the LRU. All-locations Leaflet payloads are
+cached under :data:`ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY` (#222).
 """
 
 from __future__ import annotations
 
 import copy
+import json
+import os
 from collections import OrderedDict
 from typing import Any, Callable
 
@@ -28,6 +32,7 @@ from explorer.app.streamlit.app_caches import (
     static_map_cache_key,
 )
 from explorer.app.streamlit.app_constants import (
+    ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     EXPORT_MAP_HTML_BTN_KEY,
@@ -107,6 +112,10 @@ from explorer.app.streamlit.defaults import (
     MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH,
     MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW,
     MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM,
+    MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+    MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+    MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
+    MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
     MAP_SPECIES_DEFAULT_CENTER_LAT,
     MAP_SPECIES_DEFAULT_CENTER_LON,
     MAP_SPECIES_DEFAULT_ZOOM,
@@ -117,6 +126,12 @@ from explorer.core.family_map_folium import (
     build_family_map_banner_overlay_html,
     build_family_map_legend_overlay_html_for_pins,
 )
+from explorer.components.all_locations_map import render_all_locations_map_component
+from explorer.core.all_locations_experimental_marker_style import (
+    circle_marker_style_for_all_locations_map,
+)
+from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
+from explorer.presentation.map_renderer import build_all_locations_banner_html
 
 
 _MAP_RENDER_CACHE_MAX_ENTRIES = 6
@@ -203,6 +218,7 @@ def render_prep_spinner_and_map_tab(
                     st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
                     st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
                     st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+                    st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None
@@ -281,6 +297,13 @@ def render_prep_spinner_and_map_tab(
                                 "single_point_zoom": int(MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM),
                             }
                         st.session_state[STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY] = blank_viewport_recipe
+
+                use_all_locations_leaflet = False
+                leaflet_revision: str | None = None
+                leaflet_geojson: dict[str, Any] | None = None
+                leaflet_cluster_opts: dict[str, Any] | None = None
+                leaflet_circle_style: dict[str, Any] | None = None
+                all_locations_leaflet_banner_html = ""
 
                 if map_view_mode == "families":
                     fam = (family_name or "").strip()
@@ -399,6 +422,7 @@ def render_prep_spinner_and_map_tab(
                         map_view_mode == "species" and bool(hide_non_matching_locations)
                     )
                     capture_all_locations_view = map_view_mode == "all" and not overlay_sci
+                    use_all_locations_leaflet = capture_all_locations_view
                     _go_pin = go_to_gps_pin_from_session()
                     _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _map_kw = {
@@ -516,50 +540,136 @@ def render_prep_spinner_and_map_tab(
                             ),
                         },
                     )
-                    _cached = _map_cache_lookup(_ck)
-                    if isinstance(_cached, dict) and _cached.get("map") is not None:
-                        perf_record_point("prep.map_cache_hit", extra={"mode": map_view_mode})
-                        result_map = _cached["map"]
-                        result_warning = _cached.get("warning")
+                    if use_all_locations_leaflet:
+                        raw_vis = str(
+                            os.environ.get("EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP", "") or ""
+                        ).strip()
+                        visits_inline_max: int | None = None
+                        if raw_vis:
+                            try:
+                                n_vis = int(raw_vis)
+                                visits_inline_max = n_vis if n_vis > 0 else None
+                            except ValueError:
+                                visits_inline_max = None
+                        leaflet_circle_style = circle_marker_style_for_all_locations_map(
+                            int(family_colour_scheme)
+                        )
+                        leaflet_cluster_opts = {
+                            "enabled": bool(
+                                st.session_state.get(
+                                    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                                    MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                                )
+                            ),
+                            "max_cluster_radius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+                            "disable_clustering_at_zoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+                            "spiderfy_on_max_zoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+                            "remove_outside_visible_bounds": (
+                                MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS
+                            ),
+                        }
+                        revision_bundle = {
+                            "circle_marker": leaflet_circle_style,
+                            "cluster": leaflet_cluster_opts,
+                        }
+                        revision_extra_json = json.dumps(revision_bundle, sort_keys=True)
+                        payload_cache_key = (_ck, revision_extra_json, visits_inline_max)
+                        _perf_leaflet: dict[str, Any] = {
+                            "embed": "all_locations_leaflet",
+                            "map_view_mode": map_view_mode,
+                            "payload_cache_hit": False,
+                            "visits_inline_cap": visits_inline_max,
+                        }
+                        with perf_span("map.all_locations_leaflet.payload", extra=_perf_leaflet):
+                            cached_pl = st.session_state.get(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY)
+                            if (
+                                isinstance(cached_pl, dict)
+                                and cached_pl.get("payload_cache_key") == payload_cache_key
+                            ):
+                                leaflet_revision = str(cached_pl["revision"])
+                                leaflet_geojson = cached_pl["geojson"]
+                                _perf_leaflet["payload_cache_hit"] = True
+                            else:
+                                loc_df = ctx["location_data"]
+                                work = ctx["df"]
+                                counts = work.groupby("Location ID")["Submission ID"].nunique()
+                                popup_visit_dates_ascending = (
+                                    str(popup_sort_order).strip().lower() != "descending"
+                                )
+                                leaflet_revision, leaflet_geojson = build_all_locations_geojson_payload(
+                                    loc_df,
+                                    checklist_counts_by_location=counts.to_dict(),
+                                    records_by_location=ctx["records_by_loc"],
+                                    popup_visit_dates_ascending=popup_visit_dates_ascending,
+                                    visits_inline_max=visits_inline_max,
+                                    omit_pin_colour=True,
+                                    revision_extra=revision_extra_json,
+                                )
+                                st.session_state[ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY] = {
+                                    "payload_cache_key": payload_cache_key,
+                                    "revision": leaflet_revision,
+                                    "geojson": leaflet_geojson,
+                                }
+                        n_loc, n_chk, n_sp, n_ind = ctx["effective_totals"]
+                        all_locations_leaflet_banner_html = build_all_locations_banner_html(
+                            n_loc,
+                            n_chk,
+                            n_sp,
+                            n_ind,
+                            date_filter_banner or None,
+                            position_style="position:relative;",
+                        )
+                        result_map = None
+                        result_warning = None
+                        folium_st_key = None
+                        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                     else:
-                        perf_record_point("prep.map_cache_miss", extra={"mode": map_view_mode})
-                        # #205 batch 4 I1/I2: collect popup-build vs marker-count split inside
-                        # the same perf event. ``perf_span`` stamps ``extra`` by reference at
-                        # finalize time, so mutations inside :func:`build_species_overlay_map`
-                        # land on the emitted record.
-                        _build_metrics: dict[str, Any] = {"mode": map_view_mode}
-                        with perf_span(
-                            "prep.build_species_overlay_map", extra=_build_metrics
-                        ):
-                            result = build_species_overlay_map(
-                                metrics_sink=_build_metrics, **_map_kw
-                            )
-                            result_map = result.map
-                            result_warning = result.warning
-                        if result_map is not None:
-                            _map_cache_store(
-                                _ck,
-                                {
-                                    "key": _ck,
-                                    "map": result_map,
-                                    "warning": result_warning,
-                                },
-                            )
-                            _cache_after = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
-                            perf_record_point(
-                                "prep.map_cache_store",
-                                extra={
-                                    "mode": map_view_mode,
-                                    "site": "after_build_species_overlay_map",
-                                    "cache_entries_after_store": (
-                                        len(_cache_after)
-                                        if isinstance(_cache_after, OrderedDict)
-                                        else 0
-                                    ),
-                                },
-                            )
+                        _cached = _map_cache_lookup(_ck)
+                        if isinstance(_cached, dict) and _cached.get("map") is not None:
+                            perf_record_point("prep.map_cache_hit", extra={"mode": map_view_mode})
+                            result_map = _cached["map"]
+                            result_warning = _cached.get("warning")
+                        else:
+                            perf_record_point("prep.map_cache_miss", extra={"mode": map_view_mode})
+                            # #205 batch 4 I1/I2: collect popup-build vs marker-count split inside
+                            # the same perf event. ``perf_span`` stamps ``extra`` by reference at
+                            # finalize time, so mutations inside :func:`build_species_overlay_map`
+                            # land on the emitted record.
+                            _build_metrics: dict[str, Any] = {"mode": map_view_mode}
+                            with perf_span(
+                                "prep.build_species_overlay_map", extra=_build_metrics
+                            ):
+                                result = build_species_overlay_map(
+                                    metrics_sink=_build_metrics, **_map_kw
+                                )
+                                result_map = result.map
+                                result_warning = result.warning
+                            if result_map is not None:
+                                _map_cache_store(
+                                    _ck,
+                                    {
+                                        "key": _ck,
+                                        "map": result_map,
+                                        "warning": result_warning,
+                                    },
+                                )
+                                _cache_after = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
+                                perf_record_point(
+                                    "prep.map_cache_store",
+                                    extra={
+                                        "mode": map_view_mode,
+                                        "site": "after_build_species_overlay_map",
+                                        "cache_entries_after_store": (
+                                            len(_cache_after)
+                                            if isinstance(_cache_after, OrderedDict)
+                                            else 0
+                                        ),
+                                    },
+                                )
 
-                if result_warning:
+                if use_all_locations_leaflet and leaflet_revision and leaflet_geojson is not None:
+                    pass
+                elif result_warning:
                     map_warning_text = result_warning
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                 elif result_map is None:
@@ -592,6 +702,38 @@ def render_prep_spinner_and_map_tab(
             with tab_map:
                 if map_warning_text is not None:
                     st.warning(map_warning_text)
+                elif (
+                    use_all_locations_leaflet
+                    and leaflet_revision
+                    and leaflet_geojson is not None
+                    and leaflet_cluster_opts is not None
+                    and leaflet_circle_style is not None
+                ):
+                    if map_hint_text:
+                        st.info(map_hint_text)
+                    if all_locations_leaflet_banner_html:
+                        st.markdown(all_locations_leaflet_banner_html, unsafe_allow_html=True)
+                    with perf_span(
+                        "map.all_locations_leaflet.component_embed",
+                        extra={
+                            "embed": "all_locations_leaflet",
+                            "map_view_mode": map_view_mode,
+                            "revision_prefix": leaflet_revision[:12],
+                            "n_features": len(leaflet_geojson.get("features", [])),
+                            "cluster_enabled": leaflet_cluster_opts.get("enabled"),
+                        },
+                    ):
+                        render_all_locations_map_component(
+                            revision=leaflet_revision,
+                            geojson=leaflet_geojson,
+                            height=int(map_height),
+                            cluster_options=leaflet_cluster_opts,
+                            circle_marker_style=leaflet_circle_style,
+                            key=(
+                                f"explorer_all_locations_leaflet_h{map_height}_"
+                                f"n{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
+                            ),
+                        )
                 elif (
                     folium_st_key is not None
                     and st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY) is not None
