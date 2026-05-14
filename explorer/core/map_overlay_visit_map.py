@@ -494,7 +494,7 @@ def build_visit_overlay_map(
     if not selected_species:
         nl, tc, ts, ti = effective_totals
         species_map.get_root().html.add_child(
-            Element(build_all_locations_banner_html(nl, tc, ts, ti, date_filter_status_line))
+            Element(build_all_locations_banner_html(nl, tc, ts, ti))
         )
         _fill, _edge, _radius_px, _stroke_w, _fill_op = _all_locations_marker_params_from_scheme(
             visit_marker_scheme

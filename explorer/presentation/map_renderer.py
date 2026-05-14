@@ -695,20 +695,17 @@ def build_all_locations_banner_html(
     total_checklists,
     total_species,
     total_individuals,
-    date_filter_status=None,
     *,
     position_style: str | None = None,
 ):
     """Return the HTML overlay banner for the **All locations** map (landing map).
 
     Same hierarchy as the family-map banner: green ``__title``, main stats in body text, secondary
-    line muted and slightly smaller (refs #167).
-
-    If date_filter_status is provided (e.g. "Date filter: Off" or "Date filter: 2026-01-01 to 2026-12-31"),
-    it is shown below, smaller and lighter so it is less prominent.
+    line muted and slightly smaller (refs #167). Date filter state is **not** shown here — it lives in
+    the sidebar only (#222).
 
     *position_style* — when ``None``, uses the Folium overlay default (fixed corner). Pass a string
-    (e.g. ``\"position:relative;\"``) when embedding the banner in Streamlit above the Leaflet component (#222).
+    (e.g. ``\"position:relative;\"``) when embedding the banner outside the map document (#222).
     """
     sep = _banner_sep()
     loc_w = "locations" if n_locations != 1 else "location"
@@ -718,7 +715,6 @@ def build_all_locations_banner_html(
         f'{sep}{total_species} species'
         f'{sep}{total_individuals} individual{"s" if total_individuals != 1 else ""}'
     )
-    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
     pos = _BANNER_POSITION if position_style is None else position_style
     return (
         f'<div class="pebird-map-banner" style="{pos}">'
@@ -727,7 +723,6 @@ def build_all_locations_banner_html(
         f'<span class="pebird-map-banner__all-locations-primary">{primary_line}</span>'
         f'<span class="pebird-map-banner__all-locations-details">{details_line}</span>'
         f"</div>"
-        f'{date_block}'
         f'</div>'
     )
 

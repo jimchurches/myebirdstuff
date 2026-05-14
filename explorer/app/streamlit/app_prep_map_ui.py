@@ -622,7 +622,6 @@ def render_prep_spinner_and_map_tab(
                             n_chk,
                             n_sp,
                             n_ind,
-                            date_filter_banner or None,
                         )
                         _ls = str(leaflet_circle_style.get("stroke_hex") or "#1c2630")
                         _lf = str(leaflet_circle_style.get("fill_hex") or "#3388ff")
