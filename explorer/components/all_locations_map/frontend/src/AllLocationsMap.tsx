@@ -337,6 +337,28 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   const overlayRef = useRef<L.LayerGroup | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
 
+  /** Streamlit iframe height is applied after first paint; Leaflet must re-read container size or popups anchor wrong pixels (#222). */
+  useEffect(() => {
+    const map = mapRef.current;
+    const el = containerRef.current;
+    if (!map || !el) {
+      return;
+    }
+    const bump = () => {
+      map.invalidateSize({ debounceMoveend: true });
+    };
+    const ro = new ResizeObserver(() => {
+      bump();
+    });
+    ro.observe(el);
+    bump();
+    const timers = [50, 200, 500].map((ms) => window.setTimeout(bump, ms));
+    return () => {
+      ro.disconnect();
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, [args.height, args.revision, args.geojson, args.cluster_options, args.circle_marker_style]);
+
   useEffect(() => {
     const height = Number(args.height) || 420;
     Streamlit.setFrameHeight(height);

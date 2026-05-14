@@ -25,6 +25,14 @@ The sidebar **cluster all locations** toggle is passed as `cluster_options.enabl
 
 **Pins:** `circle_marker_style` comes from Python via the same resolver as Folium **All locations**; the sidebar marker scheme index is honoured in production (#222).
 
+## Banner + legend in Streamlit (not inside the iframe)
+
+Folium maps inject ``map_banner_and_legend_theme_stylesheet`` into the map HTML. The custom component draws the map **inside an iframe**, while the **banner** and **pin legend** are rendered in Streamlit **above** that iframe, so the same stylesheet is injected from Python (``inject_map_banner_legend_theme_css``) and the legend row uses ``build_legend_html`` from ``map_renderer`` with a **relative** container style (fixed corner positions are for overlays on the map canvas only).
+
+## Popup anchor vs iframe size
+
+If popups open offset from CircleMarkers, the usual cause is Leaflet measuring the map **before** the Streamlit iframe gets its final height. The component attaches a ``ResizeObserver`` on the map container and calls ``invalidateSize`` (plus a few delayed bumps) after updates (#222).
+
 ## Pop-ups / eBird richness (design)
 
 Classic Folium builds large HTML popups in Python. The component approach keeps **the same facts and URLs**

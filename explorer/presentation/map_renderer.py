@@ -847,13 +847,17 @@ def build_species_banner_html(
     )
 
 
-def build_legend_html(items):
+def build_legend_html(items, *, container_style: str | None = None):
     """Return the HTML overlay legend from a list of ``(color, fill, label)`` tuples.
 
-    Each tuple is rendered via ``pin_legend_item``.
+    Each tuple is rendered via :func:`pin_legend_item`.
+
+    *container_style* — when ``None``, uses the Folium overlay default (fixed bottom-left). Pass a CSS
+    string for the outer ``pebird-map-legend`` box when embedding in Streamlit above the Leaflet component (#222).
     """
     parts = "".join(pin_legend_item(c, f, label) for c, f, label in items)
-    return f'<div class="pebird-map-legend" style="{_LEGEND_POSITION}">{parts}</div>'
+    pos = _LEGEND_POSITION if container_style is None else container_style
+    return f'<div class="pebird-map-legend" style="{pos}">{parts}</div>'
 
 
 # ---------------------------------------------------------------------------

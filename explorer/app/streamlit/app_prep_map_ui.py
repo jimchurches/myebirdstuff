@@ -54,6 +54,7 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_go_to_gps_ui import go_to_gps_pin_from_session
 from explorer.app.streamlit.app_map_ui import (
+    inject_map_banner_legend_theme_css,
     inject_map_folium_iframe_min_height_css,
     inject_sidebar_outline_download_button_css,
     place_spinner_emoji_strip,
@@ -131,7 +132,7 @@ from explorer.core.all_locations_experimental_marker_style import (
     circle_marker_style_for_all_locations_map,
 )
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
-from explorer.presentation.map_renderer import build_all_locations_banner_html
+from explorer.presentation.map_renderer import build_all_locations_banner_html, build_legend_html
 
 
 _MAP_RENDER_CACHE_MAX_ENTRIES = 6
@@ -709,10 +710,21 @@ def render_prep_spinner_and_map_tab(
                     and leaflet_cluster_opts is not None
                     and leaflet_circle_style is not None
                 ):
+                    inject_map_folium_iframe_min_height_css(map_height)
+                    inject_map_banner_legend_theme_css()
                     if map_hint_text:
                         st.info(map_hint_text)
                     if all_locations_leaflet_banner_html:
                         st.markdown(all_locations_leaflet_banner_html, unsafe_allow_html=True)
+                    _stroke = str(leaflet_circle_style.get("stroke_hex") or "#1c2630")
+                    _fill = str(leaflet_circle_style.get("fill_hex") or "#3388ff")
+                    st.markdown(
+                        build_legend_html(
+                            [(_stroke, _fill, "All locations")],
+                            container_style="position:relative;margin:10px 0 0 0;",
+                        ),
+                        unsafe_allow_html=True,
+                    )
                     with perf_span(
                         "map.all_locations_leaflet.component_embed",
                         extra={
