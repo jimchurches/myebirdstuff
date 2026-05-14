@@ -106,6 +106,14 @@ interface MapArgs {
   height: number;
   cluster_options?: ClusterOptionsPayload;
   circle_marker_style?: CircleMarkerStylePayload;
+  /** Injected into iframe ``<head>`` — same as Folium ``map_overlay_theme_stylesheet`` (#222). */
+  map_theme_css?: string;
+  /** Injected once — Folium ``map_popup_width_fix_script`` (#222). */
+  map_popup_width_script?: string;
+  /** Fixed-position banner HTML (viewport = iframe), e.g. top-right ``pebird-map-banner`` (#222). */
+  banner_html?: string;
+  /** Fixed-position legend HTML, e.g. bottom-left ``pebird-map-legend`` (#222). */
+  legend_html?: string;
 }
 
 /** Matches Folium all-locations defaults from explorer.app.streamlit.defaults. */
@@ -329,18 +337,48 @@ function resolvedCircleStyles(
   };
 }
 
+const STYLE_ID = "pebird-map-overlay-theme";
+const POPUP_WIDTH_SCRIPT_ID = "pebird-map-popup-width-fix";
+
+function injectHeadFragments(mapThemeCss: string, mapPopupWidthScript: string): void {
+  const css = (mapThemeCss ?? "").trim();
+  if (css) {
+    let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = STYLE_ID;
+      document.head.appendChild(styleEl);
+    }
+    const inner = css.replace(/^<style>\s*/i, "").replace(/\s*<\/style>\s*$/i, "");
+    styleEl.textContent = inner;
+  }
+  const scr = (mapPopupWidthScript ?? "").trim();
+  if (scr && !document.getElementById(POPUP_WIDTH_SCRIPT_ID)) {
+    const inner = scr.replace(/^<script>\s*/i, "").replace(/\s*<\/script>\s*$/i, "");
+    const s = document.createElement("script");
+    s.id = POPUP_WIDTH_SCRIPT_ID;
+    s.textContent = inner;
+    document.head.appendChild(s);
+  }
+}
+
 function AllLocationsMap(props: ComponentProps): React.ReactElement {
   const args = props.args as MapArgs;
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const mapPaneRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   /** Overlay layer: MarkerClusterGroup when clustering on, else plain LayerGroup. */
   const overlayRef = useRef<L.LayerGroup | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    injectHeadFragments(args.map_theme_css ?? "", args.map_popup_width_script ?? "");
+  }, [args.map_theme_css, args.map_popup_width_script]);
+
   /** Streamlit iframe height is applied after first paint; Leaflet must re-read container size or popups anchor wrong pixels (#222). */
   useEffect(() => {
     const map = mapRef.current;
-    const el = containerRef.current;
+    const el = wrapperRef.current;
     if (!map || !el) {
       return;
     }
@@ -363,12 +401,12 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
     const height = Number(args.height) || 420;
     Streamlit.setFrameHeight(height);
 
-    if (!containerRef.current) {
+    if (!mapPaneRef.current) {
       return;
     }
 
     if (!mapRef.current) {
-      const map = L.map(containerRef.current, {
+      const map = L.map(mapPaneRef.current, {
         zoomControl: true,
         attributionControl: true,
       });
@@ -448,15 +486,33 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   }, [args.revision, args.geojson, args.height, args.cluster_options, args.circle_marker_style]);
 
   const h = Number(args.height) || 420;
+  const banner = (args.banner_html ?? "").trim();
+  const legend = (args.legend_html ?? "").trim();
   return (
     <div
-      ref={containerRef}
+      ref={wrapperRef}
       style={{
+        position: "relative",
         width: "100%",
         height: h,
         minHeight: h,
       }}
-    />
+    >
+      <div
+        ref={mapPaneRef}
+        className="all-locations-leaflet-pane"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
+        }}
+      />
+      {banner ? <div key="banner-overlay" dangerouslySetInnerHTML={{ __html: banner }} /> : null}
+      {legend ? <div key="legend-overlay" dangerouslySetInnerHTML={{ __html: legend }} /> : null}
+    </div>
   );
 }
 

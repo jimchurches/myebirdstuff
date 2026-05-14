@@ -35,8 +35,19 @@ def render_all_locations_map_component(
     key: str,
     cluster_options: dict | None = None,
     circle_marker_style: dict | None = None,
+    map_theme_css: str = "",
+    map_popup_width_script: str = "",
+    banner_html: str = "",
+    legend_html: str = "",
 ) -> None:
-    """Render the iframe component or show build instructions when ``frontend/build`` is absent."""
+    """Render the iframe component or show build instructions when ``frontend/build`` is absent.
+
+    *map_theme_css* / *map_popup_width_script* — same strings Folium injects (``map_overlay_theme_stylesheet``,
+    ``map_popup_width_fix_script``) so banner/legend/popups match beta-next inside the iframe (#222).
+
+    *banner_html* / *legend_html* — overlay HTML fragments with ``position:fixed`` (viewport = iframe),
+    matching Folium all-locations overlays (top-right banner, bottom-left legend).
+    """
     fn = _component_callable()
     if fn is None:
         st.warning(
@@ -50,5 +61,9 @@ def render_all_locations_map_component(
         height=int(height),
         cluster_options=cluster_options if cluster_options is not None else {},
         circle_marker_style=circle_marker_style if circle_marker_style is not None else {},
+        map_theme_css=map_theme_css,
+        map_popup_width_script=map_popup_width_script,
+        banner_html=banner_html,
+        legend_html=legend_html,
         key=key,
     )

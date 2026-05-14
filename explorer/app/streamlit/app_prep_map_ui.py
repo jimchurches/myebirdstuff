@@ -54,7 +54,6 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_go_to_gps_ui import go_to_gps_pin_from_session
 from explorer.app.streamlit.app_map_ui import (
-    inject_map_banner_legend_theme_css,
     inject_map_folium_iframe_min_height_css,
     inject_sidebar_outline_download_button_css,
     place_spinner_emoji_strip,
@@ -132,7 +131,12 @@ from explorer.core.all_locations_experimental_marker_style import (
     circle_marker_style_for_all_locations_map,
 )
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
-from explorer.presentation.map_renderer import build_all_locations_banner_html, build_legend_html
+from explorer.presentation.map_renderer import (
+    build_all_locations_banner_html,
+    build_legend_html,
+    map_overlay_theme_stylesheet,
+    map_popup_width_fix_script,
+)
 
 
 _MAP_RENDER_CACHE_MAX_ENTRIES = 6
@@ -305,6 +309,7 @@ def render_prep_spinner_and_map_tab(
                 leaflet_cluster_opts: dict[str, Any] | None = None
                 leaflet_circle_style: dict[str, Any] | None = None
                 all_locations_leaflet_banner_html = ""
+                all_locations_leaflet_legend_html = ""
 
                 if map_view_mode == "families":
                     fam = (family_name or "").strip()
@@ -618,7 +623,11 @@ def render_prep_spinner_and_map_tab(
                             n_sp,
                             n_ind,
                             date_filter_banner or None,
-                            position_style="position:relative;",
+                        )
+                        _ls = str(leaflet_circle_style.get("stroke_hex") or "#1c2630")
+                        _lf = str(leaflet_circle_style.get("fill_hex") or "#3388ff")
+                        all_locations_leaflet_legend_html = build_legend_html(
+                            [(_ls, _lf, "All locations")],
                         )
                         result_map = None
                         result_warning = None
@@ -711,20 +720,8 @@ def render_prep_spinner_and_map_tab(
                     and leaflet_circle_style is not None
                 ):
                     inject_map_folium_iframe_min_height_css(map_height)
-                    inject_map_banner_legend_theme_css()
                     if map_hint_text:
                         st.info(map_hint_text)
-                    if all_locations_leaflet_banner_html:
-                        st.markdown(all_locations_leaflet_banner_html, unsafe_allow_html=True)
-                    _stroke = str(leaflet_circle_style.get("stroke_hex") or "#1c2630")
-                    _fill = str(leaflet_circle_style.get("fill_hex") or "#3388ff")
-                    st.markdown(
-                        build_legend_html(
-                            [(_stroke, _fill, "All locations")],
-                            container_style="position:relative;margin:10px 0 0 0;",
-                        ),
-                        unsafe_allow_html=True,
-                    )
                     with perf_span(
                         "map.all_locations_leaflet.component_embed",
                         extra={
@@ -741,6 +738,10 @@ def render_prep_spinner_and_map_tab(
                             height=int(map_height),
                             cluster_options=leaflet_cluster_opts,
                             circle_marker_style=leaflet_circle_style,
+                            map_theme_css=map_overlay_theme_stylesheet(),
+                            map_popup_width_script=map_popup_width_fix_script(),
+                            banner_html=all_locations_leaflet_banner_html,
+                            legend_html=all_locations_leaflet_legend_html,
                             key=(
                                 f"explorer_all_locations_leaflet_h{map_height}_"
                                 f"n{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"

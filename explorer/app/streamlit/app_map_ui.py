@@ -89,18 +89,6 @@ section[data-testid="stMain"] iframe {{
     )
 
 
-def inject_map_banner_legend_theme_css() -> None:
-    """Inject banner + bottom-legend chrome CSS into the Streamlit document.
-
-    Folium maps embed this via Branca on the map HTML; the All locations **custom component** renders
-    its banner in Streamlit with the same ``pebird-map-banner`` classes, so we must inject the shared
-    stylesheet here (refs #70, #222).
-    """
-    from explorer.presentation.map_renderer import map_banner_and_legend_theme_stylesheet
-
-    st.html(map_banner_and_legend_theme_stylesheet())
-
-
 def inject_spinner_theme_css() -> None:
     """Tweak ``st.spinner`` (text-style, theme greens, emoji iframe layout) to match our theme (refs #70, #124).
 

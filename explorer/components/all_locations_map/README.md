@@ -25,13 +25,13 @@ The sidebar **cluster all locations** toggle is passed as `cluster_options.enabl
 
 **Pins:** `circle_marker_style` comes from Python via the same resolver as Folium **All locations**; the sidebar marker scheme index is honoured in production (#222).
 
-## Banner + legend in Streamlit (not inside the iframe)
+## Banner + legend inside the iframe (same as Folium)
 
-Folium maps inject ``map_banner_and_legend_theme_stylesheet`` into the map HTML. The custom component draws the map **inside an iframe**, while the **banner** and **pin legend** are rendered in Streamlit **above** that iframe, so the same stylesheet is injected from Python (``inject_map_banner_legend_theme_css``) and the legend row uses ``build_legend_html`` from ``map_renderer`` with a **relative** container style (fixed corner positions are for overlays on the map canvas only).
+Folium injects ``map_overlay_theme_stylesheet`` plus banner/legend HTML **into the map document** so ``position:fixed`` anchors to the map viewport (top-right banner, bottom-left legend). The Streamlit component passes the same stylesheet, ``map_popup_width_fix_script``, ``build_all_locations_banner_html``, and ``build_legend_html`` as component args; React injects CSS/script into the iframe ``document`` and renders overlay HTML **siblings** of the Leaflet pane so chrome matches beta-next (#222).
 
 ## Popup anchor vs iframe size
 
-If popups open offset from CircleMarkers, the usual cause is Leaflet measuring the map **before** the Streamlit iframe gets its final height. The component attaches a ``ResizeObserver`` on the map container and calls ``invalidateSize`` (plus a few delayed bumps) after updates (#222).
+If popups open offset from CircleMarkers, the usual cause is Leaflet measuring the map **before** the Streamlit iframe gets its final height. The component attaches a ``ResizeObserver`` on the outer wrapper and calls ``invalidateSize`` (plus a few delayed bumps) after updates (#222).
 
 ## Pop-ups / eBird richness (design)
 
