@@ -16,6 +16,7 @@ from explorer.core.all_locations_viewport import (
     mean_center_from_pairs,
     sorted_country_labels_from_work,
 )
+from explorer.core.map_overlay_visit_map import all_locations_leaflet_viewport_recipe
 
 
 def test_location_id_to_country_map_first_non_null():
@@ -144,3 +145,88 @@ def test_all_locations_scope_option_values_order():
     assert opts[1] == ALL_LOCATIONS_SCOPE_FOCUSED
     assert opts[2] == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY
     assert set(opts[3:]) == {"NZ", "US"}
+
+
+def test_leaflet_viewport_recipe_centre_of_gravity_mode():
+    from explorer.app.streamlit.defaults import MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM
+
+    loc = pd.DataFrame(
+        {
+            "Location ID": ["A", "B"],
+            "Latitude": [-35.0, -36.0],
+            "Longitude": [149.0, 150.0],
+        }
+    )
+    df = pd.DataFrame(
+        {
+            "Location ID": ["A", "B"],
+            "Submission ID": ["S1", "S2"],
+            "Country": ["AU", "AU"],
+        }
+    )
+    vp = all_locations_leaflet_viewport_recipe(
+        effective_location_data=loc,
+        df=df,
+        all_locations_scope=ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
+        all_locations_location_country={},
+        go_to_gps_pin=None,
+    )
+    assert vp["v"] == 1
+    assert vp["mode"] == "center_zoom"
+    assert vp["zoom"] == MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM
+    assert len(vp["center"]) == 2
+
+
+def test_leaflet_viewport_recipe_go_to_gps_overrides_scope():
+    loc = pd.DataFrame(
+        {
+            "Location ID": ["A"],
+            "Latitude": [0.0],
+            "Longitude": [0.0],
+        }
+    )
+    df = pd.DataFrame(
+        {
+            "Location ID": ["A"],
+            "Submission ID": ["S1"],
+            "Country": ["US"],
+        }
+    )
+    vp = all_locations_leaflet_viewport_recipe(
+        effective_location_data=loc,
+        df=df,
+        all_locations_scope=ALL_LOCATIONS_FRAMING_FIT_ALL,
+        all_locations_location_country={"A": "US"},
+        go_to_gps_pin=(-10.0, 25.0),
+    )
+    assert vp["mode"] == "go_to_gps"
+    assert vp["lat"] == -10.0
+    assert vp["lon"] == 25.0
+
+
+def test_leaflet_viewport_recipe_fit_all_single_location():
+    loc = pd.DataFrame(
+        {
+            "Location ID": ["L1"],
+            "Latitude": [10.0],
+            "Longitude": [20.0],
+        }
+    )
+    df = pd.DataFrame(
+        {
+            "Location ID": ["L1"],
+            "Submission ID": ["S1"],
+            "Country": ["US"],
+        }
+    )
+    vp = all_locations_leaflet_viewport_recipe(
+        effective_location_data=loc,
+        df=df,
+        all_locations_scope=ALL_LOCATIONS_FRAMING_FIT_ALL,
+        all_locations_location_country={"L1": "US"},
+        go_to_gps_pin=None,
+    )
+    assert vp["mode"] == "fit_bounds"
+    assert vp["single_point"] is True
+    assert vp["lat"] == 10.0
+    assert vp["lon"] == 20.0

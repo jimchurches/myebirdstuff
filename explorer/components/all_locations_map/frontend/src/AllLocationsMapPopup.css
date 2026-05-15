@@ -25,9 +25,21 @@
 
 .leaflet-popup-content .pebird-map-popup {
   display: inline-block;
-  width: max-content;
-  max-width: min(var(--pebird-map-popup-max-width), calc(100vw - 40px));
+  /* Allow wrapping to respect the post-shrink content width (refs #145; avoids text spilling past card). */
+  width: fit-content;
+  min-width: 0;
+  max-width: min(var(--pebird-map-popup-max-width), calc(100vw - 40px), 100%);
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-sizing: border-box;
+  /* Inner breathing room so visit rows are not flush to the card edge (Folium parity). */
+  padding: 8px 10px 10px 10px;
+}
+
+.pebird-map-popup.popup-scroll-wrapper {
+  /* Slightly more room when the scroll region is present. */
+  padding: 10px 12px 10px 12px;
 }
 
 .pebird-map-popup__heading-row {
@@ -101,6 +113,15 @@
 .pebird-map-popup__visit-dates {
   margin: 0;
   padding: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.pebird-map-popup__visit-dates a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 /* Compact / secondary lines (no dedicated class in Python — matches muted stats styling). */
@@ -109,6 +130,9 @@
   margin: 0;
   color: var(--pebird-ui-muted);
   font-weight: 400;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .pebird-map-popup__heading-row + .pebird-map-popup__summary-line {
@@ -128,4 +152,42 @@
 
 .pebird-map-popup__trunc-hint a {
   font-weight: 400;
+}
+
+/* Go to GPS — Folium ``_apply_go_to_gps_pin_view`` red pin (#222). */
+.all-locations-gps-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.all-locations-gps-marker__glyph {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 0 auto;
+  background: #d32f2f;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid #7f1d1d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.leaflet-marker-icon.marker-cluster.marker-cluster-small,
+.leaflet-marker-icon.marker-cluster.marker-cluster-medium,
+.leaflet-marker-icon.marker-cluster.marker-cluster-large {
+  background: transparent !important;
+}
+
+/*
+ * Leaflet ships `.leaflet-container { overflow: hidden }` — attribution sits at bottom:0 and the
+ * last line of pixels can clip inside the Streamlit iframe. Inset the control corners explicitly
+ * (stronger than padding alone when controls stay flush to the padding edge).
+ */
+.all-locations-leaflet-pane.leaflet-container {
+  padding-bottom: 20px;
+  padding-right: 8px;
+}
+
+.all-locations-leaflet-pane.leaflet-container .leaflet-bottom.leaflet-right {
+  bottom: 10px;
+  right: 8px;
 }

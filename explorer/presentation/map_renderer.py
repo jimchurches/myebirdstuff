@@ -77,12 +77,20 @@ def map_popup_theme_stylesheet() -> str:
 .leaflet-popup-content .pebird-map-popup * {{
   box-sizing: border-box;
 }}
-/* Block-level inner box stretches to Leaflet's wide .leaflet-popup-content; shrink-wrap so width can match text. */
+/* Inline-block inner + shrink script: intrinsic width can be applied to .leaflet-popup-content (refs #145). */
 .leaflet-popup-content .pebird-map-popup {{
   display: inline-block;
-  width: max-content;
-  max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px));
+  width: fit-content;
+  min-width: 0;
+  max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px), 100%);
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-sizing: border-box;
+  padding: 8px 10px 10px 10px;
+}}
+.pebird-map-popup.popup-scroll-wrapper {{
+  padding: 10px 12px 10px 12px;
 }}
 .pebird-map-popup__heading-row {{
   width: 100%;
@@ -162,6 +170,29 @@ def map_popup_theme_stylesheet() -> str:
 .pebird-map-popup__visit-dates {{
   margin: 0;
   padding: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}}
+.pebird-map-popup__visit-dates a {{
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}}
+.pebird-map-popup__summary-line {{
+  display: block;
+  margin: 0;
+  color: {EXPLORER_UI_MUTED};
+  font-weight: 400;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}}
+.pebird-map-popup__heading-row + .pebird-map-popup__summary-line {{
+  margin-top: 0.2rem;
+}}
+.pebird-map-popup__summary-line + .pebird-map-popup__summary-line {{
+  margin-top: 0.12rem;
 }}
 .pebird-map-popup__obs-count {{
   color: {EXPLORER_UI_MUTED};
@@ -225,7 +256,7 @@ def map_popup_width_fix_script() -> str:
     """Return a ``<script>`` that shrink-wraps Leaflet popups after JS layout.
 
     Folium passes ``maxWidth``; Leaflet's ``Popup._updateLayout`` sets a pixel width on
-    ``.leaflet-popup-content`` (often ``maxWidth``). A **block** ``.pebird-map-popup`` then **stretches**
+    ``.leaflet-popup-content`` (often ``maxWidth``). A **block** ``.pebird-map-popup`` would **stretch**
     to that width, so ``fit-content`` on the parent cannot shrink. We use **inline-block** inner (CSS)
     and set **content + wrapper** to the measured inner width in px after Leaflet runs (refs #145).
     """
@@ -255,7 +286,8 @@ def map_popup_width_fix_script() -> str:
 
       var innerPx = Math.ceil(inner.scrollWidth);
       if (innerPx < 2) innerPx = Math.ceil(inner.getBoundingClientRect().width);
-      var target = Math.min(innerPx, cap);
+      /* Small buffer avoids tight right edge / subpixel rounding after padding + fonts. */
+      var target = Math.min(innerPx + 8, cap);
       content.style.setProperty('width', target + 'px', 'important');
       content.style.setProperty('max-width', cap + 'px', 'important');
       wrap.style.setProperty('width', target + 'px', 'important');
@@ -653,9 +685,9 @@ def build_species_map_location_popup_html(
 # Banner and legend HTML builders
 # ---------------------------------------------------------------------------
 
-_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
+_BANNER_POSITION = "position:fixed;top:16px;right:16px;z-index:1000;"
 
-_LEGEND_POSITION = "position:fixed;bottom:10px;left:10px;z-index:1000;"
+_LEGEND_POSITION = "position:fixed;bottom:16px;left:16px;z-index:1000;"
 
 
 def _banner_sep() -> str:

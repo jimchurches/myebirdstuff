@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
-from explorer.core.map_overlay_visit_map import _all_locations_marker_params_from_scheme
+from explorer.core.map_overlay_visit_map import (
+    _all_locations_marker_params_from_scheme,
+    all_locations_cluster_icon_style_payload,
+)
 
 
 def circle_marker_style_for_all_locations_map(colour_scheme_index: int) -> dict[str, Any]:
@@ -19,6 +22,12 @@ def circle_marker_style_for_all_locations_map(colour_scheme_index: int) -> dict[
         "stroke_weight": int(stroke_w),
         "fill_opacity": float(fill_op),
     }
+
+
+def cluster_icon_style_for_all_locations_map(colour_scheme_index: int) -> dict[str, Any] | None:
+    """MarkerCluster ``iconCreateFunction`` inputs for the Leaflet component (Folium parity)."""
+    sch = active_map_marker_colour_scheme(int(colour_scheme_index))
+    return all_locations_cluster_icon_style_payload(sch)
 
 
 def experimental_default_scheme_circle_marker_props() -> dict[str, Any]:

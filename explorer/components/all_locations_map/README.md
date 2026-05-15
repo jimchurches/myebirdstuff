@@ -1,5 +1,7 @@
 # All locations map — Streamlit component (spike #221)
 
+**Backlog / ordered TODO:** [TODO.md](./TODO.md) (viewport parity, basemap control, export, perf, …).
+
 Leaflet map embedded via `streamlit.components.v1`. The committed **`frontend/build`** output is what Streamlit loads at runtime.
 
 Rebuild after TS/React changes (also validated on every PR by **Python CI** → *All locations map (npm build)*):

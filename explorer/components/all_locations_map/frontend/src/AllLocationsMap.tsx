@@ -27,20 +27,38 @@ interface CircleMarkerStylePayload {
   fill_opacity?: number;
 }
 
+/** Folium ``_marker_cluster_icon_create_function_from_scheme`` parity — from :func:`all_locations_cluster_icon_style_payload`. */
+interface ClusterIconStylePayload {
+  fills_rgba: string[];
+  borders_rgba: string[];
+  halos_rgba: string[];
+  border_width_px: number;
+  halo_spread_px: number;
+}
+
 /** Folium `MAP_POPUP_MAX_WIDTH_PX` (`explorer/app/streamlit/defaults.py`). */
 const POPUP_MAX_WIDTH_PX = 420;
+
+/** Folium ``_apply_go_to_gps_pin_view`` popup body (`explorer/core/map_overlay_visit_map.py`). */
+const GO_TO_GPS_POPUP_HTML =
+  "<div style='font-size:13px'><strong>Temporary GPS marker</strong></div>";
 
 /** Default gap below location title row — matches ``build_location_popup_html(..., location_heading_margin_px=4)``. */
 const POPUP_LOCATION_HEADING_MARGIN_PX = 4;
 
-/** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (``map_popup_width_fix_script``). */
-function capPopupInnerWidthPx(): number {
-  return Math.min(POPUP_MAX_WIDTH_PX, Math.max(80, window.innerWidth - 40));
+/** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (``map_popup_width_fix_script``).
+
+Uses *map* pixel width (not ``window``) so Streamlit iframe caps match the visible pane (#222).
+After width changes, callers should invoke ``popup.update()`` so the tip stays on the marker (refs #145).
+*/
+function capPopupInnerWidthPxForMap(map: L.Map): number {
+  const px = Math.max(1, map.getSize().x);
+  return Math.min(POPUP_MAX_WIDTH_PX, Math.max(80, px - 24));
 }
 
-function shrinkPebirdLeafletPopups(): void {
+function shrinkPebirdLeafletPopups(map: L.Map): void {
   const pops = document.querySelectorAll(".leaflet-popup-pane .leaflet-popup");
-  const cap = capPopupInnerWidthPx();
+  const cap = capPopupInnerWidthPxForMap(map);
   pops.forEach((pop) => {
     const content = pop.querySelector(".leaflet-popup-content") as HTMLElement | null;
     const wrap = pop.querySelector(".leaflet-popup-content-wrapper") as HTMLElement | null;
@@ -56,7 +74,7 @@ function shrinkPebirdLeafletPopups(): void {
     if (innerPx < 2) {
       innerPx = Math.ceil(inner.getBoundingClientRect().width);
     }
-    const target = Math.min(innerPx, cap);
+    const target = Math.min(innerPx + 8, cap); // buffer: subpixel / padding vs measured scrollWidth
     content.style.setProperty("width", `${target}px`, "important");
     content.style.setProperty("max-width", `${cap}px`, "important");
     wrap.style.setProperty("width", `${target}px`, "important");
@@ -64,13 +82,19 @@ function shrinkPebirdLeafletPopups(): void {
   });
 }
 
-function scheduleShrinkPebirdLeafletPopups(): void {
+function scheduleShrinkPebirdLeafletPopups(map: L.Map, popup?: L.Popup): void {
+  const bump = () => {
+    shrinkPebirdLeafletPopups(map);
+    if (popup && typeof (popup as unknown as { update?: () => void }).update === "function") {
+      (popup as unknown as { update: () => void }).update();
+    }
+  };
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => shrinkPebirdLeafletPopups());
+    requestAnimationFrame(() => bump());
   });
   const delays = [0, 30, 80, 150, 260, 400];
   for (let k = 0; k < delays.length; k++) {
-    window.setTimeout(shrinkPebirdLeafletPopups, delays[k]);
+    window.setTimeout(bump, delays[k]);
   }
 }
 
@@ -106,6 +130,8 @@ interface MapArgs {
   height: number;
   cluster_options?: ClusterOptionsPayload;
   circle_marker_style?: CircleMarkerStylePayload;
+  /** Tier rgba + border/spread for ``iconCreateFunction`` (Folium cluster parity). */
+  cluster_icon_style?: ClusterIconStylePayload | Record<string, unknown>;
   /** Injected into iframe ``<head>`` — same as Folium ``map_overlay_theme_stylesheet`` (#222). */
   map_theme_css?: string;
   /** Injected once — Folium ``map_popup_width_fix_script`` (#222). */
@@ -114,6 +140,8 @@ interface MapArgs {
   banner_html?: string;
   /** Fixed-position legend HTML, e.g. bottom-left ``pebird-map-legend`` (#222). */
   legend_html?: string;
+  /** Camera recipe from :func:`all_locations_leaflet_viewport_recipe` (Folium parity, #222). */
+  viewport?: Record<string, unknown>;
 }
 
 /** Matches Folium all-locations defaults from explorer.app.streamlit.defaults. */
@@ -139,6 +167,262 @@ function toLeafletClusterOptions(payload: ClusterOptionsPayload): L.MarkerCluste
     removeOutsideVisibleBounds: Boolean(payload.remove_outside_visible_bounds),
     chunkedLoading: true,
   };
+}
+
+function parseClusterIconStyle(raw: unknown): ClusterIconStylePayload | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  const fills = o.fills_rgba;
+  const borders = o.borders_rgba;
+  const halos = o.halos_rgba;
+  if (!Array.isArray(fills) || !Array.isArray(borders) || !Array.isArray(halos)) {
+    return null;
+  }
+  if (fills.length !== 3 || borders.length !== 3 || halos.length !== 3) {
+    return null;
+  }
+  if (!fills.every((x) => typeof x === "string")) {
+    return null;
+  }
+  if (!borders.every((x) => typeof x === "string")) {
+    return null;
+  }
+  if (!halos.every((x) => typeof x === "string")) {
+    return null;
+  }
+  const bw = Number(o.border_width_px);
+  const spread = Number(o.halo_spread_px);
+  if (!Number.isFinite(bw) || !Number.isFinite(spread)) {
+    return null;
+  }
+  return {
+    fills_rgba: fills as string[],
+    borders_rgba: borders as string[],
+    halos_rgba: halos as string[],
+    border_width_px: bw,
+    halo_spread_px: spread,
+  };
+}
+
+function markerClusterGroupOptionsWithOptionalIconStyle(
+  payload: ClusterOptionsPayload,
+  clusterIconStyleRaw: unknown,
+): L.MarkerClusterGroupOptions {
+  const base = toLeafletClusterOptions(payload);
+  const style = parseClusterIconStyle(clusterIconStyleRaw);
+  if (!style) {
+    return base;
+  }
+  return {
+    ...base,
+    iconCreateFunction(cluster: L.MarkerCluster) {
+      const count = cluster.getChildCount();
+      const i = count < 10 ? 0 : count < 100 ? 1 : 2;
+      const html = `<div style="background-color:${style.fills_rgba[i]};border:${style.border_width_px}px solid ${style.borders_rgba[i]};box-shadow:0 0 0 ${style.halo_spread_px}px ${style.halos_rgba[i]};"><span>${count}</span></div>`;
+      const sizeClass =
+        count < 10 ? "marker-cluster-small" : count < 100 ? "marker-cluster-medium" : "marker-cluster-large";
+      return L.divIcon({
+        html,
+        className: `marker-cluster ${sizeClass}`,
+        iconSize: L.point(40, 40),
+      });
+    },
+  };
+}
+
+type ViewportV1GoToGps = {
+  mode: "go_to_gps";
+  lat: number;
+  lon: number;
+  padding_px: number;
+  epsilon_delta: number;
+  max_zoom: number;
+};
+
+type ViewportV1CenterZoom = {
+  mode: "center_zoom";
+  center: L.LatLngTuple;
+  zoom: number;
+};
+
+type ViewportV1FitBoundsSingle = {
+  mode: "fit_bounds";
+  single_point: true;
+  lat: number;
+  lon: number;
+  epsilon_delta: number;
+  padding_px: number;
+  max_zoom: number;
+};
+
+type ViewportV1FitBoundsMulti = {
+  mode: "fit_bounds";
+  single_point: false;
+  pairs: L.LatLngTuple[];
+  padding_px: number;
+  max_zoom: number;
+};
+
+type ViewportV1 = ViewportV1GoToGps | ViewportV1CenterZoom | ViewportV1FitBoundsSingle | ViewportV1FitBoundsMulti;
+
+function parseViewportV1(raw: unknown): ViewportV1 | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  if (o.v !== 1) {
+    return null;
+  }
+  const mode = typeof o.mode === "string" ? o.mode : "";
+  if (mode === "go_to_gps") {
+    const lat = Number(o.lat);
+    const lon = Number(o.lon);
+    const padding_px = Number(o.padding_px);
+    const epsilon_delta = Number(o.epsilon_delta);
+    const max_zoom = Number(o.max_zoom);
+    if (![lat, lon, padding_px, epsilon_delta, max_zoom].every((x) => Number.isFinite(x))) {
+      return null;
+    }
+    return { mode: "go_to_gps", lat, lon, padding_px, epsilon_delta, max_zoom };
+  }
+  if (mode === "center_zoom") {
+    const c = o.center;
+    if (!Array.isArray(c) || c.length !== 2) {
+      return null;
+    }
+    const la = Number(c[0]);
+    const lo = Number(c[1]);
+    const zoom = Number(o.zoom);
+    if (![la, lo, zoom].every((x) => Number.isFinite(x))) {
+      return null;
+    }
+    return { mode: "center_zoom", center: [la, lo], zoom: Math.round(zoom) };
+  }
+  if (mode === "fit_bounds") {
+    const padding_px = Number(o.padding_px);
+    const max_zoom = Number(o.max_zoom);
+    if (!Number.isFinite(padding_px) || !Number.isFinite(max_zoom)) {
+      return null;
+    }
+    if (o.single_point === true) {
+      const lat = Number(o.lat);
+      const lon = Number(o.lon);
+      const epsilon_delta = Number(o.epsilon_delta);
+      if (![lat, lon, epsilon_delta].every((x) => Number.isFinite(x))) {
+        return null;
+      }
+      return {
+        mode: "fit_bounds",
+        single_point: true,
+        lat,
+        lon,
+        epsilon_delta,
+        padding_px,
+        max_zoom: Math.round(max_zoom),
+      };
+    }
+    if (o.single_point === false) {
+      const pairsRaw = o.pairs;
+      if (!Array.isArray(pairsRaw) || pairsRaw.length === 0) {
+        return null;
+      }
+      const pairs: L.LatLngTuple[] = [];
+      for (const pr of pairsRaw) {
+        if (!Array.isArray(pr) || pr.length !== 2) {
+          return null;
+        }
+        const la = Number(pr[0]);
+        const lo = Number(pr[1]);
+        if (!Number.isFinite(la) || !Number.isFinite(lo)) {
+          return null;
+        }
+        pairs.push([la, lo]);
+      }
+      return {
+        mode: "fit_bounds",
+        single_point: false,
+        pairs,
+        padding_px,
+        max_zoom: Math.round(max_zoom),
+      };
+    }
+  }
+  return null;
+}
+
+function applyGoToGpsViewportCamera(map: L.Map, vp: ViewportV1GoToGps): void {
+  const d = vp.epsilon_delta;
+  const b = L.latLngBounds([vp.lat - d, vp.lon - d], [vp.lat + d, vp.lon + d]);
+  map.fitBounds(b, { padding: L.point(vp.padding_px, vp.padding_px), maxZoom: vp.max_zoom, animate: false });
+}
+
+/** Red pin approximating Folium ``folium.Icon(color='red', icon='map-marker', prefix='fa')`` (#222). */
+function goToGpsMarkerIcon(): L.DivIcon {
+  return L.divIcon({
+    className: "all-locations-gps-marker",
+    html: '<span class="all-locations-gps-marker__glyph" aria-hidden="true"></span>',
+    iconSize: [30, 40],
+    iconAnchor: [15, 40],
+    popupAnchor: [0, -34],
+  });
+}
+
+/** Folium ``_apply_go_to_gps_pin_view`` marker on the map (not inside MarkerCluster) (#222). */
+function syncGoToGpsMarker(map: L.Map, viewportRaw: unknown, markerRef: React.MutableRefObject<L.Marker | null>): void {
+  if (markerRef.current) {
+    map.removeLayer(markerRef.current);
+    markerRef.current = null;
+  }
+  const vp = parseViewportV1(viewportRaw);
+  if (!vp || vp.mode !== "go_to_gps") {
+    return;
+  }
+  const m = L.marker([vp.lat, vp.lon], { icon: goToGpsMarkerIcon(), zIndexOffset: 2500 });
+  m.bindPopup(GO_TO_GPS_POPUP_HTML, { maxWidth: POPUP_MAX_WIDTH_PX });
+  m.addTo(map);
+  markerRef.current = m;
+}
+
+/** Folium ``build_visit_overlay_map`` camera for All locations (#222). */
+function applyAllLocationsViewport(map: L.Map, viewportRaw: unknown, gjLayer: L.GeoJSON | null): void {
+  const vp = parseViewportV1(viewportRaw);
+  const padPt = (px: number) => L.point(px, px);
+  if (!vp) {
+    if (gjLayer) {
+      try {
+        const b = gjLayer.getBounds();
+        if (b.isValid()) {
+          map.fitBounds(b.pad(0.12));
+        }
+      } catch {
+        map.setView([20, 0], 2);
+      }
+    } else {
+      map.setView([20, 0], 2);
+    }
+    return;
+  }
+  if (vp.mode === "go_to_gps") {
+    applyGoToGpsViewportCamera(map, vp);
+    return;
+  }
+  if (vp.mode === "center_zoom") {
+    map.setView(vp.center, vp.zoom, { animate: false });
+    return;
+  }
+  if (vp.mode === "fit_bounds") {
+    if (vp.single_point) {
+      const d = vp.epsilon_delta;
+      const b = L.latLngBounds([vp.lat - d, vp.lon - d], [vp.lat + d, vp.lon + d]);
+      map.fitBounds(b, { padding: padPt(vp.padding_px), maxZoom: vp.max_zoom, animate: false });
+      return;
+    }
+    const latlngs = vp.pairs.map((p) => L.latLng(p[0], p[1]));
+    const b = L.latLngBounds(latlngs);
+    map.fitBounds(b, { padding: padPt(vp.padding_px), maxZoom: vp.max_zoom, animate: false });
+  }
 }
 
 function escapeHtml(text: string): string {
@@ -401,6 +685,10 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   const mapRef = useRef<L.Map | null>(null);
   /** Overlay layer: MarkerClusterGroup when clustering on, else plain LayerGroup. */
   const overlayRef = useRef<L.LayerGroup | null>(null);
+  /** Folium ``_apply_go_to_gps_pin_view`` red pin — map root, not inside MarkerCluster (#222). */
+  const goToGpsMarkerRef = useRef<L.Marker | null>(null);
+  /** Leaflet ``Popup`` instance when open — used to ``update()`` after iframe resize / width shrink (#145 / #222). */
+  const openLeafletPopupRef = useRef<L.Popup | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -416,6 +704,11 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
     }
     const bump = () => {
       map.invalidateSize({ debounceMoveend: true });
+      shrinkPebirdLeafletPopups(map);
+      const p = openLeafletPopupRef.current;
+      if (p && typeof (p as unknown as { update?: () => void }).update === "function") {
+        (p as unknown as { update: () => void }).update();
+      }
     };
     const ro = new ResizeObserver(() => {
       bump();
@@ -427,7 +720,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
       ro.disconnect();
       timers.forEach((t) => window.clearTimeout(t));
     };
-  }, [args.height, args.revision, args.geojson, args.cluster_options, args.circle_marker_style]);
+  }, [args.height, args.revision, args.geojson, args.cluster_options, args.circle_marker_style, args.cluster_icon_style, args.viewport]);
 
   useEffect(() => {
     const height = Number(args.height) || 420;
@@ -443,7 +736,19 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
         attributionControl: true,
       });
       mapRef.current = map;
-      map.on("popupopen", scheduleShrinkPebirdLeafletPopups);
+      map.on("popupopen", (ev: L.LeafletEvent) => {
+        const raw = ev as unknown as { popup?: L.Popup };
+        const popup = raw.popup;
+        openLeafletPopupRef.current = popup ?? null;
+        if (popup) {
+          scheduleShrinkPebirdLeafletPopups(map, popup);
+        } else {
+          scheduleShrinkPebirdLeafletPopups(map);
+        }
+      });
+      map.on("popupclose", () => {
+        openLeafletPopupRef.current = null;
+      });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -469,14 +774,28 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
 
     const gj = args.geojson;
     if (!gj || !gj.features || gj.features.length === 0) {
-      map.setView([20, 0], 2);
+      const vpEmpty = parseViewportV1(args.viewport);
+      if (vpEmpty?.mode === "go_to_gps") {
+        applyGoToGpsViewportCamera(map, vpEmpty);
+      } else {
+        map.setView([20, 0], 2);
+      }
+      syncGoToGpsMarker(map, args.viewport, goToGpsMarkerRef);
       map.invalidateSize();
-      return;
+      return () => {
+        const m = mapRef.current;
+        if (m && goToGpsMarkerRef.current) {
+          m.removeLayer(goToGpsMarkerRef.current);
+          goToGpsMarkerRef.current = null;
+        }
+      };
     }
 
     let overlay: L.LayerGroup;
     if (clusterEnabled) {
-      overlay = L.markerClusterGroup(toLeafletClusterOptions(clusterPayload)) as unknown as L.LayerGroup;
+      overlay = L.markerClusterGroup(
+        markerClusterGroupOptionsWithOptionalIconStyle(clusterPayload, args.cluster_icon_style),
+      ) as unknown as L.LayerGroup;
     } else {
       overlay = L.layerGroup();
     }
@@ -505,17 +824,27 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
 
     overlay.addLayer(gjLayer);
 
-    try {
-      const b = gjLayer.getBounds();
-      if (b.isValid()) {
-        map.fitBounds(b.pad(0.12));
-      }
-    } catch {
-      map.setView([20, 0], 2);
-    }
+    applyAllLocationsViewport(map, args.viewport, gjLayer);
+    syncGoToGpsMarker(map, args.viewport, goToGpsMarkerRef);
 
     map.invalidateSize();
-  }, [args.revision, args.geojson, args.height, args.cluster_options, args.circle_marker_style]);
+
+    return () => {
+      const m = mapRef.current;
+      if (m && goToGpsMarkerRef.current) {
+        m.removeLayer(goToGpsMarkerRef.current);
+        goToGpsMarkerRef.current = null;
+      }
+    };
+  }, [
+    args.revision,
+    args.geojson,
+    args.height,
+    args.cluster_options,
+    args.circle_marker_style,
+    args.cluster_icon_style,
+    args.viewport,
+  ]);
 
   const h = Number(args.height) || 420;
   const banner = (args.banner_html ?? "").trim();

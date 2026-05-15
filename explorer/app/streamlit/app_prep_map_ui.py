@@ -91,6 +91,7 @@ from explorer.core.all_locations_viewport import (
     observation_row_counts_by_country_key,
 )
 from explorer.core.map_controller import build_species_overlay_map
+from explorer.core.map_overlay_visit_map import all_locations_leaflet_viewport_recipe
 from explorer.core.map_prep import (
     data_signature_for_caches,
     mean_center_from_location_data,
@@ -129,6 +130,7 @@ from explorer.core.family_map_folium import (
 from explorer.components.all_locations_map import render_all_locations_map_component
 from explorer.core.all_locations_experimental_marker_style import (
     circle_marker_style_for_all_locations_map,
+    cluster_icon_style_for_all_locations_map,
 )
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
 from explorer.presentation.map_renderer import (
@@ -308,6 +310,7 @@ def render_prep_spinner_and_map_tab(
                 leaflet_geojson: dict[str, Any] | None = None
                 leaflet_cluster_opts: dict[str, Any] | None = None
                 leaflet_circle_style: dict[str, Any] | None = None
+                leaflet_cluster_icon_style: dict[str, Any] | None = None
                 all_locations_leaflet_banner_html = ""
                 all_locations_leaflet_legend_html = ""
 
@@ -560,6 +563,9 @@ def render_prep_spinner_and_map_tab(
                         leaflet_circle_style = circle_marker_style_for_all_locations_map(
                             int(family_colour_scheme)
                         )
+                        leaflet_cluster_icon_style = cluster_icon_style_for_all_locations_map(
+                            int(family_colour_scheme)
+                        )
                         leaflet_cluster_opts = {
                             "enabled": bool(
                                 st.session_state.get(
@@ -574,9 +580,18 @@ def render_prep_spinner_and_map_tab(
                                 MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS
                             ),
                         }
+                        leaflet_viewport = all_locations_leaflet_viewport_recipe(
+                            effective_location_data=ctx["effective_location_data"],
+                            df=ctx["df"],
+                            all_locations_scope=_scope,
+                            all_locations_location_country=location_id_to_country_map(ctx["df"]),
+                            go_to_gps_pin=_go_pin,
+                        )
                         revision_bundle = {
                             "circle_marker": leaflet_circle_style,
                             "cluster": leaflet_cluster_opts,
+                            "cluster_icon_style": leaflet_cluster_icon_style,
+                            "viewport": leaflet_viewport,
                         }
                         revision_extra_json = json.dumps(revision_bundle, sort_keys=True)
                         payload_cache_key = (_ck, revision_extra_json, visits_inline_max)
@@ -737,6 +752,8 @@ def render_prep_spinner_and_map_tab(
                             height=int(map_height),
                             cluster_options=leaflet_cluster_opts,
                             circle_marker_style=leaflet_circle_style,
+                            cluster_icon_style=leaflet_cluster_icon_style or {},
+                            viewport=leaflet_viewport,
                             map_theme_css=map_overlay_theme_stylesheet(),
                             map_popup_width_script=map_popup_width_fix_script(),
                             banner_html=all_locations_leaflet_banner_html,
