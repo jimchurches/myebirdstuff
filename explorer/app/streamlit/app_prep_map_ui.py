@@ -134,6 +134,7 @@ from explorer.core.all_locations_experimental_marker_style import (
 )
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
 from explorer.presentation.map_renderer import (
+    STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
     build_all_locations_banner_html,
     build_legend_html,
     map_overlay_theme_stylesheet,
@@ -642,6 +643,7 @@ def render_prep_spinner_and_map_tab(
                         _lf = str(leaflet_circle_style.get("fill_hex") or "#3388ff")
                         all_locations_leaflet_legend_html = build_legend_html(
                             [(_ls, _lf, "All locations")],
+                            container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
                         )
                         result_map = None
                         result_warning = None

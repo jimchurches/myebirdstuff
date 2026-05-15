@@ -441,7 +441,8 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   margin-top: 6px;
 }}
 .pebird-map-legend {{
-  padding: 8px 12px;
+  /* Mirror ``.pebird-map-banner`` inset padding (banner top/right → legend bottom/left). */
+  padding: 12px 16px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
@@ -709,6 +710,14 @@ def build_species_map_location_popup_html(
 _BANNER_POSITION = "position:fixed;top:16px;right:16px;z-index:1000;"
 
 _LEGEND_POSITION = "position:fixed;bottom:16px;left:16px;z-index:1000;"
+
+# All locations Streamlit component: keep the **banner** on ``position:fixed`` (``_BANNER_POSITION`` —
+# same top/right as Folium in the iframe viewport). The **legend** uses ``position:absolute`` with
+# ``bottom:16px`` relative to ``.all-locations-map-frame`` so the legend–map bottom gap stays stable;
+# ``left`` is tighter than 16px because a ``fixed`` banner measures from the iframe viewport while this
+# overlay is laid out inside the component root, and matching the *visual* left gutter needs a smaller
+# numeric offset (refs #222 feedback).
+STREAMLIT_COMPONENT_MAP_LEGEND_STYLE = "position:absolute;bottom:16px;left:8px;z-index:1000;"
 
 
 def _banner_sep() -> str:

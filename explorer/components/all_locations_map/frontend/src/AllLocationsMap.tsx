@@ -938,6 +938,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   return (
     <div
       ref={wrapperRef}
+      className="all-locations-map-frame"
       style={{
         position: "relative",
         width: "100%",
