@@ -46,6 +46,23 @@ const GO_TO_GPS_POPUP_HTML =
 /** Default gap below location title row — matches ``build_location_popup_html(..., location_heading_margin_px=4)``. */
 const POPUP_LOCATION_HEADING_MARGIN_PX = 4;
 
+/** Extra px on shrink width — ``scrollWidth`` can sit slightly under painted text (subpixel / links). */
+const POPUP_SHRINK_WIDTH_BUFFER_PX = 24;
+
+/** Max of inner and wide text rows (visit links, headings) while inner is ``max-content`` for measure. */
+function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
+  void inner.offsetWidth;
+  let w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
+  const wideEls = inner.querySelectorAll(
+    ".pebird-map-popup__visit-dates a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line",
+  );
+  wideEls.forEach((el) => {
+    const he = el as HTMLElement;
+    w = Math.max(w, he.scrollWidth, he.getBoundingClientRect().width);
+  });
+  return Math.ceil(Math.max(w, 1));
+}
+
 /** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (``map_popup_width_fix_script``).
 
 Uses *map* pixel width (not ``window``) so Streamlit iframe caps match the visible pane (#222).
@@ -66,15 +83,18 @@ function shrinkPebirdLeafletPopups(map: L.Map): void {
     if (!content || !wrap || !inner) {
       return;
     }
+    /* Shrink-to-fit cycle: inner has max-width:100% of .leaflet-popup-content while that node uses
+     * width:fit-content — cyclic percentage resolves tiny, so scrollWidth was ~min-content (refs #222).
+     * Size inner to max-content for measurement only, then restore so final layout still respects cap. */
+    inner.style.setProperty("max-width", "none", "important");
+    inner.style.setProperty("width", "max-content", "important");
     content.style.removeProperty("width");
     content.style.removeProperty("white-space");
     wrap.style.removeProperty("width");
-
-    let innerPx = Math.ceil(inner.scrollWidth);
-    if (innerPx < 2) {
-      innerPx = Math.ceil(inner.getBoundingClientRect().width);
-    }
-    const target = Math.min(innerPx + 8, cap); // buffer: subpixel / padding vs measured scrollWidth
+    const innerPx = measurePebirdPopupInnerWidthPx(inner);
+    inner.style.removeProperty("max-width");
+    inner.style.removeProperty("width");
+    const target = Math.min(innerPx + POPUP_SHRINK_WIDTH_BUFFER_PX, cap);
     content.style.setProperty("width", `${target}px`, "important");
     content.style.setProperty("max-width", `${cap}px`, "important");
     wrap.style.setProperty("width", `${target}px`, "important");

@@ -80,17 +80,17 @@ def map_popup_theme_stylesheet() -> str:
 /* Inline-block inner + shrink script: intrinsic width can be applied to .leaflet-popup-content (refs #145). */
 .leaflet-popup-content .pebird-map-popup {{
   display: inline-block;
-  width: fit-content;
+  width: max-content;
   min-width: 0;
   max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px), 100%);
   vertical-align: top;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   word-break: break-word;
   box-sizing: border-box;
-  padding: 8px 10px 10px 10px;
+  padding: 8px 14px 10px 6px;
 }}
 .pebird-map-popup.popup-scroll-wrapper {{
-  padding: 10px 12px 10px 12px;
+  padding: 10px 14px 10px 6px;
 }}
 .pebird-map-popup__heading-row {{
   width: 100%;
@@ -259,6 +259,8 @@ def map_popup_width_fix_script() -> str:
     ``.leaflet-popup-content`` (often ``maxWidth``). A **block** ``.pebird-map-popup`` would **stretch**
     to that width, so ``fit-content`` on the parent cannot shrink. We use **inline-block** inner (CSS)
     and set **content + wrapper** to the measured inner width in px after Leaflet runs (refs #145).
+    Inner ``max-width:100%`` is cleared briefly while measuring so shrink-to-fit does not collapse to
+    min-content width (Streamlit iframe / #222).
     """
     w = MAP_POPUP_MAX_WIDTH_PX
     return f"""
@@ -270,6 +272,21 @@ def map_popup_width_fix_script() -> str:
     return Math.min(MAX_PX, Math.max(80, window.innerWidth - 40));
   }}
 
+  function measureInnerPx(inner) {{
+    void inner.offsetWidth;
+    var w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
+    var wide = inner.querySelectorAll(
+      '.pebird-map-popup__visit-dates a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line'
+    );
+    for (var i = 0; i < wide.length; i++) {{
+      var el = wide[i];
+      w = Math.max(w, el.scrollWidth, el.getBoundingClientRect().width);
+    }}
+    return Math.ceil(Math.max(w, 1));
+  }}
+
+  var SHRINK_BUFFER_PX = 24;
+
   function shrinkPebirdPopups() {{
     var pops = document.querySelectorAll('.leaflet-popup-pane .leaflet-popup');
     var cap = capW();
@@ -280,14 +297,15 @@ def map_popup_width_fix_script() -> str:
       var inner = pop.querySelector('.pebird-map-popup');
       if (!content || !wrap || !inner) continue;
 
+      inner.style.setProperty('max-width', 'none', 'important');
+      inner.style.setProperty('width', 'max-content', 'important');
       content.style.removeProperty('width');
       content.style.removeProperty('white-space');
       wrap.style.removeProperty('width');
-
-      var innerPx = Math.ceil(inner.scrollWidth);
-      if (innerPx < 2) innerPx = Math.ceil(inner.getBoundingClientRect().width);
-      /* Small buffer avoids tight right edge / subpixel rounding after padding + fonts. */
-      var target = Math.min(innerPx + 8, cap);
+      var innerPx = measureInnerPx(inner);
+      inner.style.removeProperty('max-width');
+      inner.style.removeProperty('width');
+      var target = Math.min(innerPx + SHRINK_BUFFER_PX, cap);
       content.style.setProperty('width', target + 'px', 'important');
       content.style.setProperty('max-width', cap + 'px', 'important');
       wrap.style.setProperty('width', target + 'px', 'important');
