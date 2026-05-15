@@ -73,17 +73,19 @@ def map_popup_theme_stylesheet() -> str:
   max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px)) !important;
   box-sizing: border-box !important;
 }}
+.leaflet-popup .leaflet-popup-content {{
+  text-align: left !important;
+}}
 .leaflet-popup-content .pebird-map-popup,
 .leaflet-popup-content .pebird-map-popup * {{
   box-sizing: border-box;
 }}
-/* Inline-block inner + shrink script: intrinsic width can be applied to .leaflet-popup-content (refs #145). */
+/* Block fills post-shrink content width; JS temporarily forces max-content only while measuring. */
 .leaflet-popup-content .pebird-map-popup {{
-  display: inline-block;
-  width: max-content;
+  display: block;
+  width: 100%;
   min-width: 0;
   max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px), 100%);
-  vertical-align: top;
   overflow-wrap: break-word;
   word-break: break-word;
   box-sizing: border-box;
@@ -107,6 +109,7 @@ def map_popup_theme_stylesheet() -> str:
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  padding-right: 2rem;
 }}
 .pebird-map-popup {{
   font-family: {EXPLORER_UI_FONT_STACK};

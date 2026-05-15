@@ -18,18 +18,22 @@
   box-sizing: border-box !important;
 }
 
+/* Leaflet sets .leaflet-popup { text-align: center }; keep body copy left-aligned in the content box. */
+.leaflet-popup .leaflet-popup-content {
+  text-align: left !important;
+}
+
 .leaflet-popup-content .pebird-map-popup,
 .leaflet-popup-content .pebird-map-popup * {
   box-sizing: border-box;
 }
 
 .leaflet-popup-content .pebird-map-popup {
-  display: inline-block;
-  /* max-content gives a stable scrollWidth for shrink-wrap JS; max-width:100% applies once content has a px width. */
-  width: max-content;
+  /* Fill the px width set by shrink-wrap JS; JS temporarily forces max-content only while measuring. */
+  display: block;
+  width: 100%;
   min-width: 0;
   max-width: min(var(--pebird-map-popup-max-width), calc(100vw - 40px), 100%);
-  vertical-align: top;
   /* break-word keeps min-content sane; headings/dates keep stronger rules where needed. */
   overflow-wrap: break-word;
   word-break: break-word;
@@ -57,6 +61,8 @@
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  /* Match heading-row clearance so short titles and long visit rows share the same right column (#222). */
+  padding-right: 2rem;
 }
 
 .pebird-map-popup {
