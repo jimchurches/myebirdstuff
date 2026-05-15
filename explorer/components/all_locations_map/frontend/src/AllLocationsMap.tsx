@@ -160,8 +160,10 @@ interface MapArgs {
   banner_html?: string;
   /** Fixed-position legend HTML, e.g. bottom-left ``pebird-map-legend`` (#222). */
   legend_html?: string;
-  /** Camera recipe from :func:`all_locations_leaflet_viewport_recipe` (Folium parity, #222). */
+  /** Camera recipe from Python `all_locations_leaflet_viewport_recipe` (#222). */
   viewport?: Record<string, unknown>;
+  /** Basemap keys match Python `create_map`: `default` (OSM), `google`, `carto` (CartoDB Positron). */
+  map_style?: string;
 }
 
 /** Matches Folium all-locations defaults from explorer.app.streamlit.defaults. */
@@ -172,6 +174,60 @@ const DEFAULT_CLUSTER_PAYLOAD: ClusterOptionsPayload = {
   spiderfy_on_max_zoom: false,
   remove_outside_visible_bounds: false,
 };
+
+/** Must stay aligned with `create_map` in `explorer/presentation/map_renderer.py`. */
+type BasemapId = "default" | "google" | "carto";
+
+function normalizeBasemapId(raw: string | undefined): BasemapId {
+  const s = String(raw ?? "default").trim().toLowerCase();
+  if (s === "google" || s === "carto") {
+    return s;
+  }
+  return "default";
+}
+
+const ALL_LOCATIONS_BASEMAPS: Record<BasemapId, { url: string; opts: L.TileLayerOptions }> = {
+  default: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    opts: {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    },
+  },
+  google: {
+    url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    opts: {
+      maxZoom: 22,
+      attribution: "Google",
+    },
+  },
+  carto: {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    opts: {
+      maxZoom: 20,
+      subdomains: "abcd",
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+  },
+};
+
+function applyBasemapToMap(
+  map: L.Map,
+  mapStyleRaw: string | undefined,
+  baseTileRef: React.MutableRefObject<L.TileLayer | null>,
+): void {
+  const id = normalizeBasemapId(mapStyleRaw);
+  const spec = ALL_LOCATIONS_BASEMAPS[id];
+  if (baseTileRef.current) {
+    map.removeLayer(baseTileRef.current);
+    baseTileRef.current = null;
+  }
+  const tile = L.tileLayer(spec.url, spec.opts);
+  tile.addTo(map);
+  tile.bringToBack();
+  baseTileRef.current = tile;
+}
 
 function mergeClusterPayload(raw: ClusterOptionsPayload | undefined): ClusterOptionsPayload {
   return { ...DEFAULT_CLUSTER_PAYLOAD, ...raw };
@@ -707,6 +763,8 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   const overlayRef = useRef<L.LayerGroup | null>(null);
   /** Folium ``_apply_go_to_gps_pin_view`` red pin — map root, not inside MarkerCluster (#222). */
   const goToGpsMarkerRef = useRef<L.Marker | null>(null);
+  /** OSM / Carto / Google tile layer — swapped when ``map_style`` changes without GeoJSON revision. */
+  const baseTileLayerRef = useRef<L.TileLayer | null>(null);
   /** Leaflet ``Popup`` instance when open — used to ``update()`` after iframe resize / width shrink (#145 / #222). */
   const openLeafletPopupRef = useRef<L.Popup | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
@@ -743,6 +801,15 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   }, [args.height, args.revision, args.geojson, args.cluster_options, args.circle_marker_style, args.cluster_icon_style, args.viewport]);
 
   useEffect(() => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    applyBasemapToMap(map, args.map_style, baseTileLayerRef);
+    map.invalidateSize({ debounceMoveend: true });
+  }, [args.map_style]);
+
+  useEffect(() => {
     const height = Number(args.height) || 420;
     Streamlit.setFrameHeight(height);
 
@@ -769,10 +836,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
       map.on("popupclose", () => {
         openLeafletPopupRef.current = null;
       });
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      }).addTo(map);
+      applyBasemapToMap(map, args.map_style, baseTileLayerRef);
     }
 
     const map = mapRef.current!;
@@ -856,6 +920,8 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
         goToGpsMarkerRef.current = null;
       }
     };
+    // map_style is applied in the basemap-only effect above; do not rebuild markers/clusters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- overlay keyed on revision, not tiles
   }, [
     args.revision,
     args.geojson,

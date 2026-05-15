@@ -750,6 +750,7 @@ def render_prep_spinner_and_map_tab(
                             revision=leaflet_revision,
                             geojson=leaflet_geojson,
                             height=int(map_height),
+                            map_style=map_style,
                             cluster_options=leaflet_cluster_opts,
                             circle_marker_style=leaflet_circle_style,
                             cluster_icon_style=leaflet_cluster_icon_style or {},

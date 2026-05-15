@@ -94,17 +94,30 @@ from explorer.core.species_search import (
 )
 
 
-def invalidate_folium_map_embed_cache() -> None:
-    """Bump Folium mount nonce and drop cached map HTML (basemap, family colours, etc.)."""
-    st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-        st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
-    ) + 1
+def _all_locations_leaflet_embed_active(session_state: Any) -> bool:
+    """Prep renders the custom Leaflet component (not Folium) for unfiltered All locations (#222)."""
+    label = session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY, "")
+    mode = MAP_VIEW_LABEL_TO_MODE.get(label, "")
+    if mode != "all":
+        return False
+    sci = str(session_state.get(PERSIST_SPECIES_SCI_KEY, "") or "").strip()
+    return not sci
+
+
+def invalidate_folium_map_embed_cache(*, bump_mount_nonce: bool = True) -> None:
+    """Drop cached Folium map HTML; optionally bump iframe mount nonce (basemap, colours, etc.)."""
+    if bump_mount_nonce:
+        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        ) + 1
     st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
 
 
 def _on_basemap_changed() -> None:
-    """Invalidate Folium cache + remount iframe when the basemap **value** changes (refs #124)."""
+    """Folium embed must remount when basemap changes; Leaflet component swaps tiles in-place (#222)."""
+    if _all_locations_leaflet_embed_active(st.session_state):
+        return
     invalidate_folium_map_embed_cache()
 
 
@@ -447,7 +460,8 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     prev_effective = st.session_state.get(SESSION_PREV_EFFECTIVE_BASEMAP_KEY)
     if prev_effective != map_style:
         st.session_state[SESSION_PREV_EFFECTIVE_BASEMAP_KEY] = map_style
-        invalidate_folium_map_embed_cache()
+        if not _all_locations_leaflet_embed_active(st.session_state):
+            invalidate_folium_map_embed_cache()
 
     # Bump mount nonce when the view mode changes so the Folium iframe remounts with the new map.
     # Do not clear FOLIUM_STATIC_MAP_CACHE_KEY / EXPLORER_MAP_HTML_BYTES_KEY here: the LRU cache key

@@ -33,6 +33,7 @@ def render_all_locations_map_component(
     geojson: dict,
     height: int,
     key: str,
+    map_style: str = "default",
     cluster_options: dict | None = None,
     circle_marker_style: dict | None = None,
     cluster_icon_style: dict | None = None,
@@ -49,6 +50,9 @@ def render_all_locations_map_component(
     *cluster_icon_style* — optional tier rgba dict from :func:`~explorer.core.all_locations_experimental_marker_style.cluster_icon_style_for_all_locations_map` for MarkerCluster ``iconCreateFunction`` (Folium parity). Empty dict uses plugin default cluster colours.
 
     *viewport* — camera recipe from :func:`~explorer.core.map_overlay_visit_map.all_locations_leaflet_viewport_recipe` (Folium initial view / fit bounds parity). Omit or empty dict to fall back to GeoJSON-bounds padding in the iframe.
+
+    *map_style* — basemap key matching :func:`~explorer.presentation.map_renderer.create_map` (``default``,
+    ``google``, ``carto``). Passed from the Prep map tab sidebar; unknown values behave as ``default``.
 
     *map_theme_css* / *map_popup_width_script* — same strings Folium injects (``map_overlay_theme_stylesheet``,
     ``map_popup_width_fix_script``) so banner/legend/popups match beta-next inside the iframe (#222).
@@ -67,6 +71,7 @@ def render_all_locations_map_component(
         revision=revision,
         geojson=geojson,
         height=int(height),
+        map_style=str(map_style or "default"),
         cluster_options=cluster_options if cluster_options is not None else {},
         circle_marker_style=circle_marker_style if circle_marker_style is not None else {},
         cluster_icon_style=cluster_icon_style if cluster_icon_style is not None else {},
