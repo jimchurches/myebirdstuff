@@ -660,6 +660,133 @@ function parsePopupV1(raw: unknown): PopupPayloadV1 | null {
   return { v: 1, summary_lines, links, visited, visited_truncated, visited_total, visited_omitted };
 }
 
+/** Lifer map — structured lines from ``lifer_locations_geojson.py`` (#222). */
+interface LiferPopupLineV1 {
+  label: string;
+  date: string;
+  checklist_href: string;
+}
+
+interface LiferPopupPayloadV1 {
+  v: 1;
+  lines: LiferPopupLineV1[];
+}
+
+function parseLiferPopupV1(raw: unknown): LiferPopupPayloadV1 | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  if (o.v !== 1) {
+    return null;
+  }
+  const linesRaw = Array.isArray(o.lines) ? o.lines : [];
+  const lines: LiferPopupLineV1[] = [];
+  for (const row of linesRaw) {
+    if (!row || typeof row !== "object") {
+      continue;
+    }
+    const r = row as Record<string, unknown>;
+    lines.push({
+      label: typeof r.label === "string" ? r.label : "",
+      date: typeof r.date === "string" ? r.date : "?",
+      checklist_href: typeof r.checklist_href === "string" ? r.checklist_href : "#",
+    });
+  }
+  return { v: 1, lines };
+}
+
+/** Per-pin circle resolved in Python (``circle_pin``) for Lifer vs subspecies colours (#222). */
+interface CirclePinPayload {
+  stroke_hex?: string;
+  fill_hex?: string;
+  radius_px?: number;
+  stroke_weight?: number;
+  fill_opacity?: number;
+}
+
+function parseCirclePin(raw: unknown): CirclePinPayload | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  return {
+    stroke_hex: typeof o.stroke_hex === "string" ? o.stroke_hex : undefined,
+    fill_hex: typeof o.fill_hex === "string" ? o.fill_hex : undefined,
+    radius_px: typeof o.radius_px === "number" && Number.isFinite(o.radius_px) ? o.radius_px : undefined,
+    stroke_weight:
+      typeof o.stroke_weight === "number" && Number.isFinite(o.stroke_weight) ? o.stroke_weight : undefined,
+    fill_opacity:
+      typeof o.fill_opacity === "number" && Number.isFinite(o.fill_opacity) ? o.fill_opacity : undefined,
+  };
+}
+
+function resolvedCircleStylesFromPinPayload(pin: CirclePinPayload): Pick<
+  L.CircleMarkerOptions,
+  "radius" | "weight" | "color" | "fillColor" | "fillOpacity"
+> {
+  const okHex = (s: string | undefined, fb: string) =>
+    typeof s === "string" && /^#[0-9a-fA-F]{6}$/.test(s) ? s : fb;
+  const fillHex = okHex(pin.fill_hex, "#3388ff");
+  const strokeHex = okHex(pin.stroke_hex, "#1c2630");
+  const radius =
+    typeof pin.radius_px === "number" && Number.isFinite(pin.radius_px) && pin.radius_px > 0
+      ? pin.radius_px
+      : 7;
+  const weight =
+    typeof pin.stroke_weight === "number" && Number.isFinite(pin.stroke_weight) && pin.stroke_weight >= 1
+      ? pin.stroke_weight
+      : 1;
+  let fillOp = 0.88;
+  if (typeof pin.fill_opacity === "number" && Number.isFinite(pin.fill_opacity)) {
+    fillOp = Math.min(1, Math.max(0, pin.fill_opacity));
+  }
+  return {
+    radius,
+    weight,
+    color: strokeHex,
+    fillColor: fillHex,
+    fillOpacity: fillOp,
+  };
+}
+
+/** Lifer popup: location heading + species checklist lines (parity with ``format_lifer_popup_lines``). */
+function popupHtmlLiferLayout(name: string, lifelistUrl: string, payload: LiferPopupPayloadV1): string {
+  const hlSafe = safeHttpUrlForAnchor(lifelistUrl.trim());
+  const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
+  const locHeading =
+    hlSafe.length > 0
+      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+  const lineParts: string[] = [];
+  for (let i = 0; i < payload.lines.length; i += 1) {
+    const ln = payload.lines[i];
+    const prefix = i > 0 ? "<br>" : "";
+    const hrefRaw = ln.checklist_href.trim() || "#";
+    const hrefSafe = safeHttpUrlForAnchor(hrefRaw);
+    const label = ln.label.trim() || "—";
+    const dateStr = ln.date.trim() || "?";
+    if (hrefSafe) {
+      lineParts.push(
+        `${prefix}<a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+          label,
+        )} : ${escapeHtml(dateStr)}</a>`,
+      );
+    } else {
+      lineParts.push(`${prefix}<span>${escapeHtml(label)} : ${escapeHtml(dateStr)}</span>`);
+    }
+  }
+  const inner = lineParts.join("");
+  return (
+    `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">` +
+    `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>` +
+    `<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">` +
+    `<div class="pebird-map-popup__visited-block">` +
+    `<div class="pebird-map-popup__visit-dates">${inner}</div>` +
+    `</div></div></div>`
+  );
+}
+
 /** Classic All locations card — DOM mirrors ``assemble_location_popup_html`` / ``LocationPopupModel`` (``map_popup_models``). */
 function popupHtmlVisitedLayout(
   name: string,
@@ -723,6 +850,10 @@ function popupHtmlVisitedLayout(
 function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): string {
   const name = String(props?.name ?? "Location");
   const lifelistUrl = String(props?.lifelist_url ?? "");
+  const liferPop = parseLiferPopupV1(props?.lifer_popup_v1);
+  if (liferPop) {
+    return popupHtmlLiferLayout(name, lifelistUrl, liferPop);
+  }
   const popup = parsePopupV1(props?.popup_v1);
   if (popup?.visited) {
     const trunc =
@@ -1014,8 +1145,11 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
 
     const gjLayer = L.geoJSON(gj, {
       pointToLayer(feature, latlng) {
+        const pin = parseCirclePin(feature.properties?.circle_pin);
         const featureColour = feature.properties?.colour as string | undefined;
-        const rs = resolvedCircleStyles(args.circle_marker_style, featureColour);
+        const rs = pin
+          ? resolvedCircleStylesFromPinPayload(pin)
+          : resolvedCircleStyles(args.circle_marker_style, featureColour);
         const opts: L.CircleMarkerOptions = {
           radius: rs.radius,
           stroke: true,

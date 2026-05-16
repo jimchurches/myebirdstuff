@@ -41,6 +41,39 @@ def _epsilon_bounds_around_point(lat: float, lon: float, delta: float = 0.02) ->
     return [[lat - delta, lon - delta], [lat + delta, lon + delta]]
 
 
+def lifer_leaflet_viewport_recipe(framing_pairs: list[list[float]]) -> dict[str, Any]:
+    """Camera recipe ``v1`` for the Lifer Leaflet iframe — matches ``build_lifer_overlay_map`` fit."""
+    if not framing_pairs:
+        return {
+            "v": 1,
+            "mode": "center_zoom",
+            "center": [20.0, 0.0],
+            "zoom": 2,
+        }
+    pad = int(MAP_LIFER_MAP_FIT_BOUNDS_PADDING_PX)
+    max_z = int(MAP_LIFER_MAP_FIT_BOUNDS_MAX_ZOOM)
+    if len(framing_pairs) == 1:
+        la, lo = float(framing_pairs[0][0]), float(framing_pairs[0][1])
+        return {
+            "v": 1,
+            "mode": "fit_bounds",
+            "single_point": True,
+            "lat": la,
+            "lon": lo,
+            "epsilon_delta": 0.02,
+            "padding_px": pad,
+            "max_zoom": int(MAP_LIFER_MAP_SINGLE_POINT_ZOOM),
+        }
+    return {
+        "v": 1,
+        "mode": "fit_bounds",
+        "single_point": False,
+        "pairs": [[float(p[0]), float(p[1])] for p in framing_pairs],
+        "padding_px": pad,
+        "max_zoom": max_z,
+    }
+
+
 def build_lifer_overlay_map(
     *,
     full_location_data: Optional[pd.DataFrame],
