@@ -73,16 +73,26 @@ def map_popup_theme_stylesheet() -> str:
   max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px)) !important;
   box-sizing: border-box !important;
 }}
+.leaflet-popup .leaflet-popup-content {{
+  text-align: left !important;
+}}
 .leaflet-popup-content .pebird-map-popup,
 .leaflet-popup-content .pebird-map-popup * {{
   box-sizing: border-box;
 }}
-/* Block-level inner box stretches to Leaflet's wide .leaflet-popup-content; shrink-wrap so width can match text. */
+/* Block fills post-shrink content width; JS temporarily forces max-content only while measuring. */
 .leaflet-popup-content .pebird-map-popup {{
-  display: inline-block;
-  width: max-content;
-  max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px));
-  vertical-align: top;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px), 100%);
+  overflow-wrap: break-word;
+  word-break: normal;
+  box-sizing: border-box;
+  padding: 8px 14px 10px 6px;
+}}
+.pebird-map-popup.popup-scroll-wrapper {{
+  padding: 10px 14px 10px 6px;
 }}
 .pebird-map-popup__heading-row {{
   width: 100%;
@@ -91,6 +101,9 @@ def map_popup_theme_stylesheet() -> str:
   box-sizing: border-box;
   /* Leaflet's close control sits top-right; long titles must not run under it. */
   padding-right: 2rem;
+  /* Headings are ``nowrap`` + max-content width; scroll only if a title exceeds the card. */
+  overflow-x: auto;
+  overflow-y: hidden;
 }}
 /* Full width of the popup card so wheel events scroll visits instead of the map (#175). */
 .pebird-map-popup__scroll {{
@@ -99,6 +112,7 @@ def map_popup_theme_stylesheet() -> str:
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  padding-right: 2rem;
 }}
 .pebird-map-popup {{
   font-family: {EXPLORER_UI_FONT_STACK};
@@ -130,16 +144,14 @@ def map_popup_theme_stylesheet() -> str:
   color: {EXPLORER_UI_PRIMARY_GREEN};
   text-decoration: none;
 }}
-/* Location title link: heavier than body links (refs #70). Block + full row width so wrapping
-   respects the popup box (inline + fit-content chain was letting long names spill past the card). */
+/* Location title link: nowrap + intrinsic width — typical ``Name ( lat , lon )`` stays one line; row scrolls if needed (#222). */
 .pebird-map-popup a.pebird-map-popup__location-heading {{
   display: block;
-  width: 100%;
-  max-width: 100%;
+  width: max-content;
+  max-width: none;
   box-sizing: border-box;
   font-weight: 600;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  white-space: nowrap;
 }}
 /* Section labels: same weight/colour as banner stats line (``pebird-map-banner__stats``), not title. */
 .pebird-map-popup .pebird-map-popup__section-label {{
@@ -152,8 +164,10 @@ def map_popup_theme_stylesheet() -> str:
 .pebird-map-popup span.pebird-map-popup__location-heading {{
   color: {EXPLORER_UI_PRIMARY_GREEN};
   font-weight: 600;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  display: block;
+  width: max-content;
+  max-width: none;
+  white-space: nowrap;
 }}
 /* All-locations visit list: tight gap between section label and date links (#158). */
 .pebird-map-popup__visited-block .pebird-map-popup__section-label {{
@@ -162,6 +176,39 @@ def map_popup_theme_stylesheet() -> str:
 .pebird-map-popup__visit-dates {{
   margin: 0;
   padding: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  line-height: 1.45;
+}}
+.pebird-map-popup__visit-dates a {{
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}}
+.pebird-map-popup__visit-list-inner {{
+  overflow-x: auto;
+  max-width: 100%;
+  line-height: 1.45;
+}}
+.pebird-map-popup__visit-list-inner a {{
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}}
+.pebird-map-popup__summary-line {{
+  display: block;
+  margin: 0;
+  color: {EXPLORER_UI_MUTED};
+  font-weight: 400;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}}
+.pebird-map-popup__heading-row + .pebird-map-popup__summary-line {{
+  margin-top: 0.2rem;
+}}
+.pebird-map-popup__summary-line + .pebird-map-popup__summary-line {{
+  margin-top: 0.12rem;
 }}
 .pebird-map-popup__obs-count {{
   color: {EXPLORER_UI_MUTED};
@@ -225,9 +272,11 @@ def map_popup_width_fix_script() -> str:
     """Return a ``<script>`` that shrink-wraps Leaflet popups after JS layout.
 
     Folium passes ``maxWidth``; Leaflet's ``Popup._updateLayout`` sets a pixel width on
-    ``.leaflet-popup-content`` (often ``maxWidth``). A **block** ``.pebird-map-popup`` then **stretches**
+    ``.leaflet-popup-content`` (often ``maxWidth``). A **block** ``.pebird-map-popup`` would **stretch**
     to that width, so ``fit-content`` on the parent cannot shrink. We use **inline-block** inner (CSS)
     and set **content + wrapper** to the measured inner width in px after Leaflet runs (refs #145).
+    Inner ``max-width:100%`` is cleared briefly while measuring so shrink-to-fit does not collapse to
+    min-content width (Streamlit iframe / #222).
     """
     w = MAP_POPUP_MAX_WIDTH_PX
     return f"""
@@ -239,6 +288,21 @@ def map_popup_width_fix_script() -> str:
     return Math.min(MAX_PX, Math.max(80, window.innerWidth - 40));
   }}
 
+  function measureInnerPx(inner) {{
+    void inner.offsetWidth;
+    var w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
+    var wide = inner.querySelectorAll(
+      '.pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line'
+    );
+    for (var i = 0; i < wide.length; i++) {{
+      var el = wide[i];
+      w = Math.max(w, el.scrollWidth, el.getBoundingClientRect().width);
+    }}
+    return Math.ceil(Math.max(w, 1));
+  }}
+
+  var SHRINK_BUFFER_PX = 40;
+
   function shrinkPebirdPopups() {{
     var pops = document.querySelectorAll('.leaflet-popup-pane .leaflet-popup');
     var cap = capW();
@@ -249,13 +313,18 @@ def map_popup_width_fix_script() -> str:
       var inner = pop.querySelector('.pebird-map-popup');
       if (!content || !wrap || !inner) continue;
 
-      content.style.removeProperty('width');
+      inner.style.setProperty('max-width', 'none', 'important');
+      inner.style.setProperty('width', 'max-content', 'important');
+      content.style.setProperty('width', cap + 'px', 'important');
+      content.style.setProperty('max-width', cap + 'px', 'important');
+      wrap.style.setProperty('width', cap + 'px', 'important');
+      wrap.style.setProperty('max-width', cap + 'px', 'important');
       content.style.removeProperty('white-space');
-      wrap.style.removeProperty('width');
-
-      var innerPx = Math.ceil(inner.scrollWidth);
-      if (innerPx < 2) innerPx = Math.ceil(inner.getBoundingClientRect().width);
-      var target = Math.min(innerPx, cap);
+      var innerPx = measureInnerPx(inner);
+      inner.style.removeProperty('max-width');
+      inner.style.removeProperty('width');
+      var MIN_W = 140;
+      var target = Math.max(MIN_W, Math.min(innerPx + SHRINK_BUFFER_PX, cap));
       content.style.setProperty('width', target + 'px', 'important');
       content.style.setProperty('max-width', cap + 'px', 'important');
       wrap.style.setProperty('width', target + 'px', 'important');
@@ -388,7 +457,8 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   margin-top: 6px;
 }}
 .pebird-map-legend {{
-  padding: 8px 12px;
+  /* Mirror ``.pebird-map-banner`` inset padding (banner top/right → legend bottom/left). */
+  padding: 12px 16px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
@@ -550,6 +620,19 @@ def build_visit_info_html(visit_records, format_time_fn):
     )
 
 
+def build_visit_popup_entry_rows(visit_records, format_time_fn):
+    """Structured checklist rows for Leaflet ``popup_v1`` (parallel to :func:`build_visit_info_html`)."""
+    if visit_records.empty:
+        return []
+    return [
+        {
+            "label": esc_text(format_time_fn(r)),
+            "href": f"https://ebird.org/checklist/{esc_attr(r['Submission ID'])}",
+        }
+        for _, r in visit_records.iterrows()
+    ]
+
+
 def build_location_popup_html(
     loc_name,
     loc_id,
@@ -640,9 +723,17 @@ def build_species_map_location_popup_html(
 # Banner and legend HTML builders
 # ---------------------------------------------------------------------------
 
-_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
+_BANNER_POSITION = "position:fixed;top:16px;right:16px;z-index:1000;"
 
-_LEGEND_POSITION = "position:fixed;bottom:10px;left:10px;z-index:1000;"
+_LEGEND_POSITION = "position:fixed;bottom:16px;left:16px;z-index:1000;"
+
+# All locations Streamlit component: keep the **banner** on ``position:fixed`` (``_BANNER_POSITION`` —
+# same top/right as Folium in the iframe viewport). The **legend** uses ``position:absolute`` with
+# ``bottom:16px`` relative to ``.all-locations-map-frame`` so the legend–map bottom gap stays stable;
+# ``left`` is tighter than 16px because a ``fixed`` banner measures from the iframe viewport while this
+# overlay is laid out inside the component root, and matching the *visual* left gutter needs a smaller
+# numeric offset (refs #222 feedback).
+STREAMLIT_COMPONENT_MAP_LEGEND_STYLE = "position:absolute;bottom:16px;left:8px;z-index:1000;"
 
 
 def _banner_sep() -> str:
@@ -682,15 +773,17 @@ def build_all_locations_banner_html(
     total_checklists,
     total_species,
     total_individuals,
-    date_filter_status=None,
+    *,
+    position_style: str | None = None,
 ):
     """Return the HTML overlay banner for the **All locations** map (landing map).
 
     Same hierarchy as the family-map banner: green ``__title``, main stats in body text, secondary
-    line muted and slightly smaller (refs #167).
+    line muted and slightly smaller (refs #167). Date filter state is **not** shown here — it lives in
+    the sidebar only (#222).
 
-    If date_filter_status is provided (e.g. "Date filter: Off" or "Date filter: 2026-01-01 to 2026-12-31"),
-    it is shown below, smaller and lighter so it is less prominent.
+    *position_style* — when ``None``, uses the Folium overlay default (fixed corner). Pass a string
+    (e.g. ``\"position:relative;\"``) when embedding the banner outside the map document (#222).
     """
     sep = _banner_sep()
     loc_w = "locations" if n_locations != 1 else "location"
@@ -700,15 +793,14 @@ def build_all_locations_banner_html(
         f'{sep}{total_species} species'
         f'{sep}{total_individuals} individual{"s" if total_individuals != 1 else ""}'
     )
-    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
+    pos = _BANNER_POSITION if position_style is None else position_style
     return (
-        f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
+        f'<div class="pebird-map-banner" style="{pos}">'
         f'<span class="pebird-map-banner__title">All locations</span>'
         f'<div class="pebird-map-banner__stats">'
         f'<span class="pebird-map-banner__all-locations-primary">{primary_line}</span>'
         f'<span class="pebird-map-banner__all-locations-details">{details_line}</span>'
         f"</div>"
-        f'{date_block}'
         f'</div>'
     )
 
@@ -828,13 +920,17 @@ def build_species_banner_html(
     )
 
 
-def build_legend_html(items):
+def build_legend_html(items, *, container_style: str | None = None):
     """Return the HTML overlay legend from a list of ``(color, fill, label)`` tuples.
 
-    Each tuple is rendered via ``pin_legend_item``.
+    Each tuple is rendered via :func:`pin_legend_item`.
+
+    *container_style* — when ``None``, uses the Folium overlay default (fixed bottom-left). Pass a CSS
+    string for the outer ``pebird-map-legend`` box when embedding in Streamlit above the Leaflet component (#222).
     """
     parts = "".join(pin_legend_item(c, f, label) for c, f, label in items)
-    return f'<div class="pebird-map-legend" style="{_LEGEND_POSITION}">{parts}</div>'
+    pos = _LEGEND_POSITION if container_style is None else container_style
+    return f'<div class="pebird-map-legend" style="{pos}">{parts}</div>'
 
 
 # ---------------------------------------------------------------------------

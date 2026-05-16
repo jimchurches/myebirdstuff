@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from collections import OrderedDict
 from typing import Any, Dict, Hashable, Literal, MutableMapping, Optional, Tuple, cast
@@ -110,6 +111,114 @@ def _apply_go_to_gps_pin_view(map_obj: folium.Map, pin: tuple[float, float]) -> 
     )
 
 
+def all_locations_leaflet_viewport_recipe(
+    *,
+    effective_location_data: pd.DataFrame,
+    df: pd.DataFrame,
+    all_locations_scope: str,
+    all_locations_location_country: dict[Hashable, str] | None,
+    go_to_gps_pin: tuple[float, float] | None,
+) -> dict[str, Any]:
+    """Serializable camera recipe for the All locations Leaflet component (Folium ``build_visit_overlay_map`` parity, #222).
+
+    Keys are JSON-stable for ``revision_extra`` hashing. ``v`` is ``1`` for forward compatibility.
+    """
+    loc_c = all_locations_location_country or {}
+    scope = (all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED).strip()
+
+    def _mean_center() -> list[float]:
+        lat = float(effective_location_data["Latitude"].mean())
+        lon = float(effective_location_data["Longitude"].mean())
+        if not (math.isfinite(lat) and math.isfinite(lon)):
+            return [float(MAP_SPECIES_DEFAULT_CENTER_LAT), float(MAP_SPECIES_DEFAULT_CENTER_LON)]
+        return [lat, lon]
+
+    if go_to_gps_pin is not None and len(go_to_gps_pin) == 2:
+        lat, lon = float(go_to_gps_pin[0]), float(go_to_gps_pin[1])
+        return {
+            "v": 1,
+            "mode": "go_to_gps",
+            "lat": lat,
+            "lon": lon,
+            "padding_px": int(MAP_SPECIES_FIT_BOUNDS_PADDING_PX),
+            "epsilon_delta": 0.02,
+            "max_zoom": int(MAP_GO_TO_GPS_MAX_ZOOM),
+        }
+
+    all_loc_pairs: list[list[float]] = []
+    if scope == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY:
+        all_loc_pairs = coordinate_pairs_for_viewport(
+            effective_location_data,
+            location_id_to_country=loc_c,
+            focus_country="",
+        )
+        mc = mean_center_from_pairs(all_loc_pairs)
+        center = [float(mc[0]), float(mc[1])] if mc else _mean_center()
+        return {
+            "v": 1,
+            "mode": "center_zoom",
+            "center": center,
+            "zoom": int(MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM),
+        }
+
+    if scope == ALL_LOCATIONS_SCOPE_FOCUSED:
+        _min_c = int(MAP_ALL_LOCATIONS_FOCUSED_MIN_OBSERVATIONS_PER_COUNTRY)
+        _obs_by_c = (
+            observation_row_counts_by_country_key(df)
+            if _min_c > 0
+            else {}
+        )
+        all_loc_pairs = coordinate_pairs_focused_viewport(
+            effective_location_data,
+            location_id_to_country=loc_c,
+            observation_counts_by_country=_obs_by_c,
+            quantile_low=MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW,
+            quantile_high=MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH,
+            min_observations_full_country=_min_c,
+        )
+    else:
+        fc = "" if scope == ALL_LOCATIONS_FRAMING_FIT_ALL else scope
+        all_loc_pairs = coordinate_pairs_for_viewport(
+            effective_location_data,
+            location_id_to_country=loc_c,
+            focus_country=fc,
+        )
+        if fc and not all_loc_pairs:
+            all_loc_pairs = coordinate_pairs_for_viewport(
+                effective_location_data,
+                location_id_to_country=loc_c,
+                focus_country="",
+            )
+
+    should_fit = scope != ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY and bool(all_loc_pairs)
+    if not should_fit:
+        c = _mean_center()
+        return {"v": 1, "mode": "center_zoom", "center": c, "zoom": 5}
+
+    pad = int(MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX)
+    max_z = int(MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM)
+    if len(all_loc_pairs) == 1:
+        la, lo = float(all_loc_pairs[0][0]), float(all_loc_pairs[0][1])
+        return {
+            "v": 1,
+            "mode": "fit_bounds",
+            "single_point": True,
+            "lat": la,
+            "lon": lo,
+            "epsilon_delta": 0.02,
+            "padding_px": pad,
+            "max_zoom": int(MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM),
+        }
+    return {
+        "v": 1,
+        "mode": "fit_bounds",
+        "single_point": False,
+        "pairs": [[float(p[0]), float(p[1])] for p in all_loc_pairs],
+        "padding_px": pad,
+        "max_zoom": max_z,
+    }
+
+
 def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tuple[str, str, int, int, float]:
     """Resolved fill, edge (stroke), radius (px), stroke weight, fill opacity for **All locations** view."""
     fill_c, edge = resolve_location_visit_colours(sch)
@@ -167,18 +276,12 @@ def _marker_cluster_root_background_reset_css() -> str:
     )
 
 
-def _marker_cluster_icon_create_function_from_scheme(
-    sch: Any,
-) -> str | None:
-    """Return Leaflet.markercluster ``iconCreateFunction`` for configured cluster icon tier colours.
+def all_locations_cluster_icon_style_payload(sch: Any) -> dict[str, Any] | None:
+    """JSON-serialisable cluster icon colours for Leaflet.markercluster (Folium ``iconCreateFunction`` parity, #222).
 
-    Duck-typed: ``MapMarkerColourScheme`` (reads ``all_locations.cluster.*``),
-    :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig` (flat ``marker_cluster_*`` fields),
-    or any object exposing the same attributes.
-
-    Expects nine cluster tier colours (``tier_icon_hex`` or flat ``marker_cluster_tier_icon_hex``) with nine values
-    ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
-    If unset or invalid, returns ``None`` so Folium / Leaflet.markercluster defaults apply.
+    Returns ``fills_rgba``, ``borders_rgba``, ``halos_rgba`` (length-3 lists for small/medium/large tiers),
+    ``border_width_px``, and ``halo_spread_px``. ``None`` when the scheme has no valid nine-tier hex tuple
+    (caller falls back to plugin default green/orange styling).
     """
 
     def _cluster_colours_tuple() -> tuple[str, ...] | None:
@@ -281,9 +384,36 @@ def _marker_cluster_icon_create_function_from_scheme(
     fills_rgba = [_hex_to_rgba_css(fills[i], inner_a, channel="fill") for i in range(3)]
     borders_rgba = [_hex_to_rgba_css(borders[i], border_a, channel="edge") for i in range(3)]
     halos_rgba = [_hex_to_rgba_css(halos[i], halo_a, channel="fill") for i in range(3)]
-    fills_js = json.dumps(fills_rgba)
-    borders_js = json.dumps(borders_rgba)
-    halos_js = json.dumps(halos_rgba)
+    return {
+        "fills_rgba": fills_rgba,
+        "borders_rgba": borders_rgba,
+        "halos_rgba": halos_rgba,
+        "border_width_px": int(bw),
+        "halo_spread_px": int(spread),
+    }
+
+
+def _marker_cluster_icon_create_function_from_scheme(
+    sch: Any,
+) -> str | None:
+    """Return Leaflet.markercluster ``iconCreateFunction`` for configured cluster icon tier colours.
+
+    Duck-typed: ``MapMarkerColourScheme`` (reads ``all_locations.cluster.*``),
+    :class:`~explorer.presentation.design_map_preview.DesignMapPreviewConfig` (flat ``marker_cluster_*`` fields),
+    or any object exposing the same attributes.
+
+    Expects nine cluster tier colours (``tier_icon_hex`` or flat ``marker_cluster_tier_icon_hex``) with nine values
+    ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
+    If unset or invalid, returns ``None`` so Folium / Leaflet.markercluster defaults apply.
+    """
+    p = all_locations_cluster_icon_style_payload(sch)
+    if p is None:
+        return None
+    fills_js = json.dumps(p["fills_rgba"])
+    borders_js = json.dumps(p["borders_rgba"])
+    halos_js = json.dumps(p["halos_rgba"])
+    bw = int(p["border_width_px"])
+    spread = int(p["halo_spread_px"])
     # One inner <div> only (same as plugin default HTML). Halo is a box-shadow ring; nested divs break
     # .marker-cluster div { width/height/margin } and look offset / triple-stacked.
     return (
@@ -293,8 +423,8 @@ def _marker_cluster_icon_create_function_from_scheme(
         f"var fillsRgba = {fills_js};"
         f"var bordersRgba = {borders_js};"
         f"var halosRgba = {halos_js};"
-        f"var bw = {int(bw)};"
-        f"var spread = {int(spread)};"
+        f"var bw = {bw};"
+        f"var spread = {spread};"
         "var style = 'background-color:' + fillsRgba[i] + ';border:' + bw + 'px solid ' + bordersRgba[i] + ';"
         "box-shadow:0 0 0 ' + spread + 'px ' + halosRgba[i] + ';';"
         "var sizeClass = (count < 10) ? 'marker-cluster-small' : (count < 100) ? 'marker-cluster-medium' : 'marker-cluster-large';"
@@ -494,7 +624,7 @@ def build_visit_overlay_map(
     if not selected_species:
         nl, tc, ts, ti = effective_totals
         species_map.get_root().html.add_child(
-            Element(build_all_locations_banner_html(nl, tc, ts, ti, date_filter_status_line))
+            Element(build_all_locations_banner_html(nl, tc, ts, ti))
         )
         _fill, _edge, _radius_px, _stroke_w, _fill_op = _all_locations_marker_params_from_scheme(
             visit_marker_scheme
@@ -577,6 +707,7 @@ def build_visit_overlay_map(
 
         scope_fit = (all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED).strip()
         should_fit = scope_fit != ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY and bool(all_loc_pairs)
+        # Leaflet All locations: keep all_locations_leaflet_viewport_recipe aligned with this block (#222).
         if go_to_gps_pin:
             _apply_go_to_gps_pin_view(species_map, go_to_gps_pin)
         elif should_fit and all_loc_pairs:

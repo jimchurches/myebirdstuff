@@ -1,0 +1,216 @@
+/**
+ * Mirrors ``map_popup_theme_stylesheet`` in explorer/presentation/map_renderer.py
+ * so experimental Leaflet popups match production All locations (#221 parity).
+ * Keep MAP_POPUP_MAX_WIDTH_PX in sync with explorer/app/streamlit/defaults.py (420).
+ */
+:root {
+  --pebird-map-popup-max-width: 420px;
+  --pebird-font-stack: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pebird-ui-text: #1a2e22;
+  --pebird-ui-primary-green: #1f6f54;
+  --pebird-ui-muted: rgba(26, 46, 34, 0.55);
+}
+
+.leaflet-popup .leaflet-popup-content-wrapper,
+.leaflet-popup .leaflet-popup-content {
+  width: fit-content !important;
+  max-width: min(var(--pebird-map-popup-max-width), calc(100vw - 40px)) !important;
+  box-sizing: border-box !important;
+}
+
+/* Leaflet sets .leaflet-popup { text-align: center }; keep body copy left-aligned in the content box. */
+.leaflet-popup .leaflet-popup-content {
+  text-align: left !important;
+}
+
+.leaflet-popup-content .pebird-map-popup,
+.leaflet-popup-content .pebird-map-popup * {
+  box-sizing: border-box;
+}
+
+.leaflet-popup-content .pebird-map-popup {
+  /* Fill the px width set by shrink-wrap JS; JS temporarily forces max-content only while measuring. */
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: min(var(--pebird-map-popup-max-width), calc(100vw - 40px), 100%);
+  /* Prefer breaking at spaces; inherited ``word-break: break-word`` was splitting headings mid-coordinates (#222). */
+  overflow-wrap: break-word;
+  word-break: normal;
+  box-sizing: border-box;
+  /* Tighter left inset than right — closer to legacy Folium pop-ups; right stays a bit looser for dates + close. */
+  padding: 8px 14px 10px 6px;
+}
+
+.pebird-map-popup.popup-scroll-wrapper {
+  /* Slightly more room when the scroll region is present. */
+  padding: 10px 14px 10px 6px;
+}
+
+.pebird-map-popup__heading-row {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-right: 2rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.pebird-map-popup__scroll {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  /* Match heading-row clearance so short titles and long visit rows share the same right column (#222). */
+  padding-right: 2rem;
+}
+
+.pebird-map-popup {
+  font-family: var(--pebird-font-stack);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--pebird-ui-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.pebird-map-popup b {
+  font-weight: 600;
+}
+
+.pebird-map-popup a {
+  color: var(--pebird-ui-primary-green);
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.pebird-map-popup a:hover {
+  text-decoration: underline;
+}
+
+.pebird-map-popup .pebird-map-popup__section-label {
+  font-weight: 400;
+  color: var(--pebird-ui-text);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.pebird-map-popup span.pebird-map-popup__location-heading {
+  color: var(--pebird-ui-primary-green);
+  font-weight: 600;
+  display: block;
+  width: max-content;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.pebird-map-popup a.pebird-map-popup__location-heading {
+  display: block;
+  width: max-content;
+  max-width: none;
+  box-sizing: border-box;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pebird-map-popup__visited-block .pebird-map-popup__section-label {
+  margin: 0 0 0.15em 0;
+}
+
+.pebird-map-popup__visit-dates {
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  /* Links stay inline like Folium — ``<br>`` between rows. ``display:block`` + ``<br>`` doubled gaps (#222). */
+  line-height: 1.45;
+}
+
+.pebird-map-popup__visit-dates a {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.pebird-map-popup__visit-list-inner {
+  overflow-x: auto;
+  max-width: 100%;
+  line-height: 1.45;
+}
+
+.pebird-map-popup__visit-list-inner a {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Compact / secondary lines (no dedicated class in Python — matches muted stats styling). */
+.pebird-map-popup__summary-line {
+  display: block;
+  margin: 0;
+  color: var(--pebird-ui-muted);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.pebird-map-popup__heading-row + .pebird-map-popup__summary-line {
+  margin-top: 0.2rem;
+}
+
+.pebird-map-popup__summary-line + .pebird-map-popup__summary-line {
+  margin-top: 0.12rem;
+}
+
+.pebird-map-popup__trunc-hint {
+  margin-top: 0.55rem;
+  color: var(--pebird-ui-muted);
+  font-size: calc(1em - 2px);
+  line-height: 1.35;
+}
+
+.pebird-map-popup__trunc-hint a {
+  font-weight: 400;
+}
+
+/* Go to GPS — Folium ``_apply_go_to_gps_pin_view`` red pin (#222). */
+.all-locations-gps-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.all-locations-gps-marker__glyph {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 0 auto;
+  background: #d32f2f;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid #7f1d1d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.leaflet-marker-icon.marker-cluster.marker-cluster-small,
+.leaflet-marker-icon.marker-cluster.marker-cluster-medium,
+.leaflet-marker-icon.marker-cluster.marker-cluster-large {
+  background: transparent !important;
+}
+
+/*
+ * Leaflet ships `.leaflet-container { overflow: hidden }` — attribution sits at bottom:0 and the
+ * last line of pixels can clip inside the Streamlit iframe. Inset the control corners explicitly
+ * (stronger than padding alone when controls stay flush to the padding edge).
+ */
+.all-locations-leaflet-pane.leaflet-container {
+  padding-bottom: 20px;
+  padding-right: 8px;
+}
+
+.all-locations-leaflet-pane.leaflet-container .leaflet-bottom.leaflet-right {
+  bottom: 10px;
+  right: 8px;
+}

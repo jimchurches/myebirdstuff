@@ -166,6 +166,28 @@ def test_all_locations_cluster_markers_use_scheme_cluster_tier_fills_when_presen
     assert expected_rgb in full
 
 
+def test_all_locations_cluster_icon_style_payload_matches_folium_small_tier_fill():
+    from explorer.core.map_overlay_visit_map import all_locations_cluster_icon_style_payload
+
+    idx = first_bundled_scheme_index_with_nine_cluster_tiers()
+    assert idx is not None
+    sch = active_map_marker_colour_scheme(idx)
+    tier = sch.all_locations.cluster.tier_icon_hex
+    assert tier is not None
+    small_fill = normalize_marker_hex(str(tier[0]), channel="fill")
+    expected_rgb = leaflet_rgb_csv_from_hex_rrggbb(small_fill)
+    p = all_locations_cluster_icon_style_payload(sch)
+    assert p is not None
+    fills = p["fills_rgba"]
+    assert len(fills) == 3
+    assert fills[0].startswith("rgba(")
+    assert expected_rgb in fills[0]
+    assert len(p["borders_rgba"]) == 3
+    assert len(p["halos_rgba"]) == 3
+    assert isinstance(p["border_width_px"], int)
+    assert isinstance(p["halo_spread_px"], int)
+
+
 def test_all_locations_cluster_markers_apply_tier_border_colours_when_present():
     df = _minimal_map_df()
     base = active_map_marker_colour_scheme(BUNDLED_COLOUR_SCHEME_INDICES[-1])
