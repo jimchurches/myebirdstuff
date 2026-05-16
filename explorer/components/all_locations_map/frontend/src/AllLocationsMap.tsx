@@ -601,6 +601,23 @@ function escapeHtml(text: string): string {
   return div.innerHTML;
 }
 
+/** Allow only http(s) in popup anchors — blocks ``javascript:``, ``data:``, etc. (#222 review). */
+function safeHttpUrlForAnchor(raw: string): string {
+  const t = raw.trim();
+  if (!t) {
+    return "";
+  }
+  try {
+    const u = new URL(t);
+    if (u.protocol === "https:" || u.protocol === "http:") {
+      return u.href;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "";
+}
+
 function parsePopupV1(raw: unknown): PopupPayloadV1 | null {
   if (!raw || typeof raw !== "object") {
     return null;
@@ -653,10 +670,11 @@ function popupHtmlVisitedLayout(
   const label = visited.label?.trim() || "Visited:";
   const entries = visited.entries ?? [];
   const hl = lifelistUrl.trim();
+  const hlSafe = safeHttpUrlForAnchor(hl);
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
   const locHeading =
-    hl.length > 0
-      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+    hlSafe.length > 0
+      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
       : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
 
   const visitAnchors: string[] = [];
@@ -664,22 +682,27 @@ function popupHtmlVisitedLayout(
     const href = e.href?.trim() ?? "";
     const linkLabel = e.label?.trim() || href;
     if (href) {
-      visitAnchors.push(
-        `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel)}</a>`,
-      );
+      const hrefSafe = safeHttpUrlForAnchor(href);
+      if (hrefSafe) {
+        visitAnchors.push(
+          `<a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel)}</a>`,
+        );
+      } else {
+        visitAnchors.push(`<span class="pebird-map-popup__visit-link-text">${escapeHtml(linkLabel)}</span>`);
+      }
     }
   }
   /** Mirrors Folium ``build_visit_info_html``: ``<br>`` between *inline* checklist links — not ``display:block`` anchors (#222). */
   const visitInner = visitAnchors.join("<br>");
 
   let truncBlock = "";
-  if (trunc?.visited_truncated && (trunc.visited_omitted ?? 0) > 0 && hl) {
+  if (trunc?.visited_truncated && (trunc.visited_omitted ?? 0) > 0 && hlSafe) {
     const total = trunc.visited_total ?? entries.length + (trunc.visited_omitted ?? 0);
     const omit = trunc.visited_omitted ?? 0;
     truncBlock =
       `<div class="pebird-map-popup__trunc-hint">` +
       `${escapeHtml(String(entries.length))} of ${escapeHtml(String(total))} checklists shown. ` +
-      `<a href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer">Open lifelist</a> ` +
+      `<a href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">Open lifelist</a> ` +
       `for full history (${escapeHtml(String(omit))} more).` +
       `</div>`;
   }
@@ -715,9 +738,10 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   if (popup) {
     const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
     const hl = lifelistUrl.trim();
+    const hlSafe = safeHttpUrlForAnchor(hl);
     const locHeading =
-      hl.length > 0
-        ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+      hlSafe.length > 0
+        ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
         : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
     let html =
       `<div class="pebird-map-popup">` +
@@ -729,9 +753,14 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
       const href = link.href?.trim() ?? "";
       const label = link.label?.trim() || "Link";
       if (href) {
-        html += `<span class="pebird-map-popup__summary-line"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(
-          label,
-        )}</a></span>`;
+        const hrefSafe = safeHttpUrlForAnchor(href);
+        if (hrefSafe) {
+          html += `<span class="pebird-map-popup__summary-line"><a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+            label,
+          )}</a></span>`;
+        } else {
+          html += `<span class="pebird-map-popup__summary-line">${escapeHtml(label)}</span>`;
+        }
       }
     }
     html += "</div>";
@@ -739,10 +768,11 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   }
   const visits = props?.visit_checklists;
   const url = String(props?.lifelist_url ?? "").trim();
+  const urlSafe = safeHttpUrlForAnchor(url);
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
   const locHeading =
-    url.length > 0
-      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+    urlSafe.length > 0
+      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(urlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
       : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
   let legacy =
     `<div class="pebird-map-popup">` +
