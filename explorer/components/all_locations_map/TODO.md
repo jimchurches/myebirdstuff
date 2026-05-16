@@ -11,13 +11,28 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 ### #222 status and rollout (source narrative)
 
-**Where we are:** The **All locations** map on the Streamlit **custom component** (`declare_component` + committed `frontend/build`) is **complete for this milestone**: viewport/focus (§1), go-to-GPS (§2), basemap swap without full layer rebuild (§3), popups and chrome (§4–5). Work continues under **#222** by **migrating other map modes** (species / lifer / family — §6) and optional hygiene (§7–11).
+**Where we are (May 2026):** Two map modes are on the **Leaflet custom component** and merged to **`beta-next`**:
 
-**Integrate onto `beta-next` in batches:** Prefer **several small PRs into `beta-next` only** (per [CONTRIBUTING.md](../../../CONTRIBUTING.md) — reviewable changes), **not** one huge merge and **not** landing everything on **`main`** until you choose to promote. Flow: merge completed slices → dogfood on `beta-next` → next PR (e.g. §11 zoom debug and/or the next Folium mode). Avoid bundling “all maps + docs” in a single hit.
+| Map mode | Status | PR (approx.) |
+|----------|--------|----------------|
+| **All locations** | **Done** — §1–5 | #224 |
+| **Lifer locations** | **Done** — §6 (lifer row) | #225 |
+| **Species locations** | Folium (`st_folium`) | — |
+| **Family locations** | Folium | — |
 
-**Next immediate task:** **Open a PR targeting `beta-next`** for the current All locations / component work (when the branch is ready), merge after review, then pick **§11** or the **first §6** map migration as the following batch.
+**#222 stays open** until species + family (and any remaining Folium map paths) are migrated. This is a **WIP partial** rollout, not “close #222” yet.
 
-**Next focus (after PR):** §11 (zoom debug overlay parity) **and/or** start **§6** (first additional map mode — species, lifer, or family as a **separate** milestone). See **§10** for full doc pass **after** all maps are migrated.
+**Integrate onto `beta-next` in batches:** Prefer **several small PRs into `beta-next` only** (per [CONTRIBUTING.md](../../../CONTRIBUTING.md)), **not** one monolith and **not** landing on **`main`** until promotion. Flow: merge slice → dogfood on `beta-next` → next slice.
+
+**Recommended order for remaining §6 work** (same iframe / patterns as All locations + Lifer):
+
+1. **Species locations** — highest user traffic; more edge cases (selected species, lifer/last-seen pins, filters) than lifer but shares visit-popup DNA with All locations.
+2. **Family locations** — richest logic (`family_map_folium`, composition pins, highlight species); do last.
+3. **Optional in parallel or between maps:** §11 zoom debug overlay (small), §7 export decision, §8 perf (#205) when instrumentation work starts.
+
+**Defer until all maps migrated:** §10 full documentation pass.
+
+**Working branch:** Keep using **`222-replace-folium-custom-component`** for ongoing #222 work (do **not** delete — partial milestone branch).
 
 ---
 
@@ -65,11 +80,18 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 ---
 
-## 6. Other map modes still on Folium (later #222)
+## 6. Other map modes — Folium → Leaflet component (#222)
 
-- **Species / lifer / family** maps: remain `st_folium` until migrated — **one mode per milestone / PR series**, not all maps in a single change set.
-- **Lifer locations** — **done (Leaflet component)** (#222): same iframe as All locations; GeoJSON `lifer_popup_v1` + per-feature `circle_pin`; Prep tab switches to the component when Map view = **Lifer locations**.
-- Order is not fixed in code: pick **selected species**, **lifer locations**, or **family** next; each needs GeoJSON (or equivalent) + component (or hybrid) wiring and popup/viewport parity in its own batch onto `beta-next`.
+**Rule:** **One map mode per PR** to `beta-next`, not all maps in one change set.
+
+| Mode | Status | Notes |
+|------|--------|--------|
+| **All locations** | **Done** | `build_all_locations_geojson_payload`, `popup_v1`, clustering, scope/GPS — Prep: `use_all_locations_leaflet` |
+| **Lifer locations** | **Done** | `build_lifer_locations_geojson_payload`, `lifer_popup_v1`, per-feature `circle_pin`, no cluster — Prep: `use_lifer_leaflet` |
+| **Species locations** | **Next** | `build_visit_overlay_map` / `build_species_overlay_map`; visit + lifer/last-seen pin roles |
+| **Family locations** | **Later** | `build_family_composition_folium_map`, `family_map_compute` / `family_map_folium` |
+
+**Lifer implementation pointers:** `explorer/core/lifer_locations_geojson.py`, `lifer_leaflet_viewport_recipe` in `map_overlay_lifer_map.py`, `LIFER_LEAFLET_PAYLOAD_CACHE_KEY` in `app_constants.py`, lifer branch in `app_prep_map_ui.py`, TS: `lifer_popup_v1` + `circle_pin` in `AllLocationsMap.tsx`.
 
 ---
 
@@ -108,3 +130,61 @@ Production Folium builders call ``add_zoom_level_debug_overlay(...)`` when ``MAP
 **Gap:** Custom component maps (All locations today) do not yet honour that flag — no live zoom readout in the iframe.
 
 **Do:** Pass the flag through component args (or inject the same Leaflet/HTML pattern used by ``add_zoom_level_debug_overlay``) in ``AllLocationsMap.tsx``, and replicate for future component maps so debug behaviour stays one switch in ``defaults.py``.
+
+---
+
+## 12. Agent handover (update when status changes)
+
+*Last updated: May 2026 — after All locations + Lifer merged to `beta-next`.*
+
+### For the next agent
+
+**Goal:** Finish **#222** by migrating **Species** then **Family** off Folium onto the same Streamlit component (`explorer/components/all_locations_map/`). All locations and Lifer are the reference implementations.
+
+**Branch & git**
+
+- Long-lived branch: **`222-replace-folium-custom-component`** — **keep it** (partial #222; user requested no delete after merges).
+- **`beta-next`** already has: All locations (#224), Lifer (#225). New work: branch from `beta-next`, PR back to `beta-next`.
+- After `npm run build` in `frontend/`, commit **`frontend/build/`** (hashed bundles) — CI runs `npm ci` + build.
+
+**Architecture (repeat per map mode)**
+
+1. **Core:** GeoJSON builder + `revision` / `revision_extra` (see `all_locations_geojson.py`, `lifer_locations_geojson.py`).
+2. **Viewport:** versioned dict `v: 1` — TS `parseViewportV1` / `applyAllLocationsViewport` (lifer uses `lifer_leaflet_viewport_recipe`).
+3. **Popups:** structured JSON on feature properties (not HTML×N) — TS builds HTML with `escapeHtml` + `safeHttpUrlForAnchor`.
+4. **Prep:** `app_prep_map_ui.py` — flag like `use_*_leaflet`, session payload cache key, `render_all_locations_map_component(...)` (name is historical).
+5. **Folium builders:** leave in place for tests/export until mode is fully cut over in Prep.
+
+**Session cache keys** (`app_constants.py`)
+
+- All locations: `ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`
+- Lifer: `LIFER_LEAFLET_PAYLOAD_CACHE_KEY`
+- Cleared on dataset signature change in prep (with Folium static map cache).
+
+**Do not**
+
+- Inject Folium `map_popup_width_fix_script` into the component iframe (double-shrink / jiggle).
+- Bundle species + family + docs in one PR.
+- Close **#222** until species + family are on the component (unless product owner says otherwise).
+
+**Manual test checklist (each new mode)**
+
+- Pins, popups, banner, legend, basemap sidebar, colour scheme.
+- Mode-specific toggles (e.g. subspecies lifers — done for Lifer).
+- Warnings when data missing (mirror Folium strings).
+
+**Deferred (explicitly OK to skip for now)**
+
+- Warm-rerun / payload cache hit verification in perf logs — instrumentation pass later (#205 / §8).
+- Shared “lifer model” refactor to dedupe Folium vs GeoJSON (nice-to-have).
+- Rename component from `all_locations_map` to something generic (after all maps).
+
+**Useful docs**
+
+- [README.md](./README.md) — build, clustering, popups.
+- [docs/AI_CONTEXT.md](../../../docs/AI_CONTEXT.md) — Streamlit vs core, caching, small PRs.
+- Issue **#222** — umbrella; PRs are partial.
+
+**Suggested next task**
+
+Start **Species locations** on `222-replace-folium-custom-component`: read `build_visit_overlay_map` + existing All locations path in `app_prep_map_ui.py`, then add `species_*_geojson` (or extend visit overlay) + TS popup variant if needed.

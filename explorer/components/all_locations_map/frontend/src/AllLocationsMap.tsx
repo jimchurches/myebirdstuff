@@ -696,6 +696,174 @@ function parseLiferPopupV1(raw: unknown): LiferPopupPayloadV1 | null {
   return { v: 1, lines };
 }
 
+/** Species map — structured sections from ``species_locations_geojson.py`` (#222). */
+interface SpeciesObservationV1 {
+  datetime_label: string;
+  checklist_href: string;
+  observed_count: string;
+  media_href: string;
+}
+
+interface SpeciesSectionV1 {
+  common_name: string;
+  observation_count: number;
+  open_by_default: boolean;
+  observations: SpeciesObservationV1[];
+}
+
+interface SpeciesVisitsBlockV1 {
+  summary_label: string;
+  entries: PopupLinkV1[];
+  open_by_default: boolean;
+}
+
+interface SpeciesPopupPayloadV1 {
+  v: 1;
+  location_heading_margin_px?: number;
+  species_sections: SpeciesSectionV1[];
+  visits: SpeciesVisitsBlockV1;
+}
+
+function parseSpeciesPopupV1(raw: unknown): SpeciesPopupPayloadV1 | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  if (o.v !== 1) {
+    return null;
+  }
+  const sectionsRaw = Array.isArray(o.species_sections) ? o.species_sections : [];
+  const species_sections: SpeciesSectionV1[] = [];
+  for (const sec of sectionsRaw) {
+    if (!sec || typeof sec !== "object") {
+      continue;
+    }
+    const s = sec as Record<string, unknown>;
+    const obsRaw = Array.isArray(s.observations) ? s.observations : [];
+    const observations: SpeciesObservationV1[] = [];
+    for (const row of obsRaw) {
+      if (!row || typeof row !== "object") {
+        continue;
+      }
+      const r = row as Record<string, unknown>;
+      observations.push({
+        datetime_label: typeof r.datetime_label === "string" ? r.datetime_label : "",
+        checklist_href: typeof r.checklist_href === "string" ? r.checklist_href : "",
+        observed_count: typeof r.observed_count === "string" ? r.observed_count : "",
+        media_href: typeof r.media_href === "string" ? r.media_href : "",
+      });
+    }
+    species_sections.push({
+      common_name: typeof s.common_name === "string" ? s.common_name : "",
+      observation_count:
+        typeof s.observation_count === "number" && Number.isFinite(s.observation_count)
+          ? s.observation_count
+          : observations.length,
+      open_by_default: s.open_by_default === true,
+      observations,
+    });
+  }
+  const visRaw = o.visits;
+  if (!visRaw || typeof visRaw !== "object") {
+    return null;
+  }
+  const vo = visRaw as Record<string, unknown>;
+  const entRaw = Array.isArray(vo.entries) ? vo.entries : [];
+  const entries: PopupLinkV1[] = entRaw
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+    .map((item) => ({
+      label: typeof item.label === "string" ? item.label : "",
+      href: typeof item.href === "string" ? item.href : "",
+    }));
+  const visits: SpeciesVisitsBlockV1 = {
+    summary_label: typeof vo.summary_label === "string" ? vo.summary_label : "Visited:",
+    entries,
+    open_by_default: vo.open_by_default === true,
+  };
+  const margin =
+    typeof o.location_heading_margin_px === "number" && Number.isFinite(o.location_heading_margin_px)
+      ? o.location_heading_margin_px
+      : 6;
+  return { v: 1, location_heading_margin_px: margin, species_sections, visits };
+}
+
+/** Species-map matching pin — mirrors ``assemble_species_map_location_popup_html`` (#222). */
+function popupHtmlSpeciesLayout(
+  name: string,
+  lifelistUrl: string,
+  payload: SpeciesPopupPayloadV1,
+): string {
+  const margin =
+    typeof payload.location_heading_margin_px === "number" &&
+    Number.isFinite(payload.location_heading_margin_px)
+      ? payload.location_heading_margin_px
+      : 6;
+  const hlSafe = safeHttpUrlForAnchor(lifelistUrl.trim());
+  const locHeading =
+    hlSafe.length > 0
+      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+
+  const sectionParts: string[] = [];
+  for (const sec of payload.species_sections) {
+    const openAttr = sec.open_by_default ? " open" : "";
+    const summaryLabel = `${sec.common_name}: (${sec.observation_count})`;
+    const obsLines: string[] = [];
+    for (const obs of sec.observations) {
+      const hrefSafe = safeHttpUrlForAnchor(obs.checklist_href.trim());
+      const dt = escapeHtml(obs.datetime_label.trim() || "—");
+      const count = escapeHtml(obs.observed_count.trim());
+      let line =
+        hrefSafe.length > 0
+          ? `<a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${dt}</a>`
+          : `<span>${dt}</span>`;
+      line += ` <span class="pebird-map-popup__obs-count">(Observed: ${count})</span>`;
+      const mediaSafe = safeHttpUrlForAnchor(obs.media_href.trim());
+      if (mediaSafe) {
+        line += ` <a class="pebird-map-popup__media-link" href="${escapeHtml(mediaSafe)}" target="_blank" rel="noopener noreferrer" title="media">↗</a>`;
+      }
+      obsLines.push(`<div class="pebird-map-popup__obs-line">${line}</div>`);
+    }
+    sectionParts.push(
+      `<details class="pebird-map-popup__species-seen"${openAttr}>` +
+        `<summary class="pebird-map-popup__section-label">${escapeHtml(summaryLabel)}</summary>` +
+        `<div class="pebird-map-popup__obs-list">${obsLines.join("")}</div>` +
+        `</details>`,
+    );
+  }
+
+  const visitAnchors: string[] = [];
+  for (const e of payload.visits.entries) {
+    const href = e.href?.trim() ?? "";
+    const linkLabel = e.label?.trim() || href;
+    if (href) {
+      const hrefSafe = safeHttpUrlForAnchor(href);
+      if (hrefSafe) {
+        visitAnchors.push(
+          `<a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel)}</a>`,
+        );
+      } else {
+        visitAnchors.push(`<span class="pebird-map-popup__visit-link-text">${escapeHtml(linkLabel)}</span>`);
+      }
+    }
+  }
+  const visitsOpen = payload.visits.open_by_default ? " open" : "";
+  const visitsBlock =
+    `<details class="pebird-map-popup__all-visits"${visitsOpen}>` +
+    `<summary class="pebird-map-popup__section-label">${escapeHtml(payload.visits.summary_label)}</summary>` +
+    `<div class="pebird-map-popup__visit-list-inner">${visitAnchors.join("<br>")}</div>` +
+    `</details>`;
+
+  return (
+    `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">` +
+    `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>` +
+    `<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">` +
+    sectionParts.join("") +
+    visitsBlock +
+    `</div></div>`
+  );
+}
+
 /** Per-pin circle resolved in Python (``circle_pin``) for Lifer vs subspecies colours (#222). */
 interface CirclePinPayload {
   stroke_hex?: string;
@@ -853,6 +1021,10 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   const liferPop = parseLiferPopupV1(props?.lifer_popup_v1);
   if (liferPop) {
     return popupHtmlLiferLayout(name, lifelistUrl, liferPop);
+  }
+  const speciesPop = parseSpeciesPopupV1(props?.species_popup_v1);
+  if (speciesPop) {
+    return popupHtmlSpeciesLayout(name, lifelistUrl, speciesPop);
   }
   const popup = parsePopupV1(props?.popup_v1);
   if (popup?.visited) {

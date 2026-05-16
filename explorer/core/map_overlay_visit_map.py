@@ -219,6 +219,103 @@ def all_locations_leaflet_viewport_recipe(
     }
 
 
+def species_leaflet_viewport_recipe(
+    framing_pairs: list[list[float]],
+    *,
+    go_to_gps_pin: tuple[float, float] | None = None,
+    blank_viewport_recipe: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Camera recipe ``v1`` for Species locations Leaflet iframe.
+
+    *blank_viewport_recipe* — session recipe when no species is selected (parity with Folium blank map).
+    *framing_pairs* — species-matching pin coordinates when a species is selected.
+    """
+    if go_to_gps_pin is not None and len(go_to_gps_pin) == 2:
+        lat, lon = float(go_to_gps_pin[0]), float(go_to_gps_pin[1])
+        return {
+            "v": 1,
+            "mode": "go_to_gps",
+            "lat": lat,
+            "lon": lon,
+            "padding_px": int(MAP_SPECIES_FIT_BOUNDS_PADDING_PX),
+            "epsilon_delta": 0.02,
+            "max_zoom": int(MAP_GO_TO_GPS_MAX_ZOOM),
+        }
+
+    if not framing_pairs:
+        recipe = blank_viewport_recipe if isinstance(blank_viewport_recipe, dict) else {}
+        mode = str(recipe.get("mode", "")).strip().lower()
+        if mode == "fit_bounds":
+            pairs_raw = recipe.get("pairs")
+            pairs_list = pairs_raw if isinstance(pairs_raw, list) else []
+            pairs = [
+                [float(p[0]), float(p[1])]
+                for p in pairs_list
+                if isinstance(p, (list, tuple)) and len(p) == 2
+            ]
+            if pairs:
+                pad = int(recipe.get("padding_px", MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX))
+                max_z = int(recipe.get("max_zoom", MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM))
+                if len(pairs) == 1:
+                    la, lo = float(pairs[0][0]), float(pairs[0][1])
+                    return {
+                        "v": 1,
+                        "mode": "fit_bounds",
+                        "single_point": True,
+                        "lat": la,
+                        "lon": lo,
+                        "epsilon_delta": 0.02,
+                        "padding_px": pad,
+                        "max_zoom": int(
+                            recipe.get("single_point_zoom", MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM)
+                        ),
+                    }
+                return {
+                    "v": 1,
+                    "mode": "fit_bounds",
+                    "single_point": False,
+                    "pairs": pairs,
+                    "padding_px": pad,
+                    "max_zoom": max_z,
+                }
+        center = recipe.get("center")
+        if isinstance(center, (list, tuple)) and len(center) == 2:
+            c_lat, c_lon = float(center[0]), float(center[1])
+        else:
+            c_lat = float(MAP_SPECIES_DEFAULT_CENTER_LAT)
+            c_lon = float(MAP_SPECIES_DEFAULT_CENTER_LON)
+        zoom = int(recipe.get("zoom", MAP_SPECIES_DEFAULT_ZOOM))
+        return {
+            "v": 1,
+            "mode": "center_zoom",
+            "center": [c_lat, c_lon],
+            "zoom": zoom,
+        }
+
+    pad = int(MAP_SPECIES_FIT_BOUNDS_PADDING_PX)
+    max_z = int(MAP_SPECIES_FIT_BOUNDS_MAX_ZOOM)
+    if len(framing_pairs) == 1:
+        la, lo = float(framing_pairs[0][0]), float(framing_pairs[0][1])
+        return {
+            "v": 1,
+            "mode": "fit_bounds",
+            "single_point": True,
+            "lat": la,
+            "lon": lo,
+            "epsilon_delta": 0.02,
+            "padding_px": pad,
+            "max_zoom": int(MAP_SPECIES_SINGLE_POINT_ZOOM),
+        }
+    return {
+        "v": 1,
+        "mode": "fit_bounds",
+        "single_point": False,
+        "pairs": [[float(p[0]), float(p[1])] for p in framing_pairs],
+        "padding_px": pad,
+        "max_zoom": max_z,
+    }
+
+
 def _all_locations_marker_params_from_scheme(sch: MapMarkerColourScheme) -> tuple[str, str, int, int, float]:
     """Resolved fill, edge (stroke), radius (px), stroke weight, fill opacity for **All locations** view."""
     fill_c, edge = resolve_location_visit_colours(sch)
