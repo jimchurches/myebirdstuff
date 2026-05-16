@@ -215,6 +215,8 @@ FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
 FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
 # Leaflet custom map (All locations mode, #222) — session cache for ``(revision, geojson)`` payloads.
 ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY = "_all_locations_leaflet_payload_cache_v1"
+# Leaflet custom map — Lifer locations mode (#222).
+LIFER_LEAFLET_PAYLOAD_CACHE_KEY = "_lifer_leaflet_payload_cache_v1"
 # Go to GPS — session-only temporary marker (refs #199); never persisted to YAML.
 SESSION_GO_TO_GPS_PIN_KEY = "_session_go_to_gps_pin"
 STREAMLIT_GO_TO_GPS_DRAFT_LAT_TEXT_KEY = "_streamlit_go_to_gps_draft_lat_txt"

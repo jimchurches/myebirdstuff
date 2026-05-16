@@ -1,8 +1,8 @@
 """Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab embed.
 
 Map build runs under the first spinner so the map can render before heavy checklist/rankings caches
-(~refs #179). **All locations** uses the Leaflet Streamlit custom component (#222); other modes use
-Folium + ``st_folium``. Tab session sync runs in a second spinner so other tabs get payloads before
+(~refs #179). **All locations** and **Lifer locations** use the Leaflet Streamlit custom component (#222); other
+modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so other tabs get payloads before
 fragments run. Partial ``@st.fragment`` reruns do not use this path.
 
 **Export map HTML** uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
@@ -10,7 +10,7 @@ fragments run. Partial ``@st.fragment`` reruns do not use this path.
 Folium map uses **streamlit-folium** ``st_folium`` with a **deep copy** of the cached map so embed
 rendering cannot strip layers from the session cache. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY`
 stores unrendered Folium :class:`folium.Map` entries for the LRU. All-locations Leaflet payloads are
-cached under :data:`ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY` (#222).
+cached under :data:`ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY` / :data:`LIFER_LEAFLET_PAYLOAD_CACHE_KEY` (#222).
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from explorer.app.streamlit.app_caches import (
 )
 from explorer.app.streamlit.app_constants import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
+    LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     EXPORT_MAP_HTML_BTN_KEY,
@@ -90,7 +91,11 @@ from explorer.core.all_locations_viewport import (
     mean_center_from_pairs,
     observation_row_counts_by_country_key,
 )
+from explorer.core.lifer_locations_geojson import build_lifer_locations_geojson_payload
+from explorer.core.lifer_last_seen_prep import count_subspecies_lifer_taxa
 from explorer.core.map_controller import build_species_overlay_map
+from explorer.core.map_marker_colour_resolve import resolve_lifer_overlay_pin_params
+from explorer.core.map_overlay_lifer_map import lifer_leaflet_viewport_recipe
 from explorer.core.map_overlay_visit_map import all_locations_leaflet_viewport_recipe
 from explorer.core.map_prep import (
     data_signature_for_caches,
@@ -136,6 +141,7 @@ from explorer.core.all_locations_geojson import build_all_locations_geojson_payl
 from explorer.presentation.map_renderer import (
     STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
     build_all_locations_banner_html,
+    build_lifer_locations_banner_html,
     build_legend_html,
     map_overlay_theme_stylesheet,
 )
@@ -226,6 +232,7 @@ def render_prep_spinner_and_map_tab(
                     st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
                     st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
                     st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
+                    st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None
@@ -306,11 +313,13 @@ def render_prep_spinner_and_map_tab(
                         st.session_state[STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY] = blank_viewport_recipe
 
                 use_all_locations_leaflet = False
+                use_lifer_leaflet = False
                 leaflet_revision: str | None = None
                 leaflet_geojson: dict[str, Any] | None = None
                 leaflet_cluster_opts: dict[str, Any] | None = None
                 leaflet_circle_style: dict[str, Any] | None = None
                 leaflet_cluster_icon_style: dict[str, Any] | None = None
+                leaflet_viewport: dict[str, Any] | None = None
                 all_locations_leaflet_banner_html = ""
                 all_locations_leaflet_legend_html = ""
 
@@ -432,6 +441,7 @@ def render_prep_spinner_and_map_tab(
                     )
                     capture_all_locations_view = map_view_mode == "all" and not overlay_sci
                     use_all_locations_leaflet = capture_all_locations_view
+                    use_lifer_leaflet = map_view_mode == "lifers"
                     _go_pin = go_to_gps_pin_from_session()
                     _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _map_kw = {
@@ -648,6 +658,118 @@ def render_prep_spinner_and_map_tab(
                         result_warning = None
                         folium_st_key = None
                         st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+                    elif use_lifer_leaflet:
+                        result_warning = None
+                        leaflet_cluster_opts = {
+                            "enabled": False,
+                            "max_cluster_radius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+                            "disable_clustering_at_zoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+                            "spiderfy_on_max_zoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+                            "remove_outside_visible_bounds": (
+                                MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS
+                            ),
+                        }
+                        leaflet_circle_style = {}
+                        leaflet_cluster_icon_style = {}
+                        subsp = bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False))
+                        revision_bundle = {
+                            "lifer_leaflet": True,
+                            "map_style": map_style,
+                            "subspecies": subsp,
+                            "scheme": int(family_colour_scheme),
+                            "popup_sort": str(popup_sort_order),
+                        }
+                        revision_extra_json = json.dumps(revision_bundle, sort_keys=True)
+                        payload_cache_key = (_ck, revision_extra_json)
+                        lifer_framing_pairs: list[list[float]] = []
+                        _perf_lifer: dict[str, Any] = {
+                            "embed": "lifer_leaflet",
+                            "map_view_mode": map_view_mode,
+                            "payload_cache_hit": False,
+                        }
+                        with perf_span("map.lifer_leaflet.payload", extra=_perf_lifer):
+                            cached_lif = st.session_state.get(LIFER_LEAFLET_PAYLOAD_CACHE_KEY)
+                            if (
+                                isinstance(cached_lif, dict)
+                                and cached_lif.get("payload_cache_key") == payload_cache_key
+                            ):
+                                leaflet_revision = str(cached_lif["revision"])
+                                leaflet_geojson = cached_lif["geojson"]
+                                lifer_framing_pairs = list(cached_lif.get("framing_pairs") or [])
+                                _perf_lifer["payload_cache_hit"] = True
+                            else:
+                                (
+                                    leaflet_revision,
+                                    leaflet_geojson,
+                                    lifer_warn,
+                                    lifer_framing_pairs,
+                                ) = build_lifer_locations_geojson_payload(
+                                    full_location_data=ctx["full_location_data"],
+                                    lifer_lookup_df=ctx["lifer_lookup_df"],
+                                    true_lifer_locations=ctx["true_lifer_locations"],
+                                    true_lifer_locations_taxon=ctx["true_lifer_locations_taxon"],
+                                    show_subspecies_lifers=subsp,
+                                    base_species_fn=base_species_for_lifer,
+                                    visit_marker_scheme=_visit_sch,
+                                    revision_extra=revision_extra_json,
+                                )
+                                if lifer_warn:
+                                    result_warning = lifer_warn
+                                    leaflet_revision = None
+                                    leaflet_geojson = None
+                                    lifer_framing_pairs = []
+                                else:
+                                    st.session_state[LIFER_LEAFLET_PAYLOAD_CACHE_KEY] = {
+                                        "payload_cache_key": payload_cache_key,
+                                        "revision": leaflet_revision,
+                                        "geojson": leaflet_geojson,
+                                        "framing_pairs": lifer_framing_pairs,
+                                    }
+                            if leaflet_revision and leaflet_geojson is not None:
+                                leaflet_viewport = lifer_leaflet_viewport_recipe(lifer_framing_pairs)
+                                n_lifer_sp = len(ctx["true_lifer_locations"])
+                                n_pin = len(leaflet_geojson.get("features") or [])
+                                all_locations_leaflet_banner_html = build_lifer_locations_banner_html(
+                                    n_lifer_sp,
+                                    n_pin,
+                                    include_subspecies=subsp,
+                                    n_subspecies_lifers=(
+                                        count_subspecies_lifer_taxa(
+                                            ctx["lifer_lookup_df"],
+                                            ctx["true_lifer_locations_taxon"],
+                                        )
+                                        if subsp
+                                        else None
+                                    ),
+                                )
+                                le, lf, se, sp, _rl, _rs, _sw, _fo1, _fo2 = (
+                                    resolve_lifer_overlay_pin_params(_visit_sch)
+                                )
+                                if not subsp:
+                                    all_locations_leaflet_legend_html = build_legend_html(
+                                        [(le, lf, "Lifer")],
+                                        container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
+                                    )
+                                else:
+                                    kinds_present: set[str] = set()
+                                    for f in leaflet_geojson.get("features") or []:
+                                        pr = f.get("properties")
+                                        if isinstance(pr, dict):
+                                            pk = pr.get("pin_kind")
+                                            if pk:
+                                                kinds_present.add(str(pk))
+                                    legend_rows: list[tuple[str, str, str]] = []
+                                    if "lifer" in kinds_present:
+                                        legend_rows.append((le, lf, "Lifer"))
+                                    if "subspecies" in kinds_present:
+                                        legend_rows.append((se, sp, "Subspecies"))
+                                    all_locations_leaflet_legend_html = build_legend_html(
+                                        legend_rows,
+                                        container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
+                                    )
+                        result_map = None
+                        folium_st_key = None
+                        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                     else:
                         _cached = _map_cache_lookup(_ck)
                         if isinstance(_cached, dict) and _cached.get("map") is not None:
@@ -694,6 +816,8 @@ def render_prep_spinner_and_map_tab(
 
                 if use_all_locations_leaflet and leaflet_revision and leaflet_geojson is not None:
                     pass
+                elif use_lifer_leaflet and leaflet_revision and leaflet_geojson is not None:
+                    pass
                 elif result_warning:
                     map_warning_text = result_warning
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
@@ -728,7 +852,10 @@ def render_prep_spinner_and_map_tab(
                 if map_warning_text is not None:
                     st.warning(map_warning_text)
                 elif (
-                    use_all_locations_leaflet
+                    (
+                        use_all_locations_leaflet
+                        or use_lifer_leaflet
+                    )
                     and leaflet_revision
                     and leaflet_geojson is not None
                     and leaflet_cluster_opts is not None
@@ -737,16 +864,19 @@ def render_prep_spinner_and_map_tab(
                     inject_map_folium_iframe_min_height_css(map_height)
                     if map_hint_text:
                         st.info(map_hint_text)
-                    with perf_span(
-                        "map.all_locations_leaflet.component_embed",
-                        extra={
-                            "embed": "all_locations_leaflet",
-                            "map_view_mode": map_view_mode,
-                            "revision_prefix": leaflet_revision[:12],
-                            "n_features": len(leaflet_geojson.get("features", [])),
-                            "cluster_enabled": leaflet_cluster_opts.get("enabled"),
-                        },
-                    ):
+                    _embed_extra: dict[str, Any] = {
+                        "revision_prefix": leaflet_revision[:12],
+                        "n_features": len(leaflet_geojson.get("features", [])),
+                        "cluster_enabled": leaflet_cluster_opts.get("enabled"),
+                    }
+                    if use_lifer_leaflet:
+                        _embed_extra["embed"] = "lifer_leaflet"
+                        _span_name = "map.lifer_leaflet.component_embed"
+                    else:
+                        _embed_extra["embed"] = "all_locations_leaflet"
+                        _embed_extra["map_view_mode"] = map_view_mode
+                        _span_name = "map.all_locations_leaflet.component_embed"
+                    with perf_span(_span_name, extra=_embed_extra):
                         render_all_locations_map_component(
                             revision=leaflet_revision,
                             geojson=leaflet_geojson,
@@ -755,12 +885,12 @@ def render_prep_spinner_and_map_tab(
                             cluster_options=leaflet_cluster_opts,
                             circle_marker_style=leaflet_circle_style,
                             cluster_icon_style=leaflet_cluster_icon_style or {},
-                            viewport=leaflet_viewport,
+                            viewport=leaflet_viewport or {},
                             map_theme_css=map_overlay_theme_stylesheet(),
                             banner_html=all_locations_leaflet_banner_html,
                             legend_html=all_locations_leaflet_legend_html,
                             key=(
-                                f"explorer_all_locations_leaflet_h{map_height}_"
+                                f"explorer_{'lifer' if use_lifer_leaflet else 'all_locations'}_leaflet_h{map_height}_"
                                 f"n{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
                             ),
                         )

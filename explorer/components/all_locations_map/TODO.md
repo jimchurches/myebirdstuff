@@ -68,6 +68,7 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 ## 6. Other map modes still on Folium (later #222)
 
 - **Species / lifer / family** maps: remain `st_folium` until migrated — **one mode per milestone / PR series**, not all maps in a single change set.
+- **Lifer locations** — **done (Leaflet component)** (#222): same iframe as All locations; GeoJSON `lifer_popup_v1` + per-feature `circle_pin`; Prep tab switches to the component when Map view = **Lifer locations**.
 - Order is not fixed in code: pick **selected species**, **lifer locations**, or **family** next; each needs GeoJSON (or equivalent) + component (or hybrid) wiring and popup/viewport parity in its own batch onto `beta-next`.
 
 ---
