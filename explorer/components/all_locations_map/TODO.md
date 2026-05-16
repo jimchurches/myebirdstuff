@@ -7,7 +7,17 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 **Working principles (#222):** Ship only after all map modes leave Folium. Until then, legacy Folium paths only need to stay runnable for development — defer cross-stack DRY and deep edge-case polish until Folium is removed and one architecture remains.
 
-**Next focus:** §11 (zoom debug) or migrating the next map mode. See **§10** for doc pass after all maps.
+---
+
+### #222 status and rollout (source narrative)
+
+**Where we are:** The **All locations** map on the Streamlit **custom component** (`declare_component` + committed `frontend/build`) is **complete for this milestone**: viewport/focus (§1), go-to-GPS (§2), basemap swap without full layer rebuild (§3), popups and chrome (§4–5). Work continues under **#222** by **migrating other map modes** (species / lifer / family — §6) and optional hygiene (§7–11).
+
+**Integrate onto `beta-next` in batches:** Prefer **several small PRs into `beta-next` only** (per [CONTRIBUTING.md](../../../CONTRIBUTING.md) — reviewable changes), **not** one huge merge and **not** landing everything on **`main`** until you choose to promote. Flow: merge completed slices → dogfood on `beta-next` → next PR (e.g. §11 zoom debug and/or the next Folium mode). Avoid bundling “all maps + docs” in a single hit.
+
+**Next immediate task:** **Open a PR targeting `beta-next`** for the current All locations / component work (when the branch is ready), merge after review, then pick **§11** or the **first §6** map migration as the following batch.
+
+**Next focus (after PR):** §11 (zoom debug overlay parity) **and/or** start **§6** (first additional map mode — species, lifer, or family as a **separate** milestone). See **§10** for full doc pass **after** all maps are migrated.
 
 ---
 
@@ -57,7 +67,8 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 ## 6. Other map modes still on Folium (later #222)
 
-- **Species / lifer / family** maps: remain `st_folium` until migrated; separate milestones (GeoJSON + component or hybrid).
+- **Species / lifer / family** maps: remain `st_folium` until migrated — **one mode per milestone / PR series**, not all maps in a single change set.
+- Order is not fixed in code: pick **selected species**, **lifer locations**, or **family** next; each needs GeoJSON (or equivalent) + component (or hybrid) wiring and popup/viewport parity in its own batch onto `beta-next`.
 
 ---
 
