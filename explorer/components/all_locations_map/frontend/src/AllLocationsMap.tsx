@@ -58,13 +58,17 @@ const POPUP_SHRINK_WIDTH_BUFFER_PX = 40;
 /** Never apply a narrower content box than this — guards bad measures / font glitches (#222). */
 const POPUP_SHRINK_MIN_CONTENT_WIDTH_PX = 140;
 
-/** Max of inner and wide text rows (visit links, headings) while inner is ``max-content`` for measure. */
+/** Rows included when measuring intrinsic popup width (All locations + species + lifer). */
+const POPUP_WIDE_MEASURE_SELECTOR =
+  ".pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, " +
+  "a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, " +
+  ".pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary";
+
+/** Max of inner and wide text rows while inner is ``max-content`` for measure (#222). */
 function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
   void inner.offsetWidth;
   let w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
-  const wideEls = inner.querySelectorAll(
-    ".pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line",
-  );
+  const wideEls = inner.querySelectorAll(POPUP_WIDE_MEASURE_SELECTOR);
   wideEls.forEach((el) => {
     const he = el as HTMLElement;
     w = Math.max(w, he.scrollWidth, he.getBoundingClientRect().width);
