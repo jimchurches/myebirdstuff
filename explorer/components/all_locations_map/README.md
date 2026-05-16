@@ -29,7 +29,7 @@ The sidebar **cluster all locations** toggle is passed as `cluster_options.enabl
 
 ## Banner + legend inside the iframe (same as Folium)
 
-Folium injects ``map_overlay_theme_stylesheet`` plus banner/legend HTML **into the map document** so ``position:fixed`` anchors to the map viewport (top-right banner, bottom-left legend). The Streamlit component passes the same stylesheet, ``map_popup_width_fix_script``, ``build_all_locations_banner_html``, and ``build_legend_html`` as component args; React injects CSS/script into the iframe ``document`` and renders overlay HTML **siblings** of the Leaflet pane so chrome matches beta-next (#222). The Python stylesheet is **two** ``<style>`` blocks concatenated (popup + banner/legend); the component merges their inner CSS into one ``<style>`` node so the browser does not terminate the sheet at the first ``</style>`` token.
+Folium injects ``map_overlay_theme_stylesheet`` plus banner/legend HTML **into the map document** so ``position:fixed`` anchors to the map viewport (top-right banner, bottom-left legend). The Streamlit component passes the same theme stylesheet (no Folium shrink script — width is finalized in TS only), ``build_all_locations_banner_html``, and ``build_legend_html`` as component args; React injects CSS into the iframe ``document`` and renders overlay HTML **siblings** of the Leaflet pane so chrome matches beta-next (#222). The Python stylesheet is **two** ``<style>`` blocks concatenated (popup + banner/legend); the component merges their inner CSS into one ``<style>`` node so the browser does not terminate the sheet at the first ``</style>`` token.
 
 ## Popup anchor vs iframe size
 
@@ -52,6 +52,6 @@ Classic Folium builds large HTML popups in Python. The component approach keeps 
 
 **Current payload:** `feature.properties.popup_v1` with `v: 1`. With **`records_by_location`** (production experimental tab), **`visited`** holds `{ label: "Visited:", entries: [{label,href}] }` — classic All locations checklist list + lifelist heading link in TS. Without per-location rows (minimal tests), **`summary_lines`** + **`links`** compact fallback.
 
-Popup width aims for Folium parity (`MAP_POPUP_MAX_WIDTH_PX` = 420 in `defaults.py`). Popup **styling** mirrors production: `frontend/src/AllLocationsMapPopup.css` tracks `map_popup_theme_stylesheet` in `explorer/presentation/map_renderer.py`; visit-card HTML structure tracks `assemble_location_popup_html` / `LocationPopupModel` in `map_popup_models.py`. Shrink-to-content width uses the same logic as `map_popup_width_fix_script` on `popupopen`.
+Popup width is implemented in ``AllLocationsMap.tsx`` (aligned with Folium’s ``map_popup_width_fix_script`` behaviour). Popup **styling** mirrors production: ``frontend/src/AllLocationsMapPopup.css`` tracks ``map_popup_theme_stylesheet`` in ``explorer/presentation/map_renderer.py``; visit-card HTML mirrors ``assemble_location_popup_html`` / ``LocationPopupModel`` in ``map_popup_models.py``.
 
 This avoids regressing the “rich tie-back” story while staying faster than `popup_html × N` on the server.

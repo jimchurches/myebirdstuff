@@ -138,7 +138,6 @@ from explorer.presentation.map_renderer import (
     build_all_locations_banner_html,
     build_legend_html,
     map_overlay_theme_stylesheet,
-    map_popup_width_fix_script,
 )
 
 
@@ -758,7 +757,6 @@ def render_prep_spinner_and_map_tab(
                             cluster_icon_style=leaflet_cluster_icon_style or {},
                             viewport=leaflet_viewport,
                             map_theme_css=map_overlay_theme_stylesheet(),
-                            map_popup_width_script=map_popup_width_fix_script(),
                             banner_html=all_locations_leaflet_banner_html,
                             legend_html=all_locations_leaflet_legend_html,
                             key=(

@@ -39,6 +39,12 @@ interface ClusterIconStylePayload {
 /** Folium `MAP_POPUP_MAX_WIDTH_PX` (`explorer/app/streamlit/defaults.py`). */
 const POPUP_MAX_WIDTH_PX = 420;
 
+/** Leaflet runs ``autoPan`` inside ``popup.update()`` — stacked updates caused large vertical pans (#222). Disabled globally; ``maybePanPopupIntoView`` pans once when needed after layout settles. */
+const POPUP_BIND_OPTIONS: L.PopupOptions = {
+  maxWidth: POPUP_MAX_WIDTH_PX,
+  autoPan: false,
+};
+
 /** Folium ``_apply_go_to_gps_pin_view`` popup body (`explorer/core/map_overlay_visit_map.py`). */
 const GO_TO_GPS_POPUP_HTML =
   "<div style='font-size:13px'><strong>Temporary GPS marker</strong></div>";
@@ -46,15 +52,18 @@ const GO_TO_GPS_POPUP_HTML =
 /** Default gap below location title row — matches ``build_location_popup_html(..., location_heading_margin_px=4)``. */
 const POPUP_LOCATION_HEADING_MARGIN_PX = 4;
 
-/** Extra px on shrink width — ``scrollWidth`` can sit slightly under painted text (subpixel / links). */
-const POPUP_SHRINK_WIDTH_BUFFER_PX = 24;
+/** Extra px on shrink width — ``scrollWidth`` can sit slightly under painted text (subpixel / fonts / padding). */
+const POPUP_SHRINK_WIDTH_BUFFER_PX = 40;
+
+/** Never apply a narrower content box than this — guards bad measures / font glitches (#222). */
+const POPUP_SHRINK_MIN_CONTENT_WIDTH_PX = 140;
 
 /** Max of inner and wide text rows (visit links, headings) while inner is ``max-content`` for measure. */
 function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
   void inner.offsetWidth;
   let w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
   const wideEls = inner.querySelectorAll(
-    ".pebird-map-popup__visit-dates a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line",
+    ".pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line",
   );
   wideEls.forEach((el) => {
     const he = el as HTMLElement;
@@ -63,19 +72,26 @@ function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
   return Math.ceil(Math.max(w, 1));
 }
 
-/** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (``map_popup_width_fix_script``).
+/** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (same idea as Folium ``map_popup_width_fix_script``; this iframe runs TS only).
 
-Uses *map* pixel width (not ``window``) so Streamlit iframe caps match the visible pane (#222).
-After width changes, callers should invoke ``popup.update()`` so the tip stays on the marker (refs #145).
+Uses map pixel width (not ``window``) for cap. Parents use ``cap`` px during measure so ``width:100%`` rows do not collapse (#222).
+After width changes, callers invoke ``popup.update()`` to keep the tip on the marker (#145).
 */
 function capPopupInnerWidthPxForMap(map: L.Map): number {
   const px = Math.max(1, map.getSize().x);
   return Math.min(POPUP_MAX_WIDTH_PX, Math.max(80, px - 24));
 }
 
+/** Once width is applied for a given map cap, skip remeasuring — avoids a second visible resize when
+ * iframe/RFO bumps run later at ~50–500ms (#222). Remeasure only when ``cap`` changes (map container width). */
+const POPUP_WIDTH_COMMIT_ATTR = "data-pebird-popup-width-commit";
+const POPUP_WIDTH_CAP_ATTR = "data-pebird-shrink-applied-cap";
+
+/** Shrink-wrap ``.leaflet-popup-content`` to intrinsic width; commit per (popup, map cap) to avoid repeat work. */
 function shrinkPebirdLeafletPopups(map: L.Map): void {
   const pops = document.querySelectorAll(".leaflet-popup-pane .leaflet-popup");
   const cap = capPopupInnerWidthPxForMap(map);
+  const capStr = `${cap}`;
   pops.forEach((pop) => {
     const content = pop.querySelector(".leaflet-popup-content") as HTMLElement | null;
     const wrap = pop.querySelector(".leaflet-popup-content-wrapper") as HTMLElement | null;
@@ -83,38 +99,116 @@ function shrinkPebirdLeafletPopups(map: L.Map): void {
     if (!content || !wrap || !inner) {
       return;
     }
+    if (content.getAttribute(POPUP_WIDTH_COMMIT_ATTR) === "1" && content.getAttribute(POPUP_WIDTH_CAP_ATTR) === capStr) {
+      return;
+    }
+
     /* Shrink-to-fit cycle: inner has max-width:100% of .leaflet-popup-content while that node uses
      * width:fit-content — cyclic percentage resolves tiny, so scrollWidth was ~min-content (refs #222).
-     * Size inner to max-content for measurement only, then restore so final layout still respects cap. */
+     * Size inner to max-content for measurement only, then restore so final layout still respects cap.
+     *
+     * Never strip content/wrapper width **without** substituting ``cap``: descendants such as
+     * ``.pebird-map-popup__heading-row { width:100% }`` lose their percentage base and collapse to a
+     * min-content column — ``scrollWidth`` then matches a character-wide strip (#222). */
     inner.style.setProperty("max-width", "none", "important");
     inner.style.setProperty("width", "max-content", "important");
-    content.style.removeProperty("width");
+    content.style.setProperty("width", `${cap}px`, "important");
+    content.style.setProperty("max-width", `${cap}px`, "important");
+    wrap.style.setProperty("width", `${cap}px`, "important");
+    wrap.style.setProperty("max-width", `${cap}px`, "important");
     content.style.removeProperty("white-space");
-    wrap.style.removeProperty("width");
     const innerPx = measurePebirdPopupInnerWidthPx(inner);
     inner.style.removeProperty("max-width");
     inner.style.removeProperty("width");
-    const target = Math.min(innerPx + POPUP_SHRINK_WIDTH_BUFFER_PX, cap);
-    content.style.setProperty("width", `${target}px`, "important");
-    content.style.setProperty("max-width", `${cap}px`, "important");
-    wrap.style.setProperty("width", `${target}px`, "important");
-    wrap.style.setProperty("max-width", `${cap}px`, "important");
+    const target = Math.max(
+      POPUP_SHRINK_MIN_CONTENT_WIDTH_PX,
+      Math.min(innerPx + POPUP_SHRINK_WIDTH_BUFFER_PX, cap),
+    );
+    const nextTargetStr = `${target}`;
+    const prevTargetStr = content.dataset.pebirdShrinkTarget ?? "";
+    const changed = prevTargetStr !== nextTargetStr;
+
+    if (changed) {
+      content.dataset.pebirdShrinkTarget = nextTargetStr;
+      content.style.setProperty("width", `${target}px`, "important");
+      content.style.setProperty("max-width", `${cap}px`, "important");
+      wrap.style.setProperty("width", `${target}px`, "important");
+      wrap.style.setProperty("max-width", `${cap}px`, "important");
+    }
+    content.setAttribute(POPUP_WIDTH_COMMIT_ATTR, "1");
+    content.setAttribute(POPUP_WIDTH_CAP_ATTR, capStr);
   });
 }
 
+/** Margin inside the map container when deciding if the popup clips (#222 — replaces Leaflet ``autoPan``). */
+const POPUP_VIEWPORT_PAD_PX = 12;
+
+/** Pan the map only when the open popup’s bounding box exceeds the container inset — minimal correction, no Leaflet ``autoPan`` stack. */
+function maybePanPopupIntoView(map: L.Map, popup: L.Popup): void {
+  const mapEl = map.getContainer();
+  const popupEl = popup.getElement();
+  if (!popupEl) {
+    return;
+  }
+  const mr = mapEl.getBoundingClientRect();
+  const pr = popupEl.getBoundingClientRect();
+  const insetLeft = mr.left + POPUP_VIEWPORT_PAD_PX;
+  const insetTop = mr.top + POPUP_VIEWPORT_PAD_PX;
+  const insetRight = mr.right - POPUP_VIEWPORT_PAD_PX;
+  const insetBottom = mr.bottom - POPUP_VIEWPORT_PAD_PX;
+
+  const overflowLeft = insetLeft - pr.left;
+  const overflowRight = pr.right - insetRight;
+  const overflowTop = insetTop - pr.top;
+  const overflowBottom = pr.bottom - insetBottom;
+
+  let dx = 0;
+  let dy = 0;
+  if (overflowLeft > 0 && overflowRight <= 0) {
+    dx = -overflowLeft;
+  } else if (overflowRight > 0 && overflowLeft <= 0) {
+    dx = overflowRight;
+  } else if (overflowLeft > 0 && overflowRight > 0) {
+    dx = (overflowRight - overflowLeft) / 2;
+  }
+  if (overflowTop > 0 && overflowBottom <= 0) {
+    dy = -overflowTop;
+  } else if (overflowBottom > 0 && overflowTop <= 0) {
+    dy = overflowBottom;
+  } else if (overflowTop > 0 && overflowBottom > 0) {
+    dy = (overflowBottom - overflowTop) / 2;
+  }
+
+  if (dx !== 0 || dy !== 0) {
+    map.panBy(L.point(dx, dy), { animate: false });
+  }
+}
+
 function scheduleShrinkPebirdLeafletPopups(map: L.Map, popup?: L.Popup): void {
-  const bump = () => {
+  /** Wait for web fonts before measuring — fallback metrics used to lock ``data-pebird-popup-width-commit``
+   * produced cards that were tens of px too narrow (lines broke after commas, visit rows split date/time).
+   * One double-rAF after ``fonts.ready`` keeps a single width commit with no follow-up resize (#222). */
+  const finalize = () => {
     shrinkPebirdLeafletPopups(map);
-    if (popup && typeof (popup as unknown as { update?: () => void }).update === "function") {
-      (popup as unknown as { update: () => void }).update();
+    if (popup && typeof popup.update === "function") {
+      popup.update();
+      maybePanPopupIntoView(map, popup);
     }
   };
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => bump());
-  });
-  const delays = [0, 30, 80, 150, 260, 400];
-  for (let k = 0; k < delays.length; k++) {
-    window.setTimeout(bump, delays[k]);
+  const runAfterLayout = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(finalize);
+    });
+  };
+  try {
+    const ready = document.fonts?.ready;
+    if (ready && typeof ready.then === "function") {
+      void ready.then(runAfterLayout).catch(runAfterLayout);
+    } else {
+      runAfterLayout();
+    }
+  } catch {
+    runAfterLayout();
   }
 }
 
@@ -154,7 +248,7 @@ interface MapArgs {
   cluster_icon_style?: ClusterIconStylePayload | Record<string, unknown>;
   /** Injected into iframe ``<head>`` — same as Folium ``map_overlay_theme_stylesheet`` (#222). */
   map_theme_css?: string;
-  /** Injected once — Folium ``map_popup_width_fix_script`` (#222). */
+  /** Injected once — optional; leave empty. Folium ``map_popup_width_fix_script`` schedules extra shrink passes and is **not** used in the component iframe (TS owns width; #222). */
   map_popup_width_script?: string;
   /** Fixed-position banner HTML (viewport = iframe), e.g. top-right ``pebird-map-banner`` (#222). */
   banner_html?: string;
@@ -456,7 +550,7 @@ function syncGoToGpsMarker(map: L.Map, viewportRaw: unknown, markerRef: React.Mu
     return;
   }
   const m = L.marker([vp.lat, vp.lon], { icon: goToGpsMarkerIcon(), zIndexOffset: 2500 });
-  m.bindPopup(GO_TO_GPS_POPUP_HTML, { maxWidth: POPUP_MAX_WIDTH_PX });
+  m.bindPopup(GO_TO_GPS_POPUP_HTML, POPUP_BIND_OPTIONS);
   m.addTo(map);
   markerRef.current = m;
 }
@@ -575,6 +669,7 @@ function popupHtmlVisitedLayout(
       );
     }
   }
+  /** Mirrors Folium ``build_visit_info_html``: ``<br>`` between *inline* checklist links — not ``display:block`` anchors (#222). */
   const visitInner = visitAnchors.join("<br>");
 
   let truncBlock = "";
@@ -786,6 +881,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
       const p = openLeafletPopupRef.current;
       if (p && typeof (p as unknown as { update?: () => void }).update === "function") {
         (p as unknown as { update: () => void }).update();
+        maybePanPopupIntoView(map, p);
       }
     };
     const ro = new ResizeObserver(() => {
@@ -902,7 +998,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
       },
       onEachFeature(feature, lyr) {
         const html = popupHtmlFromFeatureProps(feature.properties as Record<string, unknown> | undefined);
-        lyr.bindPopup(html, { maxWidth: POPUP_MAX_WIDTH_PX });
+        lyr.bindPopup(html, POPUP_BIND_OPTIONS);
       },
     });
 
