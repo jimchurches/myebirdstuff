@@ -455,6 +455,21 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   text-decoration: underline;
   text-underline-offset: 2px;
 }}
+/* Family highlight + species secondary lines + legend species links (outside ``__stats`` or raw HTML labels). */
+.pebird-map-banner__family-selected-summary a,
+.pebird-map-banner__stats-secondary a,
+.pebird-map-legend a {{
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  text-decoration: none;
+  font-weight: inherit;
+}}
+.pebird-map-banner__family-selected-summary a:hover,
+.pebird-map-banner__stats-secondary a:hover,
+.pebird-map-legend a:hover {{
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}}
 .pebird-map-banner__sep {{
   color: {EXPLORER_UI_MUTED};
   font-weight: 400;
