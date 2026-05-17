@@ -10,7 +10,7 @@ import json
 from typing import Any, Callable
 
 from explorer.app.streamlit.defaults import MapMarkerColourScheme
-from explorer.core.family_map_compute import DENSITY_BAND_LABELS, FamilyLocationPin
+from explorer.core.family_map_compute import FamilyLocationPin
 from explorer.core.family_map_folium import family_map_marker_style
 from explorer.core.map_marker_colour_resolve import (
     family_map_has_highlight_halo,
@@ -144,12 +144,3 @@ def build_family_locations_geojson_payload(
     revision = hashlib.sha256(rev_payload.encode("utf-8")).hexdigest()[:24]
     geojson: dict[str, Any] = {"type": "FeatureCollection", "features": features}
     return revision, geojson, framing_pairs, highlight_framed
-
-
-def density_band_labels_present(
-    pins: tuple[FamilyLocationPin, ...] | list[FamilyLocationPin],
-) -> tuple[int, ...]:
-    """Sorted band indices present on the map (for legend rows)."""
-    pin_list = list(pins)
-    bands = sorted({int(p.density_band_index) for p in pin_list}) if pin_list else []
-    return tuple(i for i in bands if 0 <= i < len(DENSITY_BAND_LABELS))

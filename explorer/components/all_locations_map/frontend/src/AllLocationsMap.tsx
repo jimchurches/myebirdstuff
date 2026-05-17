@@ -986,7 +986,7 @@ function popupHtmlFamilyLayout(name: string, lifelistUrl: string, payload: Famil
   }
   const bodyHtml =
     lineParts.length > 0
-      ? lineParts.join("").replace(/<div/g, "<div").replace(/<\/div>/g, "</div>")
+      ? lineParts.join("")
       : '<div style="opacity:0.7;font-size:0.85em;">No species lines</div>';
   return (
     `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;min-width:12rem;max-width:22rem;">` +

@@ -1,7 +1,7 @@
 """Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab embed.
 
 Map build runs under the first spinner so the map can render before heavy checklist/rankings caches
-(~refs #179). **All locations**, **Lifer locations**, **Species locations**, and **Family locations** use the
+(map builds before heavy checklist/rankings caches). **All locations**, **Lifer locations**, **Species locations**, and **Family locations** use the
 Leaflet Streamlit custom component; other modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so
 other tabs get payloads before fragments run. Partial ``@st.fragment`` reruns do not use this path.
 
@@ -1064,7 +1064,7 @@ def render_prep_spinner_and_map_tab(
                             result_warning = _cached.get("warning")
                         else:
                             perf_record_point("prep.map_cache_miss", extra={"mode": map_view_mode})
-                            # #205 batch 4 I1/I2: collect popup-build vs marker-count split inside
+                            # Perf: split popup-build vs marker-count spans inside
                             # the same perf event. ``perf_span`` stamps ``extra`` by reference at
                             # finalize time, so mutations inside :func:`build_species_overlay_map`
                             # land on the emitted record.

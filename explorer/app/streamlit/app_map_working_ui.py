@@ -465,7 +465,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
 
     # Bump mount nonce when the view mode changes so the Folium iframe remounts with the new map.
     # Do not clear FOLIUM_STATIC_MAP_CACHE_KEY / EXPLORER_MAP_HTML_BYTES_KEY here: the LRU cache key
-    # already includes map_view_mode (#214); clearing defeated reuse across All ↔ Lifer ↔ Species.
+    # already includes map_view_mode; clearing defeated reuse across All ↔ Lifer ↔ Species ↔ Family.
     if _prev_mv is not None and _prev_mv != map_view_mode:
         st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
             st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)

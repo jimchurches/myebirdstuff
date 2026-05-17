@@ -123,6 +123,22 @@ The repo describes Streamlit and caps how much “new stack” we add; all four 
 
 ---
 
+## 14. Family locations — optional polish (deferred)
+
+From PR #228 code review. **Not blocking** merge.
+
+### Cache empty / awaiting-selection payloads
+
+**Gap:** When no family is selected or taxonomy is unavailable, prep rebuilds an empty `FeatureCollection` each rerun without storing it in `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY` (same pattern as Species §13).
+
+**Do:** Optional — store empty payloads in the 4-entry LRU for warm reruns when toggling family/highlight.
+
+### Rebuild frontend after TS one-liners
+
+Any change to `AllLocationsMap.tsx` requires `npm run build` in `frontend/` and committing `frontend/build/` before merge.
+
+---
+
 ## 13. Species locations — optional polish (deferred)
 
 From post–PR #226 code review. **Not blocking** merge; revisit during Folium removal or a perf pass (#205 / §8).
@@ -209,7 +225,8 @@ Production Folium builders call ``add_zoom_level_debug_overlay(...)`` when ``MAP
 2. §11 — zoom debug overlay on component maps.
 3. §7 — export strategy for Leaflet modes.
 4. §10 — documentation pass; optional rename of `all_locations_map` component directory.
-5. Remove or gate Folium map builders; §13 species polish; §8 perf (#205).
+5. Remove or gate Folium map builders; §13–§14 cache polish; §8 perf (#205).
+6. Standalone comments: remaining `refs #NNN` in `map_renderer.py` docstrings (popup HTML builders) — batch cleanup.
 
 ### Useful docs
 
