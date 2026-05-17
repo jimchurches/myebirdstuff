@@ -5,31 +5,26 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 **Related:** [README.md](./README.md) (build, clustering, banner/legend, popups).
 
-**Working principles (#222):** Ship only after all map modes leave Folium. Until then, legacy Folium paths only need to stay runnable for development — defer cross-stack DRY and deep edge-case polish until Folium is removed and one architecture remains.
+**Working principles (#222):** All four Map-tab modes now use the Leaflet component in production prep. Legacy Folium builders remain for tests and optional export paths until §7 — defer cross-stack DRY and deep edge-case polish until Folium is removed.
 
 ---
 
 ### #222 status and rollout (source narrative)
 
-**Where we are (May 2026):** Three map modes are on the **Leaflet custom component** and merged to **`beta-next`**; **Family** is the last Folium map mode:
+**Where we are (May 2026):** All four Map-tab modes are on the **Leaflet custom component**. All locations, Lifer, and Species are merged to **`beta-next`**; **Family** is migrated on branch **`222-family-locations-leaflet`** (PR to `beta-next` pending):
 
 | Map mode | Status | PR (approx.) |
 |----------|--------|----------------|
 | **All locations** | **Done** — §1–5 | #224 |
 | **Lifer locations** | **Done** — §6 (lifer row) | #225 |
 | **Species locations** | **Done** — §6 (species row) | #226 |
-| **Family locations** | **Done** — §6 (family row); dogfood on branch | — |
+| **Family locations** | **Done** — §6 (family row) | PR pending → `beta-next` |
 
-**#222 stays open** until Family (and any remaining Folium map paths) are migrated. This is a **WIP partial** rollout, not “close #222” yet.
+**#222** can close after Family PR merges and dogfoods on `beta-next` (unless you keep it open for §7 export, Folium removal, or §10 docs).
 
-**Integrate onto `beta-next` in batches:** Prefer **several small PRs into `beta-next` only** (per [CONTRIBUTING.md](../../../CONTRIBUTING.md)), **not** one monolith and **not** landing on **`main`** until promotion. Flow: merge slice → dogfood on `beta-next` → next slice.
+**Integrate onto `beta-next` in batches:** Prefer **several small PRs into `beta-next` only** (per [CONTRIBUTING.md](../../../CONTRIBUTING.md)), **not** one monolith and **not** landing on **`main`** until promotion.
 
-**Recommended order for remaining §6 work** (same iframe / patterns as All locations + Lifer + Species):
-
-1. ~~**Family locations**~~ — shipped on branch `222-family-locations-leaflet` (PR to `beta-next` pending).
-2. **Optional in parallel or between maps:** §11 zoom debug overlay (small), §7 export decision, §8 perf (#205) when instrumentation work starts.
-
-**Defer until all maps migrated:** §10 full documentation pass.
+**Next work (post–§6 migration):** §11 zoom debug overlay, §7 export decision, §8 perf (#205), §10 documentation pass, Folium stack removal / DRY.
 
 **Working branch:** **`222-family-locations-leaflet`** (from `beta-next` after #226 merge). The earlier branch **`222-replace-folium-custom-component`** was merged and removed from `origin` during PR #226 — recreate from `beta-next` if you need that name locally.
 
@@ -75,7 +70,7 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 **Legend / banner chrome:** ``.pebird-map-legend`` padding matches the banner (`12px 16px`). All locations iframe: **banner** ``position:fixed`` + ``_BANNER_POSITION`` (16px top/right, Folium parity); **legend** ``STREAMLIT_COMPONENT_MAP_LEGEND_STYLE`` — ``position:absolute``, ``bottom:16px``, ``left:8px`` (frame-relative bottom spacing + viewport-aligned visual left gutter).
 
-**Status:** Closed for All locations; reopen only if attribution clips on a new basemap or Streamlit iframe theme change.
+**Status:** Closed for all component map modes; reopen only if attribution clips on a new basemap or Streamlit iframe theme change.
 
 ---
 
@@ -96,11 +91,13 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 **Species optional polish:** §13 (deferred; not required for Species PR merge).
 
+**Family implementation pointers:** `explorer/core/family_locations_geojson.py`, `explorer/core/map_overlay_family_popups.py`, `family_leaflet_viewport_recipe` in `map_overlay_visit_map.py`, `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY` in `app_constants.py`, family branch in `app_prep_map_ui.py` (`use_family_leaflet`), TS: `family_popup_v1` + `circle_pin` + highlight halo in `AllLocationsMap.tsx`. Banner/legend reuse `build_family_map_banner_overlay_html` / `build_family_map_legend_overlay_html_for_pins` from `family_map_folium.py`. **Payload cache:** 4-entry LRU (family + highlight-species variants). **Export:** cleared on Leaflet family path (§7). Folium `build_family_composition_folium_map` remains for tests. Tests: `tests/explorer/test_family_locations_geojson.py`.
+
 ---
 
 ## 7. Export map HTML
 
-- Export path today serializes Folium. Decide whether All locations on the component needs HTML export or a different artifact.
+- Export path today serializes Folium. All component map modes clear `EXPLORER_MAP_HTML_BYTES_KEY` in prep — sidebar **Export map HTML** is hidden on Leaflet embeds. Decide whether component maps need HTML export or a different artifact.
 
 ---
 
@@ -116,11 +113,11 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 ---
 
-## 10. Repository documentation — custom map architecture (**after all maps migrated**)
+## 10. Repository documentation — custom map architecture
 
-The repo describes Streamlit and caps how much “new stack” we add; All locations (and eventual species / lifer / family) on the **declare_component + committed `frontend/build`** path is materially new vs the prior Folium + `st_folium` mental model.
+The repo describes Streamlit and caps how much “new stack” we add; all four map modes on the **declare_component + committed `frontend/build`** path is materially new vs the prior Folium + `st_folium` mental model.
 
-**When:** After every map mode is on the new architecture (close to ship), not patch-by-patch during migration.
+**When:** After Family PR is on `beta-next` and dogfooded (§6 complete).
 
 **Do:** Audit and refresh **relevant docs** — e.g. root `README` / explorer README, developer guides, `.cursor` commands or rules if they cite Folium-only maps, map build instructions. Replace or branch narrative (Folium vs component), document the component build, cache/revision contract, and where `defaults.py` / prep UI feed the iframe.
 
@@ -128,7 +125,7 @@ The repo describes Streamlit and caps how much “new stack” we add; All locat
 
 ## 13. Species locations — optional polish (deferred)
 
-From post–PR #226 code review. **Not blocking** Species merge; revisit during Family work, Folium removal, or a perf pass (#205 / §8).
+From post–PR #226 code review. **Not blocking** merge; revisit during Folium removal or a perf pass (#205 / §8).
 
 ### Cache banner on payload hit
 
@@ -146,7 +143,7 @@ From post–PR #226 code review. **Not blocking** Species merge; revisit during 
 
 **Gap:** `compute_species_map_banner_fields` in `species_locations_geojson.py` parallels inline banner logic in `build_visit_overlay_map` (Folium species branch). Intentionally duplicated for this slice.
 
-**Do:** Extract one shared helper (or have Folium call the Leaflet-oriented function) when Family lands or when Folium species path is removed — aligns with §12 “Shared Folium/GeoJSON DRY refactor”. Do **not** block Family migration on this.
+**Do:** Extract one shared helper (or have Folium call the Leaflet-oriented function) when Folium species path is removed — aligns with §12 “Shared Folium/GeoJSON DRY refactor”.
 
 ---
 
@@ -154,105 +151,69 @@ From post–PR #226 code review. **Not blocking** Species merge; revisit during 
 
 Production Folium builders call ``add_zoom_level_debug_overlay(...)`` when ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` is true in ``explorer/app/streamlit/defaults.py`` (see ``map_renderer.py``, ``map_overlay_visit_map.py``, ``map_overlay_lifer_map.py``).
 
-**Gap:** Custom component maps (All locations, Lifer, Species) do not yet honour that flag — no live zoom readout in the iframe.
+**Gap:** Custom component maps (All locations, Lifer, Species, Family) do not yet honour that flag — no live zoom readout in the iframe.
 
 **Do:** Pass the flag through component args (or inject the same Leaflet/HTML pattern used by ``add_zoom_level_debug_overlay``) in ``AllLocationsMap.tsx``, and replicate for future component maps so debug behaviour stays one switch in ``defaults.py``.
 
 ---
 
-## 12. Agent handover — Family locations (start here)
+## 12. Agent handover (post–§6 migration)
 
-*Last updated: May 2026 — PR **#226** merged to `beta-next`. New work branch: **`222-family-locations-leaflet`**.*
+*Last updated: May 2026 — **Family locations migrated** on `222-family-locations-leaflet` (PR to `beta-next` pending).*
 
 ### State of play
 
 | Item | Status |
 |------|--------|
-| Issue **#222** | **Open** — closes when Family (last map mode) is on the Leaflet component |
-| Integration branch | **`beta-next`** — All locations (#224), Lifer (#225), Species (#226) |
-| Remaining Folium map | None for live Map tab (Folium builders kept for tests / export until §7) |
-| This TODO file | Living backlog + handover; update as Family ships |
+| Issue **#222** | **Ready to close** after Family PR merges to `beta-next` and dogfoods (all four map modes on Leaflet component) |
+| Integration branch | **`beta-next`** — All locations (#224), Lifer (#225), Species (#226); Family PR pending |
+| Live Map tab | **All modes Leaflet** via `render_all_locations_map_component` |
+| Folium map builders | Kept for unit tests; not used in production prep for Map tab |
+| Working branch | **`222-family-locations-leaflet`** |
 
-**Note:** PR #226 merge deleted remote **`222-replace-folium-custom-component`**. Ongoing #222 work uses **`222-family-locations-leaflet`** branched from current `beta-next` (`4c5762ef` or later).
+### §6 migration — complete
 
-### Goal for the next agent
+| Mode | Leaflet | Key files |
+|------|---------|-----------|
+| All locations | Yes | `all_locations_geojson.py`, `use_all_locations_leaflet` |
+| Lifer | Yes | `lifer_locations_geojson.py`, `use_lifer_leaflet` |
+| Species | Yes | `species_locations_geojson.py`, `use_species_leaflet` |
+| Family | Yes | `family_locations_geojson.py`, `use_family_leaflet` |
 
-**Shipped on branch** `222-family-locations-leaflet`: Family locations use the Leaflet component (`family_locations_geojson.py`, `family_popup_v1`, highlight halo, viewport recipe). Merge PR to `beta-next`, dogfood, then **#222** can close (unless export/docs deferred per §7/§10).
-
-### Where to look first (Family — Folium today)
-
-| Area | Path | What it does |
-|------|------|----------------|
-| Prep / tab wiring | `explorer/app/streamlit/app_prep_map_ui.py` | `map_view_mode == "family"` → `cached_family_map_bundle`, `build_family_composition_folium_map`, banner/legend HTML (~lines 386–480). **No** `use_family_leaflet` yet. |
-| Pin + banner data | `explorer/core/family_map_compute.py` | `filter_work_to_family`, `build_family_location_pins`, `compute_family_map_banner_metrics`, highlight/halo resolution |
-| Folium map builder | `explorer/core/family_map_folium.py` | `build_family_composition_folium_map`, composition circles, highlight species, overlays |
-| Taxonomy bundle cache | `explorer/app/streamlit/app_caches.py` | `cached_family_map_bundle` |
-| Map tab embed | `explorer/app/streamlit/app_map_working_ui.py` | Family export path still Folium |
-
-### Reference implementations (copy the pattern)
-
-Use **Species** as the closest analogue (multiple pin roles, banner, background visit pins, hide/filter semantics). **Lifer** for simpler single-popup-type maps. **All locations** for clustering + `popup_v1` visit cards.
-
-| Step | Species reference | Lifer | All locations |
-|------|-------------------|-------|----------------|
-| GeoJSON + revision | `explorer/core/species_locations_geojson.py` | `lifer_locations_geojson.py` | `all_locations_geojson.py` |
-| Structured popups | `explorer/core/map_overlay_species_popups.py` | `map_overlay_lifer_popups.py` | inline `popup_v1` in geojson |
-| Viewport recipe | `species_leaflet_viewport_recipe` in `map_overlay_visit_map.py` | `lifer_leaflet_viewport_recipe` in `map_overlay_lifer_map.py` | `all_locations_leaflet_viewport_recipe` |
-| Prep flag + cache | `use_species_leaflet`, `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` in `app_prep_map_ui.py` / `app_constants.py` | `use_lifer_leaflet`, `LIFER_*` | `use_all_locations_leaflet`, `ALL_LOCATIONS_*` |
-| TS rendering | `species_popup_v1`, `pin_role`, `circle_pin` in `AllLocationsMap.tsx` | `lifer_popup_v1` | `popup_v1`, clustering |
-| Tests | `tests/explorer/test_species_locations_geojson.py` | `test_lifer_locations_geojson.py` | all-locations tests |
-
-**Shared component entry:** `explorer/components/all_locations_map/__init__.py` → `render_all_locations_map_component`. After TS changes: `cd explorer/components/all_locations_map/frontend && npm ci && npm run build`, then commit `frontend/build/`.
-
-### Suggested implementation order (Family)
-
-1. Read Folium family path end-to-end (`family_map_folium.py` + prep branch) — list pin types, highlight species, composition vs visit pins, legend items.
-2. Add `family_locations_geojson.py` (+ popup payload module if needed) — `revision` / `revision_extra`, per-feature `circle_pin`, structured popup JSON (not HTML×N).
-3. Add `family_leaflet_viewport_recipe` (or reuse visit-map helper if framing matches).
-4. Add `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY` and `use_family_leaflet` in prep; mirror species LRU/cache-key pattern.
-5. Extend `AllLocationsMap.tsx` for family popup template + any new `pin_role` / legend labels.
-6. Unit tests in `tests/explorer/test_family_locations_geojson.py` (or extend species test file pattern).
-7. One PR to `beta-next`; leave Folium builder until cutover verified; hide export on Leaflet until §7 decided.
+**Shared:** `explorer/components/all_locations_map/`, `map_overlay_theme_stylesheet()` in `map_renderer.py`, prep in `app_prep_map_ui.py`. After TS changes: `npm run build` in `frontend/`, commit `frontend/build/`.
 
 ### Session cache keys (`app_constants.py`)
 
-- All locations: `ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`
-- Lifer: `LIFER_LEAFLET_PAYLOAD_CACHE_KEY`
-- Species: `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY`
-- **Family:** add `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY` (name TBD but follow convention)
-- Cleared on dataset signature change in prep (with Folium static map cache).
+- `ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`
+- `LIFER_LEAFLET_PAYLOAD_CACHE_KEY`
+- `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` (2-entry LRU for hide-only toggle)
+- `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY` (4-entry LRU for family + highlight variants)
 
-### Code conventions (from recent batches)
+### Family batch — shipped on branch
 
-- Module docstrings and comments should **stand alone** — do not sprinkle `#222` in inline comments (epic tracking lives here and in commit `Refs:`).
-- Do **not** inject Folium `map_popup_width_fix_script` into the component iframe.
-- Prefer **one map mode per PR** to `beta-next` ([CONTRIBUTING.md](../../../CONTRIBUTING.md)).
+- Leaflet family map: density-band pins, highlight species + halo, `family_popup_v1`, banner + legend (green species links, no underline — Folium parity), viewport with highlight max-zoom, basemap, colour scheme, awaiting-selection / empty states.
+- Banner link CSS fix in `map_banner_and_legend_theme_stylesheet()`.
+- Tests: `tests/explorer/test_family_locations_geojson.py`.
 
-### Species batch — shipped on `beta-next` (#226)
+### Family QA (before/after PR merge)
 
-- Leaflet species map, `species_popup_v1` / visit-only `popup_v1`, pin roles (species / lifer / last seen / default), banner + legend, hide-non-matching (2-entry payload LRU), go-to-GPS, basemap, colour scheme, popup width measure for short headings.
-- Docstring cleanup commit; tests: `compute_species_map_banner_fields`, hide-only, pin roles — `tests/explorer/test_species_locations_geojson.py`.
+- [x] Pins, popups, banner, legend, basemap, colour scheme, highlight species
+- [x] Banner/legend species hyperlink styling (green, no underline)
+- [ ] No family selected → blank + hint
+- [ ] Family change + highlight-species toggle (warm cache)
+- [ ] Spot-check other map modes after shared CSS change
 
-### Species QA (optional retest on `beta-next`)
+### Suggested next tasks (after Family on `beta-next`)
 
-- [x] Core pins, popups, banner, legend, basemap, colour scheme
-- [x] No species selected, hide-non-matching, no-sightings warning
-- [ ] Mark lifer / mark last seen toggles
-- [ ] Warm revisit / tab switch
-- [ ] All locations popup width spot-check after shared measure change
-
-### Deferred (OK to skip during Family migration)
-
-- Export map HTML on Leaflet modes (§7) — Folium Family still exports until cutover.
-- Zoom debug overlay on component maps (§11).
-- Species cache/banner polish (§13).
-- Shared Folium/GeoJSON DRY (§12 / §13).
-- Perf harness (#205 / §8).
-- Rename component directory from `all_locations_map` (after all maps).
+1. Merge **`222-family-locations-leaflet`** → `beta-next`, dogfood, close **#222** (or keep open for cleanup epic).
+2. §11 — zoom debug overlay on component maps.
+3. §7 — export strategy for Leaflet modes.
+4. §10 — documentation pass; optional rename of `all_locations_map` component directory.
+5. Remove or gate Folium map builders; §13 species polish; §8 perf (#205).
 
 ### Useful docs
 
 - [README.md](./README.md) — build, clustering, popups.
 - [docs/AI_CONTEXT.md](../../../docs/AI_CONTEXT.md) — Streamlit vs core, caching, small PRs.
 - `.cursor/commands/code-review.md` — naming and comment standards.
-- GitHub issue **#222** — umbrella; partial PRs do not close it until Family ships.
+- GitHub issue **#222** — umbrella for the Folium → Leaflet migration.
