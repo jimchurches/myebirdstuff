@@ -120,6 +120,7 @@ from explorer.core.map_prep import (
 from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
 from explorer.core.species_logic import base_species_for_lifer, filter_species
 from explorer.core.family_map_compute import (
+    build_common_name_to_species_url,
     build_family_location_pins,
     compute_family_map_banner_metrics,
     filter_work_to_family,
@@ -456,6 +457,15 @@ def render_prep_spinner_and_map_tab(
                                 wf,
                                 highlight_base_species=hl or None,
                             )
+                            family_species_url_by_common = (
+                                build_common_name_to_species_url(
+                                    wf,
+                                    tax_merged,
+                                    fallback_fn=species_url_fn,
+                                )
+                                if tax_merged is not None and not getattr(tax_merged, "empty", True)
+                                else {}
+                            )
                             base_to_common = bundle.get("base_to_common") or {}
                             hl_label = (base_to_common.get(hl) or hl) if hl else ""
                             sel_counts = (
@@ -530,6 +540,7 @@ def render_prep_spinner_and_map_tab(
                                     f"https://ebird.org/lifelist/{lid}" if lid else None
                                 ),
                                 species_url_fn=species_url_fn,
+                                species_url_by_common=family_species_url_by_common or None,
                                 fit_bounds_highlight_only=bool(hl),
                                 revision_extra=revision_extra_json,
                             )

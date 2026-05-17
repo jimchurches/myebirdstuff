@@ -218,9 +218,13 @@ def map_popup_theme_stylesheet() -> str:
   line-height: inherit;
   font-weight: 400;
   color: {EXPLORER_UI_TEXT_COLOR};
-  overflow-wrap: anywhere;
-  word-break: break-word;
   max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}}
+.pebird-map-popup__species-line a {{
+  overflow-wrap: normal;
+  word-break: normal;
 }}
 .pebird-map-popup__heading-row + .pebird-map-popup__species-line {{
   margin-top: 0.2rem;
@@ -321,7 +325,7 @@ def map_popup_width_fix_script() -> str:
     void inner.offsetWidth;
     var w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
     var wide = inner.querySelectorAll(
-      '.pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, .pebird-map-popup__species-line, .pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary'
+      '.pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, .pebird-map-popup__species-line, .pebird-map-popup__species-line a, .pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary'
     );
     for (var i = 0; i < wide.length; i++) {{
       var el = wide[i];

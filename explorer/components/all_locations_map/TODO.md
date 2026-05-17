@@ -130,16 +130,18 @@ Audit (May 2026): all four Leaflet modes share `map_popup_theme_stylesheet()` + 
 ### Shipped in this backlog
 
 - **Family body text (§15 item 2):** Species list rows use `pebird-map-popup__species-line` (inherit base size); empty state uses `pebird-map-popup__summary-line` (muted). Folium `format_family_location_popup_html` + TS `popupHtmlFamilyLayout` updated.
+- **Family species line wrap (§15 width cap):** Removed `max-width:22rem` card cap; species lines use `white-space: nowrap` + horizontal scroll on overflow (visit-list pattern). Popup width grows via shrink-wrap measure.
 
 ### Still deferred (design / cross-mode pass)
 
 | Item | Maps | Notes |
 |------|------|--------|
 | **Heading margin below title** | All 4 | All/Lifer/Family **4px**; Species **6px** (intentional in Folium). Lifer Folium used **2px** — Leaflet Lifer still **4px**. Pick one default or document exceptions. |
-| **Family popup width cap** | Family | Inline `min-width:12rem; max-width:22rem` on card — narrower than other modes’ shrink-wrap. Drop or align with `MAP_POPUP_MAX_WIDTH_PX`. |
+| ~~**Family popup width cap**~~ | Family | **Done** — removed 22rem cap; species names nowrap (May 2026). |
 | **Section labels** | Lifer, Family | No `Visited:` / `<details>` chrome (content-driven); All + Species use `__section-label`. OK structurally; revisit if we want uniform “data block” labels. |
 | **Species-only CSS in TS file** | Species | `obs-line`, `species-seen`, chevrons live in Python `map_popup_theme_stylesheet` only; component relies on injected theme. Copy into `AllLocationsMapPopup.css` when Folium is removed. |
 | **Lifer line format** | Lifer | `Species : date` in one link vs All locations visit rows — content, not typography. |
+| **Species map — long location heading** | Species | **Reported May 2026** (e.g. Hooded Robin at “Nombinnie Nature Reserve (East)--Euabalong-Mount Hope Rd …”): location title uses `pebird-map-popup__location-heading` with `white-space: nowrap` and shrink-wrap width; very long names run to the popup edge / under the close control with little or no visible right margin — no wrap. Revisit with cross-map heading rules: optional wrap, stronger `padding-right` on `__heading-row`, or horizontal scroll on the title row (All locations already scrolls the heading row in some cases). Not a Family-map issue. |
 
 **Files:** `AllLocationsMap.tsx` (layouts), `AllLocationsMapPopup.css`, `map_renderer.py` (`map_popup_theme_stylesheet`), `family_map_compute.py`, `map_popup_models.py` (Species margin default 6).
 

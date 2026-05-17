@@ -47,6 +47,27 @@ def test_family_leaflet_viewport_highlight_max_zoom():
     assert vp["max_zoom"] == int(MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT)
 
 
+def test_build_family_geojson_uses_species_url_by_common():
+    pins = _sample_pins()
+    sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
+    _rev, gj, _framing, _hl = build_family_locations_geojson_payload(
+        pins,
+        visit_marker_scheme=sch,
+        location_page_url_fn=lambda lid: f"https://ebird.org/lifelist/{lid}",
+        species_url_fn=lambda _c: None,
+        species_url_by_common={"A": "https://ebird.org/species/aaa", "C": "https://ebird.org/species/ccc"},
+        fit_bounds_highlight_only=False,
+        revision_extra="{}",
+    )
+    feat_a = next(f for f in gj["features"] if f["properties"]["location_id"] == "L1")
+    lines = feat_a["properties"]["family_popup_v1"]["species_lines"]
+    by_name = {ln["name"]: ln["species_href"] for ln in lines}
+    assert by_name["A"] == "https://ebird.org/species/aaa"
+    assert by_name["B"] == ""
+    feat_c = next(f for f in gj["features"] if f["properties"]["location_id"] == "L2")
+    assert feat_c["properties"]["family_popup_v1"]["species_lines"][0]["species_href"] == "https://ebird.org/species/ccc"
+
+
 def test_build_family_geojson_pins_and_highlight_framing():
     pins = _sample_pins()
     sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)

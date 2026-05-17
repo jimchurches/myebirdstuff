@@ -29,10 +29,14 @@ from explorer.core.map_overlay_family_popups import family_popup_v1_payload
 def _species_url_map_for_pin(
     pin: FamilyLocationPin,
     species_url_fn: Callable[[str], str | None],
+    species_url_by_common: dict[str, str] | None = None,
 ) -> dict[str, str]:
+    global_map = species_url_by_common or {}
     out: dict[str, str] = {}
     for line in pin.common_name_lines:
-        u = species_url_fn(line)
+        u = global_map.get(line) or global_map.get(line.strip())
+        if not u:
+            u = species_url_fn(line)
         if u:
             out[line] = u
     return out
@@ -76,6 +80,7 @@ def build_family_locations_geojson_payload(
     visit_marker_scheme: MapMarkerColourScheme,
     location_page_url_fn: Callable[[str], str | None],
     species_url_fn: Callable[[str], str | None],
+    species_url_by_common: dict[str, str] | None = None,
     fit_bounds_highlight_only: bool,
     revision_extra: str = "",
 ) -> tuple[str | None, dict[str, Any] | None, list[list[float]], bool]:
@@ -110,7 +115,7 @@ def build_family_locations_geojson_payload(
     for pin in ordered:
         lid_s = str(pin.location_id)
         loc_url = location_page_url_fn(lid_s) if location_page_url_fn else None
-        url_map = _species_url_map_for_pin(pin, species_url_fn)
+        url_map = _species_url_map_for_pin(pin, species_url_fn, species_url_by_common)
         props: dict[str, Any] = {
             "location_id": lid_s,
             "name": pin.location_name or lid_s,

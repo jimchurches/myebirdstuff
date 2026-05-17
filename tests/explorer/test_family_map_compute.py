@@ -8,6 +8,7 @@ from explorer.core.family_map_compute import (
     FamilyMapBannerMetrics,
     FamilyLocationPin,
     base_species_to_common_from_taxonomy,
+    build_common_name_to_species_url,
     build_family_location_pins,
     compute_family_map_banner_metrics,
     families_recorded_alphabetically,
@@ -240,6 +241,39 @@ def test_base_species_to_common_from_taxonomy():
     d = base_species_to_common_from_taxonomy(tax)
     assert d["aa bb"] == "A"
     assert d["cc dd"] == "C"
+
+
+def test_build_common_name_to_species_url_via_base_not_taxonomy_common_name():
+    """Checklist common names link via ``_base`` → ``species_code`` (Families table parity)."""
+    work = pd.DataFrame(
+        {
+            "Common Name": ["Scarlet Robin (Campbell's)", "Scarlet Robin (Campbell's)"],
+            "_base": ["petroica campbelli", "petroica campbelli"],
+        }
+    )
+    tax = pd.DataFrame(
+        {
+            "base_species": ["petroica campbelli"],
+            "species_code": ["scarob2"],
+            "common_name": ["Campbell's Robin"],
+            "group_name": ["Australasian Robins"],
+        }
+    )
+    urls = build_common_name_to_species_url(work, tax, fallback_fn=lambda _: None)
+    assert urls["Scarlet Robin (Campbell's)"] == "https://ebird.org/species/scarob2"
+
+
+def test_build_common_name_to_species_url_falls_back_to_fn():
+    work = pd.DataFrame({"Common Name": ["Mystery Bird"], "_base": ["unknownus species"]})
+    tax = pd.DataFrame(
+        {"base_species": ["other sp"], "species_code": ["othsp1"], "common_name": ["Other"]}
+    )
+    urls = build_common_name_to_species_url(
+        work,
+        tax,
+        fallback_fn=lambda n: "https://ebird.org/species/fallback" if n == "Mystery Bird" else None,
+    )
+    assert urls["Mystery Bird"] == "https://ebird.org/species/fallback"
 
 
 def test_format_family_location_popup_html_links():

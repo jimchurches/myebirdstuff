@@ -174,9 +174,14 @@
   line-height: inherit;
   font-weight: 400;
   color: var(--pebird-ui-text);
-  overflow-wrap: anywhere;
-  word-break: break-word;
   max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.pebird-map-popup__species-line a {
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .pebird-map-popup__heading-row + .pebird-map-popup__species-line {
