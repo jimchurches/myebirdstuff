@@ -13,22 +13,19 @@ from explorer.presentation.map_popup_models import (
     assemble_location_popup_html,
     assemble_species_map_location_popup_html,
 )
-from explorer.presentation.map_renderer import (
-    MAP_POPUP_MACAULAY_LINK_SYMBOL,
-    esc_attr,
-    esc_text,
-)
+from explorer.presentation.map_renderer import MAP_POPUP_MACAULAY_LINK_SYMBOL, esc_attr, esc_text
+from explorer.presentation.stats_html_helpers import safe_http_url
 
 _HEADING_MARGIN_ALL = 4
 
 
 def _lifelist_href(lifelist_url: str, loc_id: str | None = None) -> str:
-    u = str(lifelist_url or "").strip()
+    u = safe_http_url(lifelist_url)
     if u:
         return u
     lid = str(loc_id or "").strip()
     if lid:
-        return f"https://ebird.org/lifelist/{esc_attr(lid)}"
+        return safe_http_url(f"https://ebird.org/lifelist/{lid}")
     return ""
 
 
@@ -46,7 +43,7 @@ def _loc_id_from_props(props: dict[str, Any]) -> str:
 def _visit_entries_html(entries: list[dict[str, str]]) -> str:
     parts: list[str] = []
     for e in entries:
-        href = str(e.get("href") or "").strip()
+        href = safe_http_url(str(e.get("href") or ""))
         label = esc_text(str(e.get("label") or href or "—"))
         if href:
             parts.append(
@@ -59,9 +56,9 @@ def _visit_entries_html(entries: list[dict[str, str]]) -> str:
 
 def _species_obs_line(obs: dict[str, Any]) -> str:
     dt = esc_text(str(obs.get("datetime_label") or "—").strip())
-    href = str(obs.get("checklist_href") or "").strip()
+    href = safe_http_url(str(obs.get("checklist_href") or ""))
     count = esc_text(str(obs.get("observed_count") or "").strip())
-    media = str(obs.get("media_href") or "").strip()
+    media = safe_http_url(str(obs.get("media_href") or ""))
     if href:
         line = (
             f'<a href="{esc_attr(href)}" target="_blank" rel="noopener noreferrer">{dt}</a>'
@@ -102,7 +99,7 @@ def _lifer_popup_html(name: str, lifelist_url: str, payload: dict[str, Any]) -> 
             continue
         label = esc_text(str(row.get("label") or "—"))
         date_s = esc_text(str(row.get("date") or "?"))
-        href = str(row.get("checklist_href") or "").strip()
+        href = safe_http_url(str(row.get("checklist_href") or ""))
         prefix = "<br>" if i else ""
         if href:
             inner_parts.append(
@@ -134,7 +131,7 @@ def _family_popup_html(name: str, lifelist_url: str, payload: dict[str, Any]) ->
         n = esc_text(str(row.get("name") or "").strip())
         if not n:
             continue
-        href = str(row.get("species_href") or "").strip()
+        href = safe_http_url(str(row.get("species_href") or ""))
         if href:
             line_html.append(
                 f'<div class="pebird-map-popup__species-line"><a href="{esc_attr(href)}" '
@@ -220,7 +217,7 @@ def _popup_v1_html(name: str, lifelist_url: str, popup: dict[str, Any]) -> str:
     for link in links:
         if not isinstance(link, dict):
             continue
-        href = str(link.get("href") or "").strip()
+        href = safe_http_url(str(link.get("href") or ""))
         label = esc_text(str(link.get("label") or "Link"))
         if href:
             body_parts.append(

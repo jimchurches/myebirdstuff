@@ -6,6 +6,24 @@ from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_by
 from explorer.presentation.popup_v1_export_html import popup_export_html_from_properties
 
 
+def test_popup_export_html_blocks_javascript_href():
+    html = popup_export_html_from_properties(
+        {
+            "name": "Evil",
+            "lifelist_url": "https://ebird.org/lifelist/L1",
+            "popup_v1": {
+                "v": 1,
+                "visited": {
+                    "label": "Visited:",
+                    "entries": [{"label": "bad", "href": "javascript:alert(1)"}],
+                },
+            },
+        }
+    )
+    assert "javascript:" not in html
+    assert "pebird-map-popup__visit-link-text" in html
+
+
 def test_popup_export_html_all_locations_visited():
     html = popup_export_html_from_properties(
         {

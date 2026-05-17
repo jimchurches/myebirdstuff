@@ -5,9 +5,11 @@ Map build runs under the first spinner so the map can render before heavy checkl
 Leaflet Streamlit custom component; other modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so
 other tabs get payloads before fragments run. Partial ``@st.fragment`` reruns do not use this path.
 
-**Export map HTML** (Folium path only) uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
-**deep-copied** Folium map (``branca`` mutates on render), with ``html_bytes`` cached on hit. Leaflet
-component modes clear ``EXPLORER_MAP_HTML_BYTES_KEY`` — no parallel Folium build for export (#222 §7).
+**Export map HTML:** Leaflet modes use
+:func:`~explorer.presentation.leaflet_map_html_export.leaflet_map_to_html_bytes` with bytes cached under
+:data:`LEAFLET_EXPORT_HTML_CACHE_KEY` (revision + basemap, viewport, banner/legend, etc.). Folium modes use
+:func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a **deep-copied** map, with ``html_bytes``
+cached on the map LRU hit.
 The live
 Folium map uses **streamlit-folium** ``st_folium`` with a **deep copy** of the cached map so embed
 rendering cannot strip layers from the session cache. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY`
@@ -38,6 +40,7 @@ from explorer.app.streamlit.app_caches import (
 from explorer.app.streamlit.app_constants import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
     FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
+    LEAFLET_EXPORT_HTML_CACHE_KEY,
     LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
     EBIRD_DATA_SIG_KEY,
@@ -74,6 +77,7 @@ from explorer.app.streamlit.checklist_stats_streamlit_html import (
 from explorer.app.streamlit.country_stats_streamlit_html import sync_country_tab_session_inputs
 from explorer.app.streamlit.maintenance_streamlit_html import sync_maintenance_tab_session_inputs
 from explorer.app.streamlit.map_working import folium_map_to_html_bytes
+from explorer.presentation.leaflet_map_export_cache import leaflet_export_html_cache_key
 from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
 from explorer.app.streamlit.rankings_streamlit_html import (
     build_rankings_tab_bundle,
@@ -171,6 +175,28 @@ _MAP_RENDER_CACHE_MAX_ENTRIES = 6
 # Species map: cache hide-only vs all-locations payloads separately (toggle thrashes a single slot).
 _SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
 _FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
+_LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES = 6
+
+
+def _leaflet_export_html_cache_lookup(cache_key: tuple[str, ...]) -> bytes | None:
+    cached = st.session_state.get(LEAFLET_EXPORT_HTML_CACHE_KEY)
+    if isinstance(cached, OrderedDict):
+        entry = cached.get(cache_key)
+        if isinstance(entry, (bytes, bytearray)):
+            cached.move_to_end(cache_key)
+            return bytes(entry)
+    return None
+
+
+def _leaflet_export_html_cache_store(cache_key: tuple[str, ...], html_bytes: bytes) -> None:
+    cached = st.session_state.get(LEAFLET_EXPORT_HTML_CACHE_KEY)
+    if not isinstance(cached, OrderedDict):
+        cached = OrderedDict()
+    cached[cache_key] = html_bytes
+    cached.move_to_end(cache_key)
+    while len(cached) > _LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES:
+        cached.popitem(last=False)
+    st.session_state[LEAFLET_EXPORT_HTML_CACHE_KEY] = cached
 
 
 def _leaflet_payload_cache_lookup(
@@ -298,6 +324,7 @@ def render_prep_spinner_and_map_tab(
                     st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
                     st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
                     st.session_state.pop(FAMILY_LEAFLET_PAYLOAD_CACHE_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_HTML_CACHE_KEY, None)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None
@@ -1122,19 +1149,39 @@ def render_prep_spinner_and_map_tab(
                     and leaflet_cluster_opts is not None
                     and leaflet_circle_style is not None
                 ):
-                    with perf_span("prep.leaflet_map_to_html_bytes"):
-                        st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = leaflet_map_to_html_bytes(
-                            geojson=leaflet_geojson,
-                            height=int(map_height),
-                            map_style=map_style,
-                            cluster_options=leaflet_cluster_opts,
-                            circle_marker_style=leaflet_circle_style,
-                            cluster_icon_style=leaflet_cluster_icon_style or {},
-                            viewport=leaflet_viewport or {},
-                            map_theme_css=map_overlay_theme_stylesheet(),
-                            banner_html=all_locations_leaflet_banner_html,
-                            legend_html=all_locations_leaflet_legend_html,
-                        )
+                    _export_cache_key = leaflet_export_html_cache_key(
+                        leaflet_revision=leaflet_revision,
+                        map_height=int(map_height),
+                        map_style=map_style,
+                        cluster_options=leaflet_cluster_opts,
+                        circle_marker_style=leaflet_circle_style,
+                        cluster_icon_style=leaflet_cluster_icon_style or {},
+                        viewport=leaflet_viewport or {},
+                        map_theme_css=map_overlay_theme_stylesheet(),
+                        banner_html=all_locations_leaflet_banner_html,
+                        legend_html=all_locations_leaflet_legend_html,
+                    )
+                    _cached_export_html = _leaflet_export_html_cache_lookup(_export_cache_key)
+                    if _cached_export_html is not None:
+                        perf_record_point("prep.leaflet_map_html_cache_hit")
+                        st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = _cached_export_html
+                    else:
+                        perf_record_point("prep.leaflet_map_html_cache_miss")
+                        with perf_span("prep.leaflet_map_to_html_bytes"):
+                            _built_export_html = leaflet_map_to_html_bytes(
+                                geojson=leaflet_geojson,
+                                height=int(map_height),
+                                map_style=map_style,
+                                cluster_options=leaflet_cluster_opts,
+                                circle_marker_style=leaflet_circle_style,
+                                cluster_icon_style=leaflet_cluster_icon_style or {},
+                                viewport=leaflet_viewport or {},
+                                map_theme_css=map_overlay_theme_stylesheet(),
+                                banner_html=all_locations_leaflet_banner_html,
+                                legend_html=all_locations_leaflet_legend_html,
+                            )
+                        st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = _built_export_html
+                        _leaflet_export_html_cache_store(_export_cache_key, _built_export_html)
                 elif result_warning:
                     map_warning_text = result_warning
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)

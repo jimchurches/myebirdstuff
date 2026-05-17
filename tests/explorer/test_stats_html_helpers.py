@@ -7,6 +7,7 @@ from explorer.presentation.stats_html_helpers import (
     a_external,
     esc_attr,
     esc_text,
+    safe_http_url,
     td_plain,
     th_plain,
     tr_row,
@@ -42,3 +43,22 @@ def test_a_external_escapes_and_attributes():
     assert "Bird &amp; co" in html
     assert 'target="_blank"' in html
     assert "noopener" in html
+
+
+def test_safe_http_url_accepts_http_and_https():
+    assert safe_http_url("https://ebird.org/checklist/S1") == "https://ebird.org/checklist/S1"
+    assert safe_http_url("  http://example.com/x  ") == "http://example.com/x"
+
+
+def test_safe_http_url_rejects_non_http_schemes():
+    assert safe_http_url("") == ""
+    assert safe_http_url("javascript:alert(1)") == ""
+    assert safe_http_url("data:text/html,hi") == ""
+    assert safe_http_url("//evil.example/") == ""
+    assert safe_http_url("/relative/path") == ""
+
+
+def test_a_external_unsafe_href_renders_plain_text():
+    html = a_external("javascript:alert(1)", "Click me")
+    assert "<a " not in html
+    assert html == "Click me"

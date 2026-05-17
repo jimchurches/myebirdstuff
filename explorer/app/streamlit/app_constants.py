@@ -221,6 +221,8 @@ LIFER_LEAFLET_PAYLOAD_CACHE_KEY = "_lifer_leaflet_payload_cache_v1"
 SPECIES_LEAFLET_PAYLOAD_CACHE_KEY = "_species_leaflet_payload_cache_v1"
 # Leaflet custom map (Family locations).
 FAMILY_LEAFLET_PAYLOAD_CACHE_KEY = "_family_leaflet_payload_cache_v1"
+# Leaflet export HTML (``leaflet_map_to_html_bytes``) keyed by revision + overlay inputs.
+LEAFLET_EXPORT_HTML_CACHE_KEY = "_leaflet_export_html_cache_v1"
 # Go to GPS — session-only temporary marker (refs #199); never persisted to YAML.
 SESSION_GO_TO_GPS_PIN_KEY = "_session_go_to_gps_pin"
 STREAMLIT_GO_TO_GPS_DRAFT_LAT_TEXT_KEY = "_streamlit_go_to_gps_draft_lat_txt"

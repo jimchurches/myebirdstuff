@@ -103,11 +103,21 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 **No dual stack:** Folium builders are not run for export on Leaflet paths.
 
+### Testing
+
+**Shipped:** `tests/explorer/test_leaflet_map_html_export.py` — all-locations ``popup_v1``, ``javascript:`` href blocked, integration smoke; `tests/explorer/test_leaflet_map_export_cache.py` — export cache keys; `tests/explorer/test_stats_html_helpers.py` — ``safe_http_url``.
+
+**Do (export popup HTML):**
+
+- Add tests for ``lifer_popup_v1``, ``family_popup_v1``, and ``species_popup_v1`` via ``popup_export_html_from_properties`` (minimal fixture per mode; assert mode-specific markup classes / structure).
+- **Optional:** Assert banner/legend fragments passed to ``leaflet_map_to_html_bytes`` appear in the decoded HTML (e.g. ``pebird-map-banner``, ``pebird-map-legend`` inside ``pebird-export-map-host``).
+
 ---
 
 ## 8. Performance / benchmarks (#205)
 
 - Optional: extend map perf harness / snapshots for the component path vs Folium HTML size and interaction.
+- ~~**Leaflet export HTML cache (§7 follow-up):**~~ **Done** — ``LEAFLET_EXPORT_HTML_CACHE_KEY`` LRU (6 entries) keyed by ``leaflet_export_html_cache_key`` (revision + height, basemap, cluster/circle/viewport, theme, banner, legend). Warm reruns emit ``prep.leaflet_map_html_cache_hit``; cleared on eBird data signature change.
 
 ---
 
