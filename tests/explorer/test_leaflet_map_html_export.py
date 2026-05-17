@@ -55,3 +55,5 @@ def test_leaflet_map_to_html_bytes_includes_viewer_and_geojson():
     assert "export_popup_html" in text
     assert "Pin A" in text
     assert "pebird-export-map" in text
+    assert "pebird-export-map-host" in text
+    assert "pebird-export-shell" in text

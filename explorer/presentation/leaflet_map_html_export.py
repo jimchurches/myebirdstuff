@@ -99,10 +99,14 @@ def leaflet_map_to_html_bytes(
 </style>
 </head>
 <body>
+<div class="pebird-export-shell">
+<div class="pebird-export-map-host">
 {banner}
 <div id="pebird-export-map"></div>
 {legend}
+</div>
 <p class="pebird-export-meta">Exported from Personal eBird Explorer — map tiles load from the internet.</p>
+</div>
 <script type="application/json" id="pebird-map-export-config">{config_json}</script>
 <script src="{_LEAFLET_JS}"></script>
 <script src="{_CLUSTER_JS}"></script>

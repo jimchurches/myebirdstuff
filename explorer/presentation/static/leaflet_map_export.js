@@ -131,8 +131,6 @@
     var cfg = JSON.parse(el.textContent || "{}");
     var mapNode = document.getElementById("pebird-export-map");
     if (!mapNode) return;
-    var h = Number(cfg.height) || 500;
-    mapNode.style.height = h + "px";
     var map = L.map(mapNode, { zoomControl: true, attributionControl: true });
     mapNode.classList.add("pebird-export-map-pane");
     var bm = basemap(cfg.map_style);
@@ -228,7 +226,13 @@
       );
       gm.addTo(map);
     }
-    map.invalidateSize();
+    function bumpSize() {
+      map.invalidateSize({ debounceMoveend: true });
+    }
+    bumpSize();
+    window.addEventListener("resize", bumpSize);
+    requestAnimationFrame(bumpSize);
+    setTimeout(bumpSize, 100);
   }
 
   if (document.readyState === "loading") {
