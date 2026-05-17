@@ -1,17 +1,17 @@
 """Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab embed.
 
 Map build runs under the first spinner so the map can render before heavy checklist/rankings caches
-(~refs #179). **All locations** and **Lifer locations** use the Leaflet Streamlit custom component (#222); other
-modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so other tabs get payloads before
-fragments run. Partial ``@st.fragment`` reruns do not use this path.
+(~refs #179). **All locations**, **Lifer locations**, and **Species locations** use the Leaflet Streamlit
+custom component; other modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so
+other tabs get payloads before fragments run. Partial ``@st.fragment`` reruns do not use this path.
 
 **Export map HTML** uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
 **deep-copied** Folium map (``branca`` mutates on render), with ``html_bytes`` cached on hit. The live
 Folium map uses **streamlit-folium** ``st_folium`` with a **deep copy** of the cached map so embed
 rendering cannot strip layers from the session cache. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY`
-stores unrendered Folium :class:`folium.Map` entries for the LRU. All-locations Leaflet payloads are
-cached under :data:`ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`, :data:`LIFER_LEAFLET_PAYLOAD_CACHE_KEY`,
-and :data:`SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` (#222).
+stores unrendered Folium :class:`folium.Map` entries for the LRU. Leaflet GeoJSON payloads are cached under
+:data:`ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`, :data:`LIFER_LEAFLET_PAYLOAD_CACHE_KEY`, and
+:data:`SPECIES_LEAFLET_PAYLOAD_CACHE_KEY`.
 """
 
 from __future__ import annotations

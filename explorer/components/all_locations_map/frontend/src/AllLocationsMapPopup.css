@@ -1,6 +1,6 @@
 /**
  * Mirrors ``map_popup_theme_stylesheet`` in explorer/presentation/map_renderer.py
- * so experimental Leaflet popups match production All locations (#221 parity).
+ * so experimental Leaflet popups match production All locations.
  * Keep MAP_POPUP_MAX_WIDTH_PX in sync with explorer/app/streamlit/defaults.py (420).
  */
 :root {
@@ -34,7 +34,7 @@
   width: 100%;
   min-width: 0;
   max-width: min(var(--pebird-map-popup-max-width), calc(100vw - 40px), 100%);
-  /* Prefer breaking at spaces; inherited ``word-break: break-word`` was splitting headings mid-coordinates (#222). */
+  /* Prefer breaking at spaces; inherited ``word-break: break-word`` was splitting headings mid-coordinates. */
   overflow-wrap: break-word;
   word-break: normal;
   box-sizing: border-box;
@@ -63,7 +63,7 @@
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  /* Match heading-row clearance so short titles and long visit rows share the same right column (#222). */
+  /* Match heading-row clearance so short titles and long visit rows share the same right column. */
   padding-right: 2rem;
 }
 
@@ -125,7 +125,7 @@
   padding: 0;
   max-width: 100%;
   overflow-x: auto;
-  /* Links stay inline like Folium — ``<br>`` between rows. ``display:block`` + ``<br>`` doubled gaps (#222). */
+  /* Links stay inline like Folium — ``<br>`` between rows. ``display:block`` + ``<br>`` doubled gaps. */
   line-height: 1.45;
 }
 
@@ -177,7 +177,7 @@
   font-weight: 400;
 }
 
-/* Go to GPS — Folium ``_apply_go_to_gps_pin_view`` red pin (#222). */
+/* Go to GPS — Folium ``_apply_go_to_gps_pin_view`` red pin. */
 .all-locations-gps-marker {
   background: transparent !important;
   border: none !important;

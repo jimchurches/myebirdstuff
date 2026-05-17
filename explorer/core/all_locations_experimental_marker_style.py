@@ -1,4 +1,4 @@
-"""Resolved Folium-equivalent All locations pin styling for the Leaflet map (#221 / #222)."""
+"""Resolved Folium-equivalent All locations pin styling for the Leaflet map."""
 
 from __future__ import annotations
 

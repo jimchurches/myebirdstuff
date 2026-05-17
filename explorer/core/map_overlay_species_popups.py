@@ -1,4 +1,4 @@
-"""Structured species-map popup payloads for the Leaflet component (#222).
+"""Structured species-map popup payloads for the Leaflet component.
 
 Parallels :func:`~explorer.presentation.map_renderer.build_species_map_location_popup_html` and
 :func:`~explorer.presentation.map_renderer.build_species_seen_sections_html` without pre-rendered HTML.

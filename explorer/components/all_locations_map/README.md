@@ -1,4 +1,4 @@
-# All locations map — Streamlit component (spike #221)
+# All locations map — Streamlit component
 
 **Backlog / ordered TODO:** [TODO.md](./TODO.md) (viewport parity, basemap control, export, perf, …).
 
@@ -25,15 +25,15 @@ Clustering uses **Leaflet.markercluster** with defaults aligned to `explorer/app
 
 The sidebar **cluster all locations** toggle is passed as `cluster_options.enabled`; full cluster JSON is mixed into the GeoJSON **revision** hash so toggling clustering bumps revision and reloads the overlay.
 
-**Pins:** `circle_marker_style` comes from Python via the same resolver as Folium **All locations**; the sidebar marker scheme index is honoured in production (#222).
+**Pins:** `circle_marker_style` comes from Python via the same resolver as Folium **All locations**; the sidebar marker scheme index is honoured in production.
 
 ## Banner + legend inside the iframe (same as Folium)
 
-Folium injects ``map_overlay_theme_stylesheet`` plus banner/legend HTML **into the map document** so ``position:fixed`` anchors to the map viewport (top-right banner, bottom-left legend). The Streamlit component passes the same theme stylesheet (no Folium shrink script — width is finalized in TS only), ``build_all_locations_banner_html``, and ``build_legend_html`` as component args; React injects CSS into the iframe ``document`` and renders overlay HTML **siblings** of the Leaflet pane so chrome matches beta-next (#222). The Python stylesheet is **two** ``<style>`` blocks concatenated (popup + banner/legend); the component merges their inner CSS into one ``<style>`` node so the browser does not terminate the sheet at the first ``</style>`` token.
+Folium injects ``map_overlay_theme_stylesheet`` plus banner/legend HTML **into the map document** so ``position:fixed`` anchors to the map viewport (top-right banner, bottom-left legend). The Streamlit component passes the same theme stylesheet (no Folium shrink script — width is finalized in TS only), ``build_all_locations_banner_html``, and ``build_legend_html`` as component args; React injects CSS into the iframe ``document`` and renders overlay HTML **siblings** of the Leaflet pane so chrome matches beta-next. The Python stylesheet is **two** ``<style>`` blocks concatenated (popup + banner/legend); the component merges their inner CSS into one ``<style>`` node so the browser does not terminate the sheet at the first ``</style>`` token.
 
 ## Popup anchor vs iframe size
 
-If popups open offset from CircleMarkers, the usual cause is Leaflet measuring the map **before** the Streamlit iframe gets its final height. The component attaches a ``ResizeObserver`` on the outer wrapper and calls ``invalidateSize`` (plus a few delayed bumps) after updates (#222).
+If popups open offset from CircleMarkers, the usual cause is Leaflet measuring the map **before** the Streamlit iframe gets its final height. The component attaches a ``ResizeObserver`` on the outer wrapper and calls ``invalidateSize`` (plus a few delayed bumps) after updates.
 
 ## Pop-ups / eBird richness (design)
 

@@ -119,7 +119,7 @@ def all_locations_leaflet_viewport_recipe(
     all_locations_location_country: dict[Hashable, str] | None,
     go_to_gps_pin: tuple[float, float] | None,
 ) -> dict[str, Any]:
-    """Serializable camera recipe for the All locations Leaflet component (Folium ``build_visit_overlay_map`` parity, #222).
+    """Serializable camera recipe for the All locations Leaflet component (Folium ``build_visit_overlay_map`` parity).
 
     Keys are JSON-stable for ``revision_extra`` hashing. ``v`` is ``1`` for forward compatibility.
     """
@@ -374,7 +374,7 @@ def _marker_cluster_root_background_reset_css() -> str:
 
 
 def all_locations_cluster_icon_style_payload(sch: Any) -> dict[str, Any] | None:
-    """JSON-serialisable cluster icon colours for Leaflet.markercluster (Folium ``iconCreateFunction`` parity, #222).
+    """JSON-serialisable cluster icon colours for Leaflet.markercluster (Folium ``iconCreateFunction`` parity).
 
     Returns ``fills_rgba``, ``borders_rgba``, ``halos_rgba`` (length-3 lists for small/medium/large tiers),
     ``border_width_px``, and ``halo_spread_px``. ``None`` when the scheme has no valid nine-tier hex tuple
@@ -804,7 +804,7 @@ def build_visit_overlay_map(
 
         scope_fit = (all_locations_scope or ALL_LOCATIONS_SCOPE_FOCUSED).strip()
         should_fit = scope_fit != ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY and bool(all_loc_pairs)
-        # Leaflet All locations: keep all_locations_leaflet_viewport_recipe aligned with this block (#222).
+        # Leaflet All locations: keep all_locations_leaflet_viewport_recipe aligned with this block.
         if go_to_gps_pin:
             _apply_go_to_gps_pin_view(species_map, go_to_gps_pin)
         elif should_fit and all_loc_pairs:

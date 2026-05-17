@@ -1,1 +1,1 @@
-# Explorer-local Streamlit custom components (e.g. #221 spike).
+# Explorer-local Streamlit custom components (e.g. all-locations Leaflet map).

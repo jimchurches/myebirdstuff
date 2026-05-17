@@ -1,4 +1,4 @@
-"""GeoJSON + revision for the **Species locations** Leaflet component (#222).
+"""GeoJSON + revision for the **Species locations** Leaflet component.
 
 Mirrors :func:`~explorer.core.map_overlay_visit_map.build_visit_overlay_map` species branch without Folium.
 """

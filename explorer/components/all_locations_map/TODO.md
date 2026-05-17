@@ -92,7 +92,9 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 **Lifer implementation pointers:** `explorer/core/lifer_locations_geojson.py`, `lifer_leaflet_viewport_recipe` in `map_overlay_lifer_map.py`, `LIFER_LEAFLET_PAYLOAD_CACHE_KEY` in `app_constants.py`, lifer branch in `app_prep_map_ui.py`, TS: `lifer_popup_v1` + `circle_pin` in `AllLocationsMap.tsx`.
 
-**Species implementation pointers:** `explorer/core/species_locations_geojson.py`, `explorer/core/map_overlay_species_popups.py`, `species_leaflet_viewport_recipe` in `map_overlay_visit_map.py`, `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` in `app_constants.py`, species branch in `app_prep_map_ui.py`, TS: `species_popup_v1` + `circle_pin` in `AllLocationsMap.tsx`. Popup shrink measure includes `.pebird-map-popup__obs-line` and species/all-visits `<summary>` rows (short location headings — #222). Folium `build_species_overlay_map` remains for tests / legacy branch only. **Hide-only toggle:** session cache keeps **two** payloads (hide-only on/off) via LRU — `hide_nm` is in `revision_extra` / `static_map_cache_key`; repeat toggles should skip GeoJSON rebuild after both variants are warm. E2E/perf: worth timing toggle A→B→A when adding journey tests (#205).
+**Species implementation pointers:** `explorer/core/species_locations_geojson.py`, `explorer/core/map_overlay_species_popups.py`, `species_leaflet_viewport_recipe` in `map_overlay_visit_map.py`, `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` in `app_constants.py`, species branch in `app_prep_map_ui.py`, TS: `species_popup_v1` + `circle_pin` in `AllLocationsMap.tsx`. Popup shrink measure includes `.pebird-map-popup__obs-line` and species/all-visits `<summary>` rows (short location headings). Folium `build_species_overlay_map` remains for tests / legacy branch only. **Hide-only toggle:** session cache keeps **two** GeoJSON payloads (hide-only on/off) via LRU — see §13 for other cache/DRY follow-ups. E2E/perf: worth timing toggle A→B→A when adding journey tests (#205).
+
+**Species optional polish:** §13 (deferred; not required for Species PR merge).
 
 ---
 
@@ -121,6 +123,30 @@ The repo describes Streamlit and caps how much “new stack” we add; All locat
 **When:** After every map mode is on the new architecture (close to ship), not patch-by-patch during migration.
 
 **Do:** Audit and refresh **relevant docs** — e.g. root `README` / explorer README, developer guides, `.cursor` commands or rules if they cite Folium-only maps, map build instructions. Replace or branch narrative (Folium vs component), document the component build, cache/revision contract, and where `defaults.py` / prep UI feed the iframe.
+
+---
+
+## 13. Species locations — optional polish (deferred)
+
+From post–PR #226 code review. **Not blocking** Species merge; revisit during Family work, Folium removal, or a perf pass (#205 / §8).
+
+### Cache banner on payload hit
+
+**Gap:** In `app_prep_map_ui.py` (species Leaflet branch, ~954–990), `filter_species` + `compute_species_map_banner_fields` + `build_species_banner_html` run on **every** Streamlit rerun when a species is selected, even when `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` hits and GeoJSON is skipped.
+
+**Do:** Cache banner fields or final banner HTML in the payload LRU entry (same `payload_cache_key` as GeoJSON) so warm reruns avoid repeat pandas work. Cost is smaller than GeoJSON build but noticeable if chasing “instant” revisit.
+
+### Cache awaiting-selection empty payload
+
+**Gap:** When no species is selected (`elif not overlay_sci`), empty `FeatureCollection` + revision hash are rebuilt each rerun; result is **not** stored in the species payload LRU (only built GeoJSON paths call `_leaflet_payload_cache_store`).
+
+**Do:** Optional — store empty payload in the same 2-entry LRU for consistency. Cost today is tiny.
+
+### DRY species banner stats (Folium vs Leaflet)
+
+**Gap:** `compute_species_map_banner_fields` in `species_locations_geojson.py` parallels inline banner logic in `build_visit_overlay_map` (Folium species branch). Intentionally duplicated for this slice.
+
+**Do:** Extract one shared helper (or have Folium call the Leaflet-oriented function) when Family lands or when Folium species path is removed — aligns with §12 “Shared Folium/GeoJSON DRY refactor”. Do **not** block Family migration on this.
 
 ---
 
@@ -189,7 +215,8 @@ Production Folium builders call ``add_zoom_level_debug_overlay(...)`` when ``MAP
 - Export map HTML on Leaflet modes (§7) — button hidden; Folium Family still exports until cutover.
 - Warm-rerun / payload cache hit verification in perf logs — instrumentation pass later (#205 / §8).
 - Zoom debug overlay on component maps (§11).
-- Shared Folium/GeoJSON DRY refactor (nice-to-have).
+- Shared Folium/GeoJSON DRY refactor (nice-to-have) — species banner: §13.
+- Species cache/banner polish (§13).
 - Rename component from `all_locations_map` to something generic (after all maps).
 
 **Useful docs**
