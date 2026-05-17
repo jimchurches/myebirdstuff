@@ -97,7 +97,7 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 ## 7. Export map HTML — **done (single-stack HTML)**
 
-**Shipped (branch ``222-export-map-html``):** Leaflet maps export via ``leaflet_map_to_html_bytes`` — standalone HTML with CDN Leaflet 1.9.4 + MarkerCluster, same GeoJSON/theme/banner/legend as the live component. Popups pre-rendered in Python (``popup_v1_export_html``) into ``export_popup_html`` on each feature; viewer in ``explorer/presentation/static/leaflet_map_export.js``. Prep sets ``EXPLORER_MAP_HTML_BYTES_KEY`` for all four Leaflet modes (sidebar **Export map HTML** visible again).
+**Shipped (branch ``222-export-map-html``):** Leaflet maps export via ``leaflet_map_to_html_bytes`` — standalone HTML with CDN Leaflet 1.9.4 + MarkerCluster, same GeoJSON/theme/banner/legend as the live component. Popups pre-rendered in Python (``popup_v1_export_html``) into ``export_popup_html`` on each feature; viewer in ``explorer/presentation/static/leaflet_map_export.js``. Prep stores ``LEAFLET_EXPORT_RECIPE_KEY`` only; HTML builds on sidebar **Export map HTML** click (§8 LRU cache for repeat downloads).
 
 **Constraints:** Downloaded file needs network for tiles + CDN scripts. Not fully offline.
 
@@ -117,7 +117,7 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 ## 8. Performance / benchmarks (#205)
 
 - Optional: extend map perf harness / snapshots for the component path vs Folium HTML size and interaction.
-- ~~**Leaflet export HTML cache (§7 follow-up):**~~ **Done** — ``LEAFLET_EXPORT_HTML_CACHE_KEY`` LRU (6 entries) keyed by ``leaflet_export_html_cache_key`` (revision + height, basemap, cluster/circle/viewport, theme, banner, legend). Warm reruns emit ``prep.leaflet_map_html_cache_hit``; cleared on eBird data signature change.
+- ~~**Leaflet export HTML cache (§7 follow-up):**~~ **Done** — ``LEAFLET_EXPORT_HTML_CACHE_KEY`` LRU (6 entries) keyed by ``leaflet_export_html_cache_key``. Build runs **on export button click** only (recipe in ``LEAFLET_EXPORT_RECIPE_KEY`` during prep); repeat export for the same map uses cache hit. Cleared on eBird data signature change.
 
 ---
 

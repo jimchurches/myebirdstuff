@@ -124,6 +124,7 @@ STREAMLIT_RESET_SETTINGS_BTN_KEY = "streamlit_reset_settings_btn"
 
 # Download/export button keys.
 EXPORT_MAP_HTML_BTN_KEY = "export_map_html_btn"
+EXPORT_MAP_HTML_BUILD_BTN_KEY = "export_map_html_build_btn"
 
 # Family map tab widget keys (refs #138). Highlight key is suffixed with selected family in the UI.
 STREAMLIT_FAMILY_MAP_FAMILY_KEY = "streamlit_family_map_family"
@@ -223,6 +224,10 @@ SPECIES_LEAFLET_PAYLOAD_CACHE_KEY = "_species_leaflet_payload_cache_v1"
 FAMILY_LEAFLET_PAYLOAD_CACHE_KEY = "_family_leaflet_payload_cache_v1"
 # Leaflet export HTML (``leaflet_map_to_html_bytes``) keyed by revision + overlay inputs.
 LEAFLET_EXPORT_HTML_CACHE_KEY = "_leaflet_export_html_cache_v1"
+# Inputs for on-demand export build (no HTML until user clicks export).
+LEAFLET_EXPORT_RECIPE_KEY = "_leaflet_export_recipe_v1"
+# Cache-key tuple for the last built Leaflet export matching the current recipe.
+LEAFLET_EXPORT_BUILT_CACHE_KEY = "_leaflet_export_built_cache_key_v1"
 # Go to GPS — session-only temporary marker (refs #199); never persisted to YAML.
 SESSION_GO_TO_GPS_PIN_KEY = "_session_go_to_gps_pin"
 STREAMLIT_GO_TO_GPS_DRAFT_LAT_TEXT_KEY = "_streamlit_go_to_gps_draft_lat_txt"
