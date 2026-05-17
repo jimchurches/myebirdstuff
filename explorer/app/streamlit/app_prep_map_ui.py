@@ -166,6 +166,7 @@ from explorer.presentation.map_renderer import (
 _MAP_RENDER_CACHE_MAX_ENTRIES = 6
 # Species map: cache hide-only vs all-locations payloads separately (toggle thrashes a single slot).
 _SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
+_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
 
 
 def _leaflet_payload_cache_lookup(
@@ -541,6 +542,7 @@ def render_prep_spinner_and_map_tab(
                                     "framing_pairs": family_framing_pairs,
                                     "highlight_framed": family_highlight_framed,
                                 },
+                                max_entries=_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
                             )
 
                     if leaflet_revision and leaflet_geojson is not None:
