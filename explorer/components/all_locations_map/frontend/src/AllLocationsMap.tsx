@@ -264,6 +264,8 @@ interface MapArgs {
   viewport?: Record<string, unknown>;
   /** Basemap keys match Python `create_map`: `default` (OSM), `google`, `carto` (CartoDB Positron). */
   map_style?: string;
+  /** Live zoom readout (``MAP_DEBUG_SHOW_ZOOM_LEVEL`` in Python defaults). */
+  show_zoom_debug?: boolean;
 }
 
 /** Matches Folium all-locations defaults from explorer.app.streamlit.defaults. */
@@ -1244,6 +1246,54 @@ function extractScriptInnerJs(html: string): string {
   return m ? m[1].trim() : s.replace(/^\s*<script[^>]*>\s*/i, "").replace(/\s*<\/script>\s*$/i, "").trim();
 }
 
+/** Folium ``add_zoom_level_debug_overlay`` / ``_ZoomLevelDebugOverlay`` in ``map_renderer.py``. */
+function syncZoomLevelDebugOverlay(
+  map: L.Map,
+  enabled: boolean,
+  controlRef: React.MutableRefObject<L.Control | null>,
+  onZoomRef: React.MutableRefObject<(() => void) | null>,
+): void {
+  const existing = controlRef.current;
+  if (existing) {
+    map.removeControl(existing);
+    controlRef.current = null;
+  }
+  const onZoom = onZoomRef.current;
+  if (onZoom) {
+    map.off("zoom", onZoom);
+    map.off("zoomend", onZoom);
+    onZoomRef.current = null;
+  }
+  if (!enabled) {
+    return;
+  }
+  const div = L.DomUtil.create("div", "ebird-zoom-debug-overlay");
+  div.style.cssText = [
+    "background:rgba(255,255,255,0.92)",
+    "border:1px solid #1f6f54",
+    "padding:4px 8px",
+    "font:12px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace",
+    "border-radius:4px",
+    "box-shadow:0 1px 3px rgba(0,0,0,0.2)",
+    "min-width:7ch",
+    "text-align:right",
+    "z-index:1001",
+  ].join(";");
+  const ZoomDebugControl = L.Control.extend({
+    onAdd: () => div,
+  });
+  const ctrl = new ZoomDebugControl({ position: "bottomright" });
+  ctrl.addTo(map);
+  const update = () => {
+    div.textContent = `zoom: ${map.getZoom()}`;
+  };
+  map.on("zoom", update);
+  map.on("zoomend", update);
+  update();
+  controlRef.current = ctrl;
+  onZoomRef.current = update;
+}
+
 function injectHeadFragments(mapThemeCss: string, mapPopupWidthScript: string): void {
   const css = (mapThemeCss ?? "").trim();
   if (css) {
@@ -1280,6 +1330,8 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   /** Leaflet ``Popup`` instance when open — used to ``update()`` after iframe resize / width shrink (#145). */
   const openLeafletPopupRef = useRef<L.Popup | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
+  const zoomDebugControlRef = useRef<L.Control | null>(null);
+  const zoomDebugOnZoomRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     injectHeadFragments(args.map_theme_css ?? "", args.map_popup_width_script ?? "");
@@ -1466,6 +1518,22 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
     args.cluster_icon_style,
     args.viewport,
   ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    syncZoomLevelDebugOverlay(
+      map,
+      Boolean(args.show_zoom_debug),
+      zoomDebugControlRef,
+      zoomDebugOnZoomRef,
+    );
+    return () => {
+      syncZoomLevelDebugOverlay(map, false, zoomDebugControlRef, zoomDebugOnZoomRef);
+    };
+  }, [args.show_zoom_debug]);
 
   const h = Number(args.height) || 420;
   const banner = (args.banner_html ?? "").trim();

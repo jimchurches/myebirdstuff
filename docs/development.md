@@ -38,6 +38,18 @@ Patch releases within the same minor line (for example 3.12.3 vs 3.12.7) are fin
 
 ---
 
+## Leaflet map component (npm)
+
+Explorer’s Map tab uses a Streamlit custom component with **committed** compiled assets under `explorer/components/all_locations_map/frontend/build/` (so runtime does not require Node). After editing TypeScript/CSS in `frontend/src/`:
+
+```bash
+python3 scripts/build_all_locations_map_frontend.py
+```
+
+That runs `npm ci` + `npm run build` and reports which `build/` files belong in git vs junk (e.g. macOS Finder duplicates). Details: [explorer/components/all_locations_map/README.md](../explorer/components/all_locations_map/README.md).
+
+---
+
 # Architecture Overview (Streamlit App)
 
 ```

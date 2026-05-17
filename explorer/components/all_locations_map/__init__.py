@@ -7,6 +7,8 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
+from explorer.app.streamlit.defaults import MAP_DEBUG_SHOW_ZOOM_LEVEL
+
 _PARENT = Path(__file__).resolve().parent
 _BUILD_DIR = _PARENT / "frontend" / "build"
 
@@ -60,6 +62,8 @@ def render_all_locations_map_component(
 
     *banner_html* / *legend_html* — overlay HTML fragments with ``position:fixed`` (viewport = iframe),
     matching Folium all-locations overlays (top-right banner, bottom-left legend).
+
+    Zoom debug readout follows ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` in ``defaults.py`` (Folium ``add_zoom_level_debug_overlay`` parity).
     """
     fn = _component_callable()
     if fn is None:
@@ -81,5 +85,6 @@ def render_all_locations_map_component(
         map_popup_width_script=map_popup_width_script,
         banner_html=banner_html,
         legend_html=legend_html,
+        show_zoom_debug=MAP_DEBUG_SHOW_ZOOM_LEVEL,
         key=key,
     )
