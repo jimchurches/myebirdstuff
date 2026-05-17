@@ -7,10 +7,33 @@ Leaflet map embedded via `streamlit.components.v1`. The committed **`frontend/bu
 Rebuild after TS/React changes (also validated on every PR by **Python CI** → *All locations map (npm build)*):
 
 ```bash
+# From repo root (recommended — checks for junk under build/ afterward)
+python3 scripts/build_all_locations_map_frontend.py
+```
+
+Or manually:
+
+```bash
 cd explorer/components/all_locations_map/frontend
 npm ci
 npm run build
 ```
+
+### What to commit after a build (same model as today)
+
+| Path | Commit? |
+|------|--------|
+| `frontend/src/` | Yes — source you edited |
+| `frontend/package.json`, `package-lock.json` | Yes — when dependencies change |
+| `frontend/build/index.html`, `asset-manifest.json` | Yes |
+| `frontend/build/static/css/main.<hash>.css` | Yes — **one** hashed file |
+| `frontend/build/static/js/main.<hash>.js` and `.LICENSE.txt` | Yes — **one** bundle + license |
+| `frontend/node_modules/` | **No** (gitignored) |
+| `frontend/build/**/*.map` | **No** (gitignored source maps) |
+| Folders like `static/css 4/` or `static/js 5/` | **No** — not from npm; delete or run the script with `--prune-junk` |
+| Extra `main.<oldhash>.js` left after a rebuild | **No** — remove; git should show the old hash **deleted** and the new one **added** |
+
+A normal rebuild changes the hash in the filenames above; `git status` should look like renames/updates under `build/static/`, not a pile of parallel `main.*.js` files. If unsure, run `python3 scripts/build_all_locations_map_frontend.py --check-only` before committing.
 
 Dev server (optional):
 

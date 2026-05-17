@@ -35,6 +35,9 @@ benchmarks/map_perf/tmp/
 node_modules/
 # CRA build source maps for Streamlit components (regenerated with npm run build)
 explorer/components/**/frontend/build/**/*.map
+# macOS Finder "copy N" duplicates under build/static/ (not from npm) — see scripts/build_all_locations_map_frontend.py
+explorer/components/**/frontend/build/static/css [0-9]/
+explorer/components/**/frontend/build/static/js [0-9]/
 
 # Personal eBird export used for local E2E / integration (optional; see docs/development.md, EXPLORER_E2E_DATASET_CSV)
 tests/fixtures/MyEBirdData.csv
