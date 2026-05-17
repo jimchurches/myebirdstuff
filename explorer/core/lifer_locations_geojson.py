@@ -1,4 +1,4 @@
-"""GeoJSON + revision for the **Lifer locations** Leaflet component (#222).
+"""GeoJSON + revision for the **Lifer locations** Leaflet component.
 
 Mirrors :func:`~explorer.core.map_overlay_lifer_map.build_lifer_overlay_map` data without Folium.
 Structured ``lifer_popup_v1`` feeds the iframe TS template (parity with ``format_lifer_popup_lines``).

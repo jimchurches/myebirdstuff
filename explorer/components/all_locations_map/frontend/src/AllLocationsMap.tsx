@@ -39,7 +39,7 @@ interface ClusterIconStylePayload {
 /** Folium `MAP_POPUP_MAX_WIDTH_PX` (`explorer/app/streamlit/defaults.py`). */
 const POPUP_MAX_WIDTH_PX = 420;
 
-/** Leaflet runs ``autoPan`` inside ``popup.update()`` — stacked updates caused large vertical pans (#222). Disabled globally; ``maybePanPopupIntoView`` pans once when needed after layout settles. */
+/** Leaflet runs ``autoPan`` inside ``popup.update()`` — stacked updates caused large vertical pans. Disabled globally; ``maybePanPopupIntoView`` pans once when needed after layout settles. */
 const POPUP_BIND_OPTIONS: L.PopupOptions = {
   maxWidth: POPUP_MAX_WIDTH_PX,
   autoPan: false,
@@ -55,16 +55,20 @@ const POPUP_LOCATION_HEADING_MARGIN_PX = 4;
 /** Extra px on shrink width — ``scrollWidth`` can sit slightly under painted text (subpixel / fonts / padding). */
 const POPUP_SHRINK_WIDTH_BUFFER_PX = 40;
 
-/** Never apply a narrower content box than this — guards bad measures / font glitches (#222). */
+/** Never apply a narrower content box than this — guards bad measures / font glitches. */
 const POPUP_SHRINK_MIN_CONTENT_WIDTH_PX = 140;
 
-/** Max of inner and wide text rows (visit links, headings) while inner is ``max-content`` for measure. */
+/** Rows included when measuring intrinsic popup width (All locations + species + lifer). */
+const POPUP_WIDE_MEASURE_SELECTOR =
+  ".pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, " +
+  "a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, " +
+  ".pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary";
+
+/** Max of inner and wide text rows while inner is ``max-content`` for measure. */
 function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
   void inner.offsetWidth;
   let w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
-  const wideEls = inner.querySelectorAll(
-    ".pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line",
-  );
+  const wideEls = inner.querySelectorAll(POPUP_WIDE_MEASURE_SELECTOR);
   wideEls.forEach((el) => {
     const he = el as HTMLElement;
     w = Math.max(w, he.scrollWidth, he.getBoundingClientRect().width);
@@ -74,7 +78,7 @@ function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
 
 /** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (same idea as Folium ``map_popup_width_fix_script``; this iframe runs TS only).
 
-Uses map pixel width (not ``window``) for cap. Parents use ``cap`` px during measure so ``width:100%`` rows do not collapse (#222).
+Uses map pixel width (not ``window``) for cap. Parents use ``cap`` px during measure so ``width:100%`` rows do not collapse.
 After width changes, callers invoke ``popup.update()`` to keep the tip on the marker (#145).
 */
 function capPopupInnerWidthPxForMap(map: L.Map): number {
@@ -83,7 +87,7 @@ function capPopupInnerWidthPxForMap(map: L.Map): number {
 }
 
 /** Once width is applied for a given map cap, skip remeasuring — avoids a second visible resize when
- * iframe/RFO bumps run later at ~50–500ms (#222). Remeasure only when ``cap`` changes (map container width). */
+ * iframe/RFO bumps run later at ~50–500ms. Remeasure only when ``cap`` changes (map container width). */
 const POPUP_WIDTH_COMMIT_ATTR = "data-pebird-popup-width-commit";
 const POPUP_WIDTH_CAP_ATTR = "data-pebird-shrink-applied-cap";
 
@@ -104,12 +108,12 @@ function shrinkPebirdLeafletPopups(map: L.Map): void {
     }
 
     /* Shrink-to-fit cycle: inner has max-width:100% of .leaflet-popup-content while that node uses
-     * width:fit-content — cyclic percentage resolves tiny, so scrollWidth was ~min-content (refs #222).
+     * width:fit-content — cyclic percentage resolves tiny, so scrollWidth was ~min-content  .
      * Size inner to max-content for measurement only, then restore so final layout still respects cap.
      *
      * Never strip content/wrapper width **without** substituting ``cap``: descendants such as
      * ``.pebird-map-popup__heading-row { width:100% }`` lose their percentage base and collapse to a
-     * min-content column — ``scrollWidth`` then matches a character-wide strip (#222). */
+     * min-content column — ``scrollWidth`` then matches a character-wide strip. */
     inner.style.setProperty("max-width", "none", "important");
     inner.style.setProperty("width", "max-content", "important");
     content.style.setProperty("width", `${cap}px`, "important");
@@ -140,7 +144,7 @@ function shrinkPebirdLeafletPopups(map: L.Map): void {
   });
 }
 
-/** Margin inside the map container when deciding if the popup clips (#222 — replaces Leaflet ``autoPan``). */
+/** Margin inside the map container when deciding if the popup clips (replaces Leaflet ``autoPan``). */
 const POPUP_VIEWPORT_PAD_PX = 12;
 
 /** Pan the map only when the open popup’s bounding box exceeds the container inset — minimal correction, no Leaflet ``autoPan`` stack. */
@@ -187,7 +191,7 @@ function maybePanPopupIntoView(map: L.Map, popup: L.Popup): void {
 function scheduleShrinkPebirdLeafletPopups(map: L.Map, popup?: L.Popup): void {
   /** Wait for web fonts before measuring — fallback metrics used to lock ``data-pebird-popup-width-commit``
    * produced cards that were tens of px too narrow (lines broke after commas, visit rows split date/time).
-   * One double-rAF after ``fonts.ready`` keeps a single width commit with no follow-up resize (#222). */
+   * One double-rAF after ``fonts.ready`` keeps a single width commit with no follow-up resize. */
   const finalize = () => {
     shrinkPebirdLeafletPopups(map);
     if (popup && typeof popup.update === "function") {
@@ -246,15 +250,15 @@ interface MapArgs {
   circle_marker_style?: CircleMarkerStylePayload;
   /** Tier rgba + border/spread for ``iconCreateFunction`` (Folium cluster parity). */
   cluster_icon_style?: ClusterIconStylePayload | Record<string, unknown>;
-  /** Injected into iframe ``<head>`` — same as Folium ``map_overlay_theme_stylesheet`` (#222). */
+  /** Injected into iframe ``<head>`` — same as Folium ``map_overlay_theme_stylesheet``. */
   map_theme_css?: string;
-  /** Injected once — optional; leave empty. Folium ``map_popup_width_fix_script`` schedules extra shrink passes and is **not** used in the component iframe (TS owns width; #222). */
+  /** Injected once — optional; leave empty. Folium ``map_popup_width_fix_script`` schedules extra shrink passes and is **not** used in the component iframe (TS owns width). */
   map_popup_width_script?: string;
-  /** Fixed-position banner HTML (viewport = iframe), e.g. top-right ``pebird-map-banner`` (#222). */
+  /** Fixed-position banner HTML (viewport = iframe), e.g. top-right ``pebird-map-banner``. */
   banner_html?: string;
-  /** Fixed-position legend HTML, e.g. bottom-left ``pebird-map-legend`` (#222). */
+  /** Fixed-position legend HTML, e.g. bottom-left ``pebird-map-legend``. */
   legend_html?: string;
-  /** Camera recipe from Python `all_locations_leaflet_viewport_recipe` (#222). */
+  /** Camera recipe from Python `all_locations_leaflet_viewport_recipe`. */
   viewport?: Record<string, unknown>;
   /** Basemap keys match Python `create_map`: `default` (OSM), `google`, `carto` (CartoDB Positron). */
   map_style?: string;
@@ -528,7 +532,7 @@ function applyGoToGpsViewportCamera(map: L.Map, vp: ViewportV1GoToGps): void {
   map.fitBounds(b, { padding: L.point(vp.padding_px, vp.padding_px), maxZoom: vp.max_zoom, animate: false });
 }
 
-/** Red pin approximating Folium ``folium.Icon(color='red', icon='map-marker', prefix='fa')`` (#222). */
+/** Red pin approximating Folium ``folium.Icon(color='red', icon='map-marker', prefix='fa')``. */
 function goToGpsMarkerIcon(): L.DivIcon {
   return L.divIcon({
     className: "all-locations-gps-marker",
@@ -539,7 +543,7 @@ function goToGpsMarkerIcon(): L.DivIcon {
   });
 }
 
-/** Folium ``_apply_go_to_gps_pin_view`` marker on the map (not inside MarkerCluster) (#222). */
+/** Folium ``_apply_go_to_gps_pin_view`` marker on the map (not inside MarkerCluster). */
 function syncGoToGpsMarker(map: L.Map, viewportRaw: unknown, markerRef: React.MutableRefObject<L.Marker | null>): void {
   if (markerRef.current) {
     map.removeLayer(markerRef.current);
@@ -555,7 +559,7 @@ function syncGoToGpsMarker(map: L.Map, viewportRaw: unknown, markerRef: React.Mu
   markerRef.current = m;
 }
 
-/** Folium ``build_visit_overlay_map`` camera for All locations (#222). */
+/** Folium ``build_visit_overlay_map`` camera for All locations. */
 function applyAllLocationsViewport(map: L.Map, viewportRaw: unknown, gjLayer: L.GeoJSON | null): void {
   const vp = parseViewportV1(viewportRaw);
   const padPt = (px: number) => L.point(px, px);
@@ -601,7 +605,7 @@ function escapeHtml(text: string): string {
   return div.innerHTML;
 }
 
-/** Allow only http(s) in popup anchors — blocks ``javascript:``, ``data:``, etc. (#222 review). */
+/** Allow only http(s) in popup anchors — blocks ``javascript:``, ``data:``, etc.  . */
 function safeHttpUrlForAnchor(raw: string): string {
   const t = raw.trim();
   if (!t) {
@@ -660,7 +664,7 @@ function parsePopupV1(raw: unknown): PopupPayloadV1 | null {
   return { v: 1, summary_lines, links, visited, visited_truncated, visited_total, visited_omitted };
 }
 
-/** Lifer map — structured lines from ``lifer_locations_geojson.py`` (#222). */
+/** Lifer map — structured lines from ``lifer_locations_geojson.py``. */
 interface LiferPopupLineV1 {
   label: string;
   date: string;
@@ -696,7 +700,175 @@ function parseLiferPopupV1(raw: unknown): LiferPopupPayloadV1 | null {
   return { v: 1, lines };
 }
 
-/** Per-pin circle resolved in Python (``circle_pin``) for Lifer vs subspecies colours (#222). */
+/** Species map — structured sections from ``species_locations_geojson.py``. */
+interface SpeciesObservationV1 {
+  datetime_label: string;
+  checklist_href: string;
+  observed_count: string;
+  media_href: string;
+}
+
+interface SpeciesSectionV1 {
+  common_name: string;
+  observation_count: number;
+  open_by_default: boolean;
+  observations: SpeciesObservationV1[];
+}
+
+interface SpeciesVisitsBlockV1 {
+  summary_label: string;
+  entries: PopupLinkV1[];
+  open_by_default: boolean;
+}
+
+interface SpeciesPopupPayloadV1 {
+  v: 1;
+  location_heading_margin_px?: number;
+  species_sections: SpeciesSectionV1[];
+  visits: SpeciesVisitsBlockV1;
+}
+
+function parseSpeciesPopupV1(raw: unknown): SpeciesPopupPayloadV1 | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  if (o.v !== 1) {
+    return null;
+  }
+  const sectionsRaw = Array.isArray(o.species_sections) ? o.species_sections : [];
+  const species_sections: SpeciesSectionV1[] = [];
+  for (const sec of sectionsRaw) {
+    if (!sec || typeof sec !== "object") {
+      continue;
+    }
+    const s = sec as Record<string, unknown>;
+    const obsRaw = Array.isArray(s.observations) ? s.observations : [];
+    const observations: SpeciesObservationV1[] = [];
+    for (const row of obsRaw) {
+      if (!row || typeof row !== "object") {
+        continue;
+      }
+      const r = row as Record<string, unknown>;
+      observations.push({
+        datetime_label: typeof r.datetime_label === "string" ? r.datetime_label : "",
+        checklist_href: typeof r.checklist_href === "string" ? r.checklist_href : "",
+        observed_count: typeof r.observed_count === "string" ? r.observed_count : "",
+        media_href: typeof r.media_href === "string" ? r.media_href : "",
+      });
+    }
+    species_sections.push({
+      common_name: typeof s.common_name === "string" ? s.common_name : "",
+      observation_count:
+        typeof s.observation_count === "number" && Number.isFinite(s.observation_count)
+          ? s.observation_count
+          : observations.length,
+      open_by_default: s.open_by_default === true,
+      observations,
+    });
+  }
+  const visRaw = o.visits;
+  if (!visRaw || typeof visRaw !== "object") {
+    return null;
+  }
+  const vo = visRaw as Record<string, unknown>;
+  const entRaw = Array.isArray(vo.entries) ? vo.entries : [];
+  const entries: PopupLinkV1[] = entRaw
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+    .map((item) => ({
+      label: typeof item.label === "string" ? item.label : "",
+      href: typeof item.href === "string" ? item.href : "",
+    }));
+  const visits: SpeciesVisitsBlockV1 = {
+    summary_label: typeof vo.summary_label === "string" ? vo.summary_label : "Visited:",
+    entries,
+    open_by_default: vo.open_by_default === true,
+  };
+  const margin =
+    typeof o.location_heading_margin_px === "number" && Number.isFinite(o.location_heading_margin_px)
+      ? o.location_heading_margin_px
+      : 6;
+  return { v: 1, location_heading_margin_px: margin, species_sections, visits };
+}
+
+/** Species-map matching pin — mirrors ``assemble_species_map_location_popup_html``. */
+function popupHtmlSpeciesLayout(
+  name: string,
+  lifelistUrl: string,
+  payload: SpeciesPopupPayloadV1,
+): string {
+  const margin =
+    typeof payload.location_heading_margin_px === "number" &&
+    Number.isFinite(payload.location_heading_margin_px)
+      ? payload.location_heading_margin_px
+      : 6;
+  const hlSafe = safeHttpUrlForAnchor(lifelistUrl.trim());
+  const locHeading =
+    hlSafe.length > 0
+      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+
+  const sectionParts: string[] = [];
+  for (const sec of payload.species_sections) {
+    const openAttr = sec.open_by_default ? " open" : "";
+    const summaryLabel = `${sec.common_name}: (${sec.observation_count})`;
+    const obsLines: string[] = [];
+    for (const obs of sec.observations) {
+      const hrefSafe = safeHttpUrlForAnchor(obs.checklist_href.trim());
+      const dt = escapeHtml(obs.datetime_label.trim() || "—");
+      const count = escapeHtml(obs.observed_count.trim());
+      let line =
+        hrefSafe.length > 0
+          ? `<a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${dt}</a>`
+          : `<span>${dt}</span>`;
+      line += ` <span class="pebird-map-popup__obs-count">(Observed: ${count})</span>`;
+      const mediaSafe = safeHttpUrlForAnchor(obs.media_href.trim());
+      if (mediaSafe) {
+        line += ` <a class="pebird-map-popup__media-link" href="${escapeHtml(mediaSafe)}" target="_blank" rel="noopener noreferrer" title="media">↗</a>`;
+      }
+      obsLines.push(`<div class="pebird-map-popup__obs-line">${line}</div>`);
+    }
+    sectionParts.push(
+      `<details class="pebird-map-popup__species-seen"${openAttr}>` +
+        `<summary class="pebird-map-popup__section-label">${escapeHtml(summaryLabel)}</summary>` +
+        `<div class="pebird-map-popup__obs-list">${obsLines.join("")}</div>` +
+        `</details>`,
+    );
+  }
+
+  const visitAnchors: string[] = [];
+  for (const e of payload.visits.entries) {
+    const href = e.href?.trim() ?? "";
+    const linkLabel = e.label?.trim() || href;
+    if (href) {
+      const hrefSafe = safeHttpUrlForAnchor(href);
+      if (hrefSafe) {
+        visitAnchors.push(
+          `<a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(linkLabel)}</a>`,
+        );
+      } else {
+        visitAnchors.push(`<span class="pebird-map-popup__visit-link-text">${escapeHtml(linkLabel)}</span>`);
+      }
+    }
+  }
+  const visitsOpen = payload.visits.open_by_default ? " open" : "";
+  const visitsBlock =
+    `<details class="pebird-map-popup__all-visits"${visitsOpen}>` +
+    `<summary class="pebird-map-popup__section-label">${escapeHtml(payload.visits.summary_label)}</summary>` +
+    `<div class="pebird-map-popup__visit-list-inner">${visitAnchors.join("<br>")}</div>` +
+    `</details>`;
+
+  return (
+    `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">` +
+    `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>` +
+    `<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">` +
+    sectionParts.join("") +
+    visitsBlock +
+    `</div></div>`
+  );
+}
+
+/** Per-pin circle resolved in Python (``circle_pin``) for Lifer vs subspecies colours. */
 interface CirclePinPayload {
   stroke_hex?: string;
   fill_hex?: string;
@@ -819,7 +991,7 @@ function popupHtmlVisitedLayout(
       }
     }
   }
-  /** Mirrors Folium ``build_visit_info_html``: ``<br>`` between *inline* checklist links — not ``display:block`` anchors (#222). */
+  /** Mirrors Folium ``build_visit_info_html``: ``<br>`` between *inline* checklist links — not ``display:block`` anchors. */
   const visitInner = visitAnchors.join("<br>");
 
   let truncBlock = "";
@@ -853,6 +1025,10 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   const liferPop = parseLiferPopupV1(props?.lifer_popup_v1);
   if (liferPop) {
     return popupHtmlLiferLayout(name, lifelistUrl, liferPop);
+  }
+  const speciesPop = parseSpeciesPopupV1(props?.species_popup_v1);
+  if (speciesPop) {
+    return popupHtmlSpeciesLayout(name, lifelistUrl, speciesPop);
   }
   const popup = parsePopupV1(props?.popup_v1);
   if (popup?.visited) {
@@ -1017,11 +1193,11 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   const mapRef = useRef<L.Map | null>(null);
   /** Overlay layer: MarkerClusterGroup when clustering on, else plain LayerGroup. */
   const overlayRef = useRef<L.LayerGroup | null>(null);
-  /** Folium ``_apply_go_to_gps_pin_view`` red pin — map root, not inside MarkerCluster (#222). */
+  /** Folium ``_apply_go_to_gps_pin_view`` red pin — map root, not inside MarkerCluster. */
   const goToGpsMarkerRef = useRef<L.Marker | null>(null);
   /** OSM / Carto / Google tile layer — swapped when ``map_style`` changes without GeoJSON revision. */
   const baseTileLayerRef = useRef<L.TileLayer | null>(null);
-  /** Leaflet ``Popup`` instance when open — used to ``update()`` after iframe resize / width shrink (#145 / #222). */
+  /** Leaflet ``Popup`` instance when open — used to ``update()`` after iframe resize / width shrink (#145). */
   const openLeafletPopupRef = useRef<L.Popup | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
 
@@ -1029,7 +1205,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
     injectHeadFragments(args.map_theme_css ?? "", args.map_popup_width_script ?? "");
   }, [args.map_theme_css, args.map_popup_width_script]);
 
-  /** Streamlit iframe height is applied after first paint; Leaflet must re-read container size or popups anchor wrong pixels (#222). */
+  /** Streamlit iframe height is applied after first paint; Leaflet must re-read container size or popups anchor wrong pixels. */
   useEffect(() => {
     const map = mapRef.current;
     const el = wrapperRef.current;

@@ -95,7 +95,7 @@ from explorer.core.species_search import (
 
 
 def _all_locations_leaflet_embed_active(session_state: Any) -> bool:
-    """Prep renders the custom Leaflet component (not Folium) for unfiltered All locations (#222)."""
+    """Prep renders the custom Leaflet component (not Folium) for unfiltered All locations."""
     label = session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY, "")
     mode = MAP_VIEW_LABEL_TO_MODE.get(label, "")
     if mode != "all":
@@ -115,7 +115,7 @@ def invalidate_folium_map_embed_cache(*, bump_mount_nonce: bool = True) -> None:
 
 
 def _on_basemap_changed() -> None:
-    """Folium embed must remount when basemap changes; Leaflet component swaps tiles in-place (#222)."""
+    """Folium embed must remount when basemap changes; Leaflet component swaps tiles in-place."""
     if _all_locations_leaflet_embed_active(st.session_state):
         return
     invalidate_folium_map_embed_cache()

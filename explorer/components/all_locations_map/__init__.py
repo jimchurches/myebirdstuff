@@ -1,4 +1,4 @@
-"""Streamlit embed for the All locations Leaflet map component (#221 / #222)."""
+"""Streamlit embed for the All locations Leaflet map component."""
 
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ def render_all_locations_map_component(
 
     *map_theme_css* — same string Folium injects (``map_overlay_theme_stylesheet``) for banner/legend/popup chrome.
 
-    *map_popup_width_script* — normally **omit** / pass empty: popup width is finalized in the component only; passing Folium&apos;s ``map_popup_width_fix_script`` would double-run shrink timers in the iframe (#222).
+    *map_popup_width_script* — normally **omit** / pass empty: popup width is finalized in the component only; passing Folium&apos;s ``map_popup_width_fix_script`` would double-run shrink timers in the iframe.
 
     *banner_html* / *legend_html* — overlay HTML fragments with ``position:fixed`` (viewport = iframe),
     matching Folium all-locations overlays (top-right banner, bottom-left legend).

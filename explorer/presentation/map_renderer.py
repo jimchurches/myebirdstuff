@@ -144,7 +144,7 @@ def map_popup_theme_stylesheet() -> str:
   color: {EXPLORER_UI_PRIMARY_GREEN};
   text-decoration: none;
 }}
-/* Location title link: nowrap + intrinsic width — typical ``Name ( lat , lon )`` stays one line; row scrolls if needed (#222). */
+/* Location title link: nowrap + intrinsic width — typical ``Name ( lat , lon )`` stays one line; row scrolls if needed. */
 .pebird-map-popup a.pebird-map-popup__location-heading {{
   display: block;
   width: max-content;
@@ -223,9 +223,17 @@ def map_popup_theme_stylesheet() -> str:
 .pebird-map-popup__obs-line {{
   display: block;
   margin: 0 0 0.15rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
 }}
 .pebird-map-popup__obs-line:last-child {{
   margin-bottom: 0;
+}}
+.pebird-map-popup__obs-line a {{
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }}
 .pebird-map-popup details.pebird-map-popup__species-seen {{
   margin: 0 0 0.55rem 0;
@@ -242,6 +250,9 @@ def map_popup_theme_stylesheet() -> str:
   font-weight: 400;
   color: {EXPLORER_UI_TEXT_COLOR};
   list-style: none;
+  white-space: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
 }}
 .pebird-map-popup details.pebird-map-popup__all-visits summary::-webkit-details-marker,
 .pebird-map-popup details.pebird-map-popup__species-seen summary::-webkit-details-marker {{
@@ -276,7 +287,7 @@ def map_popup_width_fix_script() -> str:
     to that width, so ``fit-content`` on the parent cannot shrink. We use **inline-block** inner (CSS)
     and set **content + wrapper** to the measured inner width in px after Leaflet runs (refs #145).
     Inner ``max-width:100%`` is cleared briefly while measuring so shrink-to-fit does not collapse to
-    min-content width (Streamlit iframe / #222).
+    min-content width (Streamlit iframe popups).
     """
     w = MAP_POPUP_MAX_WIDTH_PX
     return f"""
@@ -292,7 +303,7 @@ def map_popup_width_fix_script() -> str:
     void inner.offsetWidth;
     var w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
     var wide = inner.querySelectorAll(
-      '.pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line'
+      '.pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, .pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary'
     );
     for (var i = 0; i < wide.length; i++) {{
       var el = wide[i];
@@ -732,7 +743,7 @@ _LEGEND_POSITION = "position:fixed;bottom:16px;left:16px;z-index:1000;"
 # ``bottom:16px`` relative to ``.all-locations-map-frame`` so the legend–map bottom gap stays stable;
 # ``left`` is tighter than 16px because a ``fixed`` banner measures from the iframe viewport while this
 # overlay is laid out inside the component root, and matching the *visual* left gutter needs a smaller
-# numeric offset (refs #222 feedback).
+# numeric offset (component root layout vs iframe viewport).
 STREAMLIT_COMPONENT_MAP_LEGEND_STYLE = "position:absolute;bottom:16px;left:8px;z-index:1000;"
 
 
@@ -780,10 +791,10 @@ def build_all_locations_banner_html(
 
     Same hierarchy as the family-map banner: green ``__title``, main stats in body text, secondary
     line muted and slightly smaller (refs #167). Date filter state is **not** shown here — it lives in
-    the sidebar only (#222).
+    the sidebar only.
 
     *position_style* — when ``None``, uses the Folium overlay default (fixed corner). Pass a string
-    (e.g. ``\"position:relative;\"``) when embedding the banner outside the map document (#222).
+    (e.g. ``\"position:relative;\"``) when embedding the banner outside the map document.
     """
     sep = _banner_sep()
     loc_w = "locations" if n_locations != 1 else "location"
@@ -926,7 +937,7 @@ def build_legend_html(items, *, container_style: str | None = None):
     Each tuple is rendered via :func:`pin_legend_item`.
 
     *container_style* — when ``None``, uses the Folium overlay default (fixed bottom-left). Pass a CSS
-    string for the outer ``pebird-map-legend`` box when embedding in Streamlit above the Leaflet component (#222).
+    string for the outer ``pebird-map-legend`` box when embedding in Streamlit above the Leaflet component.
     """
     parts = "".join(pin_legend_item(c, f, label) for c, f, label in items)
     pos = _LEGEND_POSITION if container_style is None else container_style
