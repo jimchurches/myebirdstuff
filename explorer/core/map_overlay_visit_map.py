@@ -21,6 +21,9 @@ from explorer.app.streamlit.defaults import (
     MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_HIGH,
     MAP_ALL_LOCATIONS_FOCUSED_QUANTILE_LOW,
     MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM,
+    MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM,
+    MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT,
+    MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX,
     MAP_GO_TO_GPS_MAX_ZOOM,
     MAP_DEBUG_SHOW_ZOOM_LEVEL,
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
@@ -305,6 +308,95 @@ def species_leaflet_viewport_recipe(
             "epsilon_delta": 0.02,
             "padding_px": pad,
             "max_zoom": int(MAP_SPECIES_SINGLE_POINT_ZOOM),
+        }
+    return {
+        "v": 1,
+        "mode": "fit_bounds",
+        "single_point": False,
+        "pairs": [[float(p[0]), float(p[1])] for p in framing_pairs],
+        "padding_px": pad,
+        "max_zoom": max_z,
+    }
+
+
+def family_leaflet_viewport_recipe(
+    framing_pairs: list[list[float]],
+    *,
+    blank_viewport_recipe: dict[str, Any] | None = None,
+    highlight_framed: bool = False,
+) -> dict[str, Any]:
+    """Camera recipe ``v1`` for Family locations Leaflet iframe.
+
+    *blank_viewport_recipe* — session recipe when no family is selected or map is empty.
+    *highlight_framed* — use closer max zoom when framing highlight-only pins (Folium parity).
+    """
+    if not framing_pairs:
+        recipe = blank_viewport_recipe if isinstance(blank_viewport_recipe, dict) else {}
+        mode = str(recipe.get("mode", "")).strip().lower()
+        if mode == "fit_bounds":
+            pairs_raw = recipe.get("pairs")
+            pairs_list = pairs_raw if isinstance(pairs_raw, list) else []
+            pairs = [
+                [float(p[0]), float(p[1])]
+                for p in pairs_list
+                if isinstance(p, (list, tuple)) and len(p) == 2
+            ]
+            if pairs:
+                pad = int(recipe.get("padding_px", MAP_ALL_LOCATIONS_FIT_BOUNDS_PADDING_PX))
+                max_z = int(recipe.get("max_zoom", MAP_ALL_LOCATIONS_FIT_BOUNDS_MAX_ZOOM))
+                if len(pairs) == 1:
+                    la, lo = float(pairs[0][0]), float(pairs[0][1])
+                    return {
+                        "v": 1,
+                        "mode": "fit_bounds",
+                        "single_point": True,
+                        "lat": la,
+                        "lon": lo,
+                        "epsilon_delta": 0.02,
+                        "padding_px": pad,
+                        "max_zoom": int(
+                            recipe.get("single_point_zoom", MAP_ALL_LOCATIONS_SINGLE_POINT_ZOOM)
+                        ),
+                    }
+                return {
+                    "v": 1,
+                    "mode": "fit_bounds",
+                    "single_point": False,
+                    "pairs": pairs,
+                    "padding_px": pad,
+                    "max_zoom": max_z,
+                }
+        center = recipe.get("center")
+        if isinstance(center, (list, tuple)) and len(center) == 2:
+            c_lat, c_lon = float(center[0]), float(center[1])
+        else:
+            c_lat = float(MAP_SPECIES_DEFAULT_CENTER_LAT)
+            c_lon = float(MAP_SPECIES_DEFAULT_CENTER_LON)
+        zoom = int(recipe.get("zoom", MAP_SPECIES_DEFAULT_ZOOM))
+        return {
+            "v": 1,
+            "mode": "center_zoom",
+            "center": [c_lat, c_lon],
+            "zoom": zoom,
+        }
+
+    pad = int(MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX)
+    max_z = int(
+        MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT
+        if highlight_framed
+        else MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM
+    )
+    if len(framing_pairs) == 1:
+        la, lo = float(framing_pairs[0][0]), float(framing_pairs[0][1])
+        return {
+            "v": 1,
+            "mode": "fit_bounds",
+            "single_point": True,
+            "lat": la,
+            "lon": lo,
+            "epsilon_delta": 0.02,
+            "padding_px": pad,
+            "max_zoom": max_z,
         }
     return {
         "v": 1,

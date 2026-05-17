@@ -228,6 +228,7 @@ def build_family_composition_folium_map(
     height_px: int = MAP_HEIGHT_PX_DEFAULT,
     location_page_url_fn: Callable[[str], str | None] | None = None,
     species_url_fn: Callable[[str], str | None] | None = None,
+    species_url_by_common: dict[str, str] | None = None,
     fit_bounds_highlight_only: bool = False,
     colour_scheme_index: int | None = None,
     default_center: tuple[float, float] | None = None,
@@ -293,6 +294,7 @@ def build_family_composition_folium_map(
 
     loc_fn = location_page_url_fn or (lambda _lid: None)
     sp_fn = species_url_fn or (lambda _c: None)
+    global_species_urls = species_url_by_common or {}
     style = active_map_marker_colour_scheme(colour_scheme_index)
 
     # Draw low-density to high-density so denser markers sit on top.
@@ -309,7 +311,7 @@ def build_family_composition_folium_map(
         fill, stroke, sw = family_map_marker_style(pin, style=style)
         url_map: dict[str, str] = {}
         for line in pin.common_name_lines:
-            u = sp_fn(line)
+            u = global_species_urls.get(line) or global_species_urls.get(line.strip()) or sp_fn(line)
             if u:
                 url_map[line] = u
         inner = format_family_location_popup_html(

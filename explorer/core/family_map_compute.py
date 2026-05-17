@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import html as html_module
 from dataclasses import dataclass
+from collections.abc import Callable
 from typing import Iterable
 
 import pandas as pd
@@ -288,6 +289,50 @@ def merge_taxonomy_detail_for_family_map(
     return tax
 
 
+def build_common_name_to_species_url(
+    work: pd.DataFrame,
+    taxonomy_merged: pd.DataFrame,
+    *,
+    fallback_fn: Callable[[str], str | None] | None = None,
+) -> dict[str, str]:
+    """Map checklist ``Common Name`` strings to eBird species URLs (Rankings Families parity).
+
+    Families tables link via ``species_code`` keyed by ``base_species``. Map popups list
+    **observed** common names from the export; those strings often differ from taxonomy CSV
+    names (subspecies parentheses, apostrophes, splits). Resolve each observed name through
+    the row's ``_base`` → ``species_code`` in *taxonomy_merged*, then optional *fallback_fn*
+    (typically :func:`~explorer.core.taxonomy.get_species_url`).
+    """
+    base_to_code: dict[str, str] = {}
+    if not taxonomy_merged.empty and {"base_species", "species_code"}.issubset(taxonomy_merged.columns):
+        for _, row in taxonomy_merged.iterrows():
+            b = str(row["base_species"]).strip().lower()
+            code = str(row.get("species_code") or "").strip()
+            if b and code and b not in base_to_code:
+                base_to_code[b] = code
+
+    out: dict[str, str] = {}
+    if work.empty or "Common Name" not in work.columns or "_base" not in work.columns:
+        return out
+
+    commons = work["Common Name"].fillna("").astype(str).str.strip()
+    bases = work["_base"].fillna("").astype(str).str.strip().str.lower()
+    pairs = pd.DataFrame({"common": commons, "base": bases})
+    pairs = pairs[(pairs["common"] != "") & (pairs["base"] != "")]
+    for common, grp in pairs.groupby("common", sort=False):
+        url: str | None = None
+        for base in grp["base"].unique():
+            code = base_to_code.get(str(base).strip().lower())
+            if code:
+                url = f"https://ebird.org/species/{code}"
+                break
+        if not url and fallback_fn:
+            url = fallback_fn(str(common))
+        if url:
+            out[str(common)] = url
+    return out
+
+
 def base_species_to_common_from_taxonomy(taxonomy_merged: pd.DataFrame) -> dict[str, str]:
     """Map lowercased ``base_species`` → ``common_name`` (first occurrence wins)."""
     if taxonomy_merged.empty:
@@ -338,8 +383,15 @@ def format_family_location_popup_html(
         u = url_map.get(name) or url_map.get(name.strip())
         if u and str(u).strip():
             esc_u = html_module.escape(str(u).strip(), quote=True)
-            lines.append(f'<div style="font-size:0.92em;"><a href="{esc_u}" target="_blank" rel="noopener noreferrer">{esc_n}</a></div>')
+            lines.append(
+                f'<div class="pebird-map-popup__species-line"><a href="{esc_u}" '
+                f'target="_blank" rel="noopener noreferrer">{esc_n}</a></div>'
+            )
         else:
-            lines.append(f'<div style="font-size:0.92em;">{esc_n}</div>')
-    body = "".join(lines) if lines else '<div style="opacity:0.7;font-size:0.85em;">No species lines</div>'
-    return f'<div style="min-width:12rem;max-width:22rem;">{head}{body}</div>'
+            lines.append(f'<div class="pebird-map-popup__species-line">{esc_n}</div>')
+    body = (
+        "".join(lines)
+        if lines
+        else '<div class="pebird-map-popup__summary-line">No species lines</div>'
+    )
+    return f"{head}{body}"

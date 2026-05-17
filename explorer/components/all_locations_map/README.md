@@ -21,7 +21,7 @@ npm start
 ## Marker clustering
 
 Clustering uses **Leaflet.markercluster** with defaults aligned to `explorer/app/streamlit/defaults.py`
-(max radius 40px, clustering disables from zoom 9, `removeOutsideVisibleBounds` false to match Folium refs #166).
+(max radius 40px, clustering disables from zoom 9, `removeOutsideVisibleBounds` false to match Folium defaults in ``defaults.py``).
 
 The sidebar **cluster all locations** toggle is passed as `cluster_options.enabled`; full cluster JSON is mixed into the GeoJSON **revision** hash so toggling clustering bumps revision and reloads the overlay.
 
