@@ -163,6 +163,48 @@ from explorer.presentation.map_renderer import (
 
 
 _MAP_RENDER_CACHE_MAX_ENTRIES = 6
+# Species map: cache hide-only vs all-locations payloads separately (toggle thrashes a single slot).
+_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
+
+
+def _leaflet_payload_cache_lookup(
+    session_key: str,
+    payload_cache_key: tuple[Any, ...],
+) -> dict[str, Any] | None:
+    """LRU lookup for Leaflet GeoJSON session caches keyed by ``payload_cache_key``."""
+    cached = st.session_state.get(session_key)
+    if isinstance(cached, OrderedDict):
+        entry = cached.get(payload_cache_key)
+        if isinstance(entry, dict):
+            cached.move_to_end(payload_cache_key)
+            return entry
+        return None
+    if isinstance(cached, dict) and cached.get("payload_cache_key") == payload_cache_key:
+        return cached
+    return None
+
+
+def _leaflet_payload_cache_store(
+    session_key: str,
+    payload_cache_key: tuple[Any, ...],
+    entry: dict[str, Any],
+    *,
+    max_entries: int,
+) -> None:
+    """Store Leaflet payload; keep at most *max_entries* variants (e.g. hide-only on/off)."""
+    cached = st.session_state.get(session_key)
+    if not isinstance(cached, OrderedDict):
+        converted: OrderedDict[tuple[Any, ...], dict[str, Any]] = OrderedDict()
+        if isinstance(cached, dict) and cached.get("payload_cache_key") is not None:
+            legacy_key = cached["payload_cache_key"]
+            if isinstance(legacy_key, tuple):
+                converted[legacy_key] = cached
+        cached = converted
+    cached[payload_cache_key] = entry
+    cached.move_to_end(payload_cache_key)
+    while len(cached) > max_entries:
+        cached.popitem(last=False)
+    st.session_state[session_key] = cached
 
 
 def _map_cache_lookup(cache_key: tuple[Any, ...]) -> dict[str, Any] | None:
@@ -822,11 +864,11 @@ def render_prep_spinner_and_map_tab(
                             "species_selected": bool(overlay_sci),
                         }
                         with perf_span("map.species_leaflet.payload", extra=_perf_species):
-                            cached_sp = st.session_state.get(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY)
-                            if (
-                                isinstance(cached_sp, dict)
-                                and cached_sp.get("payload_cache_key") == payload_cache_key
-                            ):
+                            cached_sp = _leaflet_payload_cache_lookup(
+                                SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
+                                payload_cache_key,
+                            )
+                            if cached_sp is not None:
                                 leaflet_revision = str(cached_sp["revision"])
                                 leaflet_geojson = cached_sp["geojson"]
                                 species_framing_pairs = list(cached_sp.get("framing_pairs") or [])
@@ -884,13 +926,17 @@ def render_prep_spinner_and_map_tab(
                                     pin_roles = set()
                                 else:
                                     species_pin_roles = set(pin_roles)
-                                    st.session_state[SPECIES_LEAFLET_PAYLOAD_CACHE_KEY] = {
-                                        "payload_cache_key": payload_cache_key,
-                                        "revision": leaflet_revision,
-                                        "geojson": leaflet_geojson,
-                                        "framing_pairs": species_framing_pairs,
-                                        "pin_roles": sorted(species_pin_roles),
-                                    }
+                                    _leaflet_payload_cache_store(
+                                        SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
+                                        payload_cache_key,
+                                        {
+                                            "revision": leaflet_revision,
+                                            "geojson": leaflet_geojson,
+                                            "framing_pairs": species_framing_pairs,
+                                            "pin_roles": sorted(species_pin_roles),
+                                        },
+                                        max_entries=_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                    )
                             if leaflet_revision and leaflet_geojson is not None:
                                 leaflet_viewport = species_leaflet_viewport_recipe(
                                     species_framing_pairs,
