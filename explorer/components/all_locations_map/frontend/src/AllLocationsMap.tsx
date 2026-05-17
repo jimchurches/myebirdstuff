@@ -62,7 +62,8 @@ const POPUP_SHRINK_MIN_CONTENT_WIDTH_PX = 140;
 const POPUP_WIDE_MEASURE_SELECTOR =
   ".pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, " +
   "a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, " +
-  ".pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary";
+  ".pebird-map-popup__species-line, .pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, " +
+  ".pebird-map-popup__all-visits > summary";
 
 /** Max of inner and wide text rows while inner is ``max-content`` for measure. */
 function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
@@ -978,16 +979,16 @@ function popupHtmlFamilyLayout(name: string, lifelistUrl: string, payload: Famil
     const hrefSafe = safeHttpUrlForAnchor(ln.species_href.trim());
     if (hrefSafe) {
       lineParts.push(
-        `<div style="font-size:0.92em;"><a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(n)}</a></div>`,
+        `<div class="pebird-map-popup__species-line"><a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(n)}</a></div>`,
       );
     } else {
-      lineParts.push(`<div style="font-size:0.92em;">${escapeHtml(n)}</div>`);
+      lineParts.push(`<div class="pebird-map-popup__species-line">${escapeHtml(n)}</div>`);
     }
   }
   const bodyHtml =
     lineParts.length > 0
       ? lineParts.join("")
-      : '<div style="opacity:0.7;font-size:0.85em;">No species lines</div>';
+      : '<div class="pebird-map-popup__summary-line">No species lines</div>';
   return (
     `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;min-width:12rem;max-width:22rem;">` +
     `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>` +

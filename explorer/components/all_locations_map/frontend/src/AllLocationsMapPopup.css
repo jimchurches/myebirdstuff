@@ -166,6 +166,27 @@
   margin-top: 0.12rem;
 }
 
+/* Family map: species common-name rows (inherit popup base size — not 0.92em). */
+.pebird-map-popup__species-line {
+  display: block;
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 400;
+  color: var(--pebird-ui-text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.pebird-map-popup__heading-row + .pebird-map-popup__species-line {
+  margin-top: 0.2rem;
+}
+
+.pebird-map-popup__species-line + .pebird-map-popup__species-line {
+  margin-top: 0.12rem;
+}
+
 .pebird-map-popup__trunc-hint {
   margin-top: 0.55rem;
   color: var(--pebird-ui-muted);

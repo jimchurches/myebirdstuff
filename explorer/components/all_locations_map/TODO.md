@@ -123,6 +123,28 @@ The repo describes Streamlit and caps how much “new stack” we add; all four 
 
 ---
 
+## 15. Popup typography parity across map modes (deferred)
+
+Audit (May 2026): all four Leaflet modes share `map_popup_theme_stylesheet()` + `AllLocationsMapPopup.css` (`.pebird-map-popup` base **0.8125rem**, green headings, green links). **Headings are aligned** via `pebird-map-popup__location-heading`. Remaining gaps are mostly spacing and Family-specific chrome — not a blocker for #222 close.
+
+### Shipped in this backlog
+
+- **Family body text (§15 item 2):** Species list rows use `pebird-map-popup__species-line` (inherit base size); empty state uses `pebird-map-popup__summary-line` (muted). Folium `format_family_location_popup_html` + TS `popupHtmlFamilyLayout` updated.
+
+### Still deferred (design / cross-mode pass)
+
+| Item | Maps | Notes |
+|------|------|--------|
+| **Heading margin below title** | All 4 | All/Lifer/Family **4px**; Species **6px** (intentional in Folium). Lifer Folium used **2px** — Leaflet Lifer still **4px**. Pick one default or document exceptions. |
+| **Family popup width cap** | Family | Inline `min-width:12rem; max-width:22rem` on card — narrower than other modes’ shrink-wrap. Drop or align with `MAP_POPUP_MAX_WIDTH_PX`. |
+| **Section labels** | Lifer, Family | No `Visited:` / `<details>` chrome (content-driven); All + Species use `__section-label`. OK structurally; revisit if we want uniform “data block” labels. |
+| **Species-only CSS in TS file** | Species | `obs-line`, `species-seen`, chevrons live in Python `map_popup_theme_stylesheet` only; component relies on injected theme. Copy into `AllLocationsMapPopup.css` when Folium is removed. |
+| **Lifer line format** | Lifer | `Species : date` in one link vs All locations visit rows — content, not typography. |
+
+**Files:** `AllLocationsMap.tsx` (layouts), `AllLocationsMapPopup.css`, `map_renderer.py` (`map_popup_theme_stylesheet`), `family_map_compute.py`, `map_popup_models.py` (Species margin default 6).
+
+---
+
 ## 14. Family locations — optional polish (deferred)
 
 From PR #228 code review. **Not blocking** merge.
@@ -225,7 +247,7 @@ Production Folium builders call ``add_zoom_level_debug_overlay(...)`` when ``MAP
 2. §11 — zoom debug overlay on component maps.
 3. §7 — export strategy for Leaflet modes.
 4. §10 — documentation pass; optional rename of `all_locations_map` component directory.
-5. Remove or gate Folium map builders; §13–§14 cache polish; §8 perf (#205).
+5. Remove or gate Folium map builders; §13–§14 cache polish; §15 popup typography pass; §8 perf (#205).
 6. Standalone comments: remaining `refs #NNN` in `map_renderer.py` docstrings (popup HTML builders) — batch cleanup.
 
 ### Useful docs

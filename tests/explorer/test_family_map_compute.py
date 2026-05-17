@@ -265,3 +265,5 @@ def test_format_family_location_popup_html_links():
     assert "Bird B" in html
     assert "pebird-map-popup__location-heading" in html
     assert "pebird-map-popup__heading-row" in html
+    assert "pebird-map-popup__species-line" in html
+    assert "font-size:0.92em" not in html

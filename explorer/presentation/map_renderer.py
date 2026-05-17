@@ -210,6 +210,24 @@ def map_popup_theme_stylesheet() -> str:
 .pebird-map-popup__summary-line + .pebird-map-popup__summary-line {{
   margin-top: 0.12rem;
 }}
+/* Family map: species common-name rows (inherit popup base size — not 0.92em). */
+.pebird-map-popup__species-line {{
+  display: block;
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 400;
+  color: {EXPLORER_UI_TEXT_COLOR};
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}}
+.pebird-map-popup__heading-row + .pebird-map-popup__species-line {{
+  margin-top: 0.2rem;
+}}
+.pebird-map-popup__species-line + .pebird-map-popup__species-line {{
+  margin-top: 0.12rem;
+}}
 .pebird-map-popup__obs-count {{
   color: {EXPLORER_UI_MUTED};
   font-weight: 400;
@@ -303,7 +321,7 @@ def map_popup_width_fix_script() -> str:
     void inner.offsetWidth;
     var w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
     var wide = inner.querySelectorAll(
-      '.pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, .pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary'
+      '.pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, .pebird-map-popup__species-line, .pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary'
     );
     for (var i = 0; i < wide.length; i++) {{
       var el = wide[i];

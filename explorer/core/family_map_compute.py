@@ -338,8 +338,15 @@ def format_family_location_popup_html(
         u = url_map.get(name) or url_map.get(name.strip())
         if u and str(u).strip():
             esc_u = html_module.escape(str(u).strip(), quote=True)
-            lines.append(f'<div style="font-size:0.92em;"><a href="{esc_u}" target="_blank" rel="noopener noreferrer">{esc_n}</a></div>')
+            lines.append(
+                f'<div class="pebird-map-popup__species-line"><a href="{esc_u}" '
+                f'target="_blank" rel="noopener noreferrer">{esc_n}</a></div>'
+            )
         else:
-            lines.append(f'<div style="font-size:0.92em;">{esc_n}</div>')
-    body = "".join(lines) if lines else '<div style="opacity:0.7;font-size:0.85em;">No species lines</div>'
+            lines.append(f'<div class="pebird-map-popup__species-line">{esc_n}</div>')
+    body = (
+        "".join(lines)
+        if lines
+        else '<div class="pebird-map-popup__summary-line">No species lines</div>'
+    )
     return f'<div style="min-width:12rem;max-width:22rem;">{head}{body}</div>'
