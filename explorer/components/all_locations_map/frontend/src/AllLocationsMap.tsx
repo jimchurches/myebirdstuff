@@ -700,6 +700,40 @@ function parseLiferPopupV1(raw: unknown): LiferPopupPayloadV1 | null {
   return { v: 1, lines };
 }
 
+/** Family map — location heading + species common-name lines (``family_locations_geojson.py``). */
+interface FamilySpeciesLineV1 {
+  name: string;
+  species_href: string;
+}
+
+interface FamilyPopupPayloadV1 {
+  v: 1;
+  species_lines: FamilySpeciesLineV1[];
+}
+
+function parseFamilyPopupV1(raw: unknown): FamilyPopupPayloadV1 | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  if (o.v !== 1) {
+    return null;
+  }
+  const linesRaw = Array.isArray(o.species_lines) ? o.species_lines : [];
+  const species_lines: FamilySpeciesLineV1[] = [];
+  for (const row of linesRaw) {
+    if (!row || typeof row !== "object") {
+      continue;
+    }
+    const r = row as Record<string, unknown>;
+    species_lines.push({
+      name: typeof r.name === "string" ? r.name : "",
+      species_href: typeof r.species_href === "string" ? r.species_href : "",
+    });
+  }
+  return { v: 1, species_lines };
+}
+
 /** Species map — structured sections from ``species_locations_geojson.py``. */
 interface SpeciesObservationV1 {
   datetime_label: string;
@@ -875,6 +909,7 @@ interface CirclePinPayload {
   radius_px?: number;
   stroke_weight?: number;
   fill_opacity?: number;
+  stroke_opacity?: number;
 }
 
 function parseCirclePin(raw: unknown): CirclePinPayload | null {
@@ -890,6 +925,10 @@ function parseCirclePin(raw: unknown): CirclePinPayload | null {
       typeof o.stroke_weight === "number" && Number.isFinite(o.stroke_weight) ? o.stroke_weight : undefined,
     fill_opacity:
       typeof o.fill_opacity === "number" && Number.isFinite(o.fill_opacity) ? o.fill_opacity : undefined,
+    stroke_opacity:
+      typeof o.stroke_opacity === "number" && Number.isFinite(o.stroke_opacity)
+        ? o.stroke_opacity
+        : undefined,
   };
 }
 
@@ -920,6 +959,41 @@ function resolvedCircleStylesFromPinPayload(pin: CirclePinPayload): Pick<
     fillColor: fillHex,
     fillOpacity: fillOp,
   };
+}
+
+/** Family composition popup — mirrors ``format_family_location_popup_html``. */
+function popupHtmlFamilyLayout(name: string, lifelistUrl: string, payload: FamilyPopupPayloadV1): string {
+  const hlSafe = safeHttpUrlForAnchor(lifelistUrl.trim());
+  const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
+  const locHeading =
+    hlSafe.length > 0
+      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+  const lineParts: string[] = [];
+  for (const ln of payload.species_lines) {
+    const n = ln.name.trim();
+    if (!n) {
+      continue;
+    }
+    const hrefSafe = safeHttpUrlForAnchor(ln.species_href.trim());
+    if (hrefSafe) {
+      lineParts.push(
+        `<div style="font-size:0.92em;"><a href="${escapeHtml(hrefSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(n)}</a></div>`,
+      );
+    } else {
+      lineParts.push(`<div style="font-size:0.92em;">${escapeHtml(n)}</div>`);
+    }
+  }
+  const bodyHtml =
+    lineParts.length > 0
+      ? lineParts.join("").replace(/<div/g, "<div").replace(/<\/div>/g, "</div>")
+      : '<div style="opacity:0.7;font-size:0.85em;">No species lines</div>';
+  return (
+    `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;min-width:12rem;max-width:22rem;">` +
+    `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>` +
+    `<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">${bodyHtml}</div>` +
+    `</div>`
+  );
 }
 
 /** Lifer popup: location heading + species checklist lines (parity with ``format_lifer_popup_lines``). */
@@ -1025,6 +1099,10 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   const liferPop = parseLiferPopupV1(props?.lifer_popup_v1);
   if (liferPop) {
     return popupHtmlLiferLayout(name, lifelistUrl, liferPop);
+  }
+  const familyPop = parseFamilyPopupV1(props?.family_popup_v1);
+  if (familyPop) {
+    return popupHtmlFamilyLayout(name, lifelistUrl, familyPop);
   }
   const speciesPop = parseSpeciesPopupV1(props?.species_popup_v1);
   if (speciesPop) {
@@ -1334,7 +1412,26 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
           fillColor: rs.fillColor,
           fillOpacity: rs.fillOpacity,
         };
-        return L.circleMarker(latlng, opts);
+        const main = L.circleMarker(latlng, opts);
+        const haloPin = parseCirclePin(feature.properties?.highlight_halo_circle);
+        if (!haloPin) {
+          return main;
+        }
+        const hs = resolvedCircleStylesFromPinPayload(haloPin);
+        let strokeOp = 1;
+        if (typeof haloPin.stroke_opacity === "number" && Number.isFinite(haloPin.stroke_opacity)) {
+          strokeOp = Math.min(1, Math.max(0, haloPin.stroke_opacity));
+        }
+        const haloMarker = L.circleMarker(latlng, {
+          radius: hs.radius,
+          stroke: true,
+          weight: hs.weight,
+          color: hs.color,
+          fillColor: hs.fillColor,
+          fillOpacity: hs.fillOpacity,
+          opacity: strokeOp,
+        });
+        return L.layerGroup([haloMarker, main]);
       },
       onEachFeature(feature, lyr) {
         const html = popupHtmlFromFeatureProps(feature.properties as Record<string, unknown> | undefined);

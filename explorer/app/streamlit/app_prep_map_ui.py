@@ -1,8 +1,8 @@
 """Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab embed.
 
 Map build runs under the first spinner so the map can render before heavy checklist/rankings caches
-(~refs #179). **All locations**, **Lifer locations**, and **Species locations** use the Leaflet Streamlit
-custom component; other modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so
+(~refs #179). **All locations**, **Lifer locations**, **Species locations**, and **Family locations** use the
+Leaflet Streamlit custom component; other modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so
 other tabs get payloads before fragments run. Partial ``@st.fragment`` reruns do not use this path.
 
 **Export map HTML** uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
@@ -11,7 +11,7 @@ Folium map uses **streamlit-folium** ``st_folium`` with a **deep copy** of the c
 rendering cannot strip layers from the session cache. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY`
 stores unrendered Folium :class:`folium.Map` entries for the LRU. Leaflet GeoJSON payloads are cached under
 :data:`ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`, :data:`LIFER_LEAFLET_PAYLOAD_CACHE_KEY`, and
-:data:`SPECIES_LEAFLET_PAYLOAD_CACHE_KEY`.
+:data:`SPECIES_LEAFLET_PAYLOAD_CACHE_KEY`, and :data:`FAMILY_LEAFLET_PAYLOAD_CACHE_KEY`.
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from explorer.app.streamlit.app_caches import (
 )
 from explorer.app.streamlit.app_constants import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
+    FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
     LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
     EBIRD_DATA_SIG_KEY,
@@ -102,8 +103,10 @@ from explorer.core.map_marker_colour_resolve import (
     resolve_species_visit_pin,
 )
 from explorer.core.map_overlay_lifer_map import lifer_leaflet_viewport_recipe
+from explorer.core.family_locations_geojson import build_family_locations_geojson_payload
 from explorer.core.map_overlay_visit_map import (
     all_locations_leaflet_viewport_recipe,
+    family_leaflet_viewport_recipe,
     species_leaflet_viewport_recipe,
 )
 from explorer.core.species_locations_geojson import (
@@ -112,7 +115,6 @@ from explorer.core.species_locations_geojson import (
 )
 from explorer.core.map_prep import (
     data_signature_for_caches,
-    mean_center_from_location_data,
     prepare_all_locations_map_context,
 )
 from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
@@ -141,7 +143,6 @@ from explorer.app.streamlit.defaults import (
     active_map_marker_colour_scheme,
 )
 from explorer.core.family_map_folium import (
-    build_family_composition_folium_map,
     build_family_map_banner_overlay_html,
     build_family_map_legend_overlay_html_for_pins,
 )
@@ -291,6 +292,7 @@ def render_prep_spinner_and_map_tab(
                     st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
                     st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
                     st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
+                    st.session_state.pop(FAMILY_LEAFLET_PAYLOAD_CACHE_KEY, None)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None
@@ -373,6 +375,7 @@ def render_prep_spinner_and_map_tab(
                 use_all_locations_leaflet = False
                 use_lifer_leaflet = False
                 use_species_leaflet = False
+                use_family_leaflet = False
                 leaflet_revision: str | None = None
                 leaflet_geojson: dict[str, Any] | None = None
                 leaflet_cluster_opts: dict[str, Any] | None = None
@@ -383,6 +386,10 @@ def render_prep_spinner_and_map_tab(
                 all_locations_leaflet_legend_html = ""
 
                 if map_view_mode == "families":
+                    use_family_leaflet = True
+                    result_map = None
+                    folium_st_key = None
+                    result_warning = None
                     fam = (family_name or "").strip()
                     hl = (family_highlight_base or "").strip().lower()
 
@@ -391,33 +398,52 @@ def render_prep_spinner_and_map_tab(
                     fams = set(bundle.get("families") or ())
                     work = bundle.get("work")
                     tax_merged = bundle.get("tax_merged")
-                    fam_default_center = mean_center_from_location_data(ctx["effective_location_data"])
+
+                    _ck = static_map_cache_key(
+                        work_df,
+                        "families",
+                        date_filter_banner,
+                        map_style,
+                        (fam, hl, int(map_height), int(family_colour_scheme)),
+                        taxonomy_locale=tax_locale_effective,
+                    )
+
+                    leaflet_cluster_opts = {
+                        "enabled": False,
+                        "max_cluster_radius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+                        "disable_clustering_at_zoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+                        "spiderfy_on_max_zoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+                        "remove_outside_visible_bounds": (
+                            MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS
+                        ),
+                    }
+                    leaflet_circle_style = {}
+                    leaflet_cluster_icon_style = {}
+                    family_framing_pairs: list[list[float]] = []
+                    family_highlight_framed = False
+                    pins: tuple = ()
+                    _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
+
+                    revision_bundle = {
+                        "family_leaflet": True,
+                        "map_style": map_style,
+                        "scheme": int(family_colour_scheme),
+                        "fam": fam,
+                        "hl": hl,
+                    }
+                    revision_extra_json = json.dumps(revision_bundle, sort_keys=True)
+                    payload_cache_key = (_ck, revision_extra_json)
 
                     if not fam:
-                        result_map = build_family_composition_folium_map(
-                            (),
-                            map_style=map_style,
-                            height_px=int(map_height),
-                            colour_scheme_index=int(family_colour_scheme),
-                            default_center=fam_default_center,
-                            default_zoom=int(MAP_SPECIES_DEFAULT_ZOOM),
-                            default_viewport_recipe=blank_viewport_recipe,
-                        )
                         map_hint_text = "Select a family in the sidebar to load the map data"
-                        result_warning = None
+                        all_locations_leaflet_banner_html = ""
+                        all_locations_leaflet_legend_html = ""
                     elif fam not in fams or work is None or getattr(work, "empty", True):
-                        result_map = build_family_composition_folium_map(
-                            (),
-                            map_style=map_style,
-                            height_px=int(map_height),
-                            colour_scheme_index=int(family_colour_scheme),
-                            default_center=fam_default_center,
-                            default_zoom=int(MAP_SPECIES_DEFAULT_ZOOM),
-                            default_viewport_recipe=blank_viewport_recipe,
-                        )
                         map_hint_text = "No family data available (taxonomy may not have loaded)."
-                        result_warning = None
+                        all_locations_leaflet_banner_html = ""
+                        all_locations_leaflet_legend_html = ""
                     else:
+                        map_hint_text = None
                         with perf_span("prep.family_map_composition_with_pins"):
                             wf = filter_work_to_family(work, fam)
                             metrics = (
@@ -440,7 +466,7 @@ def render_prep_spinner_and_map_tab(
                             if hl and hl_label:
                                 _u = species_url_fn(hl_label)
                                 hl_species_url = _u if _u else None
-                            banner = (
+                            all_locations_leaflet_banner_html = (
                                 build_family_map_banner_overlay_html(
                                     metrics,
                                     selected_species_n_checklists=sel_counts[0] if sel_counts else None,
@@ -451,43 +477,79 @@ def render_prep_spinner_and_map_tab(
                                 if metrics
                                 else ""
                             )
-                            _sch = active_map_marker_colour_scheme(int(family_colour_scheme))
-                            legend = build_family_map_legend_overlay_html_for_pins(
+                            all_locations_leaflet_legend_html = build_family_map_legend_overlay_html_for_pins(
                                 pins,
                                 highlight_label=hl_label or None,
                                 highlight_species_url=hl_species_url,
-                                style=_sch,
+                                style=_visit_sch,
                             )
-                            result_map = build_family_composition_folium_map(
+
+                    _perf_family: dict[str, Any] = {
+                        "embed": "family_leaflet",
+                        "map_view_mode": map_view_mode,
+                        "payload_cache_hit": False,
+                        "family_selected": bool(fam),
+                    }
+                    with perf_span("map.family_leaflet.payload", extra=_perf_family):
+                        cached_fam = _leaflet_payload_cache_lookup(
+                            FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
+                            payload_cache_key,
+                        )
+                        if cached_fam is not None:
+                            leaflet_revision = str(cached_fam["revision"])
+                            leaflet_geojson = cached_fam["geojson"]
+                            family_framing_pairs = list(cached_fam.get("framing_pairs") or [])
+                            family_highlight_framed = bool(cached_fam.get("highlight_framed"))
+                            _perf_family["payload_cache_hit"] = True
+                        elif not fam or fam not in fams or work is None or getattr(work, "empty", True):
+                            family_framing_pairs = []
+                            empty_features: list[dict[str, Any]] = []
+                            rev_payload = (
+                                json.dumps(empty_features, separators=(",", ":"))
+                                + "|"
+                                + revision_extra_json
+                            )
+                            leaflet_revision = hashlib.sha256(
+                                rev_payload.encode("utf-8")
+                            ).hexdigest()[:24]
+                            leaflet_geojson = {
+                                "type": "FeatureCollection",
+                                "features": empty_features,
+                            }
+                        else:
+                            (
+                                leaflet_revision,
+                                leaflet_geojson,
+                                family_framing_pairs,
+                                family_highlight_framed,
+                            ) = build_family_locations_geojson_payload(
                                 pins,
-                                banner_html=banner,
-                                legend_html=legend,
-                                map_style=map_style,
-                                height_px=int(map_height),
-                                location_page_url_fn=lambda lid: f"https://ebird.org/lifelist/{lid}" if lid else None,
+                                visit_marker_scheme=_visit_sch,
+                                location_page_url_fn=lambda lid: (
+                                    f"https://ebird.org/lifelist/{lid}" if lid else None
+                                ),
                                 species_url_fn=species_url_fn,
                                 fit_bounds_highlight_only=bool(hl),
-                                colour_scheme_index=int(family_colour_scheme),
+                                revision_extra=revision_extra_json,
                             )
-                            result_warning = None
+                            _leaflet_payload_cache_store(
+                                FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
+                                payload_cache_key,
+                                {
+                                    "revision": leaflet_revision,
+                                    "geojson": leaflet_geojson,
+                                    "framing_pairs": family_framing_pairs,
+                                    "highlight_framed": family_highlight_framed,
+                                },
+                            )
 
-                    _ck = static_map_cache_key(
-                        work_df,
-                        "families",
-                        date_filter_banner,
-                        map_style,
-                        (fam, hl, int(map_height), int(family_colour_scheme)),
-                        taxonomy_locale=tax_locale_effective,
-                    )
-                    _map_cache_store(
-                        _ck,
-                        {
-                            "key": _ck,
-                            "map": result_map,
-                            "warning": result_warning,
-                            "hint": map_hint_text,
-                        },
-                    )
+                    if leaflet_revision and leaflet_geojson is not None:
+                        leaflet_viewport = family_leaflet_viewport_recipe(
+                            family_framing_pairs,
+                            blank_viewport_recipe=blank_viewport_recipe,
+                            highlight_framed=family_highlight_framed,
+                        )
+                    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                 else:
                     overlay_common = (
                         (species_pick_common or "").strip() if map_view_mode == "species" else ""
@@ -1042,6 +1104,8 @@ def render_prep_spinner_and_map_tab(
                     pass
                 elif use_species_leaflet and leaflet_revision and leaflet_geojson is not None:
                     pass
+                elif use_family_leaflet and leaflet_revision and leaflet_geojson is not None:
+                    pass
                 elif result_warning:
                     map_warning_text = result_warning
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
@@ -1080,6 +1144,7 @@ def render_prep_spinner_and_map_tab(
                         use_all_locations_leaflet
                         or use_lifer_leaflet
                         or use_species_leaflet
+                        or use_family_leaflet
                     )
                     and leaflet_revision
                     and leaflet_geojson is not None
@@ -1100,6 +1165,9 @@ def render_prep_spinner_and_map_tab(
                     elif use_species_leaflet:
                         _embed_extra["embed"] = "species_leaflet"
                         _span_name = "map.species_leaflet.component_embed"
+                    elif use_family_leaflet:
+                        _embed_extra["embed"] = "family_leaflet"
+                        _span_name = "map.family_leaflet.component_embed"
                     else:
                         _embed_extra["embed"] = "all_locations_leaflet"
                         _embed_extra["map_view_mode"] = map_view_mode
@@ -1118,7 +1186,7 @@ def render_prep_spinner_and_map_tab(
                             banner_html=all_locations_leaflet_banner_html,
                             legend_html=all_locations_leaflet_legend_html,
                             key=(
-                                f"explorer_{'lifer' if use_lifer_leaflet else 'species' if use_species_leaflet else 'all_locations'}_leaflet_h{map_height}_"
+                                f"explorer_{'lifer' if use_lifer_leaflet else 'species' if use_species_leaflet else 'family' if use_family_leaflet else 'all_locations'}_leaflet_h{map_height}_"
                                 f"n{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
                             ),
                         )
