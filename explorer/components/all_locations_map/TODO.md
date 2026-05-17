@@ -187,13 +187,9 @@ From post–PR #226 code review. **Not blocking** merge; revisit during Folium r
 
 ---
 
-## 11. Debug: live zoom level overlay (**retain parity**)
+## 11. Debug: live zoom level overlay — **done**
 
-Production Folium builders call ``add_zoom_level_debug_overlay(...)`` when ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` is true in ``explorer/app/streamlit/defaults.py`` (see ``map_renderer.py``, ``map_overlay_visit_map.py``, ``map_overlay_lifer_map.py``).
-
-**Gap:** Custom component maps (All locations, Lifer, Species, Family) do not yet honour that flag — no live zoom readout in the iframe.
-
-**Do:** Pass the flag through component args (or inject the same Leaflet/HTML pattern used by ``add_zoom_level_debug_overlay``) in ``AllLocationsMap.tsx``, and replicate for future component maps so debug behaviour stays one switch in ``defaults.py``.
+**Shipped:** ``render_all_locations_map_component`` passes ``show_zoom_debug`` from ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` (``defaults.py``). ``AllLocationsMap.tsx`` adds the same bottom-right Leaflet control as Folium ``add_zoom_level_debug_overlay`` (``.ebird-zoom-debug-overlay``). Applies to all four Map-tab Leaflet modes (single component embed).
 
 ---
 
@@ -246,7 +242,7 @@ Production Folium builders call ``add_zoom_level_debug_overlay(...)`` when ``MAP
 ### Suggested next tasks (after Family on `beta-next`)
 
 1. Merge **`222-family-locations-leaflet`** → `beta-next`, dogfood, close **#222** (or keep open for cleanup epic).
-2. §11 — zoom debug overlay on component maps.
+2. ~~§11 — zoom debug overlay on component maps.~~ **Done** on ``222-zoom-debug-overlay``.
 3. §7 — export strategy for Leaflet modes.
 4. §10 — documentation pass; optional rename of `all_locations_map` component directory.
 5. Remove or gate Folium map builders; §13–§14 cache polish; §15 popup typography pass; §8 perf (#205).
