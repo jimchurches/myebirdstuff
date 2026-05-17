@@ -5,7 +5,7 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 **Related:** [README.md](./README.md) (build, clustering, banner/legend, popups).
 
-**Working principles (#222):** All four Map-tab modes now use the Leaflet component in production prep. Legacy Folium builders remain for tests and optional export paths until §7 — defer cross-stack DRY and deep edge-case polish until Folium is removed.
+**Working principles (#222):** All four Map-tab modes now use the Leaflet component in production prep. Legacy Folium builders remain for **unit tests only** until Folium removal — **not** for production map display or export (§7 rules out a parallel Folium export stack). Defer cross-stack DRY and deep edge-case polish until Folium is removed.
 
 ---
 
@@ -95,9 +95,13 @@ Implemented in `AllLocationsMap.tsx` (`syncGoToGpsMarker`, `goToGpsMarkerIcon`) 
 
 ---
 
-## 7. Export map HTML
+## 7. Export map HTML — **done (single-stack HTML)**
 
-- Export path today serializes Folium. All component map modes clear `EXPLORER_MAP_HTML_BYTES_KEY` in prep — sidebar **Export map HTML** is hidden on Leaflet embeds. Decide whether component maps need HTML export or a different artifact.
+**Shipped (branch ``222-export-map-html``):** Leaflet maps export via ``leaflet_map_to_html_bytes`` — standalone HTML with CDN Leaflet 1.9.4 + MarkerCluster, same GeoJSON/theme/banner/legend as the live component. Popups pre-rendered in Python (``popup_v1_export_html``) into ``export_popup_html`` on each feature; viewer in ``explorer/presentation/static/leaflet_map_export.js``. Prep sets ``EXPLORER_MAP_HTML_BYTES_KEY`` for all four Leaflet modes (sidebar **Export map HTML** visible again).
+
+**Constraints:** Downloaded file needs network for tiles + CDN scripts. Not fully offline.
+
+**No dual stack:** Folium builders are not run for export on Leaflet paths.
 
 ---
 
@@ -243,7 +247,7 @@ From post–PR #226 code review. **Not blocking** merge; revisit during Folium r
 
 1. Merge **`222-family-locations-leaflet`** → `beta-next`, dogfood, close **#222** (or keep open for cleanup epic).
 2. ~~§11 — zoom debug overlay on component maps.~~ **Done** on ``222-zoom-debug-overlay``.
-3. §7 — export strategy for Leaflet modes.
+3. ~~§7 — export strategy for Leaflet modes.~~ **Done** on ``222-export-map-html``.
 4. §10 — documentation pass; optional rename of `all_locations_map` component directory.
 5. Remove or gate Folium map builders; §13–§14 cache polish; §15 popup typography pass; §8 perf (#205).
 6. Standalone comments: remaining `refs #NNN` in `map_renderer.py` docstrings (popup HTML builders) — batch cleanup.
