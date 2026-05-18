@@ -2,9 +2,9 @@
 
 from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
 from explorer.core.family_map_compute import FamilyLocationPin
-from explorer.core.family_map_folium import family_map_marker_style
+from explorer.core.family_map_overlays import family_map_marker_style
 from explorer.core.family_locations_geojson import build_family_locations_geojson_payload
-from explorer.core.map_overlay_visit_map import family_leaflet_viewport_recipe
+from explorer.core.map_leaflet_viewport import family_leaflet_viewport_recipe
 from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 
 

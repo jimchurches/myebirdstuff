@@ -53,7 +53,6 @@ from explorer.app.streamlit.defaults import (
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
 )
-from explorer.app.streamlit.app_map_ui import inject_map_folium_iframe_min_height_css
 from explorer.app.streamlit.design_map_constants import (
     FAMILY_DENSITY_BAND_UI_LABELS,
     H_BASEMAP,
@@ -133,7 +132,6 @@ from explorer.presentation.design_map_preview import (
     MARKER_SCHEME_FALLBACK_DEFAULT_STROKE_WEIGHT,
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     DesignMapPreviewConfig,
-    build_design_preview_map,
     normalize_hex_colour,
     scheme_seed_config,
 )
@@ -947,35 +945,15 @@ def main() -> None:
     tab_preview, tab_export = st.tabs(["Map preview", "Export to defaults.py"])
 
     with tab_preview:
-        if applied is None:
-            st.info("Configure the sidebar and click **Update map** to render the preview.")
-        else:
-            h = int(applied.height_px)
-            inject_map_folium_iframe_min_height_css(h)
-            m = build_design_preview_map(
-                applied,
-                position_seed=int(st.session_state[_K_POS_SEED]),
-            )
-            try:
-                from streamlit_folium import st_folium
-            except ImportError:
-                st.error("Install **streamlit-folium** (`pip install -r requirements.txt`).")
-                st.stop()
-
-            st_folium(
-                m,
-                use_container_width=True,
-                height=h,
-                key=f"design_folium_{st.session_state.get(_K_RENDER, 0)}",
-                returned_objects=[],
-                return_on_hover=False,
-            )
+        st.info(
+            "Live Folium map preview was removed with the Leaflet migration. Use the main Explorer "
+            "**Map** tab to verify marker colours, or open the **Export to defaults.py** tab to copy "
+            "scheme snippets from the sidebar configuration."
+        )
+        if applied is not None:
             st.caption(
-                "Bottom-left legend matches production maps (``build_legend_html``). "
-                "Copies **0–1** cluster near Canberra; **2–3** scatter. Family bands: highlight stroke on "
-                "copy **0** (cluster) and copy **2** (spread) so you can compare packed vs isolated. "
-                "Invalid hex falls back to catch-all white/cream (see ``map_marker_colour_resolve``); "
-                "resolved colours follow the scheme hierarchy in the sidebar preset."
+                f"Last applied scope: **{PREVIEW_SCOPE_LABELS.get(applied.preview_scope, applied.preview_scope)}** · "
+                f"basemap `{applied.map_style}` · height {applied.height_px}px."
             )
 
     with tab_export:

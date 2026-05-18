@@ -14,7 +14,8 @@ from explorer.app.streamlit.app_constants import (
     REPO_ROOT,
     FILTERED_BY_LOC_CACHE_KEY,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
-    FOLIUM_STATIC_MAP_CACHE_KEY,
+    LEAFLET_EXPORT_BUILT_CACHE_KEY,
+    LEAFLET_EXPORT_RECIPE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
@@ -104,21 +105,24 @@ def _all_locations_leaflet_embed_active(session_state: Any) -> bool:
     return not sci
 
 
-def invalidate_folium_map_embed_cache(*, bump_mount_nonce: bool = True) -> None:
-    """Drop cached Folium map HTML; optionally bump iframe mount nonce (basemap, colours, etc.)."""
+def invalidate_map_embed_cache(*, bump_mount_nonce: bool = True) -> None:
+    """Bump Leaflet component mount nonce and clear export HTML when map chrome changes."""
     if bump_mount_nonce:
         st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
             st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
         ) + 1
-    st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
+
+
+# Back-compat name for sidebar callbacks.
+invalidate_folium_map_embed_cache = invalidate_map_embed_cache
 
 
 def _on_basemap_changed() -> None:
-    """Folium embed must remount when basemap changes; Leaflet component swaps tiles in-place."""
-    if _all_locations_leaflet_embed_active(st.session_state):
-        return
-    invalidate_folium_map_embed_cache()
+    """Leaflet component swaps basemap tiles in-place; no remount required."""
+    return
 
 
 @dataclass(frozen=True)

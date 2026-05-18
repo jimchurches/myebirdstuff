@@ -1,6 +1,5 @@
 """Tests for explorer.presentation.map_renderer helpers."""
 
-import folium
 import pandas as pd
 
 from explorer.app.streamlit.defaults import MAP_POPUP_MACAULAY_LINK_SYMBOL, MAP_POPUP_MAX_WIDTH_PX
@@ -13,11 +12,9 @@ from explorer.presentation.map_renderer import (
     build_legend_html,
     build_location_popup_html,
     classify_locations,
-    create_map,
     format_species_map_sighting_row,
     format_sighting_row,
     format_visit_time,
-    map_popup_width_fix_script,
     pin_legend_item,
     popup_scroll_script,
     resolve_lifer_last_seen,
@@ -285,41 +282,6 @@ def test_popup_scroll_script_scroll_to_bottom():
 def test_popup_scroll_script_none_hint():
     result = popup_scroll_script(None, False)
     assert "None" in result
-
-
-def test_map_popup_width_fix_script_embeds_max_width():
-    s = map_popup_width_fix_script()
-    assert "<script>" in s and "shrinkPebirdPopups" in s
-    assert f"var MAX_PX = {MAP_POPUP_MAX_WIDTH_PX}" in s
-
-
-# ---------------------------------------------------------------------------
-# create_map
-# ---------------------------------------------------------------------------
-
-def test_create_map_default():
-    m = create_map([0.0, 0.0])
-    assert isinstance(m, folium.Map)
-
-
-def test_create_map_default_explicit():
-    m = create_map([0.0, 0.0], "default")
-    assert isinstance(m, folium.Map)
-
-
-def test_create_map_google():
-    m = create_map([-33.8, 151.2], "google")
-    assert isinstance(m, folium.Map)
-
-
-def test_create_map_carto():
-    m = create_map([-33.8, 151.2], "carto")
-    assert isinstance(m, folium.Map)
-
-
-def test_create_map_unknown_style_falls_back():
-    m = create_map([0.0, 0.0], "unknown_style")
-    assert isinstance(m, folium.Map)
 
 
 # ---------------------------------------------------------------------------

@@ -1,25 +1,12 @@
 """Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab embed.
 
-Map build runs under the first spinner so the map can render before heavy checklist/rankings caches
-(map builds before heavy checklist/rankings caches). **All locations**, **Lifer locations**, **Species locations**, and **Family locations** use the
-Leaflet Streamlit custom component; other modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so
-other tabs get payloads before fragments run. Partial ``@st.fragment`` reruns do not use this path.
-
-**Export map HTML:** Leaflet modes store an export **recipe** in session
-(:data:`LEAFLET_EXPORT_RECIPE_KEY`); ``leaflet_map_to_html_bytes`` runs only when the user clicks export, with
-results cached under :data:`LEAFLET_EXPORT_HTML_CACHE_KEY`. Folium modes still build ``html_bytes`` during prep
-(cached on the map LRU hit).
-The live
-Folium map uses **streamlit-folium** ``st_folium`` with a **deep copy** of the cached map so embed
-rendering cannot strip layers from the session cache. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY`
-stores unrendered Folium :class:`folium.Map` entries for the LRU. Leaflet GeoJSON payloads are cached under
-:data:`ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`, :data:`LIFER_LEAFLET_PAYLOAD_CACHE_KEY`, and
-:data:`SPECIES_LEAFLET_PAYLOAD_CACHE_KEY`, and :data:`FAMILY_LEAFLET_PAYLOAD_CACHE_KEY`.
+All four Map-tab modes use the Leaflet Streamlit custom component. Export HTML is built on sidebar
+button click from :data:`LEAFLET_EXPORT_RECIPE_KEY` (cached under :data:`LEAFLET_EXPORT_HTML_CACHE_KEY`).
+GeoJSON payloads use the ``*_LEAFLET_PAYLOAD_CACHE_KEY`` session keys.
 """
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 import os
@@ -50,7 +37,6 @@ from explorer.app.streamlit.app_constants import (
     EXPORT_MAP_HTML_BTN_KEY,
     FILTERED_BY_LOC_CACHE_KEY,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
-    FOLIUM_STATIC_MAP_CACHE_KEY,
     POPUP_FRAGMENT_CACHE_KEY,
     POPUP_HTML_CACHE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
@@ -78,7 +64,6 @@ from explorer.app.streamlit.checklist_stats_streamlit_html import (
 )
 from explorer.app.streamlit.country_stats_streamlit_html import sync_country_tab_session_inputs
 from explorer.app.streamlit.maintenance_streamlit_html import sync_maintenance_tab_session_inputs
-from explorer.app.streamlit.map_working import folium_map_to_html_bytes
 from explorer.presentation.leaflet_map_export_cache import leaflet_export_html_cache_key
 from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
 from explorer.app.streamlit.rankings_streamlit_html import (
@@ -106,16 +91,15 @@ from explorer.core.all_locations_viewport import (
 )
 from explorer.core.lifer_locations_geojson import build_lifer_locations_geojson_payload
 from explorer.core.lifer_last_seen_prep import count_subspecies_lifer_taxa
-from explorer.core.map_controller import build_species_overlay_map
 from explorer.core.map_marker_colour_resolve import (
     resolve_lifer_overlay_pin_params,
     resolve_species_visit_pin,
 )
-from explorer.core.map_overlay_lifer_map import lifer_leaflet_viewport_recipe
 from explorer.core.family_locations_geojson import build_family_locations_geojson_payload
-from explorer.core.map_overlay_visit_map import (
+from explorer.core.map_leaflet_viewport import (
     all_locations_leaflet_viewport_recipe,
     family_leaflet_viewport_recipe,
+    lifer_leaflet_viewport_recipe,
     species_leaflet_viewport_recipe,
 )
 from explorer.core.species_locations_geojson import (
@@ -152,7 +136,7 @@ from explorer.app.streamlit.defaults import (
     MAP_SPECIES_DEFAULT_ZOOM,
     active_map_marker_colour_scheme,
 )
-from explorer.core.family_map_folium import (
+from explorer.core.family_map_overlays import (
     build_family_map_banner_overlay_html,
     build_family_map_legend_overlay_html_for_pins,
 )
@@ -173,7 +157,6 @@ from explorer.presentation.map_renderer import (
 )
 
 
-_MAP_RENDER_CACHE_MAX_ENTRIES = 6
 # Species map: cache hide-only vs all-locations payloads separately (toggle thrashes a single slot).
 _SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
 _FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
@@ -314,35 +297,6 @@ def _leaflet_payload_cache_store(
     st.session_state[session_key] = cached
 
 
-def _map_cache_lookup(cache_key: tuple[Any, ...]) -> dict[str, Any] | None:
-    """Session map cache lookup with backward compatibility for old single-entry payloads."""
-    cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
-    if isinstance(cached, OrderedDict):
-        entry = cached.get(cache_key)
-        if isinstance(entry, dict):
-            cached.move_to_end(cache_key)
-            return entry
-        return None
-    if isinstance(cached, dict) and cached.get("key") == cache_key:
-        return cached
-    return None
-
-
-def _map_cache_store(cache_key: tuple[Any, ...], entry: dict[str, Any]) -> None:
-    """Store/refresh a map cache entry and keep an LRU cap."""
-    cached = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
-    if not isinstance(cached, OrderedDict):
-        converted: OrderedDict = OrderedDict()
-        if isinstance(cached, dict) and cached.get("key") is not None:
-            converted[cached["key"]] = cached
-        cached = converted
-    cached[cache_key] = entry
-    cached.move_to_end(cache_key)
-    while len(cached) > _MAP_RENDER_CACHE_MAX_ENTRIES:
-        cached.popitem(last=False)
-    st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY] = cached
-
-
 def render_prep_spinner_and_map_tab(
     *,
     tab_map: Any,
@@ -383,18 +337,12 @@ def render_prep_spinner_and_map_tab(
                             "prev_present": _prev_sig is not None,
                             "prev_sig": list(_prev_sig) if isinstance(_prev_sig, tuple) else _prev_sig,
                             "new_sig": list(sig) if isinstance(sig, tuple) else sig,
-                            "map_cache_entries_before_nuke": (
-                                len(st.session_state[FOLIUM_STATIC_MAP_CACHE_KEY])
-                                if isinstance(st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY), OrderedDict)
-                                else 0
-                            ),
                         },
                     )
                     st.session_state[EBIRD_DATA_SIG_KEY] = sig
                     st.session_state[POPUP_HTML_CACHE_KEY] = {}
                     st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
                     st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
-                    st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
                     st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
                     st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
                     st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
@@ -405,7 +353,6 @@ def render_prep_spinner_and_map_tab(
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None
-            folium_st_key: str | None = None
             capture_all_locations_view = False
             try:
                 with perf_span("prep.map_context_prepare"):
@@ -498,8 +445,6 @@ def render_prep_spinner_and_map_tab(
 
                 if map_view_mode == "families":
                     use_family_leaflet = True
-                    result_map = None
-                    folium_st_key = None
                     result_warning = None
                     fam = (family_name or "").strip()
                     hl = (family_highlight_base or "").strip().lower()
@@ -779,29 +724,6 @@ def render_prep_spinner_and_map_tab(
                         hide_non_matching_locations=bool(hide_nm),
                         go_to_gps_pin=_go_pin,
                     )
-                    _cache_at_lookup = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
-                    perf_record_point(
-                        "prep.map_cache_key_components",
-                        extra={
-                            "mode": map_view_mode,
-                            "k_map_view_mode": _ck[0],
-                            "k_date_filter_banner": _ck[1],
-                            "k_map_style": _ck[2],
-                            "k_render_opts_sig": list(_ck[3]),
-                            "k_n": _ck[4],
-                            "k_sid0": _ck[5],
-                            "k_tax": _ck[6],
-                            "k_sci": _ck[7],
-                            "k_common": _ck[8],
-                            "k_hide_nm": _ck[9],
-                            "k_gps_sig": _ck[10],
-                            "cache_entries_at_lookup": (
-                                len(_cache_at_lookup)
-                                if isinstance(_cache_at_lookup, OrderedDict)
-                                else (1 if isinstance(_cache_at_lookup, dict) else 0)
-                            ),
-                        },
-                    )
                     if use_all_locations_leaflet:
                         raw_vis = str(
                             os.environ.get("EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP", "") or ""
@@ -897,9 +819,7 @@ def render_prep_spinner_and_map_tab(
                             [(_ls, _lf, "All locations")],
                             container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
                         )
-                        result_map = None
                         result_warning = None
-                        folium_st_key = None
                     elif use_lifer_leaflet:
                         result_warning = None
                         leaflet_cluster_opts = {
@@ -1009,8 +929,6 @@ def render_prep_spinner_and_map_tab(
                                         legend_rows,
                                         container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
                                     )
-                        result_map = None
-                        folium_st_key = None
                     elif use_species_leaflet:
                         result_warning = None
                         leaflet_cluster_opts = {
@@ -1170,52 +1088,6 @@ def render_prep_spinner_and_map_tab(
                                         if legend_rows
                                         else ""
                                     )
-                        result_map = None
-                        folium_st_key = None
-                    else:
-                        _cached = _map_cache_lookup(_ck)
-                        if isinstance(_cached, dict) and _cached.get("map") is not None:
-                            perf_record_point("prep.map_cache_hit", extra={"mode": map_view_mode})
-                            result_map = _cached["map"]
-                            result_warning = _cached.get("warning")
-                        else:
-                            perf_record_point("prep.map_cache_miss", extra={"mode": map_view_mode})
-                            # Perf: split popup-build vs marker-count spans inside
-                            # the same perf event. ``perf_span`` stamps ``extra`` by reference at
-                            # finalize time, so mutations inside :func:`build_species_overlay_map`
-                            # land on the emitted record.
-                            _build_metrics: dict[str, Any] = {"mode": map_view_mode}
-                            with perf_span(
-                                "prep.build_species_overlay_map", extra=_build_metrics
-                            ):
-                                result = build_species_overlay_map(
-                                    metrics_sink=_build_metrics, **_map_kw
-                                )
-                                result_map = result.map
-                                result_warning = result.warning
-                            if result_map is not None:
-                                _map_cache_store(
-                                    _ck,
-                                    {
-                                        "key": _ck,
-                                        "map": result_map,
-                                        "warning": result_warning,
-                                    },
-                                )
-                                _cache_after = st.session_state.get(FOLIUM_STATIC_MAP_CACHE_KEY)
-                                perf_record_point(
-                                    "prep.map_cache_store",
-                                    extra={
-                                        "mode": map_view_mode,
-                                        "site": "after_build_species_overlay_map",
-                                        "cache_entries_after_store": (
-                                            len(_cache_after)
-                                            if isinstance(_cache_after, OrderedDict)
-                                            else 0
-                                        ),
-                                    },
-                                )
-
                 if (
                     (
                         use_all_locations_leaflet
@@ -1245,36 +1117,6 @@ def render_prep_spinner_and_map_tab(
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                     st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
                     st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
-                elif result_map is None:
-                    map_warning_text = "Map could not be built."
-                    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
-                else:
-                    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
-                    _cached_for_html = _map_cache_lookup(_ck)
-                    _cached_html = (
-                        _cached_for_html.get("html_bytes")
-                        if isinstance(_cached_for_html, dict)
-                        else None
-                    )
-                    if isinstance(_cached_html, (bytes, bytearray)):
-                        perf_record_point("prep.map_html_cache_hit")
-                        st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = bytes(_cached_html)
-                    else:
-                        perf_record_point("prep.map_html_cache_miss")
-                        with perf_span("prep.folium_map_to_html_bytes"):
-                            st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = folium_map_to_html_bytes(
-                                copy.deepcopy(result_map)
-                            )
-                        if isinstance(_cached_for_html, dict):
-                            _cached_for_html["html_bytes"] = st.session_state[EXPLORER_MAP_HTML_BYTES_KEY]
-                            _map_cache_store(_ck, _cached_for_html)
-                    folium_st_key = (
-                        f"explorer_folium_{abs(hash(_ck))}_h{map_height}_mv{map_view_mode}_n"
-                        f"{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
-                    )
 
             with tab_map:
                 if map_warning_text is not None:
@@ -1329,34 +1171,6 @@ def render_prep_spinner_and_map_tab(
                                 f"explorer_{'lifer' if use_lifer_leaflet else 'species' if use_species_leaflet else 'family' if use_family_leaflet else 'all_locations'}_leaflet_h{map_height}_"
                                 f"n{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
                             ),
-                        )
-                elif (
-                    folium_st_key is not None
-                    and st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY) is not None
-                ):
-                    if map_hint_text:
-                        st.info(map_hint_text)
-                    inject_map_folium_iframe_min_height_css(map_height)
-                    try:
-                        from streamlit_folium import st_folium
-                    except ImportError:
-                        st.error(
-                            "Missing **streamlit-folium** (needed to embed the Folium map). "
-                            "Locally: `pip install -r requirements.txt`. "
-                            "**Streamlit Community Cloud:** set app **Python requirements** to "
-                            "`requirements.txt` at the repo root."
-                        )
-                        st.stop()
-                    with perf_span("prep.map_iframe_embed"):
-                        # Deep copy: ``st_folium`` / Folium render paths mutate in memory; mutating the
-                        # cached ``folium.Map`` causes intermittent empty maps on subsequent cache hits.
-                        st_folium(
-                            copy.deepcopy(result_map),
-                            use_container_width=True,
-                            height=int(map_height),
-                            key=folium_st_key,
-                            returned_objects=[],
-                            return_on_hover=False,
                         )
 
         with st.spinner(TAB_PREP_SPINNER_TEXT):

@@ -7,8 +7,6 @@ import pytest
 
 from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
 from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
-from explorer.core.map_controller import build_species_overlay_map
-from explorer.core.species_logic import base_species_for_lifer
 from explorer.core.map_prep import (
     data_signature_for_caches,
     mean_center_from_location_data,
@@ -39,23 +37,12 @@ def _tiny_df():
     )
 
 
-def test_prepare_all_locations_map_context_matches_controller_contract():
+def test_prepare_all_locations_map_context_has_location_totals():
     df = _tiny_df()
     ctx = prepare_all_locations_map_context(df)
-    r = build_species_overlay_map(
-        **ctx,
-        selected_species="",
-        popup_html_cache={},
-        filtered_by_loc_cache=OrderedDict(),
-        species_url_fn=None,
-        base_species_fn=base_species_for_lifer,
-        map_view_mode="all",
-        visit_marker_scheme=active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT),
-    )
-    assert r.warning is None
-    assert r.map is not None
-    html = r.map._repr_html_()
-    assert "Test Location" in html or "L1" in html
+    assert ctx["effective_totals"][0] == 1
+    assert "records_by_loc" in ctx
+    assert "L1" in ctx["records_by_loc"]
 
 
 def test_prepare_empty_raises():

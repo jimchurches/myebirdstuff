@@ -1,6 +1,6 @@
 """GeoJSON + revision for the **Species locations** Leaflet component.
 
-Mirrors :func:`~explorer.core.map_overlay_visit_map.build_visit_overlay_map` species branch without Folium.
+Mirrors :func:`~explorer.core.map_leaflet_viewport.build_visit_overlay_map` species branch without Folium.
 """
 
 from __future__ import annotations

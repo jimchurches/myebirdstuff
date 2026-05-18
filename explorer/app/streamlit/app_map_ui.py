@@ -16,7 +16,6 @@ from explorer.app.streamlit.app_constants import (
     EXPLORER_MAP_HTML_BYTES_KEY,
     REPO_ROOT,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
-    FOLIUM_STATIC_MAP_CACHE_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
@@ -402,7 +401,6 @@ def species_searchbox_fragment() -> None:
         st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
             st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
         ) + 1
-        st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
         st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         st.rerun()
 

@@ -93,17 +93,9 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
     assert len(events) >= 3, f"expected perf JSON events in Streamlit logs, got {len(events)}"
 
     stages_seen = {str(e.get("stage")) for e in events if isinstance(e.get("stage"), str)}
-    must = {"prep.map_iframe_embed", "prep.folium_map_to_html_bytes", "prep.map_context_prepare"}
+    must = {"prep.map_context_prepare", "map.all_locations_leaflet.component_embed"}
     missing = must - stages_seen
     assert not missing, f"missing expected stages {missing!r} in {sorted(stages_seen)!r}"
-
-    # #214: All → Lifer → All must hit the Folium prep cache at least once on return (before the fix,
-    # ``app_map_working_ui`` cleared the LRU on every view-mode change, so this count stayed 0).
-    cache_hits = [e for e in events if e.get("stage") == "prep.map_cache_hit"]
-    assert len(cache_hits) >= 1, (
-        "expected at least one prep.map_cache_hit in JSONL for All→Lifer→All "
-        f"(got {len(cache_hits)}); stages seen: {sorted(stages_seen)!r}"
-    )
 
     highs = max_elapsed_ms_by_stage(events)
     failures: list[str] = []

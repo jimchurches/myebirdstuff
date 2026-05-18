@@ -7,7 +7,6 @@
 pandas>=3.0.3,<4
 
 # Core deps
-folium>=0.20.0
 whoosh
 scikit-learn>=1.8.0,<2
 pycountry>=26.2.16
@@ -16,7 +15,6 @@ PyYAML>=6.0.3,<7
 # Streamlit app deps
 streamlit>=1.57.0
 watchdog>=6.0.0,<7  # efficient file watching on reload (Streamlit falls back to polling without it)
-streamlit-folium>=0.27.2
 streamlit-searchbox>=0.1.24
 pydantic>=2.13.4,<3
 

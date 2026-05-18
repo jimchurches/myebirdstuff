@@ -4,7 +4,7 @@ import pandas as pd
 
 from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
 from explorer.core.lifer_locations_geojson import build_lifer_locations_geojson_payload
-from explorer.core.map_overlay_lifer_map import lifer_leaflet_viewport_recipe
+from explorer.core.map_leaflet_viewport import lifer_leaflet_viewport_recipe
 from explorer.core.map_prep import prepare_all_locations_map_context
 from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.species_logic import base_species_for_lifer

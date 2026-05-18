@@ -19,7 +19,6 @@ from explorer.presentation.design_map_preview import (
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     MAP_SCOPE_ALL_LOCATIONS,
     MAP_SCOPE_FAMILY_LOCATIONS,
-    build_design_preview_map,
     normalize_hex_colour,
     scheme_seed_config,
 )
@@ -137,57 +136,3 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
         assert cfg.marker_cluster_tier_icon_hex == _expected_marker_cluster_tier_icon_hex(sch)
         assert cfg.marker_cluster_inner_fill_opacity == _expected_cluster_inner_fill_opacity(sch)
 
-
-def test_build_design_preview_map_returns_folium_with_markers() -> None:
-    sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    m = build_design_preview_map(cfg, position_seed=7)
-    html = m._repr_html_()
-    assert "CircleMarker" in html or "circle" in html.lower()
-    assert "-35" in html  # Canberra latitude area
-    vf, ve = resolve_location_visit_colours(sch)
-    h = html.lower()
-    for hx in (vf, ve):
-        assert hx.replace("#", "").lower() in h
-
-
-def test_all_locations_scope_has_only_default_pins() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_ALL_LOCATIONS)
-    m = build_design_preview_map(cfg, position_seed=3)
-    html = m._repr_html_()
-    assert html.count("All locations") >= 8
-    assert "species at location" not in html
-
-
-def test_all_locations_scope_includes_seq_cluster_demo() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_ALL_LOCATIONS)
-    m = build_design_preview_map(cfg, position_seed=3)
-    html = m._repr_html_()
-    assert "SEQ cluster demo" in html
-    assert "Gold Coast (small tier)" in html
-    assert "-27" in html or "-28" in html
-
-
-def test_family_scope_excludes_seq_cluster_demo() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
-    m = build_design_preview_map(cfg, position_seed=3)
-    html = m._repr_html_()
-    assert "SEQ cluster demo" not in html
-
-
-def test_family_scope_shows_only_family_markers() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
-    m = build_design_preview_map(cfg, position_seed=3)
-    html = m._repr_html_()
-    assert html.count("species at location") >= 8
-    assert "Default location marker" not in html
-    assert "All locations" not in html
-    assert "Last seen" not in html
-    assert "pebird-map-legend" in html
-
-
-def test_build_includes_legend_overlay() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    m = build_design_preview_map(cfg, position_seed=1)
-    html = m._repr_html_()
-    assert "pebird-map-legend" in html

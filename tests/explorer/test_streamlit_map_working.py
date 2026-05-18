@@ -19,7 +19,6 @@ from explorer.core.data_loader import load_dataset  # noqa: E402
 from explorer.app.streamlit.map_working import (  # noqa: E402
     date_bounds_from_df,
     date_inception_to_today_default,
-    folium_map_to_html_bytes,
     streamlit_working_set_and_status,
 )
 
@@ -92,48 +91,3 @@ def test_streamlit_species_view_uses_same_date_filter_as_all(df: pd.DataFrame) -
     assert len(ws_all.df) == len(ws_sp.df)
     assert st_all == st_sp
 
-
-def test_folium_map_to_html_bytes() -> None:
-    import folium
-
-    m = folium.Map()
-    b = folium_map_to_html_bytes(m)
-    low = b.lower()
-    assert b"<!doctype html>" in low or b"<html" in low
-
-
-def test_embed_folium_html_bytes_iframe_delegates_to_components_html(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[tuple] = []
-
-    def _fake_html(
-        html: str,
-        width: int | None = None,
-        height: int | None = None,
-        scrolling: bool = False,
-    ) -> None:
-        calls.append((html, width, height, scrolling))
-
-    monkeypatch.setattr("streamlit.components.v1.html", _fake_html)
-    from explorer.app.streamlit.map_working import embed_folium_html_bytes_iframe
-
-    embed_folium_html_bytes_iframe(b"<!doctype html><p>hi</p>", height=300, scrolling=False)
-    assert len(calls) == 1
-    assert "<p>hi</p>" in calls[0][0]
-    assert calls[0][1] is None
-    assert calls[0][2] == 300
-    assert calls[0][3] is False
-
-
-def test_folium_map_to_html_bytes_repeated_on_deepcopy_pristine() -> None:
-    """``render()`` mutates the in-memory map; session cache must only ``render`` copies."""
-    import copy
-
-    import folium
-
-    m = folium.Map(location=[-35.0, 149.0], zoom_start=4)
-    folium.Marker([-35.0, 149.0]).add_to(m)
-    pristine = copy.deepcopy(m)
-    b1 = folium_map_to_html_bytes(copy.deepcopy(pristine))
-    b2 = folium_map_to_html_bytes(copy.deepcopy(pristine))
-    assert len(b1) > 400 and len(b2) > 400
-    assert b1[:200] == b2[:200]

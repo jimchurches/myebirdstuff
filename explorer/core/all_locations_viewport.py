@@ -1,6 +1,6 @@
 """Helpers for All locations map viewport: focus by country, bounds points, framing modes.
 
-Pure functions — no Streamlit imports. Used by :mod:`explorer.core.map_overlay_visit_map`
+Pure functions — no Streamlit imports. Used by :mod:`explorer.core.map_leaflet_viewport`
 and tests.
 """
 
