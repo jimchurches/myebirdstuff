@@ -53,23 +53,73 @@ const GO_TO_GPS_POPUP_HTML =
 const POPUP_LOCATION_HEADING_MARGIN_PX = 4;
 
 /** Extra px on shrink width — ``scrollWidth`` can sit slightly under painted text (subpixel / fonts / padding). */
-const POPUP_SHRINK_WIDTH_BUFFER_PX = 40;
+const POPUP_SHRINK_WIDTH_BUFFER_PX = 48;
 
 /** Never apply a narrower content box than this — guards bad measures / font glitches. */
 const POPUP_SHRINK_MIN_CONTENT_WIDTH_PX = 140;
 
-/** Rows included when measuring intrinsic popup width (All locations + species + lifer). */
+/** Rows included when measuring intrinsic popup width (all map modes). */
 const POPUP_WIDE_MEASURE_SELECTOR =
-  ".pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, " +
-  "a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, " +
+  ".pebird-map-popup__heading-row, .pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, " +
+  ".pebird-map-popup__summary-line, " +
   ".pebird-map-popup__species-line, .pebird-map-popup__species-line a, .pebird-map-popup__obs-line, " +
   ".pebird-map-popup__species-seen > summary, " +
   ".pebird-map-popup__all-visits > summary";
+
+const POPUP_LOCATION_HEADING_SELECTOR =
+  "a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading";
+
+/** ``.pebird-map-popup`` horizontal padding (6 + 14) + ``__heading-row`` close-button gutter (~2.25rem). */
+const POPUP_HEADING_TEXT_INSET_PX = 56;
+
+/** Intrinsic single-line width of location titles (off-DOM — matches painted bold popup font). */
+function measureLocationHeadingWidthPx(inner: HTMLElement): number {
+  let w = 0;
+  inner.querySelectorAll(POPUP_LOCATION_HEADING_SELECTOR).forEach((el) => {
+    const he = el as HTMLElement;
+    const cs = window.getComputedStyle(he);
+    const clone = he.cloneNode(true) as HTMLElement;
+    clone.style.cssText =
+      "position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;width:max-content;max-width:none;";
+    clone.style.fontFamily = cs.fontFamily;
+    clone.style.fontSize = cs.fontSize;
+    clone.style.fontWeight = cs.fontWeight;
+    clone.style.letterSpacing = cs.letterSpacing;
+    document.body.appendChild(clone);
+    w = Math.max(w, clone.scrollWidth, clone.getBoundingClientRect().width);
+    document.body.removeChild(clone);
+  });
+  return Math.ceil(Math.max(w, 1));
+}
+
+function headingTextBudgetPx(contentWidthPx: number): number {
+  return Math.max(1, contentWidthPx - POPUP_HEADING_TEXT_INSET_PX);
+}
+
+function committedPopupContentWidthPx(content: HTMLElement): number {
+  const fromData = Number.parseInt(content.dataset.pebirdShrinkTarget ?? "", 10);
+  if (Number.isFinite(fromData) && fromData > 0) {
+    return fromData;
+  }
+  return Math.ceil(content.getBoundingClientRect().width);
+}
+
+/** Drop a too-narrow width commit when the single-line title needs a wider card (or the max cap). */
+function popupWidthCommitTooNarrowForHeading(
+  inner: HTMLElement,
+  content: HTMLElement,
+  cap: number,
+): boolean {
+  const committed = committedPopupContentWidthPx(content);
+  const headingW = measureLocationHeadingWidthPx(inner);
+  return headingW > headingTextBudgetPx(committed) && committed < cap;
+}
 
 /** Max of inner and wide text rows while inner is ``max-content`` for measure. */
 function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
   void inner.offsetWidth;
   let w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
+  w = Math.max(w, measureLocationHeadingWidthPx(inner));
   const wideEls = inner.querySelectorAll(POPUP_WIDE_MEASURE_SELECTOR);
   wideEls.forEach((el) => {
     const he = el as HTMLElement;
@@ -106,7 +156,11 @@ function shrinkPebirdLeafletPopups(map: L.Map): void {
       return;
     }
     if (content.getAttribute(POPUP_WIDTH_COMMIT_ATTR) === "1" && content.getAttribute(POPUP_WIDTH_CAP_ATTR) === capStr) {
-      return;
+      if (popupWidthCommitTooNarrowForHeading(inner, content, cap)) {
+        content.removeAttribute(POPUP_WIDTH_COMMIT_ATTR);
+      } else {
+        return;
+      }
     }
 
     /* Shrink-to-fit cycle: inner has max-width:100% of .leaflet-popup-content while that node uses
@@ -609,6 +663,20 @@ function escapeHtml(text: string): string {
   return div.innerHTML;
 }
 
+/** Keep trailing ``)`` / ``]`` from wrapping onto a line alone (typography, not lat/long-specific). */
+function preventOrphanClosingPunctuation(text: string): string {
+  return text.replace(/\s+([)\]}"'»])\s*$/u, "\u00a0$1");
+}
+
+function locationHeadingHtml(name: string, lifelistUrl: string): string {
+  const inner = escapeHtml(preventOrphanClosingPunctuation(name));
+  const hlSafe = safeHttpUrlForAnchor(lifelistUrl.trim());
+  if (hlSafe.length > 0) {
+    return `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${inner}</a>`;
+  }
+  return `<span class="pebird-map-popup__location-heading">${inner}</span>`;
+}
+
 /** Allow only http(s) in popup anchors — blocks ``javascript:``, ``data:``, etc.  . */
 function safeHttpUrlForAnchor(raw: string): string {
   const t = raw.trim();
@@ -840,11 +908,7 @@ function popupHtmlSpeciesLayout(
     Number.isFinite(payload.location_heading_margin_px)
       ? payload.location_heading_margin_px
       : 6;
-  const hlSafe = safeHttpUrlForAnchor(lifelistUrl.trim());
-  const locHeading =
-    hlSafe.length > 0
-      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
-      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+  const locHeading = locationHeadingHtml(name, lifelistUrl);
 
   const sectionParts: string[] = [];
   for (const sec of payload.species_sections) {
@@ -967,12 +1031,8 @@ function resolvedCircleStylesFromPinPayload(pin: CirclePinPayload): Pick<
 
 /** Family composition popup — mirrors ``format_family_location_popup_html``. */
 function popupHtmlFamilyLayout(name: string, lifelistUrl: string, payload: FamilyPopupPayloadV1): string {
-  const hlSafe = safeHttpUrlForAnchor(lifelistUrl.trim());
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
-  const locHeading =
-    hlSafe.length > 0
-      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
-      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+  const locHeading = locationHeadingHtml(name, lifelistUrl);
   const lineParts: string[] = [];
   for (const ln of payload.species_lines) {
     const n = ln.name.trim();
@@ -1002,12 +1062,8 @@ function popupHtmlFamilyLayout(name: string, lifelistUrl: string, payload: Famil
 
 /** Lifer popup: location heading + species checklist lines (parity with ``format_lifer_popup_lines``). */
 function popupHtmlLiferLayout(name: string, lifelistUrl: string, payload: LiferPopupPayloadV1): string {
-  const hlSafe = safeHttpUrlForAnchor(lifelistUrl.trim());
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
-  const locHeading =
-    hlSafe.length > 0
-      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
-      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+  const locHeading = locationHeadingHtml(name, lifelistUrl);
   const lineParts: string[] = [];
   for (let i = 0; i < payload.lines.length; i += 1) {
     const ln = payload.lines[i];
@@ -1049,10 +1105,7 @@ function popupHtmlVisitedLayout(
   const hl = lifelistUrl.trim();
   const hlSafe = safeHttpUrlForAnchor(hl);
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
-  const locHeading =
-    hlSafe.length > 0
-      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
-      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+  const locHeading = locationHeadingHtml(name, lifelistUrl);
 
   const visitAnchors: string[] = [];
   for (const e of entries) {
@@ -1126,12 +1179,7 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   }
   if (popup) {
     const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
-    const hl = lifelistUrl.trim();
-    const hlSafe = safeHttpUrlForAnchor(hl);
-    const locHeading =
-      hlSafe.length > 0
-        ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
-        : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+    const locHeading = locationHeadingHtml(name, lifelistUrl);
     let html =
       `<div class="pebird-map-popup">` +
       `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>`;
@@ -1157,12 +1205,8 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   }
   const visits = props?.visit_checklists;
   const url = String(props?.lifelist_url ?? "").trim();
-  const urlSafe = safeHttpUrlForAnchor(url);
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
-  const locHeading =
-    urlSafe.length > 0
-      ? `<a class="pebird-map-popup__location-heading" href="${escapeHtml(urlSafe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
-      : `<span class="pebird-map-popup__location-heading">${escapeHtml(name)}</span>`;
+  const locHeading = locationHeadingHtml(name, url);
   let legacy =
     `<div class="pebird-map-popup">` +
     `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>`;
