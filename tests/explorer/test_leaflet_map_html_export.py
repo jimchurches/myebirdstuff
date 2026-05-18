@@ -183,3 +183,5 @@ def test_leaflet_map_to_html_bytes_includes_viewer_and_geojson():
     assert "pebird-export-map" in text
     assert "pebird-export-map-host" in text
     assert "pebird-export-shell" in text
+    assert "shrinkPebirdLeafletPopups" in text
+    assert "scheduleShrinkPebirdLeafletPopups" in text

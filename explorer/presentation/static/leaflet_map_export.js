@@ -1,6 +1,151 @@
 /** Standalone Leaflet viewer for exported HTML (#222). Popups use pre-rendered export_popup_html from Python. */
 (function () {
   "use strict";
+
+  /* Popup shrink-wrap — keep in sync with AllLocationsMap.tsx (live component iframe). */
+  var POPUP_MAX_WIDTH_PX = 420;
+  var POPUP_SHRINK_WIDTH_BUFFER_PX = 48;
+  var POPUP_SHRINK_MIN_CONTENT_WIDTH_PX = 140;
+  var POPUP_WIDE_MEASURE_SELECTOR =
+    ".pebird-map-popup__heading-row, .pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, " +
+    ".pebird-map-popup__summary-line, " +
+    ".pebird-map-popup__species-line, .pebird-map-popup__species-line a, .pebird-map-popup__obs-line, " +
+    ".pebird-map-popup__species-seen > summary, " +
+    ".pebird-map-popup__all-visits > summary";
+  var POPUP_LOCATION_HEADING_SELECTOR =
+    "a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading";
+  var POPUP_HEADING_TEXT_INSET_PX = 56;
+  var POPUP_WIDTH_COMMIT_ATTR = "data-pebird-popup-width-commit";
+  var POPUP_WIDTH_CAP_ATTR = "data-pebird-shrink-applied-cap";
+
+  function capPopupInnerWidthPxForMap(map) {
+    var px = Math.max(1, map.getSize().x);
+    return Math.min(POPUP_MAX_WIDTH_PX, Math.max(80, px - 24));
+  }
+
+  function measureLocationHeadingWidthPx(inner) {
+    var w = 0;
+    var nodes = inner.querySelectorAll(POPUP_LOCATION_HEADING_SELECTOR);
+    for (var i = 0; i < nodes.length; i++) {
+      var he = nodes[i];
+      var cs = window.getComputedStyle(he);
+      var clone = he.cloneNode(true);
+      clone.style.cssText =
+        "position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;width:max-content;max-width:none;";
+      clone.style.fontFamily = cs.fontFamily;
+      clone.style.fontSize = cs.fontSize;
+      clone.style.fontWeight = cs.fontWeight;
+      clone.style.letterSpacing = cs.letterSpacing;
+      document.body.appendChild(clone);
+      w = Math.max(w, clone.scrollWidth, clone.getBoundingClientRect().width);
+      document.body.removeChild(clone);
+    }
+    return Math.ceil(Math.max(w, 1));
+  }
+
+  function headingTextBudgetPx(contentWidthPx) {
+    return Math.max(1, contentWidthPx - POPUP_HEADING_TEXT_INSET_PX);
+  }
+
+  function committedPopupContentWidthPx(content) {
+    var fromData = parseInt(content.dataset.pebirdShrinkTarget || "", 10);
+    if (!isNaN(fromData) && fromData > 0) {
+      return fromData;
+    }
+    return Math.ceil(content.getBoundingClientRect().width);
+  }
+
+  function popupWidthCommitTooNarrowForHeading(inner, content, cap) {
+    var committed = committedPopupContentWidthPx(content);
+    var headingW = measureLocationHeadingWidthPx(inner);
+    return headingW > headingTextBudgetPx(committed) && committed < cap;
+  }
+
+  function measurePebirdPopupInnerWidthPx(inner) {
+    void inner.offsetWidth;
+    var w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
+    w = Math.max(w, measureLocationHeadingWidthPx(inner));
+    var wideEls = inner.querySelectorAll(POPUP_WIDE_MEASURE_SELECTOR);
+    for (var j = 0; j < wideEls.length; j++) {
+      var he = wideEls[j];
+      w = Math.max(w, he.scrollWidth, he.getBoundingClientRect().width);
+    }
+    return Math.ceil(Math.max(w, 1));
+  }
+
+  function shrinkPebirdLeafletPopups(map) {
+    var pops = document.querySelectorAll(".leaflet-popup-pane .leaflet-popup");
+    var cap = capPopupInnerWidthPxForMap(map);
+    var capStr = String(cap);
+    for (var p = 0; p < pops.length; p++) {
+      var pop = pops[p];
+      var content = pop.querySelector(".leaflet-popup-content");
+      var wrap = pop.querySelector(".leaflet-popup-content-wrapper");
+      var inner = pop.querySelector(".pebird-map-popup");
+      if (!content || !wrap || !inner) {
+        continue;
+      }
+      if (
+        content.getAttribute(POPUP_WIDTH_COMMIT_ATTR) === "1" &&
+        content.getAttribute(POPUP_WIDTH_CAP_ATTR) === capStr
+      ) {
+        if (popupWidthCommitTooNarrowForHeading(inner, content, cap)) {
+          content.removeAttribute(POPUP_WIDTH_COMMIT_ATTR);
+        } else {
+          continue;
+        }
+      }
+      inner.style.setProperty("max-width", "none", "important");
+      inner.style.setProperty("width", "max-content", "important");
+      content.style.setProperty("width", cap + "px", "important");
+      content.style.setProperty("max-width", cap + "px", "important");
+      wrap.style.setProperty("width", cap + "px", "important");
+      wrap.style.setProperty("max-width", cap + "px", "important");
+      content.style.removeProperty("white-space");
+      var innerPx = measurePebirdPopupInnerWidthPx(inner);
+      inner.style.removeProperty("max-width");
+      inner.style.removeProperty("width");
+      var target = Math.max(
+        POPUP_SHRINK_MIN_CONTENT_WIDTH_PX,
+        Math.min(innerPx + POPUP_SHRINK_WIDTH_BUFFER_PX, cap),
+      );
+      var nextTargetStr = String(target);
+      if ((content.dataset.pebirdShrinkTarget || "") !== nextTargetStr) {
+        content.dataset.pebirdShrinkTarget = nextTargetStr;
+        content.style.setProperty("width", target + "px", "important");
+        content.style.setProperty("max-width", cap + "px", "important");
+        wrap.style.setProperty("width", target + "px", "important");
+        wrap.style.setProperty("max-width", cap + "px", "important");
+      }
+      content.setAttribute(POPUP_WIDTH_COMMIT_ATTR, "1");
+      content.setAttribute(POPUP_WIDTH_CAP_ATTR, capStr);
+    }
+  }
+
+  function scheduleShrinkPebirdLeafletPopups(map, popup) {
+    function finalize() {
+      shrinkPebirdLeafletPopups(map);
+      if (popup && typeof popup.update === "function") {
+        popup.update();
+      }
+    }
+    function runAfterLayout() {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(finalize);
+      });
+    }
+    try {
+      var ready = document.fonts && document.fonts.ready;
+      if (ready && typeof ready.then === "function") {
+        ready.then(runAfterLayout).catch(runAfterLayout);
+      } else {
+        runAfterLayout();
+      }
+    } catch (e) {
+      runAfterLayout();
+    }
+  }
+
   var DEFAULT_CLUSTER = {
     enabled: true,
     max_cluster_radius: 40,
@@ -133,6 +278,17 @@
     if (!mapNode) return;
     var map = L.map(mapNode, { zoomControl: true, attributionControl: true });
     mapNode.classList.add("pebird-export-map-pane");
+    map.on("popupopen", function (ev) {
+      scheduleShrinkPebirdLeafletPopups(map, ev.popup);
+    });
+    map.on("popupclose", function () {
+      var nodes = document.querySelectorAll(".leaflet-popup-content");
+      for (var i = 0; i < nodes.length; i++) {
+        nodes[i].removeAttribute(POPUP_WIDTH_COMMIT_ATTR);
+        nodes[i].removeAttribute(POPUP_WIDTH_CAP_ATTR);
+        delete nodes[i].dataset.pebirdShrinkTarget;
+      }
+    });
     var bm = basemap(cfg.map_style);
     L.tileLayer(bm.url, bm.opts).addTo(map);
     var clusterCfg = mergeCluster(cfg.cluster_options);
@@ -206,7 +362,7 @@
       onEachFeature: function (f, layer) {
         var pr = f.properties || {};
         var html = pr.export_popup_html || pr.name || "Location";
-        layer.bindPopup(html, { maxWidth: 420 });
+        layer.bindPopup(html, { maxWidth: POPUP_MAX_WIDTH_PX, autoPan: true });
       },
     });
     overlay.addLayer(gj);
