@@ -16,9 +16,15 @@ from explorer.core.map_marker_colour_resolve import (
     resolve_location_visit_colours,
 )
 from explorer.presentation.design_map_preview import (
+    DESIGN_PREVIEW_MARKER_COPY_COUNT,
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
+    MAP_SCOPE_ALL,
     MAP_SCOPE_ALL_LOCATIONS,
     MAP_SCOPE_FAMILY_LOCATIONS,
+    MAP_SCOPE_SPECIES_LOCATIONS,
+    PREVIEW_MARKER_ROWS,
+    build_design_preview_geojson,
+    build_design_preview_leaflet_bundle,
     normalize_hex_colour,
     scheme_seed_config,
 )
@@ -135,4 +141,39 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
         )
         assert cfg.marker_cluster_tier_icon_hex == _expected_marker_cluster_tier_icon_hex(sch)
         assert cfg.marker_cluster_inner_fill_opacity == _expected_cluster_inner_fill_opacity(sch)
+
+
+def test_build_design_preview_geojson_role_markers_skip_cluster() -> None:
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_SPECIES_LOCATIONS)
+    gj = build_design_preview_geojson(cfg, position_seed=42)
+    features = gj["features"]
+    role_rows = sum(1 for r in PREVIEW_MARKER_ROWS if MAP_SCOPE_SPECIES_LOCATIONS in r.map_scopes)
+    assert len(features) == role_rows * DESIGN_PREVIEW_MARKER_COPY_COUNT
+    assert all(f["properties"].get("skip_cluster") is True for f in features)
+    assert all("circle_pin" in f["properties"] for f in features)
+
+
+def test_build_design_preview_geojson_all_locations_includes_seq_cluster_demo() -> None:
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL_LOCATIONS)
+    gj = build_design_preview_geojson(cfg, position_seed=42)
+    clustered = [f for f in gj["features"] if not f["properties"].get("skip_cluster")]
+    standalone = [f for f in gj["features"] if f["properties"].get("skip_cluster")]
+    assert len(clustered) == 7 + 45 + 120
+    assert len(standalone) > 0
+
+
+def test_build_design_preview_leaflet_bundle_revision_changes_with_nonce() -> None:
+    cfg = scheme_seed_config(2, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
+    a = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=1)
+    b = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=2)
+    assert a["revision"] != b["revision"]
+    assert a["legend_html"]
+    assert a["viewport"]["mode"] == "center_zoom"
+    assert a["cluster_options"]["enabled"] is False
+
+
+def test_build_design_preview_leaflet_bundle_cluster_enabled_for_all_scope() -> None:
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
+    bundle = build_design_preview_leaflet_bundle(cfg, position_seed=42, render_nonce=0)
+    assert bundle["cluster_options"]["enabled"] is True
 

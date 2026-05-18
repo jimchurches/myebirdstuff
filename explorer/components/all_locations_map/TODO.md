@@ -11,7 +11,7 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 ### #222 status and rollout (source narrative)
 
-**Where we are (May 2026):** All four Map-tab modes are on the **Leaflet custom component** on `beta-next`. Family map **dogfood QA complete**. On **`222-folium-removal`**: production Folium stack removed; **do not merge to `beta-next` until §16 (design utility preview parity)** — otherwise we replace the working Folium-based design tool with export-only.
+**Where we are (May 2026):** All four Map-tab modes are on the **Leaflet custom component** on `beta-next`. Family map **dogfood QA complete**. On **`222-folium-removal`**: production Folium stack removed; **§16 design utility Leaflet preview** restored (merge-ready pending smoke).
 
 | Map mode | Status | PR (approx.) |
 |----------|--------|----------------|
@@ -19,7 +19,7 @@ Update this file as items ship so the backlog stays visible outside chat history
 | **Lifer locations** | **Done** — §6 (lifer row) | #225 |
 | **Species locations** | **Done** — §6 (species row) | #226 |
 | **Family locations** | **Done** — §6 (family row) | #228 |
-| **Design utility (preview)** | **Not done** — §16 (merge blocker on this branch) | — |
+| **Design utility (preview)** | **Done** — §16 Leaflet preview parity | — |
 
 **#222** can close after `222-folium-removal` merges (production maps + export + §16) and brief smoke on `beta-next`.
 
@@ -128,7 +128,7 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 
 ---
 
-## 16. Map marker design utility — live preview parity — **not done (merge blocker)**
+## 16. Map marker design utility — live preview parity — **done**
 
 **Do not merge `222-folium-removal` to `beta-next` until this is resolved.** Today’s `beta-next` still has a working developer tool:
 
@@ -157,10 +157,10 @@ streamlit run explorer/app/streamlit/design_map_app.py
 
 **Acceptance:**
 
-- [ ] **Update map** shows pins + legend for each preview scope (all / per-map-mode).
-- [ ] Colours match sidebar + `map_marker_colour_resolve` (same as export tab would emit).
-- [ ] No `folium` / `streamlit-folium` dependency reintroduced.
-- [ ] `docs/development.md` § “Map marker colour design utility” updated (Leaflet preview, not Folium).
+- [x] **Update map** shows pins + legend for each preview scope (all / per-map-mode).
+- [x] Colours match sidebar + `map_marker_colour_resolve` (same as export tab would emit).
+- [x] No `folium` / `streamlit-folium` dependency reintroduced.
+- [x] `docs/development.md` § “Map marker colour design utility” updated (Leaflet preview, not Folium).
 
 **Files (likely):** `explorer/app/streamlit/design_map_app.py`, `explorer/presentation/design_map_preview.py` (dummy payload builder), possibly `explorer/components/all_locations_map/` if preview shares component embed.
 
@@ -174,8 +174,8 @@ See prior §13 (species banner cache), §14 (family empty LRU), §15 (popup typo
 
 ## Agent handover
 
-*Last updated: May 2026 — **Folium removed** on `222-folium-removal`; Family QA complete; **§16 blocks merge**.*
+*Last updated: May 2026 — **Folium removed** on `222-folium-removal`; Family QA complete; **§16 done**.*
 
-**Before merge to `beta-next`:** Complete **§16** (design utility Leaflet preview).
+**Before merge to `beta-next`:** Smoke **design utility** preview + Map tab; then merge `222-folium-removal`.
 
 **After merge:** §7 export popup tests, §10 docs pass, §8 perf (#205), optional §13–§15 polish, close **#222**.

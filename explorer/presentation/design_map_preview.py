@@ -1,21 +1,35 @@
 """
-Marker colour scheme config for the **Map marker design** Streamlit utility.
+Marker colour scheme config and Leaflet preview payload for the **Map marker design** utility.
 
 Builds :class:`DesignMapPreviewConfig` snapshots from sidebar presets for export into
-``defaults.py``. Live map preview was removed with the Folium stack; use the main Explorer app
-to verify colours on the Leaflet component.
+``defaults.py``, and dummy GeoJSON for the production Leaflet map component (Canberra-centred,
+zoom 5 — same framing as the legacy Folium preview).
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
+import random
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from explorer.app.streamlit.defaults import (
+    MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+    MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+    MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
+    MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
     MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
+    MAP_SPECIES_DEFAULT_CENTER_LAT,
+    MAP_SPECIES_DEFAULT_CENTER_LON,
+    MAP_SPECIES_DEFAULT_ZOOM,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
 )
+from explorer.core.family_map_compute import DENSITY_BAND_LABELS
+from explorer.core.map_leaflet_viewport import all_locations_cluster_icon_style_payload
+from explorer.presentation.map_renderer import build_legend_html, map_overlay_theme_stylesheet
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_STROKE_HEX,
     family_map_has_highlight_halo,
@@ -391,3 +405,412 @@ def scheme_seed_config(
         family_highlight_stroke_hex=hl_stroke_cfg,
         family_highlight_halo_enabled=family_map_has_highlight_halo(sch),
     )
+
+
+# Match production blank-map framing (Canberra, zoom 5).
+DESIGN_PREVIEW_MAP_CENTER: tuple[float, float] = (
+    float(MAP_SPECIES_DEFAULT_CENTER_LAT),
+    float(MAP_SPECIES_DEFAULT_CENTER_LON),
+)
+DESIGN_PREVIEW_WIDE_SPAN_DEG = (9.0, 11.0)
+DESIGN_PREVIEW_LOCAL_SPAN_DEG = (0.38, 0.48)
+DESIGN_PREVIEW_MARKER_COPY_COUNT = 8
+
+DESIGN_PREVIEW_CLUSTER_DEMO_ANCHORS: tuple[tuple[float, float, int, str], ...] = (
+    (-28.02, 153.42, 7, "Gold Coast (small tier)"),
+    (-27.62, 152.78, 45, "Brisbane W (medium tier)"),
+    (-27.05, 153.42, 120, "Brisbane NE (large tier)"),
+)
+
+DESIGN_PREVIEW_CLUSTER_JITTER_DEG = 0.008
+
+_LEGEND_KIND_ORDER: tuple[str, ...] = (
+    "visit_species",
+    "visit_species_map_locations",
+    "species_visit_lifer",
+    "visit_last_seen",
+    "visit_all_locations",
+    "lifer_map_lifer",
+    "lifer_subspecies",
+    "family_0",
+    "family_1",
+    "family_2",
+    "family_3",
+)
+
+
+def _location_for_marker(
+    kind: str,
+    copy_index: int,
+    type_slot: int,
+    position_seed: int,
+    *,
+    local: bool,
+) -> tuple[float, float]:
+    seed_int = (
+        int(position_seed) * 10009 + hash((kind, copy_index)) % 100003 + type_slot * 17
+    ) & 0xFFFFFFFF
+    rng = random.Random(seed_int)
+    dlat, dlon = DESIGN_PREVIEW_LOCAL_SPAN_DEG if local else DESIGN_PREVIEW_WIDE_SPAN_DEG
+    lat = DESIGN_PREVIEW_MAP_CENTER[0] + rng.uniform(-0.5 * dlat, 0.5 * dlat)
+    lon = DESIGN_PREVIEW_MAP_CENTER[1] + rng.uniform(-0.5 * dlon, 0.5 * dlon)
+    return lat, lon
+
+
+def _circle_radius_px_for_marker_kind(cfg: DesignMapPreviewConfig, kind: str) -> int:
+    if kind == "visit_all_locations":
+        return cfg.marker_radius_locations
+    if kind == "visit_species_map_locations":
+        return cfg.marker_radius_species_map_background
+    if kind in ("visit_species", "visit_last_seen", "species_visit_lifer"):
+        return cfg.marker_radius_species
+    if kind == "lifer_map_lifer":
+        return cfg.marker_radius_lifer_map_lifer
+    if kind == "lifer_subspecies":
+        return cfg.marker_radius_lifer_map_subspecies
+    if kind.startswith("family"):
+        return cfg.marker_radius_families
+    return cfg.marker_default_radius_px
+
+
+def _legend_entry_for_kind(kind: str, cfg: DesignMapPreviewConfig) -> tuple[str, str, str] | None:
+    if kind == "visit_all_locations":
+        return (cfg.default_stroke_hex, cfg.default_fill_hex, "All locations")
+    if kind == "visit_species_map_locations":
+        return (
+            normalize_hex_colour(cfg.species_map_background_stroke_hex),
+            normalize_hex_colour(cfg.species_map_background_fill_hex),
+            "Locations",
+        )
+    if kind == "visit_species":
+        return (
+            normalize_hex_colour(cfg.species_stroke_hex),
+            normalize_hex_colour(cfg.species_fill_hex),
+            "Species",
+        )
+    if kind == "species_visit_lifer":
+        return (
+            normalize_hex_colour(cfg.species_lifer_stroke_hex),
+            normalize_hex_colour(cfg.species_lifer_fill_hex),
+            "Lifer",
+        )
+    if kind == "visit_last_seen":
+        return (
+            normalize_hex_colour(cfg.last_seen_stroke_hex),
+            normalize_hex_colour(cfg.last_seen_fill_hex),
+            "Last seen",
+        )
+    if kind == "lifer_map_lifer":
+        return (
+            normalize_hex_colour(cfg.lifer_map_lifer_stroke_hex),
+            normalize_hex_colour(cfg.lifer_map_lifer_fill_hex),
+            "Lifer",
+        )
+    if kind == "lifer_subspecies":
+        return (
+            normalize_hex_colour(cfg.lifer_map_subspecies_stroke_hex),
+            normalize_hex_colour(cfg.lifer_map_subspecies_fill_hex),
+            "Subspecies",
+        )
+    if kind.startswith("family_"):
+        bi = int(kind.rsplit("_", 1)[-1])
+        if 0 <= bi < len(DENSITY_BAND_LABELS):
+            return (
+                normalize_hex_colour(cfg.family_stroke_hex[bi]),
+                normalize_hex_colour(cfg.family_fill_hex[bi]),
+                f"{DENSITY_BAND_LABELS[bi]} species at location",
+            )
+    return None
+
+
+def _design_legend_items(
+    cfg: DesignMapPreviewConfig, rows: tuple[PreviewMarkerRow, ...]
+) -> list[tuple[str, str, str]]:
+    kinds_present = {r.kind for r in rows}
+    items: list[tuple[str, str, str]] = []
+    for kind in _LEGEND_KIND_ORDER:
+        if kind not in kinds_present:
+            continue
+        entry = _legend_entry_for_kind(kind, cfg)
+        if entry is not None:
+            items.append(entry)
+    if kinds_present & {"family_0", "family_1", "family_2", "family_3"}:
+        sw_i = max(0, min(int(cfg.legend_highlight_band_index), len(cfg.family_fill_hex) - 1))
+        hl_edge = (
+            normalize_hex_colour(cfg.family_highlight_stroke_hex)
+            if cfg.family_highlight_stroke_hex is not None
+            else normalize_hex_colour(cfg.family_stroke_hex[sw_i])
+        )
+        items.append(
+            (
+                hl_edge,
+                normalize_hex_colour(cfg.family_fill_hex[sw_i]),
+                "Highlight: preview",
+            )
+        )
+    return items
+
+
+def _family_highlight_copy(copy_index: int) -> bool:
+    return copy_index == 0 or copy_index == 2
+
+
+def _popup_label(kind: str, cfg: DesignMapPreviewConfig, *, copy_index: int) -> str:
+    if kind == "visit_all_locations":
+        return "All locations"
+    if kind == "visit_species_map_locations":
+        return "Locations (species map)"
+    if kind == "visit_species":
+        return "Species"
+    if kind == "species_visit_lifer":
+        return "Lifer (species map)"
+    if kind == "lifer_map_lifer":
+        return "Lifer (lifer map)"
+    if kind == "visit_last_seen":
+        return "Last seen"
+    if kind == "lifer_subspecies":
+        return "Subspecies"
+    if kind.startswith("family"):
+        bi = int(kind[-1])
+        base = f"{DENSITY_BAND_LABELS[bi]} species at location"
+        if copy_index == 0:
+            return f"{base} — highlight stroke+halo (cluster)"
+        if copy_index == 2:
+            return f"{base} — highlight stroke+halo (spread)"
+        return base
+    return kind
+
+
+def _circle_pin_for_kind(
+    cfg: DesignMapPreviewConfig, kind: str, *, copy_index: int
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Return ``(circle_pin, optional highlight_halo_circle)`` for Leaflet GeoJSON."""
+    radius_px = max(1, int(_circle_radius_px_for_marker_kind(cfg, kind)))
+    visit_emphasis = (
+        ("visit_species", (cfg.species_stroke_hex, cfg.species_fill_hex)),
+        ("species_visit_lifer", (cfg.species_lifer_stroke_hex, cfg.species_lifer_fill_hex)),
+        ("visit_last_seen", (cfg.last_seen_stroke_hex, cfg.last_seen_fill_hex)),
+    )
+
+    if kind == "visit_all_locations":
+        stroke, fill_c = cfg.default_stroke_hex, cfg.default_fill_hex
+        fo = max(0.0, min(1.0, cfg.marker_fill_opacity_locations))
+        sw = max(1, int(cfg.stroke_weight_visit))
+    elif kind == "visit_species_map_locations":
+        stroke = normalize_hex_colour(cfg.species_map_background_stroke_hex)
+        fill_c = normalize_hex_colour(cfg.species_map_background_fill_hex)
+        fo = max(0.0, min(1.0, cfg.marker_fill_opacity_species_map_background))
+        sw = max(1, int(cfg.stroke_weight_species_map_background))
+    elif kind in ("visit_species", "species_visit_lifer", "visit_last_seen"):
+        _, (e, f) = next(x for x in visit_emphasis if x[0] == kind)
+        stroke = normalize_hex_colour(e)
+        fill_c = normalize_hex_colour(f)
+        fo = max(0.0, min(1.0, cfg.marker_fill_opacity_species))
+        sw = max(1, int(cfg.stroke_weight_species))
+    elif kind == "lifer_map_lifer":
+        stroke = normalize_hex_colour(cfg.lifer_map_lifer_stroke_hex)
+        fill_c = normalize_hex_colour(cfg.lifer_map_lifer_fill_hex)
+        fo = max(0.0, min(1.0, cfg.marker_fill_opacity_lifer_map_lifer))
+        sw = max(1, int(cfg.stroke_weight_lifer))
+    elif kind == "lifer_subspecies":
+        stroke = normalize_hex_colour(cfg.lifer_map_subspecies_stroke_hex)
+        fill_c = normalize_hex_colour(cfg.lifer_map_subspecies_fill_hex)
+        fo = max(0.0, min(1.0, cfg.marker_fill_opacity_lifer_map_subspecies))
+        sw = max(1, int(cfg.stroke_weight_lifer))
+    else:
+        bi = int(kind[-1])
+        stroke = normalize_hex_colour(cfg.family_stroke_hex[bi])
+        fill_c = normalize_hex_colour(cfg.family_fill_hex[bi])
+        if _family_highlight_copy(copy_index):
+            stroke = (
+                normalize_hex_colour(cfg.family_highlight_stroke_hex)
+                if cfg.family_highlight_stroke_hex is not None
+                else normalize_hex_colour(cfg.family_stroke_hex[bi])
+            )
+            sw = max(1, int(cfg.stroke_weight_family_highlight))
+        else:
+            sw = max(1, int(cfg.stroke_weight_family))
+        fo = max(0.0, min(1.0, cfg.marker_fill_opacity_families))
+
+    pin: dict[str, Any] = {
+        "stroke_hex": stroke,
+        "fill_hex": fill_c,
+        "radius_px": int(radius_px),
+        "stroke_weight": int(sw),
+        "fill_opacity": float(fo),
+    }
+    halo: dict[str, Any] | None = None
+    if (
+        cfg.family_highlight_halo_enabled
+        and kind.startswith("family_")
+        and _family_highlight_copy(copy_index)
+    ):
+        halo = {
+            "stroke_hex": normalize_hex_colour(cfg.family_highlight_halo_stroke_hex),
+            "fill_hex": normalize_hex_colour(cfg.family_highlight_halo_fill_hex),
+            "radius_px": max(
+                1,
+                int(radius_px + max(0, int(cfg.family_highlight_halo_radius_delta_px))),
+            ),
+            "stroke_weight": max(1, int(cfg.family_highlight_halo_stroke_weight)),
+            "fill_opacity": max(
+                0.0, min(1.0, cfg.family_highlight_halo_fill_opacity)
+            ),
+            "stroke_opacity": max(
+                0.0, min(1.0, cfg.family_highlight_halo_stroke_opacity)
+            ),
+        }
+    return pin, halo
+
+
+def _cluster_demo_jittered_locations(
+    anchor_lat: float,
+    anchor_lon: float,
+    n: int,
+    rng: random.Random,
+) -> list[tuple[float, float]]:
+    j = DESIGN_PREVIEW_CLUSTER_JITTER_DEG
+    return [
+        (anchor_lat + rng.uniform(-j, j), anchor_lon + rng.uniform(-j, j))
+        for _ in range(n)
+    ]
+
+
+def _append_seq_cluster_demo_features(
+    features: list[dict[str, Any]],
+    cfg: DesignMapPreviewConfig,
+    *,
+    position_seed: int,
+) -> None:
+    rng = random.Random(int(position_seed) + 9001)
+    radius_px = max(1, int(_circle_radius_px_for_marker_kind(cfg, "visit_all_locations")))
+    stroke = cfg.default_stroke_hex
+    fill_c = cfg.default_fill_hex
+    fo = max(0.0, min(1.0, cfg.marker_fill_opacity_locations))
+    sw = max(1, int(cfg.stroke_weight_visit))
+    pin = {
+        "stroke_hex": stroke,
+        "fill_hex": fill_c,
+        "radius_px": int(radius_px),
+        "stroke_weight": int(sw),
+        "fill_opacity": float(fo),
+    }
+    for anchor_lat, anchor_lon, n, tier_label in DESIGN_PREVIEW_CLUSTER_DEMO_ANCHORS:
+        for lat, lon in _cluster_demo_jittered_locations(anchor_lat, anchor_lon, n, rng):
+            label = f"SEQ cluster demo — {tier_label} (synthetic)"
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [float(lon), float(lat)]},
+                    "properties": {
+                        "location_id": f"seq-demo-{len(features)}",
+                        "name": label,
+                        "lifelist_url": "",
+                        "circle_pin": pin,
+                        "skip_cluster": False,
+                    },
+                }
+            )
+
+
+def build_design_preview_geojson(
+    cfg: DesignMapPreviewConfig,
+    *,
+    position_seed: int = 42,
+) -> dict[str, Any]:
+    """Dummy FeatureCollection for the Leaflet component (role markers + optional SEQ cluster demo)."""
+    rows = _rows_for_scope(cfg.preview_scope)
+    features: list[dict[str, Any]] = []
+    loc_memo: dict[tuple[str, int, bool], tuple[float, float]] = {}
+
+    def _memo_loc(kind: str, copy_index: int, type_slot: int, local: bool) -> tuple[float, float]:
+        key = (kind, copy_index, local)
+        if key not in loc_memo:
+            loc_memo[key] = _location_for_marker(
+                kind, copy_index, type_slot, position_seed, local=local
+            )
+        return loc_memo[key]
+
+    for type_slot, row in enumerate(rows):
+        kind = row.kind
+        for copy_index in range(DESIGN_PREVIEW_MARKER_COPY_COUNT):
+            local = (copy_index % 4) < 2
+            lat, lon = _memo_loc(kind, copy_index, type_slot, local)
+            circle_pin, halo = _circle_pin_for_kind(cfg, kind, copy_index=copy_index)
+            label = _popup_label(kind, cfg, copy_index=copy_index)
+            props: dict[str, Any] = {
+                "location_id": f"design-{kind}-{copy_index}",
+                "name": label,
+                "lifelist_url": "",
+                "circle_pin": circle_pin,
+                "skip_cluster": True,
+            }
+            if halo is not None:
+                props["highlight_halo_circle"] = halo
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [float(lon), float(lat)]},
+                    "properties": props,
+                }
+            )
+
+    if cfg.preview_scope in (MAP_SCOPE_ALL, MAP_SCOPE_ALL_LOCATIONS):
+        _append_seq_cluster_demo_features(features, cfg, position_seed=position_seed)
+
+    return {"type": "FeatureCollection", "features": features}
+
+
+def build_design_preview_legend_html(cfg: DesignMapPreviewConfig) -> str:
+    rows = _rows_for_scope(cfg.preview_scope)
+    items = _design_legend_items(cfg, rows)
+    return build_legend_html(items) if items else ""
+
+
+def design_preview_cluster_options(cfg: DesignMapPreviewConfig) -> dict[str, Any]:
+    """Cluster options for SEQ tier demo when all-locations scope is active."""
+    enabled = cfg.preview_scope in (MAP_SCOPE_ALL, MAP_SCOPE_ALL_LOCATIONS)
+    return {
+        "enabled": enabled,
+        "max_cluster_radius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
+        "disable_clustering_at_zoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+        "spiderfy_on_max_zoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+        "remove_outside_visible_bounds": MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
+        "zoom_to_bounds_on_click": True,
+    }
+
+
+def build_design_preview_leaflet_bundle(
+    cfg: DesignMapPreviewConfig,
+    *,
+    position_seed: int = 42,
+    render_nonce: int = 0,
+) -> dict[str, Any]:
+    """Revision, GeoJSON, overlays, and cluster styling for :func:`render_all_locations_map_component`."""
+    geojson = build_design_preview_geojson(cfg, position_seed=position_seed)
+    revision_extra = json.dumps(
+        {
+            "nonce": int(render_nonce),
+            "scope": cfg.preview_scope,
+            "map_style": cfg.map_style,
+            "height_px": int(cfg.height_px),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    rev_payload = json.dumps(geojson.get("features", []), separators=(",", ":")) + "|" + revision_extra
+    revision = hashlib.sha256(rev_payload.encode("utf-8")).hexdigest()[:24]
+    cluster_icon = all_locations_cluster_icon_style_payload(cfg) or {}
+    return {
+        "revision": revision,
+        "geojson": geojson,
+        "legend_html": build_design_preview_legend_html(cfg),
+        "viewport": {
+            "mode": "center_zoom",
+            "center": [DESIGN_PREVIEW_MAP_CENTER[0], DESIGN_PREVIEW_MAP_CENTER[1]],
+            "zoom": int(MAP_SPECIES_DEFAULT_ZOOM),
+        },
+        "cluster_options": design_preview_cluster_options(cfg),
+        "cluster_icon_style": cluster_icon,
+        "map_theme_css": map_overlay_theme_stylesheet(),
+    }

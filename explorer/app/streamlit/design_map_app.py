@@ -1,17 +1,16 @@
 """
-Map marker **design** utility — dummy Folium markers for tuning colours and geometry.
+Map marker **design** utility — dummy Leaflet markers for tuning colours and geometry.
 
 No eBird data required. Run from repo root::
 
     pip install -r requirements.txt
     streamlit run explorer/app/streamlit/design_map_app.py
 
-Uses :mod:`explorer.presentation.design_map_preview` and :mod:`explorer.app.streamlit.defaults`
-(:class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme` presets).
+Uses :mod:`explorer.presentation.design_map_preview` and the production
+:class:`~explorer.components.all_locations_map` Leaflet component.
 
-The preview map matches the main explorer’s initial framing: Canberra centre, zoom **5** (see
-:func:`explorer.presentation.map_renderer.create_map`). The map **renders only** when you click
-**Update map**; slider and text edits do not trigger a rebuild.
+The preview map matches the main explorer’s initial framing: Canberra centre, zoom **5**. The map
+**renders only** when you click **Update map**; slider and text edits do not trigger a rebuild.
 """
 
 from __future__ import annotations
@@ -121,6 +120,7 @@ from explorer.app.streamlit.design_map_constants import (
     H_SW_VISIT,
     PREVIEW_SCOPE_LABELS,
 )
+from explorer.components.all_locations_map import render_all_locations_map_component
 from explorer.presentation.design_map_export import format_full_defaults_export
 from explorer.presentation.design_map_preview import (
     MAP_SCOPES,
@@ -132,6 +132,7 @@ from explorer.presentation.design_map_preview import (
     MARKER_SCHEME_FALLBACK_DEFAULT_STROKE_WEIGHT,
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
     DesignMapPreviewConfig,
+    build_design_preview_leaflet_bundle,
     normalize_hex_colour,
     scheme_seed_config,
 )
@@ -177,7 +178,7 @@ def _hex_text_input(label: str, *, key: str, help: str) -> None:
 
 
 def _hex_text_input_cluster_tier(label: str, *, key: str, help: str) -> None:
-    """Optional hex fields for MarkerCluster tiers; empty means use Folium defaults."""
+    """Optional hex fields for MarkerCluster tiers; empty means use Leaflet.markercluster defaults."""
     st.text_input(
         label,
         key=key,
@@ -522,8 +523,8 @@ def main() -> None:
     st.set_page_config(page_title="Map marker design", layout="wide")
     st.title("Map marker design")
     st.caption(
-        "Preview visit-map and family-map **CircleMarker** styles on a fixed Canberra view (zoom 5). "
-        "Sidebar controls are the source of truth for the preview map (after **Update map**). "
+        "Preview visit-map and family-map pin styles on a fixed Canberra view (zoom 5) via the "
+        "production Leaflet component. Sidebar controls are the source of truth (after **Update map**). "
         "**Load preset** / initial load copies the chosen scheme from ``defaults.py`` into the controls. "
         "Adjust the sidebar, then click **Update map** to render — edits do not redraw until then."
     )
@@ -945,15 +946,32 @@ def main() -> None:
     tab_preview, tab_export = st.tabs(["Map preview", "Export to defaults.py"])
 
     with tab_preview:
-        st.info(
-            "Live Folium map preview was removed with the Leaflet migration. Use the main Explorer "
-            "**Map** tab to verify marker colours, or open the **Export to defaults.py** tab to copy "
-            "scheme snippets from the sidebar configuration."
-        )
-        if applied is not None:
+        if applied is None:
+            st.info("Click **Update map** in the sidebar to render the preview.")
+        else:
+            bundle = build_design_preview_leaflet_bundle(
+                applied,
+                position_seed=int(st.session_state.get(_K_POS_SEED, 42)),
+                render_nonce=int(st.session_state.get(_K_RENDER, 0)),
+            )
+            render_all_locations_map_component(
+                revision=bundle["revision"],
+                geojson=bundle["geojson"],
+                height=int(applied.height_px),
+                key=f"design_leaflet_{st.session_state.get(_K_RENDER, 0)}",
+                map_style=applied.map_style,
+                cluster_options=bundle["cluster_options"],
+                cluster_icon_style=bundle["cluster_icon_style"],
+                viewport=bundle["viewport"],
+                map_theme_css=bundle["map_theme_css"],
+                legend_html=bundle["legend_html"],
+            )
             st.caption(
-                f"Last applied scope: **{PREVIEW_SCOPE_LABELS.get(applied.preview_scope, applied.preview_scope)}** · "
-                f"basemap `{applied.map_style}` · height {applied.height_px}px."
+                f"Scope: **{PREVIEW_SCOPE_LABELS.get(applied.preview_scope, applied.preview_scope)}** · "
+                f"basemap `{applied.map_style}` · height {applied.height_px}px. "
+                "Bottom-left legend matches production maps. Copies **0–1** cluster near Canberra; "
+                "**2–3** scatter. Family bands: highlight stroke on copy **0** (cluster) and **2** (spread). "
+                "All-locations scope adds a **SEQ** MarkerCluster tier demo (synthetic points near Brisbane/Gold Coast)."
             )
 
     with tab_export:
