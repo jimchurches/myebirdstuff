@@ -213,8 +213,6 @@ SESSION_SPECIES_SEARCH_USER_EDITING_KEY = "_streamlit_species_search_user_editin
 SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY = "_streamlit_species_search_last_main_run_id"
 # Bumped when remounting the Leaflet map component (view/mode/height changes).
 LEAFLET_MAP_MOUNT_NONCE_KEY = "_leaflet_map_mount_nonce"
-# Back-compat alias for session keys written before rename.
-FOLIUM_MAP_MOUNT_NONCE_KEY = LEAFLET_MAP_MOUNT_NONCE_KEY
 # Leaflet custom map (All locations) — session cache for ``(revision, geojson)`` payloads.
 ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY = "_all_locations_leaflet_payload_cache_v1"
 # Leaflet custom map (Lifer locations).

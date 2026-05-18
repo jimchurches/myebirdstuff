@@ -1,6 +1,6 @@
 """Shared helpers for Streamlit + Playwright E2E tests (real subprocess, deterministic config).
 
-Map embedding uses ``streamlit_folium.st_folium`` (nested iframes), not legacy ``components.html``
+Map embedding uses the Leaflet custom component (nested iframes), not legacy ``components.html``
 ``srcdoc`` — banner detection scans all ``page.frames``.
 """
 

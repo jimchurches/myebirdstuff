@@ -2,7 +2,7 @@
 
 - launch the real Streamlit app in a subprocess,
 - point it at a fixture CSV via temporary ``config/config.yaml``,
-- assert high-value map UI contracts (``st_folium`` iframe / frames, not ``srcdoc``).
+- assert high-value map UI contracts (Leaflet component iframe / frames, not ``srcdoc``).
 
 If Playwright is not installed locally, this module is skipped.
 """

@@ -36,7 +36,7 @@ from typing import TYPE_CHECKING, Any
 
 # IDE / static-analysis friendliness:
 # ``explorer.core`` exposes some symbols lazily via ``__getattr__``. At runtime this keeps optional
-# stacks (Folium, Whoosh) from being imported unless needed, but some editors cannot “jump to
+# stacks (Whoosh, etc.) from being imported unless needed, but some editors cannot “jump to
 # definition” for lazy names. The TYPE_CHECKING block below makes those names visible to type
 # checkers and many IDEs without changing runtime imports.
 if TYPE_CHECKING:  # pragma: no cover

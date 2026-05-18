@@ -157,7 +157,7 @@ def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float
 
 # Nested :class:`~explorer.core.map_marker_scheme_model.MapMarkerColourScheme` — globals, then per-map
 # collections (all-locations → species visit → lifer map → family). See that module for structure.
-# MarkerCluster defaults for rgba math in ``map_overlay_visit_map``:
+# MarkerCluster defaults for rgba math in ``map_leaflet_viewport``:
 MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT = 0.6
 MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT = 0.6
 MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT = 1.0

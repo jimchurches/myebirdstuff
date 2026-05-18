@@ -22,8 +22,8 @@ class ExplorerState:
     selected_species_common : str
         Common name of the currently selected species (empty = all species).
     species_map : Any
-        The current ``folium.Map`` instance displayed in the UI.
-        Typed as ``Any`` to avoid a hard dependency on folium at import time.
+        Legacy field (unused since Leaflet component maps). Kept for tests and
+        backward compatibility; typed as ``Any``.
 
     Re-entry guards
     ---------------

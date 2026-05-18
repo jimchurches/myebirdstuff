@@ -36,7 +36,7 @@ from explorer.app.streamlit.app_constants import (
     EXPORT_MAP_HTML_BUILD_BTN_KEY,
     EXPORT_MAP_HTML_BTN_KEY,
     FILTERED_BY_LOC_CACHE_KEY,
-    FOLIUM_MAP_MOUNT_NONCE_KEY,
+    LEAFLET_MAP_MOUNT_NONCE_KEY,
     POPUP_FRAGMENT_CACHE_KEY,
     POPUP_HTML_CACHE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
@@ -52,7 +52,7 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_go_to_gps_ui import go_to_gps_pin_from_session
 from explorer.app.streamlit.app_map_ui import (
-    inject_map_folium_iframe_min_height_css,
+    inject_map_iframe_min_height_css,
     inject_sidebar_outline_download_button_css,
     place_spinner_emoji_strip,
     sidebar_bottom_slot_end,
@@ -1133,7 +1133,7 @@ def render_prep_spinner_and_map_tab(
                     and leaflet_cluster_opts is not None
                     and leaflet_circle_style is not None
                 ):
-                    inject_map_folium_iframe_min_height_css(map_height)
+                    inject_map_iframe_min_height_css(map_height)
                     if map_hint_text:
                         st.info(map_hint_text)
                     _embed_extra: dict[str, Any] = {
@@ -1169,7 +1169,7 @@ def render_prep_spinner_and_map_tab(
                             legend_html=all_locations_leaflet_legend_html,
                             key=(
                                 f"explorer_{'lifer' if use_lifer_leaflet else 'species' if use_species_leaflet else 'family' if use_family_leaflet else 'all_locations'}_leaflet_h{map_height}_"
-                                f"n{int(st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0))}"
+                                f"n{int(st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0))}"
                             ),
                         )
 
