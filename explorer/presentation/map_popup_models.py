@@ -6,9 +6,11 @@ work can render from the same model.
 
 from __future__ import annotations
 
-import html as html_module
 from dataclasses import dataclass
 
+import html as html_module
+
+from explorer.presentation.map_popup_heading_text import prevent_orphan_closing_punctuation
 from explorer.presentation.map_ui_constants import SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS
 from explorer.presentation.stats_html_helpers import esc_text
 
@@ -30,7 +32,7 @@ class LocationPopupModel:
 def assemble_location_popup_html(m: LocationPopupModel) -> str:
     """Build the full popup card HTML from a :class:`LocationPopupModel`."""
     loc_url = f"https://ebird.org/lifelist/{m.loc_id}"
-    esc_loc = html_module.escape(str(m.loc_name), quote=False)
+    esc_loc = html_module.escape(prevent_orphan_closing_punctuation(m.loc_name), quote=False)
     loc_link = (
         f'<a class="pebird-map-popup__location-heading" href="{loc_url}" '
         f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'
@@ -81,7 +83,7 @@ class SpeciesMapLocationPopupModel:
 def assemble_species_map_location_popup_html(m: SpeciesMapLocationPopupModel) -> str:
     """Species-map matching pin: species ``<details>`` + collapsed visit list."""
     loc_url = f"https://ebird.org/lifelist/{m.loc_id}"
-    esc_loc = html_module.escape(str(m.loc_name), quote=False)
+    esc_loc = html_module.escape(prevent_orphan_closing_punctuation(m.loc_name), quote=False)
     loc_link = (
         f'<a class="pebird-map-popup__location-heading" href="{loc_url}" '
         f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'

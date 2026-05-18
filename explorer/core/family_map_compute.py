@@ -23,6 +23,7 @@ import pandas as pd
 
 from explorer.core.species_logic import countable_species_vectorized, filter_species
 from explorer.core.stats import safe_count
+from explorer.presentation.map_popup_heading_text import prevent_orphan_closing_punctuation
 
 UNMAPPED_FAMILY_LABEL = "Unmapped"
 
@@ -361,7 +362,7 @@ def format_family_location_popup_html(
     eBird species URLs; missing keys render as plain text.
     """
     title = pin.location_name or pin.location_id
-    esc_title = html_module.escape(title)
+    esc_title = html_module.escape(prevent_orphan_closing_punctuation(title))
     if location_page_url and str(location_page_url).strip():
         esc_href = html_module.escape(str(location_page_url).strip(), quote=True)
         head = (

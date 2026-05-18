@@ -68,6 +68,7 @@ def map_popup_theme_stylesheet() -> str:
 }}
 .leaflet-popup .leaflet-popup-content {{
   text-align: left !important;
+  overflow-x: hidden !important;
 }}
 .leaflet-popup-content .pebird-map-popup,
 .leaflet-popup-content .pebird-map-popup * {{
@@ -93,9 +94,8 @@ def map_popup_theme_stylesheet() -> str:
   min-width: 0;
   box-sizing: border-box;
   /* Leaflet's close control sits top-right; long titles must not run under it. */
-  padding-right: 2rem;
-  /* Headings are ``nowrap`` + max-content width; scroll only if a title exceeds the card. */
-  overflow-x: auto;
+  padding-right: 2.25rem;
+  overflow-x: hidden;
   overflow-y: hidden;
 }}
 /* Full width of the popup card so wheel events scroll visits instead of the map. */
@@ -137,14 +137,18 @@ def map_popup_theme_stylesheet() -> str:
   color: {EXPLORER_UI_PRIMARY_GREEN};
   text-decoration: none;
 }}
-/* Location title link: nowrap + intrinsic width — typical ``Name ( lat , lon )`` stays one line; row scrolls if needed. */
+/* Location title: fill card width; wrap at spaces (shrink-wrap sizes card for one line when possible). */
 .pebird-map-popup a.pebird-map-popup__location-heading {{
   display: block;
-  width: max-content;
-  max-width: none;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: pretty;
 }}
 /* Section labels: same weight/colour as banner stats line (``pebird-map-banner__stats``), not title. */
 .pebird-map-popup .pebird-map-popup__section-label {{
@@ -158,9 +162,14 @@ def map_popup_theme_stylesheet() -> str:
   color: {EXPLORER_UI_PRIMARY_GREEN};
   font-weight: 600;
   display: block;
-  width: max-content;
-  max-width: none;
-  white-space: nowrap;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: pretty;
 }}
 /* All-locations visit list: tight gap between section label and date links. */
 .pebird-map-popup__visited-block .pebird-map-popup__section-label {{

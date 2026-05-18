@@ -13,10 +13,21 @@ from explorer.presentation.map_popup_models import (
     assemble_location_popup_html,
     assemble_species_map_location_popup_html,
 )
+from explorer.presentation.map_popup_heading_text import prevent_orphan_closing_punctuation
 from explorer.presentation.map_renderer import MAP_POPUP_MACAULAY_LINK_SYMBOL, esc_attr, esc_text
 from explorer.presentation.stats_html_helpers import safe_http_url
 
 _HEADING_MARGIN_ALL = 4
+
+
+def _location_heading_element(name: str, url: str | None) -> str:
+    esc_name = esc_text(prevent_orphan_closing_punctuation(name))
+    if url:
+        return (
+            f'<a class="pebird-map-popup__location-heading" href="{esc_attr(url)}" '
+            f'target="_blank" rel="noopener noreferrer">{esc_name}</a>'
+        )
+    return f'<span class="pebird-map-popup__location-heading">{esc_name}</span>'
 
 
 def _lifelist_href(lifelist_url: str, loc_id: str | None = None) -> str:
@@ -146,14 +157,7 @@ def _family_popup_html(name: str, lifelist_url: str, payload: dict[str, Any]) ->
     )
     loc_id = _loc_id_from_props({"lifelist_url": lifelist_url})
     url = _lifelist_href(lifelist_url, loc_id)
-    esc_name = esc_text(name)
-    if url:
-        head = (
-            f'<a class="pebird-map-popup__location-heading" href="{esc_attr(url)}" '
-            f'target="_blank" rel="noopener noreferrer">{esc_name}</a>'
-        )
-    else:
-        head = f'<span class="pebird-map-popup__location-heading">{esc_name}</span>'
+    head = _location_heading_element(name, url or None)
     return (
         f'<div class="pebird-map-popup popup-scroll-wrapper">'
         f'<div class="pebird-map-popup__heading-row" style="margin-bottom:{_HEADING_MARGIN_ALL}px;">{head}</div>'
@@ -202,13 +206,7 @@ def _popup_v1_html(name: str, lifelist_url: str, popup: dict[str, Any]) -> str:
     links = popup.get("links") if isinstance(popup.get("links"), list) else []
     loc_id = _loc_id_from_props({"lifelist_url": lifelist_url})
     url = _lifelist_href(lifelist_url, loc_id)
-    esc_name = esc_text(name)
-    head = (
-        f'<a class="pebird-map-popup__location-heading" href="{esc_attr(url)}" '
-        f'target="_blank" rel="noopener noreferrer">{esc_name}</a>'
-        if url
-        else f'<span class="pebird-map-popup__location-heading">{esc_name}</span>'
-    )
+    head = _location_heading_element(name, url or None)
     body_parts = [
         f'<span class="pebird-map-popup__summary-line">{esc_text(str(ln))}</span>'
         for ln in summary_lines
@@ -250,13 +248,7 @@ def popup_export_html_from_properties(props: dict[str, Any] | None) -> str:
         return _popup_v1_html(name, lifelist_url, popup)
     loc_id = _loc_id_from_props(props)
     url = _lifelist_href(lifelist_url, loc_id)
-    esc_name = esc_text(name)
-    head = (
-        f'<a class="pebird-map-popup__location-heading" href="{esc_attr(url)}" '
-        f'target="_blank" rel="noopener noreferrer">{esc_name}</a>'
-        if url
-        else f'<span class="pebird-map-popup__location-heading">{esc_name}</span>'
-    )
+    head = _location_heading_element(name, url or None)
     visits = props.get("visit_checklists")
     extra = (
         f'<span class="pebird-map-popup__summary-line">Checklists: {esc_text(str(visits))}</span>'

@@ -9,6 +9,7 @@
   --pebird-ui-text: #1a2e22;
   --pebird-ui-primary-green: #1f6f54;
   --pebird-ui-muted: rgba(26, 46, 34, 0.55);
+  --pebird-ui-popup-chevron: rgba(26, 46, 34, 0.36);
 }
 
 .leaflet-popup .leaflet-popup-content-wrapper,
@@ -21,6 +22,7 @@
 /* Leaflet sets .leaflet-popup { text-align: center }; keep body copy left-aligned in the content box. */
 .leaflet-popup .leaflet-popup-content {
   text-align: left !important;
+  overflow-x: hidden !important;
 }
 
 .leaflet-popup-content .pebird-map-popup,
@@ -52,8 +54,9 @@
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding-right: 2rem;
-  overflow-x: auto;
+  /* Leaflet close control — keep long titles out from under the ×. */
+  padding-right: 2.25rem;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 
@@ -98,22 +101,32 @@
   line-height: inherit;
 }
 
+/* Location title: fill card width; wrap at spaces (shrink-wrap sizes card for one line when possible). */
 .pebird-map-popup span.pebird-map-popup__location-heading {
   color: var(--pebird-ui-primary-green);
   font-weight: 600;
   display: block;
-  width: max-content;
-  max-width: none;
-  white-space: nowrap;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: pretty;
 }
 
 .pebird-map-popup a.pebird-map-popup__location-heading {
   display: block;
-  width: max-content;
-  max-width: none;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: pretty;
 }
 
 .pebird-map-popup__visited-block .pebird-map-popup__section-label {
@@ -190,6 +203,93 @@
 
 .pebird-map-popup__species-line + .pebird-map-popup__species-line {
   margin-top: 0.12rem;
+}
+
+.pebird-map-popup a.pebird-map-popup__media-link {
+  color: var(--pebird-ui-muted);
+  font-weight: 400;
+  text-decoration: none;
+  font-size: 0.92em;
+}
+
+.pebird-map-popup a.pebird-map-popup__media-link:hover {
+  color: var(--pebird-ui-primary-green);
+  text-decoration: none;
+}
+
+.pebird-map-popup__obs-count {
+  color: var(--pebird-ui-muted);
+  font-weight: 400;
+}
+
+.pebird-map-popup__obs-list {
+  margin: 0;
+  padding: 0;
+}
+
+.pebird-map-popup__obs-line {
+  display: block;
+  margin: 0 0 0.15rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.pebird-map-popup__obs-line:last-child {
+  margin-bottom: 0;
+}
+
+.pebird-map-popup__obs-line a {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.pebird-map-popup details.pebird-map-popup__species-seen {
+  margin: 0 0 0.55rem 0;
+}
+
+.pebird-map-popup details.pebird-map-popup__species-seen .pebird-map-popup__obs-list {
+  margin-top: 0.2rem;
+}
+
+.pebird-map-popup details.pebird-map-popup__all-visits {
+  margin-top: 0.45rem;
+}
+
+.pebird-map-popup details.pebird-map-popup__all-visits summary,
+.pebird-map-popup details.pebird-map-popup__species-seen summary {
+  cursor: pointer;
+  font-weight: 400;
+  color: var(--pebird-ui-text);
+  list-style: none;
+  white-space: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.pebird-map-popup details.pebird-map-popup__all-visits summary::-webkit-details-marker,
+.pebird-map-popup details.pebird-map-popup__species-seen summary::-webkit-details-marker {
+  display: none;
+}
+
+.pebird-map-popup details.pebird-map-popup__all-visits summary::before,
+.pebird-map-popup details.pebird-map-popup__species-seen summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 0.35em;
+  font-size: 0.62em;
+  vertical-align: 0.05em;
+  color: var(--pebird-ui-popup-chevron);
+}
+
+.pebird-map-popup details.pebird-map-popup__all-visits[open] summary::before,
+.pebird-map-popup details.pebird-map-popup__species-seen[open] summary::before {
+  content: "▼";
+}
+
+.pebird-map-popup details.pebird-map-popup__all-visits .pebird-map-popup__visit-list-inner {
+  margin-top: 0.35rem;
 }
 
 .pebird-map-popup__trunc-hint {
