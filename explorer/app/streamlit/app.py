@@ -1,5 +1,5 @@
 """
-Personal eBird Explorer — Streamlit app (Folium map + rich location popups).
+Personal eBird Explorer — Streamlit app (Leaflet map component + rich location popups).
 
 Planning and phased migration notes: https://github.com/jimchurches/myebirdstuff/issues/70 (refs #70).
 
@@ -34,7 +34,8 @@ Streamlit does not expose the browser language to Python.
 match Country / Yearly (refs #70).
 
 **Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** wraps checklist prep, tab syncs,
-Folium **build**, serialized HTML cached for export plus **streamlit-folium** embed in the Map tab,
+Leaflet **GeoJSON** payloads cached in session; export HTML built on button click from
+``LEAFLET_EXPORT_RECIPE_KEY``; Map tab uses the custom component embed.
 then clears the bird-emoji strip (refs #124) so the explorer spinner tracks the built-in Streamlit spinner.
 Iframe min-height CSS reduces
 letterboxing. Partial

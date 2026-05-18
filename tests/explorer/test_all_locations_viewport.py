@@ -16,7 +16,7 @@ from explorer.core.all_locations_viewport import (
     mean_center_from_pairs,
     sorted_country_labels_from_work,
 )
-from explorer.core.map_overlay_visit_map import all_locations_leaflet_viewport_recipe
+from explorer.core.map_leaflet_viewport import all_locations_leaflet_viewport_recipe
 
 
 def test_location_id_to_country_map_first_non_null():

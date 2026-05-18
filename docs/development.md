@@ -205,12 +205,13 @@ streamlit run explorer/app/streamlit/design_map_app.py
 | Piece | Location |
 |-------|----------|
 | Streamlit UI (sliders, export) | `explorer/app/streamlit/design_map_app.py` |
-| Dummy Folium preview map | `explorer/presentation/design_map_preview.py` |
+| Dummy Leaflet preview GeoJSON + legend | `explorer/presentation/design_map_preview.py` |
 | Paste-ready export | `explorer/presentation/design_map_export.py` |
+| Live preview embed | `explorer/components/all_locations_map/` (same component as production Map tab) |
 | Hierarchical hex resolution (shared with production maps that use schemes) | `explorer/core/map_marker_colour_resolve.py` |
 | Preset dataclasses / registration | `explorer/app/streamlit/defaults.py` |
 
-**All locations — MarkerCluster “cluster icons”:** the plugin expects the same DOM as its default `iconCreateFunction` — **one** inner `<div>` wrapping the count `<span>`. Extra nested divs interact badly with `.marker-cluster div { … }` sizing rules and look offset or triple-stacked. Custom colours in this repo use that single inner div: **fill** = `background-color`, **border** = `border`, **halo** = a `box-shadow` ring, and the default tier background on the icon root is cleared so it does not add another coloured layer. Hex tier colours sit on `MapMarkerClusterStyle` under **`all_locations.cluster`**; optional **opacity** and **spread/width** fields there (`inner_fill_opacity`, `halo_opacity`, `border_opacity`, `halo_spread_px`, `border_width_px`; defaults `MAP_MARKER_CLUSTER_*_DEFAULT` in `defaults.py`) approximate the plugin’s semi-transparent rgba layers without nested divs. Implementation: `explorer/core/map_overlay_visit_map.py`.
+**All locations — MarkerCluster “cluster icons”:** the plugin expects the same DOM as its default `iconCreateFunction` — **one** inner `<div>` wrapping the count `<span>`. Extra nested divs interact badly with `.marker-cluster div { … }` sizing rules and look offset or triple-stacked. Custom colours in this repo use that single inner div: **fill** = `background-color`, **border** = `border`, **halo** = a `box-shadow` ring, and the default tier background on the icon root is cleared so it does not add another coloured layer. Hex tier colours sit on `MapMarkerClusterStyle` under **`all_locations.cluster`**; optional **opacity** and **spread/width** fields there (`inner_fill_opacity`, `halo_opacity`, `border_opacity`, `halo_spread_px`, `border_width_px`; defaults `MAP_MARKER_CLUSTER_*_DEFAULT` in `defaults.py`) approximate the plugin’s semi-transparent rgba layers without nested divs. Production + design preview: `explorer/core/map_leaflet_viewport.py` (`all_locations_cluster_icon_style_payload`). The design utility adds a synthetic **SEQ** cluster tier demo when preview scope is **All locations** (or **All**).
 
 > The website [Coolors](https://coolors.co/?home) is an excellent resource when working on colour schemes.
 

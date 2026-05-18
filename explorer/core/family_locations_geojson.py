@@ -1,6 +1,6 @@
 """GeoJSON + revision for the **Family locations** Leaflet component.
 
-Mirrors :func:`~explorer.core.family_map_folium.build_family_composition_folium_map` without Folium.
+Builds GeoJSON features and ``family_popup_v1`` payloads for the Family locations Leaflet map.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from typing import Any, Callable
 
 from explorer.app.streamlit.defaults import MapMarkerColourScheme
 from explorer.core.family_map_compute import FamilyLocationPin
-from explorer.core.family_map_folium import family_map_marker_style
+from explorer.core.family_map_overlays import family_map_marker_style
 from explorer.core.map_marker_colour_resolve import (
     family_map_has_highlight_halo,
     family_map_resolved_circle_radius_px,

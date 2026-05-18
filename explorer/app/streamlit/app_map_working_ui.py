@@ -13,8 +13,9 @@ from explorer.app.streamlit.app_constants import (
     EXPLORER_MAP_HTML_BYTES_KEY,
     REPO_ROOT,
     FILTERED_BY_LOC_CACHE_KEY,
-    FOLIUM_MAP_MOUNT_NONCE_KEY,
-    FOLIUM_STATIC_MAP_CACHE_KEY,
+    LEAFLET_MAP_MOUNT_NONCE_KEY,
+    LEAFLET_EXPORT_BUILT_CACHE_KEY,
+    LEAFLET_EXPORT_RECIPE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
@@ -104,21 +105,20 @@ def _all_locations_leaflet_embed_active(session_state: Any) -> bool:
     return not sci
 
 
-def invalidate_folium_map_embed_cache(*, bump_mount_nonce: bool = True) -> None:
-    """Drop cached Folium map HTML; optionally bump iframe mount nonce (basemap, colours, etc.)."""
+def invalidate_map_embed_cache(*, bump_mount_nonce: bool = True) -> None:
+    """Bump Leaflet component mount nonce and clear export HTML when map chrome changes."""
     if bump_mount_nonce:
-        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
         ) + 1
-    st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
 
 
 def _on_basemap_changed() -> None:
-    """Folium embed must remount when basemap changes; Leaflet component swaps tiles in-place."""
-    if _all_locations_leaflet_embed_active(st.session_state):
-        return
-    invalidate_folium_map_embed_cache()
+    """Leaflet component swaps basemap tiles in-place; no remount required."""
+    return
 
 
 @dataclass(frozen=True)
@@ -438,7 +438,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 options=[1, 2, 3],
                 format_func=lambda n: _scheme_preset_labels[int(n)],
                 key=STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
-                on_change=invalidate_folium_map_embed_cache,
+                on_change=invalidate_map_embed_cache,
                 width="stretch",
             )
             family_colour_scheme = int(_scheme_sel if _scheme_sel is not None else 1)
@@ -461,14 +461,13 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     if prev_effective != map_style:
         st.session_state[SESSION_PREV_EFFECTIVE_BASEMAP_KEY] = map_style
         if not _all_locations_leaflet_embed_active(st.session_state):
-            invalidate_folium_map_embed_cache()
+            invalidate_map_embed_cache()
 
-    # Bump mount nonce when the view mode changes so the Folium iframe remounts with the new map.
-    # Do not clear FOLIUM_STATIC_MAP_CACHE_KEY / EXPLORER_MAP_HTML_BYTES_KEY here: the LRU cache key
-    # already includes map_view_mode; clearing defeated reuse across All ↔ Lifer ↔ Species ↔ Family.
+    # Bump mount nonce when the view mode changes so the Leaflet component remounts with the new map.
+    # Leaflet payload LRU keys already include map_view_mode; do not clear export HTML here.
     if _prev_mv is not None and _prev_mv != map_view_mode:
-        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
         ) + 1
 
     st.session_state[SESSION_PREV_MAP_VIEW_KEY] = map_view_mode

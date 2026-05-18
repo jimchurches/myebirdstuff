@@ -1,5 +1,5 @@
 """
-Prepare kwargs for :func:`map_controller.build_species_overlay_map` in **all locations** mode.
+Prepare shared map context (locations, records-by-location, lifer prep) for Leaflet GeoJSON builders.
 
 Centralises the same dataframe signatures the Streamlit app uses so the embedded map and popups stay
 in sync with checklist prep. When a date filter applies, pass the **filtered** working frame as

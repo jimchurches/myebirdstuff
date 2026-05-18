@@ -564,13 +564,13 @@ function syncGoToGpsMarker(map: L.Map, viewportRaw: unknown, markerRef: React.Mu
 }
 
 /** Folium ``build_visit_overlay_map`` camera for All locations. */
-function applyAllLocationsViewport(map: L.Map, viewportRaw: unknown, gjLayer: L.GeoJSON | null): void {
+function applyAllLocationsViewport(map: L.Map, viewportRaw: unknown, boundsLayer: L.Layer | null): void {
   const vp = parseViewportV1(viewportRaw);
   const padPt = (px: number) => L.point(px, px);
   if (!vp) {
-    if (gjLayer) {
+    if (boundsLayer && typeof (boundsLayer as L.FeatureGroup).getBounds === "function") {
       try {
-        const b = gjLayer.getBounds();
+        const b = (boundsLayer as L.FeatureGroup).getBounds();
         if (b.isValid()) {
           map.fitBounds(b.pad(0.12));
         }
@@ -1323,6 +1323,8 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   const mapRef = useRef<L.Map | null>(null);
   /** Overlay layer: MarkerClusterGroup when clustering on, else plain LayerGroup. */
   const overlayRef = useRef<L.LayerGroup | null>(null);
+  /** Pins with ``skip_cluster`` (design utility role markers) — sibling layer, not clustered. */
+  const standaloneOverlayRef = useRef<L.GeoJSON | null>(null);
   /** Folium ``_apply_go_to_gps_pin_view`` red pin — map root, not inside MarkerCluster. */
   const goToGpsMarkerRef = useRef<L.Marker | null>(null);
   /** OSM / Carto / Google tile layer — swapped when ``map_style`` changes without GeoJSON revision. */
@@ -1420,6 +1422,10 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
       map.removeLayer(overlayRef.current);
       overlayRef.current = null;
     }
+    if (standaloneOverlayRef.current !== null) {
+      map.removeLayer(standaloneOverlayRef.current);
+      standaloneOverlayRef.current = null;
+    }
 
     const gj = args.geojson;
     if (!gj || !gj.features || gj.features.length === 0) {
@@ -1440,18 +1446,11 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
       };
     }
 
-    let overlay: L.LayerGroup;
-    if (clusterEnabled) {
-      overlay = L.markerClusterGroup(
-        markerClusterGroupOptionsWithOptionalIconStyle(clusterPayload, args.cluster_icon_style),
-      ) as unknown as L.LayerGroup;
-    } else {
-      overlay = L.layerGroup();
-    }
-    overlay.addTo(map);
-    overlayRef.current = overlay;
+    const allFeatures = gj.features ?? [];
+    const clusterableFeatures = allFeatures.filter((f) => !f.properties?.skip_cluster);
+    const standaloneFeatures = allFeatures.filter((f) => Boolean(f.properties?.skip_cluster));
 
-    const gjLayer = L.geoJSON(gj, {
+    const geoJsonOptions: L.GeoJSONOptions = {
       pointToLayer(feature, latlng) {
         const pin = parseCirclePin(feature.properties?.circle_pin);
         const featureColour = feature.properties?.colour as string | undefined;
@@ -1491,11 +1490,48 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
         const html = popupHtmlFromFeatureProps(feature.properties as Record<string, unknown> | undefined);
         lyr.bindPopup(html, POPUP_BIND_OPTIONS);
       },
-    });
+    };
 
-    overlay.addLayer(gjLayer);
+    const boundsLayers: L.Layer[] = [];
 
-    applyAllLocationsViewport(map, args.viewport, gjLayer);
+    if (standaloneFeatures.length > 0) {
+      const standaloneLayer = L.geoJSON(
+        { ...gj, features: standaloneFeatures } as typeof gj,
+        geoJsonOptions,
+      );
+      standaloneLayer.addTo(map);
+      standaloneOverlayRef.current = standaloneLayer;
+      boundsLayers.push(standaloneLayer);
+    }
+
+    let overlay: L.LayerGroup;
+    if (clusterEnabled && clusterableFeatures.length > 0) {
+      overlay = L.markerClusterGroup(
+        markerClusterGroupOptionsWithOptionalIconStyle(clusterPayload, args.cluster_icon_style),
+      ) as unknown as L.LayerGroup;
+    } else {
+      overlay = L.layerGroup();
+    }
+    overlay.addTo(map);
+    overlayRef.current = overlay;
+
+    if (clusterableFeatures.length > 0) {
+      const gjLayer = L.geoJSON(
+        { ...gj, features: clusterableFeatures } as typeof gj,
+        geoJsonOptions,
+      );
+      overlay.addLayer(gjLayer);
+      boundsLayers.push(gjLayer);
+    }
+
+    const viewportLayer: L.Layer | null =
+      boundsLayers.length === 0
+        ? null
+        : boundsLayers.length === 1
+          ? boundsLayers[0]!
+          : L.featureGroup(boundsLayers);
+
+    applyAllLocationsViewport(map, args.viewport, viewportLayer);
     syncGoToGpsMarker(map, args.viewport, goToGpsMarkerRef);
 
     map.invalidateSize();

@@ -7,24 +7,17 @@ Pure helper functions used by the map overlay pipeline.
 Each function takes explicit inputs and returns a value — no UI
 globals, widget references, or side effects.
 
-Popup HTML is plain strings passed to ``folium.Popup``; typography and colours are **not** locked to
-Leaflet defaults: ``map_overlay_theme_stylesheet`` (popups + top/bottom map chrome, injected once per map
-in ``map_controller``) and ``EXPLORER_UI_*`` constants align with the Streamlit app and
-repo-root ``.streamlit/config.toml`` (checklist-stats theme alignment).
+Popup HTML is plain strings for the Leaflet map component; typography and colours use
+``map_overlay_theme_stylesheet`` (popups + top/bottom map chrome) and ``EXPLORER_UI_*`` constants
+aligned with the Streamlit app and repo-root ``.streamlit/config.toml``.
 """
 
 import html as _html_module
 
-import folium
 import pandas as pd
-from branca.element import MacroElement
-from folium.template import Template
 
 from explorer.core.stats import format_observed_count_for_map_popup
 from explorer.app.streamlit.defaults import (
-    MAP_HEIGHT_PX_DEFAULT,
-    MAP_HEIGHT_PX_MAX,
-    MAP_HEIGHT_PX_MIN,
     MAP_LEGEND_PIN_BORDER_PX,
     MAP_LEGEND_PIN_DOT_PX,
 )
@@ -62,7 +55,7 @@ def map_popup_theme_stylesheet() -> str:
     """Return a ``<style>`` block for Leaflet popups (injected once per map via ``branca.element.Element``).
 
     Typography matches the checklist HTML tab (~0.8125rem). CSS shrink-wraps Leaflet’s content box;
-    :func:`map_popup_width_fix_script` reapplies widths after ``Popup._updateLayout``.
+    Popup width is finalized in the Leaflet component iframe (``AllLocationsMap.tsx``).
     """
     return f"""
 <style>
@@ -298,99 +291,6 @@ def map_popup_theme_stylesheet() -> str:
   margin-top: 0.35rem;
 }}
 </style>
-"""
-
-
-def map_popup_width_fix_script() -> str:
-    """Return a ``<script>`` that shrink-wraps Leaflet popups after JS layout.
-
-    Folium passes ``maxWidth``; Leaflet's ``Popup._updateLayout`` sets a pixel width on
-    ``.leaflet-popup-content`` (often ``maxWidth``). A **block** ``.pebird-map-popup`` would **stretch**
-    to that width, so ``fit-content`` on the parent cannot shrink. We use **inline-block** inner (CSS)
-    and set **content + wrapper** to the measured inner width in px after Leaflet runs.
-    Inner ``max-width:100%`` is cleared briefly while measuring so shrink-to-fit does not collapse to
-    min-content width (Streamlit iframe popups).
-    """
-    w = MAP_POPUP_MAX_WIDTH_PX
-    return f"""
-<script>
-(function() {{
-  var MAX_PX = {w};
-
-  function capW() {{
-    return Math.min(MAX_PX, Math.max(80, window.innerWidth - 40));
-  }}
-
-  function measureInnerPx(inner) {{
-    void inner.offsetWidth;
-    var w = Math.max(inner.scrollWidth, inner.getBoundingClientRect().width);
-    var wide = inner.querySelectorAll(
-      '.pebird-map-popup__visit-dates a, .pebird-map-popup__visit-list-inner a, a.pebird-map-popup__location-heading, span.pebird-map-popup__location-heading, .pebird-map-popup__summary-line, .pebird-map-popup__species-line, .pebird-map-popup__species-line a, .pebird-map-popup__obs-line, .pebird-map-popup__species-seen > summary, .pebird-map-popup__all-visits > summary'
-    );
-    for (var i = 0; i < wide.length; i++) {{
-      var el = wide[i];
-      w = Math.max(w, el.scrollWidth, el.getBoundingClientRect().width);
-    }}
-    return Math.ceil(Math.max(w, 1));
-  }}
-
-  var SHRINK_BUFFER_PX = 40;
-
-  function shrinkPebirdPopups() {{
-    var pops = document.querySelectorAll('.leaflet-popup-pane .leaflet-popup');
-    var cap = capW();
-    for (var i = 0; i < pops.length; i++) {{
-      var pop = pops[i];
-      var content = pop.querySelector('.leaflet-popup-content');
-      var wrap = pop.querySelector('.leaflet-popup-content-wrapper');
-      var inner = pop.querySelector('.pebird-map-popup');
-      if (!content || !wrap || !inner) continue;
-
-      inner.style.setProperty('max-width', 'none', 'important');
-      inner.style.setProperty('width', 'max-content', 'important');
-      content.style.setProperty('width', cap + 'px', 'important');
-      content.style.setProperty('max-width', cap + 'px', 'important');
-      wrap.style.setProperty('width', cap + 'px', 'important');
-      wrap.style.setProperty('max-width', cap + 'px', 'important');
-      content.style.removeProperty('white-space');
-      var innerPx = measureInnerPx(inner);
-      inner.style.removeProperty('max-width');
-      inner.style.removeProperty('width');
-      var MIN_W = 140;
-      var target = Math.max(MIN_W, Math.min(innerPx + SHRINK_BUFFER_PX, cap));
-      content.style.setProperty('width', target + 'px', 'important');
-      content.style.setProperty('max-width', cap + 'px', 'important');
-      wrap.style.setProperty('width', target + 'px', 'important');
-      wrap.style.setProperty('max-width', cap + 'px', 'important');
-    }}
-  }}
-
-  function scheduleShrink() {{
-    requestAnimationFrame(function() {{
-      requestAnimationFrame(function() {{
-        shrinkPebirdPopups();
-      }});
-    }});
-    var delays = [0, 30, 80, 150, 260, 400];
-    for (var k = 0; k < delays.length; k++) {{
-      setTimeout(shrinkPebirdPopups, delays[k]);
-    }}
-  }}
-
-  var mo = new MutationObserver(function(muts) {{
-    for (var i = 0; i < muts.length; i++) {{
-      for (var j = 0; j < muts[i].addedNodes.length; j++) {{
-        var node = muts[i].addedNodes[j];
-        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {{
-          scheduleShrink();
-          return;
-        }}
-      }}
-    }}
-  }});
-  mo.observe(document.body, {{ childList: true, subtree: true }});
-}})();
-</script>
 """
 
 
@@ -1170,93 +1070,3 @@ def classify_locations(location_data, seen_location_ids, lifer_location, last_se
         by=["has_species_match", "is_lifer", "is_last_seen"],
         ascending=[True, True, True],
     )
-
-
-# ---------------------------------------------------------------------------
-# Map factory
-# ---------------------------------------------------------------------------
-
-
-class _ZoomLevelDebugOverlay(MacroElement):
-    """Leaflet control showing live zoom (debug; toggle via ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` in defaults).
-
-    Uses **bottom-right** so it stays clear of the fixed **bottom-left** legend
-    (``_LEGEND_POSITION`` / ``pebird-map-legend``), which would cover a ``bottomleft`` control.
-    """
-
-    _template = Template(
-        """
-        {% macro script(this, kwargs) %}
-        (function() {
-            var map = {{ this._parent.get_name() }};
-            var div = L.DomUtil.create('div', 'ebird-zoom-debug-overlay');
-            div.style.cssText = [
-                'background:rgba(255,255,255,0.92)',
-                'border:1px solid #1f6f54',
-                'padding:4px 8px',
-                'font:12px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace',
-                'border-radius:4px',
-                'box-shadow:0 1px 3px rgba(0,0,0,0.2)',
-                'min-width:7ch',
-                'text-align:right',
-                'z-index:1001'
-            ].join(';');
-            var ctrl = L.control({position: 'bottomright'});
-            ctrl.onAdd = function() { return div; };
-            ctrl.addTo(map);
-            function update() {
-                div.textContent = 'zoom: ' + map.getZoom();
-            }
-            map.on('zoomend', update);
-            map.on('zoom', update);
-            update();
-        })();
-        {% endmacro %}
-        """
-    )
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._name = "ZoomLevelDebugOverlay"
-
-
-def add_zoom_level_debug_overlay(map_obj: folium.Map, *, enabled: bool) -> None:
-    """If *enabled*, add a small live zoom readout (for tuning clustering). No-op when *enabled* is False."""
-    if not enabled:
-        return
-    _ZoomLevelDebugOverlay().add_to(map_obj)
-
-
-def create_map(
-    map_center,
-    map_style="default",
-    *,
-    height_px: int | float | None = None,
-    zoom_start: int | None = None,
-):
-    """Create a folium Map centred on *map_center* with the given tile style.
-
-    Supported *map_style* values: ``"default"``, ``"google"``, ``"carto"``.
-    Unknown values fall back to the default OpenStreetMap tiles.
-
-    *height_px*: pixel height for the map pane. Folium defaults to ``100%``, which
-    depends on parent layout; inside ``streamlit-folium`` that can collapse to a thin
-    strip. Pass the same value as the Streamlit **Map height** slider when embedding.
-
-    *zoom_start*: optional initial zoom level (defaults to ``5`` when omitted).
-    """
-    # Default initial zoom for first render. Lower = more zoomed out.
-    z = 5 if zoom_start is None else int(zoom_start)
-    h = float(height_px if height_px is not None else MAP_HEIGHT_PX_DEFAULT)
-    h = max(float(MAP_HEIGHT_PX_MIN), min(float(MAP_HEIGHT_PX_MAX), h))
-    common = {"location": map_center, "zoom_start": z, "height": h, "width": "100%"}
-    if map_style == "google":
-        return folium.Map(
-            tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-            attr="Google",
-            **common,
-        )
-    elif map_style == "carto":
-        return folium.Map(tiles="CartoDB Positron", attr="CartoDB", **common)
-    else:
-        return folium.Map(**common)

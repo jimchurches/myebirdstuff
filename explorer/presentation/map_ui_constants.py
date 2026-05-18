@@ -1,5 +1,5 @@
 """
-Folium / map chrome used by ``map_controller`` and ``map_renderer``.
+Map UI constants shared by the Leaflet component and HTML popup builders.
 
 **Popup chrome** (width, Macaulay link symbol) is defined in :mod:`explorer.app.streamlit.defaults`;
 re-exported here so call sites can keep importing from this module.

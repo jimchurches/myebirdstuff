@@ -112,7 +112,7 @@ def _sync_draft_text_from_pin() -> None:
 
 def render_go_to_gps_sidebar_expander() -> None:
     """Collapsible lat/long fields + form actions; bumps Folium cache when pin is set or cleared."""
-    from explorer.app.streamlit.app_map_working_ui import invalidate_folium_map_embed_cache
+    from explorer.app.streamlit.app_map_working_ui import invalidate_map_embed_cache
 
     _pending = st.session_state.pop(_GO_TO_GPS_PENDING_DRAFT_UPDATE_KEY, None)
     if _pending == "clear":
@@ -164,7 +164,7 @@ def render_go_to_gps_sidebar_expander() -> None:
                 and -180.0 <= lo <= 180.0
             ):
                 st.session_state[SESSION_GO_TO_GPS_PIN_KEY] = (la, lo)
-                invalidate_folium_map_embed_cache()
+                invalidate_map_embed_cache()
             else:
                 st.error(
                     "Could not use those coordinates. Enter decimal degrees for latitude and "
@@ -174,5 +174,5 @@ def render_go_to_gps_sidebar_expander() -> None:
         if clear:
             st.session_state.pop(SESSION_GO_TO_GPS_PIN_KEY, None)
             st.session_state[_GO_TO_GPS_PENDING_DRAFT_UPDATE_KEY] = "clear"
-            invalidate_folium_map_embed_cache()
+            invalidate_map_embed_cache()
             st.rerun()

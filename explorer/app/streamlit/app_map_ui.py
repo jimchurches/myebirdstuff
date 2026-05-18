@@ -15,8 +15,7 @@ from explorer.app.streamlit.app_constants import (
     EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     REPO_ROOT,
-    FOLIUM_MAP_MOUNT_NONCE_KEY,
-    FOLIUM_STATIC_MAP_CACHE_KEY,
+    LEAFLET_MAP_MOUNT_NONCE_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
@@ -73,8 +72,8 @@ def _species_searchbox_widget_key() -> str:
     return f"{SESSION_SPECIES_SEARCH_KEY}__v{n}"
 
 
-def inject_map_folium_iframe_min_height_css(height_px: int) -> None:
-    """Reduce streamlit-folium letterboxing when the iframe gets a near-zero height on some reruns.
+def inject_map_iframe_min_height_css(height_px: int) -> None:
+    """Ensure the Leaflet map component iframe has a sensible min-height on reruns.
 
     Targets iframes in the **main** column only (not the sidebar). Emit from the Map tab each full run
     so height tracks the sidebar **Map height (px)** slider.
@@ -398,11 +397,10 @@ def species_searchbox_fragment() -> None:
         st.session_state[SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY] = int(
             st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)
         ) + 1
-        # Remount Folium + drop cached HTML so the map returns to the all-locations view cleanly.
-        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        # Remount Leaflet component + drop cached export HTML for a clean all-locations view.
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
         ) + 1
-        st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
         st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         st.rerun()
 

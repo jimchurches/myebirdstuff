@@ -211,9 +211,8 @@ EXPLORER_PERF_DOWNLOAD_BTN_KEY = "explorer_perf_download_jsonl_btn"
 SESSION_SPECIES_SEARCH_USER_EDITING_KEY = "_streamlit_species_search_user_editing"
 # Last main-run id the species search fragment saw; used to refill the bar after tab navigation.
 SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY = "_streamlit_species_search_last_main_run_id"
-FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
-# Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
-FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
+# Bumped when remounting the Leaflet map component (view/mode/height changes).
+LEAFLET_MAP_MOUNT_NONCE_KEY = "_leaflet_map_mount_nonce"
 # Leaflet custom map (All locations) — session cache for ``(revision, geojson)`` payloads.
 ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY = "_all_locations_leaflet_payload_cache_v1"
 # Leaflet custom map (Lifer locations).

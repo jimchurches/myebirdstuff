@@ -16,10 +16,15 @@ from explorer.core.map_marker_colour_resolve import (
     resolve_location_visit_colours,
 )
 from explorer.presentation.design_map_preview import (
+    DESIGN_PREVIEW_MARKER_COPY_COUNT,
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
+    MAP_SCOPE_ALL,
     MAP_SCOPE_ALL_LOCATIONS,
     MAP_SCOPE_FAMILY_LOCATIONS,
-    build_design_preview_map,
+    MAP_SCOPE_SPECIES_LOCATIONS,
+    PREVIEW_MARKER_ROWS,
+    build_design_preview_geojson,
+    build_design_preview_leaflet_bundle,
     normalize_hex_colour,
     scheme_seed_config,
 )
@@ -138,56 +143,37 @@ def test_scheme_seed_config_matches_active_scheme_family_colours() -> None:
         assert cfg.marker_cluster_inner_fill_opacity == _expected_cluster_inner_fill_opacity(sch)
 
 
-def test_build_design_preview_map_returns_folium_with_markers() -> None:
-    sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    m = build_design_preview_map(cfg, position_seed=7)
-    html = m._repr_html_()
-    assert "CircleMarker" in html or "circle" in html.lower()
-    assert "-35" in html  # Canberra latitude area
-    vf, ve = resolve_location_visit_colours(sch)
-    h = html.lower()
-    for hx in (vf, ve):
-        assert hx.replace("#", "").lower() in h
+def test_build_design_preview_geojson_role_markers_skip_cluster() -> None:
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_SPECIES_LOCATIONS)
+    gj = build_design_preview_geojson(cfg, position_seed=42)
+    features = gj["features"]
+    role_rows = sum(1 for r in PREVIEW_MARKER_ROWS if MAP_SCOPE_SPECIES_LOCATIONS in r.map_scopes)
+    assert len(features) == role_rows * DESIGN_PREVIEW_MARKER_COPY_COUNT
+    assert all(f["properties"].get("skip_cluster") is True for f in features)
+    assert all("circle_pin" in f["properties"] for f in features)
 
 
-def test_all_locations_scope_has_only_default_pins() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_ALL_LOCATIONS)
-    m = build_design_preview_map(cfg, position_seed=3)
-    html = m._repr_html_()
-    assert html.count("All locations") >= 8
-    assert "species at location" not in html
+def test_build_design_preview_geojson_all_locations_includes_seq_cluster_demo() -> None:
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL_LOCATIONS)
+    gj = build_design_preview_geojson(cfg, position_seed=42)
+    clustered = [f for f in gj["features"] if not f["properties"].get("skip_cluster")]
+    standalone = [f for f in gj["features"] if f["properties"].get("skip_cluster")]
+    assert len(clustered) == 7 + 45 + 120
+    assert len(standalone) > 0
 
 
-def test_all_locations_scope_includes_seq_cluster_demo() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_ALL_LOCATIONS)
-    m = build_design_preview_map(cfg, position_seed=3)
-    html = m._repr_html_()
-    assert "SEQ cluster demo" in html
-    assert "Gold Coast (small tier)" in html
-    assert "-27" in html or "-28" in html
+def test_build_design_preview_leaflet_bundle_revision_changes_with_nonce() -> None:
+    cfg = scheme_seed_config(2, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
+    a = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=1)
+    b = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=2)
+    assert a["revision"] != b["revision"]
+    assert a["legend_html"]
+    assert a["viewport"]["mode"] == "center_zoom"
+    assert a["cluster_options"]["enabled"] is False
 
 
-def test_family_scope_excludes_seq_cluster_demo() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
-    m = build_design_preview_map(cfg, position_seed=3)
-    html = m._repr_html_()
-    assert "SEQ cluster demo" not in html
+def test_build_design_preview_leaflet_bundle_cluster_enabled_for_all_scope() -> None:
+    cfg = scheme_seed_config(1, preview_scope=MAP_SCOPE_ALL)
+    bundle = build_design_preview_leaflet_bundle(cfg, position_seed=42, render_nonce=0)
+    assert bundle["cluster_options"]["enabled"] is True
 
-
-def test_family_scope_shows_only_family_markers() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
-    m = build_design_preview_map(cfg, position_seed=3)
-    html = m._repr_html_()
-    assert html.count("species at location") >= 8
-    assert "Default location marker" not in html
-    assert "All locations" not in html
-    assert "Last seen" not in html
-    assert "pebird-map-legend" in html
-
-
-def test_build_includes_legend_overlay() -> None:
-    cfg = scheme_seed_config(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    m = build_design_preview_map(cfg, position_seed=1)
-    html = m._repr_html_()
-    assert "pebird-map-legend" in html

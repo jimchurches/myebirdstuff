@@ -9,8 +9,8 @@ Examples: ``load_dataset``, ``compute_rankings``, :class:`WorkingSet`.
 **2. Presentation (re-exported)** — HTML builders, rankings tables, map helpers, and
 maintenance formatters from :mod:`explorer.presentation`, plus several map-related
 names loaded lazily from :mod:`explorer.presentation.map_renderer` and
-:mod:`explorer.core.map_controller` (see ``_LAZY_IMPORTS``). Examples:
-``rankings_table``, ``create_map``, ``format_checklist_stats_bundle``.
+:mod:`explorer.presentation.map_renderer` (see ``_LAZY_IMPORTS``). Examples:
+``rankings_table``, ``format_checklist_stats_bundle``.
 
 **Why both appear here** — Older scripts and notebooks used ``from explorer.core import …``
 for a single import surface. That convenience blurs layering for newcomers.
@@ -21,12 +21,12 @@ for a single import surface. That convenience blurs layering for newcomers.
   ``from explorer.core.stats import compute_rankings``,
   ``from explorer.core.map_prep import prepare_all_locations_map_context``,
   ``from explorer.core.family_map_compute import build_family_location_pins``.
-- Import **HTML / Folium / table rendering** from :mod:`explorer.presentation` (or
+- Import **HTML / map chrome / table rendering** from :mod:`explorer.presentation` (or
   ``explorer.presentation.<module>``) explicitly.
 - Treat this module as a **backward-compatible barrel**, not the definition of
   “what core means.”
 
-Optional heavy stacks (Whoosh, Folium) load only when lazy names are accessed.
+Optional heavy stacks (Whoosh) load only when lazy names are accessed.
 """
 
 from __future__ import annotations
@@ -36,11 +36,10 @@ from typing import TYPE_CHECKING, Any
 
 # IDE / static-analysis friendliness:
 # ``explorer.core`` exposes some symbols lazily via ``__getattr__``. At runtime this keeps optional
-# stacks (Folium, Whoosh) from being imported unless needed, but some editors cannot “jump to
+# stacks (Whoosh, etc.) from being imported unless needed, but some editors cannot “jump to
 # definition” for lazy names. The TYPE_CHECKING block below makes those names visible to type
 # checkers and many IDEs without changing runtime imports.
 if TYPE_CHECKING:  # pragma: no cover
-    from explorer.core.map_controller import MapOverlayResult, build_species_overlay_map
     from explorer.presentation.checklist_stats_display import (
         format_checklist_stats_bundle,
         format_rankings_tab_html,
@@ -52,7 +51,6 @@ if TYPE_CHECKING:  # pragma: no cover
         build_species_banner_html,
         build_visit_info_html,
         classify_locations,
-        create_map,
         format_sighting_row,
         format_visit_time,
         pin_legend_item,
@@ -116,15 +114,9 @@ from explorer.presentation.maintenance_display import (
     format_incomplete_checklists_maintenance_html,
 )
 
-# Whoosh / Folium are heavy optional stacks for search + map UIs. Lazy-load so
-# lightweight imports do not require whoosh or folium installed.
+# Whoosh is a heavy optional stack for search. Lazy-load so lightweight imports
+# do not require whoosh installed.
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
-    "MapOverlayResult": ("explorer.core.map_controller", "MapOverlayResult"),
-    "build_species_overlay_map": (
-        "explorer.core.map_controller",
-        "build_species_overlay_map",
-    ),
-    "create_map": ("explorer.presentation.map_renderer", "create_map"),
     "format_visit_time": ("explorer.presentation.map_renderer", "format_visit_time"),
     "format_sighting_row": ("explorer.presentation.map_renderer", "format_sighting_row"),
     "popup_scroll_script": ("explorer.presentation.map_renderer", "popup_scroll_script"),
@@ -181,9 +173,6 @@ __all__ = [
     "get_sex_notation_by_year",
     "get_map_maintenance_data",
     "ExplorerState",
-    "MapOverlayResult",
-    "build_species_overlay_map",
-    "create_map",
     "format_visit_time",
     "format_sighting_row",
     "popup_scroll_script",
