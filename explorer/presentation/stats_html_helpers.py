@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html as html_module
 from typing import Any
+from urllib.parse import urlparse
 
 # Right-aligned numeric / emphasis cells used across rankings-style tables.
 METRIC_CELL_STYLE = "text-align:right;font-weight:600;"
@@ -21,6 +22,24 @@ def esc_text(value: Any) -> str:
 def esc_attr(value: Any) -> str:
     """Escape for HTML attribute values (e.g. ``href``)."""
     return html_module.escape(str(value) if value is not None else "", quote=True)
+
+
+def safe_http_url(raw: Any) -> str:
+    """Return *raw* trimmed only when it is an ``http`` or ``https`` URL; otherwise ``""``.
+
+    Blocks ``javascript:``, ``data:``, protocol-relative URLs, and other non-http(s) schemes.
+    Matches the Leaflet component ``safeHttpUrlForAnchor`` in ``AllLocationsMap.tsx``.
+    """
+    t = str(raw or "").strip()
+    if not t:
+        return ""
+    try:
+        parsed = urlparse(t)
+    except ValueError:
+        return ""
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return ""
+    return t
 
 
 def tr_row(*cells_html: str) -> str:
@@ -59,7 +78,10 @@ def a_external(
     target: str = "_blank",
 ) -> str:
     """Standard external link: escaped ``href`` and visible text, ``target`` + ``rel`` on anchor."""
+    safe = safe_http_url(href)
+    if not safe:
+        return esc_text(visible_text)
     return (
-        f'<a href="{esc_attr(href)}" target="{esc_attr(target)}" rel="{esc_attr(rel)}">'
+        f'<a href="{esc_attr(safe)}" target="{esc_attr(target)}" rel="{esc_attr(rel)}">'
         f"{esc_text(visible_text)}</a>"
     )

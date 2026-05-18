@@ -5,8 +5,11 @@ Map build runs under the first spinner so the map can render before heavy checkl
 Leaflet Streamlit custom component; other modes use Folium + ``st_folium``. Tab session sync runs in a second spinner so
 other tabs get payloads before fragments run. Partial ``@st.fragment`` reruns do not use this path.
 
-**Export map HTML** uses :func:`~explorer.app.streamlit.map_working.folium_map_to_html_bytes` on a
-**deep-copied** Folium map (``branca`` mutates on render), with ``html_bytes`` cached on hit. The live
+**Export map HTML:** Leaflet modes store an export **recipe** in session
+(:data:`LEAFLET_EXPORT_RECIPE_KEY`); ``leaflet_map_to_html_bytes`` runs only when the user clicks export, with
+results cached under :data:`LEAFLET_EXPORT_HTML_CACHE_KEY`. Folium modes still build ``html_bytes`` during prep
+(cached on the map LRU hit).
+The live
 Folium map uses **streamlit-folium** ``st_folium`` with a **deep copy** of the cached map so embed
 rendering cannot strip layers from the session cache. Session :data:`FOLIUM_STATIC_MAP_CACHE_KEY`
 stores unrendered Folium :class:`folium.Map` entries for the LRU. Leaflet GeoJSON payloads are cached under
@@ -36,10 +39,14 @@ from explorer.app.streamlit.app_caches import (
 from explorer.app.streamlit.app_constants import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
     FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
+    LEAFLET_EXPORT_BUILT_CACHE_KEY,
+    LEAFLET_EXPORT_HTML_CACHE_KEY,
+    LEAFLET_EXPORT_RECIPE_KEY,
     LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
+    EXPORT_MAP_HTML_BUILD_BTN_KEY,
     EXPORT_MAP_HTML_BTN_KEY,
     FILTERED_BY_LOC_CACHE_KEY,
     FOLIUM_MAP_MOUNT_NONCE_KEY,
@@ -72,6 +79,8 @@ from explorer.app.streamlit.checklist_stats_streamlit_html import (
 from explorer.app.streamlit.country_stats_streamlit_html import sync_country_tab_session_inputs
 from explorer.app.streamlit.maintenance_streamlit_html import sync_maintenance_tab_session_inputs
 from explorer.app.streamlit.map_working import folium_map_to_html_bytes
+from explorer.presentation.leaflet_map_export_cache import leaflet_export_html_cache_key
+from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
 from explorer.app.streamlit.rankings_streamlit_html import (
     build_rankings_tab_bundle,
     sync_rankings_tab_session_inputs,
@@ -168,6 +177,101 @@ _MAP_RENDER_CACHE_MAX_ENTRIES = 6
 # Species map: cache hide-only vs all-locations payloads separately (toggle thrashes a single slot).
 _SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
 _FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
+_LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES = 6
+
+
+def _leaflet_export_html_cache_lookup(cache_key: tuple[str, ...]) -> bytes | None:
+    cached = st.session_state.get(LEAFLET_EXPORT_HTML_CACHE_KEY)
+    if isinstance(cached, OrderedDict):
+        entry = cached.get(cache_key)
+        if isinstance(entry, (bytes, bytearray)):
+            cached.move_to_end(cache_key)
+            return bytes(entry)
+    return None
+
+
+def _leaflet_export_html_cache_store(cache_key: tuple[str, ...], html_bytes: bytes) -> None:
+    cached = st.session_state.get(LEAFLET_EXPORT_HTML_CACHE_KEY)
+    if not isinstance(cached, OrderedDict):
+        cached = OrderedDict()
+    cached[cache_key] = html_bytes
+    cached.move_to_end(cache_key)
+    while len(cached) > _LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES:
+        cached.popitem(last=False)
+    st.session_state[LEAFLET_EXPORT_HTML_CACHE_KEY] = cached
+
+
+def _leaflet_export_cache_key_for_recipe(recipe: dict[str, Any]) -> tuple[str, ...]:
+    return leaflet_export_html_cache_key(
+        leaflet_revision=str(recipe["leaflet_revision"]),
+        map_height=int(recipe["map_height"]),
+        map_style=str(recipe.get("map_style") or "default"),
+        cluster_options=recipe.get("cluster_options") or {},
+        circle_marker_style=recipe.get("circle_marker_style") or {},
+        cluster_icon_style=recipe.get("cluster_icon_style") or {},
+        viewport=recipe.get("viewport") or {},
+        map_theme_css=str(recipe.get("map_theme_css") or ""),
+        banner_html=str(recipe.get("banner_html") or ""),
+        legend_html=str(recipe.get("legend_html") or ""),
+    )
+
+
+def _materialize_leaflet_export_html(recipe: dict[str, Any]) -> bytes:
+    cache_key = _leaflet_export_cache_key_for_recipe(recipe)
+    cached = _leaflet_export_html_cache_lookup(cache_key)
+    if cached is not None:
+        perf_record_point("prep.leaflet_map_html_cache_hit")
+        return cached
+    perf_record_point("prep.leaflet_map_html_cache_miss")
+    with perf_span("prep.leaflet_map_to_html_bytes"):
+        built = leaflet_map_to_html_bytes(
+            geojson=recipe["geojson"],
+            height=int(recipe["map_height"]),
+            map_style=str(recipe.get("map_style") or "default"),
+            cluster_options=recipe.get("cluster_options") or {},
+            circle_marker_style=recipe.get("circle_marker_style") or {},
+            cluster_icon_style=recipe.get("cluster_icon_style") or {},
+            viewport=recipe.get("viewport") or {},
+            map_theme_css=str(recipe.get("map_theme_css") or ""),
+            banner_html=str(recipe.get("banner_html") or ""),
+            legend_html=str(recipe.get("legend_html") or ""),
+        )
+    _leaflet_export_html_cache_store(cache_key, built)
+    return built
+
+
+def _sync_leaflet_export_recipe(
+    *,
+    leaflet_revision: str,
+    leaflet_geojson: dict[str, Any],
+    map_height: int,
+    map_style: str,
+    leaflet_cluster_opts: dict[str, Any],
+    leaflet_circle_style: dict[str, Any],
+    leaflet_cluster_icon_style: dict[str, Any] | None,
+    leaflet_viewport: dict[str, Any] | None,
+    banner_html: str,
+    legend_html: str,
+) -> None:
+    """Store export inputs; clear stale download bytes when the recipe changes."""
+    recipe = {
+        "leaflet_revision": leaflet_revision,
+        "geojson": leaflet_geojson,
+        "map_height": int(map_height),
+        "map_style": str(map_style or "default"),
+        "cluster_options": leaflet_cluster_opts,
+        "circle_marker_style": leaflet_circle_style,
+        "cluster_icon_style": leaflet_cluster_icon_style or {},
+        "viewport": leaflet_viewport or {},
+        "map_theme_css": map_overlay_theme_stylesheet(),
+        "banner_html": banner_html,
+        "legend_html": legend_html,
+    }
+    st.session_state[LEAFLET_EXPORT_RECIPE_KEY] = recipe
+    recipe_key = _leaflet_export_cache_key_for_recipe(recipe)
+    if st.session_state.get(LEAFLET_EXPORT_BUILT_CACHE_KEY) != recipe_key:
+        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+        st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
 
 
 def _leaflet_payload_cache_lookup(
@@ -295,6 +399,9 @@ def render_prep_spinner_and_map_tab(
                     st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
                     st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
                     st.session_state.pop(FAMILY_LEAFLET_PAYLOAD_CACHE_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_HTML_CACHE_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None
@@ -306,6 +413,8 @@ def render_prep_spinner_and_map_tab(
             except ValueError as e:
                 map_warning_text = str(e)
                 st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+                st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+                st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
             else:
                 # Blank-map viewport recipe (session-only): same framing recipe as all-data All locations
                 # for non-country scopes, so Species/Families blank maps match the initial data framing.
@@ -562,7 +671,6 @@ def render_prep_spinner_and_map_tab(
                             blank_viewport_recipe=blank_viewport_recipe,
                             highlight_framed=family_highlight_framed,
                         )
-                    st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                 else:
                     overlay_common = (
                         (species_pick_common or "").strip() if map_view_mode == "species" else ""
@@ -792,7 +900,6 @@ def render_prep_spinner_and_map_tab(
                         result_map = None
                         result_warning = None
                         folium_st_key = None
-                        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                     elif use_lifer_leaflet:
                         result_warning = None
                         leaflet_cluster_opts = {
@@ -904,7 +1011,6 @@ def render_prep_spinner_and_map_tab(
                                     )
                         result_map = None
                         folium_st_key = None
-                        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                     elif use_species_leaflet:
                         result_warning = None
                         leaflet_cluster_opts = {
@@ -1066,7 +1172,6 @@ def render_prep_spinner_and_map_tab(
                                     )
                         result_map = None
                         folium_st_key = None
-                        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
                     else:
                         _cached = _map_cache_lookup(_ck)
                         if isinstance(_cached, dict) and _cached.get("map") is not None:
@@ -1111,21 +1216,43 @@ def render_prep_spinner_and_map_tab(
                                     },
                                 )
 
-                if use_all_locations_leaflet and leaflet_revision and leaflet_geojson is not None:
-                    pass
-                elif use_lifer_leaflet and leaflet_revision and leaflet_geojson is not None:
-                    pass
-                elif use_species_leaflet and leaflet_revision and leaflet_geojson is not None:
-                    pass
-                elif use_family_leaflet and leaflet_revision and leaflet_geojson is not None:
-                    pass
+                if (
+                    (
+                        use_all_locations_leaflet
+                        or use_lifer_leaflet
+                        or use_species_leaflet
+                        or use_family_leaflet
+                    )
+                    and leaflet_revision
+                    and leaflet_geojson is not None
+                    and leaflet_cluster_opts is not None
+                    and leaflet_circle_style is not None
+                ):
+                    _sync_leaflet_export_recipe(
+                        leaflet_revision=leaflet_revision,
+                        leaflet_geojson=leaflet_geojson,
+                        map_height=int(map_height),
+                        map_style=map_style,
+                        leaflet_cluster_opts=leaflet_cluster_opts,
+                        leaflet_circle_style=leaflet_circle_style,
+                        leaflet_cluster_icon_style=leaflet_cluster_icon_style,
+                        leaflet_viewport=leaflet_viewport,
+                        banner_html=all_locations_leaflet_banner_html,
+                        legend_html=all_locations_leaflet_legend_html,
+                    )
                 elif result_warning:
                     map_warning_text = result_warning
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
                 elif result_map is None:
                     map_warning_text = "Map could not be built."
                     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
                 else:
+                    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+                    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
                     _cached_for_html = _map_cache_lookup(_ck)
                     _cached_html = (
                         _cached_for_html.get("html_bytes")
@@ -1274,22 +1401,53 @@ def render_prep_spinner_and_map_tab(
                 sync_country_tab_session_inputs(checklist_payload)
 
         _spinner_emoji_placeholder.empty()
-        _has_map_export = bool(st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY))
+        _leaflet_recipe = st.session_state.get(LEAFLET_EXPORT_RECIPE_KEY)
+        _export_html_bytes = st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY)
+        _has_map_export = _leaflet_recipe is not None or _export_html_bytes is not None
         if _has_map_export:
             st.divider()
             _ex1, _ex2, _ex3 = st.columns([1, 3, 1])
             with _ex2:
-                # Match outline “Buy me a coffee” pill (``st.download_button`` is a real widget, not an ``<a>``).
                 inject_sidebar_outline_download_button_css(SIDEBAR_FOOTER_LINK_HEX)
-                st.download_button(
-                    "Export map HTML",
-                    data=st.session_state[EXPLORER_MAP_HTML_BYTES_KEY],
-                    file_name=MAP_EXPORT_HTML_FILENAME,
-                    mime="text/html",
-                    key=EXPORT_MAP_HTML_BTN_KEY,
-                    help="Standalone HTML for the current map.",
-                    use_container_width=True,
-                    type="secondary",
-                )
+                if isinstance(_leaflet_recipe, dict):
+                    _recipe_key = _leaflet_export_cache_key_for_recipe(_leaflet_recipe)
+                    _built_key = st.session_state.get(LEAFLET_EXPORT_BUILT_CACHE_KEY)
+                    _ready_bytes = (
+                        _export_html_bytes
+                        if isinstance(_export_html_bytes, (bytes, bytearray))
+                        and _built_key == _recipe_key
+                        else None
+                    )
+                    if _ready_bytes is not None:
+                        st.download_button(
+                            "Export map HTML",
+                            data=bytes(_ready_bytes),
+                            file_name=MAP_EXPORT_HTML_FILENAME,
+                            mime="text/html",
+                            key=EXPORT_MAP_HTML_BTN_KEY,
+                            use_container_width=True,
+                            type="secondary",
+                        )
+                    elif st.button(
+                        "Export map HTML",
+                        key=EXPORT_MAP_HTML_BUILD_BTN_KEY,
+                        use_container_width=True,
+                        type="secondary",
+                    ):
+                        with st.spinner("Building map HTML…"):
+                            _built = _materialize_leaflet_export_html(_leaflet_recipe)
+                        st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = _built
+                        st.session_state[LEAFLET_EXPORT_BUILT_CACHE_KEY] = _recipe_key
+                        st.rerun()
+                elif isinstance(_export_html_bytes, (bytes, bytearray)):
+                    st.download_button(
+                        "Export map HTML",
+                        data=bytes(_export_html_bytes),
+                        file_name=MAP_EXPORT_HTML_FILENAME,
+                        mime="text/html",
+                        key=EXPORT_MAP_HTML_BTN_KEY,
+                        use_container_width=True,
+                        type="secondary",
+                    )
         sidebar_footer_links(leading_divider=not _has_map_export)
         sidebar_bottom_slot_end()
