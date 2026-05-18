@@ -1425,14 +1425,12 @@ def render_prep_spinner_and_map_tab(
                             file_name=MAP_EXPORT_HTML_FILENAME,
                             mime="text/html",
                             key=EXPORT_MAP_HTML_BTN_KEY,
-                            help="Download standalone HTML for the current map.",
                             use_container_width=True,
                             type="secondary",
                         )
                     elif st.button(
                         "Export map HTML",
                         key=EXPORT_MAP_HTML_BUILD_BTN_KEY,
-                        help="Builds the HTML file on click (large maps may take a moment).",
                         use_container_width=True,
                         type="secondary",
                     ):
@@ -1448,7 +1446,6 @@ def render_prep_spinner_and_map_tab(
                         file_name=MAP_EXPORT_HTML_FILENAME,
                         mime="text/html",
                         key=EXPORT_MAP_HTML_BTN_KEY,
-                        help="Standalone HTML for the current map.",
                         use_container_width=True,
                         type="secondary",
                     )
