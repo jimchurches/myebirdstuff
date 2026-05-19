@@ -227,9 +227,9 @@ From PR #228. **Not blocking** merge.
 
 ## 18. Export map HTML — button UX — **done**
 
-**Shipped:** One sidebar `st.download_button` (“Export map HTML”) with `on_click` lazy build (`_on_leaflet_export_map_html_download`). Spinner + toast on first build; `st.error` on failure. Repeat exports use session bytes or `LEAFLET_EXPORT_HTML_CACHE_KEY` LRU without rebuilding — **one click** when cached. First build for a new recipe may still need a second click (Streamlit serves `data=` from the run after the build callback). Caption explains that case. Recipe sync still lazy (`_sync_leaflet_export_recipe` only); no export work on ordinary map reruns.
+**Shipped:** One sidebar `st.button` (“Export map HTML”). On click: build if needed (`_materialize_leaflet_export_html` + spinner; session/LRU skip rebuild), then `trigger_browser_file_download` (Blob URL + anchor) so **one click** always saves the file. `st.download_button` cannot attach bytes built in the same interaction reliably (Streamlit widget lifecycle). Recipe sync stays lazy (`_sync_leaflet_export_recipe` only); no export work on ordinary map reruns.
 
-**Files:** `app_prep_map_ui.py`, `app_constants.py` (`EXPORT_MAP_HTML_BTN_KEY`, `EXPORT_MAP_HTML_ERROR_KEY`).
+**Files:** `app_prep_map_ui.py`, `app_map_ui.py` (`trigger_browser_file_download`), `app_constants.py`.
 
 ---
 

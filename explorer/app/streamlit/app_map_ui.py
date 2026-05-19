@@ -169,18 +169,20 @@ def sidebar_bottom_slot_end() -> None:
 
 
 def inject_sidebar_outline_download_button_css(outline_hex: str) -> None:
-    """Style the map **Export HTML** ``st.download_button`` like the outline support link (refs #127).
+    """Style the map **Export HTML** control like the outline support link (refs #127).
 
     Streamlit widgets are not plain ``<a>`` tags; we align them visually with scoped CSS on
     ``.ebird-sidebar-bottom-slot`` (see :func:`sidebar_bottom_slot_start`).
     Uses the same colour as the footer text links (see :data:`SIDEBAR_FOOTER_LINK_HEX`).
+    Covers both ``st.download_button`` (legacy path) and ``st.button`` (Leaflet one-click export).
     """
     h = outline_hex.strip()
     if not h.startswith("#") or len(h) not in (4, 7, 9):
         h = SIDEBAR_FOOTER_LINK_HEX
     st.html(
         f"""<style>
-.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button {{
+.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button,
+.ebird-sidebar-bottom-slot [data-testid="stButton"] button {{
   background: transparent !important;
   color: {h} !important;
   border: 1px solid {h} !important;
@@ -189,15 +191,59 @@ def inject_sidebar_outline_download_button_css(outline_hex: str) -> None:
   font-weight: 500 !important;
   box-shadow: none !important;
 }}
-.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover {{
+.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover,
+.ebird-sidebar-bottom-slot [data-testid="stButton"] button:hover {{
   background: color-mix(in srgb, {h} 14%, transparent) !important;
 }}
 @supports not (color: color-mix(in srgb, black 50%, transparent)) {{
-  .ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover {{
+  .ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover,
+  .ebird-sidebar-bottom-slot [data-testid="stButton"] button:hover {{
     background: rgba(134, 142, 150, 0.12) !important;
   }}
 }}
 </style>"""
+    )
+
+
+def trigger_browser_file_download(*, data: bytes, filename: str, mime: str) -> None:
+    """Start a browser file save in the same run as a button click.
+
+    Streamlit's ``st.download_button`` cannot reliably attach bytes that were built during the
+    same interaction (users see a second click). A zero-height HTML component creates a Blob URL
+    and programmatically clicks an anchor — one deliberate export action, build-then-save.
+    """
+    import base64
+    import json
+
+    if not data:
+        return
+    b64 = base64.b64encode(data).decode("ascii")
+    filename_js = json.dumps(filename)
+    mime_js = json.dumps(mime)
+    b64_js = json.dumps(b64)
+    st.components.v1.html(
+        f"""<script>
+(function () {{
+  try {{
+    const b64 = {b64_js};
+    const raw = atob(b64);
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    const blob = new Blob([arr], {{ type: {mime_js} }});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = {filename_js};
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }} catch (e) {{
+    console.error("pebird map export download failed", e);
+  }}
+}})();
+</script>""",
+        height=0,
     )
 
 
