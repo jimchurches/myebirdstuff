@@ -160,7 +160,7 @@ Not required for #222 unless we promote during review. Track here so nothing is 
 
 **Testing**
 
-- [x] **Inventory** — `mapComponentParsers.test.ts` added; `npm test -- --watchAll=false` (7 tests). Not in CI yet → §8.3.
+- [x] **Inventory** — `mapComponentParsers.test.ts` added; `npm run test:ci` (7 tests); wired in CI (§8.3).
 - [x] **Unit-level** — `parseViewportV1` extracted to `mapComponentParsers.ts` (more parsers later if useful).
 - [x] **Integration** — **I6** ported: `test_all_locations_cluster_popup_parity` in `test_streamlit_map_e2e.py` (runs with `pytest -m e2e`; needs Playwright Chromium).
 - [x] **Build contract** — `npm run build` green; commit updated `frontend/build/` after TS change.
@@ -173,15 +173,15 @@ Not required for #222 unless we promote during review. Track here so nothing is 
 
 ### 8.3 CI hygiene — JavaScript / TypeScript (parity with Python jobs)
 
-**Today (`.github/workflows/tests.yml`):** job `all-locations-map-frontend` runs `npm ci` + `npm run build` only. Python CI also runs Ruff, pip-audit, pytest+coverage, gitleaks.
+**CI (`.github/workflows/tests.yml`):** job `all-locations-map-frontend` (*All locations map (frontend CI)*) runs after `npm ci`: `npm test -- --watchAll=false`, `npx tsc --noEmit`, `npm audit --omit=dev`, `npm run build`. Python CI still has Ruff, pip-audit, pytest+coverage, gitleaks separately.
 
-- [ ] **Gap analysis** — list what we want mirrored for the component frontend:
-  - [ ] **`npm audit`** (or `npm audit --production`) — dependency vulnerabilities; align severity policy with pip-audit (fail vs warn).
-  - [ ] **`npm test`** — once client unit tests exist (§8.2); run in CI after `npm ci`.
-  - [ ] **Lint / typecheck** — CRA runs ESLint+TS on `build`; optional explicit `npx tsc --noEmit` or `eslint src/` step for faster failure signal.
-  - [ ] **Lockfile discipline** — `package-lock.json` committed; Dependabot/npm updates reviewed like Python requirements.
-- [ ] **Implement** — add CI step(s) or job; document in `docs/development.md` and component README (local pre-push commands).
-- [ ] **Out of scope unless needed:** bundle-size budget, Lighthouse in CI, separate Node version matrix (Node 20 is enough for now).
+- [x] **Gap analysis** — mirrored for the component frontend:
+  - [x] **`npm audit --omit=dev`** — production/runtime deps only (0 vulns as of §8.3); aligns with pip-audit (fail on prod vulns). Full `npm audit` reports `react-scripts`/webpack-dev-server dev advisories — out of scope until CRA upgrade.
+  - [x] **`npm test`** — Jest via `npm run test:ci` after `npm ci` (`CI=true` in Actions).
+  - [x] **Typecheck** — explicit `npx tsc --noEmit` (+ `npm run typecheck` locally); CRA `build` still runs ESLint on compile.
+  - [x] **Lockfile discipline** — `package-lock.json` committed; review npm lock updates like `requirements.txt` (no Dependabot job yet).
+- [x] **Implement** — CI steps + `docs/development.md` + component README pre-push commands; `package.json` scripts `test:ci`, `typecheck`, `audit:prod`.
+- [x] **Out of scope unless needed:** bundle-size budget, Lighthouse in CI, separate Node version matrix (Node 20 is enough for now).
 
 ### 8.4 Server-side performance instrumentation (#179 / #205)
 

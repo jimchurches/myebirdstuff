@@ -4,19 +4,29 @@
 
 Leaflet map embedded via `streamlit.components.v1`. The committed **`frontend/build`** output is what Streamlit loads at runtime.
 
-Rebuild after TS/React changes (also validated on every PR by **Python CI** → *All locations map (npm build)*):
+Rebuild after TS/React changes (also validated on every PR by **Python CI** → *All locations map (frontend CI)*: `npm test`, `tsc --noEmit`, production `npm audit`, `npm run build`):
 
 ```bash
 # From repo root (recommended — checks for junk under build/ afterward)
 python3 scripts/build_all_locations_map_frontend.py
 ```
 
-Or manually:
+Or manually (full CI parity):
 
 ```bash
 cd explorer/components/all_locations_map/frontend
 npm ci
+npm run test:ci
+npm run typecheck
+npm run audit:prod
 npm run build
+```
+
+Quick rebuild only (skips test/audit):
+
+```bash
+cd explorer/components/all_locations_map/frontend
+npm ci && npm run build
 ```
 
 ### What to commit after a build (same model as today)
@@ -83,4 +93,4 @@ This avoids regressing the “rich tie-back” story while staying faster than `
 
 For regressions and #222 acceptance, rely on **Python** `EXPLORER_PERF` (including `map.*.leaflet.payload` / `component_embed`) and Playwright **`e2e.first_paint`** — not in-iframe timings. Browser `performance.mark` is feasible for local dev but is **out of scope** for the current product instrumentation path. See [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) §8.2.
 
-**Frontend unit tests:** `cd frontend && npm test -- --watchAll=false` (viewport parser today; more parsers optional).
+**Frontend unit tests:** `cd frontend && npm run test:ci` (viewport parser today; more parsers optional). CI also runs `npm run typecheck` and `npm run audit:prod`.

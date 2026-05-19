@@ -17,6 +17,15 @@ python -c "import pandas; print(pandas.__version__)"   # must succeed
 
 CI uses Python **3.12** and `requirements.txt`. Partial venvs (audit-only, old experiments) will fail with `ModuleNotFoundError: No module named 'pandas'`.
 
+## All locations map frontend (Jest)
+
+CI runs Jest, TypeScript check, production dependency audit, and build for `explorer/components/all_locations_map/frontend/` (see `docs/development.md` § Leaflet map component). Locally:
+
+```bash
+cd explorer/components/all_locations_map/frontend
+npm ci && npm run test:ci && npm run typecheck && npm run audit:prod
+```
+
 ## Default test run (recommended day-to-day)
 
 Run the normal unit/integration suite (**with `.venv` activated**):

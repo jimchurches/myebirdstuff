@@ -48,6 +48,19 @@ python3 scripts/build_all_locations_map_frontend.py
 
 That runs `npm ci` + `npm run build` and reports which `build/` files belong in git vs junk (e.g. macOS Finder duplicates). Details: [explorer/components/all_locations_map/README.md](../explorer/components/all_locations_map/README.md).
 
+**Pre-push / CI parity** (same checks as the *All locations map (frontend CI)* job in `.github/workflows/tests.yml`):
+
+```bash
+cd explorer/components/all_locations_map/frontend
+npm ci
+npm run test:ci
+npm run typecheck
+npm run audit:prod    # production deps only; matches pip-audit scope
+npm run build
+```
+
+`npm audit` without `--omit=dev` may report dev-toolchain issues from `react-scripts` (e.g. `webpack-dev-server`); CI does **not** fail on those. Review `package-lock.json` updates like Python `requirements.txt`.
+
 **Map HTML export (sidebar):** Lazy build on user action; one-click download via Streamlit + optional auto-click. If users report failed exports, see [map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) for a two-button fallback design and browser-risk notes.
 
 ---

@@ -199,7 +199,7 @@ python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots \
 |---------|----------------------|
 | **8.1** | **Done** — see §8.1 block above |
 | **8.2** | **Done** — see §8.2 block above |
-| **8.3** | CI: only `npm ci`+`build` today — add audit/test/lint per gap analysis |
+| **8.3** | CI: `npm ci` → test, `tsc --noEmit`, `audit --omit=dev`, build; docs + `test:ci`/`typecheck`/`audit:prod` scripts |
 | **8.4** | Rename stale docs (Folium spinners); consider **popup/geojson build metrics** to replace I1/I2; verify `payload_cache_hit` in journeys |
 | **8.5** | Run reproduce block above; paste summary to #222; optional real CSV |
 | **8.6** | Close §8 when checklist + issue comment done |
