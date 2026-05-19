@@ -11,15 +11,17 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 ### #222 status and rollout (source narrative)
 
-**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§17 Fix now** popup parity **shipped** (#233). Optional **§17 full pass** (design-review table) and **§10** docs remain.
+**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§7** export popup parity + **§18** export button UX **shipped** (`222-export-html-ux`). **§17 Fix now** popup parity **shipped** (#233). Optional **§17 full pass** and **§10** docs remain. **#222** stays open until smoke / optional follow-ups.
 
-| Map mode | Status | PR (approx.) |
-|----------|--------|----------------|
+| Map mode / workstream | Status | PR (approx.) |
+|-----------------------|--------|----------------|
 | **All locations** | **Done** — §1–5 | #224 |
 | **Lifer locations** | **Done** — §6 (lifer row) | #225 |
 | **Species locations** | **Done** — §6 (species row) | #226 |
 | **Family locations** | **Done** — §6 (family row) | #228 |
 | **Design utility (preview)** | **Done** — §16 | — |
+| **Export HTML — popup parity (§7)** | **Done** | `222-export-html-ux` |
+| **Export HTML — button UX (§18)** | **Done** | `222-export-html-ux` |
 | **Popup template — Fix now (§17)** | **Done** | #233 |
 | **Popup template — full pass (§17)** | **Optional** — product choices | — |
 
@@ -78,17 +80,15 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 
 ---
 
-## 7. Export map HTML — **done (single-stack HTML)**
+## 7. Export map HTML — **done**
 
-**Shipped:** `leaflet_map_to_html_bytes` — standalone HTML with CDN Leaflet + MarkerCluster.
+**Shipped:** `leaflet_map_to_html_bytes` — standalone HTML with CDN Leaflet + MarkerCluster (#230). Export popup HTML tests (#233). **`visited_truncated` trunc-hint** in export path matches live map (`popup_v1_export_html`, `visit_trunc_hint_html` on `LocationPopupModel`) — `222-export-html-ux`.
 
 **Do (export popup HTML):**
 
 - [x] Tests for `lifer_popup_v1`, `family_popup_v1`, and `species_popup_v1` via `popup_export_html_from_properties` (#233).
-- [x] Export `visited_truncated` trunc-hint parity with live map (`popup_v1_export_html`, `visit_trunc_hint_html` on `LocationPopupModel`).
+- [x] Export `visited_truncated` trunc-hint parity with live map (`222-export-html-ux`).
 - **Optional:** Assert banner/legend fragments in exported HTML.
-
-**Follow-up:** §18 — export button UX (single click, clear feedback).
 
 ---
 
@@ -227,7 +227,9 @@ From PR #228. **Not blocking** merge.
 
 ## 18. Export map HTML — button UX — **done**
 
-**Shipped:** One sidebar `st.button` (“Export map HTML”). On click: build if needed (spinner; session/LRU skip rebuild), `st.rerun()`, hidden `st.download_button` with bytes, parent-frame JS auto-clicks it (iframe Blob downloads do not work). One user click; lazy recipe sync unchanged.
+**Shipped (`222-export-html-ux`):** One sidebar `st.button` (“Export map HTML”). On click: build if needed (spinner; session/LRU skip rebuild), `st.rerun()`, `st.download_button` + parent-frame JS auto-click. One user click on typical desktop browsers (maintainer-tested Safari/macOS); lazy recipe sync unchanged.
+
+**Alternative (if exports fail in the field):** Two-button Prepare + Download UX — see [`docs/explorer/map-html-export-ux-alternative.md`](../../../docs/explorer/map-html-export-ux-alternative.md).
 
 **Files:** `app_prep_map_ui.py`, `app_map_ui.py` (`inject_auto_click_streamlit_download_js`), `app_constants.py`.
 
@@ -235,16 +237,14 @@ From PR #228. **Not blocking** merge.
 
 ## Agent handover
 
-*Last updated: May 2026 — **§7 + §18 export HTML done** on `222-export-html-ux`; optional §17 full pass + §10 docs next.*
+*Last updated: May 2026 — **§7 + §18 done**; merge `222-export-html-ux` → `beta-next` (Refs #222).*
 
-**Smoke (before closing #222):** Design utility + Map tab — regression checklist Map section.
+**Smoke (before closing #222):** Design utility + Map tab — regression checklist Map section; Export map HTML once (cold + repeat).
 
-**Branch `222-export-html-ux`:** §7 + §18 export HTML work.
-
-**Recommended next work (after export PR):**
+**Recommended next work (after this PR merges):**
 
 1. §10 — documentation pass (Folium → Leaflet architecture).
-2. Close **#222** after smoke on `beta-next` (optional §17 full-pass checklist first).
+2. Optional §17 full-pass checklist; then close **#222** when satisfied.
 3. §13–§14 — cache polish (optional).
 4. §8 — perf (#205).
 
