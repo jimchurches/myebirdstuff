@@ -56,9 +56,12 @@ def test_build_lifer_geojson_minimal():
     assert warn is None
     assert rev is not None
     assert gj is not None
-    assert len(gj["features"]) >= 1
+    assert len(gj["features"]) == 1
     props = gj["features"][0]["properties"]
+    assert props["location_id"] == "L1"
+    assert props["name"] == "Patch A"
     assert "lifer_popup_v1" in props
     assert props["lifer_popup_v1"]["v"] == 1
+    assert len(props["lifer_popup_v1"]["lines"]) >= 1
     assert "circle_pin" in props
-    assert len(framing) >= 1
+    assert len(framing) == 1

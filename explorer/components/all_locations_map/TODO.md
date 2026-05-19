@@ -152,7 +152,7 @@ Not required for #222 unless we promote during review. Track here so nothing is 
 
 - [ ] **Per-mode LRU session keys** — parameterized tests for lifer/species/family cache keys (helpers already covered for all-locations).
 - [ ] **`app_prep_map_ui.py` integration** — Streamlit-stubbed prep path (spinners, mode switch, cache invalidation).
-- [ ] **Accuracy audit** — spot-check tests that only assert “no exception”; tighten to payload/HTML contracts where cheap.
+- [x] **Accuracy audit** — triage in [`docs/explorer/issue-222-section-8-weak-test-triage.md`](../../../docs/explorer/issue-222-section-8-weak-test-triage.md); three cheap tightenings applied; rest **SKIP #222** or **FOLLOW-UP** issue.
 
 ### 8.2 Client-side testing & performance (component / iframe) — **done (2026-05-20)**
 
