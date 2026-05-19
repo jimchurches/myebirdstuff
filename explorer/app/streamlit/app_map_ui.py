@@ -205,41 +205,49 @@ def inject_sidebar_outline_download_button_css(outline_hex: str) -> None:
     )
 
 
-def trigger_browser_file_download(*, data: bytes, filename: str, mime: str) -> None:
-    """Start a browser file save in the same run as a button click.
+def inject_auto_click_streamlit_download_js(*, button_label: str) -> None:
+    """Click a parent-frame ``st.download_button`` after Streamlit renders it.
 
-    Streamlit's ``st.download_button`` cannot reliably attach bytes that were built during the
-    same interaction (users see a second click). A zero-height HTML component creates a Blob URL
-    and programmatically clicks an anchor — one deliberate export action, build-then-save.
+    ``st.components.v1.html`` runs in a sandboxed iframe — Blob/anchor downloads there do not
+    reach the user's filesystem. After export HTML is built, we render a real download_button in
+    the sidebar and programmatically click it in ``window.parent.document``.
     """
-    import base64
     import json
 
-    if not data:
-        return
-    b64 = base64.b64encode(data).decode("ascii")
-    filename_js = json.dumps(filename)
-    mime_js = json.dumps(mime)
-    b64_js = json.dumps(b64)
+    label_js = json.dumps(button_label)
+    st.html(
+        """<style>
+.ebird-export-auto-dl-host {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+</style>"""
+    )
     st.components.v1.html(
         f"""<script>
 (function () {{
-  try {{
-    const b64 = {b64_js};
-    const raw = atob(b64);
-    const arr = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-    const blob = new Blob([arr], {{ type: {mime_js} }});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = {filename_js};
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }} catch (e) {{
-    console.error("pebird map export download failed", e);
+  const want = {label_js};
+  function tryClick() {{
+    const root = window.parent && window.parent.document ? window.parent.document : document;
+    const buttons = root.querySelectorAll('[data-testid="stDownloadButton"] button');
+    for (let i = buttons.length - 1; i >= 0; i--) {{
+      const btn = buttons[i];
+      const text = (btn.innerText || btn.textContent || "").trim();
+      if (text === want) {{
+        btn.click();
+        return true;
+      }}
+    }}
+    return false;
+  }}
+  if (!tryClick()) {{
+    setTimeout(tryClick, 50);
+    setTimeout(tryClick, 200);
+    setTimeout(tryClick, 500);
   }}
 }})();
 </script>""",

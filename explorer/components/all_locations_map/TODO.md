@@ -227,9 +227,9 @@ From PR #228. **Not blocking** merge.
 
 ## 18. Export map HTML — button UX — **done**
 
-**Shipped:** One sidebar `st.button` (“Export map HTML”). On click: build if needed (`_materialize_leaflet_export_html` + spinner; session/LRU skip rebuild), then `trigger_browser_file_download` (Blob URL + anchor) so **one click** always saves the file. `st.download_button` cannot attach bytes built in the same interaction reliably (Streamlit widget lifecycle). Recipe sync stays lazy (`_sync_leaflet_export_recipe` only); no export work on ordinary map reruns.
+**Shipped:** One sidebar `st.button` (“Export map HTML”). On click: build if needed (spinner; session/LRU skip rebuild), `st.rerun()`, hidden `st.download_button` with bytes, parent-frame JS auto-clicks it (iframe Blob downloads do not work). One user click; lazy recipe sync unchanged.
 
-**Files:** `app_prep_map_ui.py`, `app_map_ui.py` (`trigger_browser_file_download`), `app_constants.py`.
+**Files:** `app_prep_map_ui.py`, `app_map_ui.py` (`inject_auto_click_streamlit_download_js`), `app_constants.py`.
 
 ---
 

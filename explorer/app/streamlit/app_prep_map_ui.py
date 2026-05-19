@@ -33,7 +33,9 @@ from explorer.app.streamlit.app_constants import (
     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
+    EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY,
     EXPORT_MAP_HTML_BTN_KEY,
+    EXPORT_MAP_HTML_DOWNLOAD_BTN_KEY,
     EXPORT_MAP_HTML_ERROR_KEY,
     FILTERED_BY_LOC_CACHE_KEY,
     LEAFLET_MAP_MOUNT_NONCE_KEY,
@@ -58,7 +60,7 @@ from explorer.app.streamlit.app_map_ui import (
     sidebar_bottom_slot_end,
     sidebar_bottom_slot_start,
     sidebar_footer_links,
-    trigger_browser_file_download,
+    inject_auto_click_streamlit_download_js,
 )
 from explorer.app.streamlit.checklist_stats_streamlit_html import (
     sync_checklist_stats_tab_session_inputs,
@@ -278,35 +280,52 @@ def _leaflet_export_download_bytes(recipe: dict[str, Any]) -> bytes | None:
 
 
 def _render_leaflet_export_map_html_download(recipe: dict[str, Any]) -> None:
-    """One-click export: build on button press (spinner), then browser-save via Blob URL."""
+    """One user click: build export HTML (spinner), rerun, auto-fire Streamlit download."""
     err = st.session_state.get(EXPORT_MAP_HTML_ERROR_KEY)
     if err:
         st.error(f"Could not build map export: {err}")
-    if not st.button(
+
+    if st.session_state.pop(EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY, False):
+        export_bytes = _leaflet_export_download_bytes(recipe)
+        if export_bytes is None:
+            st.error("Map export was prepared but bytes are missing. Try Export again.")
+            return
+        st.markdown('<div class="ebird-export-auto-dl-host">', unsafe_allow_html=True)
+        st.download_button(
+            "Export map HTML",
+            data=export_bytes,
+            file_name=MAP_EXPORT_HTML_FILENAME,
+            mime="text/html",
+            key=EXPORT_MAP_HTML_DOWNLOAD_BTN_KEY,
+            use_container_width=True,
+            type="secondary",
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+        inject_auto_click_streamlit_download_js(button_label="Export map HTML")
+        return
+
+    if st.button(
         "Export map HTML",
         key=EXPORT_MAP_HTML_BTN_KEY,
         use_container_width=True,
         type="secondary",
     ):
-        return
-    st.session_state.pop(EXPORT_MAP_HTML_ERROR_KEY, None)
-    export_bytes = _leaflet_export_download_bytes(recipe)
-    if export_bytes is None:
+        st.session_state.pop(EXPORT_MAP_HTML_ERROR_KEY, None)
         try:
-            with st.spinner("Building map HTML…"):
-                export_bytes = _materialize_leaflet_export_html(recipe)
+            export_bytes = _leaflet_export_download_bytes(recipe)
+            if export_bytes is None:
+                with st.spinner("Building map HTML…"):
+                    export_bytes = _materialize_leaflet_export_html(recipe)
+            recipe_key = _leaflet_export_cache_key_for_recipe(recipe)
+            st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = export_bytes
+            st.session_state[LEAFLET_EXPORT_BUILT_CACHE_KEY] = recipe_key
         except Exception as exc:
             st.session_state[EXPORT_MAP_HTML_ERROR_KEY] = str(exc)
             st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
             st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
             return
-        st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = export_bytes
-        st.session_state[LEAFLET_EXPORT_BUILT_CACHE_KEY] = _leaflet_export_cache_key_for_recipe(recipe)
-    trigger_browser_file_download(
-        data=export_bytes,
-        filename=MAP_EXPORT_HTML_FILENAME,
-        mime="text/html",
-    )
+        st.session_state[EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY] = True
+        st.rerun()
 
 
 def _leaflet_payload_cache_lookup(
