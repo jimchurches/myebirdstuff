@@ -149,6 +149,10 @@ from explorer.core.all_locations_experimental_marker_style import (
     cluster_icon_style_for_all_locations_map,
 )
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
+from explorer.core.leaflet_geojson_build_metrics import (
+    empty_leaflet_geojson_build_metrics,
+    merge_leaflet_build_metrics_into,
+)
 from explorer.presentation.map_renderer import (
     STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
     build_all_locations_banner_html,
@@ -608,6 +612,9 @@ def render_prep_spinner_and_map_tab(
                                 "type": "FeatureCollection",
                                 "features": empty_features,
                             }
+                            merge_leaflet_build_metrics_into(
+                                _perf_family, empty_leaflet_geojson_build_metrics()
+                            )
                             _leaflet_payload_cache_store(
                                 FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
@@ -682,6 +689,7 @@ def render_prep_spinner_and_map_tab(
                                 leaflet_geojson,
                                 family_framing_pairs,
                                 family_highlight_framed,
+                                payload_build_metrics,
                             ) = build_family_locations_geojson_payload(
                                 pins,
                                 visit_marker_scheme=_visit_sch,
@@ -693,6 +701,7 @@ def render_prep_spinner_and_map_tab(
                                 fit_bounds_highlight_only=bool(hl),
                                 revision_extra=revision_extra_json,
                             )
+                            merge_leaflet_build_metrics_into(_perf_family, payload_build_metrics)
                             _leaflet_payload_cache_store(
                                 FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
@@ -895,7 +904,11 @@ def render_prep_spinner_and_map_tab(
                                 popup_visit_dates_ascending = (
                                     str(popup_sort_order).strip().lower() != "descending"
                                 )
-                                leaflet_revision, leaflet_geojson = build_all_locations_geojson_payload(
+                                (
+                                    leaflet_revision,
+                                    leaflet_geojson,
+                                    payload_build_metrics,
+                                ) = build_all_locations_geojson_payload(
                                     loc_df,
                                     checklist_counts_by_location=counts.to_dict(),
                                     records_by_location=ctx["records_by_loc"],
@@ -904,6 +917,7 @@ def render_prep_spinner_and_map_tab(
                                     omit_pin_colour=True,
                                     revision_extra=revision_extra_json,
                                 )
+                                merge_leaflet_build_metrics_into(_perf_leaflet, payload_build_metrics)
                                 n_loc, n_chk, n_sp, n_ind = ctx["effective_totals"]
                                 all_locations_leaflet_banner_html = build_all_locations_banner_html(
                                     n_loc,
@@ -980,6 +994,7 @@ def render_prep_spinner_and_map_tab(
                                     leaflet_geojson,
                                     lifer_warn,
                                     lifer_framing_pairs,
+                                    payload_build_metrics,
                                 ) = build_lifer_locations_geojson_payload(
                                     full_location_data=ctx["full_location_data"],
                                     lifer_lookup_df=ctx["lifer_lookup_df"],
@@ -990,6 +1005,7 @@ def render_prep_spinner_and_map_tab(
                                     visit_marker_scheme=_visit_sch,
                                     revision_extra=revision_extra_json,
                                 )
+                                merge_leaflet_build_metrics_into(_perf_lifer, payload_build_metrics)
                                 if lifer_warn:
                                     result_warning = lifer_warn
                                     leaflet_revision = None
@@ -1122,6 +1138,9 @@ def render_prep_spinner_and_map_tab(
                                     build_species_locations_awaiting_selection_banner_html()
                                 )
                                 all_locations_leaflet_legend_html = ""
+                                merge_leaflet_build_metrics_into(
+                                    _perf_species, empty_leaflet_geojson_build_metrics()
+                                )
                                 _leaflet_payload_cache_store(
                                     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
                                     payload_cache_key,
@@ -1145,6 +1164,7 @@ def render_prep_spinner_and_map_tab(
                                     sp_warn,
                                     species_framing_pairs,
                                     pin_roles,
+                                    payload_build_metrics,
                                 ) = build_species_locations_geojson_payload(
                                     df=ctx["df"],
                                     location_data=ctx["location_data"],
@@ -1164,6 +1184,7 @@ def render_prep_spinner_and_map_tab(
                                     popup_visit_dates_ascending=popup_visit_dates_ascending,
                                     revision_extra=revision_extra_json,
                                 )
+                                merge_leaflet_build_metrics_into(_perf_species, payload_build_metrics)
                                 if sp_warn:
                                     result_warning = sp_warn
                                     leaflet_revision = None

@@ -14,11 +14,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from collections.abc import Hashable, Mapping
 from typing import Any
 
 import pandas as pd
 
+from explorer.core.leaflet_geojson_build_metrics import (
+    LeafletGeoJsonBuildMetrics,
+    empty_leaflet_geojson_build_metrics,
+)
 from explorer.presentation.map_renderer import build_visit_popup_entry_rows, format_visit_time
 
 
@@ -104,7 +109,7 @@ def build_all_locations_geojson_payload(
     pin_fill_hex: str = "#3388ff",
     omit_pin_colour: bool = False,
     revision_extra: str = "",
-) -> tuple[str, dict[str, Any]]:
+) -> tuple[str, dict[str, Any], LeafletGeoJsonBuildMetrics]:
     """Return ``(revision, geojson_dict)`` for the Leaflet Streamlit component.
 
     *revision* changes when the sorted feature set (coordinates, ids, labels, visit counts) changes.
@@ -129,6 +134,7 @@ def build_all_locations_geojson_payload(
     ld = ld.sort_values("_sort_key")
 
     features: list[dict[str, Any]] = []
+    build_metrics = empty_leaflet_geojson_build_metrics()
     for _, row in ld.iterrows():
         lid = str(row["Location ID"])
         lat_f = float(row["Latitude"])
@@ -138,11 +144,15 @@ def build_all_locations_geojson_payload(
         if checklist_counts_by_location is not None:
             visits_val = int(checklist_counts_by_location.get(row["Location ID"], 0))
         lifelist_href = _lifelist_url(lid)
+        t_popup = time.perf_counter()
         visit_entries = _visit_entries_for_location(
             records_by_location,
             row["Location ID"],
             popup_visit_dates_ascending=popup_visit_dates_ascending,
         )
+        build_metrics["popup_build_total_ms"] += (time.perf_counter() - t_popup) * 1000.0
+        if visit_entries is not None:
+            build_metrics["popup_build_count"] += 1
         if visit_entries is None:
             popup_v1: dict[str, Any] = _popup_payload_v1_compact(
                 visit_checklists=visits_val,
@@ -170,7 +180,8 @@ def build_all_locations_geojson_payload(
             }
         )
 
+    build_metrics["marker_count"] = len(features)
     rev_payload = json.dumps(features, separators=(",", ":")) + "|" + revision_extra
     revision = hashlib.sha256(rev_payload.encode("utf-8")).hexdigest()[:24]
     geojson: dict[str, Any] = {"type": "FeatureCollection", "features": features}
-    return revision, geojson
+    return revision, geojson, build_metrics

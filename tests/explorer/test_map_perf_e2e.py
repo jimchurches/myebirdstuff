@@ -98,6 +98,19 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
     missing = must - stages_seen
     assert not missing, f"missing expected stages {missing!r} in {sorted(stages_seen)!r}"
 
+    payload_misses = [
+        e
+        for e in events
+        if e.get("stage") == "map.all_locations_leaflet.payload"
+        and isinstance(e.get("extra"), dict)
+        and not e["extra"].get("payload_cache_hit")
+    ]
+    assert payload_misses, "expected at least one cold all-locations payload build"
+    assert any(
+        isinstance(e["extra"].get("marker_count"), int) and e["extra"]["marker_count"] >= 0
+        for e in payload_misses
+    ), "payload miss should include I1/I2 marker_count in extra"
+
     highs = max_elapsed_ms_by_stage(events)
     failures: list[str] = []
     for stage, cap in ceilings.items():

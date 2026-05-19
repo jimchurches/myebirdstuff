@@ -20,17 +20,18 @@ Reproduce the W1 A/B summary::
         --stage prep.map_iframe_embed \\
         --stage prep.build_species_overlay_map
 
-Batch 4 baseline with the new I1/I2/I4 fields::
+Leaflet payload build (I1/I2 on cache miss) + first paint::
 
     python scripts/aggregate_perf_jsonl.py \\
-        benchmarks/map_perf/snapshots/issue-205-batch-4 \\
-        --group-regex 'baseline-(?P<dataset>[^-]+)-r(?P<run>\\d+)' \\
-        --stage prep.build_species_overlay_map \\
+        benchmarks/map_perf/snapshots/post-leaflet \\
+        --group-regex '(?P<label>.+)' \\
+        --stage map.all_locations_leaflet.payload \\
+        --stage map.all_locations_leaflet.component_embed \\
         --stage e2e.first_paint \\
         --extra-key marker_count \\
         --extra-key popup_build_count \\
-        --extra-key popup_cache_hit_count \\
-        --extra-key popup_build_total_ms
+        --extra-key popup_build_total_ms \\
+        --extra-key payload_cache_hit
 
 Output is plain text by default (suitable for posting to GitHub comments) or JSON when
 ``--format json`` is passed.

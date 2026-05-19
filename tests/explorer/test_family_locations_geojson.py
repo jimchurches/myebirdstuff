@@ -50,7 +50,7 @@ def test_family_leaflet_viewport_highlight_max_zoom():
 def test_build_family_geojson_uses_species_url_by_common():
     pins = _sample_pins()
     sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    _rev, gj, _framing, _hl = build_family_locations_geojson_payload(
+    _rev, gj, _framing, _hl, _metrics = build_family_locations_geojson_payload(
         pins,
         visit_marker_scheme=sch,
         location_page_url_fn=lambda lid: f"https://ebird.org/lifelist/{lid}",
@@ -71,7 +71,7 @@ def test_build_family_geojson_uses_species_url_by_common():
 def test_build_family_geojson_pins_and_highlight_framing():
     pins = _sample_pins()
     sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    rev, gj, framing, hl_framed = build_family_locations_geojson_payload(
+    rev, gj, framing, hl_framed, metrics = build_family_locations_geojson_payload(
         pins,
         visit_marker_scheme=sch,
         location_page_url_fn=lambda lid: f"https://ebird.org/lifelist/{lid}",

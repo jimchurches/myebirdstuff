@@ -43,7 +43,7 @@ def test_build_lifer_geojson_minimal():
     )
     ctx = prepare_all_locations_map_context(df, full_df=df)
     sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    rev, gj, warn, framing = build_lifer_locations_geojson_payload(
+    rev, gj, warn, framing, _metrics = build_lifer_locations_geojson_payload(
         full_location_data=ctx["full_location_data"],
         lifer_lookup_df=ctx["lifer_lookup_df"],
         true_lifer_locations=ctx["true_lifer_locations"],

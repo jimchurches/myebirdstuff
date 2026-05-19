@@ -7,9 +7,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from typing import Any, Callable
 
 from explorer.app.streamlit.defaults import MapMarkerColourScheme
+from explorer.core.leaflet_geojson_build_metrics import (
+    LeafletGeoJsonBuildMetrics,
+    empty_leaflet_geojson_build_metrics,
+)
 from explorer.core.family_map_compute import FamilyLocationPin
 from explorer.core.family_map_overlays import family_map_marker_style
 from explorer.core.map_marker_colour_resolve import (
@@ -83,7 +88,7 @@ def build_family_locations_geojson_payload(
     species_url_by_common: dict[str, str] | None = None,
     fit_bounds_highlight_only: bool,
     revision_extra: str = "",
-) -> tuple[str | None, dict[str, Any] | None, list[list[float]], bool]:
+) -> tuple[str | None, dict[str, Any] | None, list[list[float]], bool, LeafletGeoJsonBuildMetrics]:
     """Return ``(revision, geojson, framing_pairs_lat_lon, highlight_framed)``.
 
     *highlight_framed* — viewport uses highlight max-zoom when true (parity with Folium).
@@ -112,10 +117,18 @@ def build_family_locations_geojson_payload(
     ]
 
     features: list[dict[str, Any]] = []
+    build_metrics = empty_leaflet_geojson_build_metrics()
     for pin in ordered:
         lid_s = str(pin.location_id)
         loc_url = location_page_url_fn(lid_s) if location_page_url_fn else None
         url_map = _species_url_map_for_pin(pin, species_url_fn, species_url_by_common)
+        t_popup = time.perf_counter()
+        family_popup = family_popup_v1_payload(
+            pin,
+            species_url_by_common=url_map or None,
+        )
+        build_metrics["popup_build_total_ms"] += (time.perf_counter() - t_popup) * 1000.0
+        build_metrics["popup_build_count"] += 1
         props: dict[str, Any] = {
             "location_id": lid_s,
             "name": pin.location_name or lid_s,
@@ -124,10 +137,7 @@ def build_family_locations_geojson_payload(
                 if loc_url and str(loc_url).strip()
                 else f"https://ebird.org/lifelist/{lid_s}"
             ),
-            "family_popup_v1": family_popup_v1_payload(
-                pin,
-                species_url_by_common=url_map or None,
-            ),
+            "family_popup_v1": family_popup,
             "circle_pin": _circle_pin_for_family_pin(pin, scheme=visit_marker_scheme),
             "density_band_index": int(pin.density_band_index),
         }
@@ -145,7 +155,8 @@ def build_family_locations_geojson_payload(
             }
         )
 
+    build_metrics["marker_count"] = len(features)
     rev_payload = json.dumps(features, separators=(",", ":")) + "|" + revision_extra
     revision = hashlib.sha256(rev_payload.encode("utf-8")).hexdigest()[:24]
     geojson: dict[str, Any] = {"type": "FeatureCollection", "features": features}
-    return revision, geojson, framing_pairs, highlight_framed
+    return revision, geojson, framing_pairs, highlight_framed, build_metrics

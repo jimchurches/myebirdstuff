@@ -120,7 +120,7 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
   - [x] **Still relevant on `beta-next`:** W4 / #215; I4 first-paint + I5 `aggregate_perf_jsonl` / #217; Batch A fragment cache / #220; **I6** lesson; `All → Lifer → All` journey; `stage_ceilings.json` uses Leaflet stages.
   - [x] **Historical / superseded:** Folium stages; H1, W1, W2 product paths; Folium lazy/structured batches — **do not re-run**.
   - [x] **Headline Folium finding:** ~78% of overlay build was popup HTML; H2 → **#221 / #222** Leaflet component.
-  - [x] **Gap → §8.4:** I1/I2 `metrics_sink` not emitted after Folium removal (no `prep.build_species_overlay_map`).
+  - [x] **Gap → §8.4:** I1/I2 restored on `map.*.leaflet.payload` misses (`marker_count`, `popup_build_*`).
 - [x] **#221 (component spike)** — `issue-221-map-component-spike.md` on `221-streamlit-custom-map-component-spike`:
   - [x] Spike JSONL table captured in prior-art doc (classic vs experimental ms).
   - [x] Production: four-map payload LRU + `payload_cache_hit` in perf `extra`.
@@ -185,14 +185,13 @@ Not required for #222 unless we promote during review. Track here so nothing is 
 
 ### 8.4 Server-side performance instrumentation (#179 / #205)
 
-- [ ] Audit `explorer/app/streamlit/perf_instrumentation.py` + call sites after Folium removal: stages still name real work (dataset load, `prep.*`, Leaflet bundle build, export, tab sync).
-- [ ] **Restore or replace I1/I2** — `popup_build_total_ms` / `marker_count` no longer on any stage (§8.0); consider GeoJSON-builder `extra` on `map.*.leaflet.payload` misses.
-- [ ] Remove or rename **Folium-specific** stage labels in **docs** (`docs/development.md` still mentions Folium-first spinners); stage mapping table in prior-art doc is the reference.
-- [ ] Confirm instrumentation on **Leaflet payload cache** paths (hit vs miss visible in perf events where useful).
-- [ ] Update `docs/development.md` perf section if spinner / stage narrative still mentions Folium-first map build.
-- [ ] Review `tests/explorer/test_perf_instrumentation.py`, `test_map_perf_e2e.py`, `test_aggregate_perf_jsonl.py` — still pass and reflect Leaflet journeys.
-- [ ] Review / tune `benchmarks/map_perf/stage_ceilings.json` after representative `--perf` run (leave CI headroom).
-- [ ] Optional: one-time table in #222 comparing **Folium-era** medians from #205 comments vs **Leaflet** medians (payload size, prep times) — do not treat Folium ceilings as Leaflet targets.
+- [x] **Audit** — `perf_instrumentation.py` unchanged; call sites in `app_prep_map_ui.py` / `app_data_loading.py` / tab fragments use Leaflet stages (`map.*.leaflet.payload`, `map.*.leaflet.component_embed`, `prep.leaflet_map_to_html_bytes`, `prep.map_context_prepare`, …). No Folium stage names in code.
+- [x] **Restore I1/I2** — GeoJSON builders return `LeafletGeoJsonBuildMetrics`; merged into perf `extra` on payload **misses** for all four maps (`explorer/core/leaflet_geojson_build_metrics.py`).
+- [x] **Docs** — `docs/development.md` spinner narrative → Leaflet-first; perf section documents I1/I2 on payload spans; `aggregate_perf_jsonl.py` example updated for Leaflet stages.
+- [x] **Payload cache** — `payload_cache_hit` already on `_perf_*` dicts; build metrics only on miss (zeros on empty family/species payloads).
+- [x] **Tests** — `test_leaflet_geojson_build_metrics.py`; `test_map_perf_e2e.py` asserts `marker_count` on cold payload miss; existing perf/aggregate tests pass.
+- [ ] **Ceilings tune** — deferred to **§8.5** after representative `--perf` run (current `stage_ceilings.json` unchanged; headroom OK for fixture).
+- [ ] **Optional Folium vs Leaflet table** — defer to **§8.5** / #222 comment (historical #205 medians in prior-art doc only).
 
 ### 8.5 Capture & document metrics (for future regressions)
 

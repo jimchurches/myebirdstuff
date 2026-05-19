@@ -16,8 +16,8 @@ notes) and these **guardrail ceilings**.
 ## Feasibility / relevance
 
 - **Feasible:** small JSON blobs, no binary logs.
-- **Relevant:** keeps `prep.*` / `dataset.load` instrumentation honest when refactoring embeds (#190)
-  or cache keys.
+- **Relevant:** keeps `prep.*` / `dataset.load` / `map.*.leaflet.*` instrumentation honest when refactoring
+  embeds (#190) or payload cache keys.
 - **Worth doing:** lightweight; complements human-reported timings. Replace or tighten ceilings when
   you intentionally improve hotspots.
 

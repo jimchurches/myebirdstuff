@@ -7,11 +7,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from typing import Any, Literal
 
 import pandas as pd
 
 from explorer.app.streamlit.defaults import MapMarkerColourScheme
+from explorer.core.leaflet_geojson_build_metrics import (
+    LeafletGeoJsonBuildMetrics,
+    empty_leaflet_geojson_build_metrics,
+)
 from explorer.core.map_marker_colour_resolve import resolve_species_visit_pin
 from explorer.core.map_overlay_species_popups import (
     species_popup_v1_payload,
@@ -122,15 +127,16 @@ def build_species_locations_geojson_payload(
     visit_marker_scheme: MapMarkerColourScheme,
     popup_visit_dates_ascending: bool,
     revision_extra: str = "",
-) -> tuple[str | None, dict[str, Any] | None, str | None, list[list[float]], set[str]]:
+) -> tuple[str | None, dict[str, Any] | None, str | None, list[list[float]], set[str], LeafletGeoJsonBuildMetrics]:
     """Return ``(revision, geojson, warning, framing_pairs_lat_lon, pin_roles_present)``.
 
     *framing_pairs* — coordinates of species-matching pins only (viewport parity with Folium).
     *pin_roles_present* — legend labels present: ``Species``, ``Locations``, ``Lifer``, ``Last seen``.
     """
+    empty_metrics = empty_leaflet_geojson_build_metrics()
     sci = (selected_species or "").strip()
     if not sci:
-        return None, None, None, [], set()
+        return None, None, None, [], set(), empty_metrics
 
     filtered = filter_species(df, sci)
     if filtered.empty:
@@ -140,6 +146,7 @@ def build_species_locations_geojson_payload(
             f"⚠️ No sightings of '{sci}' in current data — check date range or filters.",
             [],
             set(),
+            empty_metrics,
         )
 
     filtered_by_loc = {
@@ -164,6 +171,7 @@ def build_species_locations_geojson_payload(
     features: list[dict[str, Any]] = []
     framing_pairs: list[list[float]] = []
     pin_roles_present: set[str] = set()
+    build_metrics = empty_leaflet_geojson_build_metrics()
     role_to_legend = {
         "species": "Species",
         "default": "Locations",
@@ -195,6 +203,7 @@ def build_species_locations_geojson_payload(
                 visit_records = visit_records.sort_values(
                     "Date", ascending=popup_visit_dates_ascending
                 )
+        t_popup = time.perf_counter()
         visit_entries = build_visit_popup_entry_rows(visit_records, format_visit_time)
         n_visits = len(visit_records)
 
@@ -213,6 +222,8 @@ def build_species_locations_geojson_payload(
             framing_pairs.append([lat_f, lon_f])
         else:
             popup_payload = visit_only_popup_v1_payload(visit_entries=visit_entries)
+        build_metrics["popup_build_total_ms"] += (time.perf_counter() - t_popup) * 1000.0
+        build_metrics["popup_build_count"] += 1
 
         color, fill, radius_px, stroke_w, fill_opacity = resolve_species_visit_pin(
             visit_marker_scheme, role
@@ -243,7 +254,8 @@ def build_species_locations_geojson_payload(
             }
         )
 
+    build_metrics["marker_count"] = len(features)
     rev_payload = json.dumps(features, separators=(",", ":")) + "|" + revision_extra
     revision = hashlib.sha256(rev_payload.encode("utf-8")).hexdigest()[:24]
     geojson: dict[str, Any] = {"type": "FeatureCollection", "features": features}
-    return revision, geojson, None, framing_pairs, pin_roles_present
+    return revision, geojson, None, framing_pairs, pin_roles_present, build_metrics

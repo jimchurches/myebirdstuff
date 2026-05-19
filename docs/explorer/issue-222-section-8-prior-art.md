@@ -66,7 +66,7 @@
 
 ### Gap after Folium removal (→ §8.4)
 
-- **I1/I2 `metrics_sink`** (`popup_build_total_ms`, `marker_count` on overlay build) lived on **`prep.build_species_overlay_map`**, which no longer exists. `aggregate_perf_jsonl` still supports those extra keys, but **current JSONL will not emit them** unless we add counters to GeoJSON builders or `build_all_locations_geojson_payload`.
+- **I1/I2 restored (§8.4):** `marker_count`, `popup_build_count`, `popup_build_total_ms` on **`map.*.leaflet.payload`** cache misses via GeoJSON builders + `merge_leaflet_build_metrics_into`.
 - **I6** Playwright test `test_map_embed_all_locations_cluster_popup_parity_screenshot` was on `205-investigation-main`; **not present** on `beta-next` today — only `test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling` (→ §8.2).
 
 ### Local archives (gitignored)
@@ -200,7 +200,7 @@ python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots \
 | **8.1** | **Done** — see §8.1 block above |
 | **8.2** | **Done** — see §8.2 block above |
 | **8.3** | CI: `npm ci` → test, `tsc --noEmit`, `audit --omit=dev`, build; docs + `test:ci`/`typecheck`/`audit:prod` scripts |
-| **8.4** | Rename stale docs (Folium spinners); consider **popup/geojson build metrics** to replace I1/I2; verify `payload_cache_hit` in journeys |
+| **8.4** | I1/I2 on payload misses; docs spinner narrative; `payload_cache_hit` + build metrics in perf E2E |
 | **8.5** | Run reproduce block above; paste summary to #222; optional real CSV |
 | **8.6** | Close §8 when checklist + issue comment done |
 

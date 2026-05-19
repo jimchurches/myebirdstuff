@@ -323,8 +323,10 @@ regressions can be diagnosed quickly without re-adding scaffolding.
   document old -> new mapping in the PR/issue so historical comparisons stay meaningful.
 - When changing known expensive paths (map build/embed, working-set rebuild, heavy tab rendering),
   update instrumentation in the touched area (`perf_span`, `perf_fragment`, `perf_record_point`).
-- Map prep uses **two** sidebar spinners (map + Folium first, then checklist/rankings/maint caches and
+- Map prep uses **two** sidebar spinners (Leaflet map payload + embed first, then checklist/rankings/maint caches and
   tab sync) so large exports can show the map before the heaviest non-map work finishes (#179).
+- Leaflet payload cache misses record **`marker_count`**, **`popup_build_count`**, and **`popup_build_total_ms`** in perf
+  `extra` on `map.*.leaflet.payload` spans (I1/I2 parity with Folium-era `prep.build_species_overlay_map`).
 - Instrumentation should remain lightweight and optional: no behaviour changes when disabled.
 - For map/perf-related changes, run at least one focused before/after journey and include key stage
   medians or representative timings in issue/PR notes.
