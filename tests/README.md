@@ -2,9 +2,24 @@
 
 Quick guide for running test layers in this repo.
 
+## Python environment (read this first)
+
+Use **one** virtualenv at the repo root: **`.venv/`** (gitignored).
+
+```bash
+cd /path/to/myebirdstuff
+source .venv/bin/activate    # prompt should show (.venv) — not .venv-audit-test etc.
+python -c "import pandas; print(pandas.__version__)"   # must succeed
+
+# Create or refresh .venv (Python 3.12 + all deps):
+./scripts/setup_dev_venv.sh
+```
+
+CI uses Python **3.12** and `requirements.txt`. Partial venvs (audit-only, old experiments) will fail with `ModuleNotFoundError: No module named 'pandas'`.
+
 ## Default test run (recommended day-to-day)
 
-Run the normal unit/integration suite:
+Run the normal unit/integration suite (**with `.venv` activated**):
 
 ```bash
 pytest tests/ -v
