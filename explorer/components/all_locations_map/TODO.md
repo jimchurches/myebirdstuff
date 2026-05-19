@@ -7,11 +7,13 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 **Working principles:** Production Map tab uses **only** the Leaflet component. Folium / `streamlit-folium` / `map_controller` were removed on branch **`222-folium-removal`** (May 2026).
 
+**Leaflet payload cache contract (all four maps):** Session LRU via `_leaflet_payload_cache_lookup` / `_store` in `app_prep_map_ui.py`. Each entry holds `revision`, `geojson`, and (where applicable) `banner_html`, `legend_html`, plus mode-specific fields (`framing_pairs`, `pin_roles`, …). Warm reruns skip GeoJSON and overlay HTML rebuilds. LRU sizes: all-locations **4**, lifer **2**, species **2**, family **4** — sized for common toggle pairs (cluster, hide-non-matching, subspecies, highlight).
+
 ---
 
 ### #222 status and rollout (source narrative)
 
-**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§7** export popup parity + **§18** export button UX **shipped** (`222-export-html-ux`). **§17 Fix now** popup parity **shipped** (#233). Optional **§17 full pass** and **§10** docs remain. **#222** stays open until smoke / optional follow-ups.
+**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§17** popup parity **done** (#233 + `222-optional-polish-maps`). **§13–§15** four-map payload cache **done** on **`222-optional-polish-maps`** (PR → `beta-next`). **#222** stays **open** for **§8** perf/instrumentation (#205) and **§10** docs (planned after merge). Experimental spike branch retirement is **out of scope** for #222 (separate issues).
 
 | Map mode / workstream | Status | PR (approx.) |
 |-----------------------|--------|----------------|
@@ -22,16 +24,12 @@ Update this file as items ship so the backlog stays visible outside chat history
 | **Design utility (preview)** | **Done** — §16 | — |
 | **Export HTML — popup parity (§7)** | **Done** | `222-export-html-ux` |
 | **Export HTML — button UX (§18)** | **Done** | `222-export-html-ux` |
-| **Popup template — Fix now (§17)** | **Done** | #233 |
-| **Popup template — full pass (§17)** | **Optional** — product choices | — |
+| **Popup template parity (§17)** | **Done** | #233, `222-optional-polish-maps` |
+| **Leaflet payload cache — all four maps (§13–§15)** | **Done** | `222-optional-polish-maps` |
 
-### §17 status
+### §17 status — **done**
 
-**Fix now (#233):** Species rules mirrored in `AllLocationsMapPopup.css`; location headings wrap with `__heading-row` clearance (all modes); export popups use same BEM + `popup_v1_export_html.py` tests for all four payload types.
-
-**Optional full pass:** Heading margin 4px vs 6px (species), section-label uniformity, lifer line shape, manual cross-mode checklist — see §17 table below. Not blocking **#222** closure.
-
-**#222** can close after brief smoke on `beta-next` if you are satisfied with map parity; keep open only if you want the §17 full-pass checklist done first.
+Popup parity accepted for #222 (better than legacy Folium). Remaining visual nits (e.g. species **6px** vs **4px** heading margin, mode-specific section chrome) may be tuned **outside #222** if they show up in use.
 
 **Integrate onto `beta-next` in batches:** Prefer **several small PRs into `beta-next` only** (per [CONTRIBUTING.md](../../../CONTRIBUTING.md)).
 
@@ -99,12 +97,6 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 
 ---
 
-## 9. Branch / spike cleanup
-
-- When #222 is landed, retire branch `221-streamlit-custom-map-component-spike` per original plan.
-
----
-
 ## 10. Repository documentation — custom map architecture
 
 **When:** After `222-folium-removal` merges.
@@ -145,11 +137,11 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 
 ---
 
-## 17. Popup template parity across all map modes — **Fix now done (#233); full pass optional**
+## 17. Popup template parity across all map modes — **done**
 
 Audit (May 2026): all four Leaflet modes share `map_overlay_theme_stylesheet()` injected into the iframe plus `AllLocationsMapPopup.css` (`.pebird-map-popup` base **0.8125rem**, green headings, green links). Structured payloads (`popup_v1`, `species_popup_v1`, `lifer_popup_v1`, `family_popup_v1`) are rendered by **one TS layout per mode** in `AllLocationsMap.tsx`; export uses `popup_v1_export_html.py` with the same BEM classes (standalone export also embeds `AllLocationsMapPopup.css`).
 
-**Headings aligned** via `pebird-map-popup__location-heading` + `map_popup_heading_text.prevent_orphan_closing_punctuation` (Python + TS). Optional full pass: spacing choices, section chrome, manual cross-mode checklist.
+**Headings aligned** via `pebird-map-popup__location-heading` + `map_popup_heading_text.prevent_orphan_closing_punctuation` (Python + TS).
 
 ### Architecture (target)
 
@@ -168,22 +160,16 @@ See [README.md](./README.md) — “Popup anchor vs iframe size” and structure
 - **Family body text:** Species rows → `pebird-map-popup__species-line`; empty state → `pebird-map-popup__summary-line`.
 - **Family width cap:** Removed `max-width:22rem`; species names `nowrap` + horizontal scroll on overflow (visit-list pattern).
 
-### Fix now — **done (#233)**
-
-| Item | Maps | Status |
-|------|------|--------|
-| **Species-only CSS in component CSS file** | Species | **Done** — `obs-line`, `species-seen`, `all-visits`, chevrons, `media-link` in `AllLocationsMapPopup.css` (mirrors `map_popup_theme_stylesheet`). |
-| **Long location heading** | All 4 | **Done** — `white-space: normal` on `__location-heading`; `__heading-row` `padding-right: 2.25rem`; orphan punctuation helper (Python + TS). |
-| **Export popup HTML parity** | All 4 | **Done** — `popup_v1_export_html.py` + tests; export bundles `AllLocationsMapPopup.css`; trunc-hint when visits capped (§7). |
-
-### Full pass (design review — optional)
+### Shipped
 
 | Item | Maps | Notes |
 |------|------|--------|
-| **Heading margin below title** | All 4 | All/Lifer/Family **4px**; Species **6px** (legacy Folium). Pick one default or document exceptions in `map_popup_models.py` / TS constants. |
-| **Section labels** | Lifer, Family | No `Visited:` / `<details>` chrome (content-driven); All + Species use `__section-label`. Revisit if we want uniform “data block” labels. |
-| **Lifer line format** | Lifer | `Species : date` in one link vs All locations visit rows — **content** shape, not font size; only change if product wants structural parity. |
-| **Cross-mode checklist** | All 4 + export | Open the same location/species on each map mode; compare font size, link colour, bold, truncation hints, scroll regions, popup max width. Update regression checklist Map section if needed. |
+| **Species-only CSS in component CSS file** | Species | `AllLocationsMapPopup.css` mirrors `map_popup_theme_stylesheet` (#233). |
+| **Long location heading** | All 4 | `__heading-row` clearance + orphan punctuation (Python + TS) (#233). |
+| **Export popup HTML parity** | All 4 | `popup_v1_export_html.py` + tests; trunc-hint (§7). |
+| **Lifer export layout (no `Visited:` label)** | Lifer export | `222-optional-polish-maps` — matches `popupHtmlLiferLayout`. |
+
+**Accepted for #222 (change only if noticed in use):** species heading margin **6px** vs **4px** elsewhere; lifer/family content-driven blocks without all-locations `Visited:` chrome; lifer `Species : date` line shape.
 
 **Files:** `AllLocationsMap.tsx`, `AllLocationsMapPopup.css`, `map_renderer.py`, `popup_v1_export_html.py`, `map_popup_models.py`, `map_overlay_species_popups.py`, `map_overlay_family_popups.py`, geojson builders under `explorer/core/`.
 
@@ -191,21 +177,17 @@ See [README.md](./README.md) — “Popup anchor vs iframe size” and structure
 
 ---
 
-## 13. Species locations — optional polish (deferred)
+## 13. Species locations — optional polish — **done**
 
 From post–PR #226. **Not blocking** merge.
 
-### Cache banner on payload hit
+### Cache banner on payload hit — **done**
 
-**Gap:** Species Leaflet branch recomputes banner HTML on every rerun even when `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` hits.
+**Shipped:** `banner_html` and `legend_html` stored in `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` LRU entries and restored on payload cache hit (no banner recompute on warm rerun).
 
-**Do:** Cache banner fields or HTML in the payload LRU entry.
+### Cache awaiting-selection empty payload — **done**
 
-### Cache awaiting-selection empty payload
-
-**Gap:** Empty GeoJSON when no species selected is rebuilt each rerun; not stored in species payload LRU.
-
-**Do:** Optional — store in 2-entry LRU.
+**Shipped:** Empty GeoJSON + awaiting-selection banner stored in the 2-entry species payload LRU when no species is selected.
 
 ### DRY species banner stats
 
@@ -213,15 +195,36 @@ From post–PR #226. **Not blocking** merge.
 
 ---
 
-## 14. Family locations — optional polish (deferred)
+## 14. Family locations — optional polish — **done**
 
 From PR #228. **Not blocking** merge.
 
-### Cache empty / awaiting-selection payloads
+### Cache empty / awaiting-selection payloads — **done**
 
-**Gap:** Empty family payloads rebuilt each rerun; not stored in `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY`.
+**Shipped:** Empty family GeoJSON (no family selected / invalid family) stored in `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY` 4-entry LRU.
 
-**Do:** Optional — store in 4-entry LRU.
+### Cache banner + composition on payload hit — **done**
+
+**Shipped:** Family pin composition, banner, and legend run only on cache miss; full entries include `banner_html` / `legend_html` restored on hit.
+
+---
+
+## 15. Leaflet payload cache — all four maps — **done (`222-optional-polish-maps`)**
+
+Aligns warm-rerun behaviour across modes (builds on §13–§14).
+
+| Map | LRU | Banner / legend on payload hit | Empty / awaiting-selection cached |
+|-----|-----|--------------------------------|-----------------------------------|
+| **All locations** | 4 entries (`_leaflet_payload_cache_*`) | **Done** | N/A |
+| **Lifer** | 2 entries | **Done** | N/A |
+| **Species** | 2 entries | **Done** (§13) | **Done** (§13) |
+| **Family** | 4 entries | **Done** (§14) | **Done** (§14) |
+
+**Shipped:** All-locations and lifer migrated from legacy single-slot session dicts to shared `_leaflet_payload_cache_lookup` / `_store`; `banner_html` + `legend_html` stored and restored on hit (same contract as species/family).
+
+**Files:** `app_prep_map_ui.py` (`_ALL_LOCATIONS_*`, `_LIFER_*`, `_SPECIES_*`, `_FAMILY_*` max entry constants).
+
+**Out of scope (future enhancement):** Per-mode **camera** memory when switching Map view (pan/zoom); payload cache does not remount iframe or preserve user framing.
 
 ---
 
@@ -237,15 +240,25 @@ From PR #228. **Not blocking** merge.
 
 ## Agent handover
 
-*Last updated: May 2026 — **§7 + §18 done**; merge `222-export-html-ux` → `beta-next` (Refs #222).*
+*Last updated: May 2026 — branch **`222-optional-polish-maps`** (PR → `beta-next`, Refs #222).*
 
-**Smoke (before closing #222):** Design utility + Map tab — regression checklist Map section; Export map HTML once (cold + repeat).
+### Shipped on this branch
 
-**Recommended next work (after this PR merges):**
+- **§13** — Species payload LRU: banner/legend on hit; empty awaiting-selection payload cached.
+- **§14** — Family payload LRU: empty payloads; composition + banner/legend only on cache miss.
+- **§15** — All-locations + lifer: same LRU helper + banner/legend on hit (four-map contract at top of this file).
+- **§17 export** — Lifer export popup HTML matches live map (no `Visited:` section label).
 
-1. §10 — documentation pass (Folium → Leaflet architecture).
-2. Optional §17 full-pass checklist; then close **#222** when satisfied.
-3. §13–§14 — cache polish (optional).
-4. §8 — perf (#205).
+### PR smoke (after merge to `beta-next`)
 
-**Recover lost §17 detail:** `git show bdfa70f1^:explorer/components/all_locations_map/TODO.md` (section “## 15. Popup typography…” before Folium-removal commit collapsed it).
+- Map tab: switch all four **Map view** modes; repeat visit same mode — no unnecessary spinner from banner/geojson rebuild when inputs unchanged.
+- Species: no species selected → repeat rerun; family: no family selected → repeat rerun (empty map cached).
+- Export map HTML: open exported file; lifer pin popup — no `Visited:` label above species lines.
+
+### Recommended next work (post-merge; **#222** remains open)
+
+1. **§8** — perf harness / instrumentation (#205).
+2. **§10** — documentation pass (Folium → Leaflet architecture), last.
+3. Close **#222** when §8 + §10 + smoke are satisfied.
+
+**Recover lost §17 detail:** `git show bdfa70f1^:explorer/components/all_locations_map/TODO.md` (section “## 15. Popup typography…” before Folium-removal commit collapsed it; current **§15** is payload cache).

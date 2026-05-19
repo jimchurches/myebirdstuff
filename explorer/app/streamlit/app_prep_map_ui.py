@@ -160,7 +160,9 @@ from explorer.presentation.map_renderer import (
 )
 
 
-# Species map: cache hide-only vs all-locations payloads separately (toggle thrashes a single slot).
+# Leaflet payload LRU sizes (variants per map — e.g. cluster / hide-non-matching / subspecies toggles).
+_ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
+_LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
 _SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
 _FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
 _LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES = 6
@@ -562,62 +564,10 @@ def render_prep_spinner_and_map_tab(
 
                     if not fam:
                         map_hint_text = "Select a family in the sidebar to load the map data"
-                        all_locations_leaflet_banner_html = ""
-                        all_locations_leaflet_legend_html = ""
                     elif fam not in fams or work is None or getattr(work, "empty", True):
                         map_hint_text = "No family data available (taxonomy may not have loaded)."
-                        all_locations_leaflet_banner_html = ""
-                        all_locations_leaflet_legend_html = ""
                     else:
                         map_hint_text = None
-                        with perf_span("prep.family_map_composition_with_pins"):
-                            wf = filter_work_to_family(work, fam)
-                            metrics = (
-                                compute_family_map_banner_metrics(work, fam, tax_merged)
-                                if tax_merged is not None
-                                else None
-                            )
-                            pins = build_family_location_pins(
-                                wf,
-                                highlight_base_species=hl or None,
-                            )
-                            family_species_url_by_common = (
-                                build_common_name_to_species_url(
-                                    wf,
-                                    tax_merged,
-                                    fallback_fn=species_url_fn,
-                                )
-                                if tax_merged is not None and not getattr(tax_merged, "empty", True)
-                                else {}
-                            )
-                            base_to_common = bundle.get("base_to_common") or {}
-                            hl_label = (base_to_common.get(hl) or hl) if hl else ""
-                            sel_counts = (
-                                selected_species_checklist_individual_counts(wf, hl)
-                                if hl and metrics
-                                else None
-                            )
-                            hl_species_url = None
-                            if hl and hl_label:
-                                _u = species_url_fn(hl_label)
-                                hl_species_url = _u if _u else None
-                            all_locations_leaflet_banner_html = (
-                                build_family_map_banner_overlay_html(
-                                    metrics,
-                                    selected_species_n_checklists=sel_counts[0] if sel_counts else None,
-                                    selected_species_n_individuals=sel_counts[1] if sel_counts else None,
-                                    selected_species_display_name=hl_label or None,
-                                    selected_species_url=hl_species_url,
-                                )
-                                if metrics
-                                else ""
-                            )
-                            all_locations_leaflet_legend_html = build_family_map_legend_overlay_html_for_pins(
-                                pins,
-                                highlight_label=hl_label or None,
-                                highlight_species_url=hl_species_url,
-                                style=_visit_sch,
-                            )
 
                     _perf_family: dict[str, Any] = {
                         "embed": "family_leaflet",
@@ -635,9 +585,16 @@ def render_prep_spinner_and_map_tab(
                             leaflet_geojson = cached_fam["geojson"]
                             family_framing_pairs = list(cached_fam.get("framing_pairs") or [])
                             family_highlight_framed = bool(cached_fam.get("highlight_framed"))
+                            all_locations_leaflet_banner_html = str(
+                                cached_fam.get("banner_html") or ""
+                            )
+                            all_locations_leaflet_legend_html = str(
+                                cached_fam.get("legend_html") or ""
+                            )
                             _perf_family["payload_cache_hit"] = True
                         elif not fam or fam not in fams or work is None or getattr(work, "empty", True):
                             family_framing_pairs = []
+                            family_highlight_framed = False
                             empty_features: list[dict[str, Any]] = []
                             rev_payload = (
                                 json.dumps(empty_features, separators=(",", ":"))
@@ -651,7 +608,75 @@ def render_prep_spinner_and_map_tab(
                                 "type": "FeatureCollection",
                                 "features": empty_features,
                             }
+                            _leaflet_payload_cache_store(
+                                FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
+                                payload_cache_key,
+                                {
+                                    "revision": leaflet_revision,
+                                    "geojson": leaflet_geojson,
+                                    "framing_pairs": family_framing_pairs,
+                                    "highlight_framed": family_highlight_framed,
+                                    "banner_html": "",
+                                    "legend_html": "",
+                                },
+                                max_entries=_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                            )
                         else:
+                            with perf_span("prep.family_map_composition_with_pins"):
+                                wf = filter_work_to_family(work, fam)
+                                metrics = (
+                                    compute_family_map_banner_metrics(work, fam, tax_merged)
+                                    if tax_merged is not None
+                                    else None
+                                )
+                                pins = build_family_location_pins(
+                                    wf,
+                                    highlight_base_species=hl or None,
+                                )
+                                family_species_url_by_common = (
+                                    build_common_name_to_species_url(
+                                        wf,
+                                        tax_merged,
+                                        fallback_fn=species_url_fn,
+                                    )
+                                    if tax_merged is not None
+                                    and not getattr(tax_merged, "empty", True)
+                                    else {}
+                                )
+                                base_to_common = bundle.get("base_to_common") or {}
+                                hl_label = (base_to_common.get(hl) or hl) if hl else ""
+                                sel_counts = (
+                                    selected_species_checklist_individual_counts(wf, hl)
+                                    if hl and metrics
+                                    else None
+                                )
+                                hl_species_url = None
+                                if hl and hl_label:
+                                    _u = species_url_fn(hl_label)
+                                    hl_species_url = _u if _u else None
+                                all_locations_leaflet_banner_html = (
+                                    build_family_map_banner_overlay_html(
+                                        metrics,
+                                        selected_species_n_checklists=(
+                                            sel_counts[0] if sel_counts else None
+                                        ),
+                                        selected_species_n_individuals=(
+                                            sel_counts[1] if sel_counts else None
+                                        ),
+                                        selected_species_display_name=hl_label or None,
+                                        selected_species_url=hl_species_url,
+                                    )
+                                    if metrics
+                                    else ""
+                                )
+                                all_locations_leaflet_legend_html = (
+                                    build_family_map_legend_overlay_html_for_pins(
+                                        pins,
+                                        highlight_label=hl_label or None,
+                                        highlight_species_url=hl_species_url,
+                                        style=_visit_sch,
+                                    )
+                                )
                             (
                                 leaflet_revision,
                                 leaflet_geojson,
@@ -676,6 +701,8 @@ def render_prep_spinner_and_map_tab(
                                     "geojson": leaflet_geojson,
                                     "framing_pairs": family_framing_pairs,
                                     "highlight_framed": family_highlight_framed,
+                                    "banner_html": all_locations_leaflet_banner_html,
+                                    "legend_html": all_locations_leaflet_legend_html,
                                 },
                                 max_entries=_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
                             )
@@ -847,13 +874,19 @@ def render_prep_spinner_and_map_tab(
                             "visits_inline_cap": visits_inline_max,
                         }
                         with perf_span("map.all_locations_leaflet.payload", extra=_perf_leaflet):
-                            cached_pl = st.session_state.get(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY)
-                            if (
-                                isinstance(cached_pl, dict)
-                                and cached_pl.get("payload_cache_key") == payload_cache_key
-                            ):
+                            cached_pl = _leaflet_payload_cache_lookup(
+                                ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
+                                payload_cache_key,
+                            )
+                            if cached_pl is not None:
                                 leaflet_revision = str(cached_pl["revision"])
                                 leaflet_geojson = cached_pl["geojson"]
+                                all_locations_leaflet_banner_html = str(
+                                    cached_pl.get("banner_html") or ""
+                                )
+                                all_locations_leaflet_legend_html = str(
+                                    cached_pl.get("legend_html") or ""
+                                )
                                 _perf_leaflet["payload_cache_hit"] = True
                             else:
                                 loc_df = ctx["location_data"]
@@ -871,24 +904,30 @@ def render_prep_spinner_and_map_tab(
                                     omit_pin_colour=True,
                                     revision_extra=revision_extra_json,
                                 )
-                                st.session_state[ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY] = {
-                                    "payload_cache_key": payload_cache_key,
-                                    "revision": leaflet_revision,
-                                    "geojson": leaflet_geojson,
-                                }
-                        n_loc, n_chk, n_sp, n_ind = ctx["effective_totals"]
-                        all_locations_leaflet_banner_html = build_all_locations_banner_html(
-                            n_loc,
-                            n_chk,
-                            n_sp,
-                            n_ind,
-                        )
-                        _ls = str(leaflet_circle_style.get("stroke_hex") or "#1c2630")
-                        _lf = str(leaflet_circle_style.get("fill_hex") or "#3388ff")
-                        all_locations_leaflet_legend_html = build_legend_html(
-                            [(_ls, _lf, "All locations")],
-                            container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
-                        )
+                                n_loc, n_chk, n_sp, n_ind = ctx["effective_totals"]
+                                all_locations_leaflet_banner_html = build_all_locations_banner_html(
+                                    n_loc,
+                                    n_chk,
+                                    n_sp,
+                                    n_ind,
+                                )
+                                _ls = str(leaflet_circle_style.get("stroke_hex") or "#1c2630")
+                                _lf = str(leaflet_circle_style.get("fill_hex") or "#3388ff")
+                                all_locations_leaflet_legend_html = build_legend_html(
+                                    [(_ls, _lf, "All locations")],
+                                    container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
+                                )
+                                _leaflet_payload_cache_store(
+                                    ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
+                                    payload_cache_key,
+                                    {
+                                        "revision": leaflet_revision,
+                                        "geojson": leaflet_geojson,
+                                        "banner_html": all_locations_leaflet_banner_html,
+                                        "legend_html": all_locations_leaflet_legend_html,
+                                    },
+                                    max_entries=_ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                )
                         result_warning = None
                     elif use_lifer_leaflet:
                         result_warning = None
@@ -920,14 +959,20 @@ def render_prep_spinner_and_map_tab(
                             "payload_cache_hit": False,
                         }
                         with perf_span("map.lifer_leaflet.payload", extra=_perf_lifer):
-                            cached_lif = st.session_state.get(LIFER_LEAFLET_PAYLOAD_CACHE_KEY)
-                            if (
-                                isinstance(cached_lif, dict)
-                                and cached_lif.get("payload_cache_key") == payload_cache_key
-                            ):
+                            cached_lif = _leaflet_payload_cache_lookup(
+                                LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
+                                payload_cache_key,
+                            )
+                            if cached_lif is not None:
                                 leaflet_revision = str(cached_lif["revision"])
                                 leaflet_geojson = cached_lif["geojson"]
                                 lifer_framing_pairs = list(cached_lif.get("framing_pairs") or [])
+                                all_locations_leaflet_banner_html = str(
+                                    cached_lif.get("banner_html") or ""
+                                )
+                                all_locations_leaflet_legend_html = str(
+                                    cached_lif.get("legend_html") or ""
+                                )
                                 _perf_lifer["payload_cache_hit"] = True
                             else:
                                 (
@@ -951,54 +996,62 @@ def render_prep_spinner_and_map_tab(
                                     leaflet_geojson = None
                                     lifer_framing_pairs = []
                                 else:
-                                    st.session_state[LIFER_LEAFLET_PAYLOAD_CACHE_KEY] = {
-                                        "payload_cache_key": payload_cache_key,
-                                        "revision": leaflet_revision,
-                                        "geojson": leaflet_geojson,
-                                        "framing_pairs": lifer_framing_pairs,
-                                    }
+                                    n_lifer_sp = len(ctx["true_lifer_locations"])
+                                    n_pin = len(leaflet_geojson.get("features") or [])
+                                    all_locations_leaflet_banner_html = (
+                                        build_lifer_locations_banner_html(
+                                            n_lifer_sp,
+                                            n_pin,
+                                            include_subspecies=subsp,
+                                            n_subspecies_lifers=(
+                                                count_subspecies_lifer_taxa(
+                                                    ctx["lifer_lookup_df"],
+                                                    ctx["true_lifer_locations_taxon"],
+                                                )
+                                                if subsp
+                                                else None
+                                            ),
+                                        )
+                                    )
+                                    le, lf, se, sp, _rl, _rs, _sw, _fo1, _fo2 = (
+                                        resolve_lifer_overlay_pin_params(_visit_sch)
+                                    )
+                                    if not subsp:
+                                        all_locations_leaflet_legend_html = build_legend_html(
+                                            [(le, lf, "Lifer")],
+                                            container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
+                                        )
+                                    else:
+                                        kinds_present: set[str] = set()
+                                        for f in leaflet_geojson.get("features") or []:
+                                            pr = f.get("properties")
+                                            if isinstance(pr, dict):
+                                                pk = pr.get("pin_kind")
+                                                if pk:
+                                                    kinds_present.add(str(pk))
+                                        legend_rows: list[tuple[str, str, str]] = []
+                                        if "lifer" in kinds_present:
+                                            legend_rows.append((le, lf, "Lifer"))
+                                        if "subspecies" in kinds_present:
+                                            legend_rows.append((se, sp, "Subspecies"))
+                                        all_locations_leaflet_legend_html = build_legend_html(
+                                            legend_rows,
+                                            container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
+                                        )
+                                    _leaflet_payload_cache_store(
+                                        LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
+                                        payload_cache_key,
+                                        {
+                                            "revision": leaflet_revision,
+                                            "geojson": leaflet_geojson,
+                                            "framing_pairs": lifer_framing_pairs,
+                                            "banner_html": all_locations_leaflet_banner_html,
+                                            "legend_html": all_locations_leaflet_legend_html,
+                                        },
+                                        max_entries=_LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                    )
                             if leaflet_revision and leaflet_geojson is not None:
                                 leaflet_viewport = lifer_leaflet_viewport_recipe(lifer_framing_pairs)
-                                n_lifer_sp = len(ctx["true_lifer_locations"])
-                                n_pin = len(leaflet_geojson.get("features") or [])
-                                all_locations_leaflet_banner_html = build_lifer_locations_banner_html(
-                                    n_lifer_sp,
-                                    n_pin,
-                                    include_subspecies=subsp,
-                                    n_subspecies_lifers=(
-                                        count_subspecies_lifer_taxa(
-                                            ctx["lifer_lookup_df"],
-                                            ctx["true_lifer_locations_taxon"],
-                                        )
-                                        if subsp
-                                        else None
-                                    ),
-                                )
-                                le, lf, se, sp, _rl, _rs, _sw, _fo1, _fo2 = (
-                                    resolve_lifer_overlay_pin_params(_visit_sch)
-                                )
-                                if not subsp:
-                                    all_locations_leaflet_legend_html = build_legend_html(
-                                        [(le, lf, "Lifer")],
-                                        container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
-                                    )
-                                else:
-                                    kinds_present: set[str] = set()
-                                    for f in leaflet_geojson.get("features") or []:
-                                        pr = f.get("properties")
-                                        if isinstance(pr, dict):
-                                            pk = pr.get("pin_kind")
-                                            if pk:
-                                                kinds_present.add(str(pk))
-                                    legend_rows: list[tuple[str, str, str]] = []
-                                    if "lifer" in kinds_present:
-                                        legend_rows.append((le, lf, "Lifer"))
-                                    if "subspecies" in kinds_present:
-                                        legend_rows.append((se, sp, "Subspecies"))
-                                    all_locations_leaflet_legend_html = build_legend_html(
-                                        legend_rows,
-                                        container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
-                                    )
                     elif use_species_leaflet:
                         result_warning = None
                         leaflet_cluster_opts = {
@@ -1042,9 +1095,16 @@ def render_prep_spinner_and_map_tab(
                                 leaflet_geojson = cached_sp["geojson"]
                                 species_framing_pairs = list(cached_sp.get("framing_pairs") or [])
                                 species_pin_roles = set(cached_sp.get("pin_roles") or [])
+                                all_locations_leaflet_banner_html = str(
+                                    cached_sp.get("banner_html") or ""
+                                )
+                                all_locations_leaflet_legend_html = str(
+                                    cached_sp.get("legend_html") or ""
+                                )
                                 _perf_species["payload_cache_hit"] = True
                             elif not overlay_sci:
                                 species_framing_pairs = []
+                                species_pin_roles = set()
                                 empty_features: list[dict[str, Any]] = []
                                 rev_payload = (
                                     json.dumps(empty_features, separators=(",", ":"))
@@ -1058,6 +1118,23 @@ def render_prep_spinner_and_map_tab(
                                     "type": "FeatureCollection",
                                     "features": empty_features,
                                 }
+                                all_locations_leaflet_banner_html = (
+                                    build_species_locations_awaiting_selection_banner_html()
+                                )
+                                all_locations_leaflet_legend_html = ""
+                                _leaflet_payload_cache_store(
+                                    SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
+                                    payload_cache_key,
+                                    {
+                                        "revision": leaflet_revision,
+                                        "geojson": leaflet_geojson,
+                                        "framing_pairs": species_framing_pairs,
+                                        "pin_roles": [],
+                                        "banner_html": all_locations_leaflet_banner_html,
+                                        "legend_html": all_locations_leaflet_legend_html,
+                                    },
+                                    max_entries=_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                )
                             else:
                                 popup_visit_dates_ascending = (
                                     str(popup_sort_order).strip().lower() != "descending"
@@ -1095,31 +1172,6 @@ def render_prep_spinner_and_map_tab(
                                     pin_roles = set()
                                 else:
                                     species_pin_roles = set(pin_roles)
-                                    _leaflet_payload_cache_store(
-                                        SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
-                                        payload_cache_key,
-                                        {
-                                            "revision": leaflet_revision,
-                                            "geojson": leaflet_geojson,
-                                            "framing_pairs": species_framing_pairs,
-                                            "pin_roles": sorted(species_pin_roles),
-                                        },
-                                        max_entries=_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-                                    )
-                            if leaflet_revision and leaflet_geojson is not None:
-                                leaflet_viewport = species_leaflet_viewport_recipe(
-                                    species_framing_pairs,
-                                    go_to_gps_pin=_go_pin,
-                                    blank_viewport_recipe=blank_viewport_recipe
-                                    if not overlay_sci
-                                    else None,
-                                )
-                                if not overlay_sci:
-                                    all_locations_leaflet_banner_html = (
-                                        build_species_locations_awaiting_selection_banner_html()
-                                    )
-                                    all_locations_leaflet_legend_html = ""
-                                else:
                                     _filtered_sp = filter_species(ctx["df"], overlay_sci)
                                     _banner_fields = compute_species_map_banner_fields(
                                         filtered=_filtered_sp,
@@ -1158,6 +1210,27 @@ def render_prep_spinner_and_map_tab(
                                         if legend_rows
                                         else ""
                                     )
+                                    _leaflet_payload_cache_store(
+                                        SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
+                                        payload_cache_key,
+                                        {
+                                            "revision": leaflet_revision,
+                                            "geojson": leaflet_geojson,
+                                            "framing_pairs": species_framing_pairs,
+                                            "pin_roles": sorted(species_pin_roles),
+                                            "banner_html": all_locations_leaflet_banner_html,
+                                            "legend_html": all_locations_leaflet_legend_html,
+                                        },
+                                        max_entries=_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                    )
+                            if leaflet_revision and leaflet_geojson is not None:
+                                leaflet_viewport = species_leaflet_viewport_recipe(
+                                    species_framing_pairs,
+                                    go_to_gps_pin=_go_pin,
+                                    blank_viewport_recipe=blank_viewport_recipe
+                                    if not overlay_sci
+                                    else None,
+                                )
                 if (
                     (
                         use_all_locations_leaflet
