@@ -118,7 +118,10 @@ def test_popup_export_html_lifer_popup_v1():
     assert "Lifer Site" in html
     assert "Superb Fairywren" in html
     assert "pebird-map-popup__visit-dates" in html
+    assert "pebird-map-popup__visited-block" in html
     assert "popup-scroll-wrapper" in html
+    assert "Visited:" not in html
+    assert "pebird-map-popup__section-label" not in html
 
 
 def test_popup_export_html_family_popup_v1():
