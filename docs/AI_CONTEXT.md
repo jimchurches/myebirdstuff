@@ -199,6 +199,7 @@ Do not duplicate HTML in UI code — use shared formatters.
 - **Map marker design utility** — separate Streamlit app (not user-facing): `streamlit run explorer/app/streamlit/design_map_app.py`. Previews roles and exports scheme dicts; see [development.md](development.md#map-marker-colour-design-utility-developers).
 
 - **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner text and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
+- **Map HTML export UX** — Shipped one-click sidebar export; alternative two-button design and browser-risk notes: [docs/explorer/map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) (use if users report export/download failures).
 
 - **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings).
 

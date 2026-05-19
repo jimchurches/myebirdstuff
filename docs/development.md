@@ -48,6 +48,8 @@ python3 scripts/build_all_locations_map_frontend.py
 
 That runs `npm ci` + `npm run build` and reports which `build/` files belong in git vs junk (e.g. macOS Finder duplicates). Details: [explorer/components/all_locations_map/README.md](../explorer/components/all_locations_map/README.md).
 
+**Map HTML export (sidebar):** Lazy build on user action; one-click download via Streamlit + optional auto-click. If users report failed exports, see [map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) for a two-button fallback design and browser-risk notes.
+
 ---
 
 # Architecture Overview (Streamlit App)

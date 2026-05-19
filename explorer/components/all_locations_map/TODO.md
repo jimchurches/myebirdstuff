@@ -11,24 +11,27 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 ### #222 status and rollout (source narrative)
 
-**Where we are (May 2026):** All four Map-tab modes are on the **Leaflet custom component** on `beta-next`. **`222-folium-removal`**: Folium stack removed; **§16 design utility** Leaflet preview restored — **merge-ready** after PR smoke.
+**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§7** export popup parity + **§18** export button UX **shipped** (`222-export-html-ux`). **§17 Fix now** popup parity **shipped** (#233). Optional **§17 full pass** and **§10** docs remain. **#222** stays open until smoke / optional follow-ups.
 
-| Map mode | Status | PR (approx.) |
-|----------|--------|----------------|
+| Map mode / workstream | Status | PR (approx.) |
+|-----------------------|--------|----------------|
 | **All locations** | **Done** — §1–5 | #224 |
 | **Lifer locations** | **Done** — §6 (lifer row) | #225 |
 | **Species locations** | **Done** — §6 (species row) | #226 |
 | **Family locations** | **Done** — §6 (family row) | #228 |
 | **Design utility (preview)** | **Done** — §16 | — |
-| **Popup template parity (all maps)** | **Next major step** — §17 | — |
+| **Export HTML — popup parity (§7)** | **Done** | `222-export-html-ux` |
+| **Export HTML — button UX (§18)** | **Done** | `222-export-html-ux` |
+| **Popup template — Fix now (§17)** | **Done** | #233 |
+| **Popup template — full pass (§17)** | **Optional** — product choices | — |
 
-### Next major step — §17 (popup review)
+### §17 status
 
-**Goal:** One shared popup “template” as far as practical — fonts, sizes, heading row, section labels, link styles, spacing — across **All locations**, **Species**, **Lifer**, **Family**, **exported HTML**, and the design utility (simple name-only popups).
+**Fix now (#233):** Species rules mirrored in `AllLocationsMapPopup.css`; location headings wrap with `__heading-row` clearance (all modes); export popups use same BEM + `popup_v1_export_html.py` tests for all four payload types.
 
-**Approach:** Audit each mode side-by-side in the iframe + export file; align TS layouts (`AllLocationsMap.tsx`), `AllLocationsMapPopup.css`, and `map_popup_theme_stylesheet()` / `popup_v1_export_html.py`. **Some inconsistencies are worth fixing immediately** (see §17 **Fix now**); the rest can follow in a dedicated pass after `222-folium-removal` merges.
+**Optional full pass:** Heading margin 4px vs 6px (species), section-label uniformity, lifer line shape, manual cross-mode checklist — see §17 table below. Not blocking **#222** closure.
 
-**#222** can close after Folium-removal PR merges and brief smoke on `beta-next`. **§17** can continue on `beta-next` (or a follow-up branch) — not a blocker for landing Folium removal if obvious fixes are cherry-picked.
+**#222** can close after brief smoke on `beta-next` if you are satisfied with map parity; keep open only if you want the §17 full-pass checklist done first.
 
 **Integrate onto `beta-next` in batches:** Prefer **several small PRs into `beta-next` only** (per [CONTRIBUTING.md](../../../CONTRIBUTING.md)).
 
@@ -77,16 +80,15 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 
 ---
 
-## 7. Export map HTML — **done (single-stack HTML)**
+## 7. Export map HTML — **done**
 
-**Shipped:** `leaflet_map_to_html_bytes` — standalone HTML with CDN Leaflet + MarkerCluster.
+**Shipped:** `leaflet_map_to_html_bytes` — standalone HTML with CDN Leaflet + MarkerCluster (#230). Export popup HTML tests (#233). **`visited_truncated` trunc-hint** in export path matches live map (`popup_v1_export_html`, `visit_trunc_hint_html` on `LocationPopupModel`) — `222-export-html-ux`.
 
 **Do (export popup HTML):**
 
-- Add tests for `lifer_popup_v1`, `family_popup_v1`, and `species_popup_v1` via `popup_export_html_from_properties`.
+- [x] Tests for `lifer_popup_v1`, `family_popup_v1`, and `species_popup_v1` via `popup_export_html_from_properties` (#233).
+- [x] Export `visited_truncated` trunc-hint parity with live map (`222-export-html-ux`).
 - **Optional:** Assert banner/legend fragments in exported HTML.
-
-**Follow-up:** §18 — export button UX (single click, clear feedback).
 
 ---
 
@@ -143,11 +145,11 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 
 ---
 
-## 17. Popup template parity across all map modes — **next major step**
+## 17. Popup template parity across all map modes — **Fix now done (#233); full pass optional**
 
-Audit (May 2026): all four Leaflet modes share `map_overlay_theme_stylesheet()` injected into the iframe plus `AllLocationsMapPopup.css` (`.pebird-map-popup` base **0.8125rem**, green headings, green links). Structured payloads (`popup_v1`, `species_popup_v1`, `lifer_popup_v1`, `family_popup_v1`) are rendered by **one TS layout per mode** in `AllLocationsMap.tsx`; export uses `popup_v1_export_html.py` with the same BEM classes.
+Audit (May 2026): all four Leaflet modes share `map_overlay_theme_stylesheet()` injected into the iframe plus `AllLocationsMapPopup.css` (`.pebird-map-popup` base **0.8125rem**, green headings, green links). Structured payloads (`popup_v1`, `species_popup_v1`, `lifer_popup_v1`, `family_popup_v1`) are rendered by **one TS layout per mode** in `AllLocationsMap.tsx`; export uses `popup_v1_export_html.py` with the same BEM classes (standalone export also embeds `AllLocationsMapPopup.css`).
 
-**Headings are largely aligned** via `pebird-map-popup__location-heading`. Remaining work is spacing, section chrome, species-specific rules, export vs iframe parity, and documenting intentional differences.
+**Headings aligned** via `pebird-map-popup__location-heading` + `map_popup_heading_text.prevent_orphan_closing_punctuation` (Python + TS). Optional full pass: spacing choices, section chrome, manual cross-mode checklist.
 
 ### Architecture (target)
 
@@ -166,15 +168,15 @@ See [README.md](./README.md) — “Popup anchor vs iframe size” and structure
 - **Family body text:** Species rows → `pebird-map-popup__species-line`; empty state → `pebird-map-popup__summary-line`.
 - **Family width cap:** Removed `max-width:22rem`; species names `nowrap` + horizontal scroll on overflow (visit-list pattern).
 
-### Fix now (worth doing before or right after Folium-removal PR)
+### Fix now — **done (#233)**
 
-| Item | Maps | Notes |
+| Item | Maps | Status |
 |------|------|--------|
-| **Species-only CSS in component CSS file** | Species | `obs-line`, `species-seen`, disclosure chevrons live in Python `map_popup_theme_stylesheet` only; iframe relies on injected theme. **Folium is gone** — copy/mirror into `AllLocationsMapPopup.css` so popup styling survives theme injection changes. |
-| **Species map — long location heading** | Species | Long location names (e.g. Hooded Robin at “Nombinnie Nature Reserve (East)--…”) use `nowrap`; title can run under the close control. Align with All locations: `__heading-row` scroll and/or `padding-right`, or controlled wrap — pick one cross-map rule. |
-| **Export popup HTML parity** | All 4 | Spot-check exported HTML popups vs iframe for the same fixture pin; fix class/structure drift (feeds §7 tests). |
+| **Species-only CSS in component CSS file** | Species | **Done** — `obs-line`, `species-seen`, `all-visits`, chevrons, `media-link` in `AllLocationsMapPopup.css` (mirrors `map_popup_theme_stylesheet`). |
+| **Long location heading** | All 4 | **Done** — `white-space: normal` on `__location-heading`; `__heading-row` `padding-right: 2.25rem`; orphan punctuation helper (Python + TS). |
+| **Export popup HTML parity** | All 4 | **Done** — `popup_v1_export_html.py` + tests; export bundles `AllLocationsMapPopup.css`; trunc-hint when visits capped (§7). |
 
-### Full pass (design review — after merge OK)
+### Full pass (design review — optional)
 
 | Item | Maps | Notes |
 |------|------|--------|
@@ -223,44 +225,27 @@ From PR #228. **Not blocking** merge.
 
 ---
 
-## 18. Export map HTML — button UX (deferred)
+## 18. Export map HTML — button UX — **done**
 
-**Out of scope** for popup / §17 work (e.g. PR #233). Track here for a dedicated pass.
+**Shipped (`222-export-html-ux`):** One sidebar `st.button` (“Export map HTML”). On click: build if needed (spinner; session/LRU skip rebuild), `st.rerun()`, `st.download_button` + parent-frame JS auto-click. One user click on typical desktop browsers (maintainer-tested Safari/macOS); lazy recipe sync unchanged.
 
-**Reported (May 2026):** Users often need **multiple clicks** on “Export map HTML” before a download happens — easy to wonder whether anything ran.
+**Alternative (if exports fail in the field):** Two-button Prepare + Download UX — see [`docs/explorer/map-html-export-ux-alternative.md`](../../../docs/explorer/map-html-export-ux-alternative.md).
 
-**Current design (intentional trade-off):** Export HTML is **not** built during normal Map-tab reruns. `_sync_leaflet_export_recipe` in `app_prep_map_ui.py` only stores inputs (`LEAFLET_EXPORT_RECIPE_KEY`); `_materialize_leaflet_export_html` runs on button use. Sidebar uses a **two-step Streamlit pattern**: `EXPORT_MAP_HTML_BUILD_BTN_KEY` (`st.button` → build + `st.rerun()`) then `EXPORT_MAP_HTML_BTN_KEY` (`st.download_button` on the next run). That keeps Explorer map interaction fast but splits build and download across runs.
-
-**Target outcomes:**
-
-| Outcome | Notes |
-|---------|--------|
-| **Single click starts export** | One deliberate action should produce the file (or an unmistakable in-progress state), not “click until something happens”. |
-| **Clear feedback** | Spinner/progress/success/error so the user is never left wondering. |
-| **No online slowdown** | Do **not** move export build back into every map rerun / payload prep path. |
-| **Lazy export only** | No export-specific work until the user uses the export control. |
-| **Low-use feature OK** | Slower export build is acceptable; Map-tab responsiveness is not. |
-
-**Do:** Revisit `app_prep_map_ui.py` export block (~`LEAFLET_EXPORT_*`, `EXPLORER_MAP_HTML_BYTES_KEY`) — e.g. one control that builds and downloads in one gesture (Streamlit constraints), or build-on-first-click with immediate download without a silent second click. Keep `LEAFLET_EXPORT_HTML_CACHE_KEY` LRU for repeat exports of the same recipe.
-
-**Files:** `app_prep_map_ui.py`, `app_constants.py` (`EXPORT_MAP_HTML_*` keys), `leaflet_map_html_export.py`, `leaflet_map_export_cache.py`.
+**Files:** `app_prep_map_ui.py`, `app_map_ui.py` (`inject_auto_click_streamlit_download_js`), `app_constants.py`.
 
 ---
 
 ## Agent handover
 
-*Last updated: May 2026 — **Folium removed**; **§16 done**; **§17 = next major step** (popup template parity); **§18** = export button UX follow-up.*
+*Last updated: May 2026 — **§7 + §18 done**; merge `222-export-html-ux` → `beta-next` (Refs #222).*
 
-**Before merge `222-folium-removal` → `beta-next`:** Smoke design utility + Map tab (regression checklist Map section).
+**Smoke (before closing #222):** Design utility + Map tab — regression checklist Map section; Export map HTML once (cold + repeat).
 
-**Immediately after merge (recommended order):**
+**Recommended next work (after this PR merges):**
 
-1. **§17** — popup template parity (cherry-pick **Fix now** items if not in Folium-removal PR).
-2. §7 — export popup tests.
-3. §10 — documentation pass (Folium references).
-4. §13–§14 — cache polish (optional).
-5. §8 — perf (#205).
-6. §18 — export button single-click UX (when prioritised).
-7. Close **#222** when §17 fix-now + smoke are acceptable (or keep #222 open until §17 full pass — your call).
+1. §10 — documentation pass (Folium → Leaflet architecture).
+2. Optional §17 full-pass checklist; then close **#222** when satisfied.
+3. §13–§14 — cache polish (optional).
+4. §8 — perf (#205).
 
 **Recover lost §17 detail:** `git show bdfa70f1^:explorer/components/all_locations_map/TODO.md` (section “## 15. Popup typography…” before Folium-removal commit collapsed it).
