@@ -27,6 +27,7 @@ class LocationPopupModel:
     show_visit_history: bool
     lifer_heading_html: str
     location_heading_margin_px: int
+    visit_trunc_hint_html: str = ""
 
 
 def assemble_location_popup_html(m: LocationPopupModel) -> str:
@@ -55,10 +56,11 @@ def assemble_location_popup_html(m: LocationPopupModel) -> str:
         if m.show_visit_history
         else ""
     )
+    trunc_hint = m.visit_trunc_hint_html or ""
     if visited_section and extra_section:
-        inner_html = visited_section + "<br>" + extra_section
+        inner_html = visited_section + trunc_hint + "<br>" + extra_section
     else:
-        inner_html = visited_section + extra_section
+        inner_html = visited_section + trunc_hint + extra_section
     return (
         f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
         f'<div class="pebird-map-popup__heading-row" style="margin-bottom:{int(m.location_heading_margin_px)}px;">{loc_link}</div>'

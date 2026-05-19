@@ -51,6 +51,39 @@ def _loc_id_from_props(props: dict[str, Any]) -> str:
     return ""
 
 
+def _visited_trunc_hint_html(
+    *,
+    entries: list[Any],
+    lifelist_url: str,
+    loc_id: str,
+    popup: dict[str, Any],
+) -> str:
+    """Mirror ``popupHtmlVisitedLayout`` trunc block in ``AllLocationsMap.tsx``."""
+    if popup.get("visited_truncated") is not True:
+        return ""
+    try:
+        omitted = int(popup.get("visited_omitted") or 0)
+    except (TypeError, ValueError):
+        omitted = 0
+    if omitted <= 0:
+        return ""
+    href = _lifelist_href(lifelist_url, loc_id)
+    if not href:
+        return ""
+    shown = len(entries)
+    try:
+        total = int(popup.get("visited_total"))
+    except (TypeError, ValueError):
+        total = shown + omitted
+    return (
+        f'<div class="pebird-map-popup__trunc-hint">'
+        f"{esc_text(str(shown))} of {esc_text(str(total))} checklists shown. "
+        f'<a href="{esc_attr(href)}" target="_blank" rel="noopener noreferrer">Open lifelist</a> '
+        f"for full history ({esc_text(str(omitted))} more)."
+        f"</div>"
+    )
+
+
 def _visit_entries_html(entries: list[dict[str, str]]) -> str:
     parts: list[str] = []
     for e in entries:
@@ -190,6 +223,12 @@ def _popup_v1_html(name: str, lifelist_url: str, popup: dict[str, Any]) -> str:
     if isinstance(visited, dict):
         entries = visited.get("entries") if isinstance(visited.get("entries"), list) else []
         loc_id = _loc_id_from_props({"lifelist_url": lifelist_url})
+        trunc_hint = _visited_trunc_hint_html(
+            entries=entries,
+            lifelist_url=lifelist_url,
+            loc_id=loc_id,
+            popup=popup,
+        )
         return assemble_location_popup_html(
             LocationPopupModel(
                 loc_name=name,
@@ -200,6 +239,7 @@ def _popup_v1_html(name: str, lifelist_url: str, popup: dict[str, Any]) -> str:
                 show_visit_history=True,
                 lifer_heading_html="",
                 location_heading_margin_px=_HEADING_MARGIN_ALL,
+                visit_trunc_hint_html=trunc_hint,
             )
         )
     summary_lines = popup.get("summary_lines") if isinstance(popup.get("summary_lines"), list) else []

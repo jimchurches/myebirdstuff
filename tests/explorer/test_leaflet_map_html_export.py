@@ -46,6 +46,36 @@ def test_popup_export_html_all_locations_visited():
     assert "popup-scroll-wrapper" in html
 
 
+def test_popup_export_html_visited_truncated_hint():
+    html = popup_export_html_from_properties(
+        {
+            "name": "Busy Hotspot",
+            "lifelist_url": "https://ebird.org/lifelist/L42",
+            "popup_v1": {
+                "v": 1,
+                "visited": {
+                    "label": "Visited:",
+                    "entries": [
+                        {
+                            "label": f"2024-01-{d:02d}",
+                            "href": f"https://ebird.org/checklist/S{d}",
+                        }
+                        for d in range(1, 6)
+                    ],
+                },
+                "visited_truncated": True,
+                "visited_total": 50,
+                "visited_omitted": 45,
+            },
+        }
+    )
+    assert "pebird-map-popup__trunc-hint" in html
+    assert "5 of 50 checklists shown" in html
+    assert "Open lifelist" in html
+    assert "(45 more)" in html
+    assert 'href="https://ebird.org/lifelist/L42"' in html
+
+
 def test_popup_export_html_long_location_heading_wraps_in_row():
     long_name = (
         "Lake Gilles Conservation Park--Track off Lake Gilles Rd at -33.0123, 137.4567"
