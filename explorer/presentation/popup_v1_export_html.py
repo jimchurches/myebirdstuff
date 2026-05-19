@@ -136,6 +136,7 @@ def _species_sections_html(sections: list[dict[str, Any]]) -> str:
 
 
 def _lifer_popup_html(name: str, lifelist_url: str, payload: dict[str, Any]) -> str:
+    """Mirror ``popupHtmlLiferLayout`` in ``AllLocationsMap.tsx`` (no ``Visited:`` section label)."""
     lines = payload.get("lines") if isinstance(payload.get("lines"), list) else []
     inner_parts: list[str] = []
     for i, row in enumerate(lines):
@@ -153,17 +154,17 @@ def _lifer_popup_html(name: str, lifelist_url: str, payload: dict[str, Any]) -> 
         else:
             inner_parts.append(f"{prefix}<span>{label} : {date_s}</span>")
     loc_id = _loc_id_from_props({"lifelist_url": lifelist_url})
-    model = LocationPopupModel(
-        loc_name=name,
-        loc_id=loc_id or "0",
-        visit_info_html="".join(inner_parts),
-        sightings_html="",
-        lifer_species_html="",
-        show_visit_history=True,
-        lifer_heading_html="",
-        location_heading_margin_px=_HEADING_MARGIN_ALL,
+    url = _lifelist_href(lifelist_url, loc_id)
+    head = _location_heading_element(name, url or None)
+    inner = "".join(inner_parts)
+    return (
+        f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
+        f'<div class="pebird-map-popup__heading-row" style="margin-bottom:{_HEADING_MARGIN_ALL}px;">{head}</div>'
+        f'<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">'
+        f'<div class="pebird-map-popup__visited-block">'
+        f'<div class="pebird-map-popup__visit-dates">{inner}</div>'
+        f"</div></div></div>"
     )
-    return assemble_location_popup_html(model)
 
 
 def _family_popup_html(name: str, lifelist_url: str, payload: dict[str, Any]) -> str:
