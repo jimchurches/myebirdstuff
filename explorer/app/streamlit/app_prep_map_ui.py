@@ -290,7 +290,7 @@ def _render_leaflet_export_map_html_download(recipe: dict[str, Any]) -> None:
         if export_bytes is None:
             st.error("Map export was prepared but bytes are missing. Try Export again.")
             return
-        st.markdown('<div class="ebird-export-auto-dl-host">', unsafe_allow_html=True)
+        st.caption("Starting download…")
         st.download_button(
             "Export map HTML",
             data=export_bytes,
@@ -300,7 +300,6 @@ def _render_leaflet_export_map_html_download(recipe: dict[str, Any]) -> None:
             use_container_width=True,
             type="secondary",
         )
-        st.markdown("</div>", unsafe_allow_html=True)
         inject_auto_click_streamlit_download_js(button_label="Export map HTML")
         return
 
