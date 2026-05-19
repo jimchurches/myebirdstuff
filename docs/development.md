@@ -338,6 +338,8 @@ regressions can be diagnosed quickly without re-adding scaffolding.
   `pytest tests/explorer/test_streamlit_map_e2e.py tests/explorer/test_streamlit_journeys_e2e.py -m e2e -v`
 - **Opt-in perf + JSONL capture** (sets ``EXPLORER_PERF_LOG_FILE`` in the test fixture):  
   `pytest tests/explorer/test_map_perf_e2e.py --perf -v`  
+  Or one-shot baseline: **`./scripts/run_post_leaflet_perf_baseline.sh`** (archives JSONL, prints aggregate table).  
+  Results template: **`docs/explorer/issue-222-section-8-baseline.md`**.  
   Loose ceilings live in **`benchmarks/map_perf/stage_ceilings.json`** (see **`benchmarks/map_perf/README.md`**).
 - **Your real export instead of the tiny integration fixture** — copy is written under pytest’s temp dir (your file is not modified):  
   `export EXPLORER_E2E_DATASET_CSV=/path/to/MyEBirdData.csv`  

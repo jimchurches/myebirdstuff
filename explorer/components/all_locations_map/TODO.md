@@ -195,11 +195,11 @@ Not required for #222 unless we promote during review. Track here so nothing is 
 
 ### 8.5 Capture & document metrics (for future regressions)
 
-- [ ] Run at least one **documented journey** per map mode (or one combined script) with `EXPLORER_PERF=1` and `EXPLORER_PERF_LOG_FILE` (see streamlit README + `docs/development.md`).
-- [ ] Archive local snapshot(s) under `benchmarks/map_perf/snapshots/` (gitignored) via `scripts/snapshot_explorer_perf_log.py` with clear labels (e.g. `post-leaflet-four-map-cache`).
-- [ ] Paste **summary table** into GitHub **#222** (and/or #205): key stages, cold vs warm rerun, payload cache hit — medians or representative rows, not raw machine-specific absolutes as the only source of truth.
-- [ ] If ceilings change, commit `stage_ceilings.json` in the same PR with a one-line rationale in the PR body.
-- [ ] Cross-check [`docs/explorer/regression-checklist.md`](../../../docs/explorer/regression-checklist.md) — add manual perf-sensitive steps only if automation cannot cover them.
+- [x] **Documented journey** — `./scripts/run_post_leaflet_perf_baseline.sh` (Playwright `test_map_perf_e2e` + `EXPLORER_PERF_LOG_FILE`). Covers **All** + **Lifer** on fixture; Species/Family manual steps in [`docs/explorer/issue-222-section-8-baseline.md`](../../../docs/explorer/issue-222-section-8-baseline.md).
+- [x] **Archive** — `benchmarks/map_perf/snapshots/post-leaflet-fixture-r1.jsonl` + dated snapshot via `snapshot_explorer_perf_log.py` (gitignored).
+- [x] **Summary table** — committed in `docs/explorer/issue-222-section-8-baseline.md` (paste-ready #222 comment block); post to GitHub issue when convenient.
+- [x] **Ceilings** — unchanged after fixture run (all stages within `stage_ceilings.json`; tune on real CSV if needed).
+- [x] **Regression checklist** — optional perf note added (fixture journey + manual Species/Family).
 
 ### 8.6 Close-out for §8
 

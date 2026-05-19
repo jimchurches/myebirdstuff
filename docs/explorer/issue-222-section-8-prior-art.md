@@ -1,5 +1,7 @@
 # Issue #222 — §8 prior art (#205, #221, #222)
 
+**Plain-language summary:** [`issue-222-plain-summary.md`](issue-222-plain-summary.md)
+
 **Purpose:** Consolidated mining of exploratory perf/testing work so §8.1–§8.6 do not repeat dropped experiments or Folium-only protocols.  
 **Recorded:** 2026-05-20 · **Branch:** `222-test-performance-review`  
 **Living checklist:** [`explorer/components/all_locations_map/TODO.md`](../../explorer/components/all_locations_map/TODO.md) §8
@@ -127,8 +129,8 @@ Streamlit Cloud: return to **All locations** on `beta-next` felt ~**33% faster**
 | Item | Status |
 |------|--------|
 | `stage_ceilings.json` Leaflet stages | **Done** (committed) |
-| Median table on #222 (fixture + optional real CSV) | **Not done** → §8.5 |
-| Folium vs Leaflet comparison comment | **Optional** one-time in §8.5 |
+| Median table on #222 (fixture + optional real CSV) | **Done** — `docs/explorer/issue-222-section-8-baseline.md` + `scripts/run_post_leaflet_perf_baseline.sh` |
+| Folium vs Leaflet comparison comment | **Done** (narrative table in baseline doc; not production targets) |
 
 **Reproduce command (fixture):**
 
@@ -201,7 +203,7 @@ python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots \
 | **8.2** | **Done** — see §8.2 block above |
 | **8.3** | CI: `npm ci` → test, `tsc --noEmit`, `audit --omit=dev`, build; docs + `test:ci`/`typecheck`/`audit:prod` scripts |
 | **8.4** | I1/I2 on payload misses; docs spinner narrative; `payload_cache_hit` + build metrics in perf E2E |
-| **8.5** | Run reproduce block above; paste summary to #222; optional real CSV |
+| **8.5** | `run_post_leaflet_perf_baseline.sh` + `issue-222-section-8-baseline.md`; paste #222 comment from doc |
 | **8.6** | Close §8 when checklist + issue comment done |
 
 ---
