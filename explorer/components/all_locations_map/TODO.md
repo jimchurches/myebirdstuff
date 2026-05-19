@@ -174,7 +174,7 @@ See [README.md](./README.md) — “Popup anchor vs iframe size” and structure
 |------|------|--------|
 | **Species-only CSS in component CSS file** | Species | **Done** — `obs-line`, `species-seen`, `all-visits`, chevrons, `media-link` in `AllLocationsMapPopup.css` (mirrors `map_popup_theme_stylesheet`). |
 | **Long location heading** | All 4 | **Done** — `white-space: normal` on `__location-heading`; `__heading-row` `padding-right: 2.25rem`; orphan punctuation helper (Python + TS). |
-| **Export popup HTML parity** | All 4 | **Done** — `popup_v1_export_html.py` + tests in `test_leaflet_map_html_export.py`; export HTML bundles component CSS. **Except:** `visited_truncated` trunc-hint block (see §7). |
+| **Export popup HTML parity** | All 4 | **Done** — `popup_v1_export_html.py` + tests; export bundles `AllLocationsMapPopup.css`; trunc-hint when visits capped (§7). |
 
 ### Full pass (design review — optional)
 
@@ -225,37 +225,21 @@ From PR #228. **Not blocking** merge.
 
 ---
 
-## 18. Export map HTML — button UX (deferred)
+## 18. Export map HTML — button UX — **done**
 
-**Out of scope** for popup / §17 work (e.g. PR #233). Track here for a dedicated pass.
+**Shipped:** One sidebar `st.download_button` (“Export map HTML”) with `on_click` lazy build (`_on_leaflet_export_map_html_download`). Spinner + toast on first build; `st.error` on failure. Repeat exports use session bytes or `LEAFLET_EXPORT_HTML_CACHE_KEY` LRU without rebuilding — **one click** when cached. First build for a new recipe may still need a second click (Streamlit serves `data=` from the run after the build callback). Caption explains that case. Recipe sync still lazy (`_sync_leaflet_export_recipe` only); no export work on ordinary map reruns.
 
-**Reported (May 2026):** Users often need **multiple clicks** on “Export map HTML” before a download happens — easy to wonder whether anything ran.
-
-**Current design (intentional trade-off):** Export HTML is **not** built during normal Map-tab reruns. `_sync_leaflet_export_recipe` in `app_prep_map_ui.py` only stores inputs (`LEAFLET_EXPORT_RECIPE_KEY`); `_materialize_leaflet_export_html` runs on button use. Sidebar uses a **two-step Streamlit pattern**: `EXPORT_MAP_HTML_BUILD_BTN_KEY` (`st.button` → build + `st.rerun()`) then `EXPORT_MAP_HTML_BTN_KEY` (`st.download_button` on the next run). That keeps Explorer map interaction fast but splits build and download across runs.
-
-**Target outcomes:**
-
-| Outcome | Notes |
-|---------|--------|
-| **Single click starts export** | One deliberate action should produce the file (or an unmistakable in-progress state), not “click until something happens”. |
-| **Clear feedback** | Spinner/progress/success/error so the user is never left wondering. |
-| **No online slowdown** | Do **not** move export build back into every map rerun / payload prep path. |
-| **Lazy export only** | No export-specific work until the user uses the export control. |
-| **Low-use feature OK** | Slower export build is acceptable; Map-tab responsiveness is not. |
-
-**Do:** Revisit `app_prep_map_ui.py` export block (~`LEAFLET_EXPORT_*`, `EXPLORER_MAP_HTML_BYTES_KEY`) — e.g. one control that builds and downloads in one gesture (Streamlit constraints), or build-on-first-click with immediate download without a silent second click. Keep `LEAFLET_EXPORT_HTML_CACHE_KEY` LRU for repeat exports of the same recipe.
-
-**Files:** `app_prep_map_ui.py`, `app_constants.py` (`EXPORT_MAP_HTML_*` keys), `leaflet_map_html_export.py`, `leaflet_map_export_cache.py`.
+**Files:** `app_prep_map_ui.py`, `app_constants.py` (`EXPORT_MAP_HTML_BTN_KEY`, `EXPORT_MAP_HTML_ERROR_KEY`).
 
 ---
 
 ## Agent handover
 
-*Last updated: May 2026 — **Folium removed** (#232); **§16 done**; **§17 Fix now done** (#233); **§18** = export button UX; optional §17 full pass + §10 docs.*
+*Last updated: May 2026 — **§7 + §18 export HTML done** on `222-export-html-ux`; optional §17 full pass + §10 docs next.*
 
 **Smoke (before closing #222):** Design utility + Map tab — regression checklist Map section.
 
-**In progress (branch `222-export-html-ux`):** §7 export trunc-hint **done**; §18 export button single-click UX — next commit.
+**Branch `222-export-html-ux`:** §7 + §18 export HTML work.
 
 **Recommended next work (after export PR):**
 

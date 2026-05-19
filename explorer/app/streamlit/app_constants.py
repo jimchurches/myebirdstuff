@@ -124,7 +124,7 @@ STREAMLIT_RESET_SETTINGS_BTN_KEY = "streamlit_reset_settings_btn"
 
 # Download/export button keys.
 EXPORT_MAP_HTML_BTN_KEY = "export_map_html_btn"
-EXPORT_MAP_HTML_BUILD_BTN_KEY = "export_map_html_build_btn"
+EXPORT_MAP_HTML_ERROR_KEY = "export_map_html_error"
 
 # Family map tab widget keys (refs #138). Highlight key is suffixed with selected family in the UI.
 STREAMLIT_FAMILY_MAP_FAMILY_KEY = "streamlit_family_map_family"
