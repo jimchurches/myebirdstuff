@@ -15,6 +15,13 @@ import {
   withStreamlitConnection,
 } from "streamlit-component-lib";
 
+declare global {
+  interface Window {
+    /** Playwright E2E hook: Leaflet map in this component iframe (not on window by default). */
+    __pebirdLeafletMap?: L.Map;
+  }
+}
+
 interface ClusterOptionsPayload {
   enabled?: boolean;
   max_cluster_radius?: number;
@@ -1318,6 +1325,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
         attributionControl: true,
       });
       mapRef.current = map;
+      window.__pebirdLeafletMap = map;
       map.on("popupopen", (ev: L.LeafletEvent) => {
         const raw = ev as unknown as { popup?: L.Popup };
         const popup = raw.popup;

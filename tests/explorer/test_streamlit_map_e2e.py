@@ -108,15 +108,8 @@ def test_all_locations_cluster_popup_parity(streamlit_app_url: str) -> None:
             () => {
                 const out = {found: 0, error: null,
                              popupCount: 0, popupContentCount: 0, popupTipCount: 0};
-                let m = null;
-                for (const k of Object.keys(window)) {
-                    const v = window[k];
-                    if (v && v._zoom !== undefined && typeof v.getMaxZoom === 'function') {
-                        m = v;
-                        break;
-                    }
-                }
-                if (!m) { out.error = 'no leaflet map global'; return out; }
+                const m = window.__pebirdLeafletMap || null;
+                if (!m) { out.error = 'no __pebirdLeafletMap on window'; return out; }
                 m.eachLayer((layer) => {
                     if (out.found > 0) return;
                     if (window.L && layer instanceof window.L.CircleMarker) {
