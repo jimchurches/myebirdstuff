@@ -13,7 +13,7 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 ### #222 status and rollout (source narrative)
 
-**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§17** popup parity **done** (#233 + `222-optional-polish-maps`). **§13–§15** four-map payload cache **done** on **`222-optional-polish-maps`** (PR → `beta-next`). **#222** stays **open** for **§8** perf/instrumentation (#205) and **§10** docs (planned after merge). Experimental spike branch retirement is **out of scope** for #222 (separate issues).
+**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§17** popup parity **done** (#233 + `222-optional-polish-maps`). **§13–§15** four-map payload cache **done** on **`222-optional-polish-maps`** (PR → `beta-next`). **#222** stays **open** for **§8** (testing, client/CI, server perf — #205 / #221 context) and **§10** docs. Branch **`222-test-performance-review`**. Experimental spike branch retirement is **out of scope** for #222 (separate issues).
 
 | Map mode / workstream | Status | PR (approx.) |
 |-----------------------|--------|----------------|
@@ -90,10 +90,124 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 
 ---
 
-## 8. Performance / benchmarks (#205)
+## 8. Testing & performance (#222 / #205 / #221)
 
-- Optional: extend map perf harness for Leaflet payload vs old Folium HTML size.
-- **Leaflet export HTML cache:** **Done** — `LEAFLET_EXPORT_HTML_CACHE_KEY` LRU.
+**Branch:** `222-test-performance-review` · **Refs:** #222, #205, #221, #179.
+
+**Architecture (why this batch has two halves):** Production maps are a **Streamlit custom component** — Python prepares GeoJSON, `revision`, banner/legend HTML, and calls `declare_component`; **React + Leaflet** in the committed `frontend/build` iframe renders markers, clustering, and popups. **Server** perf (`EXPLORER_PERF`, Playwright E2E) measures prep + embed; **client** perf (parse, cluster, first paint inside the iframe) is largely invisible to today’s stages unless we add it deliberately.
+
+**Where metrics and baselines live (do not duplicate blindly):**
+
+| Location | Use |
+|----------|-----|
+| [`benchmarks/map_perf/README.md`](../../../benchmarks/map_perf/README.md) | Committed **stage ceilings** (`stage_ceilings.json`); how to tune guardrails |
+| `benchmarks/map_perf/snapshots/` (gitignored) | Local dated JSON snapshots via `scripts/snapshot_explorer_perf_log.py` |
+| Issue/PR notes (#179, #205, #222) | Human **before/after** medians; not committed |
+| [`docs/development.md`](../../../docs/development.md) § Performance Instrumentation Guardrails | `EXPLORER_PERF`, E2E `--perf`, JSONL archive env vars |
+| [`explorer/app/streamlit/README.md`](../../app/streamlit/README.md) | Sidebar perf panel, `EXPLORER_PERF_LOG_FILE` |
+| [`docs/explorer/regression-checklist.md`](../../../docs/explorer/regression-checklist.md) | Manual Map-tab smoke (complements automated tests) |
+| GitHub **#205** / **#221** / **#222** comments | Durable narrative + tables (Folium-era baselines, spike JSONL, subjective cloud notes) |
+| [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) | **§8.0 mined summary** on `beta-next` (stage mapping, shipped vs dropped, gaps → §8.1–§8.6) |
+| Branches `205-investigation-main`, `221-streamlit-custom-map-component-spike` | Older detail: `issue-205-perf-reference.md`, `issue-205-investigation-backlog.md`, `issue-221-map-component-spike.md` — `git show origin/<branch>:docs/explorer/...` |
+
+**Already done (keep out of checklist):** Leaflet export HTML cache — `LEAFLET_EXPORT_HTML_CACHE_KEY` LRU.
+
+### 8.0 Prior art — mine before re-measuring (#205, #221, #222) — **done (2026-05-20)**
+
+**Output:** [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) (carry-forward table at bottom).
+
+- [x] **#205 (Folium-era Explorer perf)** — issue comments (batches 1–4) + `205-investigation-main` docs:
+  - [x] **Still relevant on `beta-next`:** W4 / #215; I4 first-paint + I5 `aggregate_perf_jsonl` / #217; Batch A fragment cache / #220; **I6** lesson; `All → Lifer → All` journey; `stage_ceilings.json` uses Leaflet stages.
+  - [x] **Historical / superseded:** Folium stages; H1, W1, W2 product paths; Folium lazy/structured batches — **do not re-run**.
+  - [x] **Headline Folium finding:** ~78% of overlay build was popup HTML; H2 → **#221 / #222** Leaflet component.
+  - [x] **Gap → §8.4:** I1/I2 `metrics_sink` not emitted after Folium removal (no `prep.build_species_overlay_map`).
+- [x] **#221 (component spike)** — `issue-221-map-component-spike.md` on `221-streamlit-custom-map-component-spike`:
+  - [x] Spike JSONL table captured in prior-art doc (classic vs experimental ms).
+  - [x] Production: four-map payload LRU + `payload_cache_hit` in perf `extra`.
+  - [x] `popup_v1` + TS templates **shipped**.
+- [x] **#222** — issue body + comments mined (parity, perf, subjective Cloud note).
+- [ ] **Post-Leaflet measured baseline** — **deferred to §8.5** (ceilings/mapping done in 8.0; reproduce commands in prior-art doc).
+
+**Next:** §8.3 CI hygiene (JavaScript).
+
+### 8.1 Test suite review (post–Folium / Leaflet refactor) — **done (2026-05-20)**
+
+**Log:** [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) §8.1.
+
+- [x] Run full suite — **557 passed**, **4 skipped** (3 E2E: no Playwright Chromium; 1 perf: needs `--perf`).
+- [x] **Orphaned coverage** — no deleted-module imports under `tests/`.
+- [x] **Stale test intent** — Folium wording updated in 4 test/helper files.
+- [x] **E2E / journeys** — selectors use `pebird-map-banner` / iframe scan (Leaflet). **I6** parity test still missing → §8.2.
+- [x] **Gaps — Python map path** (partial):
+  - [x] Leaflet payload LRU helpers — `tests/explorer/test_leaflet_payload_cache.py` (banner/legend/geojson on hit).
+  - [x] Viewport / GeoJSON builders — existing `test_all_locations_viewport.py`, `test_*_locations_geojson.py`.
+  - [x] Moved to **§8.1 nice-to-have** (discuss at §8.6).
+- [x] **Gaps — component / export** — existing modules present; no new TS API churn requiring tests this pass.
+  - [x] Moved **accuracy** audit to **§8.1 nice-to-have**.
+- [x] **CI (Python)** — matches `pytest tests/` + 65% cov; E2E/perf opt-in per `tests/README.md`.
+
+### 8.1 nice-to-have (discuss before §8.6 close-out)
+
+Not required for #222 unless we promote during review. Track here so nothing is lost.
+
+- [ ] **Per-mode LRU session keys** — parameterized tests for lifer/species/family cache keys (helpers already covered for all-locations).
+- [ ] **`app_prep_map_ui.py` integration** — Streamlit-stubbed prep path (spinners, mode switch, cache invalidation).
+- [ ] **Accuracy audit** — spot-check tests that only assert “no exception”; tighten to payload/HTML contracts where cheap.
+
+### 8.2 Client-side testing & performance (component / iframe) — **done (2026-05-20)**
+
+**Log:** [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) §8.2 · component [README.md](./README.md) “Client performance”.
+
+**Testing**
+
+- [x] **Inventory** — `mapComponentParsers.test.ts` added; `npm test -- --watchAll=false` (7 tests). Not in CI yet → §8.3.
+- [x] **Unit-level** — `parseViewportV1` extracted to `mapComponentParsers.ts` (more parsers later if useful).
+- [x] **Integration** — **I6** ported: `test_all_locations_cluster_popup_parity` in `test_streamlit_map_e2e.py` (runs with `pytest -m e2e`; needs Playwright Chromium).
+- [x] **Build contract** — `npm run build` green; commit updated `frontend/build/` after TS change.
+
+**Performance (client)**
+
+- [x] **Feasibility** — browser `performance.mark` possible; wiring to Python JSONL **not** worth v1 cost.
+- [x] **Decision for #222:** **server** `EXPLORER_PERF` + Playwright `e2e.first_paint` are the supported metrics; no new client perf flag this batch.
+- [ ] **Re-measure post-cutover** — deferred to **§8.5** (embed vs payload on fixture/real CSV).
+
+### 8.3 CI hygiene — JavaScript / TypeScript (parity with Python jobs)
+
+**Today (`.github/workflows/tests.yml`):** job `all-locations-map-frontend` runs `npm ci` + `npm run build` only. Python CI also runs Ruff, pip-audit, pytest+coverage, gitleaks.
+
+- [ ] **Gap analysis** — list what we want mirrored for the component frontend:
+  - [ ] **`npm audit`** (or `npm audit --production`) — dependency vulnerabilities; align severity policy with pip-audit (fail vs warn).
+  - [ ] **`npm test`** — once client unit tests exist (§8.2); run in CI after `npm ci`.
+  - [ ] **Lint / typecheck** — CRA runs ESLint+TS on `build`; optional explicit `npx tsc --noEmit` or `eslint src/` step for faster failure signal.
+  - [ ] **Lockfile discipline** — `package-lock.json` committed; Dependabot/npm updates reviewed like Python requirements.
+- [ ] **Implement** — add CI step(s) or job; document in `docs/development.md` and component README (local pre-push commands).
+- [ ] **Out of scope unless needed:** bundle-size budget, Lighthouse in CI, separate Node version matrix (Node 20 is enough for now).
+
+### 8.4 Server-side performance instrumentation (#179 / #205)
+
+- [ ] Audit `explorer/app/streamlit/perf_instrumentation.py` + call sites after Folium removal: stages still name real work (dataset load, `prep.*`, Leaflet bundle build, export, tab sync).
+- [ ] **Restore or replace I1/I2** — `popup_build_total_ms` / `marker_count` no longer on any stage (§8.0); consider GeoJSON-builder `extra` on `map.*.leaflet.payload` misses.
+- [ ] Remove or rename **Folium-specific** stage labels in **docs** (`docs/development.md` still mentions Folium-first spinners); stage mapping table in prior-art doc is the reference.
+- [ ] Confirm instrumentation on **Leaflet payload cache** paths (hit vs miss visible in perf events where useful).
+- [ ] Update `docs/development.md` perf section if spinner / stage narrative still mentions Folium-first map build.
+- [ ] Review `tests/explorer/test_perf_instrumentation.py`, `test_map_perf_e2e.py`, `test_aggregate_perf_jsonl.py` — still pass and reflect Leaflet journeys.
+- [ ] Review / tune `benchmarks/map_perf/stage_ceilings.json` after representative `--perf` run (leave CI headroom).
+- [ ] Optional: one-time table in #222 comparing **Folium-era** medians from #205 comments vs **Leaflet** medians (payload size, prep times) — do not treat Folium ceilings as Leaflet targets.
+
+### 8.5 Capture & document metrics (for future regressions)
+
+- [ ] Run at least one **documented journey** per map mode (or one combined script) with `EXPLORER_PERF=1` and `EXPLORER_PERF_LOG_FILE` (see streamlit README + `docs/development.md`).
+- [ ] Archive local snapshot(s) under `benchmarks/map_perf/snapshots/` (gitignored) via `scripts/snapshot_explorer_perf_log.py` with clear labels (e.g. `post-leaflet-four-map-cache`).
+- [ ] Paste **summary table** into GitHub **#222** (and/or #205): key stages, cold vs warm rerun, payload cache hit — medians or representative rows, not raw machine-specific absolutes as the only source of truth.
+- [ ] If ceilings change, commit `stage_ceilings.json` in the same PR with a one-line rationale in the PR body.
+- [ ] Cross-check [`docs/explorer/regression-checklist.md`](../../../docs/explorer/regression-checklist.md) — add manual perf-sensitive steps only if automation cannot cover them.
+
+### 8.6 Close-out for §8
+
+- [ ] Review **§8.1 nice-to-have** — promote, defer to follow-up issue, or explicitly skip on #222.
+- [ ] All §8.0–§8.5 items either done or explicitly deferred with issue comment (link #205 / #221 where historical context matters).
+- [ ] No known orphaned tests or misleading Folium references left in `tests/`.
+- [ ] §8 checklist in this file updated (checkboxes) before closing **#222** (with **§10** docs still separate).
 
 ---
 
@@ -240,7 +354,7 @@ Aligns warm-rerun behaviour across modes (builds on §13–§14).
 
 ## Agent handover
 
-*Last updated: May 2026 — branch **`222-optional-polish-maps`** (PR → `beta-next`, Refs #222).*
+*Last updated: May 2026 — branch **`222-test-performance-review`** (§8.0–§8.2 done; next §8.3).*
 
 ### Shipped on this branch
 
@@ -257,7 +371,7 @@ Aligns warm-rerun behaviour across modes (builds on §13–§14).
 
 ### Recommended next work (post-merge; **#222** remains open)
 
-1. **§8** — perf harness / instrumentation (#205).
+1. **§8** — **8.0–8.2 done**; continue **8.3 → 8.6** (branch `222-test-performance-review`).
 2. **§10** — documentation pass (Folium → Leaflet architecture), last.
 3. Close **#222** when §8 + §10 + smoke are satisfied.
 

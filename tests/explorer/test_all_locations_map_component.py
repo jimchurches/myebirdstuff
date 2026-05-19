@@ -8,7 +8,7 @@ from explorer.components.all_locations_map import render_all_locations_map_compo
 
 
 def test_render_all_locations_map_component_passes_zoom_debug_flag(monkeypatch):
-    """``show_zoom_debug`` mirrors ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` (Folium overlay parity)."""
+    """``show_zoom_debug`` mirrors ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` for the Leaflet component."""
     captured: dict = {}
 
     def fake_component(**kwargs):

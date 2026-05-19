@@ -264,7 +264,7 @@ def test_streamlit_tab_modules_import_without_runtime(streamlit_stub) -> None:
 
 
 def test_static_map_cache_key_includes_species_overlay() -> None:
-    """Folium reuse for selected-species maps must not share a key with bare species mode."""
+    """Species map cache keys must differ for overlay vs awaiting-selection vs hide-non-matching toggles."""
     from explorer.app.streamlit.app_caches import static_map_cache_key
 
     df = pd.DataFrame({"Submission ID": ["s0"]})

@@ -13,6 +13,7 @@ Events are captured via ``EXPLORER_PERF_LOG_FILE`` (JSONL); guardrails read
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 

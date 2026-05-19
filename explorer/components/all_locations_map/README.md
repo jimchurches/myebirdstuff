@@ -78,3 +78,9 @@ Classic Folium builds large HTML popups in Python. The component approach keeps 
 Popup width is implemented in ``AllLocationsMap.tsx`` (aligned with Folium’s ``map_popup_width_fix_script`` behaviour). Popup **styling** mirrors production: ``frontend/src/AllLocationsMapPopup.css`` tracks ``map_popup_theme_stylesheet`` in ``explorer/presentation/map_renderer.py``; visit-card HTML mirrors ``assemble_location_popup_html`` / ``LocationPopupModel`` in ``map_popup_models.py``.
 
 This avoids regressing the “rich tie-back” story while staying faster than `popup_html × N` on the server.
+
+## Client performance (instrumentation scope)
+
+For regressions and #222 acceptance, rely on **Python** `EXPLORER_PERF` (including `map.*.leaflet.payload` / `component_embed`) and Playwright **`e2e.first_paint`** — not in-iframe timings. Browser `performance.mark` is feasible for local dev but is **out of scope** for the current product instrumentation path. See [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) §8.2.
+
+**Frontend unit tests:** `cd frontend && npm test -- --watchAll=false` (viewport parser today; more parsers optional).

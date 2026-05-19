@@ -54,7 +54,7 @@ def e2e_http_ready_timeout_s() -> float:
 
 
 def e2e_map_markup_timeout_ms() -> int:
-    """Wait for Folium banner in frames; large datasets need more than 45s on first load."""
+    """Wait for Leaflet component iframe banner (``pebird-map-banner``) in frames; large exports may need >45s."""
     import os
 
     raw = str(os.environ.get(EXPLORER_E2E_MAP_TIMEOUT_MS_ENV, "")).strip()
