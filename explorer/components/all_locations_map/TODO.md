@@ -7,11 +7,13 @@ Update this file as items ship so the backlog stays visible outside chat history
 
 **Working principles:** Production Map tab uses **only** the Leaflet component. Folium / `streamlit-folium` / `map_controller` were removed on branch **`222-folium-removal`** (May 2026).
 
+**Leaflet payload cache contract (all four maps):** Session LRU via `_leaflet_payload_cache_lookup` / `_store` in `app_prep_map_ui.py`. Each entry holds `revision`, `geojson`, and (where applicable) `banner_html`, `legend_html`, plus mode-specific fields (`framing_pairs`, `pin_roles`, …). Warm reruns skip GeoJSON and overlay HTML rebuilds. LRU sizes: all-locations **4**, lifer **2**, species **2**, family **4** — sized for common toggle pairs (cluster, hide-non-matching, subspecies, highlight).
+
 ---
 
 ### #222 status and rollout (source narrative)
 
-**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§7** export popup parity + **§18** export button UX **shipped** (`222-export-html-ux`). **§17 Fix now** popup parity **shipped** (#233). Optional **§17 full pass** and **§10** docs remain. **#222** stays open until smoke / optional follow-ups.
+**Where we are (May 2026):** All four Map-tab modes on **Leaflet** on `beta-next`. Folium stack **removed** (#232). **§7** export popup parity + **§18** export button UX **shipped** (`222-export-html-ux`). **§17 Fix now** popup parity **shipped** (#233). **§13–§14** species/family payload cache polish **shipped** (`222-optional-polish-maps`). Optional **§17 full pass** and **§10** docs remain. **#222** stays open until smoke / optional follow-ups.
 
 | Map mode / workstream | Status | PR (approx.) |
 |-----------------------|--------|----------------|
@@ -191,21 +193,17 @@ See [README.md](./README.md) — “Popup anchor vs iframe size” and structure
 
 ---
 
-## 13. Species locations — optional polish (deferred)
+## 13. Species locations — optional polish — **done**
 
 From post–PR #226. **Not blocking** merge.
 
-### Cache banner on payload hit
+### Cache banner on payload hit — **done**
 
-**Gap:** Species Leaflet branch recomputes banner HTML on every rerun even when `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` hits.
+**Shipped:** `banner_html` and `legend_html` stored in `SPECIES_LEAFLET_PAYLOAD_CACHE_KEY` LRU entries and restored on payload cache hit (no banner recompute on warm rerun).
 
-**Do:** Cache banner fields or HTML in the payload LRU entry.
+### Cache awaiting-selection empty payload — **done**
 
-### Cache awaiting-selection empty payload
-
-**Gap:** Empty GeoJSON when no species selected is rebuilt each rerun; not stored in species payload LRU.
-
-**Do:** Optional — store in 2-entry LRU.
+**Shipped:** Empty GeoJSON + awaiting-selection banner stored in the 2-entry species payload LRU when no species is selected.
 
 ### DRY species banner stats
 
@@ -213,15 +211,17 @@ From post–PR #226. **Not blocking** merge.
 
 ---
 
-## 14. Family locations — optional polish (deferred)
+## 14. Family locations — optional polish — **done**
 
 From PR #228. **Not blocking** merge.
 
-### Cache empty / awaiting-selection payloads
+### Cache empty / awaiting-selection payloads — **done**
 
-**Gap:** Empty family payloads rebuilt each rerun; not stored in `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY`.
+**Shipped:** Empty family GeoJSON (no family selected / invalid family) stored in `FAMILY_LEAFLET_PAYLOAD_CACHE_KEY` 4-entry LRU.
 
-**Do:** Optional — store in 4-entry LRU.
+### Cache banner + composition on payload hit — **done**
+
+**Shipped:** Family pin composition, banner, and legend run only on cache miss; full entries include `banner_html` / `legend_html` restored on hit.
 
 ---
 
@@ -241,11 +241,10 @@ From PR #228. **Not blocking** merge.
 
 **Smoke (before closing #222):** Design utility + Map tab — regression checklist Map section; Export map HTML once (cold + repeat).
 
-**Recommended next work (after this PR merges):**
+**Recommended next work:**
 
 1. §10 — documentation pass (Folium → Leaflet architecture).
 2. Optional §17 full-pass checklist; then close **#222** when satisfied.
-3. §13–§14 — cache polish (optional).
-4. §8 — perf (#205).
+3. §8 — perf / benchmarks (#205).
 
 **Recover lost §17 detail:** `git show bdfa70f1^:explorer/components/all_locations_map/TODO.md` (section “## 15. Popup typography…” before Folium-removal commit collapsed it).
