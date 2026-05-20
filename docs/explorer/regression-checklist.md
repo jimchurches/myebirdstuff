@@ -11,7 +11,7 @@ Run before merging refactor branches to `main`.
 
 ## Map
 - Visit times: if the export has missing times, popups may show **23:59** as a documented placeholder — see [explorer README — Missing checklist times](README.md#missing-checklist-times-synthetic-2359)
-- **Map view** dropdown: All locations / Selected species / Lifer locations (#71)
+- **Map view** dropdown: All locations / Species locations / Lifer locations / Family locations (#71, #222)
 - Lifer-only mode: one pin per lifer site, lifer pin style, popups list lifers at site + visits
 - Renders all locations
 - Species search works (matches, highlighting, clear) when **Selected species** is active

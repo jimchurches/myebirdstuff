@@ -144,7 +144,7 @@ from explorer.core.family_map_overlays import (
     build_family_map_legend_overlay_html_for_pins,
 )
 from explorer.components.all_locations_map import render_all_locations_map_component
-from explorer.core.all_locations_experimental_marker_style import (
+from explorer.core.all_locations_marker_style import (
     circle_marker_style_for_all_locations_map,
     cluster_icon_style_for_all_locations_map,
 )
