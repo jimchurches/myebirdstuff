@@ -123,7 +123,7 @@ def test_apply_dataset_signature_unchanged_preserves_leaflet_cache(
 
 
 def test_leaflet_payload_cache_miss_when_revision_extra_changes(streamlit_stub) -> None:
-    from explorer.app.streamlit.app_caches import static_map_cache_key
+    from explorer.app.streamlit.app_caches import leaflet_payload_cache_key
     from explorer.app.streamlit.app_constants import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY
     from explorer.app.streamlit.app_prep_map_ui import (
         _leaflet_payload_cache_lookup,
@@ -131,7 +131,7 @@ def test_leaflet_payload_cache_miss_when_revision_extra_changes(streamlit_stub) 
     )
 
     df = _tiny_df()
-    static_ck = static_map_cache_key(
+    payload_ck = leaflet_payload_cache_key(
         df,
         "all",
         "",
@@ -141,8 +141,8 @@ def test_leaflet_payload_cache_miss_when_revision_extra_changes(streamlit_stub) 
     )
     rev_cluster_off = json.dumps({"cluster": {"enabled": False}}, sort_keys=True)
     rev_cluster_on = json.dumps({"cluster": {"enabled": True}}, sort_keys=True)
-    key_off = (static_ck, rev_cluster_off, None)
-    key_on = (static_ck, rev_cluster_on, None)
+    key_off = (payload_ck, rev_cluster_off, None)
+    key_on = (payload_ck, rev_cluster_on, None)
 
     _leaflet_payload_cache_store(
         ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,

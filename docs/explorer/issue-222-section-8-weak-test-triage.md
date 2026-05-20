@@ -23,7 +23,7 @@
 | `test_map_renderer.py` (popup/banner) | Substring + structure contracts on HTML builders |
 | `test_all_locations_map_component.py` | Asserts `show_zoom_debug` passed to component |
 | `test_streamlit_map_e2e::test_all_locations_cluster_popup_parity` | Popup open, tip, banner width (#205 I6) |
-| `test_streamlit_ui_helpers::test_static_map_cache_key_*` | Cache keys differ when inputs differ (still used by Leaflet prep) |
+| `test_streamlit_ui_helpers::test_leaflet_payload_cache_key_*` | Cache keys differ when inputs differ (Leaflet payload LRU identity) |
 | `test_leaflet_payload_cache.py` | LRU hit restores revision/geojson/banner/legend |
 | `test_leaflet_geojson_build_metrics.py` | Marker counts + merge into perf extra |
 | `test_map_perf_e2e.py` | Stages, ceilings, `marker_count` on payload miss |
@@ -61,7 +61,7 @@
 | **Per-mode Leaflet LRU tests** | Same helper pattern as all-locations; need four session keys + eviction cases | “Test Leaflet payload LRU for lifer/species/family session keys” |
 | **`app_prep_map_ui` integration** | Needs Streamlit stub + spinners + mode switch + cache invalidation | “Integration tests for map prep spinners and payload cache invalidation” |
 | **Species/Family E2E perf journey** | Playwright must drive searchbox / family selectbox | “E2E perf journey for Species and Family map modes” |
-| **`static_map_cache_key` rename/docs** | Name says “map” but keys Leaflet payload; confuse future readers | “Rename or document static_map_cache_key for Leaflet payload LRU” (docs-only OK) |
+| **`leaflet_payload_cache_key` rename** | Was `static_map_cache_key` (Folium-era name) | **Done** — renamed in `app_caches.py` |
 | **Broad “import module” smokes** | e.g. `test_streamlit_tab_modules_import_without_runtime` | Low value unless import regression recurs — optional backlog |
 
 ---

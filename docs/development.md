@@ -325,8 +325,10 @@ regressions can be diagnosed quickly without re-adding scaffolding.
   update instrumentation in the touched area (`perf_span`, `perf_fragment`, `perf_record_point`).
 - Map prep uses **two** sidebar spinners (Leaflet map payload + embed first, then checklist/rankings/maint caches and
   tab sync) so large exports can show the map before the heaviest non-map work finishes (#179).
-- Leaflet payload cache misses record **`marker_count`**, **`popup_build_count`**, and **`popup_build_total_ms`** in perf
-  `extra` on `map.*.leaflet.payload` spans (I1/I2 parity with Folium-era `prep.build_species_overlay_map`).
+- Leaflet payload cache misses record **`marker_count`**, **`popup_build_count`**, and **`popup_build_total_ms`** in
+  perf `extra` on `map.*.leaflet.payload` spans (I1/I2 parity with Folium-era `prep.build_species_overlay_map`).
+  Session LRU keys use **`leaflet_payload_cache_key()`** (dataset + view + toggles) plus mode-specific
+  `revision_extra` in `app_prep_map_ui.py`.
 - Instrumentation should remain lightweight and optional: no behaviour changes when disabled.
 - For map/perf-related changes, run at least one focused before/after journey and include key stage
   medians or representative timings in issue/PR notes.

@@ -21,7 +21,7 @@ from explorer.app.streamlit.app_caches import (
     cached_full_export_checklist_stats_payload,
     cached_sex_notation_by_year,
     full_location_data_for_maintenance,
-    static_map_cache_key,
+    leaflet_payload_cache_key,
 )
 from explorer.app.streamlit.app_constants import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
@@ -544,7 +544,7 @@ def render_prep_spinner_and_map_tab(
                     work = bundle.get("work")
                     tax_merged = bundle.get("tax_merged")
 
-                    _ck = static_map_cache_key(
+                    _ck = leaflet_payload_cache_key(
                         work_df,
                         "families",
                         date_filter_banner,
@@ -831,7 +831,7 @@ def render_prep_spinner_and_map_tab(
                         else "",
                     )
                     _species_selected = bool(overlay_sci)
-                    _ck = static_map_cache_key(
+                    _ck = leaflet_payload_cache_key(
                         work_df,
                         map_view_mode,
                         date_filter_banner,

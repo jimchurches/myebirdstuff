@@ -340,14 +340,14 @@ def test_streamlit_tab_modules_import_without_runtime(streamlit_stub) -> None:
     importlib.import_module("explorer.app.streamlit.maintenance_streamlit_html")
 
 
-def test_static_map_cache_key_includes_species_overlay() -> None:
+def test_leaflet_payload_cache_key_includes_species_overlay() -> None:
     """Species map cache keys must differ for overlay vs awaiting-selection vs hide-non-matching toggles."""
-    from explorer.app.streamlit.app_caches import static_map_cache_key
+    from explorer.app.streamlit.app_caches import leaflet_payload_cache_key
 
     df = pd.DataFrame({"Submission ID": ["s0"]})
     ro: tuple = ()
-    no_species = static_map_cache_key(df, "species", "", "default", ro, taxonomy_locale="en_AU")
-    with_species = static_map_cache_key(
+    no_species = leaflet_payload_cache_key(df, "species", "", "default", ro, taxonomy_locale="en_AU")
+    with_species = leaflet_payload_cache_key(
         df,
         "species",
         "",
@@ -358,7 +358,7 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
         species_selected_common="American Robin",
         hide_non_matching_locations=False,
     )
-    hide_on = static_map_cache_key(
+    hide_on = leaflet_payload_cache_key(
         df,
         "species",
         "",
@@ -368,7 +368,7 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
         species_selected_sci="Turdus migratorius",
         hide_non_matching_locations=True,
     )
-    empty_awaiting_species = static_map_cache_key(
+    empty_awaiting_species = leaflet_payload_cache_key(
         df,
         "species",
         "",
@@ -381,8 +381,8 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
     assert with_species != hide_on
     assert empty_awaiting_species != no_species
 
-    base_all = static_map_cache_key(df, "all", "", "default", ro, taxonomy_locale="en_AU")
-    all_with_gps = static_map_cache_key(
+    base_all = leaflet_payload_cache_key(df, "all", "", "default", ro, taxonomy_locale="en_AU")
+    all_with_gps = leaflet_payload_cache_key(
         df,
         "all",
         "",

@@ -233,7 +233,7 @@ Copy a draft into a **new GitHub issue** only if you want it tracked. Otherwise 
 | **A** | ☑ | Low — pattern exists for All locations | Done — parameterized `test_leaflet_payload_cache.py` |
 | **B** | ☐ | Medium — catches prep regressions | Integration tests for map prep spinners and payload cache invalidation |
 | **C** | ☑ | Low — perf only | Done — `test_map_perf_fixture_journey_species_and_family_payload_stages` |
-| **D** | ☐ | Low — docs/clarity | Document or rename `static_map_cache_key` for Leaflet payload LRU |
+| **D** | ☑ | Low — docs/clarity | Renamed → `leaflet_payload_cache_key` in `app_caches.py` |
 | **E** | ☐ | Very low | Upgrade Create React App / address dev-only `npm audit` noise |
 
 #### Draft A — Per-mode Leaflet payload LRU tests ✅
@@ -270,11 +270,9 @@ Copy a draft into a **new GitHub issue** only if you want it tracked. Otherwise 
 
 ---
 
-#### Draft D — `static_map_cache_key` naming / docs
+#### Draft D — `leaflet_payload_cache_key` (renamed from `static_map_cache_key`) ✅
 
-**Problem:** Name suggests Folium-era static map cache; function builds keys for **Leaflet payload LRU** (`app_prep_map_ui`).
-
-**Done when:** One of: rename + call-site update (breaking grep only), or docstring + `docs/development.md` note that keys are payload-cache identities (dataset + view + toggles).
+**Shipped:** `leaflet_payload_cache_key` in `app_caches.py` — stable tuple for Leaflet GeoJSON payload LRU (view, filters, species/GPS toggles); paired with `revision_extra` in `app_prep_map_ui`.
 
 ---
 
