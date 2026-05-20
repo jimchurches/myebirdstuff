@@ -7,6 +7,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from explorer.core import taxonomy
+from explorer.core.taxonomy_bundle import clear_taxonomy_bundle_cache
 
 
 def _make_csv(rows, fieldnames=("common_name", "species_code", "category")):
@@ -18,11 +19,24 @@ def _make_csv(rows, fieldnames=("common_name", "species_code", "category")):
     return buf.getvalue()
 
 
+def _mock_urlopen_ctxs(*payloads: str) -> list[MagicMock]:
+    ctxs: list[MagicMock] = []
+    for payload in payloads:
+        resp = MagicMock()
+        resp.read.return_value = payload.encode("utf-8")
+        cm = MagicMock()
+        cm.__enter__ = MagicMock(return_value=resp)
+        cm.__exit__ = MagicMock(return_value=False)
+        ctxs.append(cm)
+    return ctxs
+
+
 @pytest.fixture(autouse=True)
 def _reset_taxonomy_after_each():
     """Reset taxonomy module state after each test so tests don't affect each other."""
     yield
     taxonomy._common_to_code = None
+    clear_taxonomy_bundle_cache()
 
 
 def test_load_taxonomy_success_builds_lookup():
@@ -32,17 +46,13 @@ def test_load_taxonomy_success_builds_lookup():
         {"common_name": "Grey Teal", "species_code": "grtea", "category": "species"},
         {"common_name": "Some spuh", "species_code": "spuh1", "category": "spuh"},
     ])
-    resp = MagicMock()
-    resp.read.return_value = csv_data.encode("utf-8")
-    cm = MagicMock()
-    cm.__enter__ = MagicMock(return_value=resp)
-    cm.__exit__ = MagicMock(return_value=False)
-    with patch("explorer.core.taxonomy.urlopen", return_value=cm) as m_urlopen:
+    ctxs = _mock_urlopen_ctxs(csv_data, "[]")
+    with patch("explorer.core.taxonomy_bundle.urlopen", side_effect=ctxs) as m_urlopen:
         ok = taxonomy.load_taxonomy()
     assert ok is True
-    m_urlopen.assert_called_once()
-    call_args = m_urlopen.call_args[0][0]
-    assert call_args.full_url == "https://api.ebird.org/v2/ref/taxonomy/ebird"
+    assert m_urlopen.call_count == 2
+    first_url = m_urlopen.call_args_list[0][0][0].full_url
+    assert first_url == "https://api.ebird.org/v2/ref/taxonomy/ebird"
     assert taxonomy.get_species_url("Sulphur-crested Cockatoo") == "https://ebird.org/species/succoc"
     assert taxonomy.get_species_url("Grey Teal") == "https://ebird.org/species/grtea"
     assert taxonomy.get_species_lifelist_url("Grey Teal") == "https://ebird.org/lifelist?spp=grtea"
@@ -52,14 +62,10 @@ def test_load_taxonomy_success_builds_lookup():
 def test_load_taxonomy_with_locale_requests_url_with_param():
     """When a non-en_US locale is passed, we fetch that locale and en_US, then merge."""
     csv_data = _make_csv([{"common_name": "Grey Teal", "species_code": "grtea", "category": "species"}])
-    resp = MagicMock()
-    resp.read.return_value = csv_data.encode("utf-8")
-    cm = MagicMock()
-    cm.__enter__ = MagicMock(return_value=resp)
-    cm.__exit__ = MagicMock(return_value=False)
-    with patch("explorer.core.taxonomy.urlopen", return_value=cm) as m_urlopen:
+    ctxs = _mock_urlopen_ctxs(csv_data, csv_data, "[]")
+    with patch("explorer.core.taxonomy_bundle.urlopen", side_effect=ctxs) as m_urlopen:
         taxonomy.load_taxonomy(locale="en_AU")
-    assert m_urlopen.call_count == 2
+    assert m_urlopen.call_count == 3
     urls = [c[0][0].full_url for c in m_urlopen.call_args_list]
     assert any("locale=en_AU" in u for u in urls)
     assert any("locale=en_US" in u for u in urls)
@@ -69,21 +75,17 @@ def test_load_taxonomy_with_locale_requests_url_with_param():
 def test_load_taxonomy_en_us_fetches_once():
     """en_US is the merge source; loading it directly only needs one request."""
     csv_data = _make_csv([{"common_name": "Gray Teal", "species_code": "gretea1", "category": "species"}])
-    resp = MagicMock()
-    resp.read.return_value = csv_data.encode("utf-8")
-    cm = MagicMock()
-    cm.__enter__ = MagicMock(return_value=resp)
-    cm.__exit__ = MagicMock(return_value=False)
-    with patch("explorer.core.taxonomy.urlopen", return_value=cm) as m_urlopen:
+    ctxs = _mock_urlopen_ctxs(csv_data, "[]")
+    with patch("explorer.core.taxonomy_bundle.urlopen", side_effect=ctxs) as m_urlopen:
         taxonomy.load_taxonomy(locale="en_US")
-    assert m_urlopen.call_count == 1
+    assert m_urlopen.call_count == 2
     assert "locale=en_US" in m_urlopen.call_args[0][0].full_url
 
 
 def test_load_taxonomy_network_failure_returns_false():
     """When the API is unavailable, load_taxonomy returns False and lookups return None."""
     from urllib.error import URLError
-    with patch("explorer.core.taxonomy.urlopen", side_effect=URLError("offline")):
+    with patch("explorer.core.taxonomy_bundle.urlopen", side_effect=URLError("offline")):
         ok = taxonomy.load_taxonomy()
     assert ok is False
     assert taxonomy.get_species_url("Grey Teal") is None
@@ -131,18 +133,11 @@ def test_load_taxonomy_en_au_merges_en_us_alternate_names():
     us_csv = _make_csv(
         [{"common_name": "Gray Noddy", "species_code": "grynod1", "category": "species"}]
     )
-    ctxs = []
-    for body in (au_csv, us_csv):
-        r = MagicMock()
-        r.read.return_value = body.encode("utf-8")
-        c = MagicMock()
-        c.__enter__ = MagicMock(return_value=r)
-        c.__exit__ = MagicMock(return_value=False)
-        ctxs.append(c)
-    with patch("explorer.core.taxonomy.urlopen", side_effect=ctxs) as m_urlopen:
+    ctxs = _mock_urlopen_ctxs(au_csv, us_csv, "[]")
+    with patch("explorer.core.taxonomy_bundle.urlopen", side_effect=ctxs) as m_urlopen:
         ok = taxonomy.load_taxonomy(locale="en_AU")
     assert ok is True
-    assert m_urlopen.call_count == 2
+    assert m_urlopen.call_count == 3
     assert taxonomy.get_species_url("Gray Noddy") == "https://ebird.org/species/grynod1"
     assert taxonomy.get_species_url("Grey Ternlet") == "https://ebird.org/species/grynod1"
 

@@ -10,14 +10,17 @@ import pytest
 
 from explorer.core import species_family
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
+from explorer.core.taxonomy_bundle import clear_taxonomy_bundle_cache
 
 
 @pytest.fixture(autouse=True)
 def _clear_species_family_cache():
     """Clear memoized family map cache between tests."""
     species_family._base_species_family_items_cached.cache_clear()
+    clear_taxonomy_bundle_cache()
     yield
     species_family._base_species_family_items_cached.cache_clear()
+    clear_taxonomy_bundle_cache()
 
 
 def _mock_urlopen_payload(payload: str) -> MagicMock:
@@ -38,12 +41,16 @@ species,Missing Order Bird,No Order,misord,
 species,No Common, ,nocomm,400
 """
     with patch(
-        "explorer.core.species_family.urlopen",
-        return_value=_mock_urlopen_payload(csv_data),
+        "explorer.core.taxonomy_bundle.urlopen",
+        side_effect=[
+            _mock_urlopen_payload(csv_data),
+            _mock_urlopen_payload(csv_data),
+            _mock_urlopen_payload("[]"),
+        ],
     ) as m_urlopen:
         out = species_family.load_taxonomy_species_rows("en_AU")
 
-    req = m_urlopen.call_args[0][0]
+    req = m_urlopen.call_args_list[0][0][0]
     assert "locale=en_AU" in req.full_url
     assert list(out["common_name"]) == ["Common Raven", "Grey Teal"]
     assert list(out["base_species"]) == ["corvus corax", "anas gracilis"]
@@ -61,13 +68,20 @@ def test_load_taxonomy_groups_parses_bounds_and_skips_invalid_entries():
             {"groupName": "Ravens", "groupOrder": 3, "taxonOrderBounds": []},
         ]
     )
+    csv_data = """CATEGORY,SCIENTIFIC_NAME,COMMON_NAME,SPECIES_CODE,TAXON_ORDER
+species,Anas gracilis,Grey Teal,grtea,200
+"""
     with patch(
-        "explorer.core.species_family.urlopen",
-        return_value=_mock_urlopen_payload(payload),
+        "explorer.core.taxonomy_bundle.urlopen",
+        side_effect=[
+            _mock_urlopen_payload(csv_data),
+            _mock_urlopen_payload(csv_data),
+            _mock_urlopen_payload(payload),
+        ],
     ) as m_urlopen:
         out = species_family.load_taxonomy_groups("en_AU")
 
-    req = m_urlopen.call_args[0][0]
+    req = m_urlopen.call_args_list[2][0][0]
     assert "locale=en_AU" in req.full_url
     assert out[0]["group_name"] == "Ducks"
     assert out[0]["bounds"] == [(10.0, 20.0), (40.0, 50.0)]
