@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Callable, Dict, List, Tuple, TypedDict
 
 import pandas as pd
@@ -171,6 +172,55 @@ def aggregate_lifer_sites(
         for k, v in by_loc.items()
     }
     return sorted_by_loc, len(global_sci)
+
+
+def subset_lifer_lookup_for_species(
+    lifer_lookup_df: pd.DataFrame,
+    selected_species: str,
+    base_species_fn: Callable[[object], object],
+) -> pd.DataFrame:
+    """Chronological rows for *selected_species* (taxon key for subspecies, else base species)."""
+    sci = (selected_species or "").strip()
+    if not sci or lifer_lookup_df.empty:
+        return lifer_lookup_df.iloc[0:0]
+    sci_parts = sci.split()
+    is_subspecies = len(sci_parts) >= 3
+    taxon_key = sci.lower()
+    if is_subspecies:
+        subset = lifer_lookup_df[lifer_lookup_df["_taxon"] == taxon_key]
+        if not subset.empty:
+            return subset
+    base = base_species_fn(sci)
+    if base:
+        return lifer_lookup_df[lifer_lookup_df["_base"] == base]
+    return lifer_lookup_df.iloc[0:0]
+
+
+def observation_date_within_filter(
+    obs_date: Any,
+    *,
+    filter_start_date: str,
+    filter_end_date: str,
+) -> bool:
+    """True when *obs_date* falls on a calendar day in ``[filter_start_date, filter_end_date]`` (inclusive).
+
+    Uses the same ``YYYY-MM-DD`` strings as :func:`~explorer.core.working_set.rebuild_working_set_from_date_filter`.
+    """
+    if obs_date is None or (isinstance(obs_date, float) and pd.isna(obs_date)):
+        return False
+    try:
+        start = datetime.strptime(filter_start_date.strip(), "%Y-%m-%d")
+        end = datetime.strptime(filter_end_date.strip(), "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return False
+    try:
+        t = pd.Timestamp(obs_date)
+        if pd.isna(t):
+            return False
+        d = t.to_pydatetime().replace(tzinfo=None)
+        return start <= d <= end
+    except (ValueError, TypeError):
+        return False
 
 
 def count_subspecies_lifer_taxa(

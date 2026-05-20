@@ -589,6 +589,94 @@ def test_resolve_lifer_last_seen_not_in_seen():
     assert last == "L1"
 
 
+def _lifer_lookup_df_for_date_tests() -> "pd.DataFrame":
+    import pandas as pd
+
+    return pd.DataFrame(
+        {
+            "Date": [
+                pd.Timestamp("2015-03-01"),
+                pd.Timestamp("2021-06-10"),
+                pd.Timestamp("2024-11-20"),
+            ],
+            "Location ID": ["L1", "L1", "L3"],
+            "Scientific Name": ["Anas gracilis"] * 3,
+            "Common Name": ["Grey Teal"] * 3,
+            "datetime": [
+                pd.Timestamp("2015-03-01 08:00"),
+                pd.Timestamp("2021-06-10 09:00"),
+                pd.Timestamp("2024-11-20 10:00"),
+            ],
+            "_base": ["anas gracilis"] * 3,
+            "_taxon": ["anas gracilis"] * 3,
+        }
+    )
+
+
+def test_resolve_lifer_last_seen_date_filter_hides_lifer_on_revisit_only():
+    """Lifer before the window + revisit in range → no lifer pin when date filter is on."""
+    import pandas as pd
+
+    lookup_df = _lifer_lookup_df_for_date_tests()
+    seen = {"L1"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L3"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+        lifer_lookup_df=lookup_df,
+        filter_by_date=True,
+        filter_start_date="2021-01-01",
+        filter_end_date="2021-12-31",
+    )
+    assert lifer is None
+    assert last is None
+
+
+def test_resolve_lifer_last_seen_date_filter_shows_lifer_when_lifer_in_range():
+    lookup_df = _lifer_lookup_df_for_date_tests()
+    seen = {"L1"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L3"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+        lifer_lookup_df=lookup_df,
+        filter_by_date=True,
+        filter_start_date="2015-01-01",
+        filter_end_date="2015-12-31",
+    )
+    assert lifer == "L1"
+    assert last is None
+
+
+def test_resolve_lifer_last_seen_date_filter_last_seen_by_event_date():
+    """Last seen outside range but older visit at that site in range → no last-seen pin."""
+    lookup_df = _lifer_lookup_df_for_date_tests()
+    seen = {"L1", "L3"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L3"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+        lifer_lookup_df=lookup_df,
+        filter_by_date=True,
+        filter_start_date="2021-01-01",
+        filter_end_date="2021-12-31",
+    )
+    assert lifer is None
+    assert last is None
+
+
 def test_resolve_lifer_last_seen_same_location():
     """last_seen should be None when it matches lifer."""
     seen = {"L1"}
