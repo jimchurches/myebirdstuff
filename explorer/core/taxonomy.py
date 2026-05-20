@@ -16,47 +16,12 @@ same species codes. eBird uses different English names in different regions (e.g
 API reference: https://documenter.getpostman.com/view/664302/S1ENwy59
 """
 
-import csv
-import io
 from urllib.error import URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 
-_TAXONOMY_BASE = "https://api.ebird.org/v2/ref/taxonomy/ebird"
+from explorer.core.taxonomy_bundle import load_taxonomy_bundle, taxonomy_locale_key
+
 # In-memory cache: common_name (strip) -> species_code. None if not loaded or load failed.
 _common_to_code: dict[str, str] | None = None
-
-
-def _taxonomy_csv_to_lookup(raw: str) -> dict[str, str] | None:
-    """Parse taxonomy CSV body into common_name -> species_code for category ``species`` only."""
-    reader = csv.DictReader(io.StringIO(raw))
-    if not reader.fieldnames:
-        return None
-    field_lower = {f.strip().lower(): f for f in reader.fieldnames}
-    common_key = field_lower.get("common_name") or field_lower.get("common name")
-    code_key = field_lower.get("species_code") or field_lower.get("species code")
-    category_key = field_lower.get("category")
-    if not common_key or not code_key or not category_key:
-        return None
-    lookup: dict[str, str] = {}
-    for row in reader:
-        cat = (row.get(category_key) or "").strip().lower()
-        if cat != "species":
-            continue
-        common = (row.get(common_key) or "").strip()
-        code = (row.get(code_key) or "").strip()
-        if common and code:
-            lookup[common] = code
-    return lookup
-
-
-def _fetch_taxonomy_csv(url: str) -> str | None:
-    try:
-        req = Request(url, headers={"Accept": "text/csv"})
-        with urlopen(req, timeout=30) as resp:
-            return resp.read().decode("utf-8", errors="replace")
-    except (URLError, OSError, TimeoutError):
-        return None
 
 
 def load_taxonomy(locale: str | None = None) -> bool:
@@ -65,6 +30,9 @@ def load_taxonomy(locale: str | None = None) -> bool:
     Call once at startup. On success returns True and
     get_species_url / get_species_lifelist_url will return URLs for species.
     On failure returns False; lookups return None and the UI does not break.
+
+    Uses :func:`~explorer.core.taxonomy_bundle.load_taxonomy_bundle` so the CSV is not
+    downloaded separately from the family map / Rankings loaders.
 
     Args:
         locale: Optional locale code so common names match your eBird export.
@@ -78,25 +46,13 @@ def load_taxonomy(locale: str | None = None) -> bool:
     """
     global _common_to_code
     _common_to_code = None
-    loc_clean = str(locale).strip() if locale else ""
-    primary_url = _TAXONOMY_BASE
-    if loc_clean:
-        primary_url = f"{_TAXONOMY_BASE}?{urlencode({'locale': loc_clean})}"
-    raw_primary = _fetch_taxonomy_csv(primary_url)
-    if raw_primary is None:
+    try:
+        bundle = load_taxonomy_bundle(taxonomy_locale_key(locale))
+    except (URLError, OSError, TimeoutError):
         return False
-    primary_lookup = _taxonomy_csv_to_lookup(raw_primary)
-    if primary_lookup is None:
+    if not bundle.common_to_code:
         return False
-    if loc_clean and loc_clean.lower() != "en_us":
-        us_url = f"{_TAXONOMY_BASE}?{urlencode({'locale': 'en_US'})}"
-        raw_us = _fetch_taxonomy_csv(us_url)
-        if raw_us:
-            us_lookup = _taxonomy_csv_to_lookup(raw_us)
-            if us_lookup:
-                _common_to_code = {**us_lookup, **primary_lookup}
-                return True
-    _common_to_code = primary_lookup
+    _common_to_code = bundle.common_to_code
     return True
 
 

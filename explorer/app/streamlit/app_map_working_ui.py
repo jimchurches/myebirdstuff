@@ -404,7 +404,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                     family_highlight_base = st.selectbox(
                         "Highlight species (optional)",
                         options=[""] + bases,
-                        format_func=lambda b: "— None —" if b == "" else (base_to_common.get(b) or b),
+                        format_func=lambda b: "— None —"
+                        if b == ""
+                        else (base_to_common.get(str(b).strip().lower()) or b),
                         key=STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
                     )
                 else:

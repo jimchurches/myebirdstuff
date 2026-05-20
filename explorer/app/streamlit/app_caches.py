@@ -74,17 +74,16 @@ def cached_family_map_bundle(df_full: pd.DataFrame, taxonomy_locale: str) -> dic
         merge_taxonomy_detail_for_family_map,
         prepare_family_map_work_frame,
     )
-    from explorer.core.species_family import (
-        build_base_species_to_family_map,
-        load_taxonomy_groups,
-        load_taxonomy_species_rows,
-    )
+    from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
+    from explorer.core.species_family import build_base_species_to_family_map
+    from explorer.core.taxonomy_bundle import load_taxonomy_bundle, taxonomy_locale_key
 
-    loc = (taxonomy_locale or "").strip()
+    loc = taxonomy_locale_key(taxonomy_locale) or TAXONOMY_LOCALE_DEFAULT
     try:
+        bundle = load_taxonomy_bundle(loc)
+        tax = bundle.species_rows
+        groups = list(bundle.groups)
         base_to_family = build_base_species_to_family_map(loc)
-        tax = load_taxonomy_species_rows(loc)
-        groups = load_taxonomy_groups(loc)
         tax_merged = merge_taxonomy_detail_for_family_map(tax, groups)
     except Exception:
         return {

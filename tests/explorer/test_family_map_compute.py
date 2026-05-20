@@ -20,7 +20,12 @@ from explorer.core.family_map_compute import (
     merge_taxonomy_detail_for_family_map,
     prepare_family_map_work_frame,
     selected_species_checklist_individual_counts,
+    species_url_for_base_species,
     taxonomy_species_count_for_family,
+)
+from explorer.core.family_map_overlays import (
+    build_family_map_banner_overlay_html,
+    build_family_map_legend_overlay_html_for_pins,
 )
 
 
@@ -242,6 +247,61 @@ def test_base_species_to_common_from_taxonomy():
     d = base_species_to_common_from_taxonomy(tax)
     assert d["aa bb"] == "A"
     assert d["cc dd"] == "C"
+
+
+def test_species_url_for_base_species_uses_species_code_not_common_name_lookup():
+    """Banner/legend must resolve via base → code (popup parity), not common-name cache only."""
+    tax = pd.DataFrame(
+        {
+            "base_species": ["hemipus hirundinaceus"],
+            "species_code": ["bwfshr2"],
+            "common_name": ["Black-winged Flycatcher-shrike"],
+        }
+    )
+    url = species_url_for_base_species(
+        "hemipus hirundinaceus",
+        tax,
+        fallback_fn=lambda _: None,
+    )
+    assert url == "https://ebird.org/species/bwfshr2"
+
+
+def test_species_url_for_base_species_falls_back_to_common_name_fn():
+    tax = pd.DataFrame(
+        {"base_species": ["other sp"], "species_code": [""], "common_name": ["Other"]}
+    )
+    url = species_url_for_base_species(
+        "unknownus species",
+        tax,
+        fallback_fn=lambda n: "https://ebird.org/species/fallback"
+        if n == "Mystery Bird"
+        else None,
+        fallback_common_name="Mystery Bird",
+    )
+    assert url == "https://ebird.org/species/fallback"
+
+
+def test_family_map_banner_and_legend_include_highlight_species_link():
+    metrics = FamilyMapBannerMetrics(
+        family_name="Vangas, Helmetshrikes, and Allies",
+        total_species_taxonomy=10,
+        species_recorded_user=2,
+        locations_with_records=3,
+    )
+    banner = build_family_map_banner_overlay_html(
+        metrics,
+        selected_species_n_checklists=2,
+        selected_species_n_individuals=5,
+        selected_species_display_name="Black-winged Flycatcher-shrike",
+        selected_species_url="https://ebird.org/species/bwfshr2",
+    )
+    legend = build_family_map_legend_overlay_html_for_pins(
+        (),
+        highlight_label="Black-winged Flycatcher-shrike",
+        highlight_species_url="https://ebird.org/species/bwfshr2",
+    )
+    assert 'href="https://ebird.org/species/bwfshr2"' in banner
+    assert 'href="https://ebird.org/species/bwfshr2"' in legend
 
 
 def test_build_common_name_to_species_url_via_base_not_taxonomy_common_name():
