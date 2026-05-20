@@ -45,3 +45,22 @@ python scripts/snapshot_explorer_perf_log.py /path/to/perf.jsonl --label post-em
 
 The directory stays local so you can diff before/after or attach excerpts to issues without fighting
 hardware variance on other machines.
+
+## Aggregating JSONL (build cost vs cache hits)
+
+Warm reruns set `payload_cache_hit: true` on `map.*.leaflet.payload` spans with near-zero
+`elapsed_ms` and no `marker_count` / `popup_build_*` in `extra`. For **GeoJSON build cost**,
+filter to cold misses when summarising:
+
+```bash
+python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots \
+  --glob 'post-leaflet-*.jsonl' \
+  --stage map.all_locations_leaflet.payload \
+  --extra-key payload_cache_hit \
+  --extra-key marker_count \
+  --extra-key popup_build_total_ms
+```
+
+Treat rows where `payload_cache_hit` is false (or absent on older logs) as payload **misses**;
+ignore true hits when comparing build regressions. One-shot fixture journey:
+`./scripts/run_post_leaflet_perf_baseline.sh`.
