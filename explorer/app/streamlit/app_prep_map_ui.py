@@ -373,6 +373,41 @@ def _leaflet_payload_cache_store(
     st.session_state[session_key] = cached
 
 
+def apply_dataset_signature_for_map_caches(
+    df_full: Any,
+    provenance: str | None,
+) -> bool:
+    """Update ``EBIRD_DATA_SIG_KEY`` and clear map caches when the dataset signature changes.
+
+    Returns ``True`` when caches were cleared due to a signature change.
+    """
+    prov_plain = provenance or ""
+    sig = data_signature_for_caches(df_full, prov_plain)
+    _prev_sig = st.session_state.get(EBIRD_DATA_SIG_KEY)
+    if _prev_sig == sig:
+        return False
+    perf_record_point(
+        "prep.data_sig_change",
+        extra={
+            "prev_present": _prev_sig is not None,
+            "prev_sig": list(_prev_sig) if isinstance(_prev_sig, tuple) else _prev_sig,
+            "new_sig": list(sig) if isinstance(sig, tuple) else sig,
+        },
+    )
+    st.session_state[EBIRD_DATA_SIG_KEY] = sig
+    st.session_state[POPUP_HTML_CACHE_KEY] = {}
+    st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
+    st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
+    st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
+    st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
+    st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
+    st.session_state.pop(FAMILY_LEAFLET_PAYLOAD_CACHE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_HTML_CACHE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
+    return True
+
+
 def render_prep_spinner_and_map_tab(
     *,
     tab_map: Any,
@@ -403,29 +438,7 @@ def render_prep_spinner_and_map_tab(
         with st.spinner(MAP_PREP_SPINNER_TEXT):
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
             with perf_span("prep.data_signature"):
-                prov_plain = provenance or ""
-                sig = data_signature_for_caches(df_full, prov_plain)
-                _prev_sig = st.session_state.get(EBIRD_DATA_SIG_KEY)
-                if _prev_sig != sig:
-                    perf_record_point(
-                        "prep.data_sig_change",
-                        extra={
-                            "prev_present": _prev_sig is not None,
-                            "prev_sig": list(_prev_sig) if isinstance(_prev_sig, tuple) else _prev_sig,
-                            "new_sig": list(sig) if isinstance(sig, tuple) else sig,
-                        },
-                    )
-                    st.session_state[EBIRD_DATA_SIG_KEY] = sig
-                    st.session_state[POPUP_HTML_CACHE_KEY] = {}
-                    st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
-                    st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
-                    st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
-                    st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
-                    st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
-                    st.session_state.pop(FAMILY_LEAFLET_PAYLOAD_CACHE_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_HTML_CACHE_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
+                apply_dataset_signature_for_map_caches(df_full, provenance)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None

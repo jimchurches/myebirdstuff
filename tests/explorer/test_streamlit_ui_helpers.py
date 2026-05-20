@@ -22,6 +22,34 @@ class _StubSessionState(dict):
         self[name] = value
 
 
+class _SpinnerCtx:
+    def __init__(self, stub, msg: str) -> None:
+        self._stub = stub
+        self._msg = msg
+
+    def __enter__(self):
+        self._stub.spinner_calls.append(self._msg)
+        return self
+
+    def __exit__(self, *_args) -> bool:
+        return False
+
+
+class _PlaceholderStub:
+    def empty(self) -> None:
+        return None
+
+    def container(self):
+        class _Ctx:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args) -> bool:
+                return False
+
+        return _Ctx()
+
+
 class _SidebarStub:
     """Capture ``st.sidebar`` divider/markdown used by map chrome tests."""
 
@@ -30,6 +58,12 @@ class _SidebarStub:
         self.markdown_calls: list[tuple[tuple, dict]] = []
         self.caption_calls: list[str] = []
         self.radio_calls: list[tuple] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args) -> bool:
+        return False
 
     def divider(self) -> None:
         return None
@@ -59,6 +93,17 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     stub.session_state = _StubSessionState()
     # Dict-like secrets for tests (e.g. hosted notice flag); matches ``key in st.secrets`` usage.
     stub.secrets: dict[str, str] = {}
+    stub.spinner_calls: list[str] = []
+
+    def spinner(msg: str):
+        return _SpinnerCtx(stub, msg)
+
+    stub.spinner = spinner
+
+    def empty():
+        return _PlaceholderStub()
+
+    stub.empty = empty
 
     stub.html_calls: list[str] = []
 
@@ -114,6 +159,38 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         stub.info_calls.append((args, kwargs))
 
     stub.info = info
+
+    def divider() -> None:
+        return None
+
+    stub.divider = divider
+
+    class _ColumnStub:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> bool:
+            return False
+
+    def columns(spec):
+        return [_ColumnStub() for _ in spec]
+
+    stub.columns = columns
+
+    def download_button(*_args, **_kwargs) -> None:
+        return None
+
+    stub.download_button = download_button
+
+    def button(*_args, **_kwargs) -> None:
+        return None
+
+    stub.button = button
+
+    def warning(*_args, **_kwargs) -> None:
+        return None
+
+    stub.warning = warning
 
     components_v1 = types.ModuleType("streamlit.components.v1")
     components_v1.html_calls: list[dict] = []
