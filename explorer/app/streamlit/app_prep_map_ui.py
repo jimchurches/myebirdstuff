@@ -1200,6 +1200,7 @@ def render_prep_spinner_and_map_tab(
                                 _species_filter_by_date = False
                                 _species_filter_start = ""
                                 _species_filter_end = ""
+                                # Species locations: all-time lifer/last-seen defs; pin dates gated by filter range.
                                 if map_view_mode == "species" and bool(
                                     st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False)
                                 ):

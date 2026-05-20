@@ -1000,6 +1000,13 @@ def popup_scroll_script(scroll_hint, scroll_to_bottom):
 # ---------------------------------------------------------------------------
 # Map data preparation
 # ---------------------------------------------------------------------------
+#
+# Species locations — lifer / last-seen pins:
+# True lifer and last-seen sites and dates come from the full export, not the date-filtered
+# working DataFrame. The date filter must not redefine lifers as “first sighting in range”. When
+# the filter is on, pins appear only if the true lifer / last-seen checklist date is within the
+# selected range. The Lifer locations map is separate (all-time lifer sites; no date filter).
+
 
 def resolve_lifer_last_seen(
     selected_species,

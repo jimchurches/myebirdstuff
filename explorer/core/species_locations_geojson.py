@@ -157,6 +157,7 @@ def build_species_locations_geojson_payload(
         lid: grp for lid, grp in filtered.groupby("Location ID", sort=False)
     }
     seen_location_ids = set(filtered["Location ID"])
+    # True lifer/last-seen sites come from the full export; pin visibility is resolved separately.
     lifer_location, last_seen_location = resolve_lifer_last_seen(
         sci,
         seen_location_ids,

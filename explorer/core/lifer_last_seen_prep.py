@@ -4,6 +4,12 @@ Lifer and last-seen lookup preparation from the full (unfiltered) dataset.
 Feeds map pin highlighting and species-banner “first/last seen” dates. Pure data prep — no widgets
 or HTML — so the same logic works in Streamlit and tests.
 
+**Date filter:** True lifer and last-seen *definitions* always come from the
+full export — never from the date-filtered working slice. The map date filter does not recompute
+“first sighting in range”. On **Species locations**, when the filter is on, lifer / last-seen *pins*
+are shown only if the true lifer / last-seen **checklist date** falls in the selected range; see
+:func:`~explorer.presentation.map_renderer.resolve_lifer_last_seen`.
+
 The sorted lookup frame uses internal columns ``_base`` and ``_taxon``; see the comment on the
 ``.assign`` in :func:`prepare_lifer_last_seen`.
 """
