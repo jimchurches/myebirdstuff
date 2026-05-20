@@ -121,6 +121,7 @@ from explorer.core.family_map_compute import (
     compute_family_map_banner_metrics,
     filter_work_to_family,
     selected_species_checklist_individual_counts,
+    species_url_for_base_species,
 )
 from explorer.app.streamlit.defaults import (
     MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM,
@@ -671,9 +672,33 @@ def render_prep_spinner_and_map_tab(
                                     else None
                                 )
                                 hl_species_url = None
-                                if hl and hl_label:
-                                    _u = species_url_fn(hl_label)
-                                    hl_species_url = _u if _u else None
+                                if hl:
+                                    hl_species_url = species_url_for_base_species(
+                                        hl,
+                                        tax_merged,
+                                        fallback_fn=species_url_fn,
+                                        fallback_common_name=hl_label or None,
+                                    )
+                                    if not hl_species_url and family_species_url_by_common:
+                                        _hl_rows = wf[
+                                            wf["_base"]
+                                            .astype(str)
+                                            .str.strip()
+                                            .str.lower()
+                                            == hl
+                                        ]
+                                        for _cn in (
+                                            _hl_rows["Common Name"]
+                                            .fillna("")
+                                            .astype(str)
+                                            .str.strip()
+                                            .unique()
+                                        ):
+                                            if _cn:
+                                                _u = family_species_url_by_common.get(_cn)
+                                                if _u:
+                                                    hl_species_url = _u
+                                                    break
                                 all_locations_leaflet_banner_html = (
                                     build_family_map_banner_overlay_html(
                                         metrics,

@@ -197,7 +197,8 @@ def highlight_species_choices_alphabetical(
     bases = sorted(work_family["_base"].dropna().astype(str).str.strip().unique(), key=str.casefold)
 
     def label_for(b: str) -> str:
-        return (base_to_common.get(b) or b).strip() or b
+        key = str(b).strip().lower()
+        return (base_to_common.get(key) or b).strip() or b
 
     pairs = [(label_for(b), b) for b in bases]
     pairs.sort(key=lambda p: (p[0].casefold(), p[1].casefold()))
@@ -288,6 +289,35 @@ def merge_taxonomy_detail_for_family_map(
         lambda x: pd.Series(assign_group_for_taxon_order(float(x), glist))
     )
     return tax
+
+
+def species_url_for_base_species(
+    base_species: str,
+    taxonomy_merged: pd.DataFrame | None,
+    *,
+    fallback_fn: Callable[[str], str | None] | None = None,
+    fallback_common_name: str | None = None,
+) -> str | None:
+    """eBird species page URL for a base scientific name (banner/legend parity with map popups).
+
+    Popups resolve via ``_base`` → ``species_code`` in *taxonomy_merged*; the startup
+    :func:`~explorer.core.taxonomy.get_species_url` cache is only a fallback when that fails.
+    """
+    b = str(base_species or "").strip().lower()
+    if not b:
+        return None
+    tax = taxonomy_merged if taxonomy_merged is not None else pd.DataFrame()
+    if not tax.empty and {"base_species", "species_code"}.issubset(tax.columns):
+        sub = tax[tax["base_species"].astype(str).str.strip().str.lower() == b]
+        for _, row in sub.iterrows():
+            code = str(row.get("species_code") or "").strip()
+            if code:
+                return f"https://ebird.org/species/{code}"
+    if fallback_fn and fallback_common_name:
+        name = str(fallback_common_name).strip()
+        if name:
+            return fallback_fn(name)
+    return None
 
 
 def build_common_name_to_species_url(
