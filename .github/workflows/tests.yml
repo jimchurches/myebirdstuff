@@ -74,8 +74,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  all-locations-map-frontend:
-    name: All locations map (frontend CI)
+  map-component-frontend:
+    name: Map component (frontend CI)
     needs: repository-hygiene
     runs-on: ubuntu-latest
     steps:

@@ -4,7 +4,7 @@ Leaflet map embedded via `streamlit.components.v1.declare_component`. The commit
 
 **Architecture and maintainer docs:** [docs/development.md](../../../docs/development.md) (Map architecture, marker schemes, perf guardrails). **#222 close-out / baselines (historical):** [docs/explorer/issue-222-plain-summary.md](../../../docs/explorer/issue-222-plain-summary.md).
 
-Rebuild after TS/React changes (also validated on every PR by **Python CI** → *All locations map (frontend CI)*: `npm test`, `tsc --noEmit`, production `npm audit`, `npm run build`):
+Rebuild after TS/React changes (also validated on every PR by **Python CI** → *Map component (frontend CI)*: `npm test`, `tsc --noEmit`, production `npm audit`, `npm run build`):
 
 ```bash
 # From repo root (recommended — checks for junk under build/ afterward)
