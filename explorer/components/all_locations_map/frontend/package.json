@@ -23,6 +23,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:ci": "react-scripts test --watchAll=false",
+    "typecheck": "tsc --noEmit",
+    "audit:prod": "npm audit --omit=dev",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

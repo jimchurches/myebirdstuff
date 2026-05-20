@@ -21,7 +21,7 @@ from explorer.app.streamlit.app_caches import (
     cached_full_export_checklist_stats_payload,
     cached_sex_notation_by_year,
     full_location_data_for_maintenance,
-    static_map_cache_key,
+    leaflet_payload_cache_key,
 )
 from explorer.app.streamlit.app_constants import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
@@ -149,6 +149,10 @@ from explorer.core.all_locations_experimental_marker_style import (
     cluster_icon_style_for_all_locations_map,
 )
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
+from explorer.core.leaflet_geojson_build_metrics import (
+    empty_leaflet_geojson_build_metrics,
+    merge_leaflet_build_metrics_into,
+)
 from explorer.presentation.map_renderer import (
     STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
     build_all_locations_banner_html,
@@ -369,6 +373,41 @@ def _leaflet_payload_cache_store(
     st.session_state[session_key] = cached
 
 
+def apply_dataset_signature_for_map_caches(
+    df_full: Any,
+    provenance: str | None,
+) -> bool:
+    """Update ``EBIRD_DATA_SIG_KEY`` and clear map caches when the dataset signature changes.
+
+    Returns ``True`` when caches were cleared due to a signature change.
+    """
+    prov_plain = provenance or ""
+    sig = data_signature_for_caches(df_full, prov_plain)
+    _prev_sig = st.session_state.get(EBIRD_DATA_SIG_KEY)
+    if _prev_sig == sig:
+        return False
+    perf_record_point(
+        "prep.data_sig_change",
+        extra={
+            "prev_present": _prev_sig is not None,
+            "prev_sig": list(_prev_sig) if isinstance(_prev_sig, tuple) else _prev_sig,
+            "new_sig": list(sig) if isinstance(sig, tuple) else sig,
+        },
+    )
+    st.session_state[EBIRD_DATA_SIG_KEY] = sig
+    st.session_state[POPUP_HTML_CACHE_KEY] = {}
+    st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
+    st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
+    st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
+    st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
+    st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
+    st.session_state.pop(FAMILY_LEAFLET_PAYLOAD_CACHE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_HTML_CACHE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
+    return True
+
+
 def render_prep_spinner_and_map_tab(
     *,
     tab_map: Any,
@@ -399,29 +438,7 @@ def render_prep_spinner_and_map_tab(
         with st.spinner(MAP_PREP_SPINNER_TEXT):
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
             with perf_span("prep.data_signature"):
-                prov_plain = provenance or ""
-                sig = data_signature_for_caches(df_full, prov_plain)
-                _prev_sig = st.session_state.get(EBIRD_DATA_SIG_KEY)
-                if _prev_sig != sig:
-                    perf_record_point(
-                        "prep.data_sig_change",
-                        extra={
-                            "prev_present": _prev_sig is not None,
-                            "prev_sig": list(_prev_sig) if isinstance(_prev_sig, tuple) else _prev_sig,
-                            "new_sig": list(sig) if isinstance(sig, tuple) else sig,
-                        },
-                    )
-                    st.session_state[EBIRD_DATA_SIG_KEY] = sig
-                    st.session_state[POPUP_HTML_CACHE_KEY] = {}
-                    st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
-                    st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
-                    st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
-                    st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
-                    st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
-                    st.session_state.pop(FAMILY_LEAFLET_PAYLOAD_CACHE_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_HTML_CACHE_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
-                    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
+                apply_dataset_signature_for_map_caches(df_full, provenance)
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None
@@ -527,7 +544,7 @@ def render_prep_spinner_and_map_tab(
                     work = bundle.get("work")
                     tax_merged = bundle.get("tax_merged")
 
-                    _ck = static_map_cache_key(
+                    _ck = leaflet_payload_cache_key(
                         work_df,
                         "families",
                         date_filter_banner,
@@ -608,6 +625,9 @@ def render_prep_spinner_and_map_tab(
                                 "type": "FeatureCollection",
                                 "features": empty_features,
                             }
+                            merge_leaflet_build_metrics_into(
+                                _perf_family, empty_leaflet_geojson_build_metrics()
+                            )
                             _leaflet_payload_cache_store(
                                 FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
@@ -682,6 +702,7 @@ def render_prep_spinner_and_map_tab(
                                 leaflet_geojson,
                                 family_framing_pairs,
                                 family_highlight_framed,
+                                payload_build_metrics,
                             ) = build_family_locations_geojson_payload(
                                 pins,
                                 visit_marker_scheme=_visit_sch,
@@ -693,6 +714,7 @@ def render_prep_spinner_and_map_tab(
                                 fit_bounds_highlight_only=bool(hl),
                                 revision_extra=revision_extra_json,
                             )
+                            merge_leaflet_build_metrics_into(_perf_family, payload_build_metrics)
                             _leaflet_payload_cache_store(
                                 FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
@@ -809,7 +831,7 @@ def render_prep_spinner_and_map_tab(
                         else "",
                     )
                     _species_selected = bool(overlay_sci)
-                    _ck = static_map_cache_key(
+                    _ck = leaflet_payload_cache_key(
                         work_df,
                         map_view_mode,
                         date_filter_banner,
@@ -895,7 +917,11 @@ def render_prep_spinner_and_map_tab(
                                 popup_visit_dates_ascending = (
                                     str(popup_sort_order).strip().lower() != "descending"
                                 )
-                                leaflet_revision, leaflet_geojson = build_all_locations_geojson_payload(
+                                (
+                                    leaflet_revision,
+                                    leaflet_geojson,
+                                    payload_build_metrics,
+                                ) = build_all_locations_geojson_payload(
                                     loc_df,
                                     checklist_counts_by_location=counts.to_dict(),
                                     records_by_location=ctx["records_by_loc"],
@@ -904,6 +930,7 @@ def render_prep_spinner_and_map_tab(
                                     omit_pin_colour=True,
                                     revision_extra=revision_extra_json,
                                 )
+                                merge_leaflet_build_metrics_into(_perf_leaflet, payload_build_metrics)
                                 n_loc, n_chk, n_sp, n_ind = ctx["effective_totals"]
                                 all_locations_leaflet_banner_html = build_all_locations_banner_html(
                                     n_loc,
@@ -980,6 +1007,7 @@ def render_prep_spinner_and_map_tab(
                                     leaflet_geojson,
                                     lifer_warn,
                                     lifer_framing_pairs,
+                                    payload_build_metrics,
                                 ) = build_lifer_locations_geojson_payload(
                                     full_location_data=ctx["full_location_data"],
                                     lifer_lookup_df=ctx["lifer_lookup_df"],
@@ -990,6 +1018,7 @@ def render_prep_spinner_and_map_tab(
                                     visit_marker_scheme=_visit_sch,
                                     revision_extra=revision_extra_json,
                                 )
+                                merge_leaflet_build_metrics_into(_perf_lifer, payload_build_metrics)
                                 if lifer_warn:
                                     result_warning = lifer_warn
                                     leaflet_revision = None
@@ -1122,6 +1151,9 @@ def render_prep_spinner_and_map_tab(
                                     build_species_locations_awaiting_selection_banner_html()
                                 )
                                 all_locations_leaflet_legend_html = ""
+                                merge_leaflet_build_metrics_into(
+                                    _perf_species, empty_leaflet_geojson_build_metrics()
+                                )
                                 _leaflet_payload_cache_store(
                                     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
                                     payload_cache_key,
@@ -1145,6 +1177,7 @@ def render_prep_spinner_and_map_tab(
                                     sp_warn,
                                     species_framing_pairs,
                                     pin_roles,
+                                    payload_build_metrics,
                                 ) = build_species_locations_geojson_payload(
                                     df=ctx["df"],
                                     location_data=ctx["location_data"],
@@ -1164,6 +1197,7 @@ def render_prep_spinner_and_map_tab(
                                     popup_visit_dates_ascending=popup_visit_dates_ascending,
                                     revision_extra=revision_extra_json,
                                 )
+                                merge_leaflet_build_metrics_into(_perf_species, payload_build_metrics)
                                 if sp_warn:
                                     result_warning = sp_warn
                                     leaflet_revision = None

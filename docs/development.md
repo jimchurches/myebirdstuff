@@ -48,6 +48,19 @@ python3 scripts/build_all_locations_map_frontend.py
 
 That runs `npm ci` + `npm run build` and reports which `build/` files belong in git vs junk (e.g. macOS Finder duplicates). Details: [explorer/components/all_locations_map/README.md](../explorer/components/all_locations_map/README.md).
 
+**Pre-push / CI parity** (same checks as the *All locations map (frontend CI)* job in `.github/workflows/tests.yml`):
+
+```bash
+cd explorer/components/all_locations_map/frontend
+npm ci
+npm run test:ci
+npm run typecheck
+npm run audit:prod    # production deps only; matches pip-audit scope
+npm run build
+```
+
+`npm audit` without `--omit=dev` may report dev-toolchain issues from `react-scripts` (e.g. `webpack-dev-server`); CI does **not** fail on those. Review `package-lock.json` updates like Python `requirements.txt`.
+
 **Map HTML export (sidebar):** Lazy build on user action; one-click download via Streamlit + optional auto-click. If users report failed exports, see [map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) for a two-button fallback design and browser-risk notes.
 
 ---
@@ -310,8 +323,12 @@ regressions can be diagnosed quickly without re-adding scaffolding.
   document old -> new mapping in the PR/issue so historical comparisons stay meaningful.
 - When changing known expensive paths (map build/embed, working-set rebuild, heavy tab rendering),
   update instrumentation in the touched area (`perf_span`, `perf_fragment`, `perf_record_point`).
-- Map prep uses **two** sidebar spinners (map + Folium first, then checklist/rankings/maint caches and
+- Map prep uses **two** sidebar spinners (Leaflet map payload + embed first, then checklist/rankings/maint caches and
   tab sync) so large exports can show the map before the heaviest non-map work finishes (#179).
+- Leaflet payload cache misses record **`marker_count`**, **`popup_build_count`**, and **`popup_build_total_ms`** in
+  perf `extra` on `map.*.leaflet.payload` spans (I1/I2 parity with Folium-era `prep.build_species_overlay_map`).
+  Session LRU keys use **`leaflet_payload_cache_key()`** (dataset + view + toggles) plus mode-specific
+  `revision_extra` in `app_prep_map_ui.py`.
 - Instrumentation should remain lightweight and optional: no behaviour changes when disabled.
 - For map/perf-related changes, run at least one focused before/after journey and include key stage
   medians or representative timings in issue/PR notes.
@@ -323,6 +340,8 @@ regressions can be diagnosed quickly without re-adding scaffolding.
   `pytest tests/explorer/test_streamlit_map_e2e.py tests/explorer/test_streamlit_journeys_e2e.py -m e2e -v`
 - **Opt-in perf + JSONL capture** (sets ``EXPLORER_PERF_LOG_FILE`` in the test fixture):  
   `pytest tests/explorer/test_map_perf_e2e.py --perf -v`  
+  Or one-shot baseline: **`./scripts/run_post_leaflet_perf_baseline.sh`** (archives JSONL, prints aggregate table).  
+  Results template: **`docs/explorer/issue-222-section-8-baseline.md`**.  
   Loose ceilings live in **`benchmarks/map_perf/stage_ceilings.json`** (see **`benchmarks/map_perf/README.md`**).
 - **Your real export instead of the tiny integration fixture** — copy is written under pytest’s temp dir (your file is not modified):  
   `export EXPLORER_E2E_DATASET_CSV=/path/to/MyEBirdData.csv`  

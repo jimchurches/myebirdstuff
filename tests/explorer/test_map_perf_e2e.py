@@ -13,6 +13,7 @@ Events are captured via ``EXPLORER_PERF_LOG_FILE`` (JSONL); guardrails read
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -23,6 +24,7 @@ pytest.importorskip("playwright.sync_api")
 from tests.explorer.e2e_support import (
     REPO_ROOT,
     append_e2e_first_paint_record,
+    choose_first_recorded_family,
     choose_map_view_mode,
     launch_chromium_or_skip,
     max_elapsed_ms_by_stage,
@@ -96,6 +98,93 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
     must = {"prep.map_context_prepare", "map.all_locations_leaflet.component_embed"}
     missing = must - stages_seen
     assert not missing, f"missing expected stages {missing!r} in {sorted(stages_seen)!r}"
+
+    payload_misses = [
+        e
+        for e in events
+        if e.get("stage") == "map.all_locations_leaflet.payload"
+        and isinstance(e.get("extra"), dict)
+        and not e["extra"].get("payload_cache_hit")
+    ]
+    assert payload_misses, "expected at least one cold all-locations payload build"
+    assert any(
+        isinstance(e["extra"].get("marker_count"), int) and e["extra"]["marker_count"] >= 0
+        for e in payload_misses
+    ), "payload miss should include I1/I2 marker_count in extra"
+
+    highs = max_elapsed_ms_by_stage(events)
+    failures: list[str] = []
+    for stage, cap in ceilings.items():
+        obs = highs.get(stage)
+        if obs is None:
+            continue
+        if obs > cap:
+            failures.append(f"{stage}: {obs:.1f}ms > ceiling {cap:.1f}ms")
+    assert not failures, "Perf ceilings exceeded:\n" + "\n".join(failures)
+
+
+def _assert_payload_stage_with_cold_miss(
+    events: list[dict],
+    stage: str,
+    *,
+    require_marker_count: bool = False,
+) -> None:
+    stage_events = [e for e in events if e.get("stage") == stage]
+    assert stage_events, f"expected perf stage {stage!r} in JSONL"
+    misses = [
+        e
+        for e in stage_events
+        if isinstance(e.get("extra"), dict) and not e["extra"].get("payload_cache_hit")
+    ]
+    assert misses, f"expected at least one cold {stage} payload build"
+    if require_marker_count:
+        assert any(
+            isinstance(e["extra"].get("marker_count"), int) and e["extra"]["marker_count"] >= 0
+            for e in misses
+        ), f"{stage} miss should include marker_count in extra"
+
+
+def test_map_perf_fixture_journey_species_and_family_payload_stages(
+    streamlit_perf_url_and_logfile: tuple[str, Path],
+) -> None:
+    """Species + Family map modes emit ``map.*_leaflet.payload`` stages (draft C / #222 §8.5)."""
+    url, log_file = streamlit_perf_url_and_logfile
+    ceilings = _load_stage_ceilings()
+    with launch_chromium_or_skip() as browser:
+        page = browser.new_page()
+        measure_first_paint_ms(
+            page,
+            url,
+            must_contain=['class="pebird-map-banner__title">All locations</span>'],
+        )
+        page.get_by_text("Personal eBird Explorer").wait_for(timeout=20000)
+
+        choose_map_view_mode(page, "Species locations")
+        wait_for_pebird_map_markup(
+            page,
+            must_contain=['class="pebird-map-banner__title">Species locations</span>'],
+        )
+
+        try:
+            family_label = choose_first_recorded_family(page)
+            wait_for_pebird_map_markup(
+                page,
+                must_contain=[f'class="pebird-map-banner__title">{family_label}</span>'],
+            )
+        except Exception:
+            # Taxonomy unavailable or Family widget not ready: empty family map still logs perf.
+            choose_map_view_mode(page, "Family locations")
+            wait_for_pebird_map_markup(page, must_contain=["pebird-map-banner"])
+
+    time.sleep(0.5)
+    raw_lines = log_file.read_text(encoding="utf-8").splitlines() if log_file.exists() else []
+    events = parse_perf_json_objects_from_log_lines(raw_lines)
+    assert len(events) >= 3
+
+    _assert_payload_stage_with_cold_miss(
+        events, "map.species_leaflet.payload", require_marker_count=True
+    )
+    _assert_payload_stage_with_cold_miss(events, "map.family_leaflet.payload")
 
     highs = max_elapsed_ms_by_stage(events)
     failures: list[str] = []

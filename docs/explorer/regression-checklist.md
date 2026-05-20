@@ -23,6 +23,7 @@ Run before merging refactor branches to `main`.
 - Legend displays
 - eBird checklist links open in new tab
 - Map redraw time acceptable
+- **Perf (optional):** `./scripts/run_post_leaflet_perf_baseline.sh` on fixture; warm return to **All locations** should show `payload_cache_hit` on `map.all_locations_leaflet.payload` (~0 ms). Species/Family: manual run per `docs/explorer/issue-222-section-8-baseline.md`.
 
 ## Checklist Statistics
 - Checklist stats load without errors

@@ -116,7 +116,7 @@ def cached_species_url_fn(locale_key: str) -> Callable[[str], str | None]:
     return lambda _: None
 
 
-def static_map_cache_key(
+def leaflet_payload_cache_key(
     work_df: pd.DataFrame,
     map_view_mode: str,
     date_filter_banner: str,
@@ -129,10 +129,11 @@ def static_map_cache_key(
     hide_non_matching_locations: bool = False,
     go_to_gps_pin: tuple[float, float] | None = None,
 ) -> tuple:
-    """Stable key for Folium map reuse (session holds one cached map; same key → skip rebuild).
+    """Stable identity for Leaflet GeoJSON payload LRU keys in ``app_prep_map_ui``.
 
-    *species_* / *hide_non_matching* matter for **Species locations** view (including the empty-map
-    case when no species is selected and only matching pins are shown).
+    Combined with mode-specific ``revision_extra`` JSON, this tuple selects a cached
+    GeoJSON/banner/legend entry in session. *species_* / *hide_non_matching* matter for
+    **Species locations** (including the empty-map case when no species is selected).
     """
     n = len(work_df)
     sid0 = ""

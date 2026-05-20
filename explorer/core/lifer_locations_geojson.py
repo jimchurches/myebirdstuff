@@ -8,11 +8,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from typing import Any
 
 import pandas as pd
 
 from explorer.app.streamlit.defaults import MapMarkerColourScheme
+from explorer.core.leaflet_geojson_build_metrics import (
+    LeafletGeoJsonBuildMetrics,
+    empty_leaflet_geojson_build_metrics,
+)
 from explorer.core.lifer_last_seen_prep import aggregate_lifer_sites
 from explorer.core.map_marker_colour_resolve import resolve_lifer_overlay_pin_params
 from explorer.core.map_overlay_lifer_popups import lifer_popup_line_structured_items
@@ -29,21 +34,22 @@ def build_lifer_locations_geojson_payload(
     base_species_fn: BaseSpeciesFn,
     visit_marker_scheme: MapMarkerColourScheme,
     revision_extra: str = "",
-) -> tuple[str | None, dict[str, Any] | None, str | None, list[list[float]]]:
+) -> tuple[str | None, dict[str, Any] | None, str | None, list[list[float]], LeafletGeoJsonBuildMetrics]:
     """Return ``(revision, geojson_feature_collection, warning, framing_pairs_lat_lon)``.
 
     *framing_pairs_lat_lon* — base-species lifer coordinates only (viewport parity with Folium);
     empty when ``warning`` is set or no valid coordinates.
     """
+    empty_metrics = empty_leaflet_geojson_build_metrics()
     if full_location_data is None or full_location_data.empty:
-        return None, None, "⚠️ Lifer map mode requires full location data.", []
+        return None, None, "⚠️ Lifer map mode requires full location data.", [], empty_metrics
     loc_to_species, _ = aggregate_lifer_sites(
         lifer_lookup_df,
         true_lifer_locations,
         true_lifer_locations_taxon,
     )
     if not loc_to_species:
-        return None, None, "⚠️ No lifer locations found in your dataset.", []
+        return None, None, "⚠️ No lifer locations found in your dataset.", [], empty_metrics
     base_lifer_loc_ids = set(true_lifer_locations.values())
     loc_rows_framing = full_location_data[
         full_location_data["Location ID"].isin(base_lifer_loc_ids)
@@ -61,7 +67,7 @@ def build_lifer_locations_geojson_payload(
         lifer_loc_ids = set(true_lifer_locations.values())
     loc_rows = full_location_data[full_location_data["Location ID"].isin(lifer_loc_ids)]
     if loc_rows.empty:
-        return None, None, "⚠️ No lifer locations match your location table.", []
+        return None, None, "⚠️ No lifer locations match your location table.", [], empty_metrics
 
     le, lf, se, sp, r_lifer, r_species, stroke_w, fo_lif, fo_spec = resolve_lifer_overlay_pin_params(
         visit_marker_scheme
@@ -79,18 +85,22 @@ def build_lifer_locations_geojson_payload(
         loc_kind_by_id = {lid: _loc_kind(entries) for lid, entries in loc_to_species.items()}
 
     features: list[dict[str, Any]] = []
+    build_metrics = empty_leaflet_geojson_build_metrics()
 
     for _, row in loc_rows.iterrows():
         lid = row["Location ID"]
         entries = loc_to_species.get(lid, [])
         base_entries = [e for e in entries if e.get("is_base_lifer")]
         popup_entries = entries if show_subspecies_lifers else base_entries
+        t_popup = time.perf_counter()
         lines = lifer_popup_line_structured_items(
             entries=popup_entries,
             lifer_lookup_df=lifer_lookup_df,
             location_id=lid,
             base_species_fn=base_species_fn,
         )
+        build_metrics["popup_build_total_ms"] += (time.perf_counter() - t_popup) * 1000.0
+        build_metrics["popup_build_count"] += 1
         lid_s = str(lid)
         lat_f = float(row["Latitude"])
         lon_f = float(row["Longitude"])
@@ -142,7 +152,8 @@ def build_lifer_locations_geojson_payload(
             }
         )
 
+    build_metrics["marker_count"] = len(features)
     rev_payload = json.dumps(features, separators=(",", ":")) + "|" + revision_extra
     revision = hashlib.sha256(rev_payload.encode("utf-8")).hexdigest()[:24]
     geojson: dict[str, Any] = {"type": "FeatureCollection", "features": features}
-    return revision, geojson, None, framing_pairs
+    return revision, geojson, None, framing_pairs, build_metrics

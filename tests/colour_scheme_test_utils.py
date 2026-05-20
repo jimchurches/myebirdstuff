@@ -18,7 +18,7 @@ BUNDLED_COLOUR_SCHEME_INDICES: tuple[int, ...] = tuple(
 
 
 def leaflet_rgb_csv_from_hex_rrggbb(normalized_hex: str) -> str:
-    """``#RRGGBB`` from resolvers → ``r,g,b`` substring used in Folium/Leaflet ``rgb()`` output."""
+    """``#RRGGBB`` from resolvers → ``r,g,b`` substring used in Leaflet marker ``rgb()`` output."""
     h = normalized_hex.strip().removeprefix("#")
     if len(h) != 6:
         msg = f"expected #RRGGBB, got {normalized_hex!r}"

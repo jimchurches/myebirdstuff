@@ -167,7 +167,8 @@ def test_build_design_preview_leaflet_bundle_revision_changes_with_nonce() -> No
     a = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=1)
     b = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=2)
     assert a["revision"] != b["revision"]
-    assert a["legend_html"]
+    assert len(a["legend_html"]) > 20
+    assert "pebird-map-legend" in a["legend_html"]
     assert a["viewport"]["mode"] == "center_zoom"
     assert a["cluster_options"]["enabled"] is False
 

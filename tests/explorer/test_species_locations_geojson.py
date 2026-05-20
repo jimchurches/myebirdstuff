@@ -52,7 +52,7 @@ def test_build_species_geojson_with_match_and_background_pin():
     )
     ctx = prepare_all_locations_map_context(df, full_df=df)
     sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    rev, gj, warn, framing, roles = build_species_locations_geojson_payload(
+    rev, gj, warn, framing, roles, _metrics = build_species_locations_geojson_payload(
         df=ctx["df"],
         location_data=ctx["location_data"],
         records_by_loc=ctx["records_by_loc"],
@@ -174,10 +174,10 @@ def test_compute_species_map_banner_fields():
 
 def test_build_species_geojson_hide_non_matching_locations():
     ctx = prepare_all_locations_map_context(_species_map_df(), full_df=_species_map_df())
-    _, gj_show, _, framing_show, roles_show = build_species_locations_geojson_payload(
+    _, gj_show, _, framing_show, roles_show, _ = build_species_locations_geojson_payload(
         **_species_payload_kwargs(ctx, hide_non_matching_locations=False)
     )
-    _, gj_hide, _, framing_hide, roles_hide = build_species_locations_geojson_payload(
+    _, gj_hide, _, framing_hide, roles_hide, _ = build_species_locations_geojson_payload(
         **_species_payload_kwargs(ctx, hide_non_matching_locations=True)
     )
 
@@ -224,7 +224,7 @@ def test_build_species_geojson_lifer_and_last_seen_pin_roles():
         }
     )
     ctx = prepare_all_locations_map_context(df, full_df=df)
-    _, gj, warn, framing, roles = build_species_locations_geojson_payload(
+    _, gj, warn, framing, roles, _metrics = build_species_locations_geojson_payload(
         **_species_payload_kwargs(
             ctx,
             hide_non_matching_locations=False,

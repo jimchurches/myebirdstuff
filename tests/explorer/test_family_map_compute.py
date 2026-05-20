@@ -227,6 +227,7 @@ def test_merge_taxonomy_detail_for_family_map_smoke():
         }
     ]
     merged = merge_taxonomy_detail_for_family_map(tax, groups)
+    assert len(merged) == len(tax)
     assert "group_name" in merged.columns
     assert merged["group_name"].iloc[0] == "G"
 

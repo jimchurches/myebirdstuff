@@ -75,7 +75,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   all-locations-map-frontend:
-    name: All locations map (npm build)
+    name: All locations map (frontend CI)
     needs: repository-hygiene
     runs-on: ubuntu-latest
     steps:
@@ -89,12 +89,29 @@ jobs:
           cache: npm
           cache-dependency-path: explorer/components/all_locations_map/frontend/package-lock.json
 
-      - name: Install and build Streamlit component frontend
+      - name: Install frontend dependencies
         working-directory: explorer/components/all_locations_map/frontend
         run: |
           set -euo pipefail
           npm ci
-          npm run build
+
+      - name: Unit tests (Jest)
+        working-directory: explorer/components/all_locations_map/frontend
+        env:
+          CI: true
+        run: npm test -- --watchAll=false
+
+      - name: Typecheck (tsc --noEmit)
+        working-directory: explorer/components/all_locations_map/frontend
+        run: npx tsc --noEmit
+
+      - name: Dependency audit (production deps)
+        working-directory: explorer/components/all_locations_map/frontend
+        run: npm audit --omit=dev
+
+      - name: Build Streamlit component bundle
+        working-directory: explorer/components/all_locations_map/frontend
+        run: npm run build
 
       # Output under frontend/build/ can differ slightly by OS/Node; we only assert the project
       # compiles. After changing TS/CSS locally, still run the same commands and commit updated build/.
