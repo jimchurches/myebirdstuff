@@ -76,7 +76,7 @@ All four **Map view** modes use the same Streamlit custom component (`explorer/c
 | Client | `frontend/src/AllLocationsMap.tsx` | Leaflet map, MarkerCluster, popup templates (`AllLocationsMapPopup.css`) |
 | Export | `explorer/presentation/leaflet_map_html_export.py` | Standalone HTML (CDN Leaflet) from cached recipe (`LEAFLET_EXPORT_*` keys) |
 
-**Historical performance notes** (Folium-era baselines, §8 close-out): keep as reference only — [`docs/explorer/issue-222-plain-summary.md`](explorer/issue-222-plain-summary.md), [`issue-222-section-8-baseline.md`](explorer/issue-222-section-8-baseline.md), [`issue-222-section-8-prior-art.md`](explorer/issue-222-section-8-prior-art.md). Re-run: `./scripts/run_post_leaflet_perf_baseline.sh`.
+**Historical performance notes** (#222): [`issue-222-plain-summary.md`](explorer/issue-222-plain-summary.md) (plain language), [`issue-222-section-8-baseline.md`](explorer/issue-222-section-8-baseline.md) (tables + re-run), [`issue-222-section-8-prior-art.md`](explorer/issue-222-section-8-prior-art.md) (Folium-era context). Re-run: `./scripts/run_post_leaflet_perf_baseline.sh`.
 
 ---
 

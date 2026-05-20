@@ -89,6 +89,6 @@ Export HTML uses the same class names via `popup_v1_export_html.py` (standalone 
 
 ## Client performance (instrumentation scope)
 
-For regressions, rely on **Python** `EXPLORER_PERF` (including `map.*.leaflet.payload` / `component_embed`) and Playwright **`e2e.first_paint`** — not in-iframe timings. See [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) §8.2.
+For regressions, rely on **Python** `EXPLORER_PERF` (including `map.*.leaflet.payload` / `component_embed`) and Playwright **`e2e.first_paint`** — not in-iframe timings. See [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md).
 
 **Frontend unit tests:** `cd frontend && npm run test:ci` (viewport parser and related). CI also runs `npm run typecheck` and `npm run audit:prod`.

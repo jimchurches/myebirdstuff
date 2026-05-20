@@ -157,7 +157,7 @@ Streamlit UI + Leaflet component iframe (Map tab)
 
 **Map stack:** Production maps use `explorer/components/all_locations_map/` (Streamlit `declare_component` + committed React build). Python builds GeoJSON and structured popup payloads in `explorer/core/*_locations_geojson.py`; prep and session LRU live in `app_prep_map_ui.py`. Do not reintroduce Folium unless explicitly requested.
 
-**Map perf history (#222):** Folium-era baselines and post-Leaflet measurements are **historical docs** under `docs/explorer/issue-222-*.md` — do not delete when editing architecture text.
+**Map perf history (#222):** `docs/explorer/issue-222-plain-summary.md`, `issue-222-section-8-baseline.md`, `issue-222-section-8-prior-art.md` — keep when editing architecture text.
 
 ---
 
