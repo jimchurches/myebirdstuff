@@ -4,7 +4,7 @@
 
 **Purpose:** Consolidated mining of exploratory perf/testing work so §8.1–§8.6 do not repeat dropped experiments or Folium-only protocols.  
 **Recorded:** 2026-05-20 · **Branch:** `222-test-performance-review`  
-**Living checklist:** [`explorer/components/all_locations_map/TODO.md`](../../explorer/components/all_locations_map/TODO.md) §8
+**§8 checklist:** Completed May 2026 (#222 / PR #236). Maintainer reference only — no separate component TODO file.
 
 ---
 
@@ -86,7 +86,7 @@
 
 - Streamlit custom component + Leaflet + structured **`popup_v1`** + client TS templates
 - **`revision`** — client skips marker rebuild when unchanged
-- Session **payload cache** — production: four-map Leaflet LRU (§13–§15 in component TODO); spike used `EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY`
+- Session **payload cache** — production: four-map Leaflet LRU (`*_LEAFLET_PAYLOAD_CACHE_KEY` in `app_constants.py`); spike used `EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY`
 - **`payload_cache_hit`** in perf `extra` on `map.all_locations_leaflet.payload` spans
 
 ### Spike perf table (one session, ~5.7k pins — illustrative)

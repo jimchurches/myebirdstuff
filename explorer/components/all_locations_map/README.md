@@ -1,8 +1,8 @@
 # All locations map — Streamlit component
 
-**Backlog / ordered TODO:** [TODO.md](./TODO.md) (viewport parity, basemap control, export, perf, …).
+Leaflet map embedded via `streamlit.components.v1.declare_component`. The committed **`frontend/build`** output is what Streamlit loads at runtime (Node is not required at app runtime).
 
-Leaflet map embedded via `streamlit.components.v1`. The committed **`frontend/build`** output is what Streamlit loads at runtime.
+**Architecture and maintainer docs:** [docs/development.md](../../../docs/development.md) (Map architecture, marker schemes, perf guardrails). **#222 close-out / baselines (historical):** [docs/explorer/issue-222-plain-summary.md](../../../docs/explorer/issue-222-plain-summary.md).
 
 Rebuild after TS/React changes (also validated on every PR by **Python CI** → *All locations map (frontend CI)*: `npm test`, `tsc --noEmit`, production `npm audit`, `npm run build`):
 
@@ -29,7 +29,7 @@ cd explorer/components/all_locations_map/frontend
 npm ci && npm run build
 ```
 
-### What to commit after a build (same model as today)
+### What to commit after a build
 
 | Path | Commit? |
 |------|--------|
@@ -51,46 +51,44 @@ Dev server (optional):
 npm start
 ```
 
+## Production data flow
+
+1. **`app_prep_map_ui.py`** — For the active **Map view**, build or restore a cached payload (`*_LEAFLET_PAYLOAD_CACHE_KEY` session LRUs, keyed by `leaflet_payload_cache_key()` + mode-specific `revision_extra`).
+2. **GeoJSON builders** (`all_locations_geojson.py`, `species_locations_geojson.py`, …) — Features carry structured popup properties (`popup_v1`, `species_popup_v1`, …), not pre-rendered HTML.
+3. **`render_all_locations_map_component`** — Passes `geojson`, `revision`, banner/legend HTML, viewport extras, and pin/cluster styles into the iframe.
+4. **`AllLocationsMap.tsx`** — Renders markers, clustering, popups, and fixed banner/legend overlays inside the iframe document.
+
+Warm reruns with unchanged inputs skip GeoJSON and overlay HTML rebuilds (`payload_cache_hit` in `EXPLORER_PERF` extras).
+
 ## Marker clustering
 
 Clustering uses **Leaflet.markercluster** with defaults aligned to `explorer/app/streamlit/defaults.py`
-(max radius 40px, clustering disables from zoom 9, `removeOutsideVisibleBounds` false to match Folium defaults in ``defaults.py``).
+(max radius 40px, clustering disables from zoom 9, `removeOutsideVisibleBounds` false).
 
-The sidebar **cluster all locations** toggle is passed as `cluster_options.enabled`; full cluster JSON is mixed into the GeoJSON **revision** hash so toggling clustering bumps revision and reloads the overlay.
+The sidebar **Group nearby pins** toggle is passed as `cluster_options.enabled`; cluster options are mixed into the GeoJSON **revision** hash so toggling clustering bumps revision and reloads the overlay.
 
-**Pins:** `circle_marker_style` comes from Python via the same resolver as Folium **All locations**; the sidebar marker scheme index is honoured in production.
+**Pins:** `circle_marker_style` comes from Python via `all_locations_marker_style.circle_marker_style_for_all_locations_map` (sidebar marker scheme index).
 
-## Banner + legend inside the iframe (same as Folium)
+## Banner + legend inside the iframe
 
-Folium injects ``map_overlay_theme_stylesheet`` plus banner/legend HTML **into the map document** so ``position:fixed`` anchors to the map viewport (top-right banner, bottom-left legend). The Streamlit component passes the same theme stylesheet (no Folium shrink script — width is finalized in TS only), ``build_all_locations_banner_html``, and ``build_legend_html`` as component args; React injects CSS into the iframe ``document`` and renders overlay HTML **siblings** of the Leaflet pane so chrome matches beta-next. The Python stylesheet is **two** ``<style>`` blocks concatenated (popup + banner/legend); the component merges their inner CSS into one ``<style>`` node so the browser does not terminate the sheet at the first ``</style>`` token.
+Banner and legend use `map_overlay_theme_stylesheet()` plus HTML from `build_*_banner_html` / `build_legend_html` in `map_renderer.py`, passed as component args. React injects merged CSS into the iframe `document` and renders overlay HTML as siblings of the Leaflet pane so `position:fixed` anchors to the map viewport (top-right banner, bottom-left legend). Popup width is finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 
 ## Popup anchor vs iframe size
 
-If popups open offset from CircleMarkers, the usual cause is Leaflet measuring the map **before** the Streamlit iframe gets its final height. The component attaches a ``ResizeObserver`` on the outer wrapper and calls ``invalidateSize`` (plus a few delayed bumps) after updates.
+If popups open offset from CircleMarkers, the usual cause is Leaflet measuring the map **before** the Streamlit iframe gets its final height. The component attaches a `ResizeObserver` on the outer wrapper and calls `invalidateSize` (plus delayed bumps) after updates.
 
-## Pop-ups / eBird richness (design)
+## Popups / structured payloads
 
-Classic Folium builds large HTML popups in Python. The component approach keeps **the same facts and URLs**
-(species pages, lifelist, hotspots, history summaries) without sending **thousands of pre-rendered HTML blobs**:
+The component sends **structured facts and URLs** per pin; the client renders one template per mode (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`, kept in sync with `map_popup_theme_stylesheet()` in `map_renderer.py`).
 
-1. **Structured payload** — Per-pin JSON (stable IDs, display strings, link URLs).
-2. **Client templates** — One TS/HTML/CSS template renders cards matching today’s intent.
-3. **Lazy sections** — Optional: defer **heavy** chunks (long tables, full history) until the user opens a popup, if bytes or Python time dominate — provided lazy paths avoid **full Streamlit reruns per click** where possible.
+- **Payload:** `feature.properties.popup_v1` with `v: 1` (and mode-specific variants for species / lifer / family).
+- **All locations:** With `records_by_location`, `visited` holds `{ label: "Visited:", entries: [{label,href}] }`; lifelist heading link is rendered in TS. Minimal tests may use `summary_lines` + `links` only.
+- **Optional env:** `EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP` truncates `visited.entries` for very large exports (lifelist still covers full history).
 
-**Priorities (spike):** Like-for-like functionality first; performance second; small UX differences acceptable if they buy clear speed/design wins.
-
-**Typical session:** Many pins on map (~7k possible), few popups opened (tens to low hundreds). Prefer embedding **compact** structured data for every pin; reserve lazy loading for sections that are large or rarely viewed — **re-measure on this architecture** (the classic Folium “lazy popup” experiment showed little gain because bottlenecks differed).
-
-**Perf:** Session-state payload cache (see **`EXPERIMENTAL_ALL_LOCATIONS_PAYLOAD_CACHE_KEY`**) skips rebuilding GeoJSON on warm reruns when the Folium-equivalent map cache key matches. Optional **`EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP`** (env) truncates ``visited.entries``; lifelist covers full history.
-
-**Current payload:** `feature.properties.popup_v1` with `v: 1`. With **`records_by_location`** (production experimental tab), **`visited`** holds `{ label: "Visited:", entries: [{label,href}] }` — classic All locations checklist list + lifelist heading link in TS. Without per-location rows (minimal tests), **`summary_lines`** + **`links`** compact fallback.
-
-Popup width is implemented in ``AllLocationsMap.tsx`` (aligned with Folium’s ``map_popup_width_fix_script`` behaviour). Popup **styling** mirrors production: ``frontend/src/AllLocationsMapPopup.css`` tracks ``map_popup_theme_stylesheet`` in ``explorer/presentation/map_renderer.py``; visit-card HTML mirrors ``assemble_location_popup_html`` / ``LocationPopupModel`` in ``map_popup_models.py``.
-
-This avoids regressing the “rich tie-back” story while staying faster than `popup_html × N` on the server.
+Export HTML uses the same class names via `popup_v1_export_html.py` (standalone file embeds `AllLocationsMapPopup.css`).
 
 ## Client performance (instrumentation scope)
 
-For regressions and #222 acceptance, rely on **Python** `EXPLORER_PERF` (including `map.*.leaflet.payload` / `component_embed`) and Playwright **`e2e.first_paint`** — not in-iframe timings. Browser `performance.mark` is feasible for local dev but is **out of scope** for the current product instrumentation path. See [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) §8.2.
+For regressions, rely on **Python** `EXPLORER_PERF` (including `map.*.leaflet.payload` / `component_embed`) and Playwright **`e2e.first_paint`** — not in-iframe timings. See [`docs/explorer/issue-222-section-8-prior-art.md`](../../../docs/explorer/issue-222-section-8-prior-art.md) §8.2.
 
-**Frontend unit tests:** `cd frontend && npm run test:ci` (viewport parser today; more parsers optional). CI also runs `npm run typecheck` and `npm run audit:prod`.
+**Frontend unit tests:** `cd frontend && npm run test:ci` (viewport parser and related). CI also runs `npm run typecheck` and `npm run audit:prod`.

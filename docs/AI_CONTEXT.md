@@ -17,7 +17,7 @@ It supports exploration of:
 - visit statistics
 - first/last seen data
 
-Primary interface: **Streamlit app + Folium map**
+Primary interface: **Streamlit app** with a **Leaflet** map custom component (four Map-tab modes; no Folium in production)
 
 ---
 
@@ -146,14 +146,18 @@ data_loader.py
     ↓
 canonical dataframe
     ↓
-core logic modules
+core logic modules (stats, geojson builders, …)
     ↓
-map rendering
+presentation (HTML tables, map banners/legends, theme CSS)
     ↓
-Streamlit UI
+Streamlit UI + Leaflet component iframe (Map tab)
 ```
 
 **Key rule:** UI stays thin, logic stays in modules.
+
+**Map stack:** Production maps use `explorer/components/all_locations_map/` (Streamlit `declare_component` + committed React build). Python builds GeoJSON and structured popup payloads in `explorer/core/*_locations_geojson.py`; prep and session LRU live in `app_prep_map_ui.py`. Do not reintroduce Folium unless explicitly requested.
+
+**Map perf history (#222):** Folium-era baselines and post-Leaflet measurements are **historical docs** under `docs/explorer/issue-222-*.md` — do not delete when editing architecture text.
 
 ---
 

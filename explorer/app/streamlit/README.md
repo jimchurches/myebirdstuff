@@ -12,7 +12,7 @@ streamlit run explorer/app/streamlit/app.py
 
 ### Map marker design utility (developers only)
 
-A **separate** Streamlit entry point draws dummy Folium markers for every map role so you can tune colours and geometry and export paste-ready ``MapMarkerColourScheme`` snippets. It is **not** linked from the main app (no eBird data required). Run:
+A **separate** Streamlit entry point previews every map role in the **same Leaflet component** as production so you can tune colours and geometry and export paste-ready ``MapMarkerColourScheme`` snippets. It is **not** linked from the main app (no eBird data required). Run:
 
 ```bash
 streamlit run explorer/app/streamlit/design_map_app.py
@@ -32,7 +32,7 @@ See **[docs/development.md](../../../docs/development.md#map-marker-colour-desig
 - **One-off HTML** — Ad-hoc `unsafe_allow_html` not produced by a shared formatter is a last resort; prefer extending a module helper so formatting stays aligned.
 - **Contributors / AI assistants:** When choosing dataframe vs formatter HTML, **state the tradeoff** briefly so the decision is explicit.
 
-**Console noise:** If Streamlit warns about `use_container_width`, upgrade Streamlit (`requirements.txt` pins a recent minimum) and prefer `width="stretch"` on dataframes. **streamlit-folium** may still use the old API internally for the map until that library updates.
+**Console noise:** If Streamlit warns about `use_container_width`, upgrade Streamlit (`requirements.txt` pins a recent minimum) and prefer `width="stretch"` on dataframes.
 
 ## Run locally
 
@@ -47,8 +47,6 @@ streamlit run explorer/app/streamlit/app.py
 
 **Want your prompt back?** Run in the background: `streamlit run explorer/app/streamlit/app.py &` — or use a **second terminal tab**, **`tmux`/`screen`**, or **`nohup ... &`** (see your shell docs). Stop a background server with `pkill -f "streamlit run explorer/app/streamlit/app.py"` or find its PID and `kill`.
 
-If you see an error about **streamlit-folium**, your venv was created before that dependency was added — run `pip install -r requirements.txt` again.
-
 ### Where to put the virtualenv
 
 The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `env/` so those folders stay out of Git. You can still avoid clutter under the clone:
@@ -61,21 +59,27 @@ The repo **`.gitignore`** ignores `.venv/`, `.venv-streamlit/`, `venv/`, and `en
 
 **Pandas versions:** `requirements.txt` uses **pandas 2.x** because current Streamlit releases require `pandas<3`.
 
-**Folium:** Required for the map (`folium`, `streamlit-folium` in `requirements.txt`). **Whoosh** is still not required — the package `__init__` lazy-loads search so CSV load stays light.
+**Whoosh** is not required at import time — the package `__init__` lazy-loads search so CSV load stays light.
 
 **eBird taxonomy:** Fetched once per browser session after CSV load (cached by locale). Default locale is **en_AU**; set `STREAMLIT_EBIRD_TAXONOMY_LOCALE` or `EBIRD_TAXONOMY_LOCALE` for the first-visit default, or change **Settings → Taxonomy**. The value is an eBird **locale** code (e.g. `en_AU`) — same idea as **My eBird → Preferences** for common names; [Bird names in eBird](https://support.ebird.org/en/support/solutions/articles/48000804865-bird-names-in-ebird) explains regional naming. The **taxonomy** CSV endpoint is fetched without an API key; some other reference endpoints require a key. If the fetch fails (offline, etc.), species links are skipped. Streamlit does not expose the browser language to Python.
 
-**Map panning / grey flash:** The map is a static **HTML iframe** (same bytes as **Export map HTML**), so panning does not talk to the server. Pin **popups** still work in the browser. The design map tool (`design_map_app.py`) still uses `st_folium` where needed.
+### Map tab (Leaflet component)
 
-**Performance (refs #70):** **All locations** and **Lifer locations** Folium maps are **cached** in session for the same dataset + date filter + basemap so switching between those views reuses the built map (changing the date filter or CSV invalidates the cache). **Selected species** uses the **streamlit-searchbox** component inside a **`@st.fragment`** with **fragment-scoped reruns** and **debounced** input so typing in the species search does not grey out the whole app. The **Show only selected species** toggle lives **outside** the fragment so the map updates immediately when you change it.
+All four **Map view** modes use the Streamlit custom component in `explorer/components/all_locations_map/` (see [component README](../../components/all_locations_map/README.md) and [development.md](../../../docs/development.md#map-architecture-production)).
 
-**Map banners / legend:** Fixed overlays use the same **theme tokens** as the Streamlit app (primary green titles, panel gradient, borders) via injected CSS in ``map_overlay_theme_stylesheet`` (`explorer/presentation/map_renderer.py`; refs #70).
+**Panning / popups:** The map runs in a component **iframe**; panning and pin popups are handled in the browser without a Streamlit rerun per click. **Export map HTML** produces a standalone file (CDN Leaflet) from the same recipe, built lazily on sidebar button click.
 
-**Map height:** The Folium iframe uses a **fixed pixel height** via `st.components.v1.html`. Use the sidebar slider **Map height (px)** (default 720). The app passes a `st.container` **key** that includes the height so the map **remounts** when you change the slider. Changing height may reset pan/zoom on the map.
+**Performance:** GeoJSON + banner/legend payloads are cached in session LRUs (`*_LEAFLET_PAYLOAD_CACHE_KEY`, keyed by `leaflet_payload_cache_key()`). Switching back to a map mode with unchanged inputs reuses the cached bundle (`payload_cache_hit` in `EXPLORER_PERF`). **Species locations** uses **streamlit-searchbox** inside a **`@st.fragment`** with debounced input so typing does not grey out the whole app; **Show only selected species** sits outside the fragment so the map updates immediately when toggled.
 
-**Map sidebar (controls):** **Map view** — `All locations` | `Selected species` | `Lifer locations`. **Date filter** (non–Lifer views) — **Date filter** toggle and **date range** when on (off = all-time; **Lifer locations** ignores the map date filter but remembers your date-filter choice in session for the other views). **Lifer locations** — captions and **Show subspecies lifers** where applicable. **Group nearby pins** — Leaflet clustering on the **All locations** map (session-only; persist default under **Settings → Map display** + **Save settings**). **Selected species** — `streamlit-searchbox` + Whoosh; **Show only selected species** toggle. **Basemap** and **Map height (px)** sit below. **Export map HTML** — `st.download_button` at the bottom (bytes from `folium.Map.get_root().render()`). **Taxonomy locale** for species links: **Settings → Taxonomy**.
+**Map height:** Sidebar **Map height (px)** (default 720) is passed into the component; changing height remounts the iframe and may reset pan/zoom.
 
-**Tabs:** The main area uses a classic tab order (`Map`, `Checklist Statistics`, …). **Checklist Statistics** is shared section HTML (`checklist_stats_streamlit_tab_sections_html`) with theme-scoped CSS injected via `inject_streamlit_checklist_css()` in `streamlit_theme.py` (default **green** zebra + accents; flip `USE_EBIRD_BLUE_HTML_TAB_THEME` there for **eBird-blue** across checklist-style HTML tabs). **Map** uses **map_controller** + Folium. On each full rerun, **prep** work (checklist stats payload, full-export prep, sync helpers, rankings bundle) runs in a **`st.spinner` above the main tab row** (same bird-emoji strip as the Map tab); the **Map** tab Folium build + iframe embed uses a **second** `st.spinner` inside the Map panel. Several data tabs use `@st.fragment` for partial reruns (Country, Yearly, Maintenance, Rankings, …).
+**Map sidebar (controls):** **Map view** — `All locations` | `Species locations` | `Lifer locations` | `Family locations` (see `MAP_VIEW_LABELS` in `defaults.py`). **Date filter** (non–Lifer views) — toggle and range when on (**Lifer locations** ignores the map date filter but remembers your choice for other views). **Lifer locations** — **Show subspecies lifers** where applicable. **Group nearby pins** — MarkerCluster on **All locations** (persist default under **Settings → Map display** + **Save settings**). **Species locations** — searchbox + Whoosh; **Show only selected species** toggle. **Family locations** — family picker and highlight species when applicable. **Basemap**, **Map height (px)**, and **Export map HTML** below. **Taxonomy locale:** **Settings → Taxonomy**.
+
+**Prep spinners:** On each full rerun, non-map prep (checklist stats, rankings bundle, tab sync, …) runs in a **`st.spinner` above the main tab row**; map payload build + component embed use a **second** spinner in the Map panel (`app_prep_map_ui.py`). Several data tabs use `@st.fragment` for partial reruns (Country, Yearly, Maintenance, Rankings, …).
+
+**Map banners / legend:** Fixed overlays inside the iframe use `map_overlay_theme_stylesheet()` (`explorer/presentation/map_renderer.py`).
+
+**Tabs:** **Checklist Statistics** uses shared section HTML with theme-scoped CSS via `inject_streamlit_checklist_css()` in `streamlit_theme.py` (default **green** zebra + accents; flip `USE_EBIRD_BLUE_HTML_TAB_THEME` for **eBird-blue**).
 
 ## Data loading
 
@@ -124,5 +128,5 @@ Implementation: `explorer/app/streamlit/perf_instrumentation.py` (`perf_span`, `
 
 ## Scope of this Streamlit app
 
-- Load CSV via `explorer.core.data_loader.load_dataset`, map via **map_controller** + **streamlit-folium**, checklist stats tab (shared HTML + nested `st.tabs`), **Yearly Summary** (`yearly_summary_streamlit_html`: `@st.fragment` + nested tabs; `st.toggle` for recent vs full columns when year count exceeds **Settings → Yearly tables: recent year columns**, 3–25 default 10), **Country** tab (fragment + same toggle behavior), **Maintenance** tab (`maintenance_streamlit_html`: nested tabs + expanders + `maintenance_display` HTML).  
+- Load CSV via `explorer.core.data_loader.load_dataset`, **Map** tab via **Leaflet component** (`app_prep_map_ui` + `explorer/components/all_locations_map`), checklist stats tab (shared HTML + nested `st.tabs`), **Yearly Summary** (`yearly_summary_streamlit_html`: `@st.fragment` + nested tabs; `st.toggle` for recent vs full columns when year count exceeds **Settings → Yearly tables: recent year columns**, 3–25 default 10), **Country** tab (fragment + same toggle behavior), **Maintenance** tab (`maintenance_streamlit_html`: nested tabs + expanders + `maintenance_display` HTML).  
 - **Rankings & lists** is migrated separately (`rankings_streamlit_html`).

@@ -3,7 +3,7 @@
 **Audience:** Maintainers and coding agents (not end-user documentation).  
 **Status:** The app ships the **one-click** flow described in §1. The **two-button** flow in §4 is a documented fallback if users report failed or confusing exports.
 
-**Related:** [#222](https://github.com/jimchurches/myebirdstuff/issues/222) · `explorer/components/all_locations_map/TODO.md` (§18) · `explorer/app/streamlit/app_prep_map_ui.py` · `explorer/app/streamlit/app_map_ui.py`
+**Related:** [#222](https://github.com/jimchurches/myebirdstuff/issues/222) · [component README](../../explorer/components/all_locations_map/README.md) · `explorer/app/streamlit/app_prep_map_ui.py` · `explorer/app/streamlit/app_map_ui.py`
 
 ---
 
@@ -163,4 +163,4 @@ For the expected audience (desktop, normal settings): **blocking is unlikely**. 
 | Session keys | `explorer/app/streamlit/app_constants.py` — `EXPORT_MAP_HTML_*`, `LEAFLET_EXPORT_*`, `EXPLORER_MAP_HTML_BYTES_KEY` |
 | HTML build | `explorer/presentation/leaflet_map_html_export.py` — `leaflet_map_to_html_bytes` |
 | Export LRU | `explorer/presentation/leaflet_map_export_cache.py` + `_leaflet_export_html_cache_*` in `app_prep_map_ui.py` |
-| Backlog | `explorer/components/all_locations_map/TODO.md` — §18 |
+| Shipped UX | One-click export (May 2026); see §1 |
