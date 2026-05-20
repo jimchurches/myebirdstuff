@@ -131,7 +131,7 @@ Width finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
 - [x] **#222** — issue body + comments mined (parity, perf, subjective Cloud note).
 - [x] **Post-Leaflet measured baseline** — §8.5: fixture + real `MyEBirdData.csv`; comments on #222; `issue-222-section-8-baseline.md` + plain summary.
 
-**Next (human):** manual smoke → PR `222-test-performance-review` → `beta-next` → close **#222** for §8 scope (**§10** docs separate).
+**Next (human):** merge **PR #236** → `beta-next` → manual smoke → close **#222** for §8 scope (**§10** docs separate).
 
 ### 8.1 Test suite review (post–Folium / Leaflet refactor) — **done (2026-05-20)**
 
@@ -208,17 +208,19 @@ E2E smokes and `streamlit_map_working` tests: **SKIP #222** (intentional light c
 - [x] **Ceilings** — unchanged after fixture run (all stages within `stage_ceilings.json`; tune on real CSV if needed).
 - [x] **Regression checklist** — optional perf note added (fixture journey + manual Species/Family).
 
-### 8.6 Close-out for §8 — **done on branch (2026-05-20); close #222 after PR merge**
+### 8.6 Close-out for §8 — **done on branch (2026-05-20); close #222 after PR #236 merge**
 
-**Remaining for you:** manual smoke (in progress), open PR, merge, then close GitHub **#222** for §8 scope. **§10** full doc pass stays open.
+**Remaining for you:** merge **PR #236**, manual smoke, then close GitHub **#222** for §8 scope. **§10** full doc pass stays open.
 
 - [x] **§8.1 nice-to-have** — decisions table above; accuracy audit closed; LRU + prep integration → optional follow-up drafts (not #222 blockers).
 - [x] **§8.0–§8.5** — all substantive items done or documented (prior-art, baseline, plain summary, triage, CI, I1/I2, ceilings unchanged).
 - [x] **Tests / Folium wording** — §8.1: no orphaned deleted-module imports; Folium wording cleaned in tests/helpers; shared HTML builder tests kept on purpose.
 - [x] **§8 checklist** — this file updated; stale “Next: §8.3” lines removed.
+- [x] **PR opened** — [#236](https://github.com/jimchurches/myebirdstuff/pull/236) (`222-test-performance-review` → `beta-next`).
+- [x] **#222 close-out comment posted** (2026-05-20) — §8 summary + links; issue stays open until merge + smoke.
 
-**After PR merge — #222 comment (suggested one-liner):**  
-“§8 testing/perf complete on `beta-next` (§8.0–§8.6). Plain summary + baselines on issue and in `docs/explorer/issue-222-plain-summary.md`. §10 architecture docs tracked separately in component TODO §10.”
+**After PR #236 merge — close #222 with (short):**  
+“§8 testing/perf on `beta-next` (§8.0–§8.6). See issue comments + `docs/explorer/issue-222-plain-summary.md`. §10 docs tracked in component TODO §10.”
 
 ---
 
@@ -228,22 +230,15 @@ Copy a draft into a **new GitHub issue** only if you want it tracked. Otherwise 
 
 | ID | Drop? | Priority hint | Title |
 |----|-------|---------------|-------|
-| **A** | ☐ | Low — pattern exists for All locations | Test Leaflet payload LRU for lifer, species, and family session keys |
+| **A** | ☑ | Low — pattern exists for All locations | Done — parameterized `test_leaflet_payload_cache.py` |
 | **B** | ☐ | Medium — catches prep regressions | Integration tests for map prep spinners and payload cache invalidation |
-| **C** | ☐ | Low — perf only | E2E perf journey for Species and Family map modes |
+| **C** | ☑ | Low — perf only | Done — `test_map_perf_fixture_journey_species_and_family_payload_stages` |
 | **D** | ☐ | Low — docs/clarity | Document or rename `static_map_cache_key` for Leaflet payload LRU |
 | **E** | ☐ | Very low | Upgrade Create React App / address dev-only `npm audit` noise |
 
-#### Draft A — Per-mode Leaflet payload LRU tests
+#### Draft A — Per-mode Leaflet payload LRU tests ✅
 
-**Problem:** `tests/explorer/test_leaflet_payload_cache.py` only exercises `ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`. Lifer/species/family use the same `_leaflet_payload_cache_lookup` / `_store` helpers with different session keys and LRU sizes (see `app_constants.py`).
-
-**Done when:**
-
-- Parameterized (or parallel) tests for `LIFER_`, `SPECIES_`, `FAMILY_` keys prove hit restores `revision` + `geojson` + mode-specific fields (`framing_pairs`, `pin_roles`, …).
-- Eviction when `max_entries` exceeded (MRU behaviour).
-
-**Not in scope:** Full `app_prep_map_ui` rerun (see draft B).
+**Shipped:** `tests/explorer/test_leaflet_payload_cache.py` — parameterized all / lifer / species / family session keys; hit restores mode fields (`framing_pairs`, `pin_roles`, `highlight_framed`, …); LRU eviction + MRU tests per key.
 
 ---
 
@@ -264,16 +259,14 @@ Copy a draft into a **new GitHub issue** only if you want it tracked. Otherwise 
 
 ---
 
-#### Draft C — Species / Family automated perf journey
+#### Draft C — Species / Family automated perf journey ✅
 
-**Problem:** `test_map_perf_e2e.py` only cycles **All locations** → **Lifer** → **All**. Baseline doc describes manual steps for Species/Family.
+**Shipped:**
 
-**Done when:**
-
-- Playwright selects a species (searchbox) and a family (sidebar `Family` selectbox), captures `map.species_leaflet.payload` / `map.family_leaflet.payload` in JSONL.
-- Optional: add loose ceilings in `stage_ceilings.json` if needed.
-
-**Depends on:** Stable E2E selectors for species search + family picker.
+- `test_map_perf_fixture_journey_species_and_family_payload_stages` — Species + Family map modes; asserts `map.species_leaflet.payload` / `map.family_leaflet.payload` cold misses in JSONL.
+- `e2e_support.choose_first_recorded_family` (sidebar Family selectbox); `choose_species_by_common_name` helper for future journey tests (searchbox is Base Web combobox).
+- `stage_ceilings.json` — species/family payload + embed stages (loose caps).
+- `./scripts/run_post_leaflet_perf_baseline.sh` runs both perf E2E tests.
 
 ---
 
@@ -453,10 +446,10 @@ Aligns warm-rerun behaviour across modes (builds on §13–§14).
 - Species: no species selected → repeat rerun; family: no family selected → repeat rerun (empty map cached).
 - Export map HTML: open exported file; lifer pin popup — no `Visited:` label above species lines.
 
-### Recommended next work (post-merge; **#222** remains open)
+### Recommended next work (**#222** open until §8 merge + smoke)
 
-1. **§8** — **8.0–8.2 done**; continue **8.3 → 8.6** (branch `222-test-performance-review`).
-2. **§10** — documentation pass (Folium → Leaflet architecture), last.
-3. Close **#222** when §8 + §10 + smoke are satisfied.
+1. **§8** — merge **PR #236**; manual smoke per regression checklist.
+2. Close **#222** for §8 scope after merge + smoke (§10 not required for §8 close).
+3. **§10** — documentation pass (Folium → Leaflet architecture), can follow §8 close.
 
 **Recover lost §17 detail:** `git show bdfa70f1^:explorer/components/all_locations_map/TODO.md` (section “## 15. Popup typography…” before Folium-removal commit collapsed it; current **§15** is payload cache).

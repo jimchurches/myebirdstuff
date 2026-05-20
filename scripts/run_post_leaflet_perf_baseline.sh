@@ -56,7 +56,7 @@ if [[ -n "${EXPLORER_E2E_DATASET_CSV:-}" ]]; then
 else
   echo "Running perf E2E (fixture) → $ARCHIVE"
 fi
-pytest tests/explorer/test_map_perf_e2e.py::test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling --perf -q
+pytest tests/explorer/test_map_perf_e2e.py --perf -q
 
 echo ""
 echo "Snapshot + aggregate:"

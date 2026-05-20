@@ -52,3 +52,19 @@ def test_journey_switch_all_locations_to_lifers_and_back(streamlit_app_url: str)
             must_contain=['class="pebird-map-banner__title">All locations</span>'],
         )
         _banner_all(html2)
+
+
+def test_journey_species_locations_mode_shows_awaiting_selection_banner(
+    streamlit_app_url: str,
+) -> None:
+    """Species map mode without a pick shows the awaiting-selection banner."""
+
+    with launch_chromium_or_skip() as browser:
+        page = browser.new_page()
+        page.goto(streamlit_app_url, wait_until="domcontentloaded")
+        page.get_by_text("Personal eBird Explorer").wait_for(timeout=20000)
+        choose_map_view_mode(page, "Species locations")
+        wait_for_pebird_map_markup(
+            page,
+            must_contain=['class="pebird-map-banner__title">Species locations</span>'],
+        )

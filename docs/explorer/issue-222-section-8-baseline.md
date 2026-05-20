@@ -76,17 +76,18 @@ Fixture is **tiny**; use it for CI guardrails and cache-hit behaviour, not produ
 
 ---
 
-## Species / Family map modes
+## Species / Family map modes (automated fixture journey)
 
-Automated perf journey today covers **All locations** + **Lifer locations** only. For **Species locations** and **Family locations**, run manually with `EXPLORER_PERF=1` and `EXPLORER_PERF_LOG_FILE`, then:
+**Test:** `test_map_perf_fixture_journey_species_and_family_payload_stages` (`pytest …/test_map_perf_e2e.py --perf`).
+
+**Journey:** cold **All locations** → **Species locations** (awaiting-selection banner) → **Family locations** (first recorded family when taxonomy loaded, else empty-map path).
+
+**Asserted in JSONL:** at least one cold `map.species_leaflet.payload` and `map.family_leaflet.payload` miss (`payload_cache_hit: false`). Ceilings in `stage_ceilings.json`.
+
+Re-run with the baseline script (both perf tests):
 
 ```bash
-python scripts/snapshot_explorer_perf_log.py /path/to/perf.jsonl --label post-leaflet-species-manual
-python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots \
-  --glob 'post-leaflet-*.jsonl' \
-  --stage map.species_leaflet.payload \
-  --stage map.family_leaflet.payload \
-  --extra-key payload_cache_hit --extra-key marker_count --extra-key popup_build_total_ms
+./scripts/run_post_leaflet_perf_baseline.sh
 ```
 
 ---

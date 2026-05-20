@@ -191,6 +191,43 @@ def choose_map_view_mode(page: Any, label: str) -> None:
     page.get_by_role("option", name=label).click()
 
 
+# Integration fixture species (Whoosh + map banner title use common name).
+E2E_FIXTURE_SPECIES_COMMON = "Grey Teal"
+
+
+def choose_species_by_common_name(page: Any, common_name: str) -> None:
+    """Select a species in **Species locations** via the sidebar searchbox."""
+    choose_map_view_mode(page, "Species locations")
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    sidebar.get_by_text("Show only selected species", exact=True).wait_for(timeout=20_000)
+    # streamlit-searchbox uses a Base Web combobox (not a plain st.text_input).
+    search = sidebar.get_by_role("combobox")
+    search.wait_for(state="visible", timeout=20_000)
+    search.click()
+    search.fill(common_name)
+    page.wait_for_timeout(500)
+    search.press("ArrowDown")
+    search.press("Enter")
+
+
+def choose_first_recorded_family(page: Any) -> str:
+    """Select the first non-empty **Family** in **Family locations**; return its label."""
+    choose_map_view_mode(page, "Family locations")
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    sidebar.get_by_text("Family", exact=True).wait_for(timeout=20_000)
+    # Map view is the first sidebar selectbox; Family picker is the second in this mode.
+    family_select = sidebar.locator('[data-testid="stSelectbox"]').nth(1)
+    family_select.click()
+    options = page.get_by_role("option")
+    count = options.count()
+    for i in range(count):
+        label = (options.nth(i).inner_text() or "").strip()
+        if label and not label.startswith("—"):
+            options.nth(i).click()
+            return label
+    raise AssertionError("No family options in sidebar (taxonomy may not have loaded)")
+
+
 @contextlib.contextmanager
 def launch_chromium_or_skip():
     try:
