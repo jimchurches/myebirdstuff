@@ -42,6 +42,12 @@ MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
 # all cluster children in the layer so the map matches expectations (refs #166).
 MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS = False
 
+# Marker cluster — Lifer locations map (same plugin; tunables split for independent tuning, refs #240).
+MAP_LIFER_LOCATION_CLUSTER_MAX_RADIUS_PX = 40
+MAP_LIFER_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 7
+MAP_LIFER_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
+MAP_LIFER_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS = False
+
 # Debug-only map overlay (live zoom readout). Listed in :func:`debug_defaults_enabled` for CI warnings.
 MAP_DEBUG_SHOW_ZOOM_LEVEL = False
 

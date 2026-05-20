@@ -62,10 +62,12 @@ Warm reruns with unchanged inputs skip GeoJSON and overlay HTML rebuilds (`paylo
 
 ## Marker clustering
 
-Clustering uses **Leaflet.markercluster** with defaults aligned to `explorer/app/streamlit/defaults.py`
-(max radius 40px, clustering disables from zoom 9, `removeOutsideVisibleBounds` false).
+Clustering uses **Leaflet.markercluster** with tunables in `explorer/app/streamlit/defaults.py`:
 
-The sidebar **Group nearby pins** toggle is passed as `cluster_options.enabled`; cluster options are mixed into the GeoJSON **revision** hash so toggling clustering bumps revision and reloads the overlay.
+- **All locations** — `MAP_DEFAULT_LOCATION_CLUSTER_*` (max radius 40px, clustering disables from zoom 9, `removeOutsideVisibleBounds` false).
+- **Lifer locations** — `MAP_LIFER_LOCATION_CLUSTER_*` (clustering disables from zoom 7; max radius 40px; adjust independently).
+
+The sidebar **Group nearby markers** toggle is passed as `cluster_options.enabled` on All locations and Lifer locations (Lifer reads the same persisted preference when the toggle is not shown). Cluster options are mixed into the GeoJSON **revision** hash so toggling clustering bumps revision and reloads the overlay.
 
 **Pins:** `circle_marker_style` comes from Python via `all_locations_marker_style.circle_marker_style_for_all_locations_map` (sidebar marker scheme index).
 

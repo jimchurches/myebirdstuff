@@ -24,7 +24,7 @@ MAP_BASEMAP_DEFAULT = "default"
 MAP_HEIGHT_PX_DEFAULT = 720
 MAP_HEIGHT_PX_MIN = 440
 MAP_HEIGHT_PX_MAX = 1200
-# All-locations map only: group nearby pins (Leaflet.markercluster). Species / lifer maps never cluster.
+# All locations + Lifer locations: group nearby markers (Leaflet.markercluster). Species / family: off.
 MAP_CLUSTER_ALL_LOCATIONS_DEFAULT = True
 # Bundled map-marker palette index (``1``…``3``); see ``active_map_marker_colour_scheme`` in defaults.
 MAP_MARKER_COLOUR_SCHEME_DEFAULT = 1
