@@ -4,7 +4,7 @@ Per-pin ``popup_v1`` is structured data for one TS template (not HTML×N). With 
 ``visited.entries`` mirrors classic visit-list rows (parallel to ``build_visit_info_html``).
 
 Optional ``visits_inline_max`` trims inlined checklist rows per pin (lifelist link remains); pairs with
-env ``EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP`` (same knob as the original custom-map spike).
+env ``EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP`` (optional dev cap on inline visit rows per pin).
 
 Streamlit-side payload caching avoids rebuilding GeoJSON on warm reruns when the cache key and revision
 extras match — see ``ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY`` in :mod:`explorer.app.streamlit.app_constants`.

@@ -49,7 +49,7 @@ def render_all_locations_map_component(
 
     *circle_marker_style* — resolved pin fill/stroke/radius for GeoJSON circle markers.
 
-    *cluster_icon_style* — optional tier rgba dict from :func:`~explorer.core.all_locations_experimental_marker_style.cluster_icon_style_for_all_locations_map` for MarkerCluster ``iconCreateFunction`` (Folium parity). Empty dict uses plugin default cluster colours.
+    *cluster_icon_style* — optional tier rgba dict from :func:`~explorer.core.all_locations_marker_style.cluster_icon_style_for_all_locations_map` for MarkerCluster ``iconCreateFunction``. Empty dict uses plugin default cluster colours.
 
     *viewport* — camera recipe from :func:`~explorer.core.map_leaflet_viewport.all_locations_leaflet_viewport_recipe` (Folium initial view / fit bounds parity). Omit or empty dict to fall back to GeoJSON-bounds padding in the iframe.
 

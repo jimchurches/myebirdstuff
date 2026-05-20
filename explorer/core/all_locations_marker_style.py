@@ -30,6 +30,10 @@ def cluster_icon_style_for_all_locations_map(colour_scheme_index: int) -> dict[s
     return all_locations_cluster_icon_style_payload(sch)
 
 
-def experimental_default_scheme_circle_marker_props() -> dict[str, Any]:
-    """Preset **1** (Eucalypt) — kept for spike-era callers."""
+def default_scheme_circle_marker_props() -> dict[str, Any]:
+    """Preset **1** (Eucalypt) circle marker props."""
     return circle_marker_style_for_all_locations_map(1)
+
+
+# Spike-era name; keep alias for any external callers.
+experimental_default_scheme_circle_marker_props = default_scheme_circle_marker_props
