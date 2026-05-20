@@ -156,8 +156,8 @@ STREAMLIT_POPUP_SORT_ORDER_KEY = "streamlit_popup_sort_order"
 STREAMLIT_POPUP_SCROLL_HINT_KEY = "streamlit_popup_scroll_hint"
 STREAMLIT_MARK_LIFER_KEY = "streamlit_mark_lifer"
 STREAMLIT_MARK_LAST_SEEN_KEY = "streamlit_mark_last_seen"
-# All-locations map only (species / lifer maps never cluster).
-# Runtime: sidebar toggle; map build + cache signature.
+# All locations + Lifer locations maps (species / family maps never cluster).
+# Runtime: sidebar toggle on All locations; Lifer reads same preference. Map build + cache signature.
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
 # All locations map: single control — fit all / centre of gravity / per-country fit (refs #166).
 STREAMLIT_ALL_LOCATIONS_SCOPE_KEY = "streamlit_all_locations_scope"

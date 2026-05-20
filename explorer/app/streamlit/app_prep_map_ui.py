@@ -136,6 +136,10 @@ from explorer.app.streamlit.defaults import (
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
     MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
     MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+    MAP_LIFER_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+    MAP_LIFER_LOCATION_CLUSTER_MAX_RADIUS_PX,
+    MAP_LIFER_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
+    MAP_LIFER_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
     MAP_SPECIES_DEFAULT_CENTER_LAT,
     MAP_SPECIES_DEFAULT_CENTER_LON,
     MAP_SPECIES_DEFAULT_ZOOM,
@@ -984,17 +988,24 @@ def render_prep_spinner_and_map_tab(
                         result_warning = None
                     elif use_lifer_leaflet:
                         result_warning = None
+                        leaflet_cluster_icon_style = cluster_icon_style_for_all_locations_map(
+                            int(family_colour_scheme)
+                        )
                         leaflet_cluster_opts = {
-                            "enabled": False,
-                            "max_cluster_radius": MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
-                            "disable_clustering_at_zoom": MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
-                            "spiderfy_on_max_zoom": MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+                            "enabled": bool(
+                                st.session_state.get(
+                                    STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
+                                    MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+                                )
+                            ),
+                            "max_cluster_radius": MAP_LIFER_LOCATION_CLUSTER_MAX_RADIUS_PX,
+                            "disable_clustering_at_zoom": MAP_LIFER_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
+                            "spiderfy_on_max_zoom": MAP_LIFER_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
                             "remove_outside_visible_bounds": (
-                                MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS
+                                MAP_LIFER_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS
                             ),
                         }
                         leaflet_circle_style = {}
-                        leaflet_cluster_icon_style = {}
                         subsp = bool(st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False))
                         revision_bundle = {
                             "lifer_leaflet": True,
@@ -1002,6 +1013,8 @@ def render_prep_spinner_and_map_tab(
                             "subspecies": subsp,
                             "scheme": int(family_colour_scheme),
                             "popup_sort": str(popup_sort_order),
+                            "cluster": leaflet_cluster_opts,
+                            "cluster_icon_style": leaflet_cluster_icon_style,
                         }
                         revision_extra_json = json.dumps(revision_bundle, sort_keys=True)
                         payload_cache_key = (_ck, revision_extra_json)

@@ -12,7 +12,8 @@ Run before merging refactor branches to `main`.
 ## Map
 - Visit times: if the export has missing times, popups may show **23:59** as a documented placeholder — see [explorer README — Missing checklist times](README.md#missing-checklist-times-synthetic-2359)
 - **Map view** dropdown: All locations / Species locations / Lifer locations / Family locations (#71, #222)
-- Lifer-only mode: one pin per lifer site, lifer pin style, popups list lifers at site + visits
+- Lifer-only mode: one marker per lifer site, lifer marker style, popups list lifers at site + visits
+- **Lifer locations** marker clustering: respects **Group nearby markers** / Settings (on by default); tune via `MAP_LIFER_LOCATION_CLUSTER_*` in `defaults.py` if needed
 - Renders all locations
 - Species search works (matches, highlighting, clear) when **Selected species** is active
 - Species overlay works
