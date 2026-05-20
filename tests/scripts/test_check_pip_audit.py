@@ -1,4 +1,8 @@
-"""Tests for scripts/check_pip_audit.py policy evaluation."""
+"""Tests for scripts/check_pip_audit.py policy evaluation.
+
+Live pip-audit runs are covered by the ``dependency-audit`` CI job, not pytest
+(the unit-tests job does not install pip-audit).
+"""
 
 from __future__ import annotations
 
@@ -77,15 +81,3 @@ def test_fails_on_unlisted_vulnerability() -> None:
     )
     assert code == 1
     assert any("CVE-2099-0001" in line for line in lines)
-
-
-def test_integration_against_repo_requirements() -> None:
-    """Live pip-audit run; joblib deferral should pass while no fix is published."""
-    proc = __import__("subprocess").run(
-        [sys.executable, str(_REPO / "scripts" / "check_pip_audit.py")],
-        cwd=_REPO,
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    assert proc.returncode == 0, proc.stderr + proc.stdout
