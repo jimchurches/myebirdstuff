@@ -13,15 +13,18 @@ Please include enough detail to reproduce or understand the issue. We will treat
 
 ## Dependency scanning (CI)
 
-Continuous integration runs **`pip-audit`** against the repository’s requirement files as defined in [.github/workflows/tests.yml](.github/workflows/tests.yml) (exact `-r` list may change as dependencies evolve).
+Continuous integration runs **`pip-audit`** via [`scripts/check_pip_audit.py`](scripts/check_pip_audit.py) against the repository’s requirement files (see [.github/workflows/tests.yml](.github/workflows/tests.yml)).
 
-Policy is to fail on reported vulnerabilities so remediation stays explicit in pull requests. Documented ignores are allowed when there is no fixed release and the upstream advisory is disputed.
+Policy:
 
-### Ignored advisories (CI)
+- **Fail** on any reported vulnerability that is not explicitly deferred.
+- **Defer** only advisories listed in `IGNORE_UNTIL_FIX_AVAILABLE` inside that script, and **only while** the audit database reports **no** `fix_versions` for that ID. When a fix appears on PyPI, CI **fails** with instructions to upgrade and remove the deferral entry.
+
+### Deferred until fix available (CI)
 
 | ID | Package | Rationale |
 |----|---------|-----------|
-| `PYSEC-2024-277` | `joblib` (transitive via `scikit-learn`) | CVE-2024-34997: supplier-disputed; `NumpyArrayWrapper.read_array` is for trusted cache IPC only. No fix version on PyPI; latest `joblib` 1.5.3 still flagged. Revisit if a patched release ships or we drop the `scikit-learn` dependency. |
+| `PYSEC-2024-277` | `joblib` (transitive via `scikit-learn`) | CVE-2024-34997: supplier-disputed; `NumpyArrayWrapper.read_array` is for trusted cache IPC only. No fix on PyPI yet. CI auto-fails once `fix_versions` is non-empty. |
 
 ---
 
