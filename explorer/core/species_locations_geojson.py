@@ -127,6 +127,10 @@ def build_species_locations_geojson_payload(
     visit_marker_scheme: MapMarkerColourScheme,
     popup_visit_dates_ascending: bool,
     revision_extra: str = "",
+    lifer_lookup_df: pd.DataFrame | None = None,
+    filter_by_date: bool = False,
+    filter_start_date: str = "",
+    filter_end_date: str = "",
 ) -> tuple[str | None, dict[str, Any] | None, str | None, list[list[float]], set[str], LeafletGeoJsonBuildMetrics]:
     """Return ``(revision, geojson, warning, framing_pairs_lat_lon, pin_roles_present)``.
 
@@ -153,6 +157,7 @@ def build_species_locations_geojson_payload(
         lid: grp for lid, grp in filtered.groupby("Location ID", sort=False)
     }
     seen_location_ids = set(filtered["Location ID"])
+    # True lifer/last-seen sites come from the full export; pin visibility is resolved separately.
     lifer_location, last_seen_location = resolve_lifer_last_seen(
         sci,
         seen_location_ids,
@@ -163,6 +168,10 @@ def build_species_locations_geojson_payload(
         base_species_fn=base_species_fn,
         mark_lifer=mark_lifer,
         mark_last_seen=mark_last_seen,
+        lifer_lookup_df=lifer_lookup_df,
+        filter_by_date=filter_by_date,
+        filter_start_date=filter_start_date,
+        filter_end_date=filter_end_date,
     )
     location_data_local = classify_locations(
         location_data, seen_location_ids, lifer_location, last_seen_location

@@ -50,6 +50,7 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
     STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY,
     STREAMLIT_MAP_DATE_FILTER_KEY,
+    STREAMLIT_MAP_DATE_RANGE_KEY,
     STREAMLIT_RANKINGS_TOP_N_KEY,
 )
 from explorer.app.streamlit.app_go_to_gps_ui import go_to_gps_pin_from_session
@@ -1196,6 +1197,18 @@ def render_prep_spinner_and_map_tab(
                                 popup_visit_dates_ascending = (
                                     str(popup_sort_order).strip().lower() != "descending"
                                 )
+                                _species_filter_by_date = False
+                                _species_filter_start = ""
+                                _species_filter_end = ""
+                                # Species locations: all-time lifer/last-seen defs; pin dates gated by filter range.
+                                if map_view_mode == "species" and bool(
+                                    st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False)
+                                ):
+                                    _dr = st.session_state.get(STREAMLIT_MAP_DATE_RANGE_KEY)
+                                    if isinstance(_dr, tuple) and len(_dr) == 2:
+                                        _species_filter_by_date = True
+                                        _species_filter_start = _dr[0].isoformat()
+                                        _species_filter_end = _dr[1].isoformat()
                                 (
                                     leaflet_revision,
                                     leaflet_geojson,
@@ -1221,6 +1234,10 @@ def render_prep_spinner_and_map_tab(
                                     visit_marker_scheme=_visit_sch,
                                     popup_visit_dates_ascending=popup_visit_dates_ascending,
                                     revision_extra=revision_extra_json,
+                                    lifer_lookup_df=ctx["lifer_lookup_df"],
+                                    filter_by_date=_species_filter_by_date,
+                                    filter_start_date=_species_filter_start,
+                                    filter_end_date=_species_filter_end,
                                 )
                                 merge_leaflet_build_metrics_into(_perf_species, payload_build_metrics)
                                 if sp_warn:

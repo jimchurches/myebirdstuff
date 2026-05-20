@@ -79,6 +79,9 @@ from explorer.app.streamlit.map_working import (
 from explorer.core.explorer_paths import settings_yaml_path_for_source
 from explorer.app.streamlit.perf_instrumentation import render_explorer_perf_sidebar_panel
 from explorer.app.streamlit.streamlit_ui_constants import (
+    MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION,
+    MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION,
+    MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION,
     SPECIES_SEARCH_CAPTION,
     SPECIES_SEARCH_HELP_EXPANDER_LABEL,
 )
@@ -203,7 +206,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             date_filter_on_effective = st.toggle(
                 "Date filter",
                 key=STREAMLIT_MAP_DATE_FILTER_KEY,
-                help="Filters the map to a selected date range.",
             )
             if not date_filter_on_effective:
                 date_range_sel = None
@@ -230,6 +232,12 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                     date_range_sel = (dr[0], dr[1])
                 else:
                     date_range_sel = (d_inception, today)
+
+                if map_view_mode == "species":
+                    st.caption(MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION)
+                    st.caption(MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION)
+                else:
+                    st.caption(MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION)
 
             st.session_state[PERSIST_MAP_DATE_FILTER_KEY] = date_filter_on_effective
             if date_filter_on_effective and date_range_sel is not None:

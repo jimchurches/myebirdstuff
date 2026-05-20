@@ -16,6 +16,10 @@ import html as _html_module
 
 import pandas as pd
 
+from explorer.core.lifer_last_seen_prep import (
+    observation_date_within_filter,
+    subset_lifer_lookup_for_species,
+)
 from explorer.core.stats import format_observed_count_for_map_popup
 from explorer.app.streamlit.defaults import (
     MAP_LEGEND_PIN_BORDER_PX,
@@ -996,6 +1000,13 @@ def popup_scroll_script(scroll_hint, scroll_to_bottom):
 # ---------------------------------------------------------------------------
 # Map data preparation
 # ---------------------------------------------------------------------------
+#
+# Species locations — lifer / last-seen pins:
+# True lifer and last-seen sites and dates come from the full export, not the date-filtered
+# working DataFrame. The date filter must not redefine lifers as “first sighting in range”. When
+# the filter is on, pins appear only if the true lifer / last-seen checklist date is within the
+# selected range. The Lifer locations map is separate (all-time lifer sites; no date filter).
+
 
 def resolve_lifer_last_seen(
     selected_species,
@@ -1007,34 +1018,63 @@ def resolve_lifer_last_seen(
     base_species_fn,
     mark_lifer=True,
     mark_last_seen=True,
+    *,
+    lifer_lookup_df=None,
+    filter_by_date: bool = False,
+    filter_start_date: str = "",
+    filter_end_date: str = "",
 ):
     """Resolve which location IDs are the lifer and last-seen for a species.
 
     Uses taxon-level lookup for subspecies (scientific name with 3+ parts),
-    falling back to the base-species lookup.  Only returns IDs that are in
-    *seen_location_ids*.  ``last_seen_location`` is never the same as
-    ``lifer_location``.
+    falling back to the base-species lookup.  ``last_seen_location`` is never
+    the same as ``lifer_location``.
 
-    Args:
-        selected_species: Scientific name of the selected species.
-        seen_location_ids: Set of Location IDs where the species was observed.
-        lifer_lookup: Dict mapping base species -> lifer Location ID.
-        last_seen_lookup: Dict mapping base species -> last-seen Location ID.
-        lifer_lookup_taxon: Dict mapping taxon key -> lifer Location ID.
-        last_seen_lookup_taxon: Dict mapping taxon key -> last-seen Location ID.
-        base_species_fn: Callable to extract base species from a scientific name.
-        mark_lifer: Whether to resolve lifer location.
-        mark_last_seen: Whether to resolve last-seen location.
+    When *filter_by_date* is false, pins are shown only when the true lifer /
+    last-seen location is in *seen_location_ids* (locations with filtered
+    sightings).
 
-    Returns:
-        ``(lifer_location, last_seen_location)`` — each is a Location ID
-        string or None.
+    When *filter_by_date* is true, *lifer_lookup_df* must be supplied (full export,
+    not date-filtered).  Pins are shown only when the true lifer / last-seen
+    **checklist date** falls within ``[filter_start_date, filter_end_date]``
+    (inclusive), regardless of other visits in the filtered window.
     """
     lifer_location = None
     last_seen_location = None
     sci_parts = (selected_species or "").strip().split()
     is_subspecies = len(sci_parts) >= 3
     taxon_key = selected_species.strip().lower() if selected_species else None
+
+    use_date_gate = bool(
+        filter_by_date
+        and filter_start_date
+        and filter_end_date
+        and lifer_lookup_df is not None
+        and not getattr(lifer_lookup_df, "empty", True)
+    )
+    species_subset = None
+    if use_date_gate:
+        species_subset = subset_lifer_lookup_for_species(
+            lifer_lookup_df, selected_species, base_species_fn
+        )
+
+    def _lifer_date_in_range() -> bool:
+        if species_subset is None or species_subset.empty:
+            return False
+        return observation_date_within_filter(
+            species_subset.iloc[0]["Date"],
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date,
+        )
+
+    def _last_seen_date_in_range() -> bool:
+        if species_subset is None or species_subset.empty:
+            return False
+        return observation_date_within_filter(
+            species_subset.iloc[-1]["Date"],
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date,
+        )
 
     if mark_lifer:
         true_lifer_loc = None
@@ -1043,8 +1083,12 @@ def resolve_lifer_last_seen(
         if true_lifer_loc is None and sci_parts:
             base = base_species_fn(selected_species)
             true_lifer_loc = lifer_lookup.get(base) if base else None
-        if true_lifer_loc in seen_location_ids:
-            lifer_location = true_lifer_loc
+        if true_lifer_loc is not None:
+            if use_date_gate:
+                if _lifer_date_in_range():
+                    lifer_location = true_lifer_loc
+            elif true_lifer_loc in seen_location_ids:
+                lifer_location = true_lifer_loc
 
     if mark_last_seen:
         true_last_loc = None
@@ -1053,8 +1097,12 @@ def resolve_lifer_last_seen(
         if true_last_loc is None and sci_parts:
             base = base_species_fn(selected_species)
             true_last_loc = last_seen_lookup.get(base) if base else None
-        if true_last_loc in seen_location_ids and true_last_loc != lifer_location:
-            last_seen_location = true_last_loc
+        if true_last_loc is not None and true_last_loc != lifer_location:
+            if use_date_gate:
+                if _last_seen_date_in_range():
+                    last_seen_location = true_last_loc
+            elif true_last_loc in seen_location_ids:
+                last_seen_location = true_last_loc
 
     return lifer_location, last_seen_location
 

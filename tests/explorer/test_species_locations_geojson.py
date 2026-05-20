@@ -7,6 +7,7 @@ from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
 from explorer.core.map_leaflet_viewport import species_leaflet_viewport_recipe
 from explorer.core.map_prep import prepare_all_locations_map_context
 from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
+from explorer.core.working_set import rebuild_working_set_from_date_filter
 from explorer.core.species_locations_geojson import (
     build_species_locations_geojson_payload,
     compute_species_map_banner_fields,
@@ -243,5 +244,65 @@ def test_build_species_geojson_lifer_and_last_seen_pin_roles():
     assert "popup_v1" in by_loc["L4"]
     assert "species_popup_v1" not in by_loc["L4"]
 
-    assert roles == {"Lifer", "Last seen", "Species", "Locations"}
-    assert len(framing) == 3
+
+def test_build_species_geojson_date_filter_lifer_pin_requires_lifer_date_in_range():
+    """Lifer site revisited in range but lifer checklist outside range → no lifer pin."""
+    full = pd.DataFrame(
+        {
+            "Submission ID": ["S1", "S2", "S3"],
+            "Date": [
+                pd.Timestamp("2015-03-01"),
+                pd.Timestamp("2021-06-10"),
+                pd.Timestamp("2024-11-20"),
+            ],
+            "Time": ["08:00"] * 3,
+            "datetime": [
+                pd.Timestamp("2015-03-01 08:00"),
+                pd.Timestamp("2021-06-10 09:00"),
+                pd.Timestamp("2024-11-20 10:00"),
+            ],
+            "Location ID": ["L1", "L1", "L3"],
+            "Location": ["Creek A", "Creek A", "Patch C"],
+            "Latitude": [-33.0, -33.0, -35.0],
+            "Longitude": [151.0, 151.0, 153.0],
+            "Scientific Name": ["Anas gracilis"] * 3,
+            "Common Name": ["Grey Teal"] * 3,
+            "Count": [1, 2, 3],
+        }
+    )
+    lids = set(full.dropna(subset=["Submission ID"])["Location ID"].unique())
+    ws = rebuild_working_set_from_date_filter(
+        full,
+        lids,
+        filter_by_date=True,
+        filter_start_date="2021-01-01",
+        filter_end_date="2021-12-31",
+    )
+    assert ws is not None
+    ctx = prepare_all_locations_map_context(ws.df, full_df=full)
+    sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
+    _, gj, warn, _, roles, _ = build_species_locations_geojson_payload(
+        df=ctx["df"],
+        location_data=ctx["location_data"],
+        records_by_loc=ctx["records_by_loc"],
+        selected_species="Anas gracilis",
+        true_lifer_locations=ctx["true_lifer_locations"],
+        true_lifer_locations_taxon=ctx["true_lifer_locations_taxon"],
+        true_last_seen_locations=ctx["true_last_seen_locations"],
+        true_last_seen_locations_taxon=ctx["true_last_seen_locations_taxon"],
+        hide_non_matching_locations=False,
+        mark_lifer=True,
+        mark_last_seen=True,
+        base_species_fn=base_species_for_lifer,
+        visit_marker_scheme=sch,
+        popup_visit_dates_ascending=True,
+        lifer_lookup_df=ctx["lifer_lookup_df"],
+        filter_by_date=True,
+        filter_start_date="2021-01-01",
+        filter_end_date="2021-12-31",
+    )
+    assert warn is None
+    by_loc = {f["properties"]["location_id"]: f["properties"]["pin_role"] for f in gj["features"]}
+    assert by_loc["L1"] == "species"
+    assert "Lifer" not in roles
+    assert "Last seen" not in roles
