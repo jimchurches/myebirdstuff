@@ -1406,16 +1406,17 @@ def render_prep_spinner_and_map_tab(
                         )
 
         with st.spinner(TAB_PREP_SPINNER_TEXT):
-            with perf_span("prep.cache_checklist_stats"):
+            with perf_span("prep.cache_checklist_stats.working"):
                 checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
-            with perf_span("prep.cache_maint_rankings_sex_notation"):
-                top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))
-                hc_sort = str(st.session_state.get(STREAMLIT_HIGH_COUNT_SORT_KEY))
-                hc_tb = str(st.session_state.get(STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY))
-                if df_full is not None and not df_full.empty:
+            top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))
+            hc_sort = str(st.session_state.get(STREAMLIT_HIGH_COUNT_SORT_KEY))
+            hc_tb = str(st.session_state.get(STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY))
+            if df_full is not None and not df_full.empty:
+                with perf_span("prep.cache_checklist_stats.full_export"):
                     maint_full_payload = cached_full_export_checklist_stats_payload(
                         df_full, top_n, hc_sort, hc_tb, tax_locale_effective
                     )
+                with perf_span("prep.cache_rankings_bundle"):
                     rankings_bundle = build_rankings_tab_bundle(
                         df_full,
                         country_sort=st.session_state.get(STREAMLIT_COUNTRY_TAB_SORT_KEY),
@@ -1423,12 +1424,12 @@ def render_prep_spinner_and_map_tab(
                         high_count_sort=hc_sort,
                         high_count_tie_break=hc_tb,
                     )
-                else:
-                    maint_full_payload = None
-                    rankings_bundle = {}
-                sex_notation_by_year: dict = (
-                    {} if df_full.empty else cached_sex_notation_by_year(df_full)
-                )
+                with perf_span("prep.cache_sex_notation_by_year"):
+                    sex_notation_by_year: dict = cached_sex_notation_by_year(df_full)
+            else:
+                maint_full_payload = None
+                rankings_bundle = {}
+                sex_notation_by_year = {}
 
             with perf_span("prep.tab_session_sync"):
                 sync_checklist_stats_tab_session_inputs(checklist_payload)

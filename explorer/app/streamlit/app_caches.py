@@ -13,19 +13,37 @@ from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_TOP_N_
 
 
 @st.cache_data(show_spinner=False)
+def _cached_checklist_stats_payload_impl(
+    df: pd.DataFrame,
+    top_n_limit: int,
+    high_count_sort: str,
+    high_count_tie_break: str,
+    taxonomy_locale: str,
+) -> ChecklistStatsPayload | None:
+    """Single Streamlit cache for all checklist-stats payload builds (working + full export)."""
+    return compute_checklist_stats_payload(
+        df,
+        top_n_limit,
+        high_count_sort=high_count_sort,
+        high_count_tie_break=high_count_tie_break,
+        taxonomy_locale=taxonomy_locale,
+    )
+
+
 def cached_checklist_stats_payload(
     df: pd.DataFrame,
     taxonomy_locale: str,
 ) -> ChecklistStatsPayload | None:
     """Structured checklist stats for the Checklist Statistics tab (refs #68)."""
-    return compute_checklist_stats_payload(
+    return _cached_checklist_stats_payload_impl(
         df,
         CHECKLIST_STATS_TOP_N_TABLE_LIMIT,
-        taxonomy_locale=taxonomy_locale,
+        "total_count",
+        "last",
+        taxonomy_locale,
     )
 
 
-@st.cache_data(show_spinner=False)
 def cached_full_export_checklist_stats_payload(
     df: pd.DataFrame,
     top_n_limit: int,
@@ -36,13 +54,15 @@ def cached_full_export_checklist_stats_payload(
     """Full-export stats payload shared by Maintenance + Rankings (one compute per cache key).
 
     *top_n_limit* and high-count options match **Settings → Tables & lists** and Rankings.
+    When arguments match :func:`cached_checklist_stats_payload` on the same *df*, Streamlit
+    reuses the same cached result (no duplicate ~compute_rankings pass).
     """
-    return compute_checklist_stats_payload(
+    return _cached_checklist_stats_payload_impl(
         df,
         top_n_limit,
-        high_count_sort=high_count_sort,
-        high_count_tie_break=high_count_tie_break,
-        taxonomy_locale=taxonomy_locale,
+        high_count_sort,
+        high_count_tie_break,
+        taxonomy_locale,
     )
 
 
@@ -52,6 +72,21 @@ def cached_sex_notation_by_year(df: pd.DataFrame) -> dict:
     from explorer.core.stats import get_sex_notation_by_year
 
     return get_sex_notation_by_year(df)
+
+
+@st.cache_data(show_spinner=False)
+def cached_map_maintenance_data(
+    loc_df: pd.DataFrame,
+    threshold_m: int,
+) -> tuple[list, list]:
+    """Exact- and near-duplicate location scan for the Maintenance tab (refs #79).
+
+    Cached on *loc_df* + *threshold_m* so fragment reruns do not repeat BallTree work.
+    """
+    from explorer.core.duplicate_checks import get_map_maintenance_data
+
+    exact_rows, near_pairs = get_map_maintenance_data(loc_df, threshold_m)
+    return exact_rows, near_pairs
 
 
 def full_location_data_for_maintenance(df: pd.DataFrame) -> pd.DataFrame:
