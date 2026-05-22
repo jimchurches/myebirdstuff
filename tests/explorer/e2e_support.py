@@ -210,6 +210,16 @@ def choose_species_by_common_name(page: Any, common_name: str) -> None:
     search.press("Enter")
 
 
+def choose_family_by_label(page: Any, family_label: str) -> None:
+    """Pick *family_label* in **Family locations** (sidebar Family selectbox)."""
+    choose_map_view_mode(page, "Family locations")
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    sidebar.get_by_text("Family", exact=True).wait_for(timeout=20_000)
+    family_select = sidebar.locator('[data-testid="stSelectbox"]').nth(1)
+    family_select.click()
+    page.get_by_role("option", name=family_label).click()
+
+
 def choose_first_recorded_family(page: Any) -> str:
     """Select the first non-empty **Family** in **Family locations**; return its label."""
     choose_map_view_mode(page, "Family locations")
