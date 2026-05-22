@@ -143,7 +143,7 @@ class MapWorkingContext:
 
 
 def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
-    """Map sidebar widgets, working set + species search, Folium cache invalidation on All↔Species."""
+    """Map sidebar widgets, working set + species search, Leaflet cache invalidation on All↔Species."""
     ensure_streamlit_map_basemap_height_keys()
     ensure_streamlit_map_marker_colour_scheme_keys()
 

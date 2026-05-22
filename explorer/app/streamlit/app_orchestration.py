@@ -18,7 +18,7 @@ Ordered flow:
 8. :func:`render_dashboard_shell` — title row, primary ``st.tabs``, compact tab CSS, prep spinner
    + Map tab (refs #130), then non-map tab fragments, then Settings.
 
-Prep + Folium run **after** ``st.tabs`` are created so loading indicators stay aligned with the
+Prep + Leaflet map embed run **after** ``st.tabs`` are created so loading indicators stay aligned with the
 tab row (refs #70, #130).
 """
 

@@ -111,7 +111,7 @@ def _sync_draft_text_from_pin() -> None:
 
 
 def render_go_to_gps_sidebar_expander() -> None:
-    """Collapsible lat/long fields + form actions; bumps Folium cache when pin is set or cleared."""
+    """Collapsible lat/long fields + form actions; bumps Leaflet mount nonce when pin is set or cleared."""
     from explorer.app.streamlit.app_map_working_ui import invalidate_map_embed_cache
 
     _pending = st.session_state.pop(_GO_TO_GPS_PENDING_DRAFT_UPDATE_KEY, None)

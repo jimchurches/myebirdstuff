@@ -780,42 +780,7 @@ def render_prep_spinner_and_map_tab(
                     use_lifer_leaflet = map_view_mode == "lifers"
                     use_species_leaflet = map_view_mode == "species"
                     _go_pin = go_to_gps_pin_from_session()
-                    _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
-                    _map_kw = {
-                        **ctx,
-                        "selected_species": overlay_sci,
-                        "selected_common_name": overlay_common,
-                        "map_style": map_style,
-                        "popup_sort_order": popup_sort_order,
-                        "popup_scroll_hint": popup_scroll_hint,
-                        "mark_lifer": mark_lifer,
-                        "mark_last_seen": mark_last_seen,
-                        "cluster_all_locations": bool(
-                            st.session_state.get(
-                                STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-                                MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-                            )
-                        ),
-                        # Banner: context + counts only; date filter remains in the sidebar.
-                        "date_filter_status": "",
-                        "species_url_fn": species_url_fn,
-                        "base_species_fn": base_species_for_lifer,
-                        "taxonomy_locale": tax_locale_effective,
-                        "popup_html_cache": st.session_state.get(POPUP_HTML_CACHE_KEY),
-                        "popup_fragment_cache": st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
-                        "filtered_by_loc_cache": st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
-                        "map_view_mode": map_view_mode,
-                        "hide_non_matching_locations": hide_nm,
-                        "show_subspecies_lifers": bool(
-                            st.session_state.get(STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY, False)
-                        ),
-                        "map_height_px": int(map_height),
-                        "visit_marker_scheme": _visit_sch,
-                        "species_blank_default_center": tuple(blank_viewport_recipe.get("center", [MAP_SPECIES_DEFAULT_CENTER_LAT, MAP_SPECIES_DEFAULT_CENTER_LON])),
-                        "species_blank_default_zoom": int(blank_viewport_recipe.get("zoom", MAP_SPECIES_DEFAULT_ZOOM)),
-                        "species_blank_viewport_recipe": blank_viewport_recipe,
-                        "go_to_gps_pin": _go_pin,
-                    }
+                    _scope = ALL_LOCATIONS_SCOPE_FOCUSED
                     if capture_all_locations_view:
                         _valid = {
                             ALL_LOCATIONS_FRAMING_FIT_ALL,
@@ -832,10 +797,6 @@ def render_prep_spinner_and_map_tab(
                         if _scope not in _valid:
                             _scope = ALL_LOCATIONS_SCOPE_FOCUSED
                             st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = _scope
-                        _map_kw["all_locations_scope"] = _scope
-                        _map_kw["all_locations_location_country"] = location_id_to_country_map(
-                            ctx["df"]
-                        )
                     _render_opts_sig = (
                         popup_sort_order,
                         popup_scroll_hint,

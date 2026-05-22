@@ -59,7 +59,7 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** Primary ``st.tabs`` first (``Map``, ``Families``, …; empty panels until filled). Prep + Folium embed run in a sidebar
+**Main tabs + sidebar:** Primary ``st.tabs`` first (``Map``, ``Families``, …; empty panels until filled). Prep + Leaflet map embed run in a sidebar
 bottom ``st.spinner`` (Map tab content is nested in script order so loading indicators stay aligned). Data tabs use
 ``@st.fragment`` where possible. One sidebar
 for map controls, export, and footer links (refs #70). Map sidebar + working set: :mod:`explorer.app.streamlit.app_map_working_ui`
