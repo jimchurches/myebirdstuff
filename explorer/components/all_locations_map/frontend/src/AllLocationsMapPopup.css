@@ -292,17 +292,6 @@
   margin-top: 0.35rem;
 }
 
-.pebird-map-popup__trunc-hint {
-  margin-top: 0.55rem;
-  color: var(--pebird-ui-muted);
-  font-size: calc(1em - 2px);
-  line-height: 1.35;
-}
-
-.pebird-map-popup__trunc-hint a {
-  font-weight: 400;
-}
-
 /* Go to GPS — Folium ``_apply_go_to_gps_pin_view`` red pin. */
 .all-locations-gps-marker {
   background: transparent !important;

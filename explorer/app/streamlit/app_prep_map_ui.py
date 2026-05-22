@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from typing import Any, Callable, Literal
 
 import streamlit as st
@@ -581,16 +580,6 @@ def render_prep_spinner_and_map_tab(
                         go_to_gps_pin=_go_pin,
                     )
                     if use_all_locations_leaflet:
-                        raw_vis = str(
-                            os.environ.get("EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP", "") or ""
-                        ).strip()
-                        visits_inline_max: int | None = None
-                        if raw_vis:
-                            try:
-                                n_vis = int(raw_vis)
-                                visits_inline_max = n_vis if n_vis > 0 else None
-                            except ValueError:
-                                visits_inline_max = None
                         leaflet_circle_style = circle_marker_style_for_all_locations_map(
                             int(family_colour_scheme)
                         )
@@ -625,12 +614,11 @@ def render_prep_spinner_and_map_tab(
                             "viewport": leaflet_viewport,
                         }
                         revision_extra_json = json.dumps(revision_bundle, sort_keys=True)
-                        payload_cache_key = (_ck, revision_extra_json, visits_inline_max)
+                        payload_cache_key = (_ck, revision_extra_json)
                         _perf_leaflet: dict[str, Any] = {
                             "embed": "all_locations_leaflet",
                             "map_view_mode": map_view_mode,
                             "payload_cache_hit": False,
-                            "visits_inline_cap": visits_inline_max,
                         }
                         with perf_span("map.all_locations_leaflet.payload", extra=_perf_leaflet):
                             cached_pl = leaflet_payload_cache_lookup(
@@ -663,7 +651,6 @@ def render_prep_spinner_and_map_tab(
                                     checklist_counts_by_location=counts.to_dict(),
                                     records_by_location=ctx["records_by_loc"],
                                     popup_visit_dates_ascending=popup_visit_dates_ascending,
-                                    visits_inline_max=visits_inline_max,
                                     omit_pin_colour=True,
                                     revision_extra=revision_extra_json,
                                 )

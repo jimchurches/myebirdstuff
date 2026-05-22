@@ -297,9 +297,6 @@ interface PopupPayloadV1 {
     label?: string;
     entries?: PopupLinkV1[];
   };
-  visited_truncated?: boolean;
-  visited_total?: number;
-  visited_omitted?: number;
 }
 
 interface MapArgs {
@@ -617,14 +614,7 @@ function parsePopupV1(raw: unknown): PopupPayloadV1 | null {
       }));
     visited = { label: vLabel, entries };
   }
-  const visited_truncated = o.visited_truncated === true;
-  const visited_total =
-    typeof o.visited_total === "number" && Number.isFinite(o.visited_total) ? o.visited_total : undefined;
-  const visited_omitted =
-    typeof o.visited_omitted === "number" && Number.isFinite(o.visited_omitted)
-      ? o.visited_omitted
-      : undefined;
-  return { v: 1, summary_lines, links, visited, visited_truncated, visited_total, visited_omitted };
+  return { v: 1, summary_lines, links, visited };
 }
 
 /** Lifer map — structured lines from ``lifer_locations_geojson.py``. */
@@ -989,12 +979,9 @@ function popupHtmlVisitedLayout(
   name: string,
   lifelistUrl: string,
   visited: NonNullable<PopupPayloadV1["visited"]>,
-  trunc?: Pick<PopupPayloadV1, "visited_truncated" | "visited_total" | "visited_omitted">,
 ): string {
   const label = visited.label?.trim() || "Visited:";
   const entries = visited.entries ?? [];
-  const hl = lifelistUrl.trim();
-  const hlSafe = safeHttpUrlForAnchor(hl);
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
   const locHeading = locationHeadingHtml(name, lifelistUrl);
 
@@ -1016,18 +1003,6 @@ function popupHtmlVisitedLayout(
   /** Mirrors Folium ``build_visit_info_html``: ``<br>`` between *inline* checklist links — not ``display:block`` anchors. */
   const visitInner = visitAnchors.join("<br>");
 
-  let truncBlock = "";
-  if (trunc?.visited_truncated && (trunc.visited_omitted ?? 0) > 0 && hlSafe) {
-    const total = trunc.visited_total ?? entries.length + (trunc.visited_omitted ?? 0);
-    const omit = trunc.visited_omitted ?? 0;
-    truncBlock =
-      `<div class="pebird-map-popup__trunc-hint">` +
-      `${escapeHtml(String(entries.length))} of ${escapeHtml(String(total))} checklists shown. ` +
-      `<a href="${escapeHtml(hlSafe)}" target="_blank" rel="noopener noreferrer">Open lifelist</a> ` +
-      `for full history (${escapeHtml(String(omit))} more).` +
-      `</div>`;
-  }
-
   return (
     `<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">` +
     `<div class="pebird-map-popup__heading-row" style="margin-bottom:${margin}px;">${locHeading}</div>` +
@@ -1035,7 +1010,7 @@ function popupHtmlVisitedLayout(
     `<div class="pebird-map-popup__visited-block">` +
     `<div class="pebird-map-popup__section-label">${escapeHtml(label)}</div>` +
     `<div class="pebird-map-popup__visit-dates">${visitInner}</div>` +
-    `</div>${truncBlock}` +
+    `</div>` +
     `</div></div>`
   );
 }
@@ -1058,15 +1033,7 @@ function popupHtmlFromFeatureProps(props: Record<string, unknown> | undefined): 
   }
   const popup = parsePopupV1(props?.popup_v1);
   if (popup?.visited) {
-    const trunc =
-      popup.visited_truncated === true
-        ? {
-            visited_truncated: true,
-            visited_total: popup.visited_total,
-            visited_omitted: popup.visited_omitted,
-          }
-        : undefined;
-    return popupHtmlVisitedLayout(name, lifelistUrl, popup.visited, trunc);
+    return popupHtmlVisitedLayout(name, lifelistUrl, popup.visited);
   }
   if (popup) {
     const margin = POPUP_LOCATION_HEADING_MARGIN_PX;

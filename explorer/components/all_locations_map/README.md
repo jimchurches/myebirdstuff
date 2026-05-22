@@ -85,7 +85,6 @@ The component sends **structured facts and URLs** per pin; the client renders on
 
 - **Payload:** `feature.properties.popup_v1` with `v: 1` (and mode-specific variants for species / lifer / family).
 - **All locations:** With `records_by_location`, `visited` holds `{ label: "Visited:", entries: [{label,href}] }`; lifelist heading link is rendered in TS. Minimal tests may use `summary_lines` + `links` only.
-- **Optional env:** `EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP` truncates `visited.entries` for very large exports (lifelist still covers full history).
 
 Export HTML uses the same class names via `popup_v1_export_html.py` (standalone file embeds `AllLocationsMapPopup.css`).
 
