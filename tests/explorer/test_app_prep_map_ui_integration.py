@@ -21,17 +21,21 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
 
     st.session_state.clear()
     _drop_submodule("explorer.app.streamlit.app_prep_map_ui")
+    _drop_submodule("explorer.app.streamlit.app_prep_map_tab_prep")
+    _drop_submodule("explorer.app.streamlit.app_prep_map_leaflet_caches")
     return st
 
 
-def _patch_tab_prep_caches(monkeypatch: pytest.MonkeyPatch, app_prep_map_ui) -> None:
-    monkeypatch.setattr(app_prep_map_ui, "cached_checklist_stats_payload", lambda *_a, **_k: {})
+def _patch_tab_prep_caches(monkeypatch: pytest.MonkeyPatch, app_prep_map_tab_prep) -> None:
+    monkeypatch.setattr(app_prep_map_tab_prep, "cached_checklist_stats_payload", lambda *_a, **_k: {})
     monkeypatch.setattr(
-        app_prep_map_ui, "cached_full_export_checklist_stats_payload", lambda *_a, **_k: None
+        app_prep_map_tab_prep, "cached_full_export_checklist_stats_payload", lambda *_a, **_k: None
     )
-    monkeypatch.setattr(app_prep_map_ui, "build_rankings_tab_bundle", lambda *_a, **_k: {})
-    monkeypatch.setattr(app_prep_map_ui, "cached_sex_notation_by_year", lambda *_a: {})
-    monkeypatch.setattr(app_prep_map_ui, "full_location_data_for_maintenance", lambda *_a: pd.DataFrame())
+    monkeypatch.setattr(app_prep_map_tab_prep, "build_rankings_tab_bundle", lambda *_a, **_k: {})
+    monkeypatch.setattr(app_prep_map_tab_prep, "cached_sex_notation_by_year", lambda *_a: {})
+    monkeypatch.setattr(
+        app_prep_map_tab_prep, "full_location_data_for_maintenance", lambda *_a: pd.DataFrame()
+    )
 
 
 def _seed_prep_session_defaults(st) -> None:
@@ -198,8 +202,12 @@ def test_render_prep_uses_map_then_tab_spinners_and_payload_cache_warm_hit(
             payload_hits.append(extra.get("payload_cache_hit"))
 
     monkeypatch.setattr(app_prep_map_ui, "perf_span", _capturing_perf_span)
-    monkeypatch.setattr(app_prep_map_ui, "perf_record_point", lambda *_a, **_k: None)
-    _patch_tab_prep_caches(monkeypatch, app_prep_map_ui)
+    import explorer.app.streamlit.app_prep_map_leaflet_caches as app_prep_map_leaflet_caches
+    import explorer.app.streamlit.app_prep_map_tab_prep as app_prep_map_tab_prep
+
+    monkeypatch.setattr(app_prep_map_leaflet_caches, "perf_record_point", lambda *_a, **_k: None)
+
+    _patch_tab_prep_caches(monkeypatch, app_prep_map_tab_prep)
     monkeypatch.setattr(app_prep_map_ui, "render_all_locations_map_component", lambda **_k: None)
     monkeypatch.setattr(app_map_ui, "sidebar_bottom_slot_start", lambda: None)
     monkeypatch.setattr(app_map_ui, "sidebar_bottom_slot_end", lambda: None)
@@ -256,7 +264,9 @@ def test_render_prep_with_explorer_perf_off_does_not_break(streamlit_stub, monke
 
     st = streamlit_stub
     _seed_prep_session_defaults(st)
-    _patch_tab_prep_caches(monkeypatch, app_prep_map_ui)
+    import explorer.app.streamlit.app_prep_map_tab_prep as app_prep_map_tab_prep
+
+    _patch_tab_prep_caches(monkeypatch, app_prep_map_tab_prep)
     monkeypatch.setattr(app_prep_map_ui, "render_all_locations_map_component", lambda **_k: None)
     monkeypatch.setattr(app_map_ui, "sidebar_bottom_slot_start", lambda: None)
     monkeypatch.setattr(app_map_ui, "sidebar_bottom_slot_end", lambda: None)

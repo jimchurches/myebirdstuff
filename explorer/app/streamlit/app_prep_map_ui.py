@@ -1,8 +1,9 @@
 """Sidebar prep spinners (map-first, then checklist / rankings / tab sync) and Map tab embed.
 
-All four Map-tab modes use the Leaflet Streamlit custom component. Export HTML is built on sidebar
-button click from :data:`LEAFLET_EXPORT_RECIPE_KEY` (cached under :data:`LEAFLET_EXPORT_HTML_CACHE_KEY`).
-GeoJSON payloads use the ``*_LEAFLET_PAYLOAD_CACHE_KEY`` session keys.
+All four Map-tab modes use the Leaflet Streamlit custom component. Session LRU helpers live in
+:mod:`explorer.app.streamlit.app_prep_map_leaflet_caches`; non-map tab prep in
+:mod:`explorer.app.streamlit.app_prep_map_tab_prep`. Per-mode payload builders remain here until
+further split.
 """
 
 from __future__ import annotations
@@ -10,45 +11,30 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from collections import OrderedDict
 from typing import Any, Callable, Literal
 
 import streamlit as st
 
 from explorer.app.streamlit.app_caches import (
-    cached_checklist_stats_payload,
     cached_family_map_bundle,
-    cached_full_export_checklist_stats_payload,
-    cached_sex_notation_by_year,
-    full_location_data_for_maintenance,
     leaflet_payload_cache_key,
 )
 from explorer.app.streamlit.app_constants import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
     FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
     LEAFLET_EXPORT_BUILT_CACHE_KEY,
-    LEAFLET_EXPORT_HTML_CACHE_KEY,
     LEAFLET_EXPORT_RECIPE_KEY,
     LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
-    EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
-    EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY,
     EXPORT_MAP_HTML_BTN_KEY,
-    EXPORT_MAP_HTML_DOWNLOAD_BTN_KEY,
-    EXPORT_MAP_HTML_ERROR_KEY,
     LEAFLET_MAP_MOUNT_NONCE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
-    STREAMLIT_CLOSE_LOCATION_METERS_KEY,
-    STREAMLIT_COUNTRY_TAB_SORT_KEY,
-    STREAMLIT_HIGH_COUNT_SORT_KEY,
-    STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
     STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
     STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY,
     STREAMLIT_MAP_DATE_FILTER_KEY,
     STREAMLIT_MAP_DATE_RANGE_KEY,
-    STREAMLIT_RANKINGS_TOP_N_KEY,
 )
 from explorer.app.streamlit.app_go_to_gps_ui import go_to_gps_pin_from_session
 from explorer.app.streamlit.app_map_ui import (
@@ -58,27 +44,25 @@ from explorer.app.streamlit.app_map_ui import (
     sidebar_bottom_slot_end,
     sidebar_bottom_slot_start,
     sidebar_footer_links,
-    inject_auto_click_streamlit_download_js,
 )
-from explorer.app.streamlit.checklist_stats_streamlit_html import (
-    sync_checklist_stats_tab_session_inputs,
+from explorer.app.streamlit.app_prep_map_leaflet_caches import (
+    ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    apply_dataset_signature_for_map_caches,
+    leaflet_payload_cache_lookup,
+    leaflet_payload_cache_store,
+    render_leaflet_export_map_html_download,
+    sync_leaflet_export_recipe,
 )
-from explorer.app.streamlit.country_stats_streamlit_html import sync_country_tab_session_inputs
-from explorer.app.streamlit.maintenance_streamlit_html import sync_maintenance_tab_session_inputs
-from explorer.presentation.leaflet_map_export_cache import leaflet_export_html_cache_key
-from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
-from explorer.app.streamlit.rankings_streamlit_html import (
-    build_rankings_tab_bundle,
-    sync_rankings_tab_session_inputs,
-)
+from explorer.app.streamlit.app_prep_map_tab_prep import run_tab_prep_spinner_and_sync
 from explorer.app.streamlit.streamlit_ui_constants import (
     MAP_EXPORT_HTML_FILENAME,
     MAP_PREP_SPINNER_TEXT,
     SIDEBAR_FOOTER_LINK_HEX,
-    TAB_PREP_SPINNER_TEXT,
 )
-from explorer.app.streamlit.perf_instrumentation import perf_record_point, perf_span
-from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_summary_session_inputs
+from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.core.all_locations_viewport import (
     ALL_LOCATIONS_FOCUS_ALL,
     ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY,
@@ -107,10 +91,7 @@ from explorer.core.species_locations_geojson import (
     build_species_locations_geojson_payload,
     compute_species_map_banner_fields,
 )
-from explorer.core.map_prep import (
-    data_signature_for_caches,
-    prepare_all_locations_map_context,
-)
+from explorer.core.map_prep import prepare_all_locations_map_context
 from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
 from explorer.core.species_logic import base_species_for_lifer, filter_species
 from explorer.core.family_map_compute import (
@@ -166,249 +147,13 @@ from explorer.presentation.map_renderer import (
     map_overlay_theme_stylesheet,
 )
 
-
-# Leaflet payload LRU sizes (variants per map — e.g. cluster / hide-non-matching / subspecies toggles).
-_ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
-_LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
-_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
-_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
-_LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES = 6
-
-
-def _leaflet_export_html_cache_lookup(cache_key: tuple[str, ...]) -> bytes | None:
-    cached = st.session_state.get(LEAFLET_EXPORT_HTML_CACHE_KEY)
-    if isinstance(cached, OrderedDict):
-        entry = cached.get(cache_key)
-        if isinstance(entry, (bytes, bytearray)):
-            cached.move_to_end(cache_key)
-            return bytes(entry)
-    return None
-
-
-def _leaflet_export_html_cache_store(cache_key: tuple[str, ...], html_bytes: bytes) -> None:
-    cached = st.session_state.get(LEAFLET_EXPORT_HTML_CACHE_KEY)
-    if not isinstance(cached, OrderedDict):
-        cached = OrderedDict()
-    cached[cache_key] = html_bytes
-    cached.move_to_end(cache_key)
-    while len(cached) > _LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES:
-        cached.popitem(last=False)
-    st.session_state[LEAFLET_EXPORT_HTML_CACHE_KEY] = cached
-
-
-def _leaflet_export_cache_key_for_recipe(recipe: dict[str, Any]) -> tuple[str, ...]:
-    return leaflet_export_html_cache_key(
-        leaflet_revision=str(recipe["leaflet_revision"]),
-        map_height=int(recipe["map_height"]),
-        map_style=str(recipe.get("map_style") or "default"),
-        cluster_options=recipe.get("cluster_options") or {},
-        circle_marker_style=recipe.get("circle_marker_style") or {},
-        cluster_icon_style=recipe.get("cluster_icon_style") or {},
-        viewport=recipe.get("viewport") or {},
-        map_theme_css=str(recipe.get("map_theme_css") or ""),
-        banner_html=str(recipe.get("banner_html") or ""),
-        legend_html=str(recipe.get("legend_html") or ""),
-    )
-
-
-def _materialize_leaflet_export_html(recipe: dict[str, Any]) -> bytes:
-    cache_key = _leaflet_export_cache_key_for_recipe(recipe)
-    cached = _leaflet_export_html_cache_lookup(cache_key)
-    if cached is not None:
-        perf_record_point("prep.leaflet_map_html_cache_hit")
-        return cached
-    perf_record_point("prep.leaflet_map_html_cache_miss")
-    with perf_span("prep.leaflet_map_to_html_bytes"):
-        built = leaflet_map_to_html_bytes(
-            geojson=recipe["geojson"],
-            height=int(recipe["map_height"]),
-            map_style=str(recipe.get("map_style") or "default"),
-            cluster_options=recipe.get("cluster_options") or {},
-            circle_marker_style=recipe.get("circle_marker_style") or {},
-            cluster_icon_style=recipe.get("cluster_icon_style") or {},
-            viewport=recipe.get("viewport") or {},
-            map_theme_css=str(recipe.get("map_theme_css") or ""),
-            banner_html=str(recipe.get("banner_html") or ""),
-            legend_html=str(recipe.get("legend_html") or ""),
-        )
-    _leaflet_export_html_cache_store(cache_key, built)
-    return built
-
-
-def _sync_leaflet_export_recipe(
-    *,
-    leaflet_revision: str,
-    leaflet_geojson: dict[str, Any],
-    map_height: int,
-    map_style: str,
-    leaflet_cluster_opts: dict[str, Any],
-    leaflet_circle_style: dict[str, Any],
-    leaflet_cluster_icon_style: dict[str, Any] | None,
-    leaflet_viewport: dict[str, Any] | None,
-    banner_html: str,
-    legend_html: str,
-) -> None:
-    """Store export inputs; clear stale download bytes when the recipe changes."""
-    recipe = {
-        "leaflet_revision": leaflet_revision,
-        "geojson": leaflet_geojson,
-        "map_height": int(map_height),
-        "map_style": str(map_style or "default"),
-        "cluster_options": leaflet_cluster_opts,
-        "circle_marker_style": leaflet_circle_style,
-        "cluster_icon_style": leaflet_cluster_icon_style or {},
-        "viewport": leaflet_viewport or {},
-        "map_theme_css": map_overlay_theme_stylesheet(),
-        "banner_html": banner_html,
-        "legend_html": legend_html,
-    }
-    st.session_state[LEAFLET_EXPORT_RECIPE_KEY] = recipe
-    recipe_key = _leaflet_export_cache_key_for_recipe(recipe)
-    if st.session_state.get(LEAFLET_EXPORT_BUILT_CACHE_KEY) != recipe_key:
-        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-        st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
-        st.session_state.pop(EXPORT_MAP_HTML_ERROR_KEY, None)
-
-
-def _leaflet_export_session_bytes(recipe: dict[str, Any]) -> bytes | None:
-    """Session snapshot of export HTML when it matches the current recipe."""
-    recipe_key = _leaflet_export_cache_key_for_recipe(recipe)
-    built_key = st.session_state.get(LEAFLET_EXPORT_BUILT_CACHE_KEY)
-    raw = st.session_state.get(EXPLORER_MAP_HTML_BYTES_KEY)
-    if isinstance(raw, (bytes, bytearray)) and built_key == recipe_key:
-        return bytes(raw)
-    return None
-
-
-def _leaflet_export_download_bytes(recipe: dict[str, Any]) -> bytes | None:
-    """Bytes for the sidebar download control without building (session or LRU)."""
-    ready = _leaflet_export_session_bytes(recipe)
-    if ready is not None:
-        return ready
-    return _leaflet_export_html_cache_lookup(_leaflet_export_cache_key_for_recipe(recipe))
-
-
-def _render_leaflet_export_map_html_download(recipe: dict[str, Any]) -> None:
-    """One user click: build export HTML (spinner), rerun, auto-fire Streamlit download."""
-    err = st.session_state.get(EXPORT_MAP_HTML_ERROR_KEY)
-    if err:
-        st.error(f"Could not build map export: {err}")
-
-    if st.session_state.pop(EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY, False):
-        export_bytes = _leaflet_export_download_bytes(recipe)
-        if export_bytes is None:
-            st.error("Map export was prepared but bytes are missing. Try Export again.")
-            return
-        st.caption("Starting download…")
-        st.download_button(
-            "Export map HTML",
-            data=export_bytes,
-            file_name=MAP_EXPORT_HTML_FILENAME,
-            mime="text/html",
-            key=EXPORT_MAP_HTML_DOWNLOAD_BTN_KEY,
-            use_container_width=True,
-            type="secondary",
-        )
-        inject_auto_click_streamlit_download_js(button_label="Export map HTML")
-        return
-
-    if st.button(
-        "Export map HTML",
-        key=EXPORT_MAP_HTML_BTN_KEY,
-        use_container_width=True,
-        type="secondary",
-    ):
-        st.session_state.pop(EXPORT_MAP_HTML_ERROR_KEY, None)
-        try:
-            export_bytes = _leaflet_export_download_bytes(recipe)
-            if export_bytes is None:
-                with st.spinner("Building map HTML…"):
-                    export_bytes = _materialize_leaflet_export_html(recipe)
-            recipe_key = _leaflet_export_cache_key_for_recipe(recipe)
-            st.session_state[EXPLORER_MAP_HTML_BYTES_KEY] = export_bytes
-            st.session_state[LEAFLET_EXPORT_BUILT_CACHE_KEY] = recipe_key
-        except Exception as exc:
-            st.session_state[EXPORT_MAP_HTML_ERROR_KEY] = str(exc)
-            st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-            st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
-            return
-        st.session_state[EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY] = True
-        st.rerun()
-
-
-def _leaflet_payload_cache_lookup(
-    session_key: str,
-    payload_cache_key: tuple[Any, ...],
-) -> dict[str, Any] | None:
-    """LRU lookup for Leaflet GeoJSON session caches keyed by ``payload_cache_key``."""
-    cached = st.session_state.get(session_key)
-    if isinstance(cached, OrderedDict):
-        entry = cached.get(payload_cache_key)
-        if isinstance(entry, dict):
-            cached.move_to_end(payload_cache_key)
-            return entry
-        return None
-    if isinstance(cached, dict) and cached.get("payload_cache_key") == payload_cache_key:
-        return cached
-    return None
-
-
-def _leaflet_payload_cache_store(
-    session_key: str,
-    payload_cache_key: tuple[Any, ...],
-    entry: dict[str, Any],
-    *,
-    max_entries: int,
-) -> None:
-    """Store Leaflet payload; keep at most *max_entries* variants (e.g. hide-only on/off)."""
-    cached = st.session_state.get(session_key)
-    if not isinstance(cached, OrderedDict):
-        converted: OrderedDict[tuple[Any, ...], dict[str, Any]] = OrderedDict()
-        if isinstance(cached, dict) and cached.get("payload_cache_key") is not None:
-            legacy_key = cached["payload_cache_key"]
-            if isinstance(legacy_key, tuple):
-                converted[legacy_key] = cached
-        cached = converted
-    cached[payload_cache_key] = entry
-    cached.move_to_end(payload_cache_key)
-    while len(cached) > max_entries:
-        cached.popitem(last=False)
-    st.session_state[session_key] = cached
-
-
-def apply_dataset_signature_for_map_caches(
-    df_full: Any,
-    provenance: str | None,
-) -> bool:
-    """Update ``EBIRD_DATA_SIG_KEY`` and clear Leaflet map/export session caches when the dataset changes.
-
-    Folium-era popup HTML session caches were removed in #222; invalidation is via
-    ``*_LEAFLET_PAYLOAD_CACHE_KEY`` and export keys only.
-
-    Returns ``True`` when caches were cleared due to a signature change.
-    """
-    prov_plain = provenance or ""
-    sig = data_signature_for_caches(df_full, prov_plain)
-    _prev_sig = st.session_state.get(EBIRD_DATA_SIG_KEY)
-    if _prev_sig == sig:
-        return False
-    perf_record_point(
-        "prep.data_sig_change",
-        extra={
-            "prev_present": _prev_sig is not None,
-            "prev_sig": list(_prev_sig) if isinstance(_prev_sig, tuple) else _prev_sig,
-            "new_sig": list(sig) if isinstance(sig, tuple) else sig,
-        },
-    )
-    st.session_state[EBIRD_DATA_SIG_KEY] = sig
-    st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
-    st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
-    st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)
-    st.session_state.pop(FAMILY_LEAFLET_PAYLOAD_CACHE_KEY, None)
-    st.session_state.pop(LEAFLET_EXPORT_HTML_CACHE_KEY, None)
-    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
-    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
-    return True
+# Backward-compatible aliases for tests (prefer ``app_prep_map_leaflet_caches``).
+_ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
+_LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
+_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
+_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
+_leaflet_payload_cache_lookup = leaflet_payload_cache_lookup
+_leaflet_payload_cache_store = leaflet_payload_cache_store
 
 
 def render_prep_spinner_and_map_tab(
@@ -596,7 +341,7 @@ def render_prep_spinner_and_map_tab(
                         "family_selected": bool(fam),
                     }
                     with perf_span("map.family_leaflet.payload", extra=_perf_family):
-                        cached_fam = _leaflet_payload_cache_lookup(
+                        cached_fam = leaflet_payload_cache_lookup(
                             FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
                             payload_cache_key,
                         )
@@ -631,7 +376,7 @@ def render_prep_spinner_and_map_tab(
                             merge_leaflet_build_metrics_into(
                                 _perf_family, empty_leaflet_geojson_build_metrics()
                             )
-                            _leaflet_payload_cache_store(
+                            leaflet_payload_cache_store(
                                 FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
                                 {
@@ -642,7 +387,7 @@ def render_prep_spinner_and_map_tab(
                                     "banner_html": "",
                                     "legend_html": "",
                                 },
-                                max_entries=_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                max_entries=FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
                             )
                         else:
                             with perf_span("prep.family_map_composition_with_pins"):
@@ -742,7 +487,7 @@ def render_prep_spinner_and_map_tab(
                                 revision_extra=revision_extra_json,
                             )
                             merge_leaflet_build_metrics_into(_perf_family, payload_build_metrics)
-                            _leaflet_payload_cache_store(
+                            leaflet_payload_cache_store(
                                 FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
                                 {
@@ -753,7 +498,7 @@ def render_prep_spinner_and_map_tab(
                                     "banner_html": all_locations_leaflet_banner_html,
                                     "legend_html": all_locations_leaflet_legend_html,
                                 },
-                                max_entries=_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                max_entries=FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
                             )
 
                     if leaflet_revision and leaflet_geojson is not None:
@@ -885,7 +630,7 @@ def render_prep_spinner_and_map_tab(
                             "visits_inline_cap": visits_inline_max,
                         }
                         with perf_span("map.all_locations_leaflet.payload", extra=_perf_leaflet):
-                            cached_pl = _leaflet_payload_cache_lookup(
+                            cached_pl = leaflet_payload_cache_lookup(
                                 ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
                             )
@@ -933,7 +678,7 @@ def render_prep_spinner_and_map_tab(
                                     [(_ls, _lf, "All locations")],
                                     container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
                                 )
-                                _leaflet_payload_cache_store(
+                                leaflet_payload_cache_store(
                                     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
                                     payload_cache_key,
                                     {
@@ -942,7 +687,7 @@ def render_prep_spinner_and_map_tab(
                                         "banner_html": all_locations_leaflet_banner_html,
                                         "legend_html": all_locations_leaflet_legend_html,
                                     },
-                                    max_entries=_ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                    max_entries=ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
                                 )
                         result_warning = None
                     elif use_lifer_leaflet:
@@ -984,7 +729,7 @@ def render_prep_spinner_and_map_tab(
                             "payload_cache_hit": False,
                         }
                         with perf_span("map.lifer_leaflet.payload", extra=_perf_lifer):
-                            cached_lif = _leaflet_payload_cache_lookup(
+                            cached_lif = leaflet_payload_cache_lookup(
                                 LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
                             )
@@ -1065,7 +810,7 @@ def render_prep_spinner_and_map_tab(
                                             legend_rows,
                                             container_style=STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
                                         )
-                                    _leaflet_payload_cache_store(
+                                    leaflet_payload_cache_store(
                                         LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
                                         payload_cache_key,
                                         {
@@ -1075,7 +820,7 @@ def render_prep_spinner_and_map_tab(
                                             "banner_html": all_locations_leaflet_banner_html,
                                             "legend_html": all_locations_leaflet_legend_html,
                                         },
-                                        max_entries=_LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                        max_entries=LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
                                     )
                             if leaflet_revision and leaflet_geojson is not None:
                                 leaflet_viewport = lifer_leaflet_viewport_recipe(lifer_framing_pairs)
@@ -1113,7 +858,7 @@ def render_prep_spinner_and_map_tab(
                             "species_selected": bool(overlay_sci),
                         }
                         with perf_span("map.species_leaflet.payload", extra=_perf_species):
-                            cached_sp = _leaflet_payload_cache_lookup(
+                            cached_sp = leaflet_payload_cache_lookup(
                                 SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
                                 payload_cache_key,
                             )
@@ -1152,7 +897,7 @@ def render_prep_spinner_and_map_tab(
                                 merge_leaflet_build_metrics_into(
                                     _perf_species, empty_leaflet_geojson_build_metrics()
                                 )
-                                _leaflet_payload_cache_store(
+                                leaflet_payload_cache_store(
                                     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
                                     payload_cache_key,
                                     {
@@ -1163,7 +908,7 @@ def render_prep_spinner_and_map_tab(
                                         "banner_html": all_locations_leaflet_banner_html,
                                         "legend_html": all_locations_leaflet_legend_html,
                                     },
-                                    max_entries=_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                    max_entries=SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
                                 )
                             else:
                                 popup_visit_dates_ascending = (
@@ -1258,7 +1003,7 @@ def render_prep_spinner_and_map_tab(
                                         if legend_rows
                                         else ""
                                     )
-                                    _leaflet_payload_cache_store(
+                                    leaflet_payload_cache_store(
                                         SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
                                         payload_cache_key,
                                         {
@@ -1269,7 +1014,7 @@ def render_prep_spinner_and_map_tab(
                                             "banner_html": all_locations_leaflet_banner_html,
                                             "legend_html": all_locations_leaflet_legend_html,
                                         },
-                                        max_entries=_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+                                        max_entries=SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
                                     )
                             if leaflet_revision and leaflet_geojson is not None:
                                 leaflet_viewport = species_leaflet_viewport_recipe(
@@ -1291,7 +1036,7 @@ def render_prep_spinner_and_map_tab(
                     and leaflet_cluster_opts is not None
                     and leaflet_circle_style is not None
                 ):
-                    _sync_leaflet_export_recipe(
+                    sync_leaflet_export_recipe(
                         leaflet_revision=leaflet_revision,
                         leaflet_geojson=leaflet_geojson,
                         map_height=int(map_height),
@@ -1364,47 +1109,11 @@ def render_prep_spinner_and_map_tab(
                             ),
                         )
 
-        with st.spinner(TAB_PREP_SPINNER_TEXT):
-            with perf_span("prep.cache_checklist_stats.working"):
-                checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
-            top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))
-            hc_sort = str(st.session_state.get(STREAMLIT_HIGH_COUNT_SORT_KEY))
-            hc_tb = str(st.session_state.get(STREAMLIT_HIGH_COUNT_TIE_BREAK_KEY))
-            if df_full is not None and not df_full.empty:
-                with perf_span("prep.cache_checklist_stats.full_export"):
-                    maint_full_payload = cached_full_export_checklist_stats_payload(
-                        df_full, top_n, hc_sort, hc_tb, tax_locale_effective
-                    )
-                with perf_span("prep.cache_rankings_bundle"):
-                    rankings_bundle = build_rankings_tab_bundle(
-                        df_full,
-                        country_sort=st.session_state.get(STREAMLIT_COUNTRY_TAB_SORT_KEY),
-                        taxonomy_locale=tax_locale_effective,
-                        high_count_sort=hc_sort,
-                        high_count_tie_break=hc_tb,
-                    )
-                with perf_span("prep.cache_sex_notation_by_year"):
-                    sex_notation_by_year: dict = cached_sex_notation_by_year(df_full)
-            else:
-                maint_full_payload = None
-                rankings_bundle = {}
-                sex_notation_by_year = {}
-
-            with perf_span("prep.tab_session_sync"):
-                sync_checklist_stats_tab_session_inputs(checklist_payload)
-                sync_rankings_tab_session_inputs(rankings_bundle)
-                loc_maint = full_location_data_for_maintenance(df_full)
-                incomplete_maint: dict = {}
-                if maint_full_payload is not None:
-                    incomplete_maint = maint_full_payload.incomplete_by_year or {}
-                sync_maintenance_tab_session_inputs(
-                    loc_maint,
-                    close_location_meters=int(st.session_state.get(STREAMLIT_CLOSE_LOCATION_METERS_KEY)),
-                    incomplete_by_year=incomplete_maint,
-                    sex_notation_by_year=sex_notation_by_year,
-                )
-                sync_yearly_summary_session_inputs(checklist_payload)
-                sync_country_tab_session_inputs(checklist_payload)
+        run_tab_prep_spinner_and_sync(
+            work_df=work_df,
+            df_full=df_full,
+            tax_locale_effective=tax_locale_effective,
+        )
 
         _spinner_emoji_placeholder.empty()
         _leaflet_recipe = st.session_state.get(LEAFLET_EXPORT_RECIPE_KEY)
@@ -1416,7 +1125,7 @@ def render_prep_spinner_and_map_tab(
             with _ex2:
                 inject_sidebar_outline_download_button_css(SIDEBAR_FOOTER_LINK_HEX)
                 if isinstance(_leaflet_recipe, dict):
-                    _render_leaflet_export_map_html_download(_leaflet_recipe)
+                    render_leaflet_export_map_html_download(_leaflet_recipe)
                 elif isinstance(_export_html_bytes, (bytes, bytearray)):
                     st.download_button(
                         "Export map HTML",
