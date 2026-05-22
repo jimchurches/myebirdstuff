@@ -37,10 +37,7 @@ from explorer.app.streamlit.app_constants import (
     EXPORT_MAP_HTML_BTN_KEY,
     EXPORT_MAP_HTML_DOWNLOAD_BTN_KEY,
     EXPORT_MAP_HTML_ERROR_KEY,
-    FILTERED_BY_LOC_CACHE_KEY,
     LEAFLET_MAP_MOUNT_NONCE_KEY,
-    POPUP_FRAGMENT_CACHE_KEY,
-    POPUP_HTML_CACHE_KEY,
     STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_CLOSE_LOCATION_METERS_KEY,
     STREAMLIT_COUNTRY_TAB_SORT_KEY,
@@ -383,7 +380,10 @@ def apply_dataset_signature_for_map_caches(
     df_full: Any,
     provenance: str | None,
 ) -> bool:
-    """Update ``EBIRD_DATA_SIG_KEY`` and clear map caches when the dataset signature changes.
+    """Update ``EBIRD_DATA_SIG_KEY`` and clear Leaflet map/export session caches when the dataset changes.
+
+    Folium-era popup HTML session caches were removed in #222; invalidation is via
+    ``*_LEAFLET_PAYLOAD_CACHE_KEY`` and export keys only.
 
     Returns ``True`` when caches were cleared due to a signature change.
     """
@@ -401,9 +401,6 @@ def apply_dataset_signature_for_map_caches(
         },
     )
     st.session_state[EBIRD_DATA_SIG_KEY] = sig
-    st.session_state[POPUP_HTML_CACHE_KEY] = {}
-    st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
-    st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
     st.session_state.pop(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, None)
     st.session_state.pop(LIFER_LEAFLET_PAYLOAD_CACHE_KEY, None)
     st.session_state.pop(SPECIES_LEAFLET_PAYLOAD_CACHE_KEY, None)

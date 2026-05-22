@@ -58,17 +58,14 @@ def _seed_prep_session_defaults(st) -> None:
     )
 
 
-def test_apply_dataset_signature_change_clears_leaflet_and_popup_caches(
+def test_apply_dataset_signature_change_clears_leaflet_caches(
     streamlit_stub,
 ) -> None:
     from explorer.app.streamlit.app_constants import (
         ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
         EBIRD_DATA_SIG_KEY,
-        FILTERED_BY_LOC_CACHE_KEY,
         LEAFLET_EXPORT_HTML_CACHE_KEY,
         LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
-        POPUP_FRAGMENT_CACHE_KEY,
-        POPUP_HTML_CACHE_KEY,
         SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
     )
     from explorer.app.streamlit.app_prep_map_ui import apply_dataset_signature_for_map_caches
@@ -79,9 +76,6 @@ def test_apply_dataset_signature_change_clears_leaflet_and_popup_caches(
     df_b.loc[0, "Submission ID"] = "S2"
 
     st.session_state[EBIRD_DATA_SIG_KEY] = ("disk", 1, "S1")
-    st.session_state[POPUP_HTML_CACHE_KEY] = {"k": "v"}
-    st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {"f": "v"}
-    st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict([("x", 1)])
     st.session_state[ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY] = OrderedDict(
         [(("ck",), {"revision": "1"})]
     )
@@ -91,10 +85,6 @@ def test_apply_dataset_signature_change_clears_leaflet_and_popup_caches(
 
     assert apply_dataset_signature_for_map_caches(df_b, "disk") is True
     assert st.session_state[EBIRD_DATA_SIG_KEY] == ("disk", 1, "S2")
-    assert st.session_state[POPUP_HTML_CACHE_KEY] == {}
-    assert st.session_state[POPUP_FRAGMENT_CACHE_KEY] == {}
-    assert isinstance(st.session_state[FILTERED_BY_LOC_CACHE_KEY], OrderedDict)
-    assert not st.session_state[FILTERED_BY_LOC_CACHE_KEY]
     assert ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert LIFER_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert SPECIES_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state

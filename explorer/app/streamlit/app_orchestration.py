@@ -11,7 +11,7 @@ Ordered flow:
 4. :func:`explorer.app.streamlit.app_landing_ui.load_dataframe_after_landing` — disk / upload /
    landing; may return ``None`` (caller exits).
 5. :func:`bootstrap_session_after_csv_load` — run id, perf dataset context, settings YAML,
-   table clamps, popup / filter caches.
+   table clamps.
 6. :func:`explorer.app.streamlit.app_map_working_ui.render_map_sidebar_and_working_set` —
    sidebar + working dataframe (refs #131).
 7. :func:`build_taxonomy_popup_assets` — cached taxonomy URL fn + popup preferences.
@@ -24,7 +24,6 @@ tab row (refs #70, #130).
 
 from __future__ import annotations
 
-from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -36,9 +35,6 @@ from explorer.app.streamlit.app_caches import cached_species_url_fn
 from explorer.app.streamlit.app_constants import (
     DEFAULT_TAXONOMY_LOCALE,
     EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
-    FILTERED_BY_LOC_CACHE_KEY,
-    POPUP_FRAGMENT_CACHE_KEY,
-    POPUP_HTML_CACHE_KEY,
     REPO_ROOT,
     SETTINGS_BASELINE_KEY,
     SETTINGS_CONFIG_PATH_KEY,
@@ -130,13 +126,6 @@ def bootstrap_session_after_csv_load(df_full: Any, *, source_label: str | None) 
     init_and_clamp_streamlit_table_settings()
     if SETTINGS_BASELINE_KEY not in st.session_state:
         st.session_state[SETTINGS_BASELINE_KEY] = settings_state_payload()
-
-    if POPUP_HTML_CACHE_KEY not in st.session_state:
-        st.session_state[POPUP_HTML_CACHE_KEY] = {}
-    if POPUP_FRAGMENT_CACHE_KEY not in st.session_state:
-        st.session_state[POPUP_FRAGMENT_CACHE_KEY] = {}
-    if FILTERED_BY_LOC_CACHE_KEY not in st.session_state:
-        st.session_state[FILTERED_BY_LOC_CACHE_KEY] = OrderedDict()
 
 
 def build_taxonomy_popup_assets() -> TaxonomyPopupAssets:
