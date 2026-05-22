@@ -74,6 +74,21 @@ def cached_sex_notation_by_year(df: pd.DataFrame) -> dict:
     return get_sex_notation_by_year(df)
 
 
+@st.cache_data(show_spinner=False)
+def cached_map_maintenance_data(
+    loc_df: pd.DataFrame,
+    threshold_m: int,
+) -> tuple[list, list]:
+    """Exact- and near-duplicate location scan for the Maintenance tab (refs #79).
+
+    Cached on *loc_df* + *threshold_m* so fragment reruns do not repeat BallTree work.
+    """
+    from explorer.core.duplicate_checks import get_map_maintenance_data
+
+    exact_rows, near_pairs = get_map_maintenance_data(loc_df, threshold_m)
+    return exact_rows, near_pairs
+
+
 def full_location_data_for_maintenance(df: pd.DataFrame) -> pd.DataFrame:
     """Unique locations for map maintenance (same columns as ``full_location_data``)."""
     cols = ["Location ID", "Location", "Latitude", "Longitude"]

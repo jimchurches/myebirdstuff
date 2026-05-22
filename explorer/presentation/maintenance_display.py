@@ -196,16 +196,25 @@ def map_maintenance_close_locations_body_html(near_pairs: List[Any], threshold_m
   </div>"""
 
 
+def map_maintenance_table_sections_from_data(
+    exact_rows: List[Tuple[Any, ...]],
+    near_pairs: List[Any],
+    threshold_m: int,
+) -> Tuple[str, str, str]:
+    """Location maintenance HTML from precomputed duplicate/near-duplicate results (refs #79)."""
+    intro = map_maintenance_intro_html()
+    exact = map_maintenance_exact_duplicates_body_html(exact_rows)
+    close_ = map_maintenance_close_locations_body_html(near_pairs, threshold_m)
+    return intro, exact, close_
+
+
 def map_maintenance_table_sections_html(loc_df: pd.DataFrame, threshold_m: int) -> Tuple[str, str, str]:
     """Location maintenance: intro + exact-duplicates block + close-locations block (inner HTML only).
 
     Single call to :func:`get_map_maintenance_data` (refs #79).
     """
     exact_rows, near_pairs = get_map_maintenance_data(loc_df, threshold_m)
-    intro = map_maintenance_intro_html()
-    exact = map_maintenance_exact_duplicates_body_html(exact_rows)
-    close_ = map_maintenance_close_locations_body_html(near_pairs, threshold_m)
-    return intro, exact, close_
+    return map_maintenance_table_sections_from_data(exact_rows, near_pairs, threshold_m)
 
 
 def format_map_maintenance_html(loc_df: pd.DataFrame, threshold_m: int) -> str:

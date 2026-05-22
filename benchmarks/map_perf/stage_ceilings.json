@@ -25,6 +25,7 @@
     "ranking_lists": 120000,
     "yearly_summary": 120000,
     "country": 120000,
-    "maintenance": 120000
+    "maintenance": 120000,
+    "maintenance.map_duplicate_scan": 120000
   }
 }
