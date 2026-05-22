@@ -49,6 +49,8 @@ python3 scripts/build_all_locations_map_frontend.py
 
 That runs `npm ci` + `npm run build` and reports which `build/` files belong in git vs junk (e.g. macOS Finder duplicates). Details: [explorer/components/all_locations_map/README.md](../explorer/components/all_locations_map/README.md).
 
+**macOS Finder duplicates** (`file 2.py`, `css 2/`, etc.): ignored via `.gitignore`, removed locally by `python3 scripts/prune_finder_duplicates.py` (also run automatically in the `/commit-work` command and checked in CI).
+
 **Pre-push / CI parity** (same checks as the *Map component (frontend CI)* job in `.github/workflows/tests.yml`):
 
 ```bash
