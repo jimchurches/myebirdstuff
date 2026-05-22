@@ -67,7 +67,8 @@ for map controls, export, and footer links (refs #70). Map sidebar + working set
 (refs #118). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 
-**Orchestration:** Phase boundaries for ``main()`` live in :mod:`explorer.app.streamlit.app_orchestration` (GitHub #200).
+**Orchestration:** ``main()`` → :mod:`explorer.app.streamlit.app_bootstrap`,
+:mod:`explorer.app.streamlit.app_dashboard_shell` (re-exported from :mod:`explorer.app.streamlit.app_orchestration`, #200 / R13).
 """
 
 from __future__ import annotations
