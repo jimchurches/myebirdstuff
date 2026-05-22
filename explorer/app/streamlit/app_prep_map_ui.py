@@ -780,6 +780,7 @@ def render_prep_spinner_and_map_tab(
                     use_lifer_leaflet = map_view_mode == "lifers"
                     use_species_leaflet = map_view_mode == "species"
                     _go_pin = go_to_gps_pin_from_session()
+                    _visit_sch = active_map_marker_colour_scheme(int(family_colour_scheme))
                     _scope = ALL_LOCATIONS_SCOPE_FOCUSED
                     if capture_all_locations_view:
                         _valid = {
