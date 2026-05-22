@@ -162,6 +162,7 @@ def render_prep_spinner_and_map_tab(
     work_df: Any,
     df_full: Any,
     provenance: str | None,
+    data_abs_path: str | None = None,
     tax_locale_effective: str,
     map_height: int,
     map_style: str,
@@ -186,7 +187,9 @@ def render_prep_spinner_and_map_tab(
         with st.spinner(MAP_PREP_SPINNER_TEXT):
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
             with perf_span("prep.data_signature"):
-                apply_dataset_signature_for_map_caches(df_full, provenance)
+                apply_dataset_signature_for_map_caches(
+                    df_full, provenance, data_abs_path=data_abs_path
+                )
 
             map_warning_text: str | None = None
             map_hint_text: str | None = None

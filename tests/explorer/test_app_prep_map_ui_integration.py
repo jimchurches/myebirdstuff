@@ -79,7 +79,9 @@ def test_apply_dataset_signature_change_clears_leaflet_caches(
     df_b = df_a.copy()
     df_b.loc[0, "Submission ID"] = "S2"
 
-    st.session_state[EBIRD_DATA_SIG_KEY] = ("disk", 1, "S1")
+    from explorer.core.map_prep import data_signature_for_caches
+
+    st.session_state[EBIRD_DATA_SIG_KEY] = data_signature_for_caches(df_a, "disk")
     st.session_state[ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY] = OrderedDict(
         [(("ck",), {"revision": "1"})]
     )
@@ -88,7 +90,7 @@ def test_apply_dataset_signature_change_clears_leaflet_caches(
     st.session_state[LEAFLET_EXPORT_HTML_CACHE_KEY] = OrderedDict()
 
     assert apply_dataset_signature_for_map_caches(df_b, "disk") is True
-    assert st.session_state[EBIRD_DATA_SIG_KEY] == ("disk", 1, "S2")
+    assert st.session_state[EBIRD_DATA_SIG_KEY] == data_signature_for_caches(df_b, "disk")
     assert ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert LIFER_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert SPECIES_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state

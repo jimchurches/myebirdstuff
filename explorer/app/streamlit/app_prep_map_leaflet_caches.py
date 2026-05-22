@@ -247,13 +247,15 @@ def leaflet_payload_cache_store(
 def apply_dataset_signature_for_map_caches(
     df_full: Any,
     provenance: str | None,
+    *,
+    data_abs_path: str | None = None,
 ) -> bool:
     """Update ``EBIRD_DATA_SIG_KEY`` and clear Leaflet map/export session caches when the dataset changes.
 
     Returns ``True`` when caches were cleared due to a signature change.
     """
     prov_plain = provenance or ""
-    sig = data_signature_for_caches(df_full, prov_plain)
+    sig = data_signature_for_caches(df_full, prov_plain, data_abs_path=data_abs_path)
     _prev_sig = st.session_state.get(EBIRD_DATA_SIG_KEY)
     if _prev_sig == sig:
         return False

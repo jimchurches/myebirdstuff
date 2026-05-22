@@ -198,6 +198,7 @@ def render_dashboard_shell(
         work_df=mw.work_df,
         df_full=df_full,
         provenance=provenance,
+        data_abs_path=data_abs_path,
         tax_locale_effective=tax.tax_locale_effective,
         map_height=mw.map_height,
         map_style=mw.map_style,
