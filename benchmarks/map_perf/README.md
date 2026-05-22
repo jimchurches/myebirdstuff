@@ -16,8 +16,9 @@ notes) and these **guardrail ceilings**.
 ## Feasibility / relevance
 
 - **Feasible:** small JSON blobs, no binary logs.
-- **Relevant:** keeps `prep.*` / `dataset.load` / `map.*.leaflet.*` instrumentation honest when refactoring
-  embeds (#190) or payload cache keys.
+- **Relevant:** keeps `prep.*` / `dataset.load` / `map.*.leaflet.*` / tab-prep (`prep.cache_checklist_stats.*`,
+  `prep.cache_rankings_bundle`, `perf_fragment` tab bodies) instrumentation honest when refactoring
+  embeds (#190), payload cache keys, or checklist/rankings compute.
 - **Worth doing:** lightweight; complements human-reported timings. Replace or tighten ceilings when
   you intentionally improve hotspots.
 
@@ -64,3 +65,12 @@ python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots \
 Treat rows where `payload_cache_hit` is false (or absent on older logs) as payload **misses**;
 ignore true hits when comparing build regressions. One-shot fixture journey:
 `./scripts/run_post_leaflet_perf_baseline.sh`.
+
+**Tab/table prep journey** (fixture, opt-in):
+
+```bash
+pytest tests/explorer/test_tab_perf_e2e.py --perf -v
+```
+
+Expect `prep.cache_checklist_stats.working`, `.full_export`, `prep.cache_rankings_bundle`, and
+`prep.tab_session_sync` in the JSONL after the Checklist Statistics → Overview tabs are visible.

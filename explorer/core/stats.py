@@ -239,6 +239,30 @@ def longest_streak(unique_dates, cl):
 # Ranking helpers
 # ---------------------------------------------------------------------------
 
+def _countable_species_nunique_by_group(df_obs: pd.DataFrame, group_col: str, value_name: str) -> pd.DataFrame:
+    """Distinct countable base species per *group_col* (vectorized; replaces per-group ``apply``)."""
+    empty = pd.DataFrame(columns=[group_col, value_name])
+    if df_obs.empty or group_col not in df_obs.columns:
+        return empty
+    work = df_obs[[group_col, "Scientific Name", "Common Name"]].copy()
+    work["_base"] = countable_species_vectorized(work)
+    counted = work.dropna(subset=["_base"])
+    if counted.empty:
+        return empty
+    out = counted.groupby(group_col, sort=False)["_base"].nunique().reset_index(name=value_name)
+    return out
+
+
+def _individuals_sum_by_group(df_obs: pd.DataFrame, group_col: str, value_name: str) -> pd.DataFrame:
+    """Sum of parsed ``Count`` values per *group_col* (vectorized)."""
+    empty = pd.DataFrame(columns=[group_col, value_name])
+    if df_obs.empty or group_col not in df_obs.columns:
+        return empty
+    work = df_obs[[group_col, "Count"]].copy()
+    work["_nind"] = work["Count"].apply(safe_count)
+    return work.groupby(group_col, sort=False)["_nind"].sum().reset_index(name=value_name)
+
+
 def rankings_by_value(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt, limit):
     """Top N by value desc, date asc; ties show oldest.
 
@@ -283,15 +307,9 @@ def rankings_by_location(df_obs, cl_sub, mode, fmt, limit):
     if df_obs.empty or cl_sub.empty:
         return []
     if mode == "species":
-        agg = df_obs.groupby("Location ID", group_keys=False).apply(
-            lambda g: countable_species_vectorized(g).dropna().nunique(),
-            include_groups=False,
-        ).reset_index(name="_val")
+        agg = _countable_species_nunique_by_group(df_obs, "Location ID", "_val")
     else:
-        agg = df_obs.groupby("Location ID", group_keys=False).apply(
-            lambda g: g["Count"].apply(safe_count).sum(),
-            include_groups=False,
-        ).reset_index(name="_val")
+        agg = _individuals_sum_by_group(df_obs, "Location ID", "_val")
     dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
     loc_info = cl_sub.groupby("Location ID").agg(
         Location=("Location", "first"),
@@ -808,14 +826,8 @@ def compute_rankings(
                                  "species_loc", "individuals_loc", "visited",
                                  "species_individuals", "species_checklists",
                                  "species_high_counts", "seen_once", "subspecies", "not_seen_recently")}
-    species_per_cl = df.groupby("Submission ID", group_keys=False).apply(
-        lambda g: countable_species_vectorized(g).dropna().nunique(),
-        include_groups=False,
-    ).reset_index(name="_nsp")
-    ind_per_cl = df.groupby("Submission ID", group_keys=False).apply(
-        lambda g: g["Count"].apply(safe_count).sum(),
-        include_groups=False,
-    ).reset_index(name="_nind")
+    species_per_cl = _countable_species_nunique_by_group(df, "Submission ID", "_nsp")
+    ind_per_cl = _individuals_sum_by_group(df, "Submission ID", "_nind")
     cl_species = cl.merge(species_per_cl, on="Submission ID", how="inner")
     cl_individuals = cl.merge(ind_per_cl, on="Submission ID", how="inner")
 
