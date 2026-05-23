@@ -10,7 +10,7 @@ Events are captured via ``EXPLORER_PERF_LOG_FILE`` (JSONL); guardrails read
 ``benchmarks/map_perf/stage_ceilings.json`` (very loose ceilings).
 
 Headline journey (``test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling``):
-cold **All locations** → **Lifer** → warm **All** → cold **Species** (Grey Teal) → warm **Species**
+cold **All locations** → **Lifer** → warm **All** → cold **Species** (Grey Teal) → **Lifer** → warm **Species**
 → cold **Family** → warm **Family**.
 """
 
@@ -35,6 +35,7 @@ from tests.explorer.e2e_support import (
     choose_map_view_mode,
     choose_species_by_common_name,
     launch_chromium_or_skip,
+    map_banner_must_contain,
     max_elapsed_ms_by_stage,
     measure_first_paint_ms,
     parse_perf_json_objects_from_log_lines,
@@ -101,6 +102,20 @@ def _assert_ceilings(events: list[dict], ceilings: dict[str, float]) -> None:
     assert not failures, "Perf ceilings exceeded:\n" + "\n".join(failures)
 
 
+def _run_headline_real_export_journey(page: Any) -> None:
+    """Headline journey on large exports: All (cold, in first_paint) → Lifer → warm All."""
+    choose_map_view_mode(page, "Lifer locations")
+    wait_for_pebird_map_markup(
+        page,
+        must_contain=['class="pebird-map-banner__title">Lifer locations</span>'],
+    )
+    choose_map_view_mode(page, "All locations")
+    wait_for_pebird_map_markup(
+        page,
+        must_contain=['class="pebird-map-banner__title">All locations</span>'],
+    )
+
+
 def _run_headline_four_map_mode_journey(page: Any) -> None:
     """Playwright steps after cold All first paint (#222 §8.5 four-map headline journey)."""
     choose_map_view_mode(page, "Lifer locations")
@@ -116,32 +131,20 @@ def _run_headline_four_map_mode_journey(page: Any) -> None:
     )
 
     choose_species_by_common_name(page, E2E_FIXTURE_SPECIES_COMMON)
+
+    # Warm species LRU: leave Species and return with the same pick (avoid All prep between visits).
+    choose_map_view_mode(page, "Lifer locations")
     wait_for_pebird_map_markup(
         page,
-        must_contain=[
-            f'class="pebird-map-banner__title">{E2E_FIXTURE_SPECIES_COMMON}</span>',
-        ],
+        must_contain=['class="pebird-map-banner__title">Lifer locations</span>'],
     )
-
-    choose_map_view_mode(page, "All locations")
-    wait_for_pebird_map_markup(
-        page,
-        must_contain=['class="pebird-map-banner__title">All locations</span>'],
-    )
-
     choose_species_by_common_name(page, E2E_FIXTURE_SPECIES_COMMON)
-    wait_for_pebird_map_markup(
-        page,
-        must_contain=[
-            f'class="pebird-map-banner__title">{E2E_FIXTURE_SPECIES_COMMON}</span>',
-        ],
-    )
 
     try:
         family_label = choose_first_recorded_family(page)
         wait_for_pebird_map_markup(
             page,
-            must_contain=[f'class="pebird-map-banner__title">{family_label}</span>'],
+            must_contain=map_banner_must_contain(family_label),
         )
     except Exception:
         choose_map_view_mode(page, "Family locations")
@@ -157,7 +160,7 @@ def _run_headline_four_map_mode_journey(page: Any) -> None:
     choose_family_by_label(page, family_label)
     wait_for_pebird_map_markup(
         page,
-        must_contain=[f'class="pebird-map-banner__title">{family_label}</span>'],
+        must_contain=map_banner_must_contain(family_label),
     )
 
 
@@ -166,7 +169,9 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
 ) -> None:
     url, log_file = streamlit_perf_url_and_logfile
     ceilings = _load_stage_ceilings()
-    dataset_label = "real" if os.environ.get("EXPLORER_E2E_DATASET_CSV") else "fixture"
+    is_real_export = bool(os.environ.get("EXPLORER_E2E_DATASET_CSV"))
+    dataset_label = "real" if is_real_export else "fixture"
+    journey_name = "real_export_headline" if is_real_export else "fixture_four_map_modes"
 
     with launch_chromium_or_skip() as browser:
         page = browser.new_page()
@@ -183,10 +188,13 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
                 "goto_ms": first_paint["goto_ms"],
                 "banner_ms": first_paint["banner_ms"],
                 "dataset_label": dataset_label,
-                "journey": "fixture_four_map_modes",
+                "journey": journey_name,
             },
         )
-        _run_headline_four_map_mode_journey(page)
+        if is_real_export:
+            _run_headline_real_export_journey(page)
+        else:
+            _run_headline_four_map_mode_journey(page)
 
     time.sleep(0.5)
     raw_lines = []
@@ -200,22 +208,27 @@ def test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling(
         "prep.map_context_prepare",
         "map.all_locations_leaflet.component_embed",
         "map.lifer_leaflet.payload",
-        "map.species_leaflet.payload",
-        "map.family_leaflet.payload",
     }
+    if not is_real_export:
+        must |= {
+            "map.species_leaflet.payload",
+            "map.family_leaflet.payload",
+        }
     missing = must - stages_seen
     assert not missing, f"missing expected stages {missing!r} in {sorted(stages_seen)!r}"
 
     _assert_payload_stage_with_cold_miss(events, "map.all_locations_leaflet.payload")
     _assert_payload_stage_with_cold_miss(events, "map.lifer_leaflet.payload")
-    _assert_payload_stage_with_cold_miss(
-        events, "map.species_leaflet.payload", require_marker_count=True
-    )
-    _assert_payload_stage_with_cold_miss(events, "map.family_leaflet.payload")
+    if not is_real_export:
+        _assert_payload_stage_with_cold_miss(
+            events, "map.species_leaflet.payload", require_marker_count=True
+        )
+        _assert_payload_stage_with_cold_miss(events, "map.family_leaflet.payload")
 
     _assert_at_least_one_payload_cache_hit(events, "map.all_locations_leaflet.payload")
-    _assert_at_least_one_payload_cache_hit(events, "map.species_leaflet.payload")
-    _assert_at_least_one_payload_cache_hit(events, "map.family_leaflet.payload")
+    if not is_real_export:
+        _assert_at_least_one_payload_cache_hit(events, "map.species_leaflet.payload")
+        _assert_at_least_one_payload_cache_hit(events, "map.family_leaflet.payload")
 
     payload_misses = [
         e

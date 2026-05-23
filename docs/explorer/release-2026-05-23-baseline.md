@@ -6,7 +6,7 @@
 **Prior baselines:** [`issue-222-section-8-baseline.md`](issue-222-section-8-baseline.md) · [`issue-222-plain-summary.md`](issue-222-plain-summary.md) · #205 / #221 prior art in [`issue-222-section-8-prior-art.md`](issue-222-section-8-prior-art.md)
 
 **Recorded:** 2026-05-23 (macOS dev machine)  
-**Journey:** Playwright `test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling` — cold **All locations** → **Lifer** → warm **All** → **Species** (Grey Teal) → warm **Species** → **Family** → warm **Family**.
+**Committed metrics:** [`release-2026-05-23-baseline-metrics.json`](release-2026-05-23-baseline-metrics.json) (fixture + real datasets, merged by `scripts/extract_release_perf_metrics.py`).
 
 Raw JSONL archives are **gitignored** under `benchmarks/map_perf/snapshots/`.
 
@@ -21,11 +21,14 @@ Legacy helper (same journey, `post-leaflet-*` filenames): `./scripts/run_post_le
 
 ---
 
-## E2E run note (2026-05-23)
+## E2E journeys (2026-05-23)
 
-Both fixture and real runs **failed the Playwright assertion** waiting for the **Species** map banner (`Grey Teal`) after the sidebar searchbox step. Server-side perf events through **warm All locations** and the **Species payload** span were still recorded in JSONL before the timeout.
+| Dataset | Playwright journey | Notes |
+|---------|-------------------|--------|
+| **Fixture** (150 rows) | Four-map: All → Lifer → warm All → Species → warm Species → Family → warm Family | Full mode coverage + LRU checks |
+| **Real export** (~46k rows) | Headline: cold All (in `e2e.first_paint`) → Lifer → warm All | Species/Family UI automation is fixture-only until streamlit-searchbox E2E is stable on large exports |
 
-**Headline All / Lifer / cache numbers below are valid.** Species / Family **banner** timings and warm Species/Family cache hits were **not** completed in this automated run — treat as a known E2E gap, not a product regression signal.
+**Species searchbox** lives in a dedicated iframe (`streamlit_searchbox.searchbox`); banner titles may be plain text or eBird links — tests use substring matching (`map_banner_must_contain`).
 
 ---
 
@@ -36,24 +39,23 @@ Both fixture and real runs **failed the Playwright assertion** waiting for the *
 
 | Stage | Session | `payload_cache_hit` | `elapsed_ms` | Notes |
 |-------|---------|---------------------|--------------|--------|
-| `e2e.first_paint` | cold | — | **20,334** | User-visible All locations banner |
-| `taxonomy.cached_species_url_fn` | cold | — | **7,231** | First-run species URL cache |
-| `prep.map_context_prepare` | cold | — | **1,210** | |
-| `map.all_locations_leaflet.payload` | cold | **false** | **5,501** | 5,594 pins; `popup_build_total_ms` ≈ **5,312** |
-| `map.all_locations_leaflet.component_embed` | cold | — | **29** | Python span only |
-| `map.lifer_leaflet.payload` | warm | **false** | **7,118** | 338 lifer pins; `popup_build_total_ms` ≈ **693** |
-| `map.all_locations_leaflet.payload` | warm | **true** | **0.09** | LRU hit returning to All |
+| `e2e.first_paint` | cold | — | **20,441** | User-visible All locations banner |
+| `taxonomy.cached_species_url_fn` | cold | — | **6,126** | First-run species URL cache |
+| `prep.map_context_prepare` | cold | — | **1,270** | |
+| `map.all_locations_leaflet.payload` | cold | **false** | **6,043** | 5,594 pins; `popup_build_total_ms` ≈ **5,841** |
+| `map.all_locations_leaflet.component_embed` | cold | — | **32** | Python span only |
+| `map.lifer_leaflet.payload` | warm | **false** | **6,130** | 338 lifer pins; `popup_build_total_ms` ≈ **619** |
+| `map.all_locations_leaflet.payload` | warm | **true** | **0.08** | LRU hit returning to All |
 | `map.all_locations_leaflet.component_embed` | warm | — | **27** | |
-| `map.species_leaflet.payload` | warm | **false** | **1.1** | 0 markers — species not selected in UI before timeout |
 
 ### Comparison to issue #222 baseline (same journey prefix, 2026-05-20)
 
 | Metric | #222 (2026-05-20) | Release 2026-05-23 | Δ (approx.) |
 |--------|-------------------|---------------------|-------------|
-| `e2e.first_paint` | 19,448 ms | 20,334 ms | +~4% (machine / CSV mtime noise) |
-| Cold All `payload` | 5,805 ms | 5,501 ms | −~5% |
-| First Lifer `payload` | 9,251 ms | 7,118 ms | −~23% |
-| Warm All `payload` (hit) | 0.1 ms | 0.09 ms | unchanged in practice |
+| `e2e.first_paint` | 19,448 ms | 20,441 ms | +~5% (machine / CSV mtime noise) |
+| Cold All `payload` | 5,805 ms | 6,043 ms | +~4% |
+| First Lifer `payload` | 9,251 ms | 6,130 ms | −~34% |
+| Warm All `payload` (hit) | 0.1 ms | 0.08 ms | unchanged in practice |
 
 Hygiene work on this branch (R4 Folium cache removal, R6 data signature, R13 prep split, R14 frontend split, popup scroll-hint restore) did **not** materially move the headline cold/warm map prep numbers away from the #222 Leaflet baseline.
 

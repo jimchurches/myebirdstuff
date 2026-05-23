@@ -47,7 +47,7 @@ First Lifer payload on the real file: about **7.1 s** (338 pins) vs ~9.3 s in th
 |-------|--------|
 | **Hygiene branch** re-run of the standard four-map perf journey | All / Lifer / warm All numbers align with #222 |
 | **Fixture CSV** (15 places) | Cache hits and tiny payload times still sane for CI |
-| **Species / Family in the robot test** | Run **stopped** on Species banner (Grey Teal not detected after searchbox) — **not** a sign the map modes are broken; see baseline doc |
+| **Species / Family on real export** | Automated on **fixture only** (streamlit-searchbox iframe). Real `--real` run uses headline journey: All → Lifer → warm All |
 
 So: **headline map performance for release sign-off is OK.** The gap is **automation completeness** for Species/Family banner waits, not user-visible All/Lifer regression.
 

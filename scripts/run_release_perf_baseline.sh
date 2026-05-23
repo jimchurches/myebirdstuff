@@ -67,8 +67,12 @@ PYTEST_RC=$?
 set -e
 
 echo ""
-echo "Snapshot + aggregate (pytest exit $PYTEST_RC — journey may fail on Species banner E2E; JSONL still useful):"
-python scripts/snapshot_explorer_perf_log.py "$ARCHIVE" --label "$LABEL" 2>/dev/null || true
+echo "Snapshot + aggregate:"
+if [[ -f "$ARCHIVE" ]]; then
+  python scripts/snapshot_explorer_perf_log.py "$ARCHIVE" --label "$LABEL"
+else
+  echo "warning: no JSONL archive at $ARCHIVE" >&2
+fi
 python scripts/aggregate_perf_jsonl.py "$SNAP_DIR" \
   --glob "release-${RELEASE}-*.jsonl" \
   --group-regex "release-${RELEASE}-(?P<dataset>[^-]+)-r1" \
@@ -85,6 +89,16 @@ python scripts/aggregate_perf_jsonl.py "$SNAP_DIR" \
   --extra-key marker_count \
   --extra-key popup_build_total_ms
 
+METRICS_JSON="$ROOT/docs/explorer/release-${RELEASE}-baseline-metrics.json"
+if [[ -f "$ARCHIVE" ]]; then
+  python3 scripts/extract_release_perf_metrics.py "$ARCHIVE" \
+    --dataset "$MODE" \
+    --release "$RELEASE" \
+    --out "$METRICS_JSON"
+fi
+
 echo ""
+echo "Saved: $ARCHIVE"
 echo "Baseline doc: docs/explorer/release-${RELEASE}-baseline.md"
+echo "Metrics JSON: docs/explorer/release-${RELEASE}-baseline-metrics.json (update after run if needed)"
 exit "$PYTEST_RC"
