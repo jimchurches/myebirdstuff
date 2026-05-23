@@ -1,7 +1,7 @@
 """GeoJSON + revision for the **Lifer locations** Leaflet component.
 
-Mirrors :func:`~explorer.core.map_leaflet_viewport.build_lifer_overlay_map` data without Folium.
-Structured ``lifer_popup_v1`` feeds the iframe TS template (parity with ``format_lifer_popup_lines``).
+Structured ``lifer_popup_v1`` (from :func:`~explorer.core.map_overlay_lifer_popups.lifer_popup_line_structured_items`)
+feeds the iframe TS template; viewport via :func:`~explorer.core.map_leaflet_viewport.lifer_leaflet_viewport_recipe`.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def build_lifer_locations_geojson_payload(
 ) -> tuple[str | None, dict[str, Any] | None, str | None, list[list[float]], LeafletGeoJsonBuildMetrics]:
     """Return ``(revision, geojson_feature_collection, warning, framing_pairs_lat_lon)``.
 
-    *framing_pairs_lat_lon* — base-species lifer coordinates only (viewport parity with Folium);
+    *framing_pairs_lat_lon* — base-species lifer coordinates only (``lifer_leaflet_viewport_recipe`` input);
     empty when ``warning`` is set or no valid coordinates.
     """
     empty_metrics = empty_leaflet_geojson_build_metrics()

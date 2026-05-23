@@ -2,7 +2,7 @@
 
 import L from "leaflet";
 
-/** Folium `MAP_POPUP_MAX_WIDTH_PX` (`explorer/app/streamlit/defaults.py`). */
+/** Matches ``MAP_POPUP_MAX_WIDTH_PX`` in ``explorer/app/streamlit/defaults.py`` (420). */
 const POPUP_MAX_WIDTH_PX = 420;
 
 /** Leaflet runs ``autoPan`` inside ``popup.update()`` — stacked updates caused large vertical pans. Disabled globally; ``maybePanPopupIntoView`` pans once when needed after layout settles. */
@@ -11,7 +11,7 @@ export const POPUP_BIND_OPTIONS: L.PopupOptions = {
   autoPan: false,
 };
 
-/** Folium ``_apply_go_to_gps_pin_view`` popup body (`explorer/core/map_overlay_visit_map.py`). */
+/** Go-to-GPS popup body (``map_leaflet_viewport`` ``go_to_gps`` viewport recipe). */
 export const GO_TO_GPS_POPUP_HTML =
   "<div style='font-size:13px'><strong>Temporary GPS marker</strong></div>";
 
@@ -94,7 +94,7 @@ function measurePebirdPopupInnerWidthPx(inner: HTMLElement): number {
   return Math.ceil(Math.max(w, 1));
 }
 
-/** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (same idea as Folium ``map_popup_width_fix_script``; this iframe runs TS only).
+/** Shrink-wrap Leaflet popup width to ``.pebird-map-popup`` intrinsic width (TS-only; export viewer uses ``leaflet_map_export.js``).
 
 Uses map pixel width (not ``window``) for cap. Parents use ``cap`` px during measure so ``width:100%`` rows do not collapse.
 After width changes, callers invoke ``popup.update()`` to keep the tip on the marker (#145).

@@ -1,6 +1,6 @@
 """GeoJSON + revision for the **Species locations** Leaflet component.
 
-Mirrors :func:`~explorer.core.map_leaflet_viewport.build_visit_overlay_map` species branch without Folium.
+Species-map GeoJSON for the Leaflet component; viewport via :func:`~explorer.core.map_leaflet_viewport.species_leaflet_viewport_recipe`.
 """
 
 from __future__ import annotations
@@ -134,7 +134,7 @@ def build_species_locations_geojson_payload(
 ) -> tuple[str | None, dict[str, Any] | None, str | None, list[list[float]], set[str], LeafletGeoJsonBuildMetrics]:
     """Return ``(revision, geojson, warning, framing_pairs_lat_lon, pin_roles_present)``.
 
-    *framing_pairs* — coordinates of species-matching pins only (viewport parity with Folium).
+    *framing_pairs* — coordinates of species-matching pins only (``species_leaflet_viewport_recipe`` input).
     *pin_roles_present* — legend labels present: ``Species``, ``Locations``, ``Lifer``, ``Last seen``.
     """
     empty_metrics = empty_leaflet_geojson_build_metrics()

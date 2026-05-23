@@ -689,7 +689,7 @@ _BANNER_POSITION = "position:fixed;top:16px;right:16px;z-index:1000;"
 _LEGEND_POSITION = "position:fixed;bottom:16px;left:16px;z-index:1000;"
 
 # All locations Streamlit component: keep the **banner** on ``position:fixed`` (``_BANNER_POSITION`` —
-# same top/right as Folium in the iframe viewport). The **legend** uses ``position:absolute`` with
+# top/right of the iframe viewport). The **legend** uses ``position:absolute`` with
 # ``bottom:16px`` relative to ``.all-locations-map-frame`` so the legend–map bottom gap stays stable;
 # ``left`` is tighter than 16px because a ``fixed`` banner measures from the iframe viewport while this
 # overlay is laid out inside the component root, and matching the *visual* left gutter needs a smaller
@@ -743,7 +743,7 @@ def build_all_locations_banner_html(
     line muted and slightly smaller. Date filter state is **not** shown here — it lives in
     the sidebar only.
 
-    *position_style* — when ``None``, uses the Folium overlay default (fixed corner). Pass a string
+    *position_style* — when ``None``, uses the default fixed corner overlay (``_BANNER_POSITION``). Pass a string
     (e.g. ``\"position:relative;\"``) when embedding the banner outside the map document.
     """
     sep = _banner_sep()
@@ -886,7 +886,7 @@ def build_legend_html(items, *, container_style: str | None = None):
 
     Each tuple is rendered via :func:`pin_legend_item`.
 
-    *container_style* — when ``None``, uses the Folium overlay default (fixed bottom-left). Pass a CSS
+    *container_style* — when ``None``, uses the default fixed bottom-left legend (``_LEGEND_POSITION``). Pass a CSS
     string for the outer ``pebird-map-legend`` box when embedding in Streamlit above the Leaflet component.
     """
     parts = "".join(pin_legend_item(c, f, label) for c, f, label in items)

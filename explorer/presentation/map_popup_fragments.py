@@ -1,8 +1,7 @@
-"""Content-keyed fragments for map popup HTML (#205 Batch A).
+"""Content-keyed tuple helpers for popup HTML substrings (#205 Batch A).
 
-Reuses expensive substrings (visit lists, species ``<details>`` blocks, lifer lines) across
-full-popup cache misses when the underlying rows are unchanged — e.g. map rebuild after a
-non–data-affecting rerun or when switching views that share the same visit rows.
+Legacy fragment-cache keys; production maps use structured ``*_popup_v1`` payloads and Leaflet
+session LRU caches instead. Kept for tests and any future fragment deduplication.
 """
 
 from __future__ import annotations

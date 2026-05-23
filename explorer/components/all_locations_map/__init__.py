@@ -51,7 +51,7 @@ def render_all_locations_map_component(
 
     *cluster_icon_style* — optional tier rgba dict from :func:`~explorer.core.all_locations_marker_style.cluster_icon_style_for_all_locations_map` for MarkerCluster ``iconCreateFunction``. Empty dict uses plugin default cluster colours.
 
-    *viewport* — camera recipe from :func:`~explorer.core.map_leaflet_viewport.all_locations_leaflet_viewport_recipe` (Folium initial view / fit bounds parity). Omit or empty dict to fall back to GeoJSON-bounds padding in the iframe.
+    *viewport* — camera recipe from :func:`~explorer.core.map_leaflet_viewport.all_locations_leaflet_viewport_recipe`. Omit or empty dict to fall back to GeoJSON-bounds padding in the iframe.
 
     *map_style* — basemap key from ``MAP_BASEMAP_OPTIONS`` in ``explorer.app.streamlit.defaults``
     (``default``, ``google``, ``carto``). Passed from the Prep map tab sidebar; unknown values behave as ``default``.

@@ -400,7 +400,7 @@ function popupHtmlVisitedLayout(
       }
     }
   }
-  /** Mirrors Folium ``build_visit_info_html``: ``<br>`` between *inline* checklist links — not ``display:block`` anchors. */
+  /** ``<br>`` between inline checklist links (``map_renderer.build_visit_popup_entry_rows`` layout) — not ``display:block`` anchors. */
   const visitInner = visitAnchors.join("<br>");
 
   return (

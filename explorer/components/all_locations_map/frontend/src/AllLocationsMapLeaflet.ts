@@ -157,7 +157,7 @@ export function applyGoToGpsViewportCamera(map: L.Map, vp: ViewportV1GoToGps): v
   map.fitBounds(b, { padding: L.point(vp.padding_px, vp.padding_px), maxZoom: vp.max_zoom, animate: false });
 }
 
-/** Red pin approximating Folium ``folium.Icon(color='red', icon='map-marker', prefix='fa')``. */
+/** Red DivIcon pin for go-to-GPS viewport mode. */
 function goToGpsMarkerIcon(): L.DivIcon {
   return L.divIcon({
     className: "all-locations-gps-marker",
@@ -168,7 +168,7 @@ function goToGpsMarkerIcon(): L.DivIcon {
   });
 }
 
-/** Folium ``_apply_go_to_gps_pin_view`` marker on the map (not inside MarkerCluster). */
+/** Temporary GPS marker on the map root (not inside MarkerCluster). */
 export function syncGoToGpsMarker(
   map: L.Map,
   viewportRaw: unknown,
@@ -188,7 +188,7 @@ export function syncGoToGpsMarker(
   markerRef.current = m;
 }
 
-/** Folium ``build_visit_overlay_map`` camera for All locations. */
+/** All locations camera from Python ``all_locations_leaflet_viewport_recipe`` payload. */
 export function applyAllLocationsViewport(map: L.Map, viewportRaw: unknown, boundsLayer: L.Layer | null): void {
   const vp = parseViewportV1(viewportRaw);
   const padPt = (px: number) => L.point(px, px);
@@ -233,7 +233,7 @@ function isHex6(s: string | undefined): boolean {
   return typeof s === "string" && /^#[0-9a-fA-F]{6}$/.test(s);
 }
 
-/** Folium-equivalent CircleMarker options from Python or legacy GeoJSON ``colour``. */
+/** CircleMarker options from Python ``circle_marker_style`` or legacy GeoJSON ``colour``. */
 export function resolvedCircleStyles(
   cm: CircleMarkerStylePayload | undefined,
   featureColour: string | undefined,
@@ -361,7 +361,7 @@ function extractScriptInnerJs(html: string): string {
   return m ? m[1].trim() : s.replace(/^\s*<script[^>]*>\s*/i, "").replace(/\s*<\/script>\s*$/i, "").trim();
 }
 
-/** Folium ``add_zoom_level_debug_overlay`` / ``_ZoomLevelDebugOverlay`` in ``map_renderer.py``. */
+/** Live zoom readout overlay (parity with ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` / ``defaults.py``). */
 export function syncZoomLevelDebugOverlay(
   map: L.Map,
   enabled: boolean,

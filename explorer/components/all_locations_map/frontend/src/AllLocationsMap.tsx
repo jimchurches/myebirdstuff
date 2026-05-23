@@ -49,7 +49,7 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   const overlayRef = useRef<L.LayerGroup | null>(null);
   /** Pins with ``skip_cluster`` (design utility role markers) — sibling layer, not clustered. */
   const standaloneOverlayRef = useRef<L.GeoJSON | null>(null);
-  /** Folium ``_apply_go_to_gps_pin_view`` red pin — map root, not inside MarkerCluster. */
+  /** Temporary GPS marker — map root, not inside MarkerCluster (``go_to_gps`` viewport). */
   const goToGpsMarkerRef = useRef<L.Marker | null>(null);
   /** OSM / Carto / Google tile layer — swapped when ``map_style`` changes without GeoJSON revision. */
   const baseTileLayerRef = useRef<L.TileLayer | null>(null);

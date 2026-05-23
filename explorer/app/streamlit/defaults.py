@@ -32,7 +32,7 @@ from explorer.core.map_marker_scheme_model import (
 )
 
 # ---------------------------------------------------------------------------
-# Marker cluster — default “all locations” map (Leaflet.markercluster via Folium)
+# Marker cluster — default “all locations” map (Leaflet.markercluster)
 # ---------------------------------------------------------------------------
 MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX = 40
 MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 9
@@ -52,7 +52,7 @@ MAP_LIFER_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS = False
 MAP_DEBUG_SHOW_ZOOM_LEVEL = False
 
 # ---------------------------------------------------------------------------
-# Pin geometry — Folium ``CircleMarker`` + legend sample dots; popup width
+# Pin geometry — Leaflet CircleMarker + legend sample dots; popup max width
 # ---------------------------------------------------------------------------
 MAP_CIRCLE_MARKER_RADIUS_PX = 4
 MAP_CIRCLE_MARKER_STROKE_WEIGHT = 3
@@ -60,7 +60,7 @@ MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 1.0
 MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
 MAP_LEGEND_PIN_DOT_PX = 8
 MAP_LEGEND_PIN_BORDER_PX = 2
-MAP_POPUP_MAX_WIDTH_PX = 420  # Folium L.popup maxWidth; card-like popups (refs #145).
+MAP_POPUP_MAX_WIDTH_PX = 420  # Leaflet popup maxWidth; card-like popups (refs #145).
 # Family-locations map only (popup width + initial ``fit_bounds``); not tied to marker colour presets.
 MAP_FAMILY_MAP_POPUP_MAX_WIDTH_PX = 320
 MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX = 48
@@ -128,7 +128,7 @@ MAP_SPECIES_HIDE_ONLY_DEFAULT = True
 MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer locations", "Family locations")
 
 # ---------------------------------------------------------------------------
-# Map marker colour schemes (Folium circle markers; refs #138)
+# Map marker colour schemes (Leaflet circle markers; refs #138)
 #
 # Fallback when a scheme has no ``global_defaults.radius_px`` (design utility / migration).
 MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK = 2

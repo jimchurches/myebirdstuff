@@ -1,6 +1,6 @@
 """Pure aggregation for the taxonomy-family map: how rich each checklist location is for a chosen family.
 
-This module stays UI-free so the same numbers feed Folium and tests. Density uses **distinct base
+This module stays UI-free so the same numbers feed the Leaflet map component and tests. Density uses **distinct base
 species** per location (subspecies roll up to base). Popup lines use **distinct common names** as
 recorded (subspecies can appear as separate lines). Highlight targets a **base species**; any
 subspecies row counts as a match.

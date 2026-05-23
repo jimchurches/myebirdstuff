@@ -1,6 +1,6 @@
 """Render GeoJSON popup properties to HTML for standalone Leaflet map export (#222 §7).
 
-Mirrors the component iframe templates in ``AllLocationsMap.tsx`` without a second Folium stack.
+Mirrors the component iframe templates in ``AllLocationsMapPopupHtml.ts`` for standalone export HTML.
 """
 
 from __future__ import annotations

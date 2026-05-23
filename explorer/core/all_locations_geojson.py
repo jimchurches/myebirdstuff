@@ -91,9 +91,9 @@ def build_all_locations_geojson_payload(
     Pass *revision_extra* (e.g. JSON of cluster options) so iframe behaviour can bump the revision
     without changing GeoJSON geometry.
     When *omit_pin_colour* is True, ``colour`` is omitted from features so the iframe applies
-    ``circle_marker_style`` from Streamlit (resolved Folium-equivalent pin styling).
+    ``circle_marker_style`` from Streamlit (resolved pin styling for the Leaflet component).
 
-    When *records_by_location* is set (same mapping as Folium **All locations**), each feature's
+    When *records_by_location* is set (All locations visited block), each feature's
     ``popup_v1`` includes a ``visited`` section mirroring :func:`build_location_popup_html` content.
     """
     cols = {"Location ID", "Location", "Latitude", "Longitude"}

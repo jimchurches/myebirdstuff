@@ -17,7 +17,7 @@ MAP_POPUP_SORT_ORDER_DEFAULT = "ascending"
 MAP_POPUP_SCROLL_HINT_DEFAULT = "shading"
 MAP_MARK_LIFER_DEFAULT = True
 MAP_MARK_LAST_SEEN_DEFAULT = True
-# Basemap: stored in persisted settings as a simple key (not a Folium object).
+# Basemap: stored in persisted settings as a simple key (not a tile-layer object).
 # Keep this list in sync with Streamlit UI options in ``explorer.app.streamlit.defaults``.
 MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "google", "carto")
 MAP_BASEMAP_DEFAULT = "default"
