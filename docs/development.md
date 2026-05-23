@@ -49,6 +49,8 @@ python3 scripts/build_all_locations_map_frontend.py
 
 That runs `npm ci` + `npm run build` and reports which `build/` files belong in git vs junk (e.g. macOS Finder duplicates). Details: [explorer/components/all_locations_map/README.md](../explorer/components/all_locations_map/README.md).
 
+**macOS Finder duplicates** (`file 2.py`, `css 2/`, etc.): ignored via `.gitignore`, removed locally by `python3 scripts/prune_finder_duplicates.py` (also run automatically in the `/commit-work` command and checked in CI).
+
 **Pre-push / CI parity** (same checks as the *Map component (frontend CI)* job in `.github/workflows/tests.yml`):
 
 ```bash
@@ -70,10 +72,10 @@ All four **Map view** modes use the same Streamlit custom component (`explorer/c
 
 | Step | Where | What |
 |------|--------|------|
-| Prep | `explorer/app/streamlit/app_prep_map_ui.py` | Build GeoJSON + `revision`, banner/legend HTML, viewport extras; session LRU via `*_LEAFLET_PAYLOAD_CACHE_KEY` and `leaflet_payload_cache_key()` |
+| Prep | `app_prep_map_ui.py` (orchestrator) + `app_prep_map_leaflet_modes.py` | Build GeoJSON + `revision`, banner/legend HTML, viewport extras; session LRU via `app_prep_map_leaflet_caches` |
 | Payload | `explorer/core/*_locations_geojson.py` | Structured `popup_v1` (and mode variants) in feature properties — not per-pin HTML |
 | Embed | `render_all_locations_map_component` in component `__init__.py` | `declare_component` + committed `frontend/build` iframe |
-| Client | `frontend/src/AllLocationsMap.tsx` | Leaflet map, MarkerCluster, popup templates (`AllLocationsMapPopup.css`) |
+| Client | `frontend/src/AllLocationsMap.tsx` (+ `AllLocationsMapLeaflet.ts`, `AllLocationsMapPopupHtml.ts`, `AllLocationsMapPopupSizing.ts`, `allLocationsMapTypes.ts`) | Leaflet map, MarkerCluster, popup templates (`AllLocationsMapPopup.css`) |
 | Export | `explorer/presentation/leaflet_map_html_export.py` | Standalone HTML (CDN Leaflet) from cached recipe (`LEAFLET_EXPORT_*` keys) |
 
 **Historical performance notes** (#222): [`issue-222-plain-summary.md`](explorer/issue-222-plain-summary.md) (plain language), [`issue-222-section-8-baseline.md`](explorer/issue-222-section-8-baseline.md) (tables + re-run), [`issue-222-section-8-prior-art.md`](explorer/issue-222-section-8-prior-art.md) (Folium-era context). Re-run: `./scripts/run_post_leaflet_perf_baseline.sh`.
@@ -121,7 +123,10 @@ Streamlit UI
 | species_logic | Filtering + countable species rules |
 | stats | Rankings, summaries, country stats |
 | working_set | Rebuild filtered dataset |
-| app_prep_map_ui | Map tab prep: GeoJSON payload build, session LRU, component embed, export recipe |
+| app_prep_map_ui | Map prep orchestration (spinner, context, mode dispatch) |
+| app_prep_map_leaflet_modes | Per-mode Leaflet GeoJSON + banner/legend build |
+| app_prep_map_map_tab | Map tab component embed + export sidebar |
+| app_bootstrap / app_dashboard_shell | `main()` phases after #200 / R13 split |
 | map_renderer | Banner/legend HTML + popup theme CSS (shared with component iframe) |
 | map_leaflet_viewport | Viewport recipes, cluster icon styling payloads |
 | *_locations_geojson | Per-mode GeoJSON + structured popup payloads (all / species / lifer / family) |

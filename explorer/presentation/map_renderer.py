@@ -689,7 +689,7 @@ _BANNER_POSITION = "position:fixed;top:16px;right:16px;z-index:1000;"
 _LEGEND_POSITION = "position:fixed;bottom:16px;left:16px;z-index:1000;"
 
 # All locations Streamlit component: keep the **banner** on ``position:fixed`` (``_BANNER_POSITION`` —
-# same top/right as Folium in the iframe viewport). The **legend** uses ``position:absolute`` with
+# top/right of the iframe viewport). The **legend** uses ``position:absolute`` with
 # ``bottom:16px`` relative to ``.all-locations-map-frame`` so the legend–map bottom gap stays stable;
 # ``left`` is tighter than 16px because a ``fixed`` banner measures from the iframe viewport while this
 # overlay is laid out inside the component root, and matching the *visual* left gutter needs a smaller
@@ -743,7 +743,7 @@ def build_all_locations_banner_html(
     line muted and slightly smaller. Date filter state is **not** shown here — it lives in
     the sidebar only.
 
-    *position_style* — when ``None``, uses the Folium overlay default (fixed corner). Pass a string
+    *position_style* — when ``None``, uses the default fixed corner overlay (``_BANNER_POSITION``). Pass a string
     (e.g. ``\"position:relative;\"``) when embedding the banner outside the map document.
     """
     sep = _banner_sep()
@@ -886,115 +886,12 @@ def build_legend_html(items, *, container_style: str | None = None):
 
     Each tuple is rendered via :func:`pin_legend_item`.
 
-    *container_style* — when ``None``, uses the Folium overlay default (fixed bottom-left). Pass a CSS
+    *container_style* — when ``None``, uses the default fixed bottom-left legend (``_LEGEND_POSITION``). Pass a CSS
     string for the outer ``pebird-map-legend`` box when embedding in Streamlit above the Leaflet component.
     """
     parts = "".join(pin_legend_item(c, f, label) for c, f, label in items)
     pos = _LEGEND_POSITION if container_style is None else container_style
     return f'<div class="pebird-map-legend" style="{pos}">{parts}</div>'
-
-
-# ---------------------------------------------------------------------------
-# Popup scroll behaviour (injected JS)
-# ---------------------------------------------------------------------------
-
-def popup_scroll_script(scroll_hint, scroll_to_bottom):
-    """Return an HTML ``<script>`` block that adds scroll hints to map popups.
-
-    Args:
-        scroll_hint: One of ``"chevron"``, ``"shading"``, ``"both"``, or
-            ``None``/falsy to disable.
-        scroll_to_bottom: If True, popups scroll to the bottom on open
-            (most-recent-first ordering).
-    """
-    hint_js = repr(scroll_hint)
-    to_bottom_js = "true" if scroll_to_bottom else "false"
-    return f"""
-<script>
-(function() {{
-  var HINT = {hint_js};
-  var SCROLL_TO_BOTTOM = {to_bottom_js};
-
-  function updateHints(scrollable, wrapper) {{
-    var st = scrollable.scrollTop;
-    var maxScroll = scrollable.scrollHeight - scrollable.clientHeight;
-    var hasMoreAbove = st > 0;
-    var hasMoreBelow = st < maxScroll;
-
-    if (HINT === 'chevron' || HINT === 'both') {{
-      var upEl = wrapper.querySelector('.popup-scroll-up');
-      var downEl = wrapper.querySelector('.popup-scroll-down');
-      if (upEl) upEl.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
-      if (downEl) downEl.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
-    }}
-    if (HINT === 'shading' || HINT === 'both') {{
-      var topShade = wrapper.querySelector('.popup-scroll-shade-top');
-      var botShade = wrapper.querySelector('.popup-scroll-shade-bot');
-      if (topShade) topShade.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
-      if (botShade) botShade.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
-    }}
-  }}
-
-  function setupPopup(scrollable, wrapper) {{
-    var hasOverflow = scrollable.scrollHeight > scrollable.clientHeight;
-    if (!hasOverflow) return;
-
-    scrollable.scrollTop = SCROLL_TO_BOTTOM ? scrollable.scrollHeight : 0;
-
-    var scrollTop = scrollable.offsetTop;
-    if (HINT === 'chevron' || HINT === 'both') {{
-      var up = document.createElement('div');
-      up.className = 'popup-scroll-up';
-      up.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
-      up.textContent = '\\u25B2';
-      var down = document.createElement('div');
-      down.className = 'popup-scroll-down';
-      down.style.cssText = 'position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
-      down.textContent = '\\u25BC';
-      wrapper.appendChild(up);
-      wrapper.appendChild(down);
-    }}
-    if (HINT === 'shading' || HINT === 'both') {{
-      var topShade = document.createElement('div');
-      topShade.className = 'popup-scroll-shade-top';
-      topShade.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(250,252,250,0.97),transparent);';
-      var botShade = document.createElement('div');
-      botShade.className = 'popup-scroll-shade-bot';
-      botShade.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(250,252,250,0.97),transparent);';
-      wrapper.appendChild(topShade);
-      wrapper.appendChild(botShade);
-    }}
-
-    updateHints(scrollable, wrapper);
-    scrollable.addEventListener('scroll', function() {{ updateHints(scrollable, wrapper); }});
-  }}
-
-  function onPopupOpen() {{
-    setTimeout(function() {{
-      var scrollable = document.querySelector('.leaflet-popup-content .pebird-map-popup__scroll');
-      if (!scrollable) return;
-      var wrapper = scrollable.parentElement;
-      if (wrapper.dataset.popupSetup) return;
-      wrapper.dataset.popupSetup = '1';
-      setupPopup(scrollable, wrapper);
-    }}, 100);
-  }}
-
-  var observer = new MutationObserver(function(mutations) {{
-    for (var i = 0; i < mutations.length; i++) {{
-      for (var j = 0; j < mutations[i].addedNodes.length; j++) {{
-        var node = mutations[i].addedNodes[j];
-        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {{
-          onPopupOpen();
-          return;
-        }}
-      }}
-    }}
-  }});
-  observer.observe(document.body, {{ childList: true, subtree: true }});
-}})();
-</script>
-"""
 
 
 # ---------------------------------------------------------------------------

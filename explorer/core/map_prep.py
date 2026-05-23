@@ -11,6 +11,8 @@ only map pins and banner first/last dates use that full-time data.
 
 from __future__ import annotations
 
+import hashlib
+import os
 from typing import Any, Dict, Hashable, Tuple
 
 import pandas as pd
@@ -89,9 +91,45 @@ def prepare_all_locations_map_context(
     }
 
 
-def data_signature_for_caches(df: pd.DataFrame, provenance: str) -> Tuple[str, int, str]:
-    """Stable tuple to detect a new dataset and clear popup / filter caches."""
-    first_sid = ""
-    if len(df) > 0 and "Submission ID" in df.columns:
-        first_sid = str(df["Submission ID"].iloc[0])
-    return (provenance, len(df), first_sid)
+def _dataset_content_fingerprint(df: pd.DataFrame) -> str:
+    """Hash submission-id set so two exports with the same row count do not share caches."""
+    if df.empty:
+        return "empty"
+    digest = hashlib.sha256()
+    digest.update(str(len(df)).encode())
+    if "Submission ID" not in df.columns:
+        return digest.hexdigest()[:16]
+    sids = df["Submission ID"].dropna().astype(str).str.strip()
+    if sids.empty:
+        return digest.hexdigest()[:16]
+    for sid in sorted(sids.unique()):
+        digest.update(sid.encode("utf-8", errors="replace"))
+        digest.update(b"\n")
+    return digest.hexdigest()[:16]
+
+
+def _disk_file_identity(data_abs_path: str) -> str:
+    """``mtime_ns:size`` when the export path is stat-able (disk load)."""
+    try:
+        st = os.stat(data_abs_path)
+        return f"{int(st.st_mtime_ns)}:{int(st.st_size)}"
+    except OSError:
+        return data_abs_path
+
+
+def data_signature_for_caches(
+    df: pd.DataFrame,
+    provenance: str,
+    *,
+    data_abs_path: str | None = None,
+) -> Tuple[str, int, str]:
+    """Stable tuple to detect a new dataset and clear Leaflet session caches.
+
+    Tuple is ``(provenance, row_count, fingerprint)``. The fingerprint hashes all
+    unique submission IDs (not only the first row) and, for disk loads, includes
+    file ``mtime_ns`` and size when *data_abs_path* is provided.
+    """
+    fingerprint = _dataset_content_fingerprint(df)
+    if data_abs_path:
+        fingerprint = f"{_disk_file_identity(data_abs_path)}|{fingerprint}"
+    return (provenance, len(df), fingerprint)

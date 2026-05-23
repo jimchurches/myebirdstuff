@@ -54,7 +54,6 @@ if TYPE_CHECKING:  # pragma: no cover
         format_sighting_row,
         format_visit_time,
         pin_legend_item,
-        popup_scroll_script,
         resolve_lifer_last_seen,
     )
 
@@ -119,7 +118,6 @@ from explorer.presentation.maintenance_display import (
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "format_visit_time": ("explorer.presentation.map_renderer", "format_visit_time"),
     "format_sighting_row": ("explorer.presentation.map_renderer", "format_sighting_row"),
-    "popup_scroll_script": ("explorer.presentation.map_renderer", "popup_scroll_script"),
     "pin_legend_item": ("explorer.presentation.map_renderer", "pin_legend_item"),
     "build_all_locations_banner_html": (
         "explorer.presentation.map_renderer",
@@ -175,7 +173,6 @@ __all__ = [
     "ExplorerState",
     "format_visit_time",
     "format_sighting_row",
-    "popup_scroll_script",
     "pin_legend_item",
     "build_all_locations_banner_html",
     "build_species_banner_html",

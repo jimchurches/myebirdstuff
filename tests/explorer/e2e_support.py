@@ -191,23 +191,71 @@ def choose_map_view_mode(page: Any, label: str) -> None:
     page.get_by_role("option", name=label).click()
 
 
+def map_banner_must_contain(title_fragment: str) -> list[str]:
+    """Substrings for :func:`wait_for_pebird_map_markup` (title may be plain or an eBird link)."""
+    return ["pebird-map-banner__title", title_fragment]
+
+
 # Integration fixture species (Whoosh + map banner title use common name).
 E2E_FIXTURE_SPECIES_COMMON = "Grey Teal"
 
 
 def choose_species_by_common_name(page: Any, common_name: str) -> None:
     """Select a species in **Species locations** via the sidebar searchbox."""
+    from explorer.app.streamlit.streamlit_ui_constants import SPECIES_SEARCH_PLACEHOLDER
+
     choose_map_view_mode(page, "Species locations")
     sidebar = page.locator('[data-testid="stSidebar"]')
     sidebar.get_by_text("Show only selected species", exact=True).wait_for(timeout=20_000)
-    # streamlit-searchbox uses a Base Web combobox (not a plain st.text_input).
-    search = sidebar.get_by_role("combobox")
+    with contextlib.suppress(Exception):
+        page.locator('[data-testid="stSpinner"]').wait_for(state="detached", timeout=180_000)
+    page.locator('iframe[title="streamlit_searchbox.searchbox"]').wait_for(
+        state="attached", timeout=30_000
+    )
+    # streamlit-searchbox renders inside its own iframe (not the main sidebar DOM).
+    searchbox_frame = page.frame_locator('iframe[title="streamlit_searchbox.searchbox"]')
+    search = searchbox_frame.get_by_placeholder(SPECIES_SEARCH_PLACEHOLDER)
+    if search.count() == 0:
+        search = searchbox_frame.get_by_role("combobox")
     search.wait_for(state="visible", timeout=20_000)
     search.click()
     search.fill(common_name)
+    # Match app debounce (SPECIES_SEARCH_DEBOUNCE_MS) before expecting suggestions.
+    page.wait_for_timeout(800)
+    picked = False
+    for candidate in (
+        searchbox_frame.get_by_text(common_name, exact=True),
+        searchbox_frame.locator('[role="option"]', has_text=common_name),
+        searchbox_frame.locator('[role="option"]:visible', has_text=common_name),
+    ):
+        if candidate.count() > 0:
+            candidate.first.click(timeout=10_000)
+            picked = True
+            break
+    if not picked:
+        search.press("ArrowDown")
+        page.wait_for_timeout(250)
+        search.press("Enter")
     page.wait_for_timeout(500)
-    search.press("ArrowDown")
     search.press("Enter")
+    # Fragment rerun + map prep on large exports can take tens of seconds.
+    with contextlib.suppress(Exception):
+        page.locator('[data-testid="stSpinner"]').wait_for(state="detached", timeout=120_000)
+    wait_for_pebird_map_markup(
+        page,
+        must_contain=map_banner_must_contain(common_name),
+        timeout_ms=e2e_map_markup_timeout_ms(),
+    )
+
+
+def choose_family_by_label(page: Any, family_label: str) -> None:
+    """Pick *family_label* in **Family locations** (sidebar Family selectbox)."""
+    choose_map_view_mode(page, "Family locations")
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    sidebar.get_by_text("Family", exact=True).wait_for(timeout=20_000)
+    family_select = sidebar.locator('[data-testid="stSelectbox"]').nth(1)
+    family_select.click()
+    page.get_by_role("option", name=family_label).click()
 
 
 def choose_first_recorded_family(page: Any) -> str:
@@ -368,7 +416,13 @@ def max_elapsed_ms_by_stage(events: Iterable[dict[str, Any]]) -> dict[str, float
 
 @contextlib.contextmanager
 def temporary_ebird_csv_config(repo_root: Path, tmp_path: Path, csv_source: Path) -> Iterator[None]:
-    """Point ``config/config.yaml`` + ``config_secret.yaml`` at *tmp_path* with *csv_source* copied as CSV."""
+    """Point config at *tmp_path* with *csv_source* copied as ``MyEBirdData.csv``.
+
+    Does **not** overwrite ``config_secret.yaml`` in place (avoids clobbering local secrets if a
+    run is interrupted). Instead, renames the live secret aside for the test and restores it in
+    ``finally`` (and via ``atexit`` as a safety net).
+    """
+    import atexit
     import shutil
 
     data_dir = tmp_path / "data"
@@ -380,28 +434,38 @@ def temporary_ebird_csv_config(repo_root: Path, tmp_path: Path, csv_source: Path
     config_dir.mkdir(parents=True, exist_ok=True)
     config_yaml = config_dir / "config.yaml"
     config_secret_yaml = config_dir / "config_secret.yaml"
+    secret_e2e_bak = config_dir / "config_secret.yaml.e2e-bak"
     original_cfg = config_yaml.read_text(encoding="utf-8") if config_yaml.exists() else None
-    original_secret_cfg = (
-        config_secret_yaml.read_text(encoding="utf-8") if config_secret_yaml.exists() else None
-    )
+    had_secret = config_secret_yaml.is_file()
+    if had_secret:
+        if secret_e2e_bak.exists():
+            secret_e2e_bak.unlink()
+        config_secret_yaml.rename(secret_e2e_bak)
     config_payload = f"data_folder: {data_dir.as_posix()}\n"
     config_yaml.write_text(config_payload, encoding="utf-8")
     config_secret_yaml.write_text(config_payload, encoding="utf-8")
 
+    restored = False
+
     def _restore() -> None:
+        nonlocal restored
+        if restored:
+            return
+        restored = True
         if original_cfg is None:
             with contextlib.suppress(FileNotFoundError):
                 config_yaml.unlink()
         else:
             config_yaml.write_text(original_cfg, encoding="utf-8")
-        if original_secret_cfg is None:
-            with contextlib.suppress(FileNotFoundError):
-                config_secret_yaml.unlink()
-        else:
-            config_secret_yaml.write_text(original_secret_cfg, encoding="utf-8")
+        with contextlib.suppress(FileNotFoundError):
+            config_secret_yaml.unlink()
+        if secret_e2e_bak.is_file():
+            secret_e2e_bak.rename(config_secret_yaml)
 
+    atexit.register(_restore)
     try:
         yield
     finally:
+        atexit.unregister(_restore)
         _restore()
 

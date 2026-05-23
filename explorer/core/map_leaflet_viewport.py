@@ -57,7 +57,7 @@ from explorer.core.map_marker_colour_resolve import (
 )
 
 def lifer_leaflet_viewport_recipe(framing_pairs: list[list[float]]) -> dict[str, Any]:
-    """Camera recipe ``v1`` for the Lifer Leaflet iframe — matches ``build_lifer_overlay_map`` fit."""
+    """Camera recipe ``v1`` for the Lifer Leaflet iframe (fit-bounds / single-point rules)."""
     if not framing_pairs:
         return {
             "v": 1,
@@ -98,7 +98,7 @@ def all_locations_leaflet_viewport_recipe(
     all_locations_location_country: dict[Hashable, str] | None,
     go_to_gps_pin: tuple[float, float] | None,
 ) -> dict[str, Any]:
-    """Serializable camera recipe for the All locations Leaflet component (Folium ``build_visit_overlay_map`` parity).
+    """Serializable camera recipe for the All locations Leaflet component.
 
     Keys are JSON-stable for ``revision_extra`` hashing. ``v`` is ``1`` for forward compatibility.
     """
@@ -206,7 +206,7 @@ def species_leaflet_viewport_recipe(
 ) -> dict[str, Any]:
     """Camera recipe ``v1`` for Species locations Leaflet iframe.
 
-    *blank_viewport_recipe* — session recipe when no species is selected (parity with Folium blank map).
+    *blank_viewport_recipe* — session recipe when no species is selected (species map blank state).
     *framing_pairs* — species-matching pin coordinates when a species is selected.
     """
     if go_to_gps_pin is not None and len(go_to_gps_pin) == 2:
@@ -304,7 +304,7 @@ def family_leaflet_viewport_recipe(
     """Camera recipe ``v1`` for Family locations Leaflet iframe.
 
     *blank_viewport_recipe* — session recipe when no family is selected or map is empty.
-    *highlight_framed* — use closer max zoom when framing highlight-only pins (Folium parity).
+    *highlight_framed* — use closer max zoom when framing highlight-only pins.
     """
     if not framing_pairs:
         recipe = blank_viewport_recipe if isinstance(blank_viewport_recipe, dict) else {}
@@ -443,7 +443,7 @@ def _marker_cluster_root_background_reset_css() -> str:
 
 
 def all_locations_cluster_icon_style_payload(sch: Any) -> dict[str, Any] | None:
-    """JSON-serialisable cluster icon colours for Leaflet.markercluster (Folium ``iconCreateFunction`` parity).
+    """JSON-serialisable cluster icon colours for Leaflet.markercluster ``iconCreateFunction``.
 
     Returns ``fills_rgba``, ``borders_rgba``, ``halos_rgba`` (length-3 lists for small/medium/large tiers),
     ``border_width_px``, and ``halo_spread_px``. ``None`` when the scheme has no valid nine-tier hex tuple
@@ -570,7 +570,7 @@ def _marker_cluster_icon_create_function_from_scheme(
 
     Expects nine cluster tier colours (``tier_icon_hex`` or flat ``marker_cluster_tier_icon_hex``) with nine values
     ``(small_fill, small_border, small_halo, medium_fill, medium_border, medium_halo, large_fill, large_border, large_halo)``.
-    If unset or invalid, returns ``None`` so Folium / Leaflet.markercluster defaults apply.
+    If unset or invalid, returns ``None`` so Leaflet.markercluster plugin defaults apply.
     """
     p = all_locations_cluster_icon_style_payload(sch)
     if p is None:

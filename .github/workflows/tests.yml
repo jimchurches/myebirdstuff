@@ -60,6 +60,9 @@ jobs:
             exit 1
           fi
 
+      - name: No macOS Finder duplicate paths
+        run: python scripts/prune_finder_duplicates.py --check
+
   secret-scan:
     name: Secret scan (gitleaks)
     needs: repository-hygiene

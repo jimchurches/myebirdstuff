@@ -91,7 +91,7 @@ def build_family_locations_geojson_payload(
 ) -> tuple[str | None, dict[str, Any] | None, list[list[float]], bool, LeafletGeoJsonBuildMetrics]:
     """Return ``(revision, geojson, framing_pairs_lat_lon, highlight_framed)``.
 
-    *highlight_framed* — viewport uses highlight max-zoom when true (parity with Folium).
+    *highlight_framed* — viewport uses highlight max-zoom when true (``family_leaflet_viewport_recipe``).
     """
     pin_list = list(pins)
     normal = sorted(

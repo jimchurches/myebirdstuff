@@ -1,4 +1,14 @@
 .DS_Store
+# macOS Finder "copy N" duplicates (e.g. README 2.md) — see scripts/prune_finder_duplicates.py
+**/* 2
+**/* 2.*
+**/* 3.*
+**/* 4.*
+**/* 5.*
+**/* 6.*
+**/* 7.*
+**/* 8.*
+**/* 9.*
 # Python virtual environments (any name)
 .venv/
 .venv-*/
@@ -41,3 +51,6 @@ explorer/components/**/frontend/build/static/js [0-9]/
 
 # Personal eBird export used for local E2E / integration (optional; see docs/development.md, EXPLORER_E2E_DATASET_CSV)
 tests/fixtures/MyEBirdData.csv
+
+# Local release hygiene reviews (never commit)
+docs/explorer/_LOCAL_*.md

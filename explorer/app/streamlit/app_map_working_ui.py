@@ -12,15 +12,12 @@ from explorer.app.streamlit.app_constants import (
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     REPO_ROOT,
-    FILTERED_BY_LOC_CACHE_KEY,
     LEAFLET_MAP_MOUNT_NONCE_KEY,
     LEAFLET_EXPORT_BUILT_CACHE_KEY,
     LEAFLET_EXPORT_RECIPE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
-    POPUP_FRAGMENT_CACHE_KEY,
-    POPUP_HTML_CACHE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
     SESSION_PREV_MAP_VIEW_KEY,
@@ -143,7 +140,7 @@ class MapWorkingContext:
 
 
 def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
-    """Map sidebar widgets, working set + species search, Folium cache invalidation on All↔Species."""
+    """Map sidebar widgets, working set + species search, Leaflet cache invalidation on All↔Species."""
     ensure_streamlit_map_basemap_height_keys()
     ensure_streamlit_map_marker_colour_scheme_keys()
 
@@ -258,11 +255,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         map_view_mode=_ws_mode,
         date_filter_on=date_filter_on_effective,
         date_range=date_range_sel,
-        map_caches=(
-            st.session_state.get(POPUP_HTML_CACHE_KEY),
-            st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
-            st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
-        ),
     )
     if ws is None:
         st.error("Invalid date range. Using all-time data for this run.")
@@ -271,11 +263,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             map_view_mode=map_view_mode,
             date_filter_on=False,
             date_range=None,
-            map_caches=(
-                st.session_state.get(POPUP_HTML_CACHE_KEY),
-                st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
-                st.session_state.get(POPUP_FRAGMENT_CACHE_KEY),
-            ),
         )
     work_df = ws.df
 

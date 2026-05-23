@@ -73,7 +73,7 @@ The sidebar **Group nearby markers** toggle is passed as `cluster_options.enable
 
 ## Banner + legend inside the iframe
 
-Banner and legend use `map_overlay_theme_stylesheet()` plus HTML from `build_*_banner_html` / `build_legend_html` in `map_renderer.py`, passed as component args. React injects merged CSS into the iframe `document` and renders overlay HTML as siblings of the Leaflet pane so `position:fixed` anchors to the map viewport (top-right banner, bottom-left legend). Popup width is finalized in TS only (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`).
+Banner and legend use `map_overlay_theme_stylesheet()` plus HTML from `build_*_banner_html` / `build_legend_html` in `map_renderer.py`, passed as component args. React injects merged CSS into the iframe `document` and renders overlay HTML as siblings of the Leaflet pane so `position:fixed` anchors to the map viewport (top-right banner, bottom-left legend). Popup width is finalized in TS only (`AllLocationsMapPopupSizing.ts` + `AllLocationsMapPopup.css`).
 
 ## Popup anchor vs iframe size
 
@@ -81,11 +81,10 @@ If popups open offset from CircleMarkers, the usual cause is Leaflet measuring t
 
 ## Popups / structured payloads
 
-The component sends **structured facts and URLs** per pin; the client renders one template per mode (`AllLocationsMap.tsx` + `AllLocationsMapPopup.css`, kept in sync with `map_popup_theme_stylesheet()` in `map_renderer.py`).
+The component sends **structured facts and URLs** per pin; the client renders one template per mode (`AllLocationsMapPopupHtml.ts` + `AllLocationsMapPopup.css`, kept in sync with `map_popup_theme_stylesheet()` in `map_renderer.py`).
 
 - **Payload:** `feature.properties.popup_v1` with `v: 1` (and mode-specific variants for species / lifer / family).
 - **All locations:** With `records_by_location`, `visited` holds `{ label: "Visited:", entries: [{label,href}] }`; lifelist heading link is rendered in TS. Minimal tests may use `summary_lines` + `links` only.
-- **Optional env:** `EXPLORER_EXPERIMENTAL_VISITS_INLINE_CAP` truncates `visited.entries` for very large exports (lifelist still covers full history).
 
 Export HTML uses the same class names via `popup_v1_export_html.py` (standalone file embeds `AllLocationsMapPopup.css`).
 

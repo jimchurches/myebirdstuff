@@ -1,9 +1,8 @@
-"""HTML fragments for lifer-location map popups (checklist links, first-record dates)."""
+"""Structured lifer-location popup rows for GeoJSON and the Leaflet component."""
 
 from __future__ import annotations
 
-import html as html_module
-from typing import Hashable, List
+from typing import Hashable
 
 import pandas as pd
 
@@ -59,7 +58,7 @@ def lifer_popup_line_structured_items(
     location_id: Hashable,
     base_species_fn: BaseSpeciesFn,
 ) -> list[dict[str, str]]:
-    """Parallel to :func:`format_lifer_popup_lines` — structured rows for GeoJSON / Leaflet TS.
+    """Structured rows for GeoJSON ``lifer_popup_v1`` and the Leaflet TS template.
 
     Each item has ``label``, ``date`` (``YYYY-MM-DD`` or ``?``), and ``checklist_href``
     (eBird checklist URL, ``#`` when unknown).
@@ -90,39 +89,3 @@ def lifer_popup_line_structured_items(
             )
         items.append({"label": label, "date": date_str, "checklist_href": checklist_url})
     return items
-
-
-def format_lifer_popup_lines(
-    *,
-    entries: list[dict],
-    lifer_lookup_df: pd.DataFrame,
-    location_id: Hashable,
-    base_species_fn: BaseSpeciesFn,
-) -> str:
-    """Build lifer popup list lines with first-record date and checklist links.
-
-    Each *entry* is a dict produced by
-    :func:`~explorer.core.lifer_last_seen_prep.aggregate_lifer_sites`, with:
-
-    - scientific_name / common_name
-    - is_base_lifer / is_taxon_lifer
-    """
-
-    parts: List[str] = []
-    structured = lifer_popup_line_structured_items(
-        entries=entries,
-        lifer_lookup_df=lifer_lookup_df,
-        location_id=location_id,
-        base_species_fn=base_species_fn,
-    )
-    for i, item in enumerate(structured):
-        label = item["label"]
-        esc_label = html_module.escape(str(label), quote=False)
-        checklist_url = item["checklist_href"]
-        date_str = item["date"]
-        prefix = "<br>" if i > 0 else ""
-        parts.append(
-            f'{prefix}<a href="{html_module.escape(checklist_url, quote=True)}" '
-            f'target="_blank" rel="noopener">{esc_label} : {html_module.escape(date_str)}</a>'
-        )
-    return "".join(parts)

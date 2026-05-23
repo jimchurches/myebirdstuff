@@ -1,6 +1,6 @@
 """Pure aggregation for the taxonomy-family map: how rich each checklist location is for a chosen family.
 
-This module stays UI-free so the same numbers feed Folium and tests. Density uses **distinct base
+This module stays UI-free so the same numbers feed the Leaflet map component and tests. Density uses **distinct base
 species** per location (subspecies roll up to base). Popup lines use **distinct common names** as
 recorded (subspecies can appear as separate lines). Highlight targets a **base species**; any
 subspecies row counts as a match.
@@ -14,7 +14,6 @@ block immediately after :data:`UNMAPPED_FAMILY_LABEL`.
 
 from __future__ import annotations
 
-import html as html_module
 from dataclasses import dataclass
 from collections.abc import Callable
 from typing import Iterable
@@ -23,8 +22,6 @@ import pandas as pd
 
 from explorer.core.species_logic import countable_species_vectorized, filter_species
 from explorer.core.stats import safe_count
-from explorer.presentation.map_popup_heading_text import prevent_orphan_closing_punctuation
-
 UNMAPPED_FAMILY_LABEL = "Unmapped"
 
 # Family-map work frame — internal columns (leading underscore; not from the eBird CSV):
@@ -378,51 +375,3 @@ def base_species_to_common_from_taxonomy(taxonomy_merged: pd.DataFrame) -> dict[
         if b and b not in out and c:
             out[b] = c
     return out
-
-
-def format_family_location_popup_html(
-    pin: FamilyLocationPin,
-    *,
-    location_page_url: str | None = None,
-    species_url_by_common: dict[str, str] | None = None,
-) -> str:
-    """HTML for a map pin body: location heading (optional hotspot link) and species lines (optional links).
-
-    *species_url_by_common* maps exact common-name strings (as in *pin.common_name_lines*) to
-    eBird species URLs; missing keys render as plain text.
-    """
-    title = pin.location_name or pin.location_id
-    esc_title = html_module.escape(prevent_orphan_closing_punctuation(title))
-    if location_page_url and str(location_page_url).strip():
-        esc_href = html_module.escape(str(location_page_url).strip(), quote=True)
-        head = (
-            '<div class="pebird-map-popup__heading-row" style="margin-bottom:4px;">'
-            f'<a class="pebird-map-popup__location-heading" href="{esc_href}" '
-            f'target="_blank" rel="noopener noreferrer">{esc_title}</a>'
-            "</div>"
-        )
-    else:
-        head = (
-            '<div class="pebird-map-popup__heading-row" style="margin-bottom:4px;">'
-            f'<span class="pebird-map-popup__location-heading">{esc_title}</span>'
-            "</div>"
-        )
-    lines: list[str] = []
-    url_map = species_url_by_common or {}
-    for name in pin.common_name_lines:
-        esc_n = html_module.escape(name)
-        u = url_map.get(name) or url_map.get(name.strip())
-        if u and str(u).strip():
-            esc_u = html_module.escape(str(u).strip(), quote=True)
-            lines.append(
-                f'<div class="pebird-map-popup__species-line"><a href="{esc_u}" '
-                f'target="_blank" rel="noopener noreferrer">{esc_n}</a></div>'
-            )
-        else:
-            lines.append(f'<div class="pebird-map-popup__species-line">{esc_n}</div>')
-    body = (
-        "".join(lines)
-        if lines
-        else '<div class="pebird-map-popup__summary-line">No species lines</div>'
-    )
-    return f"{head}{body}"

@@ -50,9 +50,26 @@ def test_prepare_empty_raises():
         prepare_all_locations_map_context(pd.DataFrame())
 
 
-def test_data_signature_for_caches():
+def test_data_signature_for_caches_stable_for_same_data():
     df = _tiny_df()
-    assert data_signature_for_caches(df, "disk") == ("disk", 1, "S1")
+    assert data_signature_for_caches(df, "disk") == data_signature_for_caches(df, "disk")
+
+
+def test_data_signature_for_caches_differs_when_submission_ids_change():
+    df_a = _tiny_df()
+    df_b = df_a.copy()
+    df_b.loc[0, "Submission ID"] = "S2"
+    assert data_signature_for_caches(df_a, "disk") != data_signature_for_caches(df_b, "disk")
+
+
+def test_data_signature_for_caches_includes_disk_file_identity(tmp_path):
+    df = _tiny_df()
+    csv_path = tmp_path / "MyEBirdData.csv"
+    df.to_csv(csv_path, index=False)
+    sig = data_signature_for_caches(df, "disk", data_abs_path=str(csv_path))
+    assert sig[0] == "disk"
+    assert sig[1] == 1
+    assert ":" in sig[2]
 
 
 def test_mean_center_from_location_data():

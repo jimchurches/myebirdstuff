@@ -59,7 +59,7 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** Primary ``st.tabs`` first (``Map``, ``Families``, …; empty panels until filled). Prep + Folium embed run in a sidebar
+**Main tabs + sidebar:** Primary ``st.tabs`` first (``Map``, ``Families``, …; empty panels until filled). Prep + Leaflet map embed run in a sidebar
 bottom ``st.spinner`` (Map tab content is nested in script order so loading indicators stay aligned). Data tabs use
 ``@st.fragment`` where possible. One sidebar
 for map controls, export, and footer links (refs #70). Map sidebar + working set: :mod:`explorer.app.streamlit.app_map_working_ui`
@@ -67,7 +67,8 @@ for map controls, export, and footer links (refs #70). Map sidebar + working set
 (refs #118). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 
-**Orchestration:** Phase boundaries for ``main()`` live in :mod:`explorer.app.streamlit.app_orchestration` (GitHub #200).
+**Orchestration:** ``main()`` → :mod:`explorer.app.streamlit.app_bootstrap`,
+:mod:`explorer.app.streamlit.app_dashboard_shell` (re-exported from :mod:`explorer.app.streamlit.app_orchestration`, #200 / R13).
 """
 
 from __future__ import annotations

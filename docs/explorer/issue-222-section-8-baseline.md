@@ -4,7 +4,7 @@
 
 **Recorded:** 2026-05-20 · **Branch:** `222-test-performance-review`  
 **Dataset:** `tests/fixtures/ebird_integration_fixture.csv` (150 rows, 15 locations, 114 species)  
-**Journey:** Playwright `test_map_perf_fixture_journey` — cold **All locations** → **Lifer locations** → warm **All locations** (return).
+**Journey:** Playwright `test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling` — cold **All locations** → **Lifer** → warm **All** → cold **Species** (Grey Teal) → warm **Species** → cold **Family** → warm **Family**.
 
 Raw JSONL archives are **gitignored** under `benchmarks/map_perf/snapshots/`. Reproduce locally:
 
@@ -76,15 +76,13 @@ Fixture is **tiny**; use it for CI guardrails and cache-hit behaviour, not produ
 
 ---
 
-## Species / Family map modes (automated fixture journey)
+## Species / Family map modes (same headline journey)
 
-**Test:** `test_map_perf_fixture_journey_species_and_family_payload_stages` (`pytest …/test_map_perf_e2e.py --perf`).
+Species and Family are exercised in the **same** opt-in test as All/Lifer (not a separate manual run).
 
-**Journey:** cold **All locations** → **Species locations** (awaiting-selection banner) → **Family locations** (first recorded family when taxonomy loaded, else empty-map path).
+**Asserted in JSONL:** cold `map.species_leaflet.payload` and `map.family_leaflet.payload` misses; warm return visits with `payload_cache_hit: true` for All, Species, and Family after sidebar detours. Ceilings in `stage_ceilings.json`.
 
-**Asserted in JSONL:** at least one cold `map.species_leaflet.payload` and `map.family_leaflet.payload` miss (`payload_cache_hit: false`). Ceilings in `stage_ceilings.json`.
-
-Re-run with the baseline script (both perf tests):
+Re-run with the baseline script:
 
 ```bash
 ./scripts/run_post_leaflet_perf_baseline.sh
@@ -97,7 +95,7 @@ Re-run with the baseline script (both perf tests):
 ```markdown
 ### §8.5 — Post-Leaflet perf baseline (fixture)
 
-**Journey:** cold All → Lifer → warm All (`pytest …/test_map_perf_e2e.py --perf`).
+**Journey:** cold All → Lifer → warm All → Species → warm Species → Family → warm Family (`pytest …/test_map_perf_e2e.py --perf`).
 
 | Stage | Cache hit | ms (representative) |
 |-------|-----------|---------------------|
@@ -105,11 +103,13 @@ Re-run with the baseline script (both perf tests):
 | `map.all_locations_leaflet.payload` | miss | ~19 |
 | `map.all_locations_leaflet.payload` | **hit** | **~0.02** |
 | `map.lifer_leaflet.payload` | miss | ~292 |
+| `map.species_leaflet.payload` | miss / **hit** | fixture-scale; see JSONL archive |
+| `map.family_leaflet.payload` | miss / **hit** | fixture-scale; see JSONL archive |
 | `map.*.leaflet.component_embed` | — | ~1 (Python span) |
 
 I1/I2 on cold All payload: 15 markers, `popup_build_total_ms` ~14 ms.
 
-Details: `docs/explorer/issue-222-section-8-baseline.md`. Species/Family: manual perf run documented there.
+Details: `docs/explorer/issue-222-section-8-baseline.md`.
 
 Folium-era ~25 s first paint / ~7 s embed on real CSV — narrative only; see `docs/explorer/issue-222-section-8-prior-art.md`.
 ```

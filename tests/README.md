@@ -78,6 +78,6 @@ Opt-in Playwright + `EXPLORER_PERF_LOG_FILE` JSONL (see `benchmarks/map_perf/REA
 pytest tests/explorer/test_map_perf_e2e.py --perf -v
 ```
 
-Modules: `test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling` (All → Lifer → All),
-`test_map_perf_fixture_journey_species_and_family_payload_stages`. Baseline script:
+Module: `test_map_perf_fixture_journey_emits_prep_stages_within_loose_ceiling` (All → Lifer → warm All
+→ Species → warm Species → Family → warm Family). Baseline script:
 `./scripts/run_post_leaflet_perf_baseline.sh`.

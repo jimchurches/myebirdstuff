@@ -40,7 +40,7 @@
   overflow-wrap: break-word;
   word-break: normal;
   box-sizing: border-box;
-  /* Tighter left inset than right — closer to legacy Folium pop-ups; right stays a bit looser for dates + close. */
+  /* Tighter left inset than right; right stays looser for dates + close button. */
   padding: 8px 14px 10px 6px;
 }
 
@@ -138,7 +138,7 @@
   padding: 0;
   max-width: 100%;
   overflow-x: auto;
-  /* Links stay inline like Folium — ``<br>`` between rows. ``display:block`` + ``<br>`` doubled gaps. */
+  /* Links stay inline — ``<br>`` between rows. ``display:block`` + ``<br>`` doubled gaps. */
   line-height: 1.45;
 }
 
@@ -292,18 +292,7 @@
   margin-top: 0.35rem;
 }
 
-.pebird-map-popup__trunc-hint {
-  margin-top: 0.55rem;
-  color: var(--pebird-ui-muted);
-  font-size: calc(1em - 2px);
-  line-height: 1.35;
-}
-
-.pebird-map-popup__trunc-hint a {
-  font-weight: 400;
-}
-
-/* Go to GPS — Folium ``_apply_go_to_gps_pin_view`` red pin. */
+/* Go to GPS — temporary red marker pin. */
 .all-locations-gps-marker {
   background: transparent !important;
   border: none !important;

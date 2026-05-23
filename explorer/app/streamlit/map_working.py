@@ -14,9 +14,6 @@ import pandas as pd
 
 from explorer.core.working_set import WorkingSet, rebuild_working_set_from_date_filter
 
-MapCaches = Tuple[Any, ...]
-
-
 def location_ids_with_checklists(df: pd.DataFrame) -> Set[Any]:
     """Location IDs that have at least one checklist row."""
     if df.empty or "Submission ID" not in df.columns:
@@ -51,7 +48,6 @@ def streamlit_working_set_and_status(
     map_view_mode: str,
     date_filter_on: bool,
     date_range: Optional[Tuple[date, date]],
-    map_caches: Optional[MapCaches],
 ) -> Tuple[Optional[WorkingSet], str]:
     """
     Return ``(working_set, date_filter_status)`` for map banners.
@@ -72,7 +68,6 @@ def streamlit_working_set_and_status(
             filter_by_date=False,
             filter_start_date="",
             filter_end_date="",
-            map_caches=map_caches,
         )
         return ws, "Lifer view uses all-time data"
 
@@ -85,7 +80,6 @@ def streamlit_working_set_and_status(
             filter_by_date=False,
             filter_start_date="",
             filter_end_date="",
-            map_caches=map_caches,
         )
         return ws, "Date filter: Off"
 
@@ -96,7 +90,6 @@ def streamlit_working_set_and_status(
             filter_by_date=False,
             filter_start_date="",
             filter_end_date="",
-            map_caches=map_caches,
         )
         return ws, "Date filter: Off"
 
@@ -112,7 +105,6 @@ def streamlit_working_set_and_status(
         filter_by_date=True,
         filter_start_date=start_s,
         filter_end_date=end_s,
-        map_caches=map_caches,
     )
     if ws is None:
         return None, "Date filter: invalid range"

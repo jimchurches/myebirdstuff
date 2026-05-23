@@ -79,7 +79,7 @@ def normalize_hex_colour(raw: str, *, fallback: str = MAP_MARKER_CATCHALL_STROKE
     if not s.startswith("#"):
         s = f"#{s}"
     if _HEX_RE.match(s):
-        return s[:7] if len(s) >= 7 else s  # ignore alpha if 8-char for Folium simplicity
+        return s[:7] if len(s) >= 7 else s  # ignore alpha channel on 8-char hex inputs
     return fallback
 
 
