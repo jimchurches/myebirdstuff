@@ -310,7 +310,7 @@ function popupHtmlSpeciesLayout(
   );
 }
 
-/** Family composition popup — mirrors ``format_family_location_popup_html``. */
+/** Family composition popup — ``family_popup_v1`` from ``map_overlay_family_popups``. */
 function popupHtmlFamilyLayout(name: string, lifelistUrl: string, payload: FamilyPopupPayloadV1): string {
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
   const locHeading = locationHeadingHtml(name, lifelistUrl);
@@ -341,7 +341,7 @@ function popupHtmlFamilyLayout(name: string, lifelistUrl: string, payload: Famil
   );
 }
 
-/** Lifer popup: location heading + species checklist lines (parity with ``format_lifer_popup_lines``). */
+/** Lifer popup: location heading + species checklist lines (``lifer_popup_v1``). */
 function popupHtmlLiferLayout(name: string, lifelistUrl: string, payload: LiferPopupPayloadV1): string {
   const margin = POPUP_LOCATION_HEADING_MARGIN_PX;
   const locHeading = locationHeadingHtml(name, lifelistUrl);

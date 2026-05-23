@@ -15,7 +15,6 @@ from explorer.core.family_map_compute import (
     family_density_band_index,
     family_density_band_label,
     filter_work_to_family,
-    format_family_location_popup_html,
     highlight_species_choices_alphabetical,
     merge_taxonomy_detail_for_family_map,
     prepare_family_map_work_frame,
@@ -337,7 +336,10 @@ def test_build_common_name_to_species_url_falls_back_to_fn():
     assert urls["Mystery Bird"] == "https://ebird.org/species/fallback"
 
 
-def test_format_family_location_popup_html_links():
+def test_family_popup_v1_payload_species_links():
+    from explorer.core.map_overlay_family_popups import family_popup_v1_payload
+    from explorer.presentation.popup_v1_export_html import popup_export_html_from_properties
+
     pin = FamilyLocationPin(
         location_id="L1",
         location_name="Test & Park",
@@ -348,17 +350,23 @@ def test_format_family_location_popup_html_links():
         common_name_lines=("Bird A", "Bird B"),
         highlight_match=False,
     )
-    html = format_family_location_popup_html(
+    payload = family_popup_v1_payload(
         pin,
-        location_page_url="https://ebird.org/hotspot/L1",
         species_url_by_common={"Bird A": "https://ebird.org/species/foo"},
+    )
+    assert payload["v"] == 1
+    assert len(payload["species_lines"]) == 2
+    assert payload["species_lines"][0]["species_href"] == "https://ebird.org/species/foo"
+    html = popup_export_html_from_properties(
+        {
+            "name": "Test & Park",
+            "lifelist_url": "https://ebird.org/hotspot/L1",
+            "family_popup_v1": payload,
+        }
     )
     assert "Test &amp; Park" in html
     assert "hotspot" in html
     assert "Bird A" in html
     assert "species/foo" in html
     assert "Bird B" in html
-    assert "pebird-map-popup__location-heading" in html
-    assert "pebird-map-popup__heading-row" in html
     assert "pebird-map-popup__species-line" in html
-    assert "font-size:0.92em" not in html

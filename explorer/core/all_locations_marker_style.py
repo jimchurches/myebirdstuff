@@ -28,12 +28,3 @@ def cluster_icon_style_for_all_locations_map(colour_scheme_index: int) -> dict[s
     """MarkerCluster tier colours for the Leaflet component."""
     sch = active_map_marker_colour_scheme(int(colour_scheme_index))
     return all_locations_cluster_icon_style_payload(sch)
-
-
-def default_scheme_circle_marker_props() -> dict[str, Any]:
-    """Preset **1** (Eucalypt) circle marker props."""
-    return circle_marker_style_for_all_locations_map(1)
-
-
-# Spike-era name; keep alias for any external callers.
-experimental_default_scheme_circle_marker_props = default_scheme_circle_marker_props

@@ -1,8 +1,4 @@
-"""Structured family-map popup payloads for the Leaflet component.
-
-Parallels :func:`~explorer.core.family_map_compute.format_family_location_popup_html`
-without pre-rendered HTML per pin.
-"""
+"""Structured family-map popup payloads for the Leaflet component."""
 
 from __future__ import annotations
 

@@ -61,8 +61,7 @@ MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
 MAP_LEGEND_PIN_DOT_PX = 8
 MAP_LEGEND_PIN_BORDER_PX = 2
 MAP_POPUP_MAX_WIDTH_PX = 420  # Leaflet popup maxWidth; card-like popups (refs #145).
-# Family-locations map only (popup width + initial ``fit_bounds``); not tied to marker colour presets.
-MAP_FAMILY_MAP_POPUP_MAX_WIDTH_PX = 320
+# Family-locations map initial ``fit_bounds``; not tied to marker colour presets.
 MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX = 48
 MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM = 6
 MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM_HIGHLIGHT = 8

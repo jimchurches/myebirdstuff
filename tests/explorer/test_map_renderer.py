@@ -16,7 +16,6 @@ from explorer.presentation.map_renderer import (
     format_sighting_row,
     format_visit_time,
     pin_legend_item,
-    popup_scroll_script,
     resolve_lifer_last_seen,
 )
 
@@ -256,32 +255,6 @@ def test_build_species_map_location_popup_html_visits_open_when_single_checklist
     )
     assert '<details class="pebird-map-popup__all-visits" open>' in html
     assert "Visited: (1)" in html
-
-
-# ---------------------------------------------------------------------------
-# popup_scroll_script
-# ---------------------------------------------------------------------------
-
-def test_popup_scroll_script_returns_script_tag():
-    result = popup_scroll_script("chevron", False)
-    assert "<script>" in result
-    assert "</script>" in result
-
-
-def test_popup_scroll_script_chevron_mode():
-    result = popup_scroll_script("chevron", False)
-    assert "'chevron'" in result
-    assert "SCROLL_TO_BOTTOM = false" in result
-
-
-def test_popup_scroll_script_scroll_to_bottom():
-    result = popup_scroll_script("both", True)
-    assert "SCROLL_TO_BOTTOM = true" in result
-
-
-def test_popup_scroll_script_none_hint():
-    result = popup_scroll_script(None, False)
-    assert "None" in result
 
 
 # ---------------------------------------------------------------------------
