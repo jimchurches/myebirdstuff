@@ -15,8 +15,7 @@ from explorer.app.streamlit.app_constants import (
     EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     REPO_ROOT,
-    FOLIUM_MAP_MOUNT_NONCE_KEY,
-    FOLIUM_STATIC_MAP_CACHE_KEY,
+    LEAFLET_MAP_MOUNT_NONCE_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
@@ -73,8 +72,8 @@ def _species_searchbox_widget_key() -> str:
     return f"{SESSION_SPECIES_SEARCH_KEY}__v{n}"
 
 
-def inject_map_folium_iframe_min_height_css(height_px: int) -> None:
-    """Reduce streamlit-folium letterboxing when the iframe gets a near-zero height on some reruns.
+def inject_map_iframe_min_height_css(height_px: int) -> None:
+    """Ensure the Leaflet map component iframe has a sensible min-height on reruns.
 
     Targets iframes in the **main** column only (not the sidebar). Emit from the Map tab each full run
     so height tracks the sidebar **Map height (px)** slider.
@@ -170,18 +169,20 @@ def sidebar_bottom_slot_end() -> None:
 
 
 def inject_sidebar_outline_download_button_css(outline_hex: str) -> None:
-    """Style the map **Export HTML** ``st.download_button`` like the outline support link (refs #127).
+    """Style the map **Export HTML** control like the outline support link (refs #127).
 
     Streamlit widgets are not plain ``<a>`` tags; we align them visually with scoped CSS on
     ``.ebird-sidebar-bottom-slot`` (see :func:`sidebar_bottom_slot_start`).
     Uses the same colour as the footer text links (see :data:`SIDEBAR_FOOTER_LINK_HEX`).
+    Covers both ``st.download_button`` (legacy path) and ``st.button`` (Leaflet one-click export).
     """
     h = outline_hex.strip()
     if not h.startswith("#") or len(h) not in (4, 7, 9):
         h = SIDEBAR_FOOTER_LINK_HEX
     st.html(
         f"""<style>
-.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button {{
+.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button,
+.ebird-sidebar-bottom-slot [data-testid="stButton"] button {{
   background: transparent !important;
   color: {h} !important;
   border: 1px solid {h} !important;
@@ -190,15 +191,67 @@ def inject_sidebar_outline_download_button_css(outline_hex: str) -> None:
   font-weight: 500 !important;
   box-shadow: none !important;
 }}
-.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover {{
+.ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover,
+.ebird-sidebar-bottom-slot [data-testid="stButton"] button:hover {{
   background: color-mix(in srgb, {h} 14%, transparent) !important;
 }}
 @supports not (color: color-mix(in srgb, black 50%, transparent)) {{
-  .ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover {{
+  .ebird-sidebar-bottom-slot [data-testid="stDownloadButton"] button:hover,
+  .ebird-sidebar-bottom-slot [data-testid="stButton"] button:hover {{
     background: rgba(134, 142, 150, 0.12) !important;
   }}
 }}
 </style>"""
+    )
+
+
+def inject_auto_click_streamlit_download_js(*, button_label: str) -> None:
+    """Click a parent-frame ``st.download_button`` after Streamlit renders it.
+
+    ``st.components.v1.html`` runs in a sandboxed iframe — Blob/anchor downloads there do not
+    reach the user's filesystem. After export HTML is built, we render a real download_button in
+    the sidebar and programmatically click it in ``window.parent.document``.
+    """
+    import json
+
+    label_js = json.dumps(button_label)
+    st.html(
+        """<style>
+.ebird-export-auto-dl-host {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+</style>"""
+    )
+    st.components.v1.html(
+        f"""<script>
+(function () {{
+  const want = {label_js};
+  function tryClick() {{
+    const root = window.parent && window.parent.document ? window.parent.document : document;
+    const buttons = root.querySelectorAll('[data-testid="stDownloadButton"] button');
+    for (let i = buttons.length - 1; i >= 0; i--) {{
+      const btn = buttons[i];
+      const text = (btn.innerText || btn.textContent || "").trim();
+      if (text === want) {{
+        btn.click();
+        return true;
+      }}
+    }}
+    return false;
+  }}
+  if (!tryClick()) {{
+    setTimeout(tryClick, 50);
+    setTimeout(tryClick, 200);
+    setTimeout(tryClick, 500);
+  }}
+}})();
+</script>""",
+        height=0,
     )
 
 
@@ -398,11 +451,10 @@ def species_searchbox_fragment() -> None:
         st.session_state[SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY] = int(
             st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)
         ) + 1
-        # Remount Folium + drop cached HTML so the map returns to the all-locations view cleanly.
-        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        # Remount Leaflet component + drop cached export HTML for a clean all-locations view.
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
         ) + 1
-        st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
         st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         st.rerun()
 

@@ -1,5 +1,5 @@
 """
-Hierarchical map marker hex resolution for Folium circle markers, plus family-map **geometry**
+Hierarchical map marker hex resolution for Leaflet CircleMarker payloads, plus family-map **geometry**
 (radius / fill opacity) derived from :class:`~explorer.app.streamlit.defaults.MapMarkerColourScheme`
 so the explorer matches the map-marker design utility.
 

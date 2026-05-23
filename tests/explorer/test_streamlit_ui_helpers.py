@@ -22,6 +22,34 @@ class _StubSessionState(dict):
         self[name] = value
 
 
+class _SpinnerCtx:
+    def __init__(self, stub, msg: str) -> None:
+        self._stub = stub
+        self._msg = msg
+
+    def __enter__(self):
+        self._stub.spinner_calls.append(self._msg)
+        return self
+
+    def __exit__(self, *_args) -> bool:
+        return False
+
+
+class _PlaceholderStub:
+    def empty(self) -> None:
+        return None
+
+    def container(self):
+        class _Ctx:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args) -> bool:
+                return False
+
+        return _Ctx()
+
+
 class _SidebarStub:
     """Capture ``st.sidebar`` divider/markdown used by map chrome tests."""
 
@@ -30,6 +58,12 @@ class _SidebarStub:
         self.markdown_calls: list[tuple[tuple, dict]] = []
         self.caption_calls: list[str] = []
         self.radio_calls: list[tuple] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args) -> bool:
+        return False
 
     def divider(self) -> None:
         return None
@@ -59,6 +93,17 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     stub.session_state = _StubSessionState()
     # Dict-like secrets for tests (e.g. hosted notice flag); matches ``key in st.secrets`` usage.
     stub.secrets: dict[str, str] = {}
+    stub.spinner_calls: list[str] = []
+
+    def spinner(msg: str):
+        return _SpinnerCtx(stub, msg)
+
+    stub.spinner = spinner
+
+    def empty():
+        return _PlaceholderStub()
+
+    stub.empty = empty
 
     stub.html_calls: list[str] = []
 
@@ -114,6 +159,38 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
         stub.info_calls.append((args, kwargs))
 
     stub.info = info
+
+    def divider() -> None:
+        return None
+
+    stub.divider = divider
+
+    class _ColumnStub:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> bool:
+            return False
+
+    def columns(spec):
+        return [_ColumnStub() for _ in spec]
+
+    stub.columns = columns
+
+    def download_button(*_args, **_kwargs) -> None:
+        return None
+
+    stub.download_button = download_button
+
+    def button(*_args, **_kwargs) -> None:
+        return None
+
+    stub.button = button
+
+    def warning(*_args, **_kwargs) -> None:
+        return None
+
+    stub.warning = warning
 
     components_v1 = types.ModuleType("streamlit.components.v1")
     components_v1.html_calls: list[dict] = []
@@ -263,14 +340,14 @@ def test_streamlit_tab_modules_import_without_runtime(streamlit_stub) -> None:
     importlib.import_module("explorer.app.streamlit.maintenance_streamlit_html")
 
 
-def test_static_map_cache_key_includes_species_overlay() -> None:
-    """Folium reuse for selected-species maps must not share a key with bare species mode."""
-    from explorer.app.streamlit.app_caches import static_map_cache_key
+def test_leaflet_payload_cache_key_includes_species_overlay() -> None:
+    """Species map cache keys must differ for overlay vs awaiting-selection vs hide-non-matching toggles."""
+    from explorer.app.streamlit.app_caches import leaflet_payload_cache_key
 
     df = pd.DataFrame({"Submission ID": ["s0"]})
     ro: tuple = ()
-    no_species = static_map_cache_key(df, "species", "", "default", ro, taxonomy_locale="en_AU")
-    with_species = static_map_cache_key(
+    no_species = leaflet_payload_cache_key(df, "species", "", "default", ro, taxonomy_locale="en_AU")
+    with_species = leaflet_payload_cache_key(
         df,
         "species",
         "",
@@ -281,7 +358,7 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
         species_selected_common="American Robin",
         hide_non_matching_locations=False,
     )
-    hide_on = static_map_cache_key(
+    hide_on = leaflet_payload_cache_key(
         df,
         "species",
         "",
@@ -291,7 +368,7 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
         species_selected_sci="Turdus migratorius",
         hide_non_matching_locations=True,
     )
-    empty_awaiting_species = static_map_cache_key(
+    empty_awaiting_species = leaflet_payload_cache_key(
         df,
         "species",
         "",
@@ -304,8 +381,8 @@ def test_static_map_cache_key_includes_species_overlay() -> None:
     assert with_species != hide_on
     assert empty_awaiting_species != no_species
 
-    base_all = static_map_cache_key(df, "all", "", "default", ro, taxonomy_locale="en_AU")
-    all_with_gps = static_map_cache_key(
+    base_all = leaflet_payload_cache_key(df, "all", "", "default", ro, taxonomy_locale="en_AU")
+    all_with_gps = leaflet_payload_cache_key(
         df,
         "all",
         "",

@@ -16,7 +16,8 @@ This repository contains:
 |----------|--------|
 | Streamlit app | Primary UI for exploring personal eBird data |
 | Core modules (`explorer/core`) | Data loading, stats, filtering, map logic |
-| Presentation (`explorer/presentation`) | HTML + Folium rendering helpers |
+| Presentation (`explorer/presentation`) | HTML tables, map banners/legends, popup theme CSS, Leaflet export HTML |
+| Leaflet map component (`explorer/components/all_locations_map`) | Streamlit custom component (React + Leaflet; committed `frontend/build`) |
 | GPS script | Converts coordinates → location names (used by automation) |
 | UI.Vision macros | Browser automation for eBird workflows |
 | Tests | Validation of logic and data handling |
@@ -29,12 +30,55 @@ CI runs **Python 3.12** (see `.github/workflows/tests.yml`). Contributors should
 
 We **do not** bump the documented interpreter just to stay on the newest Python release. Reasons:
 
-- **Stack compatibility** — Scientific and UI dependencies (pandas, Streamlit, Folium, binary wheels) often trail the latest Python; upgrading adds churn and risk for limited benefit if the project already runs cleanly on 3.12.
+- **Stack compatibility** — Scientific and UI dependencies (pandas, Streamlit, binary wheels) often trail the latest Python; upgrading adds churn and risk for limited benefit if the project already runs cleanly on 3.12.
 - **Alignment** — Local installs, CI, and docs should stay in step. Changing the version is a deliberate, coordinated update (CI workflow, install docs, and smoke-testing the app), not a silent assumption.
 
 **When upgrading** (for example to 3.13 or later) makes sense: a dependency requires it, you need a language or standard-library feature not available on 3.12, or you have time to run the full test suite and verify Streamlit on a branch before merging.
 
 Patch releases within the same minor line (for example 3.12.3 vs 3.12.7) are fine and do not require doc changes.
+
+---
+
+## Leaflet map component (npm)
+
+Explorer’s Map tab uses a Streamlit custom component with **committed** compiled assets under `explorer/components/all_locations_map/frontend/build/` (so runtime does not require Node). After editing TypeScript/CSS in `frontend/src/`:
+
+```bash
+python3 scripts/build_all_locations_map_frontend.py
+```
+
+That runs `npm ci` + `npm run build` and reports which `build/` files belong in git vs junk (e.g. macOS Finder duplicates). Details: [explorer/components/all_locations_map/README.md](../explorer/components/all_locations_map/README.md).
+
+**macOS Finder duplicates** (`file 2.py`, `css 2/`, etc.): ignored via `.gitignore`, removed locally by `python3 scripts/prune_finder_duplicates.py` (also run automatically in the `/commit-work` command and checked in CI).
+
+**Pre-push / CI parity** (same checks as the *Map component (frontend CI)* job in `.github/workflows/tests.yml`):
+
+```bash
+cd explorer/components/all_locations_map/frontend
+npm ci
+npm run test:ci
+npm run typecheck
+npm run audit:prod    # production deps only; matches pip-audit scope
+npm run build
+```
+
+`npm audit` without `--omit=dev` may report dev-toolchain issues from `react-scripts` (e.g. `webpack-dev-server`); CI does **not** fail on those. Review `package-lock.json` updates like Python `requirements.txt`.
+
+**Map HTML export (sidebar):** Lazy build on user action; one-click download via Streamlit + optional auto-click. If users report failed exports, see [map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) for a two-button fallback design and browser-risk notes.
+
+### Map architecture (production)
+
+All four **Map view** modes use the same Streamlit custom component (`explorer/components/all_locations_map/`). There is **no** Folium or `streamlit-folium` path in production.
+
+| Step | Where | What |
+|------|--------|------|
+| Prep | `app_prep_map_ui.py` (orchestrator) + `app_prep_map_leaflet_modes.py` | Build GeoJSON + `revision`, banner/legend HTML, viewport extras; session LRU via `app_prep_map_leaflet_caches` |
+| Payload | `explorer/core/*_locations_geojson.py` | Structured `popup_v1` (and mode variants) in feature properties — not per-pin HTML |
+| Embed | `render_all_locations_map_component` in component `__init__.py` | `declare_component` + committed `frontend/build` iframe |
+| Client | `frontend/src/AllLocationsMap.tsx` (+ `AllLocationsMapLeaflet.ts`, `AllLocationsMapPopupHtml.ts`, `AllLocationsMapPopupSizing.ts`, `allLocationsMapTypes.ts`) | Leaflet map, MarkerCluster, popup templates (`AllLocationsMapPopup.css`) |
+| Export | `explorer/presentation/leaflet_map_html_export.py` | Standalone HTML (CDN Leaflet) from cached recipe (`LEAFLET_EXPORT_*` keys) |
+
+**Historical performance notes** (#222): [`issue-222-plain-summary.md`](explorer/issue-222-plain-summary.md) (plain language), [`issue-222-section-8-baseline.md`](explorer/issue-222-section-8-baseline.md) (tables + re-run), [`issue-222-section-8-prior-art.md`](explorer/issue-222-section-8-prior-art.md) (Folium-era context). Re-run: `./scripts/run_post_leaflet_perf_baseline.sh`.
 
 ---
 
@@ -79,8 +123,13 @@ Streamlit UI
 | species_logic | Filtering + countable species rules |
 | stats | Rankings, summaries, country stats |
 | working_set | Rebuild filtered dataset |
-| map_controller | Map orchestration (entry point; see `map_overlay_*` under `explorer/core/`) |
-| map_renderer | Folium + popup rendering |
+| app_prep_map_ui | Map prep orchestration (spinner, context, mode dispatch) |
+| app_prep_map_leaflet_modes | Per-mode Leaflet GeoJSON + banner/legend build |
+| app_prep_map_map_tab | Map tab component embed + export sidebar |
+| app_bootstrap / app_dashboard_shell | `main()` phases after #200 / R13 split |
+| map_renderer | Banner/legend HTML + popup theme CSS (shared with component iframe) |
+| map_leaflet_viewport | Viewport recipes, cluster icon styling payloads |
+| *_locations_geojson | Per-mode GeoJSON + structured popup payloads (all / species / lifer / family) |
 | taxonomy | eBird taxonomy lookup |
 | duplicate_checks | Maintenance checks |
 | checklist_stats_* | Stats + display formatting |
@@ -172,11 +221,11 @@ explorer/app/streamlit/defaults.py
 
 ### Map marker colour schemes (data model and usage)
 
-Presets are **frozen dataclasses** in `explorer/core/map_marker_scheme_model.py`: a top-level `MapMarkerColourScheme` bundles `global_defaults` (default fill/stroke hex, radius, fill opacity, stroke weight) plus nested styles for each map mode — e.g. `all_locations` (visit pins + optional `cluster` tier colours), `species_locations`, `species_map_background`, `lifer_locations`, `family_locations` (required `density_fill_hex` + `legend_highlight_band_index`; optional `density_stroke_hex`, radii, stroke weights, optional `highlight_stroke_hex` / halo fields, fill opacity — omit `highlight_stroke_hex` to keep the species-highlight pin’s edge on the same **density-band** stroke as non-highlight pins; other unset fields follow `map_marker_colour_resolve`). Popup width and initial `fit_bounds` for the **family-locations** map are **not** part of the colour scheme; they live as `MAP_FAMILY_MAP_*` constants in `explorer/app/streamlit/defaults.py` (see `explorer/core/family_map_folium.py`).
+Presets are **frozen dataclasses** in `explorer/core/map_marker_scheme_model.py`: a top-level `MapMarkerColourScheme` bundles `global_defaults` (default fill/stroke hex, radius, fill opacity, stroke weight) plus nested styles for each map mode — e.g. `all_locations` (visit pins + optional `cluster` tier colours), `species_locations`, `species_map_background`, `lifer_locations`, `family_locations` (required `density_fill_hex` + `legend_highlight_band_index`; optional `density_stroke_hex`, radii, stroke weights, optional `highlight_stroke_hex` / halo fields, fill opacity — omit `highlight_stroke_hex` to keep the species-highlight pin’s edge on the same **density-band** stroke as non-highlight pins; other unset fields follow `map_marker_colour_resolve`). Popup width and initial `fit_bounds` for the **family-locations** map are **not** part of the colour scheme; they live as `MAP_FAMILY_MAP_*` constants in `explorer/app/streamlit/defaults.py` (family viewport/framing uses `explorer/core/family_map_overlays.py` and `map_leaflet_viewport.py`).
 
-**Where presets live:** `explorer/app/streamlit/defaults.py` as `MAP_MARKER_COLOUR_SCHEME_1`, `_2`, and `_3` — all three are **production** presets shipped with Explorer (not experimental placeholders). The active index is `MAP_MARKER_ACTIVE_COLOUR_SCHEME`; `active_map_marker_colour_scheme(index)` returns the scheme used by the app and tests. New slots require wiring in that helper.
+**Where presets live:** `explorer/app/streamlit/defaults.py` as `MAP_MARKER_COLOUR_SCHEME_1`, `_2`, and `_3` — all three are **production** presets shipped with Explorer. The active index is `MAP_MARKER_ACTIVE_COLOUR_SCHEME`; `active_map_marker_colour_scheme(index)` returns the scheme used by the app and tests. New slots require wiring in that helper.
 
-**Resolution:** `explorer/core/map_marker_colour_resolve.py` turns scheme + optional overrides into concrete Folium colours and geometry. Per-channel rules are documented there (fill/stroke independently: role-specific hex, then globals, then scheme defaults / catch-all). Call sites include species-filtered visit pins (`resolve_species_visit_pin` — roles such as species emphasis, lifer, last-seen, background), lifer-locations map (`resolve_lifer_overlay_pin_params` — lifer vs subspecies), and family density bands (`resolve_family_band_colours`). Folium builders under `explorer/core/` (e.g. `map_overlay_visit_map.py`, `family_map_folium.py`) consume those helpers so the design utility and production maps stay aligned.
+**Resolution:** `explorer/core/map_marker_colour_resolve.py` turns scheme + optional overrides into concrete colours and geometry. Per-channel rules are documented there (fill/stroke independently: role-specific hex, then globals, then scheme defaults / catch-all). GeoJSON builders and the Leaflet component consume those helpers via `explorer/core/all_locations_marker_style.py`, species/lifer/family geojson modules, and `map_leaflet_viewport.py` so the design utility and production maps stay aligned.
 
 Omitted or `None` per-collection fields are intended to **inherit** `global_defaults` where the model allows it (including optional `family_locations.fill_opacity`); the design utility’s export tab emits sparse Python to match (see `explorer/presentation/design_map_export.py`).
 
@@ -193,12 +242,13 @@ streamlit run explorer/app/streamlit/design_map_app.py
 | Piece | Location |
 |-------|----------|
 | Streamlit UI (sliders, export) | `explorer/app/streamlit/design_map_app.py` |
-| Dummy Folium preview map | `explorer/presentation/design_map_preview.py` |
+| Dummy Leaflet preview GeoJSON + legend | `explorer/presentation/design_map_preview.py` |
 | Paste-ready export | `explorer/presentation/design_map_export.py` |
+| Live preview embed | `explorer/components/all_locations_map/` (same component as production Map tab) |
 | Hierarchical hex resolution (shared with production maps that use schemes) | `explorer/core/map_marker_colour_resolve.py` |
 | Preset dataclasses / registration | `explorer/app/streamlit/defaults.py` |
 
-**All locations — MarkerCluster “cluster icons”:** the plugin expects the same DOM as its default `iconCreateFunction` — **one** inner `<div>` wrapping the count `<span>`. Extra nested divs interact badly with `.marker-cluster div { … }` sizing rules and look offset or triple-stacked. Custom colours in this repo use that single inner div: **fill** = `background-color`, **border** = `border`, **halo** = a `box-shadow` ring, and the default tier background on the icon root is cleared so it does not add another coloured layer. Hex tier colours sit on `MapMarkerClusterStyle` under **`all_locations.cluster`**; optional **opacity** and **spread/width** fields there (`inner_fill_opacity`, `halo_opacity`, `border_opacity`, `halo_spread_px`, `border_width_px`; defaults `MAP_MARKER_CLUSTER_*_DEFAULT` in `defaults.py`) approximate the plugin’s semi-transparent rgba layers without nested divs. Implementation: `explorer/core/map_overlay_visit_map.py`.
+**All locations — MarkerCluster “cluster icons”:** the plugin expects the same DOM as its default `iconCreateFunction` — **one** inner `<div>` wrapping the count `<span>`. Extra nested divs interact badly with `.marker-cluster div { … }` sizing rules and look offset or triple-stacked. Custom colours in this repo use that single inner div: **fill** = `background-color`, **border** = `border`, **halo** = a `box-shadow` ring, and the default tier background on the icon root is cleared so it does not add another coloured layer. Hex tier colours sit on `MapMarkerClusterStyle` under **`all_locations.cluster`**; optional **opacity** and **spread/width** fields there (`inner_fill_opacity`, `halo_opacity`, `border_opacity`, `halo_spread_px`, `border_width_px`; defaults `MAP_MARKER_CLUSTER_*_DEFAULT` in `defaults.py`) approximate the plugin’s semi-transparent rgba layers without nested divs. Production + design preview: `explorer/core/map_leaflet_viewport.py` (`all_locations_cluster_icon_style_payload`). The design utility adds a synthetic **SEQ** cluster tier demo when preview scope is **All locations** (or **All**).
 
 > The website [Coolors](https://coolors.co/?home) is an excellent resource when working on colour schemes.
 
@@ -295,8 +345,12 @@ regressions can be diagnosed quickly without re-adding scaffolding.
   document old -> new mapping in the PR/issue so historical comparisons stay meaningful.
 - When changing known expensive paths (map build/embed, working-set rebuild, heavy tab rendering),
   update instrumentation in the touched area (`perf_span`, `perf_fragment`, `perf_record_point`).
-- Map prep uses **two** sidebar spinners (map + Folium first, then checklist/rankings/maint caches and
+- Map prep uses **two** sidebar spinners (Leaflet map payload + embed first, then checklist/rankings/maint caches and
   tab sync) so large exports can show the map before the heaviest non-map work finishes (#179).
+- Leaflet payload cache misses record **`marker_count`**, **`popup_build_count`**, and **`popup_build_total_ms`** in
+  perf `extra` on `map.*.leaflet.payload` spans (I1/I2 parity with Folium-era `prep.build_species_overlay_map`).
+  Session LRU keys use **`leaflet_payload_cache_key()`** (dataset + view + toggles) plus mode-specific
+  `revision_extra` in `app_prep_map_ui.py`.
 - Instrumentation should remain lightweight and optional: no behaviour changes when disabled.
 - For map/perf-related changes, run at least one focused before/after journey and include key stage
   medians or representative timings in issue/PR notes.
@@ -308,6 +362,8 @@ regressions can be diagnosed quickly without re-adding scaffolding.
   `pytest tests/explorer/test_streamlit_map_e2e.py tests/explorer/test_streamlit_journeys_e2e.py -m e2e -v`
 - **Opt-in perf + JSONL capture** (sets ``EXPLORER_PERF_LOG_FILE`` in the test fixture):  
   `pytest tests/explorer/test_map_perf_e2e.py --perf -v`  
+  Or one-shot baseline: **`./scripts/run_post_leaflet_perf_baseline.sh`** (archives JSONL, prints aggregate table).  
+  Results template: **`docs/explorer/issue-222-section-8-baseline.md`**.  
   Loose ceilings live in **`benchmarks/map_perf/stage_ceilings.json`** (see **`benchmarks/map_perf/README.md`**).
 - **Your real export instead of the tiny integration fixture** — copy is written under pytest’s temp dir (your file is not modified):  
   `export EXPLORER_E2E_DATASET_CSV=/path/to/MyEBirdData.csv`  

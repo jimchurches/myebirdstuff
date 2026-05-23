@@ -1,5 +1,5 @@
 """
-Personal eBird Explorer — Streamlit app (Folium map + rich location popups).
+Personal eBird Explorer — Streamlit app (Leaflet map component + rich location popups).
 
 Planning and phased migration notes: https://github.com/jimchurches/myebirdstuff/issues/70 (refs #70).
 
@@ -34,7 +34,8 @@ Streamlit does not expose the browser language to Python.
 match Country / Yearly (refs #70).
 
 **Prep vs Map load:** One **sidebar** ``st.spinner`` in a **dedicated bottom slot** wraps checklist prep, tab syncs,
-Folium **build**, serialized HTML cached for export plus **streamlit-folium** embed in the Map tab,
+Leaflet **GeoJSON** payloads cached in session; export HTML built on button click from
+``LEAFLET_EXPORT_RECIPE_KEY``; Map tab uses the custom component embed.
 then clears the bird-emoji strip (refs #124) so the explorer spinner tracks the built-in Streamlit spinner.
 Iframe min-height CSS reduces
 letterboxing. Partial
@@ -58,7 +59,7 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** Primary ``st.tabs`` first (``Map``, ``Families``, …; empty panels until filled). Prep + Folium embed run in a sidebar
+**Main tabs + sidebar:** Primary ``st.tabs`` first (``Map``, ``Families``, …; empty panels until filled). Prep + Leaflet map embed run in a sidebar
 bottom ``st.spinner`` (Map tab content is nested in script order so loading indicators stay aligned). Data tabs use
 ``@st.fragment`` where possible. One sidebar
 for map controls, export, and footer links (refs #70). Map sidebar + working set: :mod:`explorer.app.streamlit.app_map_working_ui`
@@ -66,7 +67,8 @@ for map controls, export, and footer links (refs #70). Map sidebar + working set
 (refs #118). Settings use a keyed container with
 ``max-width: min(100%, 40rem)`` on wide viewports. **Tables & lists** controls are batched in a form (one rerun on **Apply**).
 
-**Orchestration:** Phase boundaries for ``main()`` live in :mod:`explorer.app.streamlit.app_orchestration` (GitHub #200).
+**Orchestration:** ``main()`` → :mod:`explorer.app.streamlit.app_bootstrap`,
+:mod:`explorer.app.streamlit.app_dashboard_shell` (re-exported from :mod:`explorer.app.streamlit.app_orchestration`, #200 / R13).
 """
 
 from __future__ import annotations

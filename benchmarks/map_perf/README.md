@@ -16,8 +16,9 @@ notes) and these **guardrail ceilings**.
 ## Feasibility / relevance
 
 - **Feasible:** small JSON blobs, no binary logs.
-- **Relevant:** keeps `prep.*` / `dataset.load` instrumentation honest when refactoring embeds (#190)
-  or cache keys.
+- **Relevant:** keeps `prep.*` / `dataset.load` / `map.*.leaflet.*` / tab-prep (`prep.cache_checklist_stats.*`,
+  `prep.cache_rankings_bundle`, `perf_fragment` tab bodies) instrumentation honest when refactoring
+  embeds (#190), payload cache keys, or checklist/rankings compute.
 - **Worth doing:** lightweight; complements human-reported timings. Replace or tighten ceilings when
   you intentionally improve hotspots.
 
@@ -45,3 +46,31 @@ python scripts/snapshot_explorer_perf_log.py /path/to/perf.jsonl --label post-em
 
 The directory stays local so you can diff before/after or attach excerpts to issues without fighting
 hardware variance on other machines.
+
+## Aggregating JSONL (build cost vs cache hits)
+
+Warm reruns set `payload_cache_hit: true` on `map.*.leaflet.payload` spans with near-zero
+`elapsed_ms` and no `marker_count` / `popup_build_*` in `extra`. For **GeoJSON build cost**,
+filter to cold misses when summarising:
+
+```bash
+python scripts/aggregate_perf_jsonl.py benchmarks/map_perf/snapshots \
+  --glob 'post-leaflet-*.jsonl' \
+  --stage map.all_locations_leaflet.payload \
+  --extra-key payload_cache_hit \
+  --extra-key marker_count \
+  --extra-key popup_build_total_ms
+```
+
+Treat rows where `payload_cache_hit` is false (or absent on older logs) as payload **misses**;
+ignore true hits when comparing build regressions. One-shot fixture journey:
+`./scripts/run_post_leaflet_perf_baseline.sh`.
+
+**Tab/table prep journey** (fixture, opt-in):
+
+```bash
+pytest tests/explorer/test_tab_perf_e2e.py --perf -v
+```
+
+Expect `prep.cache_checklist_stats.working`, `.full_export`, `prep.cache_rankings_bundle`, and
+`prep.tab_session_sync` in the JSONL after the Checklist Statistics → Overview tabs are visible.

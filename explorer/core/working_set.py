@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AbstractSet, Any, Dict, List, MutableMapping, Optional, Tuple
+from typing import AbstractSet, Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -43,15 +43,13 @@ def rebuild_working_set_from_date_filter(
     filter_start_date: str,
     filter_end_date: str,
     whoosh_index: Any = None,
-    map_caches: Optional[Tuple[dict, MutableMapping[Any, Any]]] = None,
 ) -> Optional[WorkingSet]:
     """
     Recompute the working ``df`` and derived structures from ``df_full``.
 
     Mirrors the former ``_apply_date_filter_and_build_map_data`` behaviour:
     invalid date range leaves everything unchanged (returns ``None``).
-    On success, optionally clears map popup/filter caches and rebuilds the Whoosh
-    species index when ``whoosh_index`` is provided.
+    On success, optionally rebuilds the Whoosh species index when ``whoosh_index`` is provided.
 
     Parameters
     ----------
@@ -63,8 +61,6 @@ def rebuild_working_set_from_date_filter(
         Same semantics as ``FILTER_*`` variables.
     whoosh_index
         If set, the Whoosh index is cleared and repopulated with ``species_list``.
-    map_caches
-        If set, ``(popup_html_cache, filtered_by_loc_cache)``; both are ``.clear()`` on success.
 
     Returns
     -------
@@ -113,11 +109,6 @@ def rebuild_working_set_from_date_filter(
         total_checklists_full = total_checklists
         total_species_full = total_species
         total_individuals_full = total_individuals
-
-    if map_caches is not None:
-        popup_cache, filtered_cache = map_caches
-        popup_cache.clear()
-        filtered_cache.clear()
 
     if whoosh_index is not None:
         from whoosh.query import Every

@@ -31,6 +31,27 @@ Do not guess.
 
 ---
 
+## Step 1b — Prune macOS Finder duplicates (before staging)
+
+From the repository root, run:
+
+```bash
+python3 scripts/prune_finder_duplicates.py
+```
+
+This deletes accidental Finder copies such as ``README 2.md``, ``module 2.py``, or
+``frontend/build/static/css 4/``. It skips ``.git``, ``node_modules``, ``.venv``, and
+similar cache trees.
+
+- If anything was removed, mention what was deleted in the final output (counts + a few paths).
+- Do **not** stage or commit those paths — they should be gone from disk.
+- If the user intentionally kept a oddly named file matching this pattern, stop and ask.
+
+CI enforces a clean tree with ``python scripts/prune_finder_duplicates.py --check`` in the
+repository-hygiene job.
+
+---
+
 ## Step 2 — Identify context
 
 Use the following as input:

@@ -7,33 +7,39 @@ Pure helper functions used by the map overlay pipeline.
 Each function takes explicit inputs and returns a value — no UI
 globals, widget references, or side effects.
 
-Popup HTML is plain strings passed to ``folium.Popup``; typography and colours are **not** locked to
-Leaflet defaults: ``map_overlay_theme_stylesheet`` (popups + top/bottom map chrome, injected once per map
-in ``map_controller``) and ``EXPLORER_UI_*`` constants align with the Streamlit app and
-repo-root ``.streamlit/config.toml`` (refs #70).
+Popup HTML is plain strings for the Leaflet map component; typography and colours use
+``map_overlay_theme_stylesheet`` (popups + top/bottom map chrome) and ``EXPLORER_UI_*`` constants
+aligned with the Streamlit app and repo-root ``.streamlit/config.toml``.
 """
 
 import html as _html_module
 
-import folium
 import pandas as pd
-from branca.element import MacroElement
-from folium.template import Template
 
+from explorer.core.lifer_last_seen_prep import (
+    observation_date_within_filter,
+    subset_lifer_lookup_for_species,
+)
 from explorer.core.stats import format_observed_count_for_map_popup
-from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 from explorer.app.streamlit.defaults import (
-    MAP_HEIGHT_PX_DEFAULT,
-    MAP_HEIGHT_PX_MAX,
-    MAP_HEIGHT_PX_MIN,
     MAP_LEGEND_PIN_BORDER_PX,
     MAP_LEGEND_PIN_DOT_PX,
+)
+from explorer.presentation.stats_html_helpers import esc_attr, esc_text
+from explorer.presentation.map_ui_constants import (
     MAP_POPUP_MACAULAY_LINK_SYMBOL,
     MAP_POPUP_MAX_WIDTH_PX,
+    SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS,
+)
+from explorer.presentation.map_popup_models import (
+    LocationPopupModel,
+    SpeciesMapLocationPopupModel,
+    assemble_location_popup_html,
+    assemble_species_map_location_popup_html,
 )
 
 # ---------------------------------------------------------------------------
-# UI theme (aligned with Streamlit Checklist Statistics HTML + ``.streamlit/config.toml``; refs #70)
+# UI theme (aligned with Streamlit Checklist Statistics HTML + ``.streamlit/config.toml``)
 # ---------------------------------------------------------------------------
 
 EXPLORER_UI_FONT_STACK = (
@@ -48,37 +54,43 @@ EXPLORER_UI_MUTED = "rgba(26, 46, 34, 0.55)"
 EXPLORER_UI_POPUP_DETAILS_CHEVRON = "rgba(26, 46, 34, 0.36)"
 EXPLORER_UI_BORDER_PANEL = "rgba(31, 111, 84, 0.18)"
 
-# Species-map location popup: leave <details> open only for short lists so the popup stays scannable.
-# Per species section: open when this many observation rows or fewer (not number of taxa at the pin).
-SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS = 3
-SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS = 1
-
 
 def map_popup_theme_stylesheet() -> str:
     """Return a ``<style>`` block for Leaflet popups (injected once per map via ``branca.element.Element``).
 
     Typography matches the checklist HTML tab (~0.8125rem). CSS shrink-wraps Leaflet’s content box;
-    :func:`map_popup_width_fix_script` reapplies widths after ``Popup._updateLayout`` (refs #145).
+    Popup width is finalized in the Leaflet component iframe (``AllLocationsMap.tsx``).
     """
     return f"""
 <style>
-/* Shrink-wrap: Leaflet sets pixel width on .leaflet-popup-content; wrapper must match (refs #145). */
+/* Shrink-wrap: Leaflet sets pixel width on .leaflet-popup-content; wrapper must match. */
 .leaflet-popup .leaflet-popup-content-wrapper,
 .leaflet-popup .leaflet-popup-content {{
   width: fit-content !important;
   max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px)) !important;
   box-sizing: border-box !important;
 }}
+.leaflet-popup .leaflet-popup-content {{
+  text-align: left !important;
+  overflow-x: hidden !important;
+}}
 .leaflet-popup-content .pebird-map-popup,
 .leaflet-popup-content .pebird-map-popup * {{
   box-sizing: border-box;
 }}
-/* Block-level inner box stretches to Leaflet's wide .leaflet-popup-content; shrink-wrap so width can match text. */
+/* Block fills post-shrink content width; JS temporarily forces max-content only while measuring. */
 .leaflet-popup-content .pebird-map-popup {{
-  display: inline-block;
-  width: max-content;
-  max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px));
-  vertical-align: top;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: min({MAP_POPUP_MAX_WIDTH_PX}px, calc(100vw - 40px), 100%);
+  overflow-wrap: break-word;
+  word-break: normal;
+  box-sizing: border-box;
+  padding: 8px 14px 10px 6px;
+}}
+.pebird-map-popup.popup-scroll-wrapper {{
+  padding: 10px 14px 10px 6px;
 }}
 .pebird-map-popup__heading-row {{
   width: 100%;
@@ -86,15 +98,18 @@ def map_popup_theme_stylesheet() -> str:
   min-width: 0;
   box-sizing: border-box;
   /* Leaflet's close control sits top-right; long titles must not run under it. */
-  padding-right: 2rem;
+  padding-right: 2.25rem;
+  overflow-x: hidden;
+  overflow-y: hidden;
 }}
-/* Full width of the popup card so wheel events scroll visits instead of the map (#175). */
+/* Full width of the popup card so wheel events scroll visits instead of the map. */
 .pebird-map-popup__scroll {{
   display: block;
   width: 100%;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  padding-right: 2rem;
 }}
 .pebird-map-popup {{
   font-family: {EXPLORER_UI_FONT_STACK};
@@ -126,16 +141,18 @@ def map_popup_theme_stylesheet() -> str:
   color: {EXPLORER_UI_PRIMARY_GREEN};
   text-decoration: none;
 }}
-/* Location title link: heavier than body links (refs #70). Block + full row width so wrapping
-   respects the popup box (inline + fit-content chain was letting long names spill past the card). */
+/* Location title: fill card width; wrap at spaces (shrink-wrap sizes card for one line when possible). */
 .pebird-map-popup a.pebird-map-popup__location-heading {{
   display: block;
-  width: 100%;
+  width: auto;
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   font-weight: 600;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: pretty;
 }}
 /* Section labels: same weight/colour as banner stats line (``pebird-map-banner__stats``), not title. */
 .pebird-map-popup .pebird-map-popup__section-label {{
@@ -144,27 +161,89 @@ def map_popup_theme_stylesheet() -> str:
   font-size: inherit;
   line-height: inherit;
 }}
-/* Family map / no-URL title: match linked ``.pebird-map-popup__location-heading`` colour (#158). */
+/* Family map / no-URL title: match linked ``.pebird-map-popup__location-heading`` colour. */
 .pebird-map-popup span.pebird-map-popup__location-heading {{
   color: {EXPLORER_UI_PRIMARY_GREEN};
   font-weight: 600;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  display: block;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: pretty;
 }}
-/* All-locations visit list: tight gap between section label and date links (#158). */
+/* All-locations visit list: tight gap between section label and date links. */
 .pebird-map-popup__visited-block .pebird-map-popup__section-label {{
   margin: 0 0 0.15em 0;
 }}
 .pebird-map-popup__visit-dates {{
   margin: 0;
   padding: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  line-height: 1.45;
+}}
+.pebird-map-popup__visit-dates a {{
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}}
+.pebird-map-popup__visit-list-inner {{
+  overflow-x: auto;
+  max-width: 100%;
+  line-height: 1.45;
+}}
+.pebird-map-popup__visit-list-inner a {{
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}}
+.pebird-map-popup__summary-line {{
+  display: block;
+  margin: 0;
+  color: {EXPLORER_UI_MUTED};
+  font-weight: 400;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}}
+.pebird-map-popup__heading-row + .pebird-map-popup__summary-line {{
+  margin-top: 0.2rem;
+}}
+.pebird-map-popup__summary-line + .pebird-map-popup__summary-line {{
+  margin-top: 0.12rem;
+}}
+/* Family map: species common-name rows (inherit popup base size — not 0.92em). */
+.pebird-map-popup__species-line {{
+  display: block;
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 400;
+  color: {EXPLORER_UI_TEXT_COLOR};
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}}
+.pebird-map-popup__species-line a {{
+  overflow-wrap: normal;
+  word-break: normal;
+}}
+.pebird-map-popup__heading-row + .pebird-map-popup__species-line {{
+  margin-top: 0.2rem;
+}}
+.pebird-map-popup__species-line + .pebird-map-popup__species-line {{
+  margin-top: 0.12rem;
 }}
 .pebird-map-popup__obs-count {{
   color: {EXPLORER_UI_MUTED};
   font-weight: 400;
 }}
 /* Species-map: one line per visit (datetime + count + optional media). No table — avoids wide
-   column / intrinsic-width fights with Leaflet (refs #145). */
+   column / intrinsic-width fights with Leaflet. */
 .pebird-map-popup__obs-list {{
   margin: 0;
   padding: 0;
@@ -172,9 +251,17 @@ def map_popup_theme_stylesheet() -> str:
 .pebird-map-popup__obs-line {{
   display: block;
   margin: 0 0 0.15rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
 }}
 .pebird-map-popup__obs-line:last-child {{
   margin-bottom: 0;
+}}
+.pebird-map-popup__obs-line a {{
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }}
 .pebird-map-popup details.pebird-map-popup__species-seen {{
   margin: 0 0 0.55rem 0;
@@ -191,12 +278,15 @@ def map_popup_theme_stylesheet() -> str:
   font-weight: 400;
   color: {EXPLORER_UI_TEXT_COLOR};
   list-style: none;
+  white-space: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
 }}
 .pebird-map-popup details.pebird-map-popup__all-visits summary::-webkit-details-marker,
 .pebird-map-popup details.pebird-map-popup__species-seen summary::-webkit-details-marker {{
   display: none;
 }}
-/* Custom disclosure chevron (refs #145). Colour: ``EXPLORER_UI_POPUP_DETAILS_CHEVRON``. */
+/* Custom disclosure chevron for species popup <details>. Colour: ``EXPLORER_UI_POPUP_DETAILS_CHEVRON``. */
 .pebird-map-popup details.pebird-map-popup__all-visits summary::before,
 .pebird-map-popup details.pebird-map-popup__species-seen summary::before {{
   content: '▶';
@@ -214,77 +304,6 @@ def map_popup_theme_stylesheet() -> str:
   margin-top: 0.35rem;
 }}
 </style>
-"""
-
-
-def map_popup_width_fix_script() -> str:
-    """Return a ``<script>`` that shrink-wraps Leaflet popups after JS layout.
-
-    Folium passes ``maxWidth``; Leaflet's ``Popup._updateLayout`` sets a pixel width on
-    ``.leaflet-popup-content`` (often ``maxWidth``). A **block** ``.pebird-map-popup`` then **stretches**
-    to that width, so ``fit-content`` on the parent cannot shrink. We use **inline-block** inner (CSS)
-    and set **content + wrapper** to the measured inner width in px after Leaflet runs (refs #145).
-    """
-    w = MAP_POPUP_MAX_WIDTH_PX
-    return f"""
-<script>
-(function() {{
-  var MAX_PX = {w};
-
-  function capW() {{
-    return Math.min(MAX_PX, Math.max(80, window.innerWidth - 40));
-  }}
-
-  function shrinkPebirdPopups() {{
-    var pops = document.querySelectorAll('.leaflet-popup-pane .leaflet-popup');
-    var cap = capW();
-    for (var i = 0; i < pops.length; i++) {{
-      var pop = pops[i];
-      var content = pop.querySelector('.leaflet-popup-content');
-      var wrap = pop.querySelector('.leaflet-popup-content-wrapper');
-      var inner = pop.querySelector('.pebird-map-popup');
-      if (!content || !wrap || !inner) continue;
-
-      content.style.removeProperty('width');
-      content.style.removeProperty('white-space');
-      wrap.style.removeProperty('width');
-
-      var innerPx = Math.ceil(inner.scrollWidth);
-      if (innerPx < 2) innerPx = Math.ceil(inner.getBoundingClientRect().width);
-      var target = Math.min(innerPx, cap);
-      content.style.setProperty('width', target + 'px', 'important');
-      content.style.setProperty('max-width', cap + 'px', 'important');
-      wrap.style.setProperty('width', target + 'px', 'important');
-      wrap.style.setProperty('max-width', cap + 'px', 'important');
-    }}
-  }}
-
-  function scheduleShrink() {{
-    requestAnimationFrame(function() {{
-      requestAnimationFrame(function() {{
-        shrinkPebirdPopups();
-      }});
-    }});
-    var delays = [0, 30, 80, 150, 260, 400];
-    for (var k = 0; k < delays.length; k++) {{
-      setTimeout(shrinkPebirdPopups, delays[k]);
-    }}
-  }}
-
-  var mo = new MutationObserver(function(muts) {{
-    for (var i = 0; i < muts.length; i++) {{
-      for (var j = 0; j < muts[i].addedNodes.length; j++) {{
-        var node = muts[i].addedNodes[j];
-        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {{
-          scheduleShrink();
-          return;
-        }}
-      }}
-    }}
-  }});
-  mo.observe(document.body, {{ childList: true, subtree: true }});
-}})();
-</script>
 """
 
 
@@ -332,7 +351,7 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   font-weight: 400;
   margin: 0;
 }}
-/* All-locations map: match family-map banner hierarchy — title (green) + body-colour main line + muted smaller line (#167). */
+/* All-locations map: match family-map banner hierarchy — title (green) + body-colour main line + muted smaller line. */
 .pebird-map-banner__all-locations-primary {{
   display: block;
   font-size: inherit;
@@ -350,7 +369,7 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   margin-top: 6px;
   line-height: 1.35;
 }}
-/* Species map only: secondary stats (first/last seen, high count) below the primary summary line (#162). */
+/* Species map only: secondary stats (first/last seen, high count) below the primary summary line. */
 .pebird-map-banner__stats-secondary {{
   font-size: calc(1em - 3px);
 }}
@@ -371,6 +390,21 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   text-decoration: underline;
   text-underline-offset: 2px;
 }}
+/* Family highlight + species secondary lines + legend species links (outside ``__stats`` or raw HTML labels). */
+.pebird-map-banner__family-selected-summary a,
+.pebird-map-banner__stats-secondary a,
+.pebird-map-legend a {{
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  text-decoration: none;
+  font-weight: inherit;
+}}
+.pebird-map-banner__family-selected-summary a:hover,
+.pebird-map-banner__stats-secondary a:hover,
+.pebird-map-legend a:hover {{
+  color: {EXPLORER_UI_PRIMARY_GREEN};
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}}
 .pebird-map-banner__sep {{
   color: {EXPLORER_UI_MUTED};
   font-weight: 400;
@@ -384,7 +418,8 @@ def map_banner_and_legend_theme_stylesheet() -> str:
   margin-top: 6px;
 }}
 .pebird-map-legend {{
-  padding: 8px 12px;
+  /* Mirror ``.pebird-map-banner`` inset padding (banner top/right → legend bottom/left). */
+  padding: 12px 16px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
@@ -395,7 +430,7 @@ def map_banner_and_legend_theme_stylesheet() -> str:
 
 
 def map_overlay_theme_stylesheet() -> str:
-    """All injected map UI chrome: Leaflet popups + top banner + bottom legend (refs #70)."""
+    """All injected map UI chrome: Leaflet popups + top banner + bottom legend."""
     return map_popup_theme_stylesheet() + map_banner_and_legend_theme_stylesheet()
 
 
@@ -456,7 +491,7 @@ def format_sighting_row(r):
 def format_species_map_sighting_row(r: pd.Series) -> str:
     """Format one species-map observation: one line with datetime link, (Observed: n), optional media.
 
-    Omits species name — rows are grouped under per–common-name headings (refs #145).
+    Omits species name — rows are grouped under per–common-name headings.
     """
     if "datetime" in r.index and pd.notna(r.get("datetime")):
         dt = r["datetime"]
@@ -484,7 +519,7 @@ def format_species_map_sighting_row(r: pd.Series) -> str:
 
 
 def build_species_seen_sections_html(species_sightings: pd.DataFrame, *, ascending: bool) -> str:
-    """Group *species_sightings* by ``Common Name``; one ``<details>`` block per taxon (refs #145).
+    """Group *species_sightings* by ``Common Name``; one ``<details>`` block per taxon.
 
     The summary line matches the visit list pattern, ``Name: (n)``, where *n* is the number of
     observation rows for that species at this pin (not the sum of ``Count``).
@@ -546,6 +581,19 @@ def build_visit_info_html(visit_records, format_time_fn):
     )
 
 
+def build_visit_popup_entry_rows(visit_records, format_time_fn):
+    """Structured checklist rows for Leaflet ``popup_v1`` (parallel to :func:`build_visit_info_html`)."""
+    if visit_records.empty:
+        return []
+    return [
+        {
+            "label": esc_text(format_time_fn(r)),
+            "href": f"https://ebird.org/checklist/{esc_attr(r['Submission ID'])}",
+        }
+        for _, r in visit_records.iterrows()
+    ]
+
+
 def build_location_popup_html(
     loc_name,
     loc_id,
@@ -568,52 +616,29 @@ def build_location_popup_html(
             the visit list (from ``format_sighting_row``). Ignored if
             *lifer_species_html* is set.
         lifer_species_html: Optional HTML fragment listing lifer species first
-            recorded at this location (refs #71). When non-empty, shown instead
+            recorded at this location. When non-empty, shown instead
             of the *sightings_html* "Seen:" block.
         show_visit_history: When False, omit the "Visited:" section entirely
-            (used by the lifer-map popup simplification; refs #104).
+            (used by the lifer-map popup simplification).
         lifer_heading_html: Optional heading HTML prepended when *lifer_species_html*
             is provided. Pass ``""`` to omit the heading (used by lifer-map popups).
         location_heading_margin_px: Gap below the location title row (default ``4``). Species-map
-            popups use ``6`` via :func:`build_species_map_location_popup_html` (#158).
+            popups use ``6`` via :func:`build_species_map_location_popup_html`.
 
     Returns:
         Complete popup HTML string with scroll wrapper.
     """
-    loc_url = f"https://ebird.org/lifelist/{loc_id}"
-    esc_loc = _html_module.escape(str(loc_name), quote=False)
-    loc_link = (
-        f'<a class="pebird-map-popup__location-heading" href="{loc_url}" '
-        f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'
+    m = LocationPopupModel(
+        loc_name=str(loc_name),
+        loc_id=str(loc_id),
+        visit_info_html=visit_info_html,
+        sightings_html=sightings_html,
+        lifer_species_html=lifer_species_html,
+        show_visit_history=show_visit_history,
+        lifer_heading_html=lifer_heading_html,
+        location_heading_margin_px=int(location_heading_margin_px),
     )
-    if lifer_species_html:
-        extra_section = f"{lifer_heading_html}{lifer_species_html}" if lifer_heading_html else lifer_species_html
-    elif sightings_html:
-        extra_section = (
-            f'<div class="pebird-map-popup__section-label">Seen:</div>{sightings_html}'
-        )
-    else:
-        extra_section = ""
-    visited_section = (
-        '<div class="pebird-map-popup__visited-block">'
-        '<div class="pebird-map-popup__section-label">Visited:</div>'
-        f'<div class="pebird-map-popup__visit-dates">{visit_info_html}</div>'
-        "</div>"
-        if show_visit_history
-        else ""
-    )
-    # If both sections are present, add a separator line break.
-    if visited_section and extra_section:
-        inner_html = visited_section + "<br>" + extra_section
-    else:
-        inner_html = visited_section + extra_section
-    return (
-        f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
-        f'<div class="pebird-map-popup__heading-row" style="margin-bottom:{int(location_heading_margin_px)}px;">{loc_link}</div>'
-        f'<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">'
-        f"{inner_html}"
-        f'</div></div>'
-    )
+    return assemble_location_popup_html(m)
 
 
 def build_species_map_location_popup_html(
@@ -625,6 +650,7 @@ def build_species_map_location_popup_html(
     visit_record_count: int,
     popup_ascending: bool,
     location_heading_margin_px: int = 6,
+    species_sections_html: str | None = None,
 ) -> str:
     """Popup for **species-matching** markers on the species map: species sections first, visits in ``<details>``.
 
@@ -632,46 +658,43 @@ def build_species_map_location_popup_html(
     taxon; the visit list uses :data:`SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS` for when to leave
     that block open.
 
-    Non-matching pins use :func:`build_location_popup_html` without species sections (refs #145).
+    Non-matching pins use :func:`build_location_popup_html` without species sections.
+
+    *species_sections_html* optionally supplies pre-built species ``<details>`` HTML (must match
+    ``build_species_seen_sections_html`` for the same *species_sightings* and *popup_ascending*) for
+    fragment reuse across full-popup misses (perf instrumentation).
     """
-    loc_url = f"https://ebird.org/lifelist/{loc_id}"
-    esc_loc = _html_module.escape(str(loc_name), quote=False)
-    loc_link = (
-        f'<a class="pebird-map-popup__location-heading" href="{loc_url}" '
-        f'target="_blank" rel="noopener noreferrer">{esc_loc}</a>'
+    sections_html = (
+        species_sections_html
+        if species_sections_html is not None
+        else build_species_seen_sections_html(species_sightings, ascending=popup_ascending)
     )
-    sections_html = build_species_seen_sections_html(species_sightings, ascending=popup_ascending)
-    summary_text = f"Visited: ({visit_record_count})"
-    esc_summary = esc_text(summary_text)
-    inner_visits = visit_info_html if (visit_info_html and str(visit_info_html).strip()) else ""
-    visits_open = (
-        " open"
-        if visit_record_count <= SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS
-        else ""
+    m = SpeciesMapLocationPopupModel(
+        loc_name=str(loc_name),
+        loc_id=str(loc_id),
+        species_sections_html=sections_html,
+        visit_info_html=visit_info_html,
+        visit_record_count=int(visit_record_count),
+        location_heading_margin_px=int(location_heading_margin_px),
     )
-    details_block = (
-        f'<details class="pebird-map-popup__all-visits"{visits_open}>'
-        f'<summary class="pebird-map-popup__section-label">{esc_summary}</summary>'
-        f'<div class="pebird-map-popup__visit-list-inner">{inner_visits}</div>'
-        f"</details>"
-    )
-    inner_html = sections_html + details_block
-    return (
-        f'<div class="pebird-map-popup popup-scroll-wrapper" style="position:relative;">'
-        f'<div class="pebird-map-popup__heading-row" style="margin-bottom:{int(location_heading_margin_px)}px;">{loc_link}</div>'
-        f'<div class="pebird-map-popup__scroll" style="max-height:300px;overflow-y:auto;">'
-        f"{inner_html}"
-        f"</div></div>"
-    )
+    return assemble_species_map_location_popup_html(m)
 
 
 # ---------------------------------------------------------------------------
 # Banner and legend HTML builders
 # ---------------------------------------------------------------------------
 
-_BANNER_POSITION = "position:fixed;top:10px;right:10px;z-index:1000;"
+_BANNER_POSITION = "position:fixed;top:16px;right:16px;z-index:1000;"
 
-_LEGEND_POSITION = "position:fixed;bottom:10px;left:10px;z-index:1000;"
+_LEGEND_POSITION = "position:fixed;bottom:16px;left:16px;z-index:1000;"
+
+# All locations Streamlit component: keep the **banner** on ``position:fixed`` (``_BANNER_POSITION`` —
+# top/right of the iframe viewport). The **legend** uses ``position:absolute`` with
+# ``bottom:16px`` relative to ``.all-locations-map-frame`` so the legend–map bottom gap stays stable;
+# ``left`` is tighter than 16px because a ``fixed`` banner measures from the iframe viewport while this
+# overlay is laid out inside the component root, and matching the *visual* left gutter needs a smaller
+# numeric offset (component root layout vs iframe viewport).
+STREAMLIT_COMPONENT_MAP_LEGEND_STYLE = "position:absolute;bottom:16px;left:8px;z-index:1000;"
 
 
 def _banner_sep() -> str:
@@ -711,15 +734,17 @@ def build_all_locations_banner_html(
     total_checklists,
     total_species,
     total_individuals,
-    date_filter_status=None,
+    *,
+    position_style: str | None = None,
 ):
     """Return the HTML overlay banner for the **All locations** map (landing map).
 
     Same hierarchy as the family-map banner: green ``__title``, main stats in body text, secondary
-    line muted and slightly smaller (refs #167).
+    line muted and slightly smaller. Date filter state is **not** shown here — it lives in
+    the sidebar only.
 
-    If date_filter_status is provided (e.g. "Date filter: Off" or "Date filter: 2026-01-01 to 2026-12-31"),
-    it is shown below, smaller and lighter so it is less prominent.
+    *position_style* — when ``None``, uses the default fixed corner overlay (``_BANNER_POSITION``). Pass a string
+    (e.g. ``\"position:relative;\"``) when embedding the banner outside the map document.
     """
     sep = _banner_sep()
     loc_w = "locations" if n_locations != 1 else "location"
@@ -729,15 +754,14 @@ def build_all_locations_banner_html(
         f'{sep}{total_species} species'
         f'{sep}{total_individuals} individual{"s" if total_individuals != 1 else ""}'
     )
-    date_block = _banner_muted_line(date_filter_status) if date_filter_status else ""
+    pos = _BANNER_POSITION if position_style is None else position_style
     return (
-        f'<div class="pebird-map-banner" style="{_BANNER_POSITION}">'
+        f'<div class="pebird-map-banner" style="{pos}">'
         f'<span class="pebird-map-banner__title">All locations</span>'
         f'<div class="pebird-map-banner__stats">'
         f'<span class="pebird-map-banner__all-locations-primary">{primary_line}</span>'
         f'<span class="pebird-map-banner__all-locations-details">{details_line}</span>'
         f"</div>"
-        f'{date_block}'
         f'</div>'
     )
 
@@ -762,7 +786,7 @@ def build_lifer_locations_banner_html(
     include_subspecies: bool = False,
     n_subspecies_lifers: int | None = None,
 ):
-    """Banner for lifer-only map mode (refs #71).
+    """Banner for lifer-only map mode.
 
     *n_lifer_species* is always the species-lifer count (first record per base species), independent
     of the subspecies overlay. When *include_subspecies* is true, pass *n_subspecies_lifers* from
@@ -814,10 +838,10 @@ def build_species_banner_html(
         last_seen_date: Formatted date string for most recent sighting (empty to omit).
         high_count_date: Formatted date string when high count was recorded (empty to omit).
         date_filter_status: Optional string (e.g. "Date filter: Off" or range) shown on last line, smaller and lighter.
-        species_url: Optional eBird species page URL; if set, display_name is rendered as a clickable link (refs #56).
-        first_seen_checklist_url: Optional eBird checklist URL for the first-seen date (refs #56).
-        last_seen_checklist_url: Optional eBird checklist URL for the last-seen date (refs #56).
-        high_count_checklist_url: Optional eBird checklist URL for the high-count date (refs #56).
+        species_url: Optional eBird species page URL; if set, display_name is rendered as a clickable link.
+        first_seen_checklist_url: Optional eBird checklist URL for the first-seen date.
+        last_seen_checklist_url: Optional eBird checklist URL for the last-seen date.
+        high_count_checklist_url: Optional eBird checklist URL for the high-count date.
     """
     def _maybe_link(label: str, url: str | None) -> str:
         if not url:
@@ -857,121 +881,29 @@ def build_species_banner_html(
     )
 
 
-def build_legend_html(items):
+def build_legend_html(items, *, container_style: str | None = None):
     """Return the HTML overlay legend from a list of ``(color, fill, label)`` tuples.
 
-    Each tuple is rendered via ``pin_legend_item``.
+    Each tuple is rendered via :func:`pin_legend_item`.
+
+    *container_style* — when ``None``, uses the default fixed bottom-left legend (``_LEGEND_POSITION``). Pass a CSS
+    string for the outer ``pebird-map-legend`` box when embedding in Streamlit above the Leaflet component.
     """
     parts = "".join(pin_legend_item(c, f, label) for c, f, label in items)
-    return f'<div class="pebird-map-legend" style="{_LEGEND_POSITION}">{parts}</div>'
-
-
-# ---------------------------------------------------------------------------
-# Popup scroll behaviour (injected JS)
-# ---------------------------------------------------------------------------
-
-def popup_scroll_script(scroll_hint, scroll_to_bottom):
-    """Return an HTML ``<script>`` block that adds scroll hints to map popups.
-
-    Args:
-        scroll_hint: One of ``"chevron"``, ``"shading"``, ``"both"``, or
-            ``None``/falsy to disable.
-        scroll_to_bottom: If True, popups scroll to the bottom on open
-            (most-recent-first ordering).
-    """
-    hint_js = repr(scroll_hint)
-    to_bottom_js = "true" if scroll_to_bottom else "false"
-    return f"""
-<script>
-(function() {{
-  var HINT = {hint_js};
-  var SCROLL_TO_BOTTOM = {to_bottom_js};
-
-  function updateHints(scrollable, wrapper) {{
-    var st = scrollable.scrollTop;
-    var maxScroll = scrollable.scrollHeight - scrollable.clientHeight;
-    var hasMoreAbove = st > 0;
-    var hasMoreBelow = st < maxScroll;
-
-    if (HINT === 'chevron' || HINT === 'both') {{
-      var upEl = wrapper.querySelector('.popup-scroll-up');
-      var downEl = wrapper.querySelector('.popup-scroll-down');
-      if (upEl) upEl.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
-      if (downEl) downEl.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
-    }}
-    if (HINT === 'shading' || HINT === 'both') {{
-      var topShade = wrapper.querySelector('.popup-scroll-shade-top');
-      var botShade = wrapper.querySelector('.popup-scroll-shade-bot');
-      if (topShade) topShade.style.visibility = hasMoreAbove ? 'visible' : 'hidden';
-      if (botShade) botShade.style.visibility = hasMoreBelow ? 'visible' : 'hidden';
-    }}
-  }}
-
-  function setupPopup(scrollable, wrapper) {{
-    var hasOverflow = scrollable.scrollHeight > scrollable.clientHeight;
-    if (!hasOverflow) return;
-
-    scrollable.scrollTop = SCROLL_TO_BOTTOM ? scrollable.scrollHeight : 0;
-
-    var scrollTop = scrollable.offsetTop;
-    if (HINT === 'chevron' || HINT === 'both') {{
-      var up = document.createElement('div');
-      up.className = 'popup-scroll-up';
-      up.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
-      up.textContent = '\\u25B2';
-      var down = document.createElement('div');
-      down.className = 'popup-scroll-down';
-      down.style.cssText = 'position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;pointer-events:none;z-index:10;';
-      down.textContent = '\\u25BC';
-      wrapper.appendChild(up);
-      wrapper.appendChild(down);
-    }}
-    if (HINT === 'shading' || HINT === 'both') {{
-      var topShade = document.createElement('div');
-      topShade.className = 'popup-scroll-shade-top';
-      topShade.style.cssText = 'position:absolute;top:' + scrollTop + 'px;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to bottom,rgba(250,252,250,0.97),transparent);';
-      var botShade = document.createElement('div');
-      botShade.className = 'popup-scroll-shade-bot';
-      botShade.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:24px;pointer-events:none;z-index:5;background:linear-gradient(to top,rgba(250,252,250,0.97),transparent);';
-      wrapper.appendChild(topShade);
-      wrapper.appendChild(botShade);
-    }}
-
-    updateHints(scrollable, wrapper);
-    scrollable.addEventListener('scroll', function() {{ updateHints(scrollable, wrapper); }});
-  }}
-
-  function onPopupOpen() {{
-    setTimeout(function() {{
-      var scrollable = document.querySelector('.leaflet-popup-content .pebird-map-popup__scroll');
-      if (!scrollable) return;
-      var wrapper = scrollable.parentElement;
-      if (wrapper.dataset.popupSetup) return;
-      wrapper.dataset.popupSetup = '1';
-      setupPopup(scrollable, wrapper);
-    }}, 100);
-  }}
-
-  var observer = new MutationObserver(function(mutations) {{
-    for (var i = 0; i < mutations.length; i++) {{
-      for (var j = 0; j < mutations[i].addedNodes.length; j++) {{
-        var node = mutations[i].addedNodes[j];
-        if (node.nodeType === 1 && node.classList && node.classList.contains('leaflet-popup')) {{
-          onPopupOpen();
-          return;
-        }}
-      }}
-    }}
-  }});
-  observer.observe(document.body, {{ childList: true, subtree: true }});
-}})();
-</script>
-"""
+    pos = _LEGEND_POSITION if container_style is None else container_style
+    return f'<div class="pebird-map-legend" style="{pos}">{parts}</div>'
 
 
 # ---------------------------------------------------------------------------
 # Map data preparation
 # ---------------------------------------------------------------------------
+#
+# Species locations — lifer / last-seen pins:
+# True lifer and last-seen sites and dates come from the full export, not the date-filtered
+# working DataFrame. The date filter must not redefine lifers as “first sighting in range”. When
+# the filter is on, pins appear only if the true lifer / last-seen checklist date is within the
+# selected range. The Lifer locations map is separate (all-time lifer sites; no date filter).
+
 
 def resolve_lifer_last_seen(
     selected_species,
@@ -983,34 +915,63 @@ def resolve_lifer_last_seen(
     base_species_fn,
     mark_lifer=True,
     mark_last_seen=True,
+    *,
+    lifer_lookup_df=None,
+    filter_by_date: bool = False,
+    filter_start_date: str = "",
+    filter_end_date: str = "",
 ):
     """Resolve which location IDs are the lifer and last-seen for a species.
 
     Uses taxon-level lookup for subspecies (scientific name with 3+ parts),
-    falling back to the base-species lookup.  Only returns IDs that are in
-    *seen_location_ids*.  ``last_seen_location`` is never the same as
-    ``lifer_location``.
+    falling back to the base-species lookup.  ``last_seen_location`` is never
+    the same as ``lifer_location``.
 
-    Args:
-        selected_species: Scientific name of the selected species.
-        seen_location_ids: Set of Location IDs where the species was observed.
-        lifer_lookup: Dict mapping base species -> lifer Location ID.
-        last_seen_lookup: Dict mapping base species -> last-seen Location ID.
-        lifer_lookup_taxon: Dict mapping taxon key -> lifer Location ID.
-        last_seen_lookup_taxon: Dict mapping taxon key -> last-seen Location ID.
-        base_species_fn: Callable to extract base species from a scientific name.
-        mark_lifer: Whether to resolve lifer location.
-        mark_last_seen: Whether to resolve last-seen location.
+    When *filter_by_date* is false, pins are shown only when the true lifer /
+    last-seen location is in *seen_location_ids* (locations with filtered
+    sightings).
 
-    Returns:
-        ``(lifer_location, last_seen_location)`` — each is a Location ID
-        string or None.
+    When *filter_by_date* is true, *lifer_lookup_df* must be supplied (full export,
+    not date-filtered).  Pins are shown only when the true lifer / last-seen
+    **checklist date** falls within ``[filter_start_date, filter_end_date]``
+    (inclusive), regardless of other visits in the filtered window.
     """
     lifer_location = None
     last_seen_location = None
     sci_parts = (selected_species or "").strip().split()
     is_subspecies = len(sci_parts) >= 3
     taxon_key = selected_species.strip().lower() if selected_species else None
+
+    use_date_gate = bool(
+        filter_by_date
+        and filter_start_date
+        and filter_end_date
+        and lifer_lookup_df is not None
+        and not getattr(lifer_lookup_df, "empty", True)
+    )
+    species_subset = None
+    if use_date_gate:
+        species_subset = subset_lifer_lookup_for_species(
+            lifer_lookup_df, selected_species, base_species_fn
+        )
+
+    def _lifer_date_in_range() -> bool:
+        if species_subset is None or species_subset.empty:
+            return False
+        return observation_date_within_filter(
+            species_subset.iloc[0]["Date"],
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date,
+        )
+
+    def _last_seen_date_in_range() -> bool:
+        if species_subset is None or species_subset.empty:
+            return False
+        return observation_date_within_filter(
+            species_subset.iloc[-1]["Date"],
+            filter_start_date=filter_start_date,
+            filter_end_date=filter_end_date,
+        )
 
     if mark_lifer:
         true_lifer_loc = None
@@ -1019,8 +980,12 @@ def resolve_lifer_last_seen(
         if true_lifer_loc is None and sci_parts:
             base = base_species_fn(selected_species)
             true_lifer_loc = lifer_lookup.get(base) if base else None
-        if true_lifer_loc in seen_location_ids:
-            lifer_location = true_lifer_loc
+        if true_lifer_loc is not None:
+            if use_date_gate:
+                if _lifer_date_in_range():
+                    lifer_location = true_lifer_loc
+            elif true_lifer_loc in seen_location_ids:
+                lifer_location = true_lifer_loc
 
     if mark_last_seen:
         true_last_loc = None
@@ -1029,8 +994,12 @@ def resolve_lifer_last_seen(
         if true_last_loc is None and sci_parts:
             base = base_species_fn(selected_species)
             true_last_loc = last_seen_lookup.get(base) if base else None
-        if true_last_loc in seen_location_ids and true_last_loc != lifer_location:
-            last_seen_location = true_last_loc
+        if true_last_loc is not None and true_last_loc != lifer_location:
+            if use_date_gate:
+                if _last_seen_date_in_range():
+                    last_seen_location = true_last_loc
+            elif true_last_loc in seen_location_ids:
+                last_seen_location = true_last_loc
 
     return lifer_location, last_seen_location
 
@@ -1055,93 +1024,3 @@ def classify_locations(location_data, seen_location_ids, lifer_location, last_se
         by=["has_species_match", "is_lifer", "is_last_seen"],
         ascending=[True, True, True],
     )
-
-
-# ---------------------------------------------------------------------------
-# Map factory
-# ---------------------------------------------------------------------------
-
-
-class _ZoomLevelDebugOverlay(MacroElement):
-    """Leaflet control showing live zoom (debug; toggle via ``MAP_DEBUG_SHOW_ZOOM_LEVEL`` in defaults).
-
-    Uses **bottom-right** so it stays clear of the fixed **bottom-left** legend
-    (``_LEGEND_POSITION`` / ``pebird-map-legend``), which would cover a ``bottomleft`` control.
-    """
-
-    _template = Template(
-        """
-        {% macro script(this, kwargs) %}
-        (function() {
-            var map = {{ this._parent.get_name() }};
-            var div = L.DomUtil.create('div', 'ebird-zoom-debug-overlay');
-            div.style.cssText = [
-                'background:rgba(255,255,255,0.92)',
-                'border:1px solid #1f6f54',
-                'padding:4px 8px',
-                'font:12px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace',
-                'border-radius:4px',
-                'box-shadow:0 1px 3px rgba(0,0,0,0.2)',
-                'min-width:7ch',
-                'text-align:right',
-                'z-index:1001'
-            ].join(';');
-            var ctrl = L.control({position: 'bottomright'});
-            ctrl.onAdd = function() { return div; };
-            ctrl.addTo(map);
-            function update() {
-                div.textContent = 'zoom: ' + map.getZoom();
-            }
-            map.on('zoomend', update);
-            map.on('zoom', update);
-            update();
-        })();
-        {% endmacro %}
-        """
-    )
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._name = "ZoomLevelDebugOverlay"
-
-
-def add_zoom_level_debug_overlay(map_obj: folium.Map, *, enabled: bool) -> None:
-    """If *enabled*, add a small live zoom readout (for tuning clustering). No-op when *enabled* is False."""
-    if not enabled:
-        return
-    _ZoomLevelDebugOverlay().add_to(map_obj)
-
-
-def create_map(
-    map_center,
-    map_style="default",
-    *,
-    height_px: int | float | None = None,
-    zoom_start: int | None = None,
-):
-    """Create a folium Map centred on *map_center* with the given tile style.
-
-    Supported *map_style* values: ``"default"``, ``"google"``, ``"carto"``.
-    Unknown values fall back to the default OpenStreetMap tiles.
-
-    *height_px*: pixel height for the map pane. Folium defaults to ``100%``, which
-    depends on parent layout; inside ``streamlit-folium`` that can collapse to a thin
-    strip. Pass the same value as the Streamlit **Map height** slider when embedding.
-
-    *zoom_start*: optional initial zoom level (defaults to ``5`` when omitted).
-    """
-    # Default initial zoom for first render. Lower = more zoomed out.
-    z = 5 if zoom_start is None else int(zoom_start)
-    h = float(height_px if height_px is not None else MAP_HEIGHT_PX_DEFAULT)
-    h = max(float(MAP_HEIGHT_PX_MIN), min(float(MAP_HEIGHT_PX_MAX), h))
-    common = {"location": map_center, "zoom_start": z, "height": h, "width": "100%"}
-    if map_style == "google":
-        return folium.Map(
-            tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-            attr="Google",
-            **common,
-        )
-    elif map_style == "carto":
-        return folium.Map(tiles="CartoDB Positron", attr="CartoDB", **common)
-    else:
-        return folium.Map(**common)

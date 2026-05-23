@@ -17,7 +17,7 @@ It supports exploration of:
 - visit statistics
 - first/last seen data
 
-Primary interface: **Streamlit app + Folium map**
+Primary interface: **Streamlit app** with a **Leaflet** map custom component (four Map-tab modes; no Folium in production)
 
 ---
 
@@ -146,14 +146,18 @@ data_loader.py
     ↓
 canonical dataframe
     ↓
-core logic modules
+core logic modules (stats, geojson builders, …)
     ↓
-map rendering
+presentation (HTML tables, map banners/legends, theme CSS)
     ↓
-Streamlit UI
+Streamlit UI + Leaflet component iframe (Map tab)
 ```
 
 **Key rule:** UI stays thin, logic stays in modules.
+
+**Map stack:** Production maps use `explorer/components/all_locations_map/` (Streamlit `declare_component` + committed React build). Python builds GeoJSON and structured popup payloads in `explorer/core/*_locations_geojson.py`; prep and session LRU live in `app_prep_map_ui.py`. Do not reintroduce Folium unless explicitly requested.
+
+**Map perf history (#222):** `docs/explorer/issue-222-plain-summary.md`, `issue-222-section-8-baseline.md`, `issue-222-section-8-prior-art.md` — keep when editing architecture text.
 
 ---
 
@@ -199,6 +203,7 @@ Do not duplicate HTML in UI code — use shared formatters.
 - **Map marker design utility** — separate Streamlit app (not user-facing): `streamlit run explorer/app/streamlit/design_map_app.py`. Previews roles and exports scheme dicts; see [development.md](development.md#map-marker-colour-design-utility-developers).
 
 - **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner text and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
+- **Map HTML export UX** — Shipped one-click sidebar export; alternative two-button design and browser-risk notes: [docs/explorer/map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) (use if users report export/download failures).
 
 - **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings).
 

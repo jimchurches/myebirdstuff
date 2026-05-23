@@ -492,7 +492,6 @@ def test_integration_working_set_full_view_matches_checklist_locations(fixture_d
         filter_start_date="2024-01-01",
         filter_end_date="2024-12-31",
         whoosh_index=None,
-        map_caches=None,
     )
     assert ws is not None
 

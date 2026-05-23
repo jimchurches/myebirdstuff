@@ -38,6 +38,19 @@ SPECIES_SEARCH_HELP_EXPANDER_LABEL = "Search tips"
 SPECIES_SEARCH_EDIT_AFTER_SUBMIT = "option"
 SPECIES_SEARCH_RERUN_SCOPE = "fragment"
 
+# Map sidebar — shown under **Date filter** when the toggle is on (``st.caption``).
+MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION = (
+    "Only locations with checklists in this date range are shown on the map."
+)
+# **Species locations** only (two lines).
+MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION = (
+    "Only sightings in this date range are shown on the map and in species search results."
+)
+MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION = (
+    "Lifer and last-seen markers use your all-time first and last records. "
+    "These markers appear only when the relevant checklist falls within the selected date range."
+)
+
 # ---------------------------------------------------------------------------
 # Main tab strip (``st.tabs`` order)
 # ---------------------------------------------------------------------------
@@ -58,7 +71,7 @@ NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
 
 CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
 
-# Map-first prep (refs #179): Folium embed before heavy checklist/rankings caches so the map can paint sooner.
+# Map-first prep (refs #179): Leaflet embed before heavy checklist/rankings caches so the map can paint sooner.
 MAP_PREP_SPINNER_TEXT = "Building map…"
 TAB_PREP_SPINNER_TEXT = "Preparing checklist, rankings, and other tabs…"
 

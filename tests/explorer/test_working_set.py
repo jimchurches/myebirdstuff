@@ -28,7 +28,6 @@ def _minimal_df():
 def test_rebuild_no_filter_matches_full_for_locations():
     df_full = _minimal_df()
     lids = set(df_full["Location ID"].unique())
-    popup, filtered = {}, __import__("collections").OrderedDict()
     ws = rebuild_working_set_from_date_filter(
         df_full,
         lids,
@@ -36,7 +35,6 @@ def test_rebuild_no_filter_matches_full_for_locations():
         filter_start_date="2024-01-01",
         filter_end_date="2024-12-31",
         whoosh_index=None,
-        map_caches=(popup, filtered),
     )
     assert ws is not None
     assert isinstance(ws, WorkingSet)
@@ -45,7 +43,6 @@ def test_rebuild_no_filter_matches_full_for_locations():
     assert ws.total_checklists == 4
     assert ws.records_by_loc_full == {}
     assert ws.total_checklists_full == ws.total_checklists
-    assert popup == {} and len(filtered) == 0
 
 
 def test_rebuild_date_filter_subsets_rows():
@@ -58,7 +55,6 @@ def test_rebuild_date_filter_subsets_rows():
         filter_start_date="2024-01-01",
         filter_end_date="2024-02-01",
         whoosh_index=None,
-        map_caches=None,
     )
     assert ws is not None
     assert len(ws.df) == 1
@@ -78,7 +74,6 @@ def test_rebuild_invalid_dates_returns_none():
         filter_start_date="not-a-date",
         filter_end_date="2024-12-31",
         whoosh_index=None,
-        map_caches=None,
     )
     assert ws is None
 
@@ -99,7 +94,6 @@ def test_rebuild_whoosh_index_updated():
         filter_start_date="2024-01-01",
         filter_end_date="2024-02-01",
         whoosh_index=ix,
-        map_caches=None,
     )
     assert ws is not None
     with ix.searcher() as searcher:
@@ -111,23 +105,6 @@ def test_rebuild_whoosh_index_updated():
                 "taxonomy_group": "",
             }
         ]
-
-
-def test_map_caches_cleared_on_success():
-    df_full = _minimal_df()
-    lids = set(df_full["Location ID"].unique())
-    popup = {"k": "v"}
-    filtered = __import__("collections").OrderedDict([("a", 1)])
-    rebuild_working_set_from_date_filter(
-        df_full,
-        lids,
-        filter_by_date=False,
-        filter_start_date="",
-        filter_end_date="",
-        map_caches=(popup, filtered),
-    )
-    assert popup == {}
-    assert len(filtered) == 0
 
 
 def test_records_by_loc_full_respects_location_ids_with_checklists():
@@ -165,7 +142,6 @@ def test_records_by_loc_full_respects_location_ids_with_checklists():
         filter_start_date="2024-01-01",
         filter_end_date="2024-02-01",
         whoosh_index=None,
-        map_caches=None,
     )
     assert ws is not None
     assert set(ws.records_by_loc_full.keys()) == {"L1", "L2"}

@@ -55,6 +55,8 @@ The AI_CONTEXT.md document gives more context including the following mindset st
 - [ ] Code structure is clear and maintainable
 - [ ] No unnecessary duplication or dead code
 - [ ] Tests/documentation updated as needed
+- [ ] Names for variables, constants, and similar symbols are clear and self-explanatory
+- [ ] Comments and docstrings stand on their own — explain *what* and *why* in the code, not via GitHub issue numbers (e.g. avoid “see #123”, “changed for #257”, or “blacklisted per #444” as the explanation). Exception: intentional `TODO`/`FIXME` on the same branch/PR that will be resolved before the linked issue is closed
 - [ ] Change size matches the request (no unrelated drive-by edits)
 
 ### Security & Safety

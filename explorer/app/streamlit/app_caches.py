@@ -13,19 +13,37 @@ from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_TOP_N_
 
 
 @st.cache_data(show_spinner=False)
+def _cached_checklist_stats_payload_impl(
+    df: pd.DataFrame,
+    top_n_limit: int,
+    high_count_sort: str,
+    high_count_tie_break: str,
+    taxonomy_locale: str,
+) -> ChecklistStatsPayload | None:
+    """Single Streamlit cache for all checklist-stats payload builds (working + full export)."""
+    return compute_checklist_stats_payload(
+        df,
+        top_n_limit,
+        high_count_sort=high_count_sort,
+        high_count_tie_break=high_count_tie_break,
+        taxonomy_locale=taxonomy_locale,
+    )
+
+
 def cached_checklist_stats_payload(
     df: pd.DataFrame,
     taxonomy_locale: str,
 ) -> ChecklistStatsPayload | None:
     """Structured checklist stats for the Checklist Statistics tab (refs #68)."""
-    return compute_checklist_stats_payload(
+    return _cached_checklist_stats_payload_impl(
         df,
         CHECKLIST_STATS_TOP_N_TABLE_LIMIT,
-        taxonomy_locale=taxonomy_locale,
+        "total_count",
+        "last",
+        taxonomy_locale,
     )
 
 
-@st.cache_data(show_spinner=False)
 def cached_full_export_checklist_stats_payload(
     df: pd.DataFrame,
     top_n_limit: int,
@@ -36,13 +54,15 @@ def cached_full_export_checklist_stats_payload(
     """Full-export stats payload shared by Maintenance + Rankings (one compute per cache key).
 
     *top_n_limit* and high-count options match **Settings → Tables & lists** and Rankings.
+    When arguments match :func:`cached_checklist_stats_payload` on the same *df*, Streamlit
+    reuses the same cached result (no duplicate ~compute_rankings pass).
     """
-    return compute_checklist_stats_payload(
+    return _cached_checklist_stats_payload_impl(
         df,
         top_n_limit,
-        high_count_sort=high_count_sort,
-        high_count_tie_break=high_count_tie_break,
-        taxonomy_locale=taxonomy_locale,
+        high_count_sort,
+        high_count_tie_break,
+        taxonomy_locale,
     )
 
 
@@ -52,6 +72,21 @@ def cached_sex_notation_by_year(df: pd.DataFrame) -> dict:
     from explorer.core.stats import get_sex_notation_by_year
 
     return get_sex_notation_by_year(df)
+
+
+@st.cache_data(show_spinner=False)
+def cached_map_maintenance_data(
+    loc_df: pd.DataFrame,
+    threshold_m: int,
+) -> tuple[list, list]:
+    """Exact- and near-duplicate location scan for the Maintenance tab (refs #79).
+
+    Cached on *loc_df* + *threshold_m* so fragment reruns do not repeat BallTree work.
+    """
+    from explorer.core.duplicate_checks import get_map_maintenance_data
+
+    exact_rows, near_pairs = get_map_maintenance_data(loc_df, threshold_m)
+    return exact_rows, near_pairs
 
 
 def full_location_data_for_maintenance(df: pd.DataFrame) -> pd.DataFrame:
@@ -74,17 +109,16 @@ def cached_family_map_bundle(df_full: pd.DataFrame, taxonomy_locale: str) -> dic
         merge_taxonomy_detail_for_family_map,
         prepare_family_map_work_frame,
     )
-    from explorer.core.species_family import (
-        build_base_species_to_family_map,
-        load_taxonomy_groups,
-        load_taxonomy_species_rows,
-    )
+    from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
+    from explorer.core.species_family import build_base_species_to_family_map
+    from explorer.core.taxonomy_bundle import load_taxonomy_bundle, taxonomy_locale_key
 
-    loc = (taxonomy_locale or "").strip()
+    loc = taxonomy_locale_key(taxonomy_locale) or TAXONOMY_LOCALE_DEFAULT
     try:
+        bundle = load_taxonomy_bundle(loc)
+        tax = bundle.species_rows
+        groups = list(bundle.groups)
         base_to_family = build_base_species_to_family_map(loc)
-        tax = load_taxonomy_species_rows(loc)
-        groups = load_taxonomy_groups(loc)
         tax_merged = merge_taxonomy_detail_for_family_map(tax, groups)
     except Exception:
         return {
@@ -116,7 +150,7 @@ def cached_species_url_fn(locale_key: str) -> Callable[[str], str | None]:
     return lambda _: None
 
 
-def static_map_cache_key(
+def leaflet_payload_cache_key(
     work_df: pd.DataFrame,
     map_view_mode: str,
     date_filter_banner: str,
@@ -129,10 +163,11 @@ def static_map_cache_key(
     hide_non_matching_locations: bool = False,
     go_to_gps_pin: tuple[float, float] | None = None,
 ) -> tuple:
-    """Stable key for Folium map reuse (session holds one cached map; same key → skip rebuild).
+    """Stable identity for Leaflet GeoJSON payload LRU keys in ``app_prep_map_ui``.
 
-    *species_* / *hide_non_matching* matter for **Species locations** view (including the empty-map
-    case when no species is selected and only matching pins are shown).
+    Combined with mode-specific ``revision_extra`` JSON, this tuple selects a cached
+    GeoJSON/banner/legend entry in session. *species_* / *hide_non_matching* matter for
+    **Species locations** (including the empty-map case when no species is selected).
     """
     n = len(work_df)
     sid0 = ""

@@ -11,8 +11,9 @@ Run before merging refactor branches to `main`.
 
 ## Map
 - Visit times: if the export has missing times, popups may show **23:59** as a documented placeholder — see [explorer README — Missing checklist times](README.md#missing-checklist-times-synthetic-2359)
-- **Map view** dropdown: All locations / Selected species / Lifer locations (#71)
-- Lifer-only mode: one pin per lifer site, lifer pin style, popups list lifers at site + visits
+- **Map view** dropdown: All locations / Species locations / Lifer locations / Family locations (#71, #222)
+- Lifer-only mode: one marker per lifer site, lifer marker style, popups list lifers at site + visits
+- **Lifer locations** marker clustering: respects **Group nearby markers** / Settings (on by default); tune via `MAP_LIFER_LOCATION_CLUSTER_*` in `defaults.py` if needed
 - Renders all locations
 - Species search works (matches, highlighting, clear) when **Selected species** is active
 - Species overlay works
@@ -23,6 +24,7 @@ Run before merging refactor branches to `main`.
 - Legend displays
 - eBird checklist links open in new tab
 - Map redraw time acceptable
+- **Perf (optional):** `./scripts/run_post_leaflet_perf_baseline.sh` on fixture; warm return to **All locations** should show `payload_cache_hit` on `map.all_locations_leaflet.payload` (~0 ms). Species/Family: manual run per `docs/explorer/issue-222-section-8-baseline.md`.
 
 ## Checklist Statistics
 - Checklist stats load without errors

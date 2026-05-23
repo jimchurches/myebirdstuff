@@ -1,6 +1,6 @@
 """Pure aggregation for the taxonomy-family map: how rich each checklist location is for a chosen family.
 
-This module stays UI-free so the same numbers feed Folium and tests. Density uses **distinct base
+This module stays UI-free so the same numbers feed the Leaflet map component and tests. Density uses **distinct base
 species** per location (subspecies roll up to base). Popup lines use **distinct common names** as
 recorded (subspecies can appear as separate lines). Highlight targets a **base species**; any
 subspecies row counts as a match.
@@ -14,15 +14,14 @@ block immediately after :data:`UNMAPPED_FAMILY_LABEL`.
 
 from __future__ import annotations
 
-import html as html_module
 from dataclasses import dataclass
+from collections.abc import Callable
 from typing import Iterable
 
 import pandas as pd
 
 from explorer.core.species_logic import countable_species_vectorized, filter_species
 from explorer.core.stats import safe_count
-
 UNMAPPED_FAMILY_LABEL = "Unmapped"
 
 # Family-map work frame — internal columns (leading underscore; not from the eBird CSV):
@@ -195,7 +194,8 @@ def highlight_species_choices_alphabetical(
     bases = sorted(work_family["_base"].dropna().astype(str).str.strip().unique(), key=str.casefold)
 
     def label_for(b: str) -> str:
-        return (base_to_common.get(b) or b).strip() or b
+        key = str(b).strip().lower()
+        return (base_to_common.get(key) or b).strip() or b
 
     pairs = [(label_for(b), b) for b in bases]
     pairs.sort(key=lambda p: (p[0].casefold(), p[1].casefold()))
@@ -288,6 +288,79 @@ def merge_taxonomy_detail_for_family_map(
     return tax
 
 
+def species_url_for_base_species(
+    base_species: str,
+    taxonomy_merged: pd.DataFrame | None,
+    *,
+    fallback_fn: Callable[[str], str | None] | None = None,
+    fallback_common_name: str | None = None,
+) -> str | None:
+    """eBird species page URL for a base scientific name (banner/legend parity with map popups).
+
+    Popups resolve via ``_base`` → ``species_code`` in *taxonomy_merged*; the startup
+    :func:`~explorer.core.taxonomy.get_species_url` cache is only a fallback when that fails.
+    """
+    b = str(base_species or "").strip().lower()
+    if not b:
+        return None
+    tax = taxonomy_merged if taxonomy_merged is not None else pd.DataFrame()
+    if not tax.empty and {"base_species", "species_code"}.issubset(tax.columns):
+        sub = tax[tax["base_species"].astype(str).str.strip().str.lower() == b]
+        for _, row in sub.iterrows():
+            code = str(row.get("species_code") or "").strip()
+            if code:
+                return f"https://ebird.org/species/{code}"
+    if fallback_fn and fallback_common_name:
+        name = str(fallback_common_name).strip()
+        if name:
+            return fallback_fn(name)
+    return None
+
+
+def build_common_name_to_species_url(
+    work: pd.DataFrame,
+    taxonomy_merged: pd.DataFrame,
+    *,
+    fallback_fn: Callable[[str], str | None] | None = None,
+) -> dict[str, str]:
+    """Map checklist ``Common Name`` strings to eBird species URLs (Rankings Families parity).
+
+    Families tables link via ``species_code`` keyed by ``base_species``. Map popups list
+    **observed** common names from the export; those strings often differ from taxonomy CSV
+    names (subspecies parentheses, apostrophes, splits). Resolve each observed name through
+    the row's ``_base`` → ``species_code`` in *taxonomy_merged*, then optional *fallback_fn*
+    (typically :func:`~explorer.core.taxonomy.get_species_url`).
+    """
+    base_to_code: dict[str, str] = {}
+    if not taxonomy_merged.empty and {"base_species", "species_code"}.issubset(taxonomy_merged.columns):
+        for _, row in taxonomy_merged.iterrows():
+            b = str(row["base_species"]).strip().lower()
+            code = str(row.get("species_code") or "").strip()
+            if b and code and b not in base_to_code:
+                base_to_code[b] = code
+
+    out: dict[str, str] = {}
+    if work.empty or "Common Name" not in work.columns or "_base" not in work.columns:
+        return out
+
+    commons = work["Common Name"].fillna("").astype(str).str.strip()
+    bases = work["_base"].fillna("").astype(str).str.strip().str.lower()
+    pairs = pd.DataFrame({"common": commons, "base": bases})
+    pairs = pairs[(pairs["common"] != "") & (pairs["base"] != "")]
+    for common, grp in pairs.groupby("common", sort=False):
+        url: str | None = None
+        for base in grp["base"].unique():
+            code = base_to_code.get(str(base).strip().lower())
+            if code:
+                url = f"https://ebird.org/species/{code}"
+                break
+        if not url and fallback_fn:
+            url = fallback_fn(str(common))
+        if url:
+            out[str(common)] = url
+    return out
+
+
 def base_species_to_common_from_taxonomy(taxonomy_merged: pd.DataFrame) -> dict[str, str]:
     """Map lowercased ``base_species`` → ``common_name`` (first occurrence wins)."""
     if taxonomy_merged.empty:
@@ -302,44 +375,3 @@ def base_species_to_common_from_taxonomy(taxonomy_merged: pd.DataFrame) -> dict[
         if b and b not in out and c:
             out[b] = c
     return out
-
-
-def format_family_location_popup_html(
-    pin: FamilyLocationPin,
-    *,
-    location_page_url: str | None = None,
-    species_url_by_common: dict[str, str] | None = None,
-) -> str:
-    """HTML for a map pin body: location heading (optional hotspot link) and species lines (optional links).
-
-    *species_url_by_common* maps exact common-name strings (as in *pin.common_name_lines*) to
-    eBird species URLs; missing keys render as plain text.
-    """
-    title = pin.location_name or pin.location_id
-    esc_title = html_module.escape(title)
-    if location_page_url and str(location_page_url).strip():
-        esc_href = html_module.escape(str(location_page_url).strip(), quote=True)
-        head = (
-            '<div class="pebird-map-popup__heading-row" style="margin-bottom:4px;">'
-            f'<a class="pebird-map-popup__location-heading" href="{esc_href}" '
-            f'target="_blank" rel="noopener noreferrer">{esc_title}</a>'
-            "</div>"
-        )
-    else:
-        head = (
-            '<div class="pebird-map-popup__heading-row" style="margin-bottom:4px;">'
-            f'<span class="pebird-map-popup__location-heading">{esc_title}</span>'
-            "</div>"
-        )
-    lines: list[str] = []
-    url_map = species_url_by_common or {}
-    for name in pin.common_name_lines:
-        esc_n = html_module.escape(name)
-        u = url_map.get(name) or url_map.get(name.strip())
-        if u and str(u).strip():
-            esc_u = html_module.escape(str(u).strip(), quote=True)
-            lines.append(f'<div style="font-size:0.92em;"><a href="{esc_u}" target="_blank" rel="noopener noreferrer">{esc_n}</a></div>')
-        else:
-            lines.append(f'<div style="font-size:0.92em;">{esc_n}</div>')
-    body = "".join(lines) if lines else '<div style="opacity:0.7;font-size:0.85em;">No species lines</div>'
-    return f'<div style="min-width:12rem;max-width:22rem;">{head}{body}</div>'

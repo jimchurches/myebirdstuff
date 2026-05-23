@@ -8,14 +8,11 @@ with Streamlit-friendly semantics: *All locations* vs *Lifer locations*, optiona
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, MutableMapping, Optional, Set, Tuple
+from typing import Any, Optional, Set, Tuple
 
 import pandas as pd
 
 from explorer.core.working_set import WorkingSet, rebuild_working_set_from_date_filter
-
-MapCaches = Tuple[dict, MutableMapping[Any, Any]]
-
 
 def location_ids_with_checklists(df: pd.DataFrame) -> Set[Any]:
     """Location IDs that have at least one checklist row."""
@@ -51,7 +48,6 @@ def streamlit_working_set_and_status(
     map_view_mode: str,
     date_filter_on: bool,
     date_range: Optional[Tuple[date, date]],
-    map_caches: Optional[MapCaches],
 ) -> Tuple[Optional[WorkingSet], str]:
     """
     Return ``(working_set, date_filter_status)`` for map banners.
@@ -72,7 +68,6 @@ def streamlit_working_set_and_status(
             filter_by_date=False,
             filter_start_date="",
             filter_end_date="",
-            map_caches=map_caches,
         )
         return ws, "Lifer view uses all-time data"
 
@@ -85,7 +80,6 @@ def streamlit_working_set_and_status(
             filter_by_date=False,
             filter_start_date="",
             filter_end_date="",
-            map_caches=map_caches,
         )
         return ws, "Date filter: Off"
 
@@ -96,7 +90,6 @@ def streamlit_working_set_and_status(
             filter_by_date=False,
             filter_start_date="",
             filter_end_date="",
-            map_caches=map_caches,
         )
         return ws, "Date filter: Off"
 
@@ -112,40 +105,8 @@ def streamlit_working_set_and_status(
         filter_by_date=True,
         filter_start_date=start_s,
         filter_end_date=end_s,
-        map_caches=map_caches,
     )
     if ws is None:
         return None, "Date filter: invalid range"
     return ws, f"Date filter: {start_s} to {end_s}"
 
-
-def folium_map_to_html_bytes(m: Any) -> bytes:
-    """Serialize a Folium map to UTF-8 HTML bytes for download or iframe ``srcdoc``.
-
-    ``branca`` full-document ``render()`` mutates the in-memory map; callers that keep a long-lived
-    :class:`folium.Map` in session cache must pass a **copy** of the map here (not the cached
-    object).
-    """
-    root = m.get_root()
-    html = root.render()
-    if isinstance(html, bytes):
-        return html
-    return str(html).encode("utf-8")
-
-
-def embed_folium_html_bytes_iframe(
-    html_bytes: bytes,
-    *,
-    height: int,
-    scrolling: bool = True,
-) -> None:
-    """Render pre-serialized Folium full-page HTML in the app via :func:`streamlit.components.v1.html`.
-
-    Streamlit’s HTML iframe (``srcdoc=…``) matches what ``st_folium`` ultimately ships to the
-    client; the same *bytes* used for **Export map HTML** can be passed here for one render per
-    run (or zero when ``html_bytes`` is served from the map HTML cache).
-    """
-    import streamlit.components.v1 as components
-
-    s = html_bytes.decode("utf-8")
-    components.html(s, width=None, height=int(height), scrolling=scrolling)

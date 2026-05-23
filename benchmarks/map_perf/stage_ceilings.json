@@ -5,11 +5,27 @@
   "max_elapsed_ms": {
     "dataset.load": 180000,
     "prep.map_context_prepare": 180000,
-    "prep.build_species_overlay_map": 180000,
     "prep.cached_family_map_bundle": 180000,
     "prep.family_map_composition_with_pins": 180000,
-    "prep.folium_map_to_html_bytes": 240000,
-    "prep.map_iframe_embed": 120000,
-    "taxonomy.cached_species_url_fn": 60000
+    "map.all_locations_leaflet.component_embed": 120000,
+    "map.all_locations_leaflet.payload": 240000,
+    "map.lifer_leaflet.component_embed": 120000,
+    "map.lifer_leaflet.payload": 240000,
+    "map.species_leaflet.payload": 240000,
+    "map.species_leaflet.component_embed": 120000,
+    "map.family_leaflet.payload": 240000,
+    "map.family_leaflet.component_embed": 120000,
+    "taxonomy.cached_species_url_fn": 60000,
+    "prep.cache_checklist_stats.working": 180000,
+    "prep.cache_checklist_stats.full_export": 180000,
+    "prep.cache_rankings_bundle": 180000,
+    "prep.cache_sex_notation_by_year": 60000,
+    "prep.tab_session_sync": 60000,
+    "checklist_statistics": 120000,
+    "ranking_lists": 120000,
+    "yearly_summary": 120000,
+    "country": 120000,
+    "maintenance": 120000,
+    "maintenance.map_duplicate_scan": 120000
   }
 }

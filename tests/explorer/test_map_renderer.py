@@ -1,6 +1,5 @@
 """Tests for explorer.presentation.map_renderer helpers."""
 
-import folium
 import pandas as pd
 
 from explorer.app.streamlit.defaults import MAP_POPUP_MACAULAY_LINK_SYMBOL, MAP_POPUP_MAX_WIDTH_PX
@@ -13,13 +12,10 @@ from explorer.presentation.map_renderer import (
     build_legend_html,
     build_location_popup_html,
     classify_locations,
-    create_map,
     format_species_map_sighting_row,
     format_sighting_row,
     format_visit_time,
-    map_popup_width_fix_script,
     pin_legend_item,
-    popup_scroll_script,
     resolve_lifer_last_seen,
 )
 
@@ -259,67 +255,6 @@ def test_build_species_map_location_popup_html_visits_open_when_single_checklist
     )
     assert '<details class="pebird-map-popup__all-visits" open>' in html
     assert "Visited: (1)" in html
-
-
-# ---------------------------------------------------------------------------
-# popup_scroll_script
-# ---------------------------------------------------------------------------
-
-def test_popup_scroll_script_returns_script_tag():
-    result = popup_scroll_script("chevron", False)
-    assert "<script>" in result
-    assert "</script>" in result
-
-
-def test_popup_scroll_script_chevron_mode():
-    result = popup_scroll_script("chevron", False)
-    assert "'chevron'" in result
-    assert "SCROLL_TO_BOTTOM = false" in result
-
-
-def test_popup_scroll_script_scroll_to_bottom():
-    result = popup_scroll_script("both", True)
-    assert "SCROLL_TO_BOTTOM = true" in result
-
-
-def test_popup_scroll_script_none_hint():
-    result = popup_scroll_script(None, False)
-    assert "None" in result
-
-
-def test_map_popup_width_fix_script_embeds_max_width():
-    s = map_popup_width_fix_script()
-    assert "<script>" in s and "shrinkPebirdPopups" in s
-    assert f"var MAX_PX = {MAP_POPUP_MAX_WIDTH_PX}" in s
-
-
-# ---------------------------------------------------------------------------
-# create_map
-# ---------------------------------------------------------------------------
-
-def test_create_map_default():
-    m = create_map([0.0, 0.0])
-    assert isinstance(m, folium.Map)
-
-
-def test_create_map_default_explicit():
-    m = create_map([0.0, 0.0], "default")
-    assert isinstance(m, folium.Map)
-
-
-def test_create_map_google():
-    m = create_map([-33.8, 151.2], "google")
-    assert isinstance(m, folium.Map)
-
-
-def test_create_map_carto():
-    m = create_map([-33.8, 151.2], "carto")
-    assert isinstance(m, folium.Map)
-
-
-def test_create_map_unknown_style_falls_back():
-    m = create_map([0.0, 0.0], "unknown_style")
-    assert isinstance(m, folium.Map)
 
 
 # ---------------------------------------------------------------------------
@@ -625,6 +560,94 @@ def test_resolve_lifer_last_seen_not_in_seen():
     )
     assert lifer is None
     assert last == "L1"
+
+
+def _lifer_lookup_df_for_date_tests() -> "pd.DataFrame":
+    import pandas as pd
+
+    return pd.DataFrame(
+        {
+            "Date": [
+                pd.Timestamp("2015-03-01"),
+                pd.Timestamp("2021-06-10"),
+                pd.Timestamp("2024-11-20"),
+            ],
+            "Location ID": ["L1", "L1", "L3"],
+            "Scientific Name": ["Anas gracilis"] * 3,
+            "Common Name": ["Grey Teal"] * 3,
+            "datetime": [
+                pd.Timestamp("2015-03-01 08:00"),
+                pd.Timestamp("2021-06-10 09:00"),
+                pd.Timestamp("2024-11-20 10:00"),
+            ],
+            "_base": ["anas gracilis"] * 3,
+            "_taxon": ["anas gracilis"] * 3,
+        }
+    )
+
+
+def test_resolve_lifer_last_seen_date_filter_hides_lifer_on_revisit_only():
+    """Lifer before the window + revisit in range → no lifer pin when date filter is on."""
+    import pandas as pd
+
+    lookup_df = _lifer_lookup_df_for_date_tests()
+    seen = {"L1"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L3"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+        lifer_lookup_df=lookup_df,
+        filter_by_date=True,
+        filter_start_date="2021-01-01",
+        filter_end_date="2021-12-31",
+    )
+    assert lifer is None
+    assert last is None
+
+
+def test_resolve_lifer_last_seen_date_filter_shows_lifer_when_lifer_in_range():
+    lookup_df = _lifer_lookup_df_for_date_tests()
+    seen = {"L1"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L3"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+        lifer_lookup_df=lookup_df,
+        filter_by_date=True,
+        filter_start_date="2015-01-01",
+        filter_end_date="2015-12-31",
+    )
+    assert lifer == "L1"
+    assert last is None
+
+
+def test_resolve_lifer_last_seen_date_filter_last_seen_by_event_date():
+    """Last seen outside range but older visit at that site in range → no last-seen pin."""
+    lookup_df = _lifer_lookup_df_for_date_tests()
+    seen = {"L1", "L3"}
+    lifer, last = resolve_lifer_last_seen(
+        "Anas gracilis",
+        seen,
+        lifer_lookup={"anas gracilis": "L1"},
+        last_seen_lookup={"anas gracilis": "L3"},
+        lifer_lookup_taxon={},
+        last_seen_lookup_taxon={},
+        base_species_fn=_dummy_base,
+        lifer_lookup_df=lookup_df,
+        filter_by_date=True,
+        filter_start_date="2021-01-01",
+        filter_end_date="2021-12-31",
+    )
+    assert lifer is None
+    assert last is None
 
 
 def test_resolve_lifer_last_seen_same_location():

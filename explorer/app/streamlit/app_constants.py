@@ -101,9 +101,6 @@ DEFAULT_TAXONOMY_LOCALE = TAXONOMY_LOCALE_DEFAULT
 # App-wide misc/internal session keys used in ``explorer.app.streamlit.app``.
 EBIRD_DATA_SIG_KEY = "ebird_data_sig"
 EXPLORER_MAP_HTML_BYTES_KEY = "_explorer_map_html_bytes"
-POPUP_HTML_CACHE_KEY = "popup_html_cache"
-FILTERED_BY_LOC_CACHE_KEY = "filtered_by_loc_cache"
-
 # Landing page container/widget keys.
 EBIRD_LANDING_MAIN_CONTAINER_KEY = "ebird_landing_main"
 EBIRD_LANDING_CSV_UPLOADER_KEY = "ebird_landing_csv_uploader"
@@ -123,6 +120,9 @@ STREAMLIT_RESET_SETTINGS_BTN_KEY = "streamlit_reset_settings_btn"
 
 # Download/export button keys.
 EXPORT_MAP_HTML_BTN_KEY = "export_map_html_btn"
+EXPORT_MAP_HTML_DOWNLOAD_BTN_KEY = "export_map_html_download_btn"
+EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY = "_export_map_html_auto_download_v1"
+EXPORT_MAP_HTML_ERROR_KEY = "export_map_html_error"
 
 # Family map tab widget keys (refs #138). Highlight key is suffixed with selected family in the UI.
 STREAMLIT_FAMILY_MAP_FAMILY_KEY = "streamlit_family_map_family"
@@ -152,8 +152,8 @@ STREAMLIT_POPUP_SORT_ORDER_KEY = "streamlit_popup_sort_order"
 STREAMLIT_POPUP_SCROLL_HINT_KEY = "streamlit_popup_scroll_hint"
 STREAMLIT_MARK_LIFER_KEY = "streamlit_mark_lifer"
 STREAMLIT_MARK_LAST_SEEN_KEY = "streamlit_mark_last_seen"
-# All-locations map only (species / lifer maps never cluster).
-# Runtime: sidebar toggle; map build + cache signature.
+# All locations + Lifer locations maps (species / family maps never cluster).
+# Runtime: sidebar toggle on All locations; Lifer reads same preference. Map build + cache signature.
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
 # All locations map: single control — fit all / centre of gravity / per-country fit (refs #166).
 STREAMLIT_ALL_LOCATIONS_SCOPE_KEY = "streamlit_all_locations_scope"
@@ -209,9 +209,22 @@ EXPLORER_PERF_DOWNLOAD_BTN_KEY = "explorer_perf_download_jsonl_btn"
 SESSION_SPECIES_SEARCH_USER_EDITING_KEY = "_streamlit_species_search_user_editing"
 # Last main-run id the species search fragment saw; used to refill the bar after tab navigation.
 SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY = "_streamlit_species_search_last_main_run_id"
-FOLIUM_STATIC_MAP_CACHE_KEY = "_folium_static_all_lifer_cache"
-# Bumped when toggling Map view All locations <-> Species locations so streamlit-folium remounts cleanly.
-FOLIUM_MAP_MOUNT_NONCE_KEY = "_folium_map_mount_nonce"
+# Bumped when remounting the Leaflet map component (view/mode/height changes).
+LEAFLET_MAP_MOUNT_NONCE_KEY = "_leaflet_map_mount_nonce"
+# Leaflet custom map (All locations) — session cache for ``(revision, geojson)`` payloads.
+ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY = "_all_locations_leaflet_payload_cache_v1"
+# Leaflet custom map (Lifer locations).
+LIFER_LEAFLET_PAYLOAD_CACHE_KEY = "_lifer_leaflet_payload_cache_v1"
+# Leaflet custom map (Species locations).
+SPECIES_LEAFLET_PAYLOAD_CACHE_KEY = "_species_leaflet_payload_cache_v1"
+# Leaflet custom map (Family locations).
+FAMILY_LEAFLET_PAYLOAD_CACHE_KEY = "_family_leaflet_payload_cache_v1"
+# Leaflet export HTML (``leaflet_map_to_html_bytes``) keyed by revision + overlay inputs.
+LEAFLET_EXPORT_HTML_CACHE_KEY = "_leaflet_export_html_cache_v1"
+# Inputs for on-demand export build (no HTML until user clicks export).
+LEAFLET_EXPORT_RECIPE_KEY = "_leaflet_export_recipe_v1"
+# Cache-key tuple for the last built Leaflet export matching the current recipe.
+LEAFLET_EXPORT_BUILT_CACHE_KEY = "_leaflet_export_built_cache_key_v1"
 # Go to GPS — session-only temporary marker (refs #199); never persisted to YAML.
 SESSION_GO_TO_GPS_PIN_KEY = "_session_go_to_gps_pin"
 STREAMLIT_GO_TO_GPS_DRAFT_LAT_TEXT_KEY = "_streamlit_go_to_gps_draft_lat_txt"

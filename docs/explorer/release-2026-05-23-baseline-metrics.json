@@ -1,0 +1,651 @@
+{
+  "release": "2026-05-23",
+  "datasets": {
+    "fixture": {
+      "dataset_label": "fixture",
+      "source_jsonl": "benchmarks/map_perf/snapshots/release-2026-05-23-fixture-r1.jsonl",
+      "git_ref": "243-release-hygiene-final-testing",
+      "dataset_shape": {
+        "rows": 150,
+        "unique_locations": 15,
+        "unique_species": 114,
+        "unique_checklists": 15
+      },
+      "headline_events": [
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 5427.055,
+          "session_warmth": "cold",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 24.281,
+          "session_warmth": "cold",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.all_locations_leaflet.payload",
+          "elapsed_ms": 28.393,
+          "session_warmth": "cold",
+          "payload_cache_hit": false,
+          "marker_count": 15,
+          "popup_build_total_ms": 21.639,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.all_locations_leaflet.component_embed",
+          "elapsed_ms": 0.974,
+          "session_warmth": "cold",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "e2e.first_paint",
+          "elapsed_ms": 6332.7,
+          "session_warmth": null,
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": null,
+          "unique_locations": null
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.094,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 57.372,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.lifer_leaflet.payload",
+          "elapsed_ms": 718.417,
+          "session_warmth": "warm",
+          "payload_cache_hit": false,
+          "marker_count": 15,
+          "popup_build_total_ms": 68.22,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.lifer_leaflet.component_embed",
+          "elapsed_ms": 0.549,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.078,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 23.092,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.all_locations_leaflet.payload",
+          "elapsed_ms": 0.013,
+          "session_warmth": "warm",
+          "payload_cache_hit": true,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.all_locations_leaflet.component_embed",
+          "elapsed_ms": 0.602,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.068,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 112.942,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.species_leaflet.payload",
+          "elapsed_ms": 0.048,
+          "session_warmth": "warm",
+          "payload_cache_hit": false,
+          "marker_count": 0,
+          "popup_build_total_ms": 0.0,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.species_leaflet.component_embed",
+          "elapsed_ms": 0.446,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.066,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 23.663,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.species_leaflet.payload",
+          "elapsed_ms": 9.884,
+          "session_warmth": "warm",
+          "payload_cache_hit": false,
+          "marker_count": 2,
+          "popup_build_total_ms": 2.513,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.species_leaflet.component_embed",
+          "elapsed_ms": 0.469,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.071,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 20.657,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.lifer_leaflet.payload",
+          "elapsed_ms": 0.016,
+          "session_warmth": "warm",
+          "payload_cache_hit": true,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.lifer_leaflet.component_embed",
+          "elapsed_ms": 0.522,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.062,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 23.545,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.species_leaflet.payload",
+          "elapsed_ms": 0.017,
+          "session_warmth": "warm",
+          "payload_cache_hit": true,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.species_leaflet.component_embed",
+          "elapsed_ms": 0.333,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.076,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 21.532,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.family_leaflet.payload",
+          "elapsed_ms": 0.036,
+          "session_warmth": "warm",
+          "payload_cache_hit": false,
+          "marker_count": 0,
+          "popup_build_total_ms": 0.0,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.family_leaflet.component_embed",
+          "elapsed_ms": 0.471,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.063,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 21.173,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.family_leaflet.payload",
+          "elapsed_ms": 215.346,
+          "session_warmth": "warm",
+          "payload_cache_hit": false,
+          "marker_count": 3,
+          "popup_build_total_ms": 0.005,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.family_leaflet.component_embed",
+          "elapsed_ms": 0.374,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.084,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 22.837,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.lifer_leaflet.payload",
+          "elapsed_ms": 0.013,
+          "session_warmth": "warm",
+          "payload_cache_hit": true,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.lifer_leaflet.component_embed",
+          "elapsed_ms": 0.536,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.084,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 21.267,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.family_leaflet.payload",
+          "elapsed_ms": 0.01,
+          "session_warmth": "warm",
+          "payload_cache_hit": true,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.family_leaflet.component_embed",
+          "elapsed_ms": 0.426,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.087,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 20.828,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.family_leaflet.payload",
+          "elapsed_ms": 0.009,
+          "session_warmth": "warm",
+          "payload_cache_hit": true,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        },
+        {
+          "stage": "map.family_leaflet.component_embed",
+          "elapsed_ms": 0.489,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 150,
+          "unique_locations": 15
+        }
+      ]
+    },
+    "real": {
+      "dataset_label": "real",
+      "source_jsonl": "benchmarks/map_perf/snapshots/release-2026-05-23-real-r1.jsonl",
+      "git_ref": "243-release-hygiene-final-testing",
+      "dataset_shape": {
+        "rows": 46178,
+        "unique_locations": 5594,
+        "unique_species": 886,
+        "unique_checklists": 7462
+      },
+      "headline_events": [
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 6125.867,
+          "session_warmth": "cold",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 1270.361,
+          "session_warmth": "cold",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "map.all_locations_leaflet.payload",
+          "elapsed_ms": 6043.055,
+          "session_warmth": "cold",
+          "payload_cache_hit": false,
+          "marker_count": 5594,
+          "popup_build_total_ms": 5841.17,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "map.all_locations_leaflet.component_embed",
+          "elapsed_ms": 32.313,
+          "session_warmth": "cold",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "e2e.first_paint",
+          "elapsed_ms": 20440.7,
+          "session_warmth": null,
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": null,
+          "unique_locations": null
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.146,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 1648.612,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "map.lifer_leaflet.payload",
+          "elapsed_ms": 6129.77,
+          "session_warmth": "warm",
+          "payload_cache_hit": false,
+          "marker_count": 338,
+          "popup_build_total_ms": 618.977,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "map.lifer_leaflet.component_embed",
+          "elapsed_ms": 2.679,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "taxonomy.cached_species_url_fn",
+          "elapsed_ms": 0.106,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "prep.map_context_prepare",
+          "elapsed_ms": 1576.516,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "map.all_locations_leaflet.payload",
+          "elapsed_ms": 0.079,
+          "session_warmth": "warm",
+          "payload_cache_hit": true,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        },
+        {
+          "stage": "map.all_locations_leaflet.component_embed",
+          "elapsed_ms": 26.863,
+          "session_warmth": "warm",
+          "payload_cache_hit": null,
+          "marker_count": null,
+          "popup_build_total_ms": null,
+          "rows": 46178,
+          "unique_locations": 5594
+        }
+      ]
+    }
+  }
+}

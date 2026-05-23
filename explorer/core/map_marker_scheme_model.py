@@ -42,7 +42,7 @@ class MapMarkerGlobalDefaults:
 class MapMarkerClusterStyle:
     """Leaflet.markercluster tier icon overrides (all-locations map only).
 
-    Nine entries: small / medium / large tier, each (fill, border, halo) — see ``map_overlay_visit_map``.
+    Nine entries: small / medium / large tier, each (fill, border, halo) — see ``all_locations_cluster_icon_style_payload`` in ``map_leaflet_viewport``.
     """
 
     tier_icon_hex: tuple[str, str, str, str, str, str, str, str, str] | None = None

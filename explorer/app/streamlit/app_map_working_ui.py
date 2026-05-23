@@ -12,13 +12,12 @@ from explorer.app.streamlit.app_constants import (
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
     REPO_ROOT,
-    FILTERED_BY_LOC_CACHE_KEY,
-    FOLIUM_MAP_MOUNT_NONCE_KEY,
-    FOLIUM_STATIC_MAP_CACHE_KEY,
+    LEAFLET_MAP_MOUNT_NONCE_KEY,
+    LEAFLET_EXPORT_BUILT_CACHE_KEY,
+    LEAFLET_EXPORT_RECIPE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
-    POPUP_HTML_CACHE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
     SESSION_PREV_MAP_VIEW_KEY,
@@ -77,6 +76,9 @@ from explorer.app.streamlit.map_working import (
 from explorer.core.explorer_paths import settings_yaml_path_for_source
 from explorer.app.streamlit.perf_instrumentation import render_explorer_perf_sidebar_panel
 from explorer.app.streamlit.streamlit_ui_constants import (
+    MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION,
+    MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION,
+    MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION,
     SPECIES_SEARCH_CAPTION,
     SPECIES_SEARCH_HELP_EXPANDER_LABEL,
 )
@@ -93,18 +95,30 @@ from explorer.core.species_search import (
 )
 
 
-def invalidate_folium_map_embed_cache() -> None:
-    """Bump Folium mount nonce and drop cached map HTML (basemap, family colours, etc.)."""
-    st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-        st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
-    ) + 1
-    st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
+def _all_locations_leaflet_embed_active(session_state: Any) -> bool:
+    """Prep renders the custom Leaflet component (not Folium) for unfiltered All locations."""
+    label = session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY, "")
+    mode = MAP_VIEW_LABEL_TO_MODE.get(label, "")
+    if mode != "all":
+        return False
+    sci = str(session_state.get(PERSIST_SPECIES_SCI_KEY, "") or "").strip()
+    return not sci
+
+
+def invalidate_map_embed_cache(*, bump_mount_nonce: bool = True) -> None:
+    """Bump Leaflet component mount nonce and clear export HTML when map chrome changes."""
+    if bump_mount_nonce:
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
+        ) + 1
     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
+    st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
 
 
 def _on_basemap_changed() -> None:
-    """Invalidate Folium cache + remount iframe when the basemap **value** changes (refs #124)."""
-    invalidate_folium_map_embed_cache()
+    """Leaflet component swaps basemap tiles in-place; no remount required."""
+    return
 
 
 @dataclass(frozen=True)
@@ -126,7 +140,7 @@ class MapWorkingContext:
 
 
 def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
-    """Map sidebar widgets, working set + species search, Folium cache invalidation on All↔Species."""
+    """Map sidebar widgets, working set + species search, Leaflet cache invalidation on All↔Species."""
     ensure_streamlit_map_basemap_height_keys()
     ensure_streamlit_map_marker_colour_scheme_keys()
 
@@ -189,7 +203,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             date_filter_on_effective = st.toggle(
                 "Date filter",
                 key=STREAMLIT_MAP_DATE_FILTER_KEY,
-                help="Filters the map to a selected date range.",
             )
             if not date_filter_on_effective:
                 date_range_sel = None
@@ -217,6 +230,12 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 else:
                     date_range_sel = (d_inception, today)
 
+                if map_view_mode == "species":
+                    st.caption(MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION)
+                    st.caption(MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION)
+                else:
+                    st.caption(MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION)
+
             st.session_state[PERSIST_MAP_DATE_FILTER_KEY] = date_filter_on_effective
             if date_filter_on_effective and date_range_sel is not None:
                 st.session_state[PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
@@ -236,10 +255,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         map_view_mode=_ws_mode,
         date_filter_on=date_filter_on_effective,
         date_range=date_range_sel,
-        map_caches=(
-            st.session_state.get(POPUP_HTML_CACHE_KEY),
-            st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
-        ),
     )
     if ws is None:
         st.error("Invalid date range. Using all-time data for this run.")
@@ -248,10 +263,6 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             map_view_mode=map_view_mode,
             date_filter_on=False,
             date_range=None,
-            map_caches=(
-                st.session_state.get(POPUP_HTML_CACHE_KEY),
-                st.session_state.get(FILTERED_BY_LOC_CACHE_KEY),
-            ),
         )
     work_df = ws.df
 
@@ -279,7 +290,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             if _scope_sel == ALL_LOCATIONS_SCOPE_FOCUSED:
                 st.caption(
                     "Focused view shows your main birding regions. "
-                    "Smaller or infrequent locations may be hidden."
+                    "Other locations may be outside the current view; zoom or pan to find them."
                 )
             elif _scope_sel == ALL_LOCATIONS_FRAMING_CENTRE_OF_GRAVITY:
                 st.caption(
@@ -388,7 +399,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                     family_highlight_base = st.selectbox(
                         "Highlight species (optional)",
                         options=[""] + bases,
-                        format_func=lambda b: "— None —" if b == "" else (base_to_common.get(b) or b),
+                        format_func=lambda b: "— None —"
+                        if b == ""
+                        else (base_to_common.get(str(b).strip().lower()) or b),
                         key=STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
                     )
                 else:
@@ -422,7 +435,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
                 options=[1, 2, 3],
                 format_func=lambda n: _scheme_preset_labels[int(n)],
                 key=STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
-                on_change=invalidate_folium_map_embed_cache,
+                on_change=invalidate_map_embed_cache,
                 width="stretch",
             )
             family_colour_scheme = int(_scheme_sel if _scheme_sel is not None else 1)
@@ -444,13 +457,14 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     prev_effective = st.session_state.get(SESSION_PREV_EFFECTIVE_BASEMAP_KEY)
     if prev_effective != map_style:
         st.session_state[SESSION_PREV_EFFECTIVE_BASEMAP_KEY] = map_style
-        invalidate_folium_map_embed_cache()
+        if not _all_locations_leaflet_embed_active(st.session_state):
+            invalidate_map_embed_cache()
 
+    # Bump mount nonce when the view mode changes so the Leaflet component remounts with the new map.
+    # Leaflet payload LRU keys already include map_view_mode; do not clear export HTML here.
     if _prev_mv is not None and _prev_mv != map_view_mode:
-        st.session_state.pop(FOLIUM_STATIC_MAP_CACHE_KEY, None)
-        st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
-        st.session_state[FOLIUM_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(FOLIUM_MAP_MOUNT_NONCE_KEY, 0)
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
+            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
         ) + 1
 
     st.session_state[SESSION_PREV_MAP_VIEW_KEY] = map_view_mode

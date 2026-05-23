@@ -17,17 +17,17 @@ from explorer.presentation.maintenance_display import (
     incomplete_checklists_year_table_html,
     iter_incomplete_checklists_years_desc,
     iter_sex_notation_years_desc,
-    map_maintenance_table_sections_html,
+    map_maintenance_table_sections_from_data,
     sex_notation_intro_html,
     sex_notation_year_table_html,
 )
-from explorer.app.streamlit.app_caches import cached_species_url_fn
+from explorer.app.streamlit.app_caches import cached_map_maintenance_data, cached_species_url_fn
 from explorer.app.streamlit.app_constants import (
     DEFAULT_TAXONOMY_LOCALE,
     MAINTENANCE_TAB_SYNC_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
-from explorer.app.streamlit.perf_instrumentation import perf_fragment
+from explorer.app.streamlit.perf_instrumentation import perf_fragment, perf_span
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 
 # Same wrapper class as Checklist Statistics + Country HTML tabs (typography, tables, links).
@@ -123,8 +123,10 @@ def render_maintenance_streamlit_tab(
                     _md(_WRAPPER_OPEN + table + _WRAPPER_CLOSE)
 
     with tab_loc:
-        intro, exact_body, close_body = map_maintenance_table_sections_html(
-            loc_df, close_location_meters
+        with perf_span("maintenance.map_duplicate_scan"):
+            exact_rows, near_pairs = cached_map_maintenance_data(loc_df, close_location_meters)
+        intro, exact_body, close_body = map_maintenance_table_sections_from_data(
+            exact_rows, near_pairs, close_location_meters
         )
         _md(_WRAPPER_OPEN + intro + _WRAPPER_CLOSE)
         with st.expander("Exact duplicates", expanded=False):

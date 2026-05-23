@@ -17,14 +17,14 @@ MAP_POPUP_SORT_ORDER_DEFAULT = "ascending"
 MAP_POPUP_SCROLL_HINT_DEFAULT = "shading"
 MAP_MARK_LIFER_DEFAULT = True
 MAP_MARK_LAST_SEEN_DEFAULT = True
-# Basemap: stored in persisted settings as a simple key (not a Folium object).
+# Basemap: stored in persisted settings as a simple key (not a tile-layer object).
 # Keep this list in sync with Streamlit UI options in ``explorer.app.streamlit.defaults``.
 MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "google", "carto")
 MAP_BASEMAP_DEFAULT = "default"
 MAP_HEIGHT_PX_DEFAULT = 720
 MAP_HEIGHT_PX_MIN = 440
 MAP_HEIGHT_PX_MAX = 1200
-# All-locations map only: group nearby pins (Leaflet.markercluster). Species / lifer maps never cluster.
+# All locations + Lifer locations: group nearby markers (Leaflet.markercluster). Species / family: off.
 MAP_CLUSTER_ALL_LOCATIONS_DEFAULT = True
 # Bundled map-marker palette index (``1``…``3``); see ``active_map_marker_colour_scheme`` in defaults.
 MAP_MARKER_COLOUR_SCHEME_DEFAULT = 1
