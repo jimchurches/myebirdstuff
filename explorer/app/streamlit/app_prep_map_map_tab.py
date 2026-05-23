@@ -77,6 +77,8 @@ def render_map_tab_leaflet_embed(
     map_view_mode: str,
     map_hint_text: str | None,
     map_warning_text: str | None,
+    popup_scroll_hint: str = "",
+    popup_sort_order: str = "ascending",
 ) -> None:
     """Render map-tab warning, hint, and Leaflet component embed."""
     with tab_map:
@@ -120,6 +122,8 @@ def render_map_tab_leaflet_embed(
                     cluster_icon_style=bundle.leaflet_cluster_icon_style or {},
                     viewport=bundle.leaflet_viewport or {},
                     map_theme_css=map_overlay_theme_stylesheet(),
+                    popup_scroll_hint=str(popup_scroll_hint or ""),
+                    popup_scroll_to_bottom=popup_sort_order == "ascending",
                     banner_html=bundle.all_locations_leaflet_banner_html,
                     legend_html=bundle.all_locations_leaflet_legend_html,
                     key=(

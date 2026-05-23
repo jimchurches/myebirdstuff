@@ -42,6 +42,8 @@ def render_all_locations_map_component(
     viewport: dict | None = None,
     map_theme_css: str = "",
     map_popup_width_script: str = "",
+    popup_scroll_hint: str = "",
+    popup_scroll_to_bottom: bool = False,
     banner_html: str = "",
     legend_html: str = "",
 ) -> None:
@@ -59,6 +61,10 @@ def render_all_locations_map_component(
     *map_theme_css* — ``map_overlay_theme_stylesheet()`` from ``explorer.presentation.map_renderer`` for banner/legend/popup chrome.
 
     *map_popup_width_script* — normally **omit** / pass empty: popup width is finalized in the component iframe only.
+
+    *popup_scroll_hint* — ``chevron``, ``shading``, or ``both`` from Settings; overflow hints on scrollable popup body.
+
+    *popup_scroll_to_bottom* — when visit sort is ascending, open popups scrolled to the bottom.
 
     *banner_html* / *legend_html* — overlay HTML fragments with ``position:fixed`` (viewport = iframe):
     top-right banner, bottom-left legend.
@@ -83,6 +89,8 @@ def render_all_locations_map_component(
         viewport=viewport if viewport is not None else {},
         map_theme_css=map_theme_css,
         map_popup_width_script=map_popup_width_script,
+        popup_scroll_hint=str(popup_scroll_hint or ""),
+        popup_scroll_to_bottom=bool(popup_scroll_to_bottom),
         banner_html=banner_html,
         legend_html=legend_html,
         show_zoom_debug=MAP_DEBUG_SHOW_ZOOM_LEVEL,

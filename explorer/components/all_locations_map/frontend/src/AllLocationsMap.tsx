@@ -32,6 +32,7 @@ import {
   scheduleShrinkPebirdLeafletPopups,
   shrinkPebirdLeafletPopups,
 } from "./AllLocationsMapPopupSizing";
+import { schedulePopupScrollHints } from "./AllLocationsMapPopupScrollHints";
 
 declare global {
   interface Window {
@@ -58,6 +59,13 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
   const lastRevisionRef = useRef<string | null>(null);
   const zoomDebugControlRef = useRef<L.Control | null>(null);
   const zoomDebugOnZoomRef = useRef<(() => void) | null>(null);
+  const popupScrollHintRef = useRef(args.popup_scroll_hint ?? "");
+  const popupScrollToBottomRef = useRef(Boolean(args.popup_scroll_to_bottom));
+
+  useEffect(() => {
+    popupScrollHintRef.current = args.popup_scroll_hint ?? "";
+    popupScrollToBottomRef.current = Boolean(args.popup_scroll_to_bottom);
+  }, [args.popup_scroll_hint, args.popup_scroll_to_bottom]);
 
   useEffect(() => {
     injectHeadFragments(args.map_theme_css ?? "", args.map_popup_width_script ?? "");
@@ -121,6 +129,11 @@ function AllLocationsMap(props: ComponentProps): React.ReactElement {
         openLeafletPopupRef.current = popup ?? null;
         if (popup) {
           scheduleShrinkPebirdLeafletPopups(map, popup);
+          schedulePopupScrollHints(
+            popup,
+            popupScrollHintRef.current,
+            popupScrollToBottomRef.current,
+          );
         } else {
           scheduleShrinkPebirdLeafletPopups(map);
         }

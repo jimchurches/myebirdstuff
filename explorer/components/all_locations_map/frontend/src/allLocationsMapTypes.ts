@@ -55,6 +55,10 @@ export interface MapArgs {
   cluster_icon_style?: ClusterIconStylePayload | Record<string, unknown>;
   map_theme_css?: string;
   map_popup_width_script?: string;
+  /** Settings: ``chevron`` | ``shading`` | ``both`` — overflow hints on scrollable popup body. */
+  popup_scroll_hint?: string;
+  /** When true (visit sort ascending), scroll popup body to bottom on open. */
+  popup_scroll_to_bottom?: boolean;
   banner_html?: string;
   legend_html?: string;
   viewport?: Record<string, unknown>;

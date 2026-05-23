@@ -168,6 +168,8 @@ def render_prep_spinner_and_map_tab(
                 map_view_mode=map_view_mode,
                 map_hint_text=map_hint_text,
                 map_warning_text=map_warning_text,
+                popup_scroll_hint=str(popup_scroll_hint or ""),
+                popup_sort_order=str(popup_sort_order or "ascending"),
             )
 
         run_tab_prep_spinner_and_sync(
