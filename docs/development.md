@@ -64,7 +64,7 @@ npm run build
 
 `npm audit` without `--omit=dev` may report dev-toolchain issues from `react-scripts` (e.g. `webpack-dev-server`); CI does **not** fail on those. Review `package-lock.json` updates like Python `requirements.txt`.
 
-**Map HTML export (sidebar):** Lazy build on user action; one-click download via Streamlit + optional auto-click. If users report failed exports, see [map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) for a two-button fallback design and browser-risk notes.
+**Map HTML export (sidebar):** Lazy build on user action; one-click download via Streamlit + optional auto-click. If users report failed exports, see [map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) for a two-button fallback design and browser-risk notes. Export is infrequent and not on the live map hot path — a larger self-contained HTML file (e.g. full basemap defs in the embedded config) is an intentional tradeoff; optimise Streamlit map perf first.
 
 ### Map architecture (production)
 

@@ -2,6 +2,10 @@
 
 Single-stack: uses the same GeoJSON + theme CSS as production, with a small vanilla JS viewer
 (``static/leaflet_map_export.js``). No Folium build at export time.
+
+Export is a low-frequency sidebar action. A slightly larger self-contained HTML file — for
+example the full basemap manifest embedded in the export config — is an acceptable tradeoff
+for maintainability. Live Streamlit map performance is the priority, not export file size.
 """
 
 from __future__ import annotations
