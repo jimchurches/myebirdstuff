@@ -1,11 +1,9 @@
-"""Regression: E2E helpers must not read or write repo ``config/config_secret.yaml`` (#247)."""
+"""Regression: E2E helpers must not read or write repo ``config/config_secret.yaml``."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
-
-import pytest
 
 from tests.explorer.e2e_support import INTEGRATION_FIXTURE_CSV, temporary_ebird_csv_config
 

@@ -25,7 +25,10 @@ EXPLORER_CONFIG_DIR_ENV = "EXPLORER_CONFIG_DIR"
 
 
 def explorer_config_dir(repo_root: str) -> str:
-    """Directory containing ``config.yaml`` / ``config_secret.yaml`` for path resolution."""
+    """Directory containing ``config.yaml`` / ``config_secret.yaml`` for path resolution.
+
+    ``EXPLORER_CONFIG_DIR`` overrides the default ``{repo_root}/config`` (E2E tests only).
+    """
     override = os.environ.get(EXPLORER_CONFIG_DIR_ENV, "").strip()
     if override:
         return os.path.normpath(override)

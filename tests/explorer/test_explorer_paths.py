@@ -88,6 +88,19 @@ def test_settings_yaml_path_for_source(tmp_path):
     assert p3 is None
 
 
+def test_settings_yaml_path_honours_explorer_config_dir(tmp_path, monkeypatch):
+    from explorer.core.explorer_paths import EXPLORER_CONFIG_DIR_ENV, settings_yaml_path_for_source
+
+    repo = tmp_path / "repo"
+    (repo / "config").mkdir(parents=True)
+    isolated_config = tmp_path / "isolated_config"
+    isolated_config.mkdir()
+
+    monkeypatch.setenv(EXPLORER_CONFIG_DIR_ENV, str(isolated_config))
+    p = settings_yaml_path_for_source(str(repo), "config")
+    assert p == os.path.join(str(isolated_config), "config.yaml")
+
+
 def test_config_yaml_wins_over_cwd_when_both_have_csv(tmp_path):
     from explorer.core.explorer_paths import (
         build_explorer_candidate_dirs,
