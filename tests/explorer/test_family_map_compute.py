@@ -265,6 +265,24 @@ def test_species_url_for_base_species_uses_species_code_not_common_name_lookup()
     assert url == "https://ebird.org/species/bwfshr2"
 
 
+def test_species_url_for_base_species_common_starling_en_us_taxonomy():
+    """Export says Common Starling; en_US taxonomy CSV says European Starling — link via base (refs #251)."""
+    tax = pd.DataFrame(
+        {
+            "base_species": ["sturnus vulgaris"],
+            "species_code": ["eursta"],
+            "common_name": ["European Starling"],
+        }
+    )
+    url = species_url_for_base_species(
+        "sturnus vulgaris",
+        tax,
+        fallback_fn=lambda name: None,
+        fallback_common_name="Common Starling",
+    )
+    assert url == "https://ebird.org/species/eursta"
+
+
 def test_species_url_for_base_species_falls_back_to_common_name_fn():
     tax = pd.DataFrame(
         {"base_species": ["other sp"], "species_code": [""], "common_name": ["Other"]}

@@ -84,7 +84,11 @@ from explorer.core.map_marker_colour_resolve import (
     resolve_lifer_overlay_pin_params,
     resolve_species_visit_pin,
 )
-from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
+from explorer.core.settings_schema_defaults import (
+    MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
+    TAXONOMY_LOCALE_DEFAULT,
+)
+from explorer.core.taxonomy_bundle import load_taxonomy_bundle, taxonomy_locale_key
 from explorer.core.species_locations_geojson import (
     build_species_locations_geojson_payload,
     compute_species_map_banner_fields,
@@ -855,7 +859,14 @@ def prep_standard_map_leaflet_modes(
                         lifer_lookup_df=ctx["lifer_lookup_df"],
                         base_species_fn=base_species_for_lifer,
                     )
-                    _sp_url = species_url_fn(_banner_fields["display_name"])
+                    _tax_loc = taxonomy_locale_key(tax_locale_effective) or TAXONOMY_LOCALE_DEFAULT
+                    _tax_rows = load_taxonomy_bundle(_tax_loc).species_rows
+                    _sp_url = species_url_for_base_species(
+                        base_species_for_lifer(overlay_sci),
+                        _tax_rows,
+                        fallback_fn=species_url_fn,
+                        fallback_common_name=_banner_fields["display_name"],
+                    )
                     all_locations_leaflet_banner_html = build_species_banner_html(
                         species_url=_sp_url if _sp_url else None,
                         date_filter_status="",
