@@ -9,6 +9,10 @@ The committed ``frontend/build/`` tree is what Explorer loads at runtime (see co
 This script runs ``npm ci`` + ``npm run build``, then reports expected vs stray files so you know
 what to ``git add`` and what to delete (e.g. macOS Finder duplicates like ``static/css 4/``).
 
+With ``--check-only``, validates committed ``frontend/build/`` **and** that
+``basemaps.generated.ts`` matches ``explorer/data/basemaps.yaml`` (via
+``scripts/generate_basemap_assets.py --check``).
+
 Exit 1 if junk or unexpected files remain under ``build/`` (use ``--prune-junk`` to remove known junk only).
 """
 
@@ -28,6 +32,16 @@ _BUILD = _FRONTEND / "build"
 
 # macOS Finder "copy N" folders — never produced by Create React App.
 _JUNK_DIR_RE = re.compile(r"^(css|js) \d+$")
+
+
+def _run_basemap_assets(*, check: bool) -> None:
+    cmd = [sys.executable, str(_REPO_ROOT / "scripts/generate_basemap_assets.py")]
+    if check:
+        print("Checking basemap assets against explorer/data/basemaps.yaml …")
+        cmd.append("--check")
+    else:
+        print("Generating basemap assets from explorer/data/basemaps.yaml …")
+    subprocess.run(cmd, cwd=_REPO_ROOT, check=True)
 
 
 def _run_npm_build(*, skip_install: bool) -> None:
@@ -116,13 +130,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    _run_basemap_assets(check=args.check_only)
+
     if not args.check_only:
-        print("Generating basemap assets from explorer/data/basemaps.yaml …")
-        subprocess.run(
-            [sys.executable, str(_REPO_ROOT / "scripts/generate_basemap_assets.py")],
-            cwd=_REPO_ROOT,
-            check=True,
-        )
         print(f"Building {_FRONTEND.relative_to(_REPO_ROOT)} …")
         _run_npm_build(skip_install=args.skip_install)
 
