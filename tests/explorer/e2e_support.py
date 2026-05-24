@@ -415,57 +415,27 @@ def max_elapsed_ms_by_stage(events: Iterable[dict[str, Any]]) -> dict[str, float
 
 
 @contextlib.contextmanager
-def temporary_ebird_csv_config(repo_root: Path, tmp_path: Path, csv_source: Path) -> Iterator[None]:
-    """Point config at *tmp_path* with *csv_source* copied as ``MyEBirdData.csv``.
+def temporary_ebird_csv_config(tmp_path: Path, csv_source: Path) -> Iterator[dict[str, str]]:
+    """Point the Streamlit app at *csv_source* via an isolated temp config directory.
 
-    Does **not** overwrite ``config_secret.yaml`` in place (avoids clobbering local secrets if a
-    run is interrupted). Instead, renames the live secret aside for the test and restores it in
-    ``finally`` (and via ``atexit`` as a safety net).
+    Writes ``config.yaml`` under ``tmp_path/config/`` only. Returns env overrides
+    (``EXPLORER_CONFIG_DIR``) for the Streamlit subprocess — the repo ``config/`` tree
+    (including ``config_secret.yaml``) is never read or written.
     """
-    import atexit
     import shutil
+
+    from explorer.core.explorer_paths import EXPLORER_CONFIG_DIR_ENV
 
     data_dir = tmp_path / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     dataset_path = data_dir / "MyEBirdData.csv"
     shutil.copyfile(csv_source, dataset_path)
 
-    config_dir = repo_root / "config"
+    config_dir = tmp_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
     config_yaml = config_dir / "config.yaml"
-    config_secret_yaml = config_dir / "config_secret.yaml"
-    secret_e2e_bak = config_dir / "config_secret.yaml.e2e-bak"
-    original_cfg = config_yaml.read_text(encoding="utf-8") if config_yaml.exists() else None
-    had_secret = config_secret_yaml.is_file()
-    if had_secret:
-        if secret_e2e_bak.exists():
-            secret_e2e_bak.unlink()
-        config_secret_yaml.rename(secret_e2e_bak)
     config_payload = f"data_folder: {data_dir.as_posix()}\n"
     config_yaml.write_text(config_payload, encoding="utf-8")
-    config_secret_yaml.write_text(config_payload, encoding="utf-8")
 
-    restored = False
-
-    def _restore() -> None:
-        nonlocal restored
-        if restored:
-            return
-        restored = True
-        if original_cfg is None:
-            with contextlib.suppress(FileNotFoundError):
-                config_yaml.unlink()
-        else:
-            config_yaml.write_text(original_cfg, encoding="utf-8")
-        with contextlib.suppress(FileNotFoundError):
-            config_secret_yaml.unlink()
-        if secret_e2e_bak.is_file():
-            secret_e2e_bak.rename(config_secret_yaml)
-
-    atexit.register(_restore)
-    try:
-        yield
-    finally:
-        atexit.unregister(_restore)
-        _restore()
+    yield {EXPLORER_CONFIG_DIR_ENV: str(config_dir)}
 

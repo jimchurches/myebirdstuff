@@ -9,7 +9,9 @@ Search order (first folder that contains the filename wins):
 
 ``config/config_template.yaml`` is a tracked template; secret configs are gitignored.
 
-No env-based data folder: use config files, CWD, or Streamlit **file upload**. Streamlit Cloud: upload on the landing page.
+Config directory defaults to ``{repo_root}/config``. Set ``EXPLORER_CONFIG_DIR`` to an
+absolute path (E2E tests use an isolated temp dir) so personal ``config_secret.yaml`` is
+never read or written. Streamlit Cloud: upload on the landing page.
 """
 
 from __future__ import annotations
@@ -18,6 +20,16 @@ import os
 from typing import List, Optional, Tuple
 
 from explorer.core.path_resolution import find_data_file
+
+EXPLORER_CONFIG_DIR_ENV = "EXPLORER_CONFIG_DIR"
+
+
+def explorer_config_dir(repo_root: str) -> str:
+    """Directory containing ``config.yaml`` / ``config_secret.yaml`` for path resolution."""
+    override = os.environ.get(EXPLORER_CONFIG_DIR_ENV, "").strip()
+    if override:
+        return os.path.normpath(override)
+    return os.path.join(repo_root, "config")
 
 
 def _safe_load_yaml_mapping(path: str) -> dict:
@@ -53,7 +65,7 @@ def build_explorer_candidate_dirs(
     """Return ``(folders, source_labels)`` for :func:`resolve_ebird_data_file`."""
     folders: List[str] = []
     sources: List[str] = []
-    config_dir = os.path.join(repo_root, "config")
+    config_dir = explorer_config_dir(repo_root)
 
     for label, name in (
         ("config_secret", "config_secret.yaml"),
@@ -106,7 +118,7 @@ def resolve_ebird_data_file(
 def settings_yaml_path_for_source(repo_root: str, source_label: str) -> Optional[str]:
     """Active config path for a resolved source (or ``None``)."""
     src = (source_label or "").strip().lower()
-    config_dir = os.path.join(repo_root, "config")
+    config_dir = explorer_config_dir(repo_root)
     if src == "config_secret":
         return os.path.join(config_dir, "config_secret.yaml")
     if src == "config":

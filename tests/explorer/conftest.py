@@ -37,8 +37,8 @@ def streamlit_app_url(tmp_path):
     port = free_tcp_port()
     url = f"http://127.0.0.1:{port}"
     csv_src = resolve_e2e_dataset_csv_source()
-    with temporary_ebird_csv_config(REPO_ROOT, tmp_path, csv_src):
-        with streamlit_http_server(cwd=REPO_ROOT, port=port, env_extra={}, capture_stdio=False) as (_proc, _logs):
+    with temporary_ebird_csv_config(tmp_path, csv_src) as config_env:
+        with streamlit_http_server(cwd=REPO_ROOT, port=port, env_extra=config_env, capture_stdio=False) as (_proc, _logs):
             wait_for_http_ready(url, timeout_s=e2e_http_ready_timeout_s())
             yield url
 
@@ -54,7 +54,8 @@ def streamlit_perf_url_and_logfile(tmp_path):
         "EXPLORER_PERF_LOG_FILE": str(log_file),
     }
     csv_src = resolve_e2e_dataset_csv_source()
-    with temporary_ebird_csv_config(REPO_ROOT, tmp_path, csv_src):
+    with temporary_ebird_csv_config(tmp_path, csv_src) as config_env:
+        env_extra = {**config_env, **env_extra}
         with streamlit_http_server(cwd=REPO_ROOT, port=port, env_extra=env_extra, capture_stdio=False) as (_proc, _logs):
             wait_for_http_ready(url, timeout_s=e2e_http_ready_timeout_s())
             try:
