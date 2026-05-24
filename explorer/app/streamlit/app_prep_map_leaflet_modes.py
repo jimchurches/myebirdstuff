@@ -62,7 +62,6 @@ from explorer.core.family_map_compute import (
     compute_family_map_banner_metrics,
     filter_work_to_family,
     selected_species_checklist_individual_counts,
-    species_url_for_base_species,
 )
 from explorer.core.family_map_overlays import (
     build_family_map_banner_overlay_html,
@@ -84,11 +83,8 @@ from explorer.core.map_marker_colour_resolve import (
     resolve_lifer_overlay_pin_params,
     resolve_species_visit_pin,
 )
-from explorer.core.settings_schema_defaults import (
-    MAP_CLUSTER_ALL_LOCATIONS_DEFAULT,
-    TAXONOMY_LOCALE_DEFAULT,
-)
-from explorer.core.taxonomy_bundle import load_taxonomy_bundle, taxonomy_locale_key
+from explorer.core.settings_schema_defaults import MAP_CLUSTER_ALL_LOCATIONS_DEFAULT
+from explorer.core.species_link_urls import species_banner_url
 from explorer.core.species_locations_geojson import (
     build_species_locations_geojson_payload,
     compute_species_map_banner_fields,
@@ -271,11 +267,11 @@ def prep_family_leaflet_mode(
                 )
                 hl_species_url = None
                 if hl:
-                    hl_species_url = species_url_for_base_species(
-                        hl,
-                        tax_merged,
-                        fallback_fn=species_url_fn,
-                        fallback_common_name=hl_label or None,
+                    hl_species_url = species_banner_url(
+                        base_species=hl,
+                        taxonomy_locale=tax_locale_effective,
+                        display_name=hl_label or "",
+                        species_url_fn=species_url_fn,
                     )
                     if not hl_species_url and family_species_url_by_common:
                         _hl_rows = wf[
@@ -859,14 +855,11 @@ def prep_standard_map_leaflet_modes(
                         lifer_lookup_df=ctx["lifer_lookup_df"],
                         base_species_fn=base_species_for_lifer,
                     )
-                    _base_sp = base_species_for_lifer(overlay_sci)
-                    _tax_loc = taxonomy_locale_key(tax_locale_effective) or TAXONOMY_LOCALE_DEFAULT
-                    _tax_rows = load_taxonomy_bundle(_tax_loc).species_rows
-                    _sp_url = species_url_for_base_species(
-                        _base_sp,
-                        _tax_rows,
-                        fallback_fn=species_url_fn,
-                        fallback_common_name=_banner_fields["display_name"],
+                    _sp_url = species_banner_url(
+                        base_species=base_species_for_lifer(overlay_sci),
+                        taxonomy_locale=tax_locale_effective,
+                        display_name=_banner_fields["display_name"],
+                        species_url_fn=species_url_fn,
                     )
                     all_locations_leaflet_banner_html = build_species_banner_html(
                         species_url=_sp_url if _sp_url else None,
