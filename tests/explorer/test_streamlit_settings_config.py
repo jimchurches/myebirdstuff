@@ -129,10 +129,11 @@ def test_load_yaml_settings_accepts_basemap_keys(tmp_path, basemap_key: str):
 
 def test_map_basemap_options_match_settings_schema():
     from explorer.app.streamlit.defaults import MAP_BASEMAP_LABELS, MAP_BASEMAP_OPTIONS
+    from explorer.core.basemap_manifest import get_basemap_entries
     from explorer.core.settings_schema_defaults import MAP_BASEMAP_OPTIONS as SCHEMA_OPTIONS
 
     assert MAP_BASEMAP_OPTIONS == SCHEMA_OPTIONS
-    assert len(MAP_BASEMAP_OPTIONS) == 5
+    assert len(MAP_BASEMAP_OPTIONS) == len(get_basemap_entries())
     assert list(MAP_BASEMAP_LABELS) == list(MAP_BASEMAP_OPTIONS)
 
 

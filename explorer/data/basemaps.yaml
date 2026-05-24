@@ -1,0 +1,44 @@
+# Single source of truth for Explorer map basemap keys, labels, and tile layers.
+# Edit here only; regenerate frontend assets with:
+#   python3 scripts/generate_basemap_assets.py
+# (also runs automatically from scripts/build_all_locations_map_frontend.py)
+
+default_key: default
+
+basemaps:
+  - key: default
+    label: Default (OpenStreetMap)
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    max_zoom: 19
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    attribution_export: "&copy; OpenStreetMap contributors"
+
+  - key: voyager
+    label: CARTO Voyager
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+    max_zoom: 20
+    subdomains: abcd
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    attribution_export: "&copy; OpenStreetMap &copy; CARTO"
+
+  - key: carto
+    label: CartoDB Positron
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+    max_zoom: 20
+    subdomains: abcd
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    attribution_export: "&copy; OpenStreetMap &copy; CARTO"
+
+  - key: esri_topo
+    label: Esri World Topo
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+    max_zoom: 19
+    attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community"
+    attribution_export: "Tiles &copy; Esri"
+
+  - key: google
+    label: Google Hybrid
+    url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+    max_zoom: 22
+    attribution: Google
+    attribution_export: Google

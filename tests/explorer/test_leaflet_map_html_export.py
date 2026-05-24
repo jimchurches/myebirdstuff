@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from explorer.core.basemap_manifest import basemap_tile_url_fragment, get_basemap_entries
 from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
 from explorer.presentation.popup_v1_export_html import popup_export_html_from_properties
 
@@ -158,13 +159,7 @@ def test_popup_export_html_species_popup_v1():
 
 @pytest.mark.parametrize(
     ("map_style", "tile_fragment"),
-    [
-        ("default", "tile.openstreetmap.org"),
-        ("voyager", "basemaps.cartocdn.com/rastertiles/voyager"),
-        ("carto", "basemaps.cartocdn.com/light_all"),
-        ("esri_topo", "World_Topo_Map"),
-        ("google", "mt1.google.com/vt/lyrs=y"),
-    ],
+    [(e.key, basemap_tile_url_fragment(e)) for e in get_basemap_entries()],
 )
 def test_leaflet_map_to_html_bytes_basemap_tile_urls(map_style: str, tile_fragment: str):
     geojson = {

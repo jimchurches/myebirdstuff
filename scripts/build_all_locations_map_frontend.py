@@ -117,6 +117,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if not args.check_only:
+        print("Generating basemap assets from explorer/data/basemaps.yaml …")
+        subprocess.run(
+            [sys.executable, str(_REPO_ROOT / "scripts/generate_basemap_assets.py")],
+            cwd=_REPO_ROOT,
+            check=True,
+        )
         print(f"Building {_FRONTEND.relative_to(_REPO_ROOT)} …")
         _run_npm_build(skip_install=args.skip_install)
 

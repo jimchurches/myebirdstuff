@@ -5,7 +5,7 @@ you may edit in one place without hunting through core modules.
 **What belongs here**
 
 - Marker cluster options, pin **radius / stroke / opacities**, legend dot sizes, popup width
-- Map UI: basemap list/labels, height slider bounds, view labels, date-filter default; **debug-only map toggles** registered in :func:`debug_defaults_enabled` for CI
+- Map UI: basemap list/labels (from ``explorer/data/basemaps.yaml``), height slider bounds, view labels, date-filter default; **debug-only map toggles** registered in :func:`debug_defaults_enabled` for CI
 - Theme hex values aligned with ``.streamlit/config.toml``, settings panel width cap
 - Rankings HTML layout width / scroll hint default; spinner CSS cache key suffix when theme CSS changes
 
@@ -30,6 +30,7 @@ from explorer.core.map_marker_scheme_model import (
     MapMarkerSpeciesLocationsStyle,
     MapMarkerSpeciesMapBackgroundStyle,
 )
+from explorer.core.basemap_manifest import MAP_BASEMAP_LABELS  # noqa: F401 — re-export for Streamlit UI
 from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export for Streamlit UI
     MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_OPTIONS,
@@ -109,14 +110,6 @@ MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
 # ---------------------------------------------------------------------------
 # Map UI — sidebar / Settings controls (basemap default is persisted in YAML)
 # ---------------------------------------------------------------------------
-
-MAP_BASEMAP_LABELS: dict[str, str] = {
-    "default": "Default (OpenStreetMap)",
-    "voyager": "CARTO Voyager",
-    "carto": "CartoDB Positron",
-    "esri_topo": "Esri World Topo",
-    "google": "Google Hybrid",
-}
 
 MAP_HEIGHT_PX_DEFAULT = 720
 MAP_HEIGHT_PX_MIN = 440

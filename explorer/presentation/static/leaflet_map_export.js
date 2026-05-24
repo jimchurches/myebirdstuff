@@ -153,40 +153,11 @@
     spiderfy_on_max_zoom: false,
     remove_outside_visible_bounds: false,
   };
-  var BASEMAPS = {
-    default: {
-      url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      opts: { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" },
-    },
-    voyager: {
-      url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-      opts: {
-        maxZoom: 20,
-        subdomains: "abcd",
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
-      },
-    },
-    carto: {
-      url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-      opts: {
-        maxZoom: 20,
-        subdomains: "abcd",
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
-      },
-    },
-    esri_topo: {
-      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-      opts: { maxZoom: 19, attribution: "Tiles &copy; Esri" },
-    },
-    google: {
-      url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-      opts: { maxZoom: 22, attribution: "Google" },
-    },
-  };
 
-  function basemap(style) {
+  function basemap(style, basemaps) {
     var s = String(style || "default").toLowerCase();
-    return BASEMAPS[s] || BASEMAPS.default;
+    var maps = basemaps || {};
+    return maps[s] || maps.default || { url: "", opts: {} };
   }
 
   function mergeCluster(raw) {
@@ -301,7 +272,7 @@
         delete nodes[i].dataset.pebirdShrinkTarget;
       }
     });
-    var bm = basemap(cfg.map_style);
+    var bm = basemap(cfg.map_style, cfg.basemaps);
     L.tileLayer(bm.url, bm.opts).addTo(map);
     var clusterCfg = mergeCluster(cfg.cluster_options);
     var overlay;

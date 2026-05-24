@@ -78,7 +78,7 @@ All four **Map view** modes use the same Streamlit custom component (`explorer/c
 | Client | `frontend/src/AllLocationsMap.tsx` (+ `AllLocationsMapLeaflet.ts`, `AllLocationsMapPopupHtml.ts`, `AllLocationsMapPopupSizing.ts`, `allLocationsMapTypes.ts`) | Leaflet map, MarkerCluster, popup templates (`AllLocationsMapPopup.css`) |
 | Export | `explorer/presentation/leaflet_map_html_export.py` | Standalone HTML (CDN Leaflet) from cached recipe (`LEAFLET_EXPORT_*` keys) |
 
-**Basemaps:** allowlisted keys in `explorer/core/settings_schema_defaults.py` (`MAP_BASEMAP_OPTIONS`); UI labels in `explorer/app/streamlit/defaults.py` (`MAP_BASEMAP_LABELS`). Tile URLs must stay aligned in `AllLocationsMapLeaflet.ts` and `presentation/static/leaflet_map_export.js`. Order: Default (OSM), CARTO Voyager, CartoDB Positron, Esri World Topo, Google Hybrid.
+**Basemaps:** single manifest at `explorer/data/basemaps.yaml` (keys, labels, tile URLs). Python loads it via `explorer/core/basemap_manifest.py` (`MAP_BASEMAP_OPTIONS`, `MAP_BASEMAP_LABELS`). Regenerate the React tile config with `python3 scripts/generate_basemap_assets.py` (also run from `scripts/build_all_locations_map_frontend.py`). HTML export embeds tile defs from the same manifest at export time (`leaflet_map_html_export.py` → `leaflet_map_export.js`).
 
 **Historical performance notes** (#222): [`issue-222-plain-summary.md`](explorer/issue-222-plain-summary.md) (plain language), [`issue-222-section-8-baseline.md`](explorer/issue-222-section-8-baseline.md) (tables + re-run), [`issue-222-section-8-prior-art.md`](explorer/issue-222-section-8-prior-art.md) (Folium-era context). Re-run: `./scripts/run_post_leaflet_perf_baseline.sh`.
 
