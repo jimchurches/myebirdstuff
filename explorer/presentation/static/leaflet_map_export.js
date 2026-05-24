@@ -154,10 +154,11 @@
     remove_outside_visible_bounds: false,
   };
 
-  function basemap(style, basemaps) {
-    var s = String(style || "default").toLowerCase();
+  function basemap(style, basemaps, defaultKey) {
+    var fallback = String(defaultKey || "default").toLowerCase();
+    var s = String(style || fallback).toLowerCase();
     var maps = basemaps || {};
-    return maps[s] || maps.default || { url: "", opts: {} };
+    return maps[s] || maps[fallback] || { url: "", opts: {} };
   }
 
   function mergeCluster(raw) {
@@ -272,7 +273,7 @@
         delete nodes[i].dataset.pebirdShrinkTarget;
       }
     });
-    var bm = basemap(cfg.map_style, cfg.basemaps);
+    var bm = basemap(cfg.map_style, cfg.basemaps, cfg.basemap_default);
     L.tileLayer(bm.url, bm.opts).addTo(map);
     var clusterCfg = mergeCluster(cfg.cluster_options);
     var overlay;

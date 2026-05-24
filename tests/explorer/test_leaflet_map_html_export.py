@@ -8,6 +8,7 @@ import re
 import pytest
 
 from explorer.core.basemap_manifest import (
+    MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_OPTIONS,
     basemap_tile_layers_for_export,
     basemap_tile_url_fragment,
@@ -198,6 +199,7 @@ def test_leaflet_map_to_html_bytes_embeds_basemap_manifest_in_config():
         viewport={"v": 1, "mode": "center_zoom", "center": [-37.0, 145.0], "zoom": 10},
     )
     config = _parse_export_config_html(raw.decode("utf-8"))
+    assert config["basemap_default"] == MAP_BASEMAP_DEFAULT
     assert "basemaps" in config
     assert set(config["basemaps"]) == set(MAP_BASEMAP_OPTIONS)
     assert config["basemaps"] == basemap_tile_layers_for_export()

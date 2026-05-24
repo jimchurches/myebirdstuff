@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from explorer.core.basemap_manifest import basemap_tile_layers_for_export
+from explorer.core.basemap_manifest import MAP_BASEMAP_DEFAULT, basemap_tile_layers_for_export
 from explorer.presentation.popup_v1_export_html import enrich_geojson_for_export
 
 _STATIC = Path(__file__).resolve().parent / "static"
@@ -52,7 +52,7 @@ def leaflet_map_to_html_bytes(
     *,
     geojson: dict[str, Any],
     height: int,
-    map_style: str = "default",
+    map_style: str = MAP_BASEMAP_DEFAULT,
     cluster_options: dict[str, Any] | None = None,
     circle_marker_style: dict[str, Any] | None = None,
     cluster_icon_style: dict[str, Any] | None = None,
@@ -67,7 +67,8 @@ def leaflet_map_to_html_bytes(
     config = {
         "geojson": enriched,
         "height": int(height),
-        "map_style": str(map_style or "default"),
+        "map_style": str(map_style or MAP_BASEMAP_DEFAULT),
+        "basemap_default": MAP_BASEMAP_DEFAULT,
         "basemaps": basemap_tile_layers_for_export(),
         "cluster_options": cluster_options if cluster_options is not None else {},
         "circle_marker_style": circle_marker_style if circle_marker_style is not None else {},
