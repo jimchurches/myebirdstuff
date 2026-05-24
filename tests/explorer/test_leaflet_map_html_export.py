@@ -2,8 +2,18 @@
 
 from __future__ import annotations
 
+import json
+import re
+
 import pytest
 
+from explorer.core.basemap_manifest import (
+    MAP_BASEMAP_DEFAULT,
+    MAP_BASEMAP_OPTIONS,
+    basemap_tile_layers_for_export,
+    basemap_tile_url_fragment,
+    get_basemap_entries,
+)
 from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
 from explorer.presentation.popup_v1_export_html import popup_export_html_from_properties
 
@@ -156,18 +166,8 @@ def test_popup_export_html_species_popup_v1():
     assert "pebird-map-popup__all-visits" in html
 
 
-@pytest.mark.parametrize(
-    ("map_style", "tile_fragment"),
-    [
-        ("default", "tile.openstreetmap.org"),
-        ("voyager", "basemaps.cartocdn.com/rastertiles/voyager"),
-        ("carto", "basemaps.cartocdn.com/light_all"),
-        ("esri_topo", "World_Topo_Map"),
-        ("google", "mt1.google.com/vt/lyrs=y"),
-    ],
-)
-def test_leaflet_map_to_html_bytes_basemap_tile_urls(map_style: str, tile_fragment: str):
-    geojson = {
+def _minimal_export_geojson() -> dict:
+    return {
         "type": "FeatureCollection",
         "features": [
             {
@@ -177,8 +177,41 @@ def test_leaflet_map_to_html_bytes_basemap_tile_urls(map_style: str, tile_fragme
             }
         ],
     }
+
+
+def _parse_export_config_html(text: str) -> dict:
+    match = re.search(
+        r'<script type="application/json" id="pebird-map-export-config">(.*?)</script>',
+        text,
+        flags=re.DOTALL,
+    )
+    assert match is not None, "export config script tag missing"
+    return json.loads(match.group(1))
+
+
+def test_leaflet_map_to_html_bytes_embeds_basemap_manifest_in_config():
     raw = leaflet_map_to_html_bytes(
-        geojson=geojson,
+        geojson=_minimal_export_geojson(),
+        height=400,
+        map_style="default",
+        cluster_options={"enabled": False},
+        circle_marker_style={"fill_hex": "#3388ff", "stroke_hex": "#1c2630", "radius_px": 7},
+        viewport={"v": 1, "mode": "center_zoom", "center": [-37.0, 145.0], "zoom": 10},
+    )
+    config = _parse_export_config_html(raw.decode("utf-8"))
+    assert config["basemap_default"] == MAP_BASEMAP_DEFAULT
+    assert "basemaps" in config
+    assert set(config["basemaps"]) == set(MAP_BASEMAP_OPTIONS)
+    assert config["basemaps"] == basemap_tile_layers_for_export()
+
+
+@pytest.mark.parametrize(
+    ("map_style", "tile_fragment"),
+    [(e.key, basemap_tile_url_fragment(e)) for e in get_basemap_entries()],
+)
+def test_leaflet_map_to_html_bytes_basemap_tile_urls(map_style: str, tile_fragment: str):
+    raw = leaflet_map_to_html_bytes(
+        geojson=_minimal_export_geojson(),
         height=400,
         map_style=map_style,
         cluster_options={"enabled": False},
@@ -188,6 +221,7 @@ def test_leaflet_map_to_html_bytes_basemap_tile_urls(map_style: str, tile_fragme
     text = raw.decode("utf-8")
     assert f'"map_style":"{map_style}"' in text
     assert tile_fragment in text
+    assert "basemaps" in _parse_export_config_html(text)
 
 
 def test_leaflet_map_to_html_bytes_includes_viewer_and_geojson():
