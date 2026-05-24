@@ -98,7 +98,7 @@ Disk search is **first folder that contains the CSV**, in this order:
 | **Config `data_folder`** | As above (`config_secret.yaml` → `config.yaml`). |
 | **Working directory** | Put `MyEBirdData.csv` (or override basename with env **`STREAMLIT_EBIRD_DATA_FILE`**) in the directory you start Streamlit from. |
 
-There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder override; use config files, CWD, or upload.
+There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder override; use config files, CWD, or upload. **`EXPLORER_CONFIG_DIR`** (environment only) redirects config YAML lookup for automated E2E tests; normal local runs leave it unset.
 
 **Precedence (load):** A new pick from the landing uploader → **disk** (config paths + CWD) → **cached upload**. Stale upload cache is cleared when disk wins.
 

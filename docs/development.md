@@ -359,7 +359,7 @@ regressions can be diagnosed quickly without re-adding scaffolding.
 
 ### Explorer E2E (Playwright) and perf guardrails
 
-- **Smoke + journeys** (fixture CSV via temp `config`): `pip install playwright` ·
+- **Smoke + journeys** (fixture CSV via temp `config` under pytest `tmp_path`; `EXPLORER_CONFIG_DIR` — never touches repo `config/config_secret.yaml`): `pip install playwright` ·
   `python -m playwright install chromium` ·  
   `pytest tests/explorer/test_streamlit_map_e2e.py tests/explorer/test_streamlit_journeys_e2e.py -m e2e -v`
 - **Opt-in perf + JSONL capture** (sets ``EXPLORER_PERF_LOG_FILE`` in the test fixture):  
