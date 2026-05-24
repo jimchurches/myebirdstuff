@@ -859,10 +859,11 @@ def prep_standard_map_leaflet_modes(
                         lifer_lookup_df=ctx["lifer_lookup_df"],
                         base_species_fn=base_species_for_lifer,
                     )
+                    _base_sp = base_species_for_lifer(overlay_sci)
                     _tax_loc = taxonomy_locale_key(tax_locale_effective) or TAXONOMY_LOCALE_DEFAULT
                     _tax_rows = load_taxonomy_bundle(_tax_loc).species_rows
                     _sp_url = species_url_for_base_species(
-                        base_species_for_lifer(overlay_sci),
+                        _base_sp,
                         _tax_rows,
                         fallback_fn=species_url_fn,
                         fallback_common_name=_banner_fields["display_name"],

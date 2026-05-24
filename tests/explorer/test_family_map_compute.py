@@ -266,7 +266,7 @@ def test_species_url_for_base_species_uses_species_code_not_common_name_lookup()
 
 
 def test_species_url_for_base_species_common_starling_en_us_taxonomy():
-    """Export says Common Starling; en_US taxonomy CSV says European Starling — link via base (refs #251)."""
+    """Export says Common Starling; en_US taxonomy CSV says European Starling — link via base."""
     tax = pd.DataFrame(
         {
             "base_species": ["sturnus vulgaris"],
