@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
 from explorer.presentation.popup_v1_export_html import popup_export_html_from_properties
 
@@ -152,6 +154,40 @@ def test_popup_export_html_species_popup_v1():
     assert "pebird-map-popup__species-seen" in html
     assert "pebird-map-popup__obs-line" in html
     assert "pebird-map-popup__all-visits" in html
+
+
+@pytest.mark.parametrize(
+    ("map_style", "tile_fragment"),
+    [
+        ("default", "tile.openstreetmap.org"),
+        ("voyager", "basemaps.cartocdn.com/rastertiles/voyager"),
+        ("carto", "basemaps.cartocdn.com/light_all"),
+        ("esri_topo", "World_Topo_Map"),
+        ("google", "mt1.google.com/vt/lyrs=y"),
+    ],
+)
+def test_leaflet_map_to_html_bytes_basemap_tile_urls(map_style: str, tile_fragment: str):
+    geojson = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [145.0, -37.0]},
+                "properties": {"name": "Pin A"},
+            }
+        ],
+    }
+    raw = leaflet_map_to_html_bytes(
+        geojson=geojson,
+        height=400,
+        map_style=map_style,
+        cluster_options={"enabled": False},
+        circle_marker_style={"fill_hex": "#3388ff", "stroke_hex": "#1c2630", "radius_px": 7},
+        viewport={"v": 1, "mode": "center_zoom", "center": [-37.0, 145.0], "zoom": 10},
+    )
+    text = raw.decode("utf-8")
+    assert f'"map_style":"{map_style}"' in text
+    assert tile_fragment in text
 
 
 def test_leaflet_map_to_html_bytes_includes_viewer_and_geojson():

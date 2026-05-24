@@ -30,6 +30,10 @@ from explorer.core.map_marker_scheme_model import (
     MapMarkerSpeciesLocationsStyle,
     MapMarkerSpeciesMapBackgroundStyle,
 )
+from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export for Streamlit UI
+    MAP_BASEMAP_DEFAULT,
+    MAP_BASEMAP_OPTIONS,
+)
 
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster)
@@ -106,13 +110,13 @@ MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
 # Map UI (session-only; not persisted in embedded YAML)
 # ---------------------------------------------------------------------------
 
-MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "google", "carto")
 MAP_BASEMAP_LABELS: dict[str, str] = {
-    "default": "Default",
-    "google": "Google (hybrid)",
+    "default": "Default (OpenStreetMap)",
+    "voyager": "CARTO Voyager",
     "carto": "CartoDB Positron",
+    "esri_topo": "Esri World Topo",
+    "google": "Google Hybrid",
 }
-MAP_BASEMAP_DEFAULT = "default"
 
 MAP_HEIGHT_PX_DEFAULT = 720
 MAP_HEIGHT_PX_MIN = 440
