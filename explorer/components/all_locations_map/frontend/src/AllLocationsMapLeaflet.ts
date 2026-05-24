@@ -67,7 +67,7 @@ const ALL_LOCATIONS_BASEMAPS: Record<BasemapId, { url: string; opts: L.TileLayer
 
 export function normalizeBasemapId(raw: string | undefined): BasemapId {
   const s = String(raw ?? "default").trim().toLowerCase();
-  if (Object.prototype.hasOwnProperty.call(ALL_LOCATIONS_BASEMAPS, s)) {
+  if (s in ALL_LOCATIONS_BASEMAPS) {
     return s as BasemapId;
   }
   return "default";

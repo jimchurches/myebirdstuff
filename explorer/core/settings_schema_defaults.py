@@ -18,7 +18,7 @@ MAP_POPUP_SCROLL_HINT_DEFAULT = "shading"
 MAP_MARK_LIFER_DEFAULT = True
 MAP_MARK_LAST_SEEN_DEFAULT = True
 # Basemap: stored in persisted settings as a simple key (not a tile-layer object).
-# Order matches the Map sidebar / Settings dropdown (refs #246). Labels live in
+# Order matches the Map sidebar / Settings dropdown. Labels live in
 # ``explorer.app.streamlit.defaults.MAP_BASEMAP_LABELS``.
 MAP_BASEMAP_OPTIONS: tuple[str, ...] = (
     "default",

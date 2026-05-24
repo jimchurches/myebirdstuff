@@ -133,7 +133,7 @@ def test_map_basemap_options_match_settings_schema():
 
     assert MAP_BASEMAP_OPTIONS == SCHEMA_OPTIONS
     assert len(MAP_BASEMAP_OPTIONS) == 5
-    assert set(MAP_BASEMAP_LABELS) == set(MAP_BASEMAP_OPTIONS)
+    assert list(MAP_BASEMAP_LABELS) == list(MAP_BASEMAP_OPTIONS)
 
 
 def test_settings_data_path_html_includes_config_path_when_given():

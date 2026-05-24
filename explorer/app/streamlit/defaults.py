@@ -107,7 +107,7 @@ MAP_LIFER_MAP_SINGLE_POINT_ZOOM = 9
 MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
 
 # ---------------------------------------------------------------------------
-# Map UI (session-only; not persisted in embedded YAML)
+# Map UI — sidebar / Settings controls (basemap default is persisted in YAML)
 # ---------------------------------------------------------------------------
 
 MAP_BASEMAP_LABELS: dict[str, str] = {
