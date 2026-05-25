@@ -214,18 +214,6 @@ def inject_auto_click_streamlit_download_js(*, button_label: str) -> None:
     import json
 
     label_js = json.dumps(button_label)
-    st.html(
-        """<style>
-.ebird-export-auto-dl-host {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  overflow: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-</style>"""
-    )
     st.iframe(
         f"""<script>
 (function () {{

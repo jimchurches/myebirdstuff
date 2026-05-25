@@ -202,15 +202,6 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     stub.warning = warning
 
     components_v1 = types.ModuleType("streamlit.components.v1")
-    components_v1.html_calls: list[dict] = []
-
-    def components_html(html: str, height=None, scrolling=False) -> None:
-        components_v1.html_calls.append(
-            {"html": html, "height": height, "scrolling": scrolling}
-        )
-
-    components_v1.html = components_html
-
     components_pkg = types.ModuleType("streamlit.components")
     components_pkg.v1 = components_v1
     stub.components = components_pkg
@@ -575,11 +566,8 @@ def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_pare
     from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
 
     label = "Export map HTML"
-    streamlit_stub.html_calls.clear()
     streamlit_stub.iframe_calls.clear()
     inject_auto_click_streamlit_download_js(button_label=label)
-    assert len(streamlit_stub.html_calls) == 1
-    assert "ebird-export-auto-dl-host" in streamlit_stub.html_calls[0]
     assert len(streamlit_stub.iframe_calls) == 1
     payload = streamlit_stub.iframe_calls[0]["src"]
     assert label in payload
