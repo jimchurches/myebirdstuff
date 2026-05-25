@@ -112,6 +112,15 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 
     stub.html = html
 
+    stub.iframe_calls: list[dict] = []
+
+    def iframe(src: str, *, width="stretch", height="content", tab_index=None) -> None:
+        stub.iframe_calls.append(
+            {"src": src, "width": width, "height": height, "tab_index": tab_index}
+        )
+
+    stub.iframe = iframe
+
     stub.markdown_calls: list[tuple[tuple, dict]] = []
 
     def markdown(*args, **kwargs):
@@ -193,15 +202,6 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     stub.warning = warning
 
     components_v1 = types.ModuleType("streamlit.components.v1")
-    components_v1.html_calls: list[dict] = []
-
-    def components_html(html: str, height=None, scrolling=False) -> None:
-        components_v1.html_calls.append(
-            {"html": html, "height": height, "scrolling": scrolling}
-        )
-
-    components_v1.html = components_html
-
     components_pkg = types.ModuleType("streamlit.components")
     components_pkg.v1 = components_v1
     stub.components = components_pkg
@@ -547,20 +547,33 @@ def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
 
 
 def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit_stub) -> None:
-    import streamlit.components.v1 as components
-
     from explorer.app.streamlit.app_map_ui import inject_spinner_emoji_animation
     from explorer.app.streamlit.defaults import THEME_PRIMARY_HEX
     from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_SPINNER_EMOJIS
 
     inject_spinner_emoji_animation()
-    assert len(components.html_calls) == 1
-    payload = components.html_calls[0]["html"]
+    assert len(streamlit_stub.iframe_calls) == 1
+    payload = streamlit_stub.iframe_calls[0]["src"]
     assert THEME_PRIMARY_HEX in payload
     for emoji in CHECKLIST_STATS_SPINNER_EMOJIS:
         assert emoji in payload
-    assert components.html_calls[0]["height"] == 52
-    assert components.html_calls[0]["scrolling"] is False
+    assert streamlit_stub.iframe_calls[0]["height"] == 52
+
+
+def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_parent_click(
+    streamlit_stub,
+) -> None:
+    from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
+
+    label = "Export map HTML"
+    streamlit_stub.iframe_calls.clear()
+    inject_auto_click_streamlit_download_js(button_label=label)
+    assert len(streamlit_stub.iframe_calls) == 1
+    payload = streamlit_stub.iframe_calls[0]["src"]
+    assert label in payload
+    assert "window.parent.document" in payload
+    assert 'data-testid="stDownloadButton"' in payload
+    assert streamlit_stub.iframe_calls[0]["height"] == 0
 
 
 def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stub) -> None:
