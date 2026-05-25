@@ -569,6 +569,25 @@ def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit
     assert streamlit_stub.iframe_calls[0]["height"] == 52
 
 
+def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_parent_click(
+    streamlit_stub,
+) -> None:
+    from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
+
+    label = "Export map HTML"
+    streamlit_stub.html_calls.clear()
+    streamlit_stub.iframe_calls.clear()
+    inject_auto_click_streamlit_download_js(button_label=label)
+    assert len(streamlit_stub.html_calls) == 1
+    assert "ebird-export-auto-dl-host" in streamlit_stub.html_calls[0]
+    assert len(streamlit_stub.iframe_calls) == 1
+    payload = streamlit_stub.iframe_calls[0]["src"]
+    assert label in payload
+    assert "window.parent.document" in payload
+    assert 'data-testid="stDownloadButton"' in payload
+    assert streamlit_stub.iframe_calls[0]["height"] == 0
+
+
 def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stub) -> None:
     from explorer.presentation.checklist_stats_display import CHECKLIST_STATS_TABLE_CSS
 

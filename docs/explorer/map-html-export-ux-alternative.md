@@ -15,7 +15,7 @@ Sidebar control: single **`st.button`** labelled **“Export map HTML”**.
 2. If export bytes are not already in session or the Leaflet export LRU (`LEAFLET_EXPORT_HTML_CACHE_KEY`), build runs with **`st.spinner("Building map HTML…")`** via `_materialize_leaflet_export_html` (lazy — no export work on ordinary map reruns; recipe stored in `LEAFLET_EXPORT_RECIPE_KEY` by `_sync_leaflet_export_recipe` only).
 3. Bytes are stored in `EXPLORER_MAP_HTML_BYTES_KEY` + `LEAFLET_EXPORT_BUILT_CACHE_KEY`.
 4. `st.session_state[EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY]` is set and **`st.rerun()`** runs.
-5. On the next run, a real **`st.download_button`** (same label) is rendered with the finished bytes; **`inject_auto_click_streamlit_download_js`** (in `app_map_ui.py`) programmatically clicks that button in **`window.parent.document`** (retries at 50 / 200 / 500 ms).
+5. On the next run, a real **`st.download_button`** (same label) is rendered with the finished bytes; **`inject_auto_click_streamlit_download_js`** (in `app_map_ui.py`) uses **`st.iframe`** to programmatically click that button in **`window.parent.document`** (retries at 50 / 200 / 500 ms).
 6. Caption **“Starting download…”** appears on the auto-download run; the download button stays visible as a manual fallback.
 
 **Design goals preserved:**
@@ -33,7 +33,7 @@ Sidebar control: single **`st.button`** labelled **“Export map HTML”**.
 
 - **`st.download_button`** needs file bytes when the widget is wired for that run. Building in an `on_click` callback on the *same* interaction often leaves users clicking again — the download for click *N* may still use empty or stale `data=` from before the build finished.
 - The old **two-widget** pattern (`st.button` → build → `st.rerun()` → `st.download_button`) worked but felt like “nothing happened” because both steps used the **same label** (“Export map HTML”).
-- **`st.components.v1.html`** runs in a **sandboxed iframe**. Creating a Blob and `<a download>` *inside* that iframe frequently produces **spinners with no file** (build succeeds; save does not). Do not revive that approach.
+- **`st.iframe`** (formerly `st.components.v1.html`) runs in a **sandboxed iframe**. Creating a Blob and `<a download>` *inside* that iframe frequently produces **spinners with no file** (build succeeds; save does not). Do not revive that approach.
 
 ---
 
@@ -43,7 +43,7 @@ Sidebar control: single **`st.button`** labelled **“Export map HTML”**.
 |--------|--------|
 | `st.button` + `st.rerun()` + `st.download_button` (same label) | Works; **confusing** (feels like broken double-click) |
 | `st.download_button` + `on_click` build | Unreliable one-click; still often needs a second click |
-| Blob / anchor inside `st.components.v1.html` | **Failed** in practice (iframe); high block risk |
+| Blob / anchor inside `st.iframe` (legacy `st.components.v1.html`) | **Failed** in practice (iframe); high block risk |
 | **Current:** build → rerun → `st.download_button` + parent-frame `.click()` | **Shipped**; one click on desktop Safari/macOS in maintainer testing |
 | **Alternative (§4):** explicit Prepare + Download buttons | Not shipped; fallback design |
 
@@ -122,7 +122,7 @@ The file is **not** saved by custom script logic. The script only **clicks Strea
 
 ### What was likely to block (avoid)
 
-**Blob + `<a download>` inside `st.components.v1.html`** — common failure mode (sandboxed iframe, no user gesture on that document). That was abandoned for good reason.
+**Blob + `<a download>` inside `st.iframe`** (legacy `st.components.v1.html`) — common failure mode (sandboxed iframe, no user gesture on that document). That was abandoned for good reason.
 
 ### Residual risks — current script
 
