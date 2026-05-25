@@ -8,7 +8,6 @@ import os
 from typing import Any
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
@@ -104,8 +103,8 @@ def inject_spinner_theme_css() -> None:
 def inject_spinner_emoji_animation() -> None:
     """Animate bird emoji in batches under the checklist-stats spinner text (refs #74).
 
-    ``st.spinner`` cannot update its label mid-run; this uses a small ``components.html`` iframe and
-    client-side ``setInterval`` to advance non-overlapping batches while Python is blocked.
+    ``st.spinner`` cannot update its label mid-run; this uses a small ``st.iframe`` and client-side
+    ``setInterval`` to advance non-overlapping batches while Python is blocked.
     Theme CSS centers this iframe under the spinner row in normal document flow (refs #124).
     """
     emojis = list(CHECKLIST_STATS_SPINNER_EMOJIS)
@@ -137,7 +136,7 @@ letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
   setInterval(tick, MS);
 }})();
 </script></body></html>"""
-    components.html(html, height=52, scrolling=False)
+    st.iframe(html, height=52)
 
 
 def place_spinner_emoji_strip() -> Any:
@@ -208,7 +207,7 @@ def inject_sidebar_outline_download_button_css(outline_hex: str) -> None:
 def inject_auto_click_streamlit_download_js(*, button_label: str) -> None:
     """Click a parent-frame ``st.download_button`` after Streamlit renders it.
 
-    ``st.components.v1.html`` runs in a sandboxed iframe — Blob/anchor downloads there do not
+    ``st.iframe`` runs in a sandboxed iframe — Blob/anchor downloads there do not
     reach the user's filesystem. After export HTML is built, we render a real download_button in
     the sidebar and programmatically click it in ``window.parent.document``.
     """
@@ -227,7 +226,7 @@ def inject_auto_click_streamlit_download_js(*, button_label: str) -> None:
 }
 </style>"""
     )
-    st.components.v1.html(
+    st.iframe(
         f"""<script>
 (function () {{
   const want = {label_js};

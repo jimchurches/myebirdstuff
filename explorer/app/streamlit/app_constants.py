@@ -312,7 +312,7 @@ div[data-testid="stSpinner"] div[class*="Spinner"] {{
   border-top-color: {THEME_PRIMARY_HEX} !important;
 }}
 
-/* Bird-emoji strip (only ``components.html`` in Explorer uses height 52): tuck under spinner, centered. */
+/* Bird-emoji strip (``st.iframe`` spinner animation uses height 52): tuck under spinner, centered. */
 [data-testid="stAppViewContainer"] main iframe[height="52"],
 [data-testid="stSidebar"] iframe[height="52"] {{
   display: block !important;

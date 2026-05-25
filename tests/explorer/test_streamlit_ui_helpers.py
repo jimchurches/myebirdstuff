@@ -112,6 +112,15 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 
     stub.html = html
 
+    stub.iframe_calls: list[dict] = []
+
+    def iframe(src: str, *, width="stretch", height="content", tab_index=None) -> None:
+        stub.iframe_calls.append(
+            {"src": src, "width": width, "height": height, "tab_index": tab_index}
+        )
+
+    stub.iframe = iframe
+
     stub.markdown_calls: list[tuple[tuple, dict]] = []
 
     def markdown(*args, **kwargs):
@@ -547,20 +556,17 @@ def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
 
 
 def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit_stub) -> None:
-    import streamlit.components.v1 as components
-
     from explorer.app.streamlit.app_map_ui import inject_spinner_emoji_animation
     from explorer.app.streamlit.defaults import THEME_PRIMARY_HEX
     from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_SPINNER_EMOJIS
 
     inject_spinner_emoji_animation()
-    assert len(components.html_calls) == 1
-    payload = components.html_calls[0]["html"]
+    assert len(streamlit_stub.iframe_calls) == 1
+    payload = streamlit_stub.iframe_calls[0]["src"]
     assert THEME_PRIMARY_HEX in payload
     for emoji in CHECKLIST_STATS_SPINNER_EMOJIS:
         assert emoji in payload
-    assert components.html_calls[0]["height"] == 52
-    assert components.html_calls[0]["scrolling"] is False
+    assert streamlit_stub.iframe_calls[0]["height"] == 52
 
 
 def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stub) -> None:
