@@ -242,6 +242,7 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
         "explorer.app.streamlit.country_stats_streamlit_html",
         "explorer.app.streamlit.checklist_stats_streamlit_html",
         "explorer.app.streamlit.rankings_streamlit_html",
+        "explorer.app.streamlit.bird_families_streamlit_html",
         "explorer.app.streamlit.maintenance_streamlit_html",
         "explorer.app.streamlit.app_landing_ui",
         "explorer.app.streamlit.explorer_update_notice",
@@ -310,6 +311,55 @@ def test_sync_rankings_tab_session_inputs_sets_bundle(streamlit_stub) -> None:
     assert st.session_state[RANKINGS_TAB_BUNDLE_KEY] is sentinel
 
 
+def test_run_families_fragment_load_message_without_bundle(streamlit_stub, monkeypatch) -> None:
+    bird = importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
+    render_calls: list[dict] = []
+    monkeypatch.setattr(
+        bird,
+        "render_families_streamlit_tab_from_bundle",
+        lambda bundle: render_calls.append(bundle),
+    )
+    from explorer.app.streamlit.app_constants import RANKINGS_TAB_BUNDLE_KEY
+
+    st = streamlit_stub
+    st.session_state.pop(RANKINGS_TAB_BUNDLE_KEY, None)
+    bird.run_families_streamlit_tab_fragment()
+    assert render_calls == []
+    assert any("Bird Families" in str(args[0]) for args, _ in st.info_calls)
+
+
+def test_run_families_fragment_delegates_when_bundle_present(streamlit_stub, monkeypatch) -> None:
+    bird = importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
+    render_calls: list[dict] = []
+    monkeypatch.setattr(
+        bird,
+        "render_families_streamlit_tab_from_bundle",
+        lambda bundle: render_calls.append(bundle),
+    )
+    from explorer.app.streamlit.app_constants import RANKINGS_TAB_BUNDLE_KEY
+    from explorer.app.streamlit.bird_families_streamlit_html import GROUP_COVERAGE_SUMMARY_KEY
+
+    bundle = {
+        "rankings_sections_top_n": [],
+        GROUP_COVERAGE_SUMMARY_KEY: pd.DataFrame(),
+    }
+    st = streamlit_stub
+    st.session_state[RANKINGS_TAB_BUNDLE_KEY] = bundle
+    bird.run_families_streamlit_tab_fragment()
+    assert len(render_calls) == 1
+    assert render_calls[0] is bundle
+
+
+def test_render_families_empty_summary_shows_taxonomy_unavailable(streamlit_stub) -> None:
+    bird = importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
+    from explorer.app.streamlit.bird_families_streamlit_html import GROUP_COVERAGE_SUMMARY_KEY
+
+    st = streamlit_stub
+    st.info_calls.clear()
+    bird.render_families_streamlit_tab_from_bundle({GROUP_COVERAGE_SUMMARY_KEY: pd.DataFrame()})
+    assert any("taxonomy" in str(args[0]).lower() for args, _ in st.info_calls)
+
+
 def test_sync_maintenance_tab_session_inputs_sets_sync_dict(streamlit_stub) -> None:
     maint = importlib.import_module("explorer.app.streamlit.maintenance_streamlit_html")
     from explorer.app.streamlit.app_constants import MAINTENANCE_TAB_SYNC_KEY
@@ -337,6 +387,7 @@ def test_streamlit_tab_modules_import_without_runtime(streamlit_stub) -> None:
     """Catch regressions like missing constants or bad imports (refs fragment sync wiring)."""
     importlib.import_module("explorer.app.streamlit.checklist_stats_streamlit_html")
     importlib.import_module("explorer.app.streamlit.rankings_streamlit_html")
+    importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
     importlib.import_module("explorer.app.streamlit.maintenance_streamlit_html")
 
 

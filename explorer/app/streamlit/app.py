@@ -55,8 +55,8 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 **Top N** / **visible rows** / table options are under **Settings → Tables & lists** (batch **Apply**; refs `#81`).
 Nested **Top Lists** / **Interesting Lists** only; **Bird Families** is its own main tab (same prep bundle).
 
-**Bird Families:** ``run_families_streamlit_tab_fragment`` — species-group coverage (refs `#73`); prep data from
-``build_rankings_tab_bundle`` in session ``RANKINGS_TAB_BUNDLE_KEY``.
+**Bird Families:** :mod:`explorer.app.streamlit.bird_families_streamlit_html` — species-group coverage (refs `#73`);
+prep data from ``build_rankings_tab_bundle`` in session ``RANKINGS_TAB_BUNDLE_KEY``.
 
 **Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs inside
 ``@st.fragment``; ``st.toggle`` switches recent vs full year columns when count exceeds **Settings → Yearly tables:

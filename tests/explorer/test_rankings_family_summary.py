@@ -1,4 +1,4 @@
-"""Family coverage overview metrics (refs Families tab)."""
+"""Family coverage overview metrics (refs Bird Families tab)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import pandas as pd
 
 
 def test_family_coverage_summary_metrics_df_counts():
-    from explorer.app.streamlit.rankings_streamlit_html import _family_coverage_summary_metrics_df
+    from explorer.app.streamlit.bird_families_streamlit_html import family_coverage_summary_metrics_df
 
     summary = pd.DataFrame(
         {
@@ -16,7 +16,7 @@ def test_family_coverage_summary_metrics_df_counts():
             "percent_seen": [100.0, 0.0, 100.0, 30.0],
         }
     )
-    out = _family_coverage_summary_metrics_df(summary)
+    out = family_coverage_summary_metrics_df(summary)
     assert len(out) == 12
     assert list(out.columns) == ["Section", "Metric", "Value"]
     assert out.loc[0, "Section"] == "Taxonomy"
@@ -44,14 +44,14 @@ def test_family_coverage_summary_metrics_df_counts():
 
 
 def test_family_coverage_summary_metrics_df_empty():
-    from explorer.app.streamlit.rankings_streamlit_html import _family_coverage_summary_metrics_df
+    from explorer.app.streamlit.bird_families_streamlit_html import family_coverage_summary_metrics_df
 
-    out = _family_coverage_summary_metrics_df(pd.DataFrame())
+    out = family_coverage_summary_metrics_df(pd.DataFrame())
     assert out.empty
 
 
 def test_family_coverage_summary_metrics_html_group_rows():
-    from explorer.app.streamlit.rankings_streamlit_html import _family_coverage_summary_metrics_html
+    from explorer.app.streamlit.bird_families_streamlit_html import family_coverage_summary_metrics_html
 
     summary = pd.DataFrame(
         {
@@ -61,7 +61,7 @@ def test_family_coverage_summary_metrics_html_group_rows():
             "percent_seen": [100.0],
         }
     )
-    html_out = _family_coverage_summary_metrics_html(summary)
+    html_out = family_coverage_summary_metrics_html(summary)
     assert "family-coverage-overview" in html_out
     assert "family-coverage-group" in html_out
     assert "Taxonomy" in html_out
