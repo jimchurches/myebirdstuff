@@ -13,7 +13,7 @@ pycountry>=26.2.16
 PyYAML>=6.0.3,<7
 
 # Streamlit app deps
-streamlit>=1.57.0
+streamlit>=1.58.0
 watchdog>=6.0.0,<7  # efficient file watching on reload (Streamlit falls back to polling without it)
 streamlit-searchbox>=0.1.24
 pydantic>=2.13.4,<3
@@ -25,4 +25,4 @@ pytest-cov>=7.1.0,<8
 Pygments>=2.20.0
 
 # Linting (CI + local; ruff checks explorer/ — see ruff.toml)
-ruff>=0.15.14,<1
+ruff>=0.15.15,<1
