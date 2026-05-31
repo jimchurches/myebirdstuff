@@ -12,6 +12,7 @@ Prep attaches coverage tables to the shared rankings session bundle via
 from __future__ import annotations
 
 import html
+import logging
 from typing import Any
 
 import pandas as pd
@@ -27,9 +28,14 @@ from explorer.core.species_logic import countable_species_vectorized
 from explorer.core.stats import safe_count
 
 from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
-from explorer.app.streamlit.defaults import RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
+from explorer.app.streamlit.defaults import (
+    RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
+    TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE,
+)
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
+
+logger = logging.getLogger(__name__)
 
 _STREAMLIT_TABLE_SCOPE = "streamlit-checklist-html-ab"
 _RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"
@@ -46,8 +52,26 @@ _EBIRD_TAXONOMY_URL = "https://science.ebird.org/en/use-ebird-data/the-ebird-tax
 _FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX = 280
 
 
+def compute_world_species_coverage(detail: pd.DataFrame) -> tuple[int, int, float]:
+    """Return (observed_species, living_taxonomy_species, observed_percent) from merged coverage detail."""
+    if detail.empty:
+        return 0, 0, 0.0
+    total = int(detail["base_species"].nunique())
+    observed = int(detail.loc[detail["seen"], "base_species"].nunique())
+    pct = (observed / total * 100.0) if total else 0.0
+    return observed, total, pct
+
+
+def _filter_taxonomy_for_coverage(tax: pd.DataFrame) -> pd.DataFrame:
+    """Apply extinct-species filter per :data:`TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE`."""
+    if TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE or "is_extinct" not in tax.columns:
+        return tax
+    return tax[~tax["is_extinct"].fillna(False)].copy()
+
+
 def _family_coverage_summary_metrics_sections(
     summary: pd.DataFrame,
+    world_coverage: tuple[int, int, float] | None = None,
 ) -> list[tuple[str, list[tuple[str, str]]]]:
     """(section heading, [(metric label, formatted value), ...]) for overview HTML and tests."""
     if summary.empty:
@@ -68,8 +92,23 @@ def _family_coverage_summary_metrics_sections(
     n_ge_50 = int((pct_seen >= 50.0).sum())
     n_single_species_family = int((total_sp == 1).sum())
     n_zero_seen = int((seen == 0).sum())
-    return [
+    sections: list[tuple[str, list[tuple[str, str]]]] = [
         ("Taxonomy", [("Total families", f"{n_total:,}")]),
+    ]
+    if world_coverage is not None:
+        obs_sp, total_sp_world, pct_world = world_coverage
+        sections.append(
+            (
+                "World species coverage",
+                [
+                    ("Observed species", f"{obs_sp:,}"),
+                    ("Living species in eBird/Clements taxonomy", f"{total_sp_world:,}"),
+                    ("Observed species (%)", f"{pct_world:.1f}%"),
+                ],
+            )
+        )
+    sections.extend(
+        [
         (
             "Coverage",
             [
@@ -101,21 +140,29 @@ def _family_coverage_summary_metrics_sections(
                 ("Families with no species recorded", f"{n_zero_seen:,}"),
             ],
         ),
-    ]
+        ]
+    )
+    return sections
 
 
-def family_coverage_summary_metrics_df(summary: pd.DataFrame) -> pd.DataFrame:
+def family_coverage_summary_metrics_df(
+    summary: pd.DataFrame,
+    world_coverage: tuple[int, int, float] | None = None,
+) -> pd.DataFrame:
     """Flattened Section / Metric / Value (used by unit tests; mirrors overview rows)."""
     rows: list[dict[str, str]] = []
-    for section, pairs in _family_coverage_summary_metrics_sections(summary):
+    for section, pairs in _family_coverage_summary_metrics_sections(summary, world_coverage):
         for metric, value in pairs:
             rows.append({"Section": section, "Metric": metric, "Value": value})
     return pd.DataFrame(rows)
 
 
-def family_coverage_summary_metrics_html(summary: pd.DataFrame) -> str:
+def family_coverage_summary_metrics_html(
+    summary: pd.DataFrame,
+    world_coverage: tuple[int, int, float] | None = None,
+) -> str:
     """HTML overview table with group heading rows (same ``stats-tbl`` / ``rankings-tbl`` pattern as species detail)."""
-    sections = _family_coverage_summary_metrics_sections(summary)
+    sections = _family_coverage_summary_metrics_sections(summary, world_coverage)
     if not sections:
         return ""
     body_parts: list[str] = []
@@ -138,15 +185,19 @@ def family_coverage_summary_metrics_html(summary: pd.DataFrame) -> str:
     )
 
 
-def _family_coverage_taxonomy_note_html() -> str:
+def _family_coverage_taxonomy_note_html(include_world_coverage_note: bool = False) -> str:
     """Footnote below the overview table; same caption style as Yearly Summary protocol note (refs #85)."""
-    inner = (
-        f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">'
+    parts = [
         "<strong>Taxonomy:</strong> "
         f'<a href="{html.escape(_EBIRD_TAXONOMY_URL)}" target="_blank" rel="noopener">eBird</a> '
         "— species and family groups follow the eBird taxonomy."
-        "</p>"
-    )
+    ]
+    if include_world_coverage_note:
+        parts.append(
+            "Coverage uses living species from the current eBird/Clements taxonomy. "
+            "Extinct species are excluded by default."
+        )
+    inner = "".join(f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">{p}</p>' for p in parts)
     return f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">{inner}</div>'
 
 
@@ -179,6 +230,10 @@ def build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) -> 
     tax = _load_taxonomy_species_rows(taxonomy_locale)
     groups = _load_taxonomy_groups(taxonomy_locale)
     if tax.empty or not groups:
+        return pd.DataFrame(), pd.DataFrame()
+
+    tax = _filter_taxonomy_for_coverage(tax)
+    if tax.empty:
         return pd.DataFrame(), pd.DataFrame()
 
     tax = tax.copy()
@@ -233,6 +288,13 @@ def build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) -> 
         obs["individuals"] = obs["individuals"].fillna(0).astype(int)
         obs["first_sid"] = obs["first_sid"].fillna("").astype(str)
         obs["last_sid"] = obs["last_sid"].fillna("").astype(str)
+    tax_bases = set(tax["base_species"].astype(str))
+    unmatched = sorted(set(obs["base_species"].astype(str)) - tax_bases)
+    if unmatched:
+        logger.debug(
+            "Observed base species not in taxonomy (excluded from coverage): %s",
+            unmatched,
+        )
     merged = tax.merge(obs, how="left", on="base_species")
     merged["seen"] = merged["checklists"].notna()
     merged["checklists"] = merged["checklists"].fillna(0).astype(int)
@@ -384,11 +446,15 @@ def render_families_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
 
     if not selected_group:
         st.markdown("**Family coverage overview**")
-        _overview_html = family_coverage_summary_metrics_html(summary)
+        world_cov = compute_world_species_coverage(detail) if not detail.empty else None
+        _overview_html = family_coverage_summary_metrics_html(summary, world_cov)
         if _overview_html:
             st.markdown(_overview_html, unsafe_allow_html=True)
         st.markdown('<div style="height:1rem;" aria-hidden="true"></div>', unsafe_allow_html=True)
-        st.markdown(_family_coverage_taxonomy_note_html(), unsafe_allow_html=True)
+        st.markdown(
+            _family_coverage_taxonomy_note_html(include_world_coverage_note=world_cov is not None),
+            unsafe_allow_html=True,
+        )
         return
 
     selected = detail[detail["group_name"] == selected_group].copy()

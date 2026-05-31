@@ -118,3 +118,43 @@ def test_en_au_merges_us_csv_without_extra_species_row_fetch():
     assert m_urlopen.call_count == 3
     assert bundle.common_to_code["Gray Noddy"] == "grynod1"
     assert bundle.common_to_code["Grey Ternlet"] == "grynod1"
+
+
+def test_parse_taxonomy_csv_retains_extinct_fields():
+    csv_data = _make_csv(
+        [
+            {
+                "common_name": "Living Bird",
+                "species_code": "livbrd",
+                "category": "species",
+                "scientific_name": "Aves vivus",
+                "taxon_order": "100",
+                "extinct": "0",
+                "extinct_year": "",
+            },
+            {
+                "common_name": "Extinct Bird",
+                "species_code": "extbrd",
+                "category": "species",
+                "scientific_name": "Aves extinctus",
+                "taxon_order": "101",
+                "extinct": "1",
+                "extinct_year": "1900",
+            },
+        ],
+        fieldnames=(
+            "common_name",
+            "species_code",
+            "category",
+            "scientific_name",
+            "taxon_order",
+            "extinct",
+            "extinct_year",
+        ),
+    )
+    ctxs = _mock_urlopen_responses([csv_data])
+    with patch("explorer.core.taxonomy_bundle.urlopen", side_effect=ctxs):
+        bundle = load_taxonomy_bundle("en_US")
+    rows = bundle.species_rows.sort_values("taxon_order").reset_index(drop=True)
+    assert list(rows["is_extinct"]) == [False, True]
+    assert rows.loc[1, "extinct_year"] == "1900"

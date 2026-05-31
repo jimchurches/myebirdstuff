@@ -65,6 +65,8 @@ def _parse_taxonomy_csv(raw: str) -> tuple[pd.DataFrame, dict[str, str]]:
         field_lower.get("scientific name"),
     )
     tax_order_key = field_lower.get("taxon_order") or field_lower.get("taxon order")
+    extinct_key = field_lower.get("extinct")
+    extinct_year_key = field_lower.get("extinct_year") or field_lower.get("extinct year")
 
     rows: list[dict[str, Any]] = []
     lookup: dict[str, str] = {}
@@ -97,6 +99,9 @@ def _parse_taxonomy_csv(raw: str) -> tuple[pd.DataFrame, dict[str, str]]:
             taxon_order = float(str(tax_raw).strip())
         except Exception:
             continue
+        extinct_raw = str(row.get(extinct_key) or "").strip() if extinct_key else ""
+        extinct_year_raw = str(row.get(extinct_year_key) or "").strip() if extinct_year_key else ""
+        is_extinct = extinct_raw in {"1", "true", "True", "yes", "Yes"}
         rows.append(
             {
                 "scientific_name": sci,
@@ -104,6 +109,9 @@ def _parse_taxonomy_csv(raw: str) -> tuple[pd.DataFrame, dict[str, str]]:
                 "species_code": code,
                 "taxon_order": taxon_order,
                 "base_species": " ".join(sci.lower().split()[:2]).strip(),
+                "extinct": extinct_raw,
+                "extinct_year": extinct_year_raw,
+                "is_extinct": is_extinct,
             }
         )
     return pd.DataFrame(rows), lookup

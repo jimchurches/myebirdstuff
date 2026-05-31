@@ -403,6 +403,10 @@ SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v18"
 RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX = 1400
 RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT = "shading"
 
+# Bird Families / taxonomy coverage: when False, extinct species are excluded from denominators
+# and family/world coverage tables (refs #262).
+TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE = False
+
 
 def debug_defaults_enabled() -> list[str]:
     """Return names of debug toggles in this module that are currently ``True``.
