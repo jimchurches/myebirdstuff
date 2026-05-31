@@ -31,7 +31,7 @@ def _patch_tab_prep_caches(monkeypatch: pytest.MonkeyPatch, app_prep_map_tab_pre
     monkeypatch.setattr(
         app_prep_map_tab_prep, "cached_full_export_checklist_stats_payload", lambda *_a, **_k: None
     )
-    monkeypatch.setattr(app_prep_map_tab_prep, "build_rankings_tab_bundle", lambda *_a, **_k: {})
+    monkeypatch.setattr(app_prep_map_tab_prep, "build_ranking_lists_families_bundle", lambda *_a, **_k: {})
     monkeypatch.setattr(app_prep_map_tab_prep, "cached_sex_notation_by_year", lambda *_a: {})
     monkeypatch.setattr(
         app_prep_map_tab_prep, "full_location_data_for_maintenance", lambda *_a: pd.DataFrame()

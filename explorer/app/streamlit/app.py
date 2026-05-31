@@ -51,15 +51,19 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 (refs #79).
 
 **Ranking & Lists:** ``cached_full_export_checklist_stats_payload`` + ``format_checklist_stats_bundle``;
-``build_rankings_tab_bundle`` runs in the **prep** spinner pass (above the tab row, with other full-export prep);
+``build_ranking_lists_families_bundle`` runs in the **prep** spinner pass (above the tab row, with other full-export prep);
 **Top N** / **visible rows** / table options are under **Settings → Tables & lists** (batch **Apply**; refs `#81`).
+Nested **Top Lists** / **Interesting Lists** only; **Bird Families** is its own main tab (same prep bundle).
+
+**Bird Families:** :mod:`explorer.app.streamlit.bird_families_streamlit_html` — species-group coverage (refs `#73`);
+prep data from ``build_ranking_lists_families_bundle`` in session ``RANKING_LISTS_FAMILIES_BUNDLE_KEY``.
 
 **Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs inside
 ``@st.fragment``; ``st.toggle`` switches recent vs full year columns when count exceeds **Settings → Yearly tables:
 recent year columns** (default 10). ``sync_yearly_summary_session_inputs`` + ``run_yearly_summary_streamlit_fragment``
 match the Country tab fragment pattern (refs #85).
 
-**Main tabs + sidebar:** Primary ``st.tabs`` first (``Map``, ``Families``, …; empty panels until filled). Prep + Leaflet map embed run in a sidebar
+**Main tabs + sidebar:** Primary ``st.tabs`` first (``Map``, ``Bird Families``, …; empty panels until filled). Prep + Leaflet map embed run in a sidebar
 bottom ``st.spinner`` (Map tab content is nested in script order so loading indicators stay aligned). Data tabs use
 ``@st.fragment`` where possible. One sidebar
 for map controls, export, and footer links (refs #70). Map sidebar + working set: :mod:`explorer.app.streamlit.app_map_working_ui`

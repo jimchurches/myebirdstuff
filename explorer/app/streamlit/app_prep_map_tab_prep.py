@@ -29,8 +29,8 @@ from explorer.app.streamlit.checklist_stats_streamlit_html import (
 from explorer.app.streamlit.country_stats_streamlit_html import sync_country_tab_session_inputs
 from explorer.app.streamlit.maintenance_streamlit_html import sync_maintenance_tab_session_inputs
 from explorer.app.streamlit.rankings_streamlit_html import (
-    build_rankings_tab_bundle,
-    sync_rankings_tab_session_inputs,
+    build_ranking_lists_families_bundle,
+    sync_ranking_lists_families_bundle,
 )
 from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.app.streamlit.streamlit_ui_constants import TAB_PREP_SPINNER_TEXT
@@ -56,7 +56,7 @@ def run_tab_prep_spinner_and_sync(
                     df_full, top_n, hc_sort, hc_tb, tax_locale_effective
                 )
             with perf_span("prep.cache_rankings_bundle"):
-                rankings_bundle = build_rankings_tab_bundle(
+                ranking_lists_families_bundle = build_ranking_lists_families_bundle(
                     df_full,
                     country_sort=st.session_state.get(STREAMLIT_COUNTRY_TAB_SORT_KEY),
                     taxonomy_locale=tax_locale_effective,
@@ -67,12 +67,12 @@ def run_tab_prep_spinner_and_sync(
                 sex_notation_by_year: dict = cached_sex_notation_by_year(df_full)
         else:
             maint_full_payload = None
-            rankings_bundle = {}
+            ranking_lists_families_bundle = {}
             sex_notation_by_year = {}
 
         with perf_span("prep.tab_session_sync"):
             sync_checklist_stats_tab_session_inputs(checklist_payload)
-            sync_rankings_tab_session_inputs(rankings_bundle)
+            sync_ranking_lists_families_bundle(ranking_lists_families_bundle)
             loc_maint = full_location_data_for_maintenance(df_full)
             incomplete_maint: dict = {}
             if maint_full_payload is not None:

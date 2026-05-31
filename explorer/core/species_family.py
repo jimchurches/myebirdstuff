@@ -1,7 +1,7 @@
 """eBird taxonomy → species-group (family) mapping for stats and Rankings.
 
 Fetches the same eBird taxonomy CSV and species-group JSON as the **Families** tab
-(:func:`~explorer.app.streamlit.rankings_streamlit_html._build_group_coverage_tables`).
+(:func:`~explorer.app.streamlit.bird_families_streamlit_html.build_group_coverage_tables`).
 Core code uses :func:`build_base_species_to_family_map` with ``functools.lru_cache``;
 Streamlit layers may add separate ``@st.cache_data`` around the loaders.
 

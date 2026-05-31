@@ -134,7 +134,8 @@ STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY = "streamlit_family_map_colour_scheme"
 YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY = "_streamlit_yearly_summary_checklist_payload"
 COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY = "_streamlit_country_tab_checklist_payload"
 CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY = "_streamlit_checklist_stats_work_payload"
-RANKINGS_TAB_BUNDLE_KEY = "_streamlit_rankings_tab_bundle"
+# Ranking & Lists HTML sections + Bird Families coverage tables (full-export prep).
+RANKING_LISTS_FAMILIES_BUNDLE_KEY = "_streamlit_ranking_lists_families_bundle"
 MAINTENANCE_TAB_SYNC_KEY = "_streamlit_maintenance_tab_sync"
 
 # "Show full history" toggles.
