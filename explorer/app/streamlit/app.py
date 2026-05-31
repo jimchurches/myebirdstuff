@@ -51,12 +51,12 @@ triggers a **partial rerun** (not the whole map/checklist pipeline) (refs #75).
 (refs #79).
 
 **Ranking & Lists:** ``cached_full_export_checklist_stats_payload`` + ``format_checklist_stats_bundle``;
-``build_rankings_tab_bundle`` runs in the **prep** spinner pass (above the tab row, with other full-export prep);
+``build_ranking_lists_families_bundle`` runs in the **prep** spinner pass (above the tab row, with other full-export prep);
 **Top N** / **visible rows** / table options are under **Settings → Tables & lists** (batch **Apply**; refs `#81`).
 Nested **Top Lists** / **Interesting Lists** only; **Bird Families** is its own main tab (same prep bundle).
 
 **Bird Families:** :mod:`explorer.app.streamlit.bird_families_streamlit_html` — species-group coverage (refs `#73`);
-prep data from ``build_rankings_tab_bundle`` in session ``RANKINGS_TAB_BUNDLE_KEY``.
+prep data from ``build_ranking_lists_families_bundle`` in session ``RANKING_LISTS_FAMILIES_BUNDLE_KEY``.
 
 **Yearly Summary:** ``yearly_summary_streamlit_html`` — nested **All** / **Travelling** / **Stationary** tabs inside
 ``@st.fragment``; ``st.toggle`` switches recent vs full year columns when count exceeds **Settings → Yearly tables:

@@ -6,7 +6,7 @@ With **no family selected**, the lower panel shows **family-level coverage** in 
 ``stats-tbl`` / ``rankings-tbl`` table; selecting a row shows per-species detail.
 
 Prep attaches coverage tables to the shared rankings session bundle via
-:func:`attach_group_coverage_to_bundle` (called from :func:`~explorer.app.streamlit.rankings_streamlit_html.build_rankings_tab_bundle`).
+:func:`attach_group_coverage_to_bundle` (called from :func:`~explorer.app.streamlit.rankings_streamlit_html.build_ranking_lists_families_bundle`).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from explorer.core.species_family import (
 from explorer.core.species_logic import countable_species_vectorized
 from explorer.core.stats import safe_count
 
-from explorer.app.streamlit.app_constants import RANKINGS_TAB_BUNDLE_KEY
+from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
 from explorer.app.streamlit.defaults import RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
@@ -442,7 +442,7 @@ def render_families_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
 def run_families_streamlit_tab_fragment() -> None:
     """Partial reruns when Bird Families selection/widgets change (rankings prep bundle)."""
     with perf_fragment("families"):
-        bundle = st.session_state.get(RANKINGS_TAB_BUNDLE_KEY) or {}
+        bundle = st.session_state.get(RANKING_LISTS_FAMILIES_BUNDLE_KEY) or {}
         if not bundle:
             st.info("Load checklist data to use Bird Families.")
             return
