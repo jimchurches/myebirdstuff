@@ -70,7 +70,7 @@ def test_family_coverage_summary_metrics_html_group_rows():
     assert "<th colspan=\"2\">" in html_out
 
 
-def test_family_coverage_summary_metrics_includes_world_species_section():
+def test_family_coverage_summary_metrics_integrates_world_species_rows():
     from explorer.app.streamlit.bird_families_streamlit_html import family_coverage_summary_metrics_df
 
     summary = pd.DataFrame(
@@ -82,12 +82,39 @@ def test_family_coverage_summary_metrics_includes_world_species_section():
         }
     )
     out = family_coverage_summary_metrics_df(summary, world_coverage=(752, 11062, 6.8))
-    world_rows = out[out["Section"] == "World species coverage"]
-    assert len(world_rows) == 3
-    assert world_rows.iloc[0]["Metric"] == "Observed species"
-    assert world_rows.iloc[0]["Value"] == "752"
-    assert world_rows.iloc[1]["Value"] == "11,062"
-    assert world_rows.iloc[2]["Value"] == "6.8%"
+    assert "World species coverage" not in set(out["Section"])
+    taxonomy = out[out["Section"] == "Taxonomy"]
+    assert list(taxonomy["Metric"]) == ["Total families", "Total species"]
+    assert taxonomy.iloc[1]["Value"] == "11,062"
+    coverage = out[out["Section"] == "Coverage"]
+    assert list(coverage["Metric"]) == [
+        "Observed families (at least one species)",
+        "Observed species",
+        "Observed families (%)",
+        "Observed species (%)",
+        "Fully recorded families (all species observed)",
+        "Fully recorded families (%)",
+    ]
+    assert coverage.iloc[1]["Value"] == "752"
+    assert coverage.iloc[3]["Value"] == "6.8%"
+
+
+def test_world_species_coverage_list_html_footnote_excludes_extinct_by_default(monkeypatch):
+    from explorer.app.streamlit import bird_families_streamlit_html as bf
+
+    monkeypatch.setattr(bf, "TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE", False)
+    html_out = bf.world_species_coverage_list_html(10, 100, 10.0)
+    assert "Species in eBird taxonomy" in html_out
+    assert "Observed species (%)" in html_out
+    assert "excluded" in html_out.lower()
+
+
+def test_world_species_coverage_list_html_footnote_includes_extinct_when_enabled(monkeypatch):
+    from explorer.app.streamlit import bird_families_streamlit_html as bf
+
+    monkeypatch.setattr(bf, "TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE", True)
+    html_out = bf.world_species_coverage_list_html(10, 100, 10.0)
+    assert "included" in html_out.lower()
 
 
 def test_compute_world_species_coverage_counts_seen_base_species():
@@ -144,3 +171,45 @@ def test_build_group_coverage_tables_excludes_extinct_species_by_default(monkeyp
     assert summary.iloc[0]["total_species"] == 1
     assert len(detail) == 1
     assert bf.compute_world_species_coverage(detail) == (1, 1, 100.0)
+
+
+def test_attach_group_coverage_stores_world_metrics_once(monkeypatch):
+    from explorer.app.streamlit import bird_families_streamlit_html as bf
+
+    tax = pd.DataFrame(
+        [
+            {
+                "scientific_name": "Aves vivus",
+                "common_name": "Living Bird",
+                "species_code": "livbrd",
+                "taxon_order": 10.0,
+                "base_species": "aves vivus",
+                "is_extinct": False,
+            },
+        ]
+    )
+    groups = [{"group_name": "All Birds", "group_order": 1, "bounds": [(0.0, 100.0)]}]
+    df_full = pd.DataFrame(
+        {
+            "Scientific Name": ["Aves vivus"],
+            "Common Name": ["Living Bird"],
+            "Count": [1],
+            "Submission ID": ["s1"],
+            "Date": ["2020-01-01"],
+        }
+    )
+    calls: list[str] = []
+    original = bf.compute_world_species_coverage
+
+    def _counting_compute(detail):
+        calls.append("compute")
+        return original(detail)
+
+    monkeypatch.setattr(bf, "_load_taxonomy_species_rows", lambda _loc: tax)
+    monkeypatch.setattr(bf, "_load_taxonomy_groups", lambda _loc: groups)
+    monkeypatch.setattr(bf, "compute_world_species_coverage", _counting_compute)
+
+    bundle = bf.attach_group_coverage_to_bundle({}, df_full, "en_AU")
+    assert bundle[bf.WORLD_SPECIES_COVERAGE_METRICS_KEY] == (1, 1, 100.0)
+    assert bundle[bf.WORLD_SPECIES_COVERAGE_SECTION_KEY][0] == "World species coverage"
+    assert calls == ["compute"]

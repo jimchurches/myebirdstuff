@@ -12,7 +12,8 @@ Species-group coverage lives on the **Bird Families** main tab
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
 ``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
-include a narrow leading **Rank** column with soft accent styling (refs `#83`). **Species: Not seen in
+include a narrow leading **Rank** column with soft accent styling (refs `#83`). **World species coverage**
+is the first expander under **Interesting Lists** (refs `#262`). **Species: Not seen in
 the past year** is the last expander under Interesting Lists; it lists countable species with no
 observation in the trailing twelve months on the **full export** and is not Top-N–capped (refs `#106`).
 A hint points to the **Country** tab for the in-country, working-set–scoped variant (refs `#108`).
@@ -30,7 +31,10 @@ from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 
 from explorer.app.streamlit.app_caches import cached_full_export_checklist_stats_payload
 from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
-from explorer.app.streamlit.bird_families_streamlit_html import attach_group_coverage_to_bundle
+from explorer.app.streamlit.bird_families_streamlit_html import (
+    WORLD_SPECIES_COVERAGE_SECTION_KEY,
+    attach_group_coverage_to_bundle,
+)
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
@@ -102,7 +106,11 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
         _rankings_expander_sections(list(bundle.get("rankings_sections_top_n") or []))
 
     with tab_int:
-        _rankings_expander_sections(list(bundle.get("rankings_sections_other") or []))
+        sections = list(bundle.get("rankings_sections_other") or [])
+        world_section = bundle.get(WORLD_SPECIES_COVERAGE_SECTION_KEY)
+        if world_section:
+            sections = [world_section] + sections
+        _rankings_expander_sections(sections)
 
 
 @st.fragment
