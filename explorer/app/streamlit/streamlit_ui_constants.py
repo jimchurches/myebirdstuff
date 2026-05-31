@@ -59,6 +59,7 @@ NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Map",
     "Checklist Statistics",
     "Ranking & Lists",
+    "Bird Families",
     "Yearly Summary",
     "Country",
     "Maintenance",

@@ -1,16 +1,17 @@
 """
-**Ranking & Lists** (Streamlit): nested tabs **Top Lists** / **Interesting Lists** / **Families**
-(eBird species groups under the hood; refs `#73`), expanders per list on the first two tabs.
+**Ranking & Lists** (Streamlit): nested tabs **Top Lists** / **Interesting Lists**, expanders per list.
 
 Uses HTML from :func:`explorer.presentation.checklist_stats_display.format_checklist_stats_bundle`
 (``rankings_sections_top_n`` / ``rankings_sections_other``) — same tables as the explorer’s richly-linked HTML tables,
 rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matches **Checklist Statistics**:
 :func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` plus Rankings width scoped under
-``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width). The **Families** tab uses
-``st.dataframe`` with **single-row selection** and a **bounded height** so the summary scrolls inside the grid
-(compact layout). With **no family selected**, the lower panel shows **family-level coverage** in an HTML
-``stats-tbl`` / ``rankings-tbl`` table (group headings + metric rows); selecting a row shows species detail the
-same way.
+``streamlit-checklist-html-ab`` (plus ``streamlit-rankings-html`` for width).
+
+**Bird Families** is a separate main tab (:func:`run_families_streamlit_tab_fragment`); species-group coverage UI
+(eBird groups under the hood; refs `#73`) uses ``st.dataframe`` with **single-row selection** and a **bounded height**
+so the summary scrolls inside the grid (compact layout). With **no family selected**, the lower panel shows
+**family-level coverage** in an HTML ``stats-tbl`` / ``rankings-tbl`` table (group headings + metric rows);
+selecting a row shows species detail the same way. Bundle keys and prep stay in this module.
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
 ``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
@@ -51,7 +52,7 @@ from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_cs
 _STREAMLIT_TABLE_SCOPE = "streamlit-checklist-html-ab"
 _RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"
 
-# Bundle keys and widget/session keys: eBird "group" in code; nested tab label Families (refs #73).
+# Bundle keys and widget/session keys: eBird "group" in code; main tab label Bird Families (refs #73).
 _GROUP_COVERAGE_SUMMARY_KEY = "group_coverage_summary"
 _GROUP_COVERAGE_DETAIL_KEY = "group_coverage_detail"
 _GROUP_COVERAGE_ERROR_KEY = "group_coverage_error"
@@ -336,8 +337,7 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
     """Render Rankings HTML from a precomputed bundle (fragment-safe)."""
     inject_streamlit_checklist_css(_rankings_family_coverage_inject_css())
 
-    # Third tab: species-group coverage (Families label; refs #73).
-    tab_top, tab_int, tab_group = st.tabs(["Top Lists", "Interesting Lists", "Families"])
+    tab_top, tab_int = st.tabs(["Top Lists", "Interesting Lists"])
 
     with tab_top:
         _rankings_expander_sections(list(bundle.get("rankings_sections_top_n") or []))
@@ -345,158 +345,162 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
     with tab_int:
         _rankings_expander_sections(list(bundle.get("rankings_sections_other") or []))
 
-    with tab_group:
-        summary = bundle.get(_GROUP_COVERAGE_SUMMARY_KEY)
-        detail = bundle.get(_GROUP_COVERAGE_DETAIL_KEY)
-        coverage_error = str(bundle.get(_GROUP_COVERAGE_ERROR_KEY) or "").strip()
-        if coverage_error:
-            st.error(f"Family coverage error: {coverage_error}")
-        if not isinstance(summary, pd.DataFrame) or summary.empty:
-            st.info("Family coverage unavailable (taxonomy data not loaded).")
-            return
 
-        display_summary = summary.copy()
-        display_summary["% seen"] = display_summary["percent_seen"].map(lambda x: f"{float(x):.1f}%")
-        display_summary = display_summary.rename(
-            columns={
-                "group_name": "Family",
-                "total_species": "Total species",
-                "seen_species": "Seen species",
-            }
-        )[["Family", "Seen species", "Total species", "% seen"]]
+def render_families_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
+    """Render Bird Families (species-group coverage) from a precomputed bundle (fragment-safe)."""
+    inject_streamlit_checklist_css(_rankings_family_coverage_inject_css())
 
-        fam_values = set(display_summary["Family"].astype(str))
-        _table_key = _STREAMLIT_GROUP_COVERAGE_TABLE_KEY
+    summary = bundle.get(_GROUP_COVERAGE_SUMMARY_KEY)
+    detail = bundle.get(_GROUP_COVERAGE_DETAIL_KEY)
+    coverage_error = str(bundle.get(_GROUP_COVERAGE_ERROR_KEY) or "").strip()
+    if coverage_error:
+        st.error(f"Family coverage error: {coverage_error}")
+    if not isinstance(summary, pd.DataFrame) or summary.empty:
+        st.info("Family coverage unavailable (taxonomy data not loaded).")
+        return
 
-        selection_supported = True
-        try:
-            event = st.dataframe(
-                display_summary,
-                # Match lower HTML tables (``max-width`` on ``.streamlit-rankings-html``; defaults.py).
-                width=RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
-                hide_index=True,
-                height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
-                column_config={
-                    "Family": st.column_config.TextColumn("Family", width="large"),
-                    "Seen species": st.column_config.NumberColumn("Seen", width="small"),
-                    "Total species": st.column_config.NumberColumn("Total", width="small"),
-                    "% seen": st.column_config.TextColumn("% seen", width="small"),
-                },
-                on_select="rerun",
-                selection_mode="single-row",
-                key=_table_key,
-            )
-            selected_rows: list = []
-            if isinstance(event, dict):
-                selected_rows = event.get("selection", {}).get("rows", []) or []
-            if selected_rows:
-                idx = int(selected_rows[0])
-                if 0 <= idx < len(display_summary):
-                    st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = str(
-                        display_summary.iloc[idx]["Family"]
-                    )
-            else:
-                # Empty selection must clear session; otherwise the previous family sticks after deselect.
-                st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = ""
-        except TypeError:
-            selection_supported = False
-            st.dataframe(
-                display_summary,
-                width=RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
-                hide_index=True,
-                height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
-            )
+    display_summary = summary.copy()
+    display_summary["% seen"] = display_summary["percent_seen"].map(lambda x: f"{float(x):.1f}%")
+    display_summary = display_summary.rename(
+        columns={
+            "group_name": "Family",
+            "total_species": "Total species",
+            "seen_species": "Seen species",
+        }
+    )[["Family", "Seen species", "Total species", "% seen"]]
 
-        selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
-        if selected_group not in fam_values:
+    fam_values = set(display_summary["Family"].astype(str))
+    _table_key = _STREAMLIT_GROUP_COVERAGE_TABLE_KEY
+
+    selection_supported = True
+    try:
+        event = st.dataframe(
+            display_summary,
+            # Match lower HTML tables (``max-width`` on ``.streamlit-rankings-html``; defaults.py).
+            width=RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
+            hide_index=True,
+            height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
+            column_config={
+                "Family": st.column_config.TextColumn("Family", width="large"),
+                "Seen species": st.column_config.NumberColumn("Seen", width="small"),
+                "Total species": st.column_config.NumberColumn("Total", width="small"),
+                "% seen": st.column_config.TextColumn("% seen", width="small"),
+            },
+            on_select="rerun",
+            selection_mode="single-row",
+            key=_table_key,
+        )
+        selected_rows: list = []
+        if isinstance(event, dict):
+            selected_rows = event.get("selection", {}).get("rows", []) or []
+        if selected_rows:
+            idx = int(selected_rows[0])
+            if 0 <= idx < len(display_summary):
+                st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = str(
+                    display_summary.iloc[idx]["Family"]
+                )
+        else:
+            # Empty selection must clear session; otherwise the previous family sticks after deselect.
+            st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = ""
+    except TypeError:
+        selection_supported = False
+        st.dataframe(
+            display_summary,
+            width=RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
+            hide_index=True,
+            height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
+        )
+
+    selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
+    if selected_group not in fam_values:
+        selected_group = ""
+        st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = ""
+
+    if not selection_supported:
+        _summary_label = "— Family summary (overview) —"
+        group_options = sorted(summary["group_name"].tolist(), key=lambda s: str(s).lower())
+        opts = [_summary_label] + group_options
+        if selected_group and selected_group in group_options:
+            _pick = selected_group
+        else:
+            _pick = _summary_label
+        pick = st.selectbox(
+            "Select family",
+            options=opts,
+            index=opts.index(_pick) if _pick in opts else 0,
+            key=_STREAMLIT_GROUP_COVERAGE_FALLBACK_KEY,
+        )
+        if pick == _summary_label:
             selected_group = ""
             st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = ""
+        else:
+            selected_group = pick
+            st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
 
-        if not selection_supported:
-            _summary_label = "— Family summary (overview) —"
-            group_options = sorted(summary["group_name"].tolist(), key=lambda s: str(s).lower())
-            opts = [_summary_label] + group_options
-            if selected_group and selected_group in group_options:
-                _pick = selected_group
-            else:
-                _pick = _summary_label
-            pick = st.selectbox(
-                "Select family",
-                options=opts,
-                index=opts.index(_pick) if _pick in opts else 0,
-                key=_STREAMLIT_GROUP_COVERAGE_FALLBACK_KEY,
-            )
-            if pick == _summary_label:
-                selected_group = ""
-                st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = ""
-            else:
-                selected_group = pick
-                st.session_state[_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY] = selected_group
+    selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
+    if selected_group not in fam_values:
+        selected_group = ""
 
-        selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
-        if selected_group not in fam_values:
-            selected_group = ""
+    st.divider()
 
-        st.divider()
+    if not isinstance(detail, pd.DataFrame) or detail.empty:
+        st.info("No family detail available yet.")
+        return
 
-        if not isinstance(detail, pd.DataFrame) or detail.empty:
-            st.info("No family detail available yet.")
-            return
+    if not selected_group:
+        st.markdown("**Family coverage overview**")
+        _overview_html = _family_coverage_summary_metrics_html(summary)
+        if _overview_html:
+            st.markdown(_overview_html, unsafe_allow_html=True)
+        st.markdown('<div style="height:1rem;" aria-hidden="true"></div>', unsafe_allow_html=True)
+        st.markdown(_family_coverage_taxonomy_note_html(), unsafe_allow_html=True)
+        return
 
-        if not selected_group:
-            st.markdown("**Family coverage overview**")
-            _overview_html = _family_coverage_summary_metrics_html(summary)
-            if _overview_html:
-                st.markdown(_overview_html, unsafe_allow_html=True)
-            st.markdown('<div style="height:1rem;" aria-hidden="true"></div>', unsafe_allow_html=True)
-            st.markdown(_family_coverage_taxonomy_note_html(), unsafe_allow_html=True)
-            return
+    selected = detail[detail["group_name"] == selected_group].copy()
+    if selected.empty:
+        st.info("No species found for selected family.")
+        return
+    seen_n = int(selected["seen"].sum())
+    total_n = int(len(selected))
+    pct = (seen_n / total_n * 100.0) if total_n else 0.0
+    st.markdown(f"**{selected_group}: {seen_n}/{total_n} species seen ({pct:.1f}%)**")
 
-        selected = detail[detail["group_name"] == selected_group].copy()
-        if selected.empty:
-            st.info("No species found for selected family.")
-            return
-        seen_n = int(selected["seen"].sum())
-        total_n = int(len(selected))
-        pct = (seen_n / total_n * 100.0) if total_n else 0.0
-        st.markdown(f"**{selected_group}: {seen_n}/{total_n} species seen ({pct:.1f}%)**")
-
-        selected["Species"] = selected.apply(
-            lambda r: (
-                f'<a href="{r["species_url"]}" target="_blank" rel="noopener">{r["common_name"]}</a>'
-                if str(r["species_url"]).strip()
-                else str(r["common_name"])
-            ),
-            axis=1,
+    selected["Species"] = selected.apply(
+        lambda r: (
+            f'<a href="{r["species_url"]}" target="_blank" rel="noopener">{r["common_name"]}</a>'
+            if str(r["species_url"]).strip()
+            else str(r["common_name"])
+        ),
+        axis=1,
+    )
+    selected = selected.sort_values(["seen", "common_name"], ascending=[False, True])
+    html_rows = []
+    for _, r in selected.iterrows():
+        first_cell = r["first_seen"] or "—"
+        if str(r.get("first_sid", "")).strip() and first_cell != "—":
+            first_cell = f'<a href="https://ebird.org/checklist/{r["first_sid"]}" target="_blank" rel="noopener">{first_cell}</a>'
+        last_cell = r["last_seen"] or "—"
+        if str(r.get("last_sid", "")).strip() and last_cell != "—":
+            last_cell = f'<a href="https://ebird.org/checklist/{r["last_sid"]}" target="_blank" rel="noopener">{last_cell}</a>'
+        html_rows.append(
+            "<tr>"
+            f'<td>{r["Species"]}</td>'
+            f'<td style="text-align:right">{int(r["checklists"]):,}</td>'
+            f'<td style="text-align:right">{int(r["individuals"]):,}</td>'
+            f"<td>{first_cell}</td>"
+            f"<td>{last_cell}</td>"
+            "</tr>"
         )
-        selected = selected.sort_values(["seen", "common_name"], ascending=[False, True])
-        html_rows = []
-        for _, r in selected.iterrows():
-            first_cell = r["first_seen"] or "—"
-            if str(r.get("first_sid", "")).strip() and first_cell != "—":
-                first_cell = f'<a href="https://ebird.org/checklist/{r["first_sid"]}" target="_blank" rel="noopener">{first_cell}</a>'
-            last_cell = r["last_seen"] or "—"
-            if str(r.get("last_sid", "")).strip() and last_cell != "—":
-                last_cell = f'<a href="https://ebird.org/checklist/{r["last_sid"]}" target="_blank" rel="noopener">{last_cell}</a>'
-            html_rows.append(
-                "<tr>"
-                f'<td>{r["Species"]}</td>'
-                f'<td style="text-align:right">{int(r["checklists"]):,}</td>'
-                f'<td style="text-align:right">{int(r["individuals"]):,}</td>'
-                f"<td>{first_cell}</td>"
-                f"<td>{last_cell}</td>"
-                "</tr>"
-            )
-        st.markdown(
-            (
-                f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">'
-                "<table class='stats-tbl rankings-tbl'>"
-                "<thead><tr><th>Species</th><th>Checklists</th><th>Individuals</th>"
-                "<th>First seen</th><th>Last seen</th></tr></thead>"
-                f"<tbody>{''.join(html_rows)}</tbody></table></div>"
-            ),
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        (
+            f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">'
+            "<table class='stats-tbl rankings-tbl'>"
+            "<thead><tr><th>Species</th><th>Checklists</th><th>Individuals</th>"
+            "<th>First seen</th><th>Last seen</th></tr></thead>"
+            f"<tbody>{''.join(html_rows)}</tbody></table></div>"
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 @st.fragment
@@ -508,6 +512,19 @@ def run_rankings_streamlit_tab_fragment() -> None:
             st.info("Load checklist data to use Ranking & Lists.")
             return
         render_rankings_streamlit_tab_from_bundle(bundle)
+
+
+@st.fragment
+def run_families_streamlit_tab_fragment() -> None:
+    """Partial reruns when Bird Families selection/widgets change (same bundle as Rankings prep)."""
+    with perf_fragment("families"):
+        bundle = st.session_state.get(RANKINGS_TAB_BUNDLE_KEY) or {}
+        summary = bundle.get(_GROUP_COVERAGE_SUMMARY_KEY)
+        if not isinstance(summary, pd.DataFrame) or summary.empty:
+            if not bundle:
+                st.info("Load checklist data to use Bird Families.")
+            return
+        render_families_streamlit_tab_from_bundle(bundle)
 
 
 def build_rankings_tab_bundle(

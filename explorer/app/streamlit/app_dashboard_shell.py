@@ -13,7 +13,10 @@ from explorer.app.streamlit.app_settings_ui import render_settings_tab
 from explorer.app.streamlit.checklist_stats_streamlit_html import run_checklist_stats_streamlit_fragment
 from explorer.app.streamlit.country_stats_streamlit_html import run_country_tab_streamlit_fragment
 from explorer.app.streamlit.maintenance_streamlit_html import run_maintenance_streamlit_tab_fragment
-from explorer.app.streamlit.rankings_streamlit_html import run_rankings_streamlit_tab_fragment
+from explorer.app.streamlit.rankings_streamlit_html import (
+    run_families_streamlit_tab_fragment,
+    run_rankings_streamlit_tab_fragment,
+)
 from explorer.app.streamlit.streamlit_theme import inject_main_tab_panel_top_compact_css
 from explorer.app.streamlit.streamlit_ui_constants import NOTEBOOK_MAIN_TAB_LABELS
 from explorer.app.streamlit.yearly_summary_streamlit_html import run_yearly_summary_streamlit_fragment
@@ -25,16 +28,20 @@ if TYPE_CHECKING:
 def run_non_map_data_tab_fragments(
     tab_checklist: Any,
     tab_rankings: Any,
+    tab_families: Any,
     tab_yearly: Any,
     tab_country: Any,
     tab_maint: Any,
 ) -> None:
-    """Checklist, Rankings, Yearly, Country, Maintenance tabs (refs #118)."""
+    """Checklist, Rankings, Bird Families, Yearly, Country, Maintenance tabs (refs #118)."""
     with tab_checklist:
         run_checklist_stats_streamlit_fragment()
 
     with tab_rankings:
         run_rankings_streamlit_tab_fragment()
+
+    with tab_families:
+        run_families_streamlit_tab_fragment()
 
     with tab_yearly:
         run_yearly_summary_streamlit_fragment()
@@ -62,6 +69,7 @@ def render_dashboard_shell(
         tab_map,
         tab_checklist,
         tab_rankings,
+        tab_families,
         tab_yearly,
         tab_country,
         tab_maint,
@@ -98,6 +106,7 @@ def render_dashboard_shell(
     run_non_map_data_tab_fragments(
         tab_checklist,
         tab_rankings,
+        tab_families,
         tab_yearly,
         tab_country,
         tab_maint,
