@@ -1,4 +1,4 @@
-"""Load the eBird export DataFrame from disk or upload (refs #98)."""
+"""Load the eBird export DataFrame from disk or session upload."""
 
 from __future__ import annotations
 

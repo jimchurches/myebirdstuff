@@ -1,5 +1,5 @@
 """
-Optional GitHub release vs embedded build notice for local runs (refs #189).
+Optional GitHub release vs embedded build notice for local runs.
 
 Uses ``@st.cache_data`` (24h TTL) for the GitHub API call so reruns do not hammer the network.
 """

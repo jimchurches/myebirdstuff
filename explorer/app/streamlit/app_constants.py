@@ -1,5 +1,5 @@
 """
-Shared literals for the Streamlit app: repo path, session-state key strings, and injected CSS (refs #98).
+Shared literals for the Streamlit app: repo path, session-state key strings, and injected CSS.
 
 ``REPO_ROOT`` is resolved from this package path (`explorer/app/streamlit`) for disk resolution and settings paths.
 """
@@ -43,7 +43,7 @@ MAP_VIEW_LABEL_TO_MODE = {
 
 SETTINGS_PANEL_CSS = f"""
 <style>
-/* Cap slider/track width on wide screens; stays full width when the block is narrow (refs #70). */
+/* Cap slider/track width on wide screens; stays full width when the block is narrow. */
 div[data-testid="stVerticalBlockBorderWrapper"].st-key-ebird_settings_panel,
 div.st-key-ebird_settings_panel {{
     max-width: min(100%, {SETTINGS_PANEL_MAX_WIDTH_REM}rem);
@@ -96,7 +96,7 @@ DEFAULT_CLOSE_LOCATION_METERS = MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT
 DEFAULT_TAXONOMY_LOCALE = TAXONOMY_LOCALE_DEFAULT
 
 # ---------------------------------------------------------------------------
-# Streamlit session-state key names (refs #99)
+# Streamlit session-state key names
 # ---------------------------------------------------------------------------
 # Keep session-state keys (especially ``streamlit_*`` and internal ``_streamlit_*``)
 # in one place to avoid typos and hard-to-find mismatches during refactors.
@@ -127,7 +127,7 @@ EXPORT_MAP_HTML_DOWNLOAD_BTN_KEY = "export_map_html_download_btn"
 EXPORT_MAP_HTML_AUTO_DOWNLOAD_KEY = "_export_map_html_auto_download_v1"
 EXPORT_MAP_HTML_ERROR_KEY = "export_map_html_error"
 
-# Family map tab widget keys (refs #138). Highlight key is suffixed with selected family in the UI.
+# Family map tab widget keys; highlight key is suffixed with selected family in the UI.
 STREAMLIT_FAMILY_MAP_FAMILY_KEY = "streamlit_family_map_family"
 STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY = "streamlit_family_map_highlight"
 # Session key string kept for backwards compatibility with saved browser sessions.
@@ -147,7 +147,7 @@ STREAMLIT_COUNTRY_YEARLY_SHOW_FULL_KEY = "streamlit_country_yearly_show_full"
 
 # Country selectbox key.
 STREAMLIT_COUNTRY_TAB_COUNTRY_KEY = "streamlit_country_tab_country"
-# Country tab: not-seen-recently block — wrapper constrains width; expander key is inner (refs #108).
+# Country tab: not-seen-recently block — wrapper constrains width; expander key is inner.
 STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY = "streamlit_country_not_seen_wrap"
 STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY = "streamlit_country_not_seen_expander"
 
@@ -159,7 +159,7 @@ STREAMLIT_MARK_LAST_SEEN_KEY = "streamlit_mark_last_seen"
 # All locations + Lifer locations maps (species / family maps never cluster).
 # Runtime: sidebar toggle on All locations; Lifer reads same preference. Map build + cache signature.
 STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
-# All locations map: single control — fit all / centre of gravity / per-country fit (refs #166).
+# All locations map: fit all / centre of gravity / per-country fit scope control.
 STREAMLIT_ALL_LOCATIONS_SCOPE_KEY = "streamlit_all_locations_scope"
 # Blank-map viewport recipe (session only): derived from all-data All locations scope (non-country).
 STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY = "_streamlit_blank_map_default_viewport_recipe"
@@ -173,7 +173,7 @@ STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY = "_streamlit_map_basemap_apply_from_set
 STREAMLIT_MAP_BASEMAP_SAVED_KEY = "streamlit_map_basemap_saved"
 STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY = "_streamlit_map_height_apply_from_settings_pending"
 STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY = "streamlit_map_height_px_saved"
-# Map marker palette (1–3): persisted default + sidebar radio; Settings → Save defers apply (refs #147).
+# Map marker palette (1–3): persisted default + sidebar radio; Settings → Save defers apply.
 STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY = "_streamlit_map_marker_colour_scheme_apply_pending"
 STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY = "streamlit_map_marker_colour_scheme_saved"
 
@@ -195,7 +195,7 @@ PERSIST_SPECIES_COMMON_KEY = "_preserve_streamlit_species_common"
 PERSIST_SPECIES_SCI_KEY = "_preserve_streamlit_species_sci"
 SESSION_PREV_MAP_VIEW_KEY = "_streamlit_prev_map_view_mode"
 SESSION_SPECIES_SEARCH_KEY = "streamlit_species_searchbox"
-# Bumped on search reset so ``st_searchbox`` remounts with an empty field (refs #73).
+# Bumped on search reset so ``st_searchbox`` remounts with an empty field.
 SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY = "_streamlit_species_search_remount_nonce"
 SESSION_SPECIES_WS_KEY = "_ws_for_species_search_fragment"
 SESSION_SPECIES_IX_KEY = "_streamlit_species_whoosh_ix"
@@ -203,7 +203,7 @@ SESSION_SPECIES_IX_SIG_KEY = "_streamlit_species_whoosh_ix_sig"
 SESSION_SPECIES_PICK_KEY = "_streamlit_species_pick_common"
 # Incremented once per ``main()`` run (fragment-only reruns do not execute ``main``).
 EXPLORER_MAIN_SCRIPT_RUN_ID_KEY = "_explorer_main_script_run_id"
-# Optional performance instrumentation (``EXPLORER_PERF=1``); refs #179.
+# Optional performance instrumentation (``EXPLORER_PERF=1``).
 EXPLORER_PERF_EVENTS_KEY = "_explorer_perf_events"
 EXPLORER_PERF_DATASET_CTX_KEY = "_explorer_perf_dataset_ctx"
 EXPLORER_PERF_MAX_EVENTS = 2500
@@ -229,7 +229,7 @@ LEAFLET_EXPORT_HTML_CACHE_KEY = "_leaflet_export_html_cache_v1"
 LEAFLET_EXPORT_RECIPE_KEY = "_leaflet_export_recipe_v1"
 # Cache-key tuple for the last built Leaflet export matching the current recipe.
 LEAFLET_EXPORT_BUILT_CACHE_KEY = "_leaflet_export_built_cache_key_v1"
-# Go to GPS — session-only temporary marker (refs #199); never persisted to YAML.
+# Go to GPS — session-only temporary marker; never persisted to YAML.
 SESSION_GO_TO_GPS_PIN_KEY = "_session_go_to_gps_pin"
 STREAMLIT_GO_TO_GPS_DRAFT_LAT_TEXT_KEY = "_streamlit_go_to_gps_draft_lat_txt"
 STREAMLIT_GO_TO_GPS_DRAFT_LON_TEXT_KEY = "_streamlit_go_to_gps_draft_lon_txt"
@@ -269,7 +269,7 @@ SETTINGS_SESSION_KEYS = (
 
 SPINNER_THEME_CSS = f"""
 <style>
-/* ``st.spinner`` — text-style (no pill): theme greens on icon + label only (refs #74). */
+/* ``st.spinner`` — text-style (no pill): theme greens on icon + label only. */
 /* Modern Streamlit uses an icon spinner (``iconValue: spinner``), not a CSS border ring. */
 div[data-testid="stSpinner"],
 div[data-testid="stSpinner"].stSpinner {{
@@ -337,7 +337,7 @@ div[data-testid="stSpinner"] div[class*="Spinner"] {{
   width: 100%;
 }}
 /* Bottom region (spinner, export, footer): sticky within the sidebar scroll area only — no separate
-   “panel” colour or min-height (those read as an empty box when idle; refs #124). */
+   “panel” colour or min-height (those read as an empty box when idle). */
 [data-testid="stSidebar"] .ebird-sidebar-bottom-slot {{
   position: sticky;
   bottom: 0;

@@ -1,4 +1,4 @@
-"""Settings tab UI for the Streamlit app (refs #118).
+"""Settings tab UI for the Streamlit app.
 
 Extracted from :mod:`explorer.app.streamlit.app` so ``main()`` stays orchestration-heavy
 rather than embedding the full settings forms and captions.

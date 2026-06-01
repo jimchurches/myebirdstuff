@@ -47,10 +47,10 @@ MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 9
 MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
 # When True (plugin default), markers outside the viewport are removed for performance; after
 # programmatic ``fitBounds`` some markers can fail to appear until the user zooms/pans. False keeps
-# all cluster children in the layer so the map matches expectations (refs #166).
+# all cluster children in the layer so the map matches expectations after programmatic fitBounds.
 MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS = False
 
-# Marker cluster — Lifer locations map (same plugin; tunables split for independent tuning, refs #240).
+# Marker cluster — Lifer locations map (same plugin; tunables split for independent tuning).
 MAP_LIFER_LOCATION_CLUSTER_MAX_RADIUS_PX = 40
 MAP_LIFER_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 7
 MAP_LIFER_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
@@ -68,7 +68,7 @@ MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 1.0
 MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
 MAP_LEGEND_PIN_DOT_PX = 8
 MAP_LEGEND_PIN_BORDER_PX = 2
-MAP_POPUP_MAX_WIDTH_PX = 420  # Leaflet popup maxWidth; card-like popups (refs #145).
+MAP_POPUP_MAX_WIDTH_PX = 420  # Leaflet popup maxWidth; card-like popups. Codegen: scripts/generate_basemap_assets.py.
 # Family-locations map initial ``fit_bounds``; not tied to marker colour presets.
 MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX = 48
 MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM = 6
@@ -97,16 +97,15 @@ MAP_SPECIES_DEFAULT_ZOOM = 5
 MAP_SPECIES_FIT_BOUNDS_PADDING_PX = 48
 MAP_SPECIES_FIT_BOUNDS_MAX_ZOOM = 7
 MAP_SPECIES_SINGLE_POINT_ZOOM = 8
-# Go to GPS temporary pin: fitBounds max zoom (session-only marker; refs #199).
+# Go to GPS temporary pin: fitBounds max zoom (session-only marker).
 MAP_GO_TO_GPS_MAX_ZOOM = 10
 
-# Lifer-locations map: initial fit_bounds (not colour-scheme settings). Framing uses base-species
-# lifer pins only; subspecies-only pins do not affect bounds (refs #105).
+# Lifer-locations map initial fit_bounds uses base-species lifer pins only; subspecies-only pins do not affect bounds.
 MAP_LIFER_MAP_FIT_BOUNDS_PADDING_PX = 48
 MAP_LIFER_MAP_FIT_BOUNDS_MAX_ZOOM = 6
 MAP_LIFER_MAP_SINGLE_POINT_ZOOM = 9
 
-# Character shown for Macaulay Library media links in map popups (refs #145).
+# Character shown for Macaulay Library media links in map popups.
 # Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).
 MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
 
@@ -139,7 +138,7 @@ MAP_SPECIES_HIDE_ONLY_DEFAULT = True
 MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer locations", "Family locations")
 
 # ---------------------------------------------------------------------------
-# Map marker colour schemes (Leaflet circle markers; refs #138)
+# Map marker colour schemes (Leaflet circle markers)
 #
 # Fallback when a scheme has no ``global_defaults.radius_px`` (design utility / migration).
 MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK = 2
@@ -386,9 +385,9 @@ MAP_MARKER_ACTIVE_COLOUR_SCHEME: int = 1
 
 
 def active_map_marker_colour_scheme(scheme_index: int | None = None) -> MapMarkerColourScheme:
-    """Return the map-marker style bundle for *scheme_index* ``1``, ``2``, or ``3`` (refs #138).
+    """Return the map-marker style bundle for *scheme_index* ``1``, ``2``, or ``3``.
 
-    When *scheme_index* is ``None``, uses :data:`MAP_MARKER_ACTIVE_COLOUR_SCHEME` (Reds by default).
+    When *scheme_index* is ``None``, uses :data:`MAP_MARKER_ACTIVE_COLOUR_SCHEME`.
     Unknown indices fall back to scheme ``1``.
     """
     n = int(MAP_MARKER_ACTIVE_COLOUR_SCHEME if scheme_index is None else scheme_index)
@@ -419,7 +418,7 @@ RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX = 1400
 RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT = "shading"
 
 # Bird Families / taxonomy coverage: when False, extinct species are excluded from denominators
-# and family/world coverage tables (refs #262).
+# and family/world coverage tables.
 TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE = False
 
 
