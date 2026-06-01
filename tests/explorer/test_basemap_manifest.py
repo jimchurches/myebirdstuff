@@ -34,7 +34,7 @@ def test_basemap_manifest_options_labels_and_tiles():
         assert component[key]["opts"]["maxZoom"] == export[key]["opts"]["maxZoom"]
 
 
-def test_generated_basemap_ts_is_fresh():
+def test_generated_map_assets_are_fresh():
     result = subprocess.run(
         [sys.executable, str(_REPO_ROOT / "scripts/generate_basemap_assets.py"), "--check"],
         cwd=_REPO_ROOT,

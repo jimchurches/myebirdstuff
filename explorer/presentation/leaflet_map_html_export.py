@@ -42,6 +42,13 @@ def _read_static(name: str) -> str:
     return (_STATIC / name).read_text(encoding="utf-8")
 
 
+def _read_export_viewer_js() -> str:
+    """Concatenate generated popup constants with the hand-written export viewer."""
+    constants = _read_static("leaflet_map_export_constants.generated.js")
+    viewer = _read_static("leaflet_map_export.js")
+    return f"{constants}\n{viewer}"
+
+
 def _extract_style_inner(css_bundle: str) -> str:
     parts = re.findall(r"<style[^>]*>(.*?)</style>", css_bundle, flags=re.DOTALL | re.IGNORECASE)
     return "\n".join(p.strip() for p in parts if p.strip())
@@ -84,7 +91,7 @@ def leaflet_map_to_html_bytes(
     if _COMPONENT_CSS.is_file():
         popup_css = _COMPONENT_CSS.read_text(encoding="utf-8")
     page_css = _read_static("leaflet_map_export_page.css")
-    viewer_js = _read_static("leaflet_map_export.js")
+    viewer_js = _read_export_viewer_js()
     esc_title = html_module.escape(title, quote=False)
     banner = (banner_html or "").strip()
     legend = (legend_html or "").strip()

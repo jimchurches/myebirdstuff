@@ -2,8 +2,7 @@
 (function () {
   "use strict";
 
-  /* Popup shrink-wrap — keep in sync with AllLocationsMap.tsx (live component iframe). */
-  var POPUP_MAX_WIDTH_PX = 420;
+  /* POPUP_MAX_WIDTH_PX is defined in leaflet_map_export_constants.generated.js (from defaults.py). */
   var POPUP_SHRINK_WIDTH_BUFFER_PX = 48;
   var POPUP_SHRINK_MIN_CONTENT_WIDTH_PX = 140;
   var POPUP_WIDE_MEASURE_SELECTOR =
