@@ -1,4 +1,4 @@
-"""Sidebar “Go to GPS” expander for All locations / Species locations maps (refs #199)."""
+"""Sidebar “Go to GPS” expander for All locations and Species locations maps."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def go_to_gps_pin_from_session() -> tuple[float, float] | None:
 
 
 def _try_split_pasted_lat_lon() -> None:
-    """If either field contains a ``lat, lon`` paste, split into both fields (refs #199)."""
+    """If either field contains a ``lat, lon`` paste, split into both fields."""
     lat_s = str(st.session_state.get(STREAMLIT_GO_TO_GPS_DRAFT_LAT_TEXT_KEY, "")).strip()
     lon_s = str(st.session_state.get(STREAMLIT_GO_TO_GPS_DRAFT_LON_TEXT_KEY, "")).strip()
     for raw in (lat_s, lon_s):

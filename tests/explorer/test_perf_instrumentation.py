@@ -1,4 +1,4 @@
-"""Tests for optional Explorer performance instrumentation (refs #179)."""
+"""Tests for optional Explorer performance instrumentation."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 """
 HTML builders for the Maintenance tab (map duplicates, incomplete checklists, sex notation).
 
-Extracted from the UI layer for reuse (e.g. Streamlit); refs #69, #79.
+Extracted from the UI layer for reuse (e.g. Streamlit maintenance tab).
 """
 
 from __future__ import annotations
@@ -16,8 +16,8 @@ from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 # eBird location edit URL (merge/delete personal locations), not lifelist.
 EBIRD_LOCATION_EDIT_BASE = "https://ebird.org/mylocations/edit/"
 
-# Shared; Streamlit ``stats-tbl`` / ``stats-tbl-maint`` rules live in
-# ``checklist_stats_display._streamlit_checklist_html_tab_css`` (refs #79).
+# Streamlit ``stats-tbl`` / ``stats-tbl-maint`` rules live in
+# ``checklist_stats_display._streamlit_checklist_html_tab_css``.
 MAINTENANCE_TABLE_CLASSES = "maint-tbl stats-tbl stats-tbl-maint"
 MAINTENANCE_PAIR_TABLE_CLASSES = "maint-tbl stats-tbl stats-tbl-maint maint-pair-tbl"
 
@@ -201,7 +201,7 @@ def map_maintenance_table_sections_from_data(
     near_pairs: List[Any],
     threshold_m: int,
 ) -> Tuple[str, str, str]:
-    """Location maintenance HTML from precomputed duplicate/near-duplicate results (refs #79)."""
+    """Location maintenance HTML from precomputed duplicate/near-duplicate results."""
     intro = map_maintenance_intro_html()
     exact = map_maintenance_exact_duplicates_body_html(exact_rows)
     close_ = map_maintenance_close_locations_body_html(near_pairs, threshold_m)
@@ -211,7 +211,7 @@ def map_maintenance_table_sections_from_data(
 def map_maintenance_table_sections_html(loc_df: pd.DataFrame, threshold_m: int) -> Tuple[str, str, str]:
     """Location maintenance: intro + exact-duplicates block + close-locations block (inner HTML only).
 
-    Single call to :func:`get_map_maintenance_data` (refs #79).
+    Single call to :func:`get_map_maintenance_data` for exact and near-duplicate rows.
     """
     exact_rows, near_pairs = get_map_maintenance_data(loc_df, threshold_m)
     return map_maintenance_table_sections_from_data(exact_rows, near_pairs, threshold_m)
@@ -296,7 +296,7 @@ def format_sex_notation_maintenance_html(
     sex_notation_by_year: Dict[Any, List[Tuple[Any, ...]]],
     species_url_fn: Optional[Callable[[str], Optional[str]]] = None,
 ) -> str:
-    """HTML for sex-notation strings in checklist comments, grouped by year (refs #56)."""
+    """HTML for sex-notation strings in checklist comments, grouped by year."""
     if not sex_notation_by_year:
         return ""
     explanation = sex_notation_intro_html()

@@ -1,4 +1,4 @@
-"""Tests for checklist-style HTML table helpers (refs #117)."""
+"""Tests for checklist-style HTML table helpers."""
 
 import html as html_module
 

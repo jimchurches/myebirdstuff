@@ -1,7 +1,7 @@
 """
 HTML rendering for checklist statistics, yearly summary, and rankings sections.
 
-Consumes :class:`ChecklistStatsPayload` from ``checklist_stats_compute`` (refs #68).
+Consumes :class:`ChecklistStatsPayload` from ``checklist_stats_compute``.
 """
 
 from __future__ import annotations
@@ -161,7 +161,7 @@ def sort_country_sections_for_display(
     country_sections: List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]],
     country_sort: str,
 ) -> List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]]:
-    """Order country sections for Country tab / HTML (refs #91).
+    """Order country sections for Country tab / HTML.
 
     *country_sort*: ``alphabetical`` | ``lifers_world`` | ``total_species`` — same keys as
     :data:`COUNTRY_TAB_SORT_*` in :mod:`explorer.core.constants`.
@@ -206,7 +206,7 @@ def _format_country_summary_html(
         if not years_list or not rows:
             continue
         title = _country_accordion_title(country_key)
-        # Same table fragment as :func:`format_country_yearly_table_html` (refs #75, single source of truth).
+        # Same table fragment as :func:`format_country_yearly_table_html` (single source of truth).
         table_html = format_country_yearly_table_html(
             country_key, years_list, rows, inline_statistic_links=True
         )
@@ -305,7 +305,7 @@ def country_yearly_links_bar_html(country_key: str) -> str:
     return f'<p class="stats-links-row">{sep.join(parts)}</p>'
 
 
-# Shared stats panel HTML and Streamlit HTML tab (refs #70).
+# Shared stats panel HTML and Streamlit HTML tab CSS.
 CHECKLIST_STATS_TABLE_CSS = """
     .stats-info-icon { position:relative; display:inline-block; margin-left:4px; }
     .stats-info-glyph { cursor:help; opacity:0.7; }
@@ -315,9 +315,9 @@ CHECKLIST_STATS_TABLE_CSS = """
     .stats-col:last-child .stats-info-tooltip { left:0; right:auto; }
     .stats-tbl-3 th:nth-child(2), .stats-tbl-3 td:nth-child(2) { text-align:center; }
     .rankings-tbl td:first-child { font-weight:normal; }
-    /* Scroll area: slight top inset so header sits below strongest part of top fade (refs #81). */
+    /* Scroll area: slight top inset so header sits below strongest part of top fade. */
     .rankings-scroll-inner { box-sizing: border-box; padding-top: 0.5rem; }
-    /* Subspecies: scientific names share table/summary font size; muted color only (refs #81). */
+    /* Subspecies: scientific names share table/summary font size; muted color only. */
     .subspecies-sci-secondary { color: #6b7280; font-size: inherit; line-height: inherit; font-weight: inherit; }
     """
 
@@ -326,7 +326,7 @@ CHECKLIST_STATS_TABLE_CSS = """
 #
 # **Default:** green accents + zebra (``#1f6f54`` — aligns with ``.streamlit/config.toml`` primary).
 # **Alternate:** ``CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE`` (eBird-style blue); Streamlit enables
-# it via ``USE_EBIRD_BLUE_HTML_TAB_THEME`` in ``explorer/app/streamlit/streamlit_theme.py`` (refs #95).
+# it via ``USE_EBIRD_BLUE_HTML_TAB_THEME`` in ``explorer/app/streamlit/streamlit_theme.py``.
 #
 # Typography aligned with Streamlit nested ``st.tabs`` labels (~13px / normal weight in default theme).
 def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
@@ -345,7 +345,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
         text_fb = "#1a2e22"
         p_fallback = "26, 46, 34"
     # Opaque zebra/header fills for sticky yearly first column (semi-transparent rgba shows
-    # scrolling cells through; blend accent onto same base as .stats-tbl background — refs #85).
+    # scrolling cells through; blend accent onto same base as .stats-tbl background).
     _base_tbl = (250, 252, 250)  # #fafcfa — matches var(--background-color, #fafcfa)
 
     def _opaque_accent_on_base(alpha: float) -> str:
@@ -440,7 +440,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 }}
 /* Multi-column yearly tables (country + global Yearly Summary): undo fixed layout squeeze.
    Default .stats-tbl uses table-layout:fixed + width:100%, which splits many year columns
-   equally and wraps headers/values; use content-sized columns + nowrap (refs #85). */
+   equally and wraps headers/values; use content-sized columns + nowrap. */
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly {{
   table-layout: auto;
   width: max-content;
@@ -464,7 +464,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 .streamlit-checklist-html-ab.streamlit-yearly-summary-ab {{
   max-width: 100%;
 }}
-/* First column: statistic labels + sticky “freeze” while scrolling horizontally (refs #85). */
+/* First column: statistic labels + sticky “freeze” while scrolling horizontally. */
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly th:first-child,
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-yearly td:first-child {{
   width: 16rem;
@@ -507,7 +507,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   padding-right: 0.45rem;
   box-sizing: border-box;
 }}
-/* Maintenance tab: multi-column tables share stats-tbl chrome; undo 2-col KV widths (refs #79). */
+/* Maintenance tab: multi-column tables share stats-tbl chrome; undo 2-col KV widths. */
 .streamlit-checklist-html-ab .stats-tbl.stats-tbl-maint th {{
   padding: 0.45rem 0.7rem;
   border-bottom: 1px solid rgba({acc}, 0.2);
@@ -597,7 +597,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
     color: rgba({p_fallback}, 0.7);
   }}
 }}
-/* Rankings & lists (refs #81): ``.stats-tbl`` defaults assume 2-col KV tables — rankings use 3–6 columns.
+/* Rankings & lists: ``.stats-tbl`` defaults assume 2-col KV tables — rankings use 3–6 columns.
    Reset widths + match maintenance-style header band so expanders match other Streamlit HTML tabs. */
 .streamlit-checklist-html-ab .stats-tbl.rankings-tbl thead th {{
   padding: 0.45rem 0.7rem;
@@ -607,7 +607,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   font-weight: 600;
   background: rgba({acc}, 0.09);
 }}
-/* Scroll area: top padding under scroll fade (refs #81). */
+/* Scroll area: top padding under scroll fade. */
 .streamlit-checklist-html-ab .rankings-scroll-inner {{
   box-sizing: border-box;
   padding-top: 0.5rem;
@@ -621,7 +621,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
 }}
 /* Location / visited rankings: align plain-text columns with Checklist Statistics KV labels
    (proportional numerals, 400). Checklist uses tabular-nums only on the value column; we were
-   applying tabular-nums to every cell here, which subtly changes state/country (refs #81). */
+   applying tabular-nums to every cell here, which subtly changes state/country appearance. */
 .streamlit-checklist-html-ab .stats-tbl.location-cols-tbl th {{
   text-align: left;
   font-variant-numeric: normal;
@@ -672,7 +672,7 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }}
-/* #83: soft accent + smaller type for leading Rank (Top Lists location tables + species rank-tbl). */
+/* Soft accent + smaller type for leading Rank column (Top Lists location tables + species rank-tbl). */
 .streamlit-checklist-html-ab .stats-tbl.rank-tbl.rank-col-soft-accent th:nth-child(1),
 .streamlit-checklist-html-ab .stats-tbl.rank-tbl.rank-col-soft-accent td:nth-child(1),
 .streamlit-checklist-html-ab .stats-tbl.location-cols-tbl.rank-col-soft-accent th:nth-child(1),
@@ -856,7 +856,7 @@ _YEARLY_INFO_ICON_RE = re.compile(
     re.DOTALL,
 )
 
-# Order for traveling / stationary detail rows (refs #85).
+# Order for traveling / stationary detail rows.
 _YEARLY_TRAVELING_ORDER = [
     "Total distance (km)",
     "Average distance (km)",
@@ -876,7 +876,7 @@ _YEARLY_STREAMLIT_CAPTION_STYLE = (
     "margin:10px 0 0;color:#6b7280;font-size:12px;line-height:1.5;max-width:52rem;"
 )
 
-# Streamlit Yearly Summary: default to the most recent N calendar years when count exceeds this (refs #85).
+# Streamlit Yearly Summary: default to the most recent N calendar years when count exceeds this.
 YEARLY_STREAMLIT_RECENT_YEAR_COUNT = 10
 
 # Shown below the Yearly Summary toggle in ``yearly_summary_streamlit_html`` (not embedded in All-tab HTML).
@@ -888,7 +888,7 @@ YEARLY_STREAMLIT_ALL_TAB_PROTOCOL_NOTE = (
 
 
 def format_yearly_streamlit_all_tab_protocol_note_html() -> str:
-    """HTML for the protocol note below the Yearly Summary toggle (refs #85).
+    """HTML for the protocol note below the Yearly Summary toggle.
 
     Wrapped in ``.streamlit-checklist-html-ab`` so the ``<p>`` picks up the same scoped ``> p`` rules
     as tables in this tab, with ``_YEARLY_STREAMLIT_CAPTION_STYLE`` inline (same as old footnotes).
@@ -905,7 +905,7 @@ def format_yearly_streamlit_all_tab_protocol_note_html() -> str:
 
 
 def strip_yearly_stats_info_icons(label_html: str) -> str:
-    """Remove inline ``stats-info-icon`` spans from yearly row labels (Streamlit yearly tab; refs #85)."""
+    """Remove inline ``stats-info-icon`` spans from yearly row labels (Streamlit yearly tab)."""
     return _YEARLY_INFO_ICON_RE.sub("", label_html or "").strip()
 
 
@@ -998,7 +998,7 @@ def _slice_yearly_row_vals(vals: List[str], years_list: List[Any], s: slice) -> 
     """Slice per-year cells in lockstep with *years_list*.
 
     Country yearly rows often end with a **Total** column (``len(vals) == len(years_list) + 1``).
-    That tail must be dropped, sliced, or recomputed so headers stay aligned (#85).
+    That tail must be dropped, sliced, or recomputed so headers stay aligned.
     """
     n = len(years_list)
     n_disp = len(years_list[s])
@@ -1028,7 +1028,7 @@ def slice_yearly_table_rows(
     years_list: List[Any],
     s: slice,
 ) -> List[Tuple[str, List[str]]]:
-    """Slice each row's per-year values in lockstep with *years_list* (e.g. Country yearly table; #85)."""
+    """Slice each row's per-year values in lockstep with *years_list* (e.g. Country yearly table)."""
     return [(lab, _slice_yearly_row_vals(vals, years_list, s)) for lab, vals in rows]
 
 
@@ -1079,7 +1079,7 @@ def build_yearly_summary_streamlit_tab_html_dict(
     show_full_history: bool = False,
     recent_year_count: int = YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
 ) -> Optional[Dict[str, str]]:
-    """Build inner HTML for Streamlit Yearly Summary nested tabs (All / Travelling / Stationary; refs #85).
+    """Build inner HTML for Streamlit Yearly Summary nested tabs (All / Travelling / Stationary).
 
     When ``len(years_list) > recent_year_count`` and *show_full_history* is false, only the most
     recent *recent_year_count* years are shown (columns), preserving ordering.
@@ -1538,7 +1538,7 @@ def format_rankings_tab_html(
     *,
     top_n_limit: int,
 ) -> str:
-    """Wrap Rankings tab sections in accordions (same styling as Maintenance tab). Refs #69."""
+    """Wrap Rankings tab sections in accordions (same styling as Maintenance tab)."""
 
     def _details_block(title: str, html_body: str) -> str:
         return f"""

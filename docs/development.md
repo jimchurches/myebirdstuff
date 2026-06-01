@@ -64,7 +64,7 @@ npm run build
 
 `npm audit` without `--omit=dev` may report dev-toolchain issues from `react-scripts` (e.g. `webpack-dev-server`); CI does **not** fail on those. Review `package-lock.json` updates like Python `requirements.txt`.
 
-**Map HTML export (sidebar):** Lazy build on user action; one-click download via Streamlit + optional auto-click. If users report failed exports, see [map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) for a two-button fallback design and browser-risk notes.
+**Map HTML export (sidebar):** Lazy build on user action; one-click download via Streamlit + optional auto-click. If users report failed exports, see [map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) for a two-button fallback design and browser-risk notes. Export is infrequent and not on the live map hot path — a larger self-contained HTML file (e.g. full basemap defs in the embedded config) is an intentional tradeoff; optimise Streamlit map perf first.
 
 ### Map architecture (production)
 
@@ -77,6 +77,8 @@ All four **Map view** modes use the same Streamlit custom component (`explorer/c
 | Embed | `render_all_locations_map_component` in component `__init__.py` | `declare_component` + committed `frontend/build` iframe |
 | Client | `frontend/src/AllLocationsMap.tsx` (+ `AllLocationsMapLeaflet.ts`, `AllLocationsMapPopupHtml.ts`, `AllLocationsMapPopupSizing.ts`, `allLocationsMapTypes.ts`) | Leaflet map, MarkerCluster, popup templates (`AllLocationsMapPopup.css`) |
 | Export | `explorer/presentation/leaflet_map_html_export.py` | Standalone HTML (CDN Leaflet) from cached recipe (`LEAFLET_EXPORT_*` keys) |
+
+**Basemaps:** single manifest at `explorer/data/basemaps.yaml` (keys, labels, tile URLs). Python loads it via `explorer/core/basemap_manifest.py` (`MAP_BASEMAP_OPTIONS`, `MAP_BASEMAP_LABELS`). Regenerate the React tile config with `python3 scripts/generate_basemap_assets.py` (also run from `scripts/build_all_locations_map_frontend.py`). HTML export embeds tile defs from the same manifest at export time (`leaflet_map_html_export.py` → `leaflet_map_export.js`).
 
 **Historical performance notes** (#222): [`issue-222-plain-summary.md`](explorer/issue-222-plain-summary.md) (plain language), [`issue-222-section-8-baseline.md`](explorer/issue-222-section-8-baseline.md) (tables + re-run), [`issue-222-section-8-prior-art.md`](explorer/issue-222-section-8-prior-art.md) (Folium-era context). Re-run: `./scripts/run_post_leaflet_perf_baseline.sh`.
 
@@ -357,7 +359,7 @@ regressions can be diagnosed quickly without re-adding scaffolding.
 
 ### Explorer E2E (Playwright) and perf guardrails
 
-- **Smoke + journeys** (fixture CSV via temp `config`): `pip install playwright` ·
+- **Smoke + journeys** (fixture CSV via temp `config` under pytest `tmp_path`; `EXPLORER_CONFIG_DIR` — never touches repo `config/config_secret.yaml`): `pip install playwright` ·
   `python -m playwright install chromium` ·  
   `pytest tests/explorer/test_streamlit_map_e2e.py tests/explorer/test_streamlit_journeys_e2e.py -m e2e -v`
 - **Opt-in perf + JSONL capture** (sets ``EXPLORER_PERF_LOG_FILE`` in the test fixture):  

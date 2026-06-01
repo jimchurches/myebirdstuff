@@ -9,6 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from explorer.core.basemap_manifest import (  # noqa: F401 — re-export for settings_config
+    MAP_BASEMAP_DEFAULT,
+    MAP_BASEMAP_OPTIONS,
+)
 from explorer.core.constants import COUNTRY_TAB_SORT_ALPHABETICAL
 
 SETTINGS_SCHEMA_VERSION = 1
@@ -17,10 +21,7 @@ MAP_POPUP_SORT_ORDER_DEFAULT = "ascending"
 MAP_POPUP_SCROLL_HINT_DEFAULT = "shading"
 MAP_MARK_LIFER_DEFAULT = True
 MAP_MARK_LAST_SEEN_DEFAULT = True
-# Basemap: stored in persisted settings as a simple key (not a tile-layer object).
-# Keep this list in sync with Streamlit UI options in ``explorer.app.streamlit.defaults``.
-MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "google", "carto")
-MAP_BASEMAP_DEFAULT = "default"
+# Map height bounds are persisted in YAML; Streamlit UI re-exports these from ``defaults.py``.
 MAP_HEIGHT_PX_DEFAULT = 720
 MAP_HEIGHT_PX_MIN = 440
 MAP_HEIGHT_PX_MAX = 1200

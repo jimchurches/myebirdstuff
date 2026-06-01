@@ -1,4 +1,4 @@
-"""Tests for explorer.core.lifer_last_seen_prep (refs #68)."""
+"""Tests for explorer.core.lifer_last_seen_prep."""
 
 import pandas as pd
 

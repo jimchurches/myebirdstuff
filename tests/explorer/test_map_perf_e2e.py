@@ -117,7 +117,7 @@ def _run_headline_real_export_journey(page: Any) -> None:
 
 
 def _run_headline_four_map_mode_journey(page: Any) -> None:
-    """Playwright steps after cold All first paint (#222 §8.5 four-map headline journey)."""
+    """Playwright steps after cold All first paint (four-map headline journey)."""
     choose_map_view_mode(page, "Lifer locations")
     wait_for_pebird_map_markup(
         page,

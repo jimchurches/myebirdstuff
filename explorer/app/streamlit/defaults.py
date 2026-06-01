@@ -5,7 +5,7 @@ you may edit in one place without hunting through core modules.
 **What belongs here**
 
 - Marker cluster options, pin **radius / stroke / opacities**, legend dot sizes, popup width
-- Map UI: basemap list/labels, height slider bounds, view labels, date-filter default; **debug-only map toggles** registered in :func:`debug_defaults_enabled` for CI
+- Map UI: basemap list/labels (from ``explorer/data/basemaps.yaml``), height slider bounds, view labels, date-filter default; **debug-only map toggles** registered in :func:`debug_defaults_enabled` for CI
 - Theme hex values aligned with ``.streamlit/config.toml``, settings panel width cap
 - Rankings HTML layout width / scroll hint default; spinner CSS cache key suffix when theme CSS changes
 
@@ -30,6 +30,14 @@ from explorer.core.map_marker_scheme_model import (
     MapMarkerSpeciesLocationsStyle,
     MapMarkerSpeciesMapBackgroundStyle,
 )
+from explorer.core.basemap_manifest import MAP_BASEMAP_LABELS  # noqa: F401 — re-export for Streamlit UI
+from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export for Streamlit UI
+    MAP_BASEMAP_DEFAULT,
+    MAP_BASEMAP_OPTIONS,
+    MAP_HEIGHT_PX_DEFAULT,
+    MAP_HEIGHT_PX_MAX,
+    MAP_HEIGHT_PX_MIN,
+)
 
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster)
@@ -39,10 +47,10 @@ MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 9
 MAP_DEFAULT_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
 # When True (plugin default), markers outside the viewport are removed for performance; after
 # programmatic ``fitBounds`` some markers can fail to appear until the user zooms/pans. False keeps
-# all cluster children in the layer so the map matches expectations (refs #166).
+# all cluster children in the layer so the map matches expectations after programmatic fitBounds.
 MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS = False
 
-# Marker cluster — Lifer locations map (same plugin; tunables split for independent tuning, refs #240).
+# Marker cluster — Lifer locations map (same plugin; tunables split for independent tuning).
 MAP_LIFER_LOCATION_CLUSTER_MAX_RADIUS_PX = 40
 MAP_LIFER_LOCATION_CLUSTER_DISABLE_AT_ZOOM = 7
 MAP_LIFER_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM = False
@@ -60,7 +68,7 @@ MAP_PIN_FILL_OPACITY_ALL_LOCATIONS = 1.0
 MAP_PIN_FILL_OPACITY_EMPHASIS = 0.9
 MAP_LEGEND_PIN_DOT_PX = 8
 MAP_LEGEND_PIN_BORDER_PX = 2
-MAP_POPUP_MAX_WIDTH_PX = 420  # Leaflet popup maxWidth; card-like popups (refs #145).
+MAP_POPUP_MAX_WIDTH_PX = 420  # Leaflet popup maxWidth; card-like popups. Codegen: scripts/generate_basemap_assets.py.
 # Family-locations map initial ``fit_bounds``; not tied to marker colour presets.
 MAP_FAMILY_MAP_FIT_BOUNDS_PADDING_PX = 48
 MAP_FAMILY_MAP_FIT_BOUNDS_MAX_ZOOM = 6
@@ -89,35 +97,38 @@ MAP_SPECIES_DEFAULT_ZOOM = 5
 MAP_SPECIES_FIT_BOUNDS_PADDING_PX = 48
 MAP_SPECIES_FIT_BOUNDS_MAX_ZOOM = 7
 MAP_SPECIES_SINGLE_POINT_ZOOM = 8
-# Go to GPS temporary pin: fitBounds max zoom (session-only marker; refs #199).
+# Go to GPS temporary pin: fitBounds max zoom (session-only marker).
 MAP_GO_TO_GPS_MAX_ZOOM = 10
 
-# Lifer-locations map: initial fit_bounds (not colour-scheme settings). Framing uses base-species
-# lifer pins only; subspecies-only pins do not affect bounds (refs #105).
+# Lifer-locations map initial fit_bounds uses base-species lifer pins only; subspecies-only pins do not affect bounds.
 MAP_LIFER_MAP_FIT_BOUNDS_PADDING_PX = 48
 MAP_LIFER_MAP_FIT_BOUNDS_MAX_ZOOM = 6
 MAP_LIFER_MAP_SINGLE_POINT_ZOOM = 9
 
-# Character shown for Macaulay Library media links in map popups (refs #145).
+# Character shown for Macaulay Library media links in map popups.
 # Possible alternatives for user testing: ⧉ (two joined squares, U+29C9); ⊕ (circled plus, U+2295).
 MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
 
 # ---------------------------------------------------------------------------
-# Map UI (session-only; not persisted in embedded YAML)
+# Map UI — sidebar / Settings controls (basemap default is persisted in YAML)
 # ---------------------------------------------------------------------------
 
-MAP_BASEMAP_OPTIONS: tuple[str, ...] = ("default", "google", "carto")
-MAP_BASEMAP_LABELS: dict[str, str] = {
-    "default": "Default",
-    "google": "Google (hybrid)",
-    "carto": "CartoDB Positron",
-}
-MAP_BASEMAP_DEFAULT = "default"
-
-MAP_HEIGHT_PX_DEFAULT = 720
-MAP_HEIGHT_PX_MIN = 440
-MAP_HEIGHT_PX_MAX = 1200
 MAP_HEIGHT_PX_STEP = 20
+# Leaflet component iframe min-height floor (sidebar slider can go lower in theory; keep map usable).
+MAP_IFRAME_MIN_HEIGHT_PX = 240
+
+# Session LRU — Leaflet GeoJSON payload and HTML export caches (``app_prep_map_leaflet_caches``).
+ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
+LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
+SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
+FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
+LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES = 6
+
+# Bird Families tab — summary ``st.dataframe`` height when no family row is selected.
+BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX = 280
+
+# Country tab — rendered not-seen HTML session cache.
+COUNTRY_NOT_SEEN_HTML_CACHE_MAX_ENTRIES = 20
 
 MAP_DATE_FILTER_DEFAULT = False
 
@@ -127,7 +138,7 @@ MAP_SPECIES_HIDE_ONLY_DEFAULT = True
 MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer locations", "Family locations")
 
 # ---------------------------------------------------------------------------
-# Map marker colour schemes (Leaflet circle markers; refs #138)
+# Map marker colour schemes (Leaflet circle markers)
 #
 # Fallback when a scheme has no ``global_defaults.radius_px`` (design utility / migration).
 MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK = 2
@@ -151,13 +162,13 @@ def clamp_map_marker_circle_radius_px(value: int | float | None) -> int:
 def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float) -> float:
     """Clamp circle fill opacity to ``[0, 1]`` for map marker schemes and the design utility."""
     if value is None:
-        x = fallback
+        raw_opacity = fallback
     else:
         try:
-            x = float(value)
+            raw_opacity = float(value)
         except (TypeError, ValueError):
-            x = fallback
-    return max(0.0, min(1.0, x))
+            raw_opacity = fallback
+    return max(0.0, min(1.0, raw_opacity))
 
 
 # Nested :class:`~explorer.core.map_marker_scheme_model.MapMarkerColourScheme` — globals, then per-map
@@ -374,9 +385,9 @@ MAP_MARKER_ACTIVE_COLOUR_SCHEME: int = 1
 
 
 def active_map_marker_colour_scheme(scheme_index: int | None = None) -> MapMarkerColourScheme:
-    """Return the map-marker style bundle for *scheme_index* ``1``, ``2``, or ``3`` (refs #138).
+    """Return the map-marker style bundle for *scheme_index* ``1``, ``2``, or ``3``.
 
-    When *scheme_index* is ``None``, uses :data:`MAP_MARKER_ACTIVE_COLOUR_SCHEME` (Reds by default).
+    When *scheme_index* is ``None``, uses :data:`MAP_MARKER_ACTIVE_COLOUR_SCHEME`.
     Unknown indices fall back to scheme ``1``.
     """
     n = int(MAP_MARKER_ACTIVE_COLOUR_SCHEME if scheme_index is None else scheme_index)
@@ -395,6 +406,9 @@ SETTINGS_PANEL_MAX_WIDTH_REM = 40
 
 THEME_TEXT_HEX = "#1A2E22"
 THEME_PRIMARY_HEX = "#1F6F54"
+THEME_MAIN_TAB_INACTIVE_MUTED_HEX = "#6b7f77"
+THEME_MAIN_TAB_HOVER_HEX = "#156248"
+THEME_APP_HEADER_TITLE_HEX = "#1f3d2b"
 THEME_SECONDARY_BG_HEX = "#EEF4F0"
 
 SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v18"
@@ -405,6 +419,10 @@ SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v18"
 
 RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX = 1400
 RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT = "shading"
+
+# Bird Families / taxonomy coverage: when False, extinct species are excluded from denominators
+# and family/world coverage tables.
+TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE = False
 
 
 def debug_defaults_enabled() -> list[str]:

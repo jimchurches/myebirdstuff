@@ -198,7 +198,8 @@ Do not duplicate HTML in UI code — use shared formatters.
 
 ### Defaults
 
-- **`explorer/app/streamlit/defaults.py`** — **Developer tweakables**: map cluster options, pin **size / stroke / opacity**, legend dot sizes, theme hex, basemap list, map height slider bounds, layout widths, temporary map debug (live zoom). Edit here to change look/behaviour without hunting core modules.
+- **`explorer/data/basemaps.yaml`** — **Map basemaps** (keys, labels, tile URLs); loaded by `explorer/core/basemap_manifest.py`. Regenerate React assets with `python3 scripts/generate_basemap_assets.py`.
+- **`explorer/app/streamlit/defaults.py`** — **Developer tweakables**: map cluster options, pin **size / stroke / opacity**, legend dot sizes, theme hex, map height slider bounds, layout widths, temporary map debug (live zoom). Edit here to change look/behaviour without hunting core modules.
 
 - **Map marker design utility** — separate Streamlit app (not user-facing): `streamlit run explorer/app/streamlit/design_map_app.py`. Previews roles and exports scheme dicts; see [development.md](development.md#map-marker-colour-design-utility-developers).
 

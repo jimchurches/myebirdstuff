@@ -1,4 +1,4 @@
-"""Orchestration phases for the Streamlit dashboard entrypoint (GitHub #200).
+"""Orchestration phases for the Streamlit dashboard entrypoint.
 
 Implementation lives in :mod:`explorer.app.streamlit.app_bootstrap` and
 :mod:`explorer.app.streamlit.app_dashboard_shell`. This module re-exports the public
@@ -14,13 +14,13 @@ Ordered flow:
 5. :func:`bootstrap_session_after_csv_load` — run id, perf dataset context, settings YAML,
    table clamps.
 6. :func:`explorer.app.streamlit.app_map_working_ui.render_map_sidebar_and_working_set` —
-   sidebar + working dataframe (refs #131).
+   sidebar + working dataframe.
 7. :func:`build_taxonomy_popup_assets` — cached taxonomy URL fn + popup preferences.
 8. :func:`render_dashboard_shell` — title row, primary ``st.tabs``, prep spinner
-   + Map tab (refs #130), then non-map tab fragments, then Settings.
+   + Map tab, then non-map tab fragments, then Settings.
 
 Prep + Leaflet map embed run **after** ``st.tabs`` are created so loading indicators stay aligned with the
-tab row (refs #70, #130).
+tab row.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Leaflet GeoJSON build metrics for perf JSONL (#222 §8.4)."""
+"""Leaflet GeoJSON build metrics for perf JSONL."""
 
 from __future__ import annotations
 

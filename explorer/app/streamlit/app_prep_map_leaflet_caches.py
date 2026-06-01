@@ -35,13 +35,7 @@ from explorer.presentation.leaflet_map_export_cache import leaflet_export_html_c
 from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
 from explorer.presentation.map_renderer import map_overlay_theme_stylesheet
 
-# Leaflet payload LRU sizes (variants per map — e.g. cluster / hide-non-matching / subspecies toggles).
-ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
-LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
-SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
-FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
-LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES = 6
-
+from explorer.app.streamlit.defaults import LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES
 
 def leaflet_export_html_cache_lookup(cache_key: tuple[str, ...]) -> bytes | None:
     cached = st.session_state.get(LEAFLET_EXPORT_HTML_CACHE_KEY)

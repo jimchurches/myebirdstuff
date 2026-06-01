@@ -106,6 +106,37 @@ def test_config_path_yaml_roundtrip(tmp_path):
     assert cfg["map_display"]["map_marker_colour_scheme"] == 2
 
 
+def test_load_yaml_settings_repairs_invalid_basemap(tmp_path):
+    from explorer.core.settings_config import load_yaml_settings
+
+    p = tmp_path / "bad-basemap.yaml"
+    p.write_text("map_display:\n  basemap: voyager_nolabels\n", encoding="utf-8")
+    cfg, warn = load_yaml_settings(str(p))
+    assert warn is None
+    assert cfg["map_display"]["basemap"] == "default"
+
+
+@pytest.mark.parametrize("basemap_key", ["voyager", "esri_topo", "carto", "google"])
+def test_load_yaml_settings_accepts_basemap_keys(tmp_path, basemap_key: str):
+    from explorer.core.settings_config import load_yaml_settings
+
+    p = tmp_path / "basemap.yaml"
+    p.write_text(f"map_display:\n  basemap: {basemap_key}\n", encoding="utf-8")
+    cfg, warn = load_yaml_settings(str(p))
+    assert warn is None
+    assert cfg["map_display"]["basemap"] == basemap_key
+
+
+def test_map_basemap_options_match_settings_schema():
+    from explorer.app.streamlit.defaults import MAP_BASEMAP_LABELS, MAP_BASEMAP_OPTIONS
+    from explorer.core.basemap_manifest import get_basemap_entries
+    from explorer.core.settings_schema_defaults import MAP_BASEMAP_OPTIONS as SCHEMA_OPTIONS
+
+    assert MAP_BASEMAP_OPTIONS == SCHEMA_OPTIONS
+    assert len(MAP_BASEMAP_OPTIONS) == len(get_basemap_entries())
+    assert list(MAP_BASEMAP_LABELS) == list(MAP_BASEMAP_OPTIONS)
+
+
 def test_settings_data_path_html_includes_config_path_when_given():
     from explorer.app.streamlit.app_settings_state import settings_data_path_html
 

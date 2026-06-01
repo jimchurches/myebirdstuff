@@ -9,6 +9,10 @@ The committed ``frontend/build/`` tree is what Explorer loads at runtime (see co
 This script runs ``npm ci`` + ``npm run build``, then reports expected vs stray files so you know
 what to ``git add`` and what to delete (e.g. macOS Finder duplicates like ``static/css 4/``).
 
+With ``--check-only``, validates committed ``frontend/build/`` **and** that generated map assets
+match ``explorer/data/basemaps.yaml`` and ``MAP_POPUP_MAX_WIDTH_PX`` in ``defaults.py`` (via
+``scripts/generate_basemap_assets.py --check``).
+
 Exit 1 if junk or unexpected files remain under ``build/`` (use ``--prune-junk`` to remove known junk only).
 """
 
@@ -28,6 +32,16 @@ _BUILD = _FRONTEND / "build"
 
 # macOS Finder "copy N" folders — never produced by Create React App.
 _JUNK_DIR_RE = re.compile(r"^(css|js) \d+$")
+
+
+def _run_basemap_assets(*, check: bool) -> None:
+    cmd = [sys.executable, str(_REPO_ROOT / "scripts/generate_basemap_assets.py")]
+    if check:
+        print("Checking generated map assets (basemaps.yaml + defaults.py) …")
+        cmd.append("--check")
+    else:
+        print("Generating map assets from basemaps.yaml and defaults.py …")
+    subprocess.run(cmd, cwd=_REPO_ROOT, check=True)
 
 
 def _run_npm_build(*, skip_install: bool) -> None:
@@ -115,6 +129,8 @@ def main() -> None:
         help="Delete macOS Finder duplicate folders (``css 4/``, ``js 5/``, …) under ``build/static``.",
     )
     args = parser.parse_args()
+
+    _run_basemap_assets(check=args.check_only)
 
     if not args.check_only:
         print(f"Building {_FRONTEND.relative_to(_REPO_ROOT)} …")

@@ -26,7 +26,7 @@ See **[docs/development.md](../../../docs/development.md#map-marker-colour-desig
 
 ## UI guidelines
 
-- **Layouts and simple data** — Prefer Streamlit primitives: tabs, sidebar, `st.expander`, nested `st.tabs`, `st.dataframe` / `st.table`, `st.metric`, `st.columns`, `.streamlit/config.toml` theme (eBird-adjacent greens in `[theme]`). **Checklist Statistics** uses nested `st.tabs` plus **shared HTML** tables from `checklist_stats_streamlit_tab_sections_html`. **Rankings & lists** (`rankings_streamlit_html.py`) adds another level: **Top Lists** / **Interesting Lists** nested tabs, expanders per list, HTML from `format_checklist_stats_bundle` on the full export; **Top N** / **visible rows** sliders live under **Settings → Tables & lists**. Streamlit expanders can’t act as a single-open accordion for mutually exclusive panels — nested tabs are the pattern.
+- **Layouts and simple data** — Prefer Streamlit primitives: tabs, sidebar, `st.expander`, nested `st.tabs`, `st.dataframe` / `st.table`, `st.metric`, `st.columns`, `.streamlit/config.toml` theme (eBird-adjacent greens in `[theme]`). **Checklist Statistics** uses nested `st.tabs` plus **shared HTML** tables from `checklist_stats_streamlit_tab_sections_html`. **Ranking & Lists** (`rankings_streamlit_html.py`) uses nested **Top Lists** / **Interesting Lists** tabs with expanders per list, HTML from `format_checklist_stats_bundle` on the full export. **Bird Families** (`bird_families_streamlit_html.py`) is a separate main tab for species-group coverage UI. **Top N** / **visible rows** sliders live under **Settings → Tables & lists**. Streamlit expanders can’t act as a single-open accordion for mutually exclusive panels — nested tabs are the pattern.
 - **Rich tables (rankings, “Interesting lists”, richly-linked lists)** — These are produced as **HTML** (linked species/locations/dates, bold counts, ⧉, dotted/solid link styling). **`st.dataframe` is the wrong tool** for that UX. **Use HTML from shared formatters** in `explorer/presentation/` (`checklist_stats_display`, `rankings_display`, `format_checklist_stats_bundle`, etc.) and render with **`st.markdown(..., unsafe_allow_html=True)`** or **`st.html`**. **Do not fork** duplicate table HTML in this package; extend the shared formatters instead.
 - **eBird links** — Never drop deep links just to avoid HTML. See [AI_CONTEXT.md — Streamlit UI](../../../docs/AI_CONTEXT.md#streamlit-ui).
 - **One-off HTML** — Ad-hoc `unsafe_allow_html` not produced by a shared formatter is a last resort; prefer extending a module helper so formatting stays aligned.
@@ -98,7 +98,7 @@ Disk search is **first folder that contains the CSV**, in this order:
 | **Config `data_folder`** | As above (`config_secret.yaml` → `config.yaml`). |
 | **Working directory** | Put `MyEBirdData.csv` (or override basename with env **`STREAMLIT_EBIRD_DATA_FILE`**) in the directory you start Streamlit from. |
 
-There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder override; use config files, CWD, or upload.
+There is **no** `STREAMLIT_EBIRD_DATA_FOLDER` or Streamlit-secret data-folder override; use config files, CWD, or upload. **`EXPLORER_CONFIG_DIR`** (environment only) redirects config YAML lookup for automated E2E tests; normal local runs leave it unset.
 
 **Precedence (load):** A new pick from the landing uploader → **disk** (config paths + CWD) → **cached upload**. Stale upload cache is cleared when disk wins.
 

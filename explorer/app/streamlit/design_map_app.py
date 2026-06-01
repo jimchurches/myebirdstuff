@@ -21,7 +21,7 @@ import re
 import sys
 
 # ``streamlit run explorer/app/streamlit/design_map_app.py`` puts the script directory on ``sys.path``,
-# not the repo root — same as :mod:`explorer.app.streamlit.app` (refs #70).
+# not the repo root — same as :mod:`explorer.app.streamlit.app`.
 _REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)

@@ -1,4 +1,4 @@
-"""YAML-backed Settings tab: session payload, save/load, clamping, helpers (refs #98)."""
+"""YAML-backed Settings tab: session payload, save/load, clamping, and helpers."""
 
 from __future__ import annotations
 
@@ -391,7 +391,7 @@ def apply_pending_map_cluster_toggle(session_state: MutableMapping[str, Any]) ->
     Streamlit cannot set ``STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY`` in the same run as the form that
     shares that key with the Map sidebar; the form stores into
     ``STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY`` instead. Call this at the start of the
-    next script run (before ``with st.sidebar:``). refs #98.
+    next script run (before ``with st.sidebar:``).
     """
     pending = session_state.pop(STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY, None)
     if pending is not None:
@@ -402,7 +402,6 @@ def apply_pending_map_basemap_override(session_state: MutableMapping[str, Any]) 
     """Apply Settings → Apply map settings deferred basemap override before the sidebar builds the widget.
 
     Uses the same pattern as :func:`apply_pending_map_cluster_toggle` to respect Streamlit widget rules.
-    refs #139.
     """
     pending = session_state.pop(STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY, None)
     if pending is not None:

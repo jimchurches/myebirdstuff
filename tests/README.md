@@ -61,6 +61,8 @@ python -m playwright install chromium
 
 If Playwright is not installed, E2E modules skip by design.
 
+**Local secrets:** E2E tests write config only under pytest’s temp directory (`EXPLORER_CONFIG_DIR`). Your gitignored `config/config_secret.yaml` and `config/config.yaml` are never read or modified by pytest.
+
 ## Map / Leaflet tests (Python, no browser)
 
 | Module | What it covers |

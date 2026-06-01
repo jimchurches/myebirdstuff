@@ -7,7 +7,7 @@ Run before merging refactor branches to `main`.
 - Streamlit app launches locally
 - Streamlit app loads successfully
 - Dataset loads successfully
-- Seven tabs available and data displayed (`Map`, `Checklist Statistics`, `Rankings & lists`, `Yearly Summary`, `Country`, `Maintenance`, `Settings`)
+- Eight tabs available and data displayed (`Map`, `Checklist Statistics`, `Ranking & Lists`, `Bird Families`, `Yearly Summary`, `Country`, `Maintenance`, `Settings`)
 
 ## Map
 - Visit times: if the export has missing times, popups may show **23:59** as a documented placeholder — see [explorer README — Missing checklist times](README.md#missing-checklist-times-synthetic-2359)
@@ -46,10 +46,17 @@ Run before merging refactor branches to `main`.
 - Initial statistic rows present (e.g. Lifers world/country, totals, days, cumulative days in country)
 - For **2-letter country keys**, **Lifers (country)** has **⧉** → eBird region life list (`lifelist?r=…`); **Total checklists** has **⧉** → `mychecklists/<CODE>`; **Unknown** / non-ISO keys have no links
 
-## Rankings & lists
-- Rankings and lists load
+## Ranking & Lists
+- Ranking & Lists load (nested **Top Lists** / **Interesting Lists** only)
+- **Interesting Lists:** **Species: Coverage** is the first expander (#262); table shows species in eBird taxonomy, observed species, and observed %; footnote mentions extinct-species handling
 - Species tables (Most individuals, Most checklists, Subspecies occurrence, Seen only once) render correctly
 - Links work (locations and checklists)
+
+## Bird Families
+- Bird Families tab loads (main tab, not under Ranking & Lists)
+- Family summary grid and overview / species detail behave as before
+- **Family coverage overview** (no family selected): *Total species* under Taxonomy; *Observed species* and *Observed species (%)* under Coverage (#262)
+- Footnote covers eBird/Clements taxonomy and extinct-species inclusion/exclusion; eBird species links work in family detail
 
 ## Settings
 - **Tables & lists:** Country tab sorting dropdown (Alphabetically / By life birds / By total species) reorders Country accordions only

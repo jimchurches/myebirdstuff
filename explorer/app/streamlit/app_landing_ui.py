@@ -1,4 +1,4 @@
-"""No-data landing: upload flow until a dataframe is available (refs #131)."""
+"""No-data landing: CSV upload flow until a dataframe is available."""
 
 from __future__ import annotations
 

@@ -1,14 +1,13 @@
 """
-**Yearly Summary** (Streamlit): nested **All** / **Travelling** / **Stationary** tabs (refs #85).
+**Yearly Summary** (Streamlit): nested **All** / **Travelling** / **Stationary** tabs.
 
 HTML from :func:`build_yearly_summary_streamlit_tab_html_dict`; styles match Checklist Statistics
 (:func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` under ``.streamlit-checklist-html-ab``).
 
-When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**
-(3–25, default 10), a **Show full history** ``st.toggle`` below the nested tabs switches between the
-recent window and all columns. One protocol note (All + Travelling/Stationary completeness) sits below
-that control with spacing—redundant per-tab footnotes were removed. Reruns are limited to this ``@st.fragment``
-(same pattern as **Country**).
+When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**,
+a **Show full history** ``st.toggle`` below the nested tabs switches between the recent window and all
+columns. One protocol note (All + Travelling/Stationary completeness) sits below that control.
+Reruns are limited to this ``@st.fragment`` (same pattern as **Country**).
 
 **Placement:** A single toggle after all ``with tab:`` blocks stays below the active table while avoiding
 duplicate keys (the same widget cannot be declared inside each nested tab).
@@ -33,14 +32,24 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY,
     YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY,
 )
+from explorer.core.settings_schema_defaults import (
+    YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
+    YEARLY_RECENT_COLUMN_COUNT_MAX,
+    YEARLY_RECENT_COLUMN_COUNT_MIN,
+)
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 
 
 def get_yearly_recent_column_count() -> int:
-    """Recent-year column window for Yearly Summary + Country (``streamlit_yearly_recent_column_count``; 3–25)."""
-    n = int(st.session_state.get(STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY, 10))
-    return max(3, min(25, n))
+    """Recent-year column window for Yearly Summary + Country (Settings → Yearly tables)."""
+    n = int(
+        st.session_state.get(
+            STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
+            YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
+        )
+    )
+    return max(YEARLY_RECENT_COLUMN_COUNT_MIN, min(YEARLY_RECENT_COLUMN_COUNT_MAX, n))
 
 
 def sync_yearly_summary_session_inputs(payload: Optional[ChecklistStatsPayload]) -> None:

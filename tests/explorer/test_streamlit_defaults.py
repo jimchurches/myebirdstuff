@@ -1,4 +1,4 @@
-"""Ensure :mod:`explorer.app.streamlit.defaults` stays aligned with persisted settings (refs #70)."""
+"""Ensure :mod:`explorer.app.streamlit.defaults` stays aligned with persisted settings."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def test_persisted_defaults_match_streamlit_settings_model():
 
 
 def test_lifer_location_cluster_tunables_match_all_locations_v1() -> None:
-    """Lifer map has separate constants; v1 values match All locations (refs #240)."""
+    """Lifer map has separate constants; v1 values match All locations."""
     from explorer.app.streamlit.defaults import (
         MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
         MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,

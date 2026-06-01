@@ -112,6 +112,15 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 
     stub.html = html
 
+    stub.iframe_calls: list[dict] = []
+
+    def iframe(src: str, *, width="stretch", height="content", tab_index=None) -> None:
+        stub.iframe_calls.append(
+            {"src": src, "width": width, "height": height, "tab_index": tab_index}
+        )
+
+    stub.iframe = iframe
+
     stub.markdown_calls: list[tuple[tuple, dict]] = []
 
     def markdown(*args, **kwargs):
@@ -193,15 +202,6 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     stub.warning = warning
 
     components_v1 = types.ModuleType("streamlit.components.v1")
-    components_v1.html_calls: list[dict] = []
-
-    def components_html(html: str, height=None, scrolling=False) -> None:
-        components_v1.html_calls.append(
-            {"html": html, "height": height, "scrolling": scrolling}
-        )
-
-    components_v1.html = components_html
-
     components_pkg = types.ModuleType("streamlit.components")
     components_pkg.v1 = components_v1
     stub.components = components_pkg
@@ -242,6 +242,7 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
         "explorer.app.streamlit.country_stats_streamlit_html",
         "explorer.app.streamlit.checklist_stats_streamlit_html",
         "explorer.app.streamlit.rankings_streamlit_html",
+        "explorer.app.streamlit.bird_families_streamlit_html",
         "explorer.app.streamlit.maintenance_streamlit_html",
         "explorer.app.streamlit.app_landing_ui",
         "explorer.app.streamlit.explorer_update_notice",
@@ -299,15 +300,64 @@ def test_sync_checklist_stats_tab_session_inputs_sets_payload(streamlit_stub) ->
     assert st.session_state[CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY] is sentinel
 
 
-def test_sync_rankings_tab_session_inputs_sets_bundle(streamlit_stub) -> None:
+def test_sync_ranking_lists_families_bundle_sets_bundle(streamlit_stub) -> None:
     rankings = importlib.import_module("explorer.app.streamlit.rankings_streamlit_html")
-    from explorer.app.streamlit.app_constants import RANKINGS_TAB_BUNDLE_KEY
+    from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
 
     sentinel = {"rankings_sections_top_n": [("t", "<p>x</p>")], "rankings_sections_other": []}
-    rankings.sync_rankings_tab_session_inputs(sentinel)
+    rankings.sync_ranking_lists_families_bundle(sentinel)
 
     st = streamlit_stub
-    assert st.session_state[RANKINGS_TAB_BUNDLE_KEY] is sentinel
+    assert st.session_state[RANKING_LISTS_FAMILIES_BUNDLE_KEY] is sentinel
+
+
+def test_run_families_fragment_load_message_without_bundle(streamlit_stub, monkeypatch) -> None:
+    bird = importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
+    render_calls: list[dict] = []
+    monkeypatch.setattr(
+        bird,
+        "render_families_streamlit_tab_from_bundle",
+        lambda bundle: render_calls.append(bundle),
+    )
+    from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
+
+    st = streamlit_stub
+    st.session_state.pop(RANKING_LISTS_FAMILIES_BUNDLE_KEY, None)
+    bird.run_families_streamlit_tab_fragment()
+    assert render_calls == []
+    assert any("Bird Families" in str(args[0]) for args, _ in st.info_calls)
+
+
+def test_run_families_fragment_delegates_when_bundle_present(streamlit_stub, monkeypatch) -> None:
+    bird = importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
+    render_calls: list[dict] = []
+    monkeypatch.setattr(
+        bird,
+        "render_families_streamlit_tab_from_bundle",
+        lambda bundle: render_calls.append(bundle),
+    )
+    from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
+    from explorer.app.streamlit.bird_families_streamlit_html import GROUP_COVERAGE_SUMMARY_KEY
+
+    bundle = {
+        "rankings_sections_top_n": [],
+        GROUP_COVERAGE_SUMMARY_KEY: pd.DataFrame(),
+    }
+    st = streamlit_stub
+    st.session_state[RANKING_LISTS_FAMILIES_BUNDLE_KEY] = bundle
+    bird.run_families_streamlit_tab_fragment()
+    assert len(render_calls) == 1
+    assert render_calls[0] is bundle
+
+
+def test_render_families_empty_summary_shows_taxonomy_unavailable(streamlit_stub) -> None:
+    bird = importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
+    from explorer.app.streamlit.bird_families_streamlit_html import GROUP_COVERAGE_SUMMARY_KEY
+
+    st = streamlit_stub
+    st.info_calls.clear()
+    bird.render_families_streamlit_tab_from_bundle({GROUP_COVERAGE_SUMMARY_KEY: pd.DataFrame()})
+    assert any("taxonomy" in str(args[0]).lower() for args, _ in st.info_calls)
 
 
 def test_sync_maintenance_tab_session_inputs_sets_sync_dict(streamlit_stub) -> None:
@@ -337,6 +387,7 @@ def test_streamlit_tab_modules_import_without_runtime(streamlit_stub) -> None:
     """Catch regressions like missing constants or bad imports (refs fragment sync wiring)."""
     importlib.import_module("explorer.app.streamlit.checklist_stats_streamlit_html")
     importlib.import_module("explorer.app.streamlit.rankings_streamlit_html")
+    importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
     importlib.import_module("explorer.app.streamlit.maintenance_streamlit_html")
 
 
@@ -394,7 +445,7 @@ def test_leaflet_payload_cache_key_includes_species_overlay() -> None:
     assert base_all != all_with_gps
 
 
-# --- app_data_loading / app_map_ui / streamlit_theme (refs #98; UI-surface regressions) ---
+# --- app_data_loading / app_map_ui / streamlit_theme (UI-surface regressions) ---
 
 
 def _fixture_csv_bytes() -> bytes:
@@ -547,20 +598,33 @@ def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
 
 
 def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit_stub) -> None:
-    import streamlit.components.v1 as components
-
     from explorer.app.streamlit.app_map_ui import inject_spinner_emoji_animation
     from explorer.app.streamlit.defaults import THEME_PRIMARY_HEX
     from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_SPINNER_EMOJIS
 
     inject_spinner_emoji_animation()
-    assert len(components.html_calls) == 1
-    payload = components.html_calls[0]["html"]
+    assert len(streamlit_stub.iframe_calls) == 1
+    payload = streamlit_stub.iframe_calls[0]["src"]
     assert THEME_PRIMARY_HEX in payload
     for emoji in CHECKLIST_STATS_SPINNER_EMOJIS:
         assert emoji in payload
-    assert components.html_calls[0]["height"] == 52
-    assert components.html_calls[0]["scrolling"] is False
+    assert streamlit_stub.iframe_calls[0]["height"] == 52
+
+
+def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_parent_click(
+    streamlit_stub,
+) -> None:
+    from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
+
+    label = "Export map HTML"
+    streamlit_stub.iframe_calls.clear()
+    inject_auto_click_streamlit_download_js(button_label=label)
+    assert len(streamlit_stub.iframe_calls) == 1
+    payload = streamlit_stub.iframe_calls[0]["src"]
+    assert label in payload
+    assert "window.parent.document" in payload
+    assert 'data-testid="stDownloadButton"' in payload
+    assert streamlit_stub.iframe_calls[0]["height"] == 0
 
 
 def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stub) -> None:

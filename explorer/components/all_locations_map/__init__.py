@@ -55,8 +55,9 @@ def render_all_locations_map_component(
 
     *viewport* — camera recipe from :func:`~explorer.core.map_leaflet_viewport.all_locations_leaflet_viewport_recipe`. Omit or empty dict to fall back to GeoJSON-bounds padding in the iframe.
 
-    *map_style* — basemap key from ``MAP_BASEMAP_OPTIONS`` in ``explorer.app.streamlit.defaults``
-    (``default``, ``google``, ``carto``). Passed from the Prep map tab sidebar; unknown values behave as ``default``.
+    *map_style* — basemap key from ``MAP_BASEMAP_OPTIONS`` (``explorer/data/basemaps.yaml`` via ``explorer.core.basemap_manifest``)
+    (e.g. ``default``, ``voyager``, ``carto``, ``esri_topo``, ``google``). Passed from the Prep map
+    tab sidebar; unknown values behave as ``default``.
 
     *map_theme_css* — ``map_overlay_theme_stylesheet()`` from ``explorer.presentation.map_renderer`` for banner/legend/popup chrome.
 

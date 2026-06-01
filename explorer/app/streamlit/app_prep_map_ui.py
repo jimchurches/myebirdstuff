@@ -24,15 +24,7 @@ from explorer.app.streamlit.app_map_ui import (
     sidebar_bottom_slot_start,
 )
 from explorer.app.streamlit.app_prep_map_blank_viewport import seed_blank_map_default_viewport_recipe
-from explorer.app.streamlit.app_prep_map_leaflet_caches import (
-    ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    apply_dataset_signature_for_map_caches,
-    leaflet_payload_cache_lookup,
-    leaflet_payload_cache_store,
-)
+from explorer.app.streamlit.app_prep_map_leaflet_caches import apply_dataset_signature_for_map_caches
 from explorer.app.streamlit.app_prep_map_leaflet_modes import (
     prep_family_leaflet_mode,
     prep_standard_map_leaflet_modes,
@@ -57,14 +49,6 @@ __all__ = [
     "apply_dataset_signature_for_map_caches",
     "perf_span",
 ]
-
-# Backward-compatible aliases for tests (prefer ``app_prep_map_leaflet_caches``).
-_ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
-_LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
-_SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
-_FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
-_leaflet_payload_cache_lookup = leaflet_payload_cache_lookup
-_leaflet_payload_cache_store = leaflet_payload_cache_store
 
 
 def render_prep_spinner_and_map_tab(

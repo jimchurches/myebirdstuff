@@ -1,4 +1,4 @@
-"""Tests for checklist stats compute + display bundle (refs #68)."""
+"""Tests for checklist stats compute + display bundle."""
 
 import pandas as pd
 
@@ -156,7 +156,7 @@ def test_yearly_streamlit_year_window_slice():
 
 
 def test_build_yearly_summary_respects_recent_year_window():
-    """>10 years + show_full_history False → 10 year columns in HTML (#85)."""
+    """>10 years + show_full_history False → 10 year columns in HTML."""
     rows = []
     for sid, y in [(f"s{i}", 2000 + i) for i in range(15)]:
         rows.append(
@@ -210,7 +210,7 @@ def test_strip_yearly_stats_info_icons_removes_span():
 
 
 def test_build_yearly_summary_streamlit_tab_html_dict_smoke():
-    """Streamlit yearly tabs: three bodies, no inline info icons, yearly table class (refs #85)."""
+    """Streamlit yearly tabs: three bodies, no inline info icons, yearly table class."""
     df = pd.DataFrame(
         {
             "Submission ID": ["s1", "s1", "s2"],

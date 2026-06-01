@@ -16,44 +16,19 @@ import {
   GO_TO_GPS_POPUP_HTML,
   POPUP_BIND_OPTIONS,
 } from "./AllLocationsMapPopupSizing";
+import {
+  ALL_LOCATIONS_BASEMAPS,
+  BASEMAP_DEFAULT,
+  type BasemapId,
+} from "./basemaps.generated";
 
-
-/** Must stay aligned with `create_map` in `explorer/presentation/map_renderer.py`. */
-type BasemapId = "default" | "google" | "carto";
-
-function normalizeBasemapId(raw: string | undefined): BasemapId {
-  const s = String(raw ?? "default").trim().toLowerCase();
-  if (s === "google" || s === "carto") {
-    return s;
+export function normalizeBasemapId(raw: string | undefined): BasemapId {
+  const s = String(raw ?? BASEMAP_DEFAULT).trim().toLowerCase();
+  if (s in ALL_LOCATIONS_BASEMAPS) {
+    return s as BasemapId;
   }
-  return "default";
+  return BASEMAP_DEFAULT;
 }
-
-const ALL_LOCATIONS_BASEMAPS: Record<BasemapId, { url: string; opts: L.TileLayerOptions }> = {
-  default: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    opts: {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    },
-  },
-  google: {
-    url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-    opts: {
-      maxZoom: 22,
-      attribution: "Google",
-    },
-  },
-  carto: {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    opts: {
-      maxZoom: 20,
-      subdomains: "abcd",
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  },
-};
 
 export function applyBasemapToMap(
   map: L.Map,

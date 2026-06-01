@@ -1,9 +1,8 @@
-/** Standalone Leaflet viewer for exported HTML (#222). Popups use pre-rendered export_popup_html from Python. */
+/** Standalone Leaflet viewer for exported HTML. Popups use pre-rendered export_popup_html from Python. */
 (function () {
   "use strict";
 
-  /* Popup shrink-wrap — keep in sync with AllLocationsMap.tsx (live component iframe). */
-  var POPUP_MAX_WIDTH_PX = 420;
+  /* POPUP_MAX_WIDTH_PX is defined in leaflet_map_export_constants.generated.js (from defaults.py). */
   var POPUP_SHRINK_WIDTH_BUFFER_PX = 48;
   var POPUP_SHRINK_MIN_CONTENT_WIDTH_PX = 140;
   var POPUP_WIDE_MEASURE_SELECTOR =
@@ -153,28 +152,12 @@
     spiderfy_on_max_zoom: false,
     remove_outside_visible_bounds: false,
   };
-  var BASEMAPS = {
-    default: {
-      url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      opts: { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" },
-    },
-    google: {
-      url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-      opts: { maxZoom: 22, attribution: "Google" },
-    },
-    carto: {
-      url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-      opts: {
-        maxZoom: 20,
-        subdomains: "abcd",
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
-      },
-    },
-  };
 
-  function basemap(style) {
-    var s = String(style || "default").toLowerCase();
-    return BASEMAPS[s === "google" || s === "carto" ? s : "default"];
+  function basemap(style, basemaps, defaultKey) {
+    var fallback = String(defaultKey || "default").toLowerCase();
+    var s = String(style || fallback).toLowerCase();
+    var maps = basemaps || {};
+    return maps[s] || maps[fallback] || { url: "", opts: {} };
   }
 
   function mergeCluster(raw) {
@@ -289,7 +272,7 @@
         delete nodes[i].dataset.pebirdShrinkTarget;
       }
     });
-    var bm = basemap(cfg.map_style);
+    var bm = basemap(cfg.map_style, cfg.basemaps, cfg.basemap_default);
     L.tileLayer(bm.url, bm.opts).addTo(map);
     var clusterCfg = mergeCluster(cfg.cluster_options);
     var overlay;

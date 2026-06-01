@@ -1,5 +1,5 @@
 """
-Optional GitHub release vs embedded build notice for local runs (refs #189).
+Optional GitHub release vs embedded build notice for local runs.
 
 Uses ``@st.cache_data`` (24h TTL) for the GitHub API call so reruns do not hammer the network.
 """
@@ -18,7 +18,7 @@ import streamlit as st
 
 from explorer.app.streamlit.explorer_build_version import EXPLORER_BUILD_VERSION
 from explorer.app.streamlit.streamlit_ui_constants import SIDEBAR_FOOTER_LINK_HEX
-from explorer.core.explorer_paths import _safe_load_yaml_mapping
+from explorer.core.explorer_paths import _safe_load_yaml_mapping, explorer_config_dir
 from explorer.core.explorer_release_version import remote_release_is_newer_than_embedded
 
 GITHUB_RELEASES_LATEST_API = (
@@ -56,7 +56,7 @@ def _hostname_from_context_url(url: Any) -> str:
 
 def _config_files_opt_out_update_check(repo_root: str) -> bool:
     """True if ``check_for_updates: false`` appears in either YAML config."""
-    config_dir = os.path.join(repo_root, "config")
+    config_dir = explorer_config_dir(repo_root)
     for name in ("config_secret.yaml", "config.yaml"):
         raw = _safe_load_yaml_mapping(os.path.join(config_dir, name))
         v = raw.get("check_for_updates")
