@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from explorer.app.streamlit.defaults import THEME_PRIMARY_HEX
+from explorer.app.streamlit.defaults import THEME_MAIN_TAB_HOVER_HEX, THEME_PRIMARY_HEX
 from explorer.presentation.checklist_stats_display import (
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS,
     CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE,
@@ -49,7 +49,6 @@ section[data-testid="stMain"] div[role="tabpanel"] {
 
 # Main tab strip: muted inactive grey-green; primary green when selected.
 _MAIN_TAB_INACTIVE_MUTED_HEX = "#6b7f77"
-_MAIN_TAB_HOVER_HEX = "#156248"
 _MAIN_TAB_LABEL_REM = "0.9375rem"
 # Match Streamlit app chrome + checklist HTML (``app_constants`` / ``map_renderer.EXPLORER_UI_FONT_STACK``).
 _MAIN_TAB_LABEL_FONT_STACK = (
@@ -67,7 +66,7 @@ section[data-testid="stMain"] [data-testid="stTabs"] button[role="tab"][aria-sel
 }}
 section[data-testid="stMain"] [data-testid="stTabs"] [data-baseweb="tab"]:hover,
 section[data-testid="stMain"] [data-testid="stTabs"] button[role="tab"]:hover {{
-  color: {_MAIN_TAB_HOVER_HEX} !important;
+  color: {THEME_MAIN_TAB_HOVER_HEX} !important;
 }}
 section[data-testid="stMain"] [data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"]:hover,
 section[data-testid="stMain"] [data-testid="stTabs"] button[role="tab"][aria-selected="true"]:hover {{
@@ -90,7 +89,7 @@ section[data-testid="stMain"] [data-testid="stTabs"] button[role="tab"][aria-sel
 }}
 section[data-testid="stMain"] [data-testid="stTabs"] [data-baseweb="tab"]:not([aria-selected="true"]):hover [data-testid="stMarkdownContainer"],
 section[data-testid="stMain"] [data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]):hover [data-testid="stMarkdownContainer"] {{
-  color: {_MAIN_TAB_HOVER_HEX} !important;
+  color: {THEME_MAIN_TAB_HOVER_HEX} !important;
 }}
 section[data-testid="stMain"] [data-testid="stTabs"] [data-testid="stMarkdownContainer"] p {{
   color: inherit !important;
