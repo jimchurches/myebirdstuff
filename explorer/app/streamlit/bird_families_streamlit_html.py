@@ -63,11 +63,11 @@ def compute_world_species_coverage(detail: pd.DataFrame) -> tuple[int, int, floa
     return observed, total, pct
 
 
-def _filter_taxonomy_for_coverage(tax: pd.DataFrame) -> pd.DataFrame:
+def _filter_taxonomy_for_coverage(taxonomy_frame: pd.DataFrame) -> pd.DataFrame:
     """Apply extinct-species filter per :data:`TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE`."""
-    if TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE or "is_extinct" not in tax.columns:
-        return tax
-    return tax[~tax["is_extinct"].fillna(False)].copy()
+    if TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE or "is_extinct" not in taxonomy_frame.columns:
+        return taxonomy_frame
+    return taxonomy_frame[~taxonomy_frame["is_extinct"].fillna(False)].copy()
 
 
 def _extinct_species_coverage_clause() -> str:
