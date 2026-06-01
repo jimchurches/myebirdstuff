@@ -48,13 +48,15 @@ Run before merging refactor branches to `main`.
 
 ## Ranking & Lists
 - Ranking & Lists load (nested **Top Lists** / **Interesting Lists** only)
+- **Interesting Lists:** **Species: Coverage** is the first expander (#262); table shows species in eBird taxonomy, observed species, and observed %; footnote mentions extinct-species handling
 - Species tables (Most individuals, Most checklists, Subspecies occurrence, Seen only once) render correctly
 - Links work (locations and checklists)
 
 ## Bird Families
 - Bird Families tab loads (main tab, not under Ranking & Lists)
 - Family summary grid and overview / species detail behave as before
-- Taxonomy footnote and eBird species links work
+- **Family coverage overview** (no family selected): *Total species* under Taxonomy; *Observed species* and *Observed species (%)* under Coverage (#262)
+- Footnote covers eBird/Clements taxonomy and extinct-species inclusion/exclusion; eBird species links work in family detail
 
 ## Settings
 - **Tables & lists:** Country tab sorting dropdown (Alphabetically / By life birds / By total species) reorders Country accordions only

@@ -12,7 +12,8 @@ Species-group coverage lives on the **Bird Families** main tab
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
 ``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
-include a narrow leading **Rank** column with soft accent styling (refs `#83`). **Species: Not seen in
+include a narrow leading **Rank** column with soft accent styling (refs `#83`). **Species: Coverage**
+is the first expander under **Interesting Lists** (refs `#262`). **Species: Not seen in
 the past year** is the last expander under Interesting Lists; it lists countable species with no
 observation in the trailing twelve months on the **full export** and is not Top-N–capped (refs `#106`).
 A hint points to the **Country** tab for the in-country, working-set–scoped variant (refs `#108`).
@@ -30,7 +31,10 @@ from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
 
 from explorer.app.streamlit.app_caches import cached_full_export_checklist_stats_payload
 from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
-from explorer.app.streamlit.bird_families_streamlit_html import attach_group_coverage_to_bundle
+from explorer.app.streamlit.bird_families_streamlit_html import (
+    WORLD_SPECIES_COVERAGE_SECTION_KEY,
+    attach_group_coverage_to_bundle,
+)
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
@@ -92,6 +96,15 @@ def _rankings_expander_sections(sections: list[tuple[str, str]]) -> None:
             )
 
 
+def _rankings_bundle_has_content(bundle: dict[str, Any]) -> bool:
+    """True when the bundle includes Top Lists, Interesting Lists, or Species: Coverage sections."""
+    return bool(
+        bundle.get("rankings_sections_top_n")
+        or bundle.get("rankings_sections_other")
+        or bundle.get(WORLD_SPECIES_COVERAGE_SECTION_KEY)
+    )
+
+
 def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
     """Render Rankings HTML from a precomputed bundle (fragment-safe)."""
     inject_streamlit_checklist_css(_rankings_table_layout_inject_css())
@@ -102,7 +115,11 @@ def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
         _rankings_expander_sections(list(bundle.get("rankings_sections_top_n") or []))
 
     with tab_int:
-        _rankings_expander_sections(list(bundle.get("rankings_sections_other") or []))
+        sections = list(bundle.get("rankings_sections_other") or [])
+        world_section = bundle.get(WORLD_SPECIES_COVERAGE_SECTION_KEY)
+        if world_section:
+            sections = [world_section] + sections
+        _rankings_expander_sections(sections)
 
 
 @st.fragment
@@ -110,7 +127,7 @@ def run_rankings_streamlit_tab_fragment() -> None:
     """Partial reruns when Rankings expanders/widgets change (same pattern as Country / Yearly)."""
     with perf_fragment("ranking_lists"):
         bundle = st.session_state.get(RANKING_LISTS_FAMILIES_BUNDLE_KEY) or {}
-        if not bundle.get("rankings_sections_top_n") and not bundle.get("rankings_sections_other"):
+        if not _rankings_bundle_has_content(bundle):
             st.info("Load checklist data to use Ranking & Lists.")
             return
         render_rankings_streamlit_tab_from_bundle(bundle)
