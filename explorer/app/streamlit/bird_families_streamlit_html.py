@@ -1,5 +1,5 @@
 """
-**Bird Families** (Streamlit main tab): species-group coverage (eBird taxonomy; refs `#73`).
+**Bird Families** (Streamlit main tab): species-group coverage against eBird taxonomy.
 
 Uses ``st.dataframe`` with **single-row selection** and a **bounded height** summary grid.
 With **no family selected**, the lower panel shows **family-level coverage** in an HTML
@@ -71,14 +71,14 @@ def _filter_taxonomy_for_coverage(tax: pd.DataFrame) -> pd.DataFrame:
 
 
 def _extinct_species_coverage_clause() -> str:
-    """Lowercase clause for footnotes; no trailing period (refs #262)."""
+    """Lowercase clause for coverage footnotes; no trailing period."""
     if TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE:
         return "extinct species are included in coverage totals"
     return "extinct species are excluded from coverage totals"
 
 
 def taxonomy_coverage_footnote_text() -> str:
-    """Plain-text footnote for family/world coverage tables (refs #262)."""
+    """Plain-text footnote for family/world coverage tables."""
     return (
         "Species and family groups follow the eBird/Clements taxonomy; "
         f"{_extinct_species_coverage_clause()}."
@@ -86,7 +86,7 @@ def taxonomy_coverage_footnote_text() -> str:
 
 
 def world_species_coverage_list_html(observed: int, total: int, pct: float) -> str:
-    """Simple metric table + footnote for Rankings **Interesting Lists** expander (refs #262)."""
+    """Metric table and footnote for Rankings **Interesting Lists** Species: Coverage expander."""
     rows = [
         ("Species in eBird taxonomy", f"{total:,}"),
         ("Observed species", f"{observed:,}"),
@@ -216,7 +216,7 @@ def family_coverage_summary_metrics_html(
 
 
 def _family_coverage_taxonomy_note_html() -> str:
-    """Footnote below the overview table; same caption style as Yearly Summary protocol note (refs #85)."""
+    """Footnote below the overview table; same caption style as Yearly Summary protocol note."""
     inner = (
         f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">'
         "Species and family groups follow the "
@@ -229,7 +229,7 @@ def _family_coverage_taxonomy_note_html() -> str:
 
 
 def _bird_families_inject_css() -> str:
-    """Table max-width + family overview group rows (refs #73, #81)."""
+    """Inject table max-width CSS and render family overview group rows."""
     return (
         f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:{RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX}px;width:100%; }}"
         f" .{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} .family-coverage-overview tr.family-coverage-group th {{"

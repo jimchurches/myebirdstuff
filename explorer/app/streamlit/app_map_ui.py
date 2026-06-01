@@ -1,4 +1,4 @@
-"""Map sidebar chrome, spinner theme/emoji helpers, and species search fragment (refs #98)."""
+"""Map sidebar chrome, spinner theme/emoji helpers, and species search fragment."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ from explorer.app.streamlit.streamlit_ui_constants import (
 
 
 def _species_searchbox_widget_key() -> str:
-    """Stable Streamlit widget id; nonce bumps on reset so the field remounts empty (refs #73)."""
+    """Return a stable widget key; nonce bumps on reset so the search field remounts empty."""
     n = int(st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0))
     return f"{SESSION_SPECIES_SEARCH_KEY}__v{n}"
 
@@ -91,7 +91,7 @@ section[data-testid="stMain"] iframe {{
 
 
 def inject_spinner_theme_css() -> None:
-    """Tweak ``st.spinner`` (text-style, theme greens, emoji iframe layout) to match our theme (refs #70, #124).
+    """Style ``st.spinner`` with theme greens and layout suited to the emoji iframe strip.
 
     Use :func:`streamlit.html` for **style-only** blocks: ``st.markdown(..., unsafe_allow_html)``
     sanitizes or scopes HTML so global ``<style>`` may not affect the spinner; style-only
@@ -104,11 +104,11 @@ def inject_spinner_theme_css() -> None:
 
 
 def inject_spinner_emoji_animation() -> None:
-    """Animate bird emoji in batches under the checklist-stats spinner text (refs #74).
+    """Animate bird emoji in batches under the checklist-stats spinner text.
 
     ``st.spinner`` cannot update its label mid-run; this uses a small ``st.iframe`` and client-side
     ``setInterval`` to advance non-overlapping batches while Python is blocked.
-    Theme CSS centers this iframe under the spinner row in normal document flow (refs #124).
+    Theme CSS centers this iframe under the spinner row in normal document flow.
     """
     emojis = list(CHECKLIST_STATS_SPINNER_EMOJIS)
     batch = max(1, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE))
@@ -143,7 +143,7 @@ letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
 
 
 def place_spinner_emoji_strip() -> Any:
-    """Show the animated bird-emoji strip for the current ``st.spinner`` (refs #74, #124).
+    """Show the animated bird-emoji strip for the current ``st.spinner``.
 
     Uses ``st.empty()`` + ``container()`` + :func:`inject_spinner_emoji_animation`. Returns the
     placeholder; call ``.empty()`` on it when the spinner phase ends so the iframe is dropped.
@@ -155,10 +155,9 @@ def place_spinner_emoji_strip() -> Any:
 
 
 def sidebar_bottom_slot_start() -> None:
-    """Open the bottom sidebar region (spinner + emoji, export, footer).
+    """Open the sticky bottom sidebar region (spinner, export, footer).
 
-    Wrapper is ``position: sticky`` with a transparent background so it does not look like a separate
-    empty panel when idle (refs #124).
+    Wrapper uses a transparent background so it does not look like a separate empty panel when idle.
     """
     st.markdown(
         '<div class="ebird-sidebar-bottom-slot" aria-live="polite">',
@@ -171,7 +170,7 @@ def sidebar_bottom_slot_end() -> None:
 
 
 def inject_sidebar_outline_download_button_css(outline_hex: str) -> None:
-    """Style the map **Export HTML** control like the outline support link (refs #127).
+    """Style the map **Export HTML** control like the outline support link.
 
     Streamlit widgets are not plain ``<a>`` tags; we align them visually with scoped CSS on
     ``.ebird-sidebar-bottom-slot`` (see :func:`sidebar_bottom_slot_start`).
@@ -273,7 +272,7 @@ def _support_buy_me_a_coffee_outline_html(url: str, *, outline_hex: str) -> str:
 
 
 def ensure_streamlit_map_basemap_height_keys() -> None:
-    """Seed basemap + map height in session state (keyed widgets; refs #70)."""
+    """Seed basemap and map height session keys for sidebar widgets."""
     if STREAMLIT_MAP_BASEMAP_SAVED_KEY not in st.session_state:
         st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
     elif st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY) not in MAP_BASEMAP_OPTIONS:
@@ -302,7 +301,7 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
 
 
 def ensure_streamlit_map_marker_colour_scheme_keys() -> None:
-    """Seed persisted + sidebar map-marker palette index (``1``…``3``); refs #147."""
+    """Seed persisted and sidebar map-marker palette index (``1``…``3``)."""
     if STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY not in st.session_state:
         st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
     else:
@@ -333,7 +332,7 @@ def ensure_streamlit_map_marker_colour_scheme_keys() -> None:
 def sidebar_footer_links(
     *, leading_divider: bool = True, show_explorer_update_notice: bool = True
 ) -> None:
-    """Small centred sidebar footer: GitHub, eBird, Instagram + Explorer README + optional support (refs #127)."""
+    """Render centred sidebar footer links and optional support / update notice."""
     if leading_divider:
         st.sidebar.divider()
     if show_explorer_update_notice:
@@ -368,13 +367,13 @@ def sidebar_footer_links(
 
 @st.fragment
 def species_searchbox_fragment() -> None:
-    """Whoosh-backed species search with weighted common/scientific/group matching (refs #73)."""
+    """Whoosh-backed species search with weighted common/scientific/group matching."""
     try:
         from streamlit_searchbox import st_searchbox
     except ImportError:
         st.error(
             "Missing **streamlit-searchbox**. Install with: "
-            "`pip install -r requirements.txt` (refs #70)."
+            "`pip install -r requirements.txt`."
         )
         return
     species_search_index = st.session_state.get(SESSION_SPECIES_IX_KEY)
@@ -420,7 +419,7 @@ def species_searchbox_fragment() -> None:
         )
 
     def _on_species_submit(selected: Any) -> None:
-        # Submit can fire while editing; only commit a real species and rerun when it changes (refs #73).
+        # Submit can fire while editing; only commit a real species and rerun when it changes.
         ws = st.session_state.get(SESSION_SPECIES_WS_KEY)
         valid_common = frozenset(ws.species_list) if ws is not None else frozenset()
         raw = selected if isinstance(selected, str) else str(selected)
@@ -467,8 +466,7 @@ def species_searchbox_fragment() -> None:
     if pick is not None:
         raw = pick if isinstance(pick, str) else str(pick)
         p = raw.strip()
-        # Empty field while typing / backspacing must not clear the map species — only choosing a
-        # valid species updates PICK; reset (×) clears via ``_on_species_reset`` (refs #73).
+        # Empty field while typing must not clear the map species — only a valid pick or reset (×) does.
         if p in valid_common:
             st.session_state[SESSION_SPECIES_PICK_KEY] = p
-        # Partial / invalid typing: do not assign PICK (avoids empty filter → blank map) (refs #73).
+        # Partial / invalid typing: do not assign PICK (avoids empty filter → blank map).

@@ -1,14 +1,14 @@
 """
-**Country** (Streamlit): one country at a time — same HTML/CSS patterns as Checklist Statistics (refs #75).
+**Country** (Streamlit): one country at a time — same HTML/CSS patterns as Checklist Statistics.
 
 Country order follows **Settings → Tables & lists → Country ordering** (``streamlit_country_tab_sort``).
 
 Per-country yearly tables match **Yearly Summary**: when year columns exceed **Settings → Yearly tables:
-recent year columns**, a **Show full history** ``st.toggle`` switches recent vs full (refs #85).
+recent year columns**, a **Show full history** ``st.toggle`` switches recent vs full.
 
 **Species: Not seen in the past year (<country>)** (expander below the yearly table; title follows the
-dropdown) scopes the same recency idea as Rankings **Interesting Lists**, but last seen uses checklists in
-the selected country only; data matches the filtered working set (refs #108).
+dropdown) uses the same recency idea as Rankings **Interesting Lists**, but last seen uses checklists in
+the selected country only and data matches the filtered working set.
 """
 
 from __future__ import annotations
@@ -53,11 +53,11 @@ _COUNTRY_TAB_EXTRA_CSS = (
 .streamlit-checklist-html-ab .stats-link-icon { opacity: 0.85; }
 """
     + f"""
-/* Country picker: cap width on very wide viewports (table below uses ~min(68rem); refs #132). */
+/* Country picker: cap width on very wide viewports (table below uses ~min(68rem)). */
 section[data-testid="stMain"] div.st-key-{STREAMLIT_COUNTRY_TAB_COUNTRY_KEY} {{
   max-width: min(36rem, 100%);
 }}
-/* Not-seen block: keyed container wraps expander — match .streamlit-checklist-html-ab max-width (refs #108). */
+/* Not-seen block: keyed container wraps expander — match .streamlit-checklist-html-ab max-width. */
 section[data-testid="stMain"] div.stElementContainer.st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY},
 section[data-testid="stMain"] div.st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY},
 section[data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"].st-key-{STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY} {{
@@ -74,12 +74,12 @@ section[data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"].st
 """
 )
 
-# Inset below the tab strip for the first control (dropdown / info), similar to Settings tab rhythm (#132).
+# Inset below the tab strip for the first control (dropdown / info), similar to Settings tab rhythm.
 _COUNTRY_TAB_TOP_SPACER_REM = 0.85
 
 
 def _country_tab_top_spacer() -> None:
-    """Thin vertical gap so the Country tab does not sit flush like Map/table tabs (refs #132)."""
+    """Add vertical space below the tab strip before the first Country control."""
     h = f"{_COUNTRY_TAB_TOP_SPACER_REM}rem"
     st.html(
         f'<div style="height:{h};min-height:{h};flex-shrink:0" aria-hidden="true"></div>'
@@ -113,7 +113,7 @@ def render_country_stats_streamlit_html(
     if cur not in keys:
         st.session_state[STREAMLIT_COUNTRY_TAB_COUNTRY_KEY] = keys[0]
 
-    # Narrow column so the picker does not stretch full width; ratio keeps it responsive (refs #132).
+    # Narrow column so the picker does not stretch full width; ratio keeps it responsive.
     _sel_col, _ = st.columns([2, 5], gap="small")
     with _sel_col:
         selected = st.selectbox(
@@ -188,7 +188,7 @@ def _render_country_not_seen_recently_expander(
     payload: ChecklistStatsPayload,
     selected_country_key: str,
 ) -> None:
-    """In-country recency list (refs #108); discoverable from Rankings Interesting Lists hint."""
+    """Species not seen in the past year within the selected country (Rankings lists the global variant)."""
     rows = (payload.country_not_seen_recently or {}).get(selected_country_key, [])
     country_label = country_display_name_plain(selected_country_key)
     expander_title = f"Species: Not seen in the past year ({country_label})"
@@ -253,10 +253,7 @@ def sync_country_tab_session_inputs(payload: ChecklistStatsPayload | None) -> No
 
 @st.fragment
 def run_country_tab_streamlit_fragment() -> None:
-    """Partial reruns: only this fragment when Country selectbox changes (refs #75).
-
-    Full app reruns still call :func:`sync_country_tab_session_inputs`.
-    """
+    """Partial reruns when Country widgets change; full runs still call sync_country_tab_session_inputs."""
     with perf_fragment("country"):
         payload = st.session_state.get(COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY)
         country_sort = st.session_state.streamlit_country_tab_sort

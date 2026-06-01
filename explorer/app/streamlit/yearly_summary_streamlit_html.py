@@ -1,14 +1,13 @@
 """
-**Yearly Summary** (Streamlit): nested **All** / **Travelling** / **Stationary** tabs (refs #85).
+**Yearly Summary** (Streamlit): nested **All** / **Travelling** / **Stationary** tabs.
 
 HTML from :func:`build_yearly_summary_streamlit_tab_html_dict`; styles match Checklist Statistics
 (:func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` under ``.streamlit-checklist-html-ab``).
 
-When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**
-(3–25, default 10), a **Show full history** ``st.toggle`` below the nested tabs switches between the
-recent window and all columns. One protocol note (All + Travelling/Stationary completeness) sits below
-that control with spacing—redundant per-tab footnotes were removed. Reruns are limited to this ``@st.fragment``
-(same pattern as **Country**).
+When the dataset has more years than **Settings → Tables & lists → Yearly tables: recent year columns**,
+a **Show full history** ``st.toggle`` below the nested tabs switches between the recent window and all
+columns. One protocol note (All + Travelling/Stationary completeness) sits below that control.
+Reruns are limited to this ``@st.fragment`` (same pattern as **Country**).
 
 **Placement:** A single toggle after all ``with tab:`` blocks stays below the active table while avoiding
 duplicate keys (the same widget cannot be declared inside each nested tab).
