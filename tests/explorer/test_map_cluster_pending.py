@@ -1,4 +1,4 @@
-"""Settings → Apply map settings: deferred cluster key applied before sidebar (refs #98)."""
+"""Settings → Apply map settings: deferred cluster key applied before sidebar."""
 
 from __future__ import annotations
 

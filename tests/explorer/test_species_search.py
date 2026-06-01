@@ -1,4 +1,4 @@
-"""Tests for explorer.core.species_search (refs #69, #70)."""
+"""Tests for explorer.core.species_search."""
 
 import tempfile
 

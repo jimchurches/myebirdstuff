@@ -1,4 +1,4 @@
-"""Tests for explorer.presentation.maintenance_display (refs #69)."""
+"""Tests for explorer.presentation.maintenance_display."""
 
 import pandas as pd
 

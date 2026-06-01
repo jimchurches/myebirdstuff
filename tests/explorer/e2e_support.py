@@ -139,7 +139,7 @@ def measure_first_paint_ms(
     Returns ``{"goto_ms", "banner_ms"}``. ``goto_ms`` is navigation-complete wall time
     (``page.goto(... wait_until="domcontentloaded")`` return); ``banner_ms`` is the
     user-experienced first-paint, end-to-end (subprocess pipeline: data load → prep →
-    map build → Streamlit render → iframe DOM paint). This is I4 for #205 batch 4.
+    map build → Streamlit render → iframe DOM paint).
 
     *must_contain* (optional) lets callers refine "banner observed" to a specific
     banner (e.g. ``All locations`` vs ``Lifer locations``); default just waits for

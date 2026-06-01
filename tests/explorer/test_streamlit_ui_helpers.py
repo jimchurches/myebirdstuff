@@ -445,7 +445,7 @@ def test_leaflet_payload_cache_key_includes_species_overlay() -> None:
     assert base_all != all_with_gps
 
 
-# --- app_data_loading / app_map_ui / streamlit_theme (refs #98; UI-surface regressions) ---
+# --- app_data_loading / app_map_ui / streamlit_theme (UI-surface regressions) ---
 
 
 def _fixture_csv_bytes() -> bytes:

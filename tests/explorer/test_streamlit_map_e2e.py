@@ -25,7 +25,7 @@ from tests.explorer.e2e_support import (
 
 pytestmark = pytest.mark.e2e
 
-# Banner width floor for #190-style regression (thin column); see #205 I6 / #222 §8.2.
+# Banner width floor for thin-column regression; see map E2E popup/cluster contracts.
 _PEBIRD_BANNER_MIN_WIDTH_PX = 150.0
 
 
@@ -68,7 +68,7 @@ def test_all_locations_map_shows_legend_and_focused_default(streamlit_app_url: s
 
 
 def test_all_locations_cluster_popup_parity(streamlit_app_url: str) -> None:
-    """All-locations cluster + popup DOM parity (#205 I6, #222 Leaflet component).
+    """All-locations cluster + popup DOM parity (Leaflet component).
 
     Opens a ``CircleMarker`` popup via the Leaflet API (fixture clusters may never
   un-cluster at max zoom). Asserts popup content + tip and minimum banner width.
@@ -135,7 +135,7 @@ def test_all_locations_cluster_popup_parity(streamlit_app_url: str) -> None:
         assert result.get("found", 0) >= 1, f"could not open CircleMarker popup (result={result!r})"
         assert int(result.get("popupContentCount", 0)) >= 1
         assert int(result.get("popupTipCount", 0)) >= 1, (
-            "missing .leaflet-popup-tip (#190 detachment shape)"
+            "missing .leaflet-popup-tip (detached popup shape)"
         )
 
         banner = map_frame.locator(".pebird-map-banner").first

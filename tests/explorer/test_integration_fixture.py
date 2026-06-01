@@ -6,8 +6,6 @@ outputs. All expected values (row counts, checklist counts, countable species,
 lifer-by-year, yearly totals, country-summary tables, duplicate counts,
 missing-time behaviour) are taken from
 tests/fixtures/ebird_integration_fixture_notes.md.
-
-Refs #53.
 """
 
 import os
@@ -100,7 +98,7 @@ EXPECTED_COUNTRY_TOTAL_SPECIES_ROW = {
 EXPECTED_YEARLY_TOTAL_CHECKLISTS_PER_YEAR = ["4", "1", "4", "3", "3"]  # sums to EXPECTED_CHECKLISTS
 
 # ---------------------------------------------------------------------------
-# #103: subspecies-first lifer representation invariants (fixture derived)
+# subspecies-first lifer representation invariants (fixture derived)
 # ---------------------------------------------------------------------------
 EXPECTED_TAXON_LIFER_ENTRIES = 5
 EXPECTED_BOTH_LIFER_ENTRIES = 5
@@ -202,7 +200,7 @@ def test_integration_lifer_count_by_year(fixture_df):
 
 
 def test_integration_lifer_subspecies_representation_flags(fixture_df):
-    """#103: Fixture-derived expectations for subspecies-first lifer aggregation.
+    """Fixture-derived expectations for subspecies-first lifer aggregation.
 
     This ensures subspecies lifer detection is derived from scientific-name structure
     (3+ parts) and correctly identifies 'both' lifer entries for subspecies-first cases.
@@ -460,7 +458,7 @@ def test_integration_blank_date_in_temp_copy():
 
 
 # ---------------------------------------------------------------------------
-# 8. Working-set / Reset View consistency (refs #66, #68)
+# 8. Working-set / Reset View consistency
 # ---------------------------------------------------------------------------
 
 def test_integration_working_set_full_view_matches_checklist_locations(fixture_df):

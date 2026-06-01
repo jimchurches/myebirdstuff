@@ -254,17 +254,17 @@ def _load_taxonomy_groups(locale: str) -> list[dict[str, Any]]:
 @st.cache_data(show_spinner=False)
 def build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Build summary/detail DataFrames for species-group coverage (eBird taxonomy + sppgroup)."""
-    tax = _load_taxonomy_species_rows(taxonomy_locale)
+    taxonomy_frame = _load_taxonomy_species_rows(taxonomy_locale)
     groups = _load_taxonomy_groups(taxonomy_locale)
-    if tax.empty or not groups:
+    if taxonomy_frame.empty or not groups:
         return pd.DataFrame(), pd.DataFrame()
 
-    tax = _filter_taxonomy_for_coverage(tax)
-    if tax.empty:
+    taxonomy_frame = _filter_taxonomy_for_coverage(taxonomy_frame)
+    if taxonomy_frame.empty:
         return pd.DataFrame(), pd.DataFrame()
 
-    tax = tax.copy()
-    tax[["group_name", "group_order"]] = tax["taxon_order"].apply(
+    taxonomy_frame = taxonomy_frame.copy()
+    taxonomy_frame[["group_name", "group_order"]] = taxonomy_frame["taxon_order"].apply(
         lambda x: pd.Series(assign_group_for_taxon_order(float(x), groups))
     )
 
@@ -315,14 +315,14 @@ def build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) -> 
         obs["individuals"] = obs["individuals"].fillna(0).astype(int)
         obs["first_sid"] = obs["first_sid"].fillna("").astype(str)
         obs["last_sid"] = obs["last_sid"].fillna("").astype(str)
-    tax_bases = set(tax["base_species"].astype(str))
-    unmatched = sorted(set(obs["base_species"].astype(str)) - tax_bases)
+    taxonomy_bases = set(taxonomy_frame["base_species"].astype(str))
+    unmatched = sorted(set(obs["base_species"].astype(str)) - taxonomy_bases)
     if unmatched:
         logger.debug(
             "Observed base species not in taxonomy (excluded from coverage): %s",
             unmatched,
         )
-    merged = tax.merge(obs, how="left", on="base_species")
+    merged = taxonomy_frame.merge(obs, how="left", on="base_species")
     merged["seen"] = merged["checklists"].notna()
     merged["checklists"] = merged["checklists"].fillna(0).astype(int)
     merged["individuals"] = merged["individuals"].fillna(0).astype(int)

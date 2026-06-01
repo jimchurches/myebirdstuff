@@ -1,4 +1,4 @@
-"""Integration tests for map prep spinners and Leaflet payload cache wiring (#222 draft B)."""
+"""Integration tests for map prep spinners and Leaflet payload cache wiring."""
 
 from __future__ import annotations
 

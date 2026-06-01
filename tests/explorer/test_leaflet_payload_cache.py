@@ -1,4 +1,4 @@
-"""Unit tests for Leaflet GeoJSON session LRU helpers in ``app_prep_map_leaflet_caches`` (#222 §13–§15, draft A)."""
+"""Unit tests for Leaflet GeoJSON session LRU helpers in ``app_prep_map_leaflet_caches``."""
 
 from __future__ import annotations
 

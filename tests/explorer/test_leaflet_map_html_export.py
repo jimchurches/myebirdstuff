@@ -1,4 +1,4 @@
-"""Tests for standalone Leaflet map HTML export (#222 §7)."""
+"""Tests for standalone Leaflet map HTML export."""
 
 from __future__ import annotations
 

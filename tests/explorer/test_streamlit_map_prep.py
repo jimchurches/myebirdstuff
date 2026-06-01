@@ -1,4 +1,4 @@
-"""Tests for Streamlit map context prep (refs #70)."""
+"""Tests for Streamlit map context prep."""
 
 
 import pandas as pd

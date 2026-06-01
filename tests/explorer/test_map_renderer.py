@@ -111,7 +111,7 @@ def test_format_sighting_row_with_datetime():
 
 
 # ---------------------------------------------------------------------------
-# format_species_map_sighting_row / build_species_seen_sections_html (refs #145)
+# format_species_map_sighting_row / build_species_seen_sections_html
 # ---------------------------------------------------------------------------
 
 def test_format_species_map_sighting_row_omits_common_name():
@@ -393,7 +393,7 @@ def test_build_species_banner_html_is_div():
 
 
 def test_build_species_banner_html_with_species_url():
-    """When species_url is provided, display_name is wrapped in a link (refs #56)."""
+    """When species_url is provided, display_name is wrapped in a link."""
     html = build_species_banner_html(
         "Grey Teal",
         2,

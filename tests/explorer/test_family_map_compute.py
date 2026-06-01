@@ -1,4 +1,4 @@
-"""Unit tests for family map aggregation (refs #138)."""
+"""Unit tests for family map aggregation."""
 
 import pandas as pd
 import pytest

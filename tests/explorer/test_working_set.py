@@ -1,4 +1,4 @@
-"""Tests for explorer.core.working_set (refs #66)."""
+"""Tests for explorer.core.working_set."""
 
 import tempfile
 
