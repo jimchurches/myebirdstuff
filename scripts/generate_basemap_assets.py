@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Generate frontend basemap assets from ``explorer/data/basemaps.yaml``.
+"""Generate frontend map assets from repo manifests and ``defaults.py``.
 
-Writes ``explorer/components/all_locations_map/frontend/src/basemaps.generated.ts``.
+Writes:
+
+- ``explorer/components/all_locations_map/frontend/src/basemaps.generated.ts`` (from ``basemaps.yaml``)
+- ``map_popup_constants.generated.ts`` / ``.css`` (from ``MAP_POPUP_MAX_WIDTH_PX`` in ``defaults.py``)
+- ``explorer/presentation/static/leaflet_map_export_constants.generated.js`` (same popup width)
 
 Run from repo root (also invoked by ``scripts/build_all_locations_map_frontend.py``):
 
@@ -18,18 +22,22 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_TS_OUT = (
-    _REPO_ROOT
-    / "explorer/components/all_locations_map/frontend/src/basemaps.generated.ts"
-)
+_FRONTEND_SRC = _REPO_ROOT / "explorer/components/all_locations_map/frontend/src"
+_STATIC = _REPO_ROOT / "explorer/presentation/static"
 
 
 def _json_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def _popup_max_width_px() -> int:
+    sys.path.insert(0, str(_REPO_ROOT))
+    from explorer.app.streamlit.defaults import MAP_POPUP_MAX_WIDTH_PX  # noqa: PLC0415
+
+    return int(MAP_POPUP_MAX_WIDTH_PX)
+
+
 def render_basemaps_ts() -> str:
-    # Import after repo root is on path when run as script.
     sys.path.insert(0, str(_REPO_ROOT))
     from explorer.core.basemap_manifest import (  # noqa: PLC0415
         MAP_BASEMAP_DEFAULT,
@@ -76,33 +84,97 @@ def render_basemaps_ts() -> str:
     return "\n".join(lines)
 
 
+def render_popup_constants_ts() -> str:
+    width = _popup_max_width_px()
+    return "\n".join(
+        [
+            "/** AUTO-GENERATED from explorer/app/streamlit/defaults.py — do not edit. */",
+            "/** Regenerate: python3 scripts/generate_basemap_assets.py */",
+            "",
+            f"export const POPUP_MAX_WIDTH_PX = {width};",
+            "",
+        ]
+    )
+
+
+def render_popup_constants_css() -> str:
+    width = _popup_max_width_px()
+    return "\n".join(
+        [
+            "/** AUTO-GENERATED from explorer/app/streamlit/defaults.py — do not edit. */",
+            "/** Regenerate: python3 scripts/generate_basemap_assets.py */",
+            "",
+            ":root {",
+            f"  --pebird-map-popup-max-width: {width}px;",
+            "}",
+            "",
+        ]
+    )
+
+
+def render_export_popup_constants_js() -> str:
+    width = _popup_max_width_px()
+    return "\n".join(
+        [
+            "/** AUTO-GENERATED from explorer/app/streamlit/defaults.py — do not edit. */",
+            "/** Regenerate: python3 scripts/generate_basemap_assets.py */",
+            "",
+            f"var POPUP_MAX_WIDTH_PX = {width};",
+            "",
+        ]
+    )
+
+
+def _generated_outputs() -> tuple[tuple[Path, str], ...]:
+    return (
+        (_FRONTEND_SRC / "basemaps.generated.ts", render_basemaps_ts()),
+        (_FRONTEND_SRC / "map_popup_constants.generated.ts", render_popup_constants_ts()),
+        (_FRONTEND_SRC / "map_popup_constants.generated.css", render_popup_constants_css()),
+        (
+            _STATIC / "leaflet_map_export_constants.generated.js",
+            render_export_popup_constants_js(),
+        ),
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Exit 1 if generated TS is out of date (do not write).",
+        help="Exit 1 if any generated file is out of date (do not write).",
     )
     args = parser.parse_args()
 
-    rendered = render_basemaps_ts()
+    outputs = _generated_outputs()
+    stale: list[str] = []
+    for path, rendered in outputs:
+        rel = path.relative_to(_REPO_ROOT)
+        if args.check:
+            if not path.is_file():
+                stale.append(f"missing {rel}")
+                continue
+            existing = path.read_text(encoding="utf-8")
+            if existing != rendered:
+                stale.append(str(rel))
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(rendered, encoding="utf-8")
+            print(f"wrote {rel}")
+
     if args.check:
-        if not _TS_OUT.is_file():
-            print(f"error: missing {_TS_OUT.relative_to(_REPO_ROOT)}", file=sys.stderr)
-            sys.exit(1)
-        existing = _TS_OUT.read_text(encoding="utf-8")
-        if existing != rendered:
+        if stale:
             print(
-                f"error: {_TS_OUT.relative_to(_REPO_ROOT)} is stale; "
+                "error: generated map assets are stale; "
                 "run python3 scripts/generate_basemap_assets.py",
                 file=sys.stderr,
             )
+            for item in stale:
+                print(f"  - {item}", file=sys.stderr)
             sys.exit(1)
-        print(f"OK: {_TS_OUT.relative_to(_REPO_ROOT)} matches basemaps.yaml")
+        for path, _ in outputs:
+            print(f"OK: {path.relative_to(_REPO_ROOT)}")
         return
-
-    _TS_OUT.write_text(rendered, encoding="utf-8")
-    print(f"wrote {_TS_OUT.relative_to(_REPO_ROOT)}")
 
 
 if __name__ == "__main__":

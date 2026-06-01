@@ -2,8 +2,7 @@
 
 import L from "leaflet";
 
-/** Matches ``MAP_POPUP_MAX_WIDTH_PX`` in ``explorer/app/streamlit/defaults.py`` (420). */
-const POPUP_MAX_WIDTH_PX = 420;
+import { POPUP_MAX_WIDTH_PX } from "./map_popup_constants.generated";
 
 /** Leaflet runs ``autoPan`` inside ``popup.update()`` — stacked updates caused large vertical pans. Disabled globally; ``maybePanPopupIntoView`` pans once when needed after layout settles. */
 export const POPUP_BIND_OPTIONS: L.PopupOptions = {

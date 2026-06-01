@@ -7,6 +7,7 @@ import re
 
 import pytest
 
+from explorer.app.streamlit.defaults import MAP_POPUP_MAX_WIDTH_PX
 from explorer.core.basemap_manifest import (
     MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_OPTIONS,
@@ -258,3 +259,17 @@ def test_leaflet_map_to_html_bytes_includes_viewer_and_geojson():
     assert "pebird-export-shell" in text
     assert "shrinkPebirdLeafletPopups" in text
     assert "scheduleShrinkPebirdLeafletPopups" in text
+
+
+def test_leaflet_map_to_html_bytes_embeds_generated_popup_max_width():
+    raw = leaflet_map_to_html_bytes(
+        geojson=_minimal_export_geojson(),
+        height=400,
+        map_style="default",
+        cluster_options={"enabled": False},
+        circle_marker_style={"fill_hex": "#3388ff", "stroke_hex": "#1c2630", "radius_px": 7},
+        viewport={"v": 1, "mode": "center_zoom", "center": [-37.0, 145.0], "zoom": 10},
+    )
+    text = raw.decode("utf-8")
+    assert f"var POPUP_MAX_WIDTH_PX = {MAP_POPUP_MAX_WIDTH_PX};" in text
+    assert "AUTO-GENERATED from explorer/app/streamlit/defaults.py" in text

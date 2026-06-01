@@ -1,10 +1,11 @@
 /**
  * Mirrors ``map_popup_theme_stylesheet`` in explorer/presentation/map_renderer.py
  * so experimental Leaflet popups match production All locations.
- * Keep MAP_POPUP_MAX_WIDTH_PX in sync with explorer/app/streamlit/defaults.py (420).
+ * Popup max width: ``map_popup_constants.generated.css`` (from ``defaults.py``).
  */
+@import "./map_popup_constants.generated.css";
+
 :root {
-  --pebird-map-popup-max-width: 420px;
   --pebird-font-stack: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --pebird-ui-text: #1a2e22;
   --pebird-ui-primary-green: #1f6f54;
