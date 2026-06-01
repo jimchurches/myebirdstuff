@@ -71,16 +71,18 @@ def _filter_taxonomy_for_coverage(tax: pd.DataFrame) -> pd.DataFrame:
     return tax[~tax["is_extinct"].fillna(False)].copy()
 
 
-def world_species_coverage_extinct_footnote_text() -> str:
-    """Caption for world species coverage tables (refs #262)."""
+def _extinct_species_coverage_clause() -> str:
+    """Lowercase clause for footnotes; no trailing period (refs #262)."""
     if TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE:
-        return (
-            "Extinct species are included in the eBird/Clements taxonomy total and "
-            "coverage percentage."
-        )
+        return "extinct species are included in coverage totals"
+    return "extinct species are excluded from coverage totals"
+
+
+def taxonomy_coverage_footnote_text() -> str:
+    """Plain-text footnote for family/world coverage tables (refs #262)."""
     return (
-        "Extinct species are excluded from the eBird/Clements taxonomy total and "
-        "coverage percentage."
+        "Species and family groups follow the eBird/Clements taxonomy; "
+        f"{_extinct_species_coverage_clause()}."
     )
 
 
@@ -105,7 +107,7 @@ def world_species_coverage_list_html(observed: int, total: int, pct: float) -> s
     )
     footnote = (
         f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">'
-        f"{html.escape(world_species_coverage_extinct_footnote_text())}"
+        f"{html.escape(taxonomy_coverage_footnote_text())}"
         "</p>"
     )
     return tbl + footnote
@@ -218,9 +220,10 @@ def _family_coverage_taxonomy_note_html() -> str:
     """Footnote below the overview table; same caption style as Yearly Summary protocol note (refs #85)."""
     inner = (
         f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">'
-        "<strong>Taxonomy:</strong> "
-        f'<a href="{html.escape(_EBIRD_TAXONOMY_URL)}" target="_blank" rel="noopener">eBird</a> '
-        "— species and family groups follow the eBird taxonomy."
+        "Species and family groups follow the "
+        f'<a href="{html.escape(_EBIRD_TAXONOMY_URL)}" target="_blank" rel="noopener">eBird</a>'
+        "/Clements taxonomy; "
+        f"{html.escape(_extinct_species_coverage_clause())}."
         "</p>"
     )
     return f'<div class="{_STREAMLIT_TABLE_SCOPE} {_RANKINGS_SCOPE_EXTRA}">{inner}</div>'

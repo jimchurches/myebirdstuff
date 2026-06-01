@@ -106,7 +106,8 @@ def test_world_species_coverage_list_html_footnote_excludes_extinct_by_default(m
     html_out = bf.world_species_coverage_list_html(10, 100, 10.0)
     assert "Species in eBird taxonomy" in html_out
     assert "Observed species (%)" in html_out
-    assert "excluded" in html_out.lower()
+    assert "eBird/Clements taxonomy" in html_out
+    assert "excluded from coverage totals" in html_out.lower()
 
 
 def test_world_species_coverage_list_html_footnote_includes_extinct_when_enabled(monkeypatch):
@@ -114,7 +115,21 @@ def test_world_species_coverage_list_html_footnote_includes_extinct_when_enabled
 
     monkeypatch.setattr(bf, "TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE", True)
     html_out = bf.world_species_coverage_list_html(10, 100, 10.0)
-    assert "included" in html_out.lower()
+    assert "included in coverage totals" in html_out.lower()
+
+
+def test_family_coverage_taxonomy_note_html_combined_footnote(monkeypatch):
+    from explorer.app.streamlit import bird_families_streamlit_html as bf
+
+    monkeypatch.setattr(bf, "TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE", False)
+    html_out = bf._family_coverage_taxonomy_note_html()
+    assert "eBird</a>/Clements taxonomy" in html_out
+    assert "excluded from coverage totals" in html_out.lower()
+    assert "<strong>Taxonomy:</strong>" not in html_out
+
+    monkeypatch.setattr(bf, "TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE", True)
+    html_out = bf._family_coverage_taxonomy_note_html()
+    assert "included in coverage totals" in html_out.lower()
 
 
 def test_compute_world_species_coverage_counts_seen_base_species():
@@ -213,3 +228,17 @@ def test_attach_group_coverage_stores_world_metrics_once(monkeypatch):
     assert bundle[bf.WORLD_SPECIES_COVERAGE_METRICS_KEY] == (1, 1, 100.0)
     assert bundle[bf.WORLD_SPECIES_COVERAGE_SECTION_KEY][0] == "Species: Coverage"
     assert calls == ["compute"]
+
+
+def test_rankings_bundle_has_content_includes_world_species_section():
+    from explorer.app.streamlit.rankings_streamlit_html import (
+        WORLD_SPECIES_COVERAGE_SECTION_KEY,
+        _rankings_bundle_has_content,
+    )
+
+    assert _rankings_bundle_has_content({}) is False
+    assert _rankings_bundle_has_content({"rankings_sections_top_n": [("t", "h")]}) is True
+    assert _rankings_bundle_has_content({"rankings_sections_other": [("t", "h")]}) is True
+    assert _rankings_bundle_has_content(
+        {WORLD_SPECIES_COVERAGE_SECTION_KEY: ("Species: Coverage", "<p>x</p>")}
+    ) is True

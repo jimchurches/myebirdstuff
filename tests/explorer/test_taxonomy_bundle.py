@@ -158,3 +158,41 @@ def test_parse_taxonomy_csv_retains_extinct_fields():
     rows = bundle.species_rows.sort_values("taxon_order").reset_index(drop=True)
     assert list(rows["is_extinct"]) == [False, True]
     assert rows.loc[1, "extinct_year"] == "1900"
+
+
+def test_taxonomy_row_is_extinct_from_year_when_flag_unset():
+    from explorer.core.taxonomy_bundle import _taxonomy_row_is_extinct
+
+    assert _taxonomy_row_is_extinct("0", "1900") is True
+    assert _taxonomy_row_is_extinct("", "1938") is True
+    assert _taxonomy_row_is_extinct("0", "") is False
+    assert _taxonomy_row_is_extinct("1", "") is True
+
+
+def test_parse_taxonomy_csv_marks_extinct_from_extinct_year_only():
+    csv_data = _make_csv(
+        [
+            {
+                "common_name": "Year Only Extinct",
+                "species_code": "yrext",
+                "category": "species",
+                "scientific_name": "Aves antiquus",
+                "taxon_order": "102",
+                "extinct": "0",
+                "extinct_year": "1938",
+            },
+        ],
+        fieldnames=(
+            "common_name",
+            "species_code",
+            "category",
+            "scientific_name",
+            "taxon_order",
+            "extinct",
+            "extinct_year",
+        ),
+    )
+    ctxs = _mock_urlopen_responses([csv_data])
+    with patch("explorer.core.taxonomy_bundle.urlopen", side_effect=ctxs):
+        bundle = load_taxonomy_bundle("en_US")
+    assert bool(bundle.species_rows.iloc[0]["is_extinct"]) is True

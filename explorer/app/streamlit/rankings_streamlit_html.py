@@ -96,6 +96,15 @@ def _rankings_expander_sections(sections: list[tuple[str, str]]) -> None:
             )
 
 
+def _rankings_bundle_has_content(bundle: dict[str, Any]) -> bool:
+    """True when the bundle includes Top Lists, Interesting Lists, or Species: Coverage sections."""
+    return bool(
+        bundle.get("rankings_sections_top_n")
+        or bundle.get("rankings_sections_other")
+        or bundle.get(WORLD_SPECIES_COVERAGE_SECTION_KEY)
+    )
+
+
 def render_rankings_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
     """Render Rankings HTML from a precomputed bundle (fragment-safe)."""
     inject_streamlit_checklist_css(_rankings_table_layout_inject_css())
@@ -118,7 +127,7 @@ def run_rankings_streamlit_tab_fragment() -> None:
     """Partial reruns when Rankings expanders/widgets change (same pattern as Country / Yearly)."""
     with perf_fragment("ranking_lists"):
         bundle = st.session_state.get(RANKING_LISTS_FAMILIES_BUNDLE_KEY) or {}
-        if not bundle.get("rankings_sections_top_n") and not bundle.get("rankings_sections_other"):
+        if not _rankings_bundle_has_content(bundle):
             st.info("Load checklist data to use Ranking & Lists.")
             return
         render_rankings_streamlit_tab_from_bundle(bundle)

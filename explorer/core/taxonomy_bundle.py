@@ -50,6 +50,16 @@ def _fetch_taxonomy_csv(url: str) -> str | None:
         return None
 
 
+def _taxonomy_row_is_extinct(extinct_raw: str, extinct_year_raw: str) -> bool:
+    """True when eBird marks a species extinct via ``EXTINCT`` or a non-empty ``EXTINCT_YEAR``.
+
+    The live taxonomy CSV usually sets ``EXTINCT=1``; some rows may only carry ``EXTINCT_YEAR``.
+    """
+    if extinct_raw in {"1", "true", "True", "yes", "Yes"}:
+        return True
+    return bool(extinct_year_raw)
+
+
 def _parse_taxonomy_csv(raw: str) -> tuple[pd.DataFrame, dict[str, str]]:
     """Parse one taxonomy CSV into species rows and common_name → species_code (species category only)."""
     reader = csv.DictReader(io.StringIO(raw))
@@ -101,7 +111,7 @@ def _parse_taxonomy_csv(raw: str) -> tuple[pd.DataFrame, dict[str, str]]:
             continue
         extinct_raw = str(row.get(extinct_key) or "").strip() if extinct_key else ""
         extinct_year_raw = str(row.get(extinct_year_key) or "").strip() if extinct_year_key else ""
-        is_extinct = extinct_raw in {"1", "true", "True", "yes", "Yes"}
+        is_extinct = _taxonomy_row_is_extinct(extinct_raw, extinct_year_raw)
         rows.append(
             {
                 "scientific_name": sci,
