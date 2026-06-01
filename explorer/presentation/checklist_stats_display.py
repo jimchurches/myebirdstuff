@@ -1,7 +1,7 @@
 """
 HTML rendering for checklist statistics, yearly summary, and rankings sections.
 
-Consumes :class:`ChecklistStatsPayload` from ``checklist_stats_compute`` (refs #68).
+Consumes :class:`ChecklistStatsPayload` from ``checklist_stats_compute``.
 """
 
 from __future__ import annotations
@@ -161,7 +161,7 @@ def sort_country_sections_for_display(
     country_sections: List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]],
     country_sort: str,
 ) -> List[Tuple[str, List[Any], List[Tuple[str, List[str]]]]]:
-    """Order country sections for Country tab / HTML (refs #91).
+    """Order country sections for Country tab / HTML.
 
     *country_sort*: ``alphabetical`` | ``lifers_world`` | ``total_species`` — same keys as
     :data:`COUNTRY_TAB_SORT_*` in :mod:`explorer.core.constants`.
@@ -206,7 +206,7 @@ def _format_country_summary_html(
         if not years_list or not rows:
             continue
         title = _country_accordion_title(country_key)
-        # Same table fragment as :func:`format_country_yearly_table_html` (refs #75, single source of truth).
+        # Same table fragment as :func:`format_country_yearly_table_html` (single source of truth).
         table_html = format_country_yearly_table_html(
             country_key, years_list, rows, inline_statistic_links=True
         )
@@ -856,7 +856,7 @@ _YEARLY_INFO_ICON_RE = re.compile(
     re.DOTALL,
 )
 
-# Order for traveling / stationary detail rows (refs #85).
+# Order for traveling / stationary detail rows.
 _YEARLY_TRAVELING_ORDER = [
     "Total distance (km)",
     "Average distance (km)",
@@ -876,7 +876,7 @@ _YEARLY_STREAMLIT_CAPTION_STYLE = (
     "margin:10px 0 0;color:#6b7280;font-size:12px;line-height:1.5;max-width:52rem;"
 )
 
-# Streamlit Yearly Summary: default to the most recent N calendar years when count exceeds this (refs #85).
+# Streamlit Yearly Summary: default to the most recent N calendar years when count exceeds this.
 YEARLY_STREAMLIT_RECENT_YEAR_COUNT = 10
 
 # Shown below the Yearly Summary toggle in ``yearly_summary_streamlit_html`` (not embedded in All-tab HTML).
@@ -888,7 +888,7 @@ YEARLY_STREAMLIT_ALL_TAB_PROTOCOL_NOTE = (
 
 
 def format_yearly_streamlit_all_tab_protocol_note_html() -> str:
-    """HTML for the protocol note below the Yearly Summary toggle (refs #85).
+    """HTML for the protocol note below the Yearly Summary toggle.
 
     Wrapped in ``.streamlit-checklist-html-ab`` so the ``<p>`` picks up the same scoped ``> p`` rules
     as tables in this tab, with ``_YEARLY_STREAMLIT_CAPTION_STYLE`` inline (same as old footnotes).
@@ -905,7 +905,7 @@ def format_yearly_streamlit_all_tab_protocol_note_html() -> str:
 
 
 def strip_yearly_stats_info_icons(label_html: str) -> str:
-    """Remove inline ``stats-info-icon`` spans from yearly row labels (Streamlit yearly tab; refs #85)."""
+    """Remove inline ``stats-info-icon`` spans from yearly row labels (Streamlit yearly tab)."""
     return _YEARLY_INFO_ICON_RE.sub("", label_html or "").strip()
 
 
@@ -998,7 +998,7 @@ def _slice_yearly_row_vals(vals: List[str], years_list: List[Any], s: slice) -> 
     """Slice per-year cells in lockstep with *years_list*.
 
     Country yearly rows often end with a **Total** column (``len(vals) == len(years_list) + 1``).
-    That tail must be dropped, sliced, or recomputed so headers stay aligned (#85).
+    That tail must be dropped, sliced, or recomputed so headers stay aligned.
     """
     n = len(years_list)
     n_disp = len(years_list[s])
@@ -1028,7 +1028,7 @@ def slice_yearly_table_rows(
     years_list: List[Any],
     s: slice,
 ) -> List[Tuple[str, List[str]]]:
-    """Slice each row's per-year values in lockstep with *years_list* (e.g. Country yearly table; #85)."""
+    """Slice each row's per-year values in lockstep with *years_list* (e.g. Country yearly table)."""
     return [(lab, _slice_yearly_row_vals(vals, years_list, s)) for lab, vals in rows]
 
 
@@ -1079,7 +1079,7 @@ def build_yearly_summary_streamlit_tab_html_dict(
     show_full_history: bool = False,
     recent_year_count: int = YEARLY_STREAMLIT_RECENT_YEAR_COUNT,
 ) -> Optional[Dict[str, str]]:
-    """Build inner HTML for Streamlit Yearly Summary nested tabs (All / Travelling / Stationary; refs #85).
+    """Build inner HTML for Streamlit Yearly Summary nested tabs (All / Travelling / Stationary).
 
     When ``len(years_list) > recent_year_count`` and *show_full_history* is false, only the most
     recent *recent_year_count* years are shown (columns), preserving ordering.
@@ -1538,7 +1538,7 @@ def format_rankings_tab_html(
     *,
     top_n_limit: int,
 ) -> str:
-    """Wrap Rankings tab sections in accordions (same styling as Maintenance tab). Refs #69."""
+    """Wrap Rankings tab sections in accordions (same styling as Maintenance tab)."""
 
     def _details_block(title: str, html_body: str) -> str:
         return f"""

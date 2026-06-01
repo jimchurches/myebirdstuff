@@ -1,4 +1,4 @@
-"""Shared helpers for checklist-style HTML tables (escaping, cells, rows, external links) (refs #117).
+"""Shared helpers for checklist-style HTML tables (escaping, cells, rows, external links).
 
 Call sites own table structure and classes; helpers standardize *how* plain text and links are escaped
 and how common cell styles are expressed.
