@@ -111,8 +111,8 @@ def main() -> None:
 
     bootstrap_session_after_csv_load(df_full, source_label=source_label)
 
-    mw = render_map_sidebar_and_working_set(df_full)
-    tax = build_taxonomy_popup_assets()
+    map_working = render_map_sidebar_and_working_set(df_full)
+    taxonomy_assets = build_taxonomy_popup_assets()
 
     render_dashboard_shell(
         df_full=df_full,
@@ -120,8 +120,8 @@ def main() -> None:
         source_label=source_label,
         data_abs_path=data_abs_path,
         data_basename=data_basename,
-        mw=mw,
-        tax=tax,
+        map_working=map_working,
+        taxonomy_assets=taxonomy_assets,
     )
 
 

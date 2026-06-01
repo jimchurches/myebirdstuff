@@ -34,6 +34,9 @@ from explorer.core.basemap_manifest import MAP_BASEMAP_LABELS  # noqa: F401 — 
 from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export for Streamlit UI
     MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_OPTIONS,
+    MAP_HEIGHT_PX_DEFAULT,
+    MAP_HEIGHT_PX_MAX,
+    MAP_HEIGHT_PX_MIN,
 )
 
 # ---------------------------------------------------------------------------
@@ -111,10 +114,22 @@ MAP_POPUP_MACAULAY_LINK_SYMBOL = "↗"
 # Map UI — sidebar / Settings controls (basemap default is persisted in YAML)
 # ---------------------------------------------------------------------------
 
-MAP_HEIGHT_PX_DEFAULT = 720
-MAP_HEIGHT_PX_MIN = 440
-MAP_HEIGHT_PX_MAX = 1200
 MAP_HEIGHT_PX_STEP = 20
+# Leaflet component iframe min-height floor (sidebar slider can go lower in theory; keep map usable).
+MAP_IFRAME_MIN_HEIGHT_PX = 240
+
+# Session LRU — Leaflet GeoJSON payload and HTML export caches (``app_prep_map_leaflet_caches``).
+ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
+LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
+SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 2
+FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES = 4
+LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES = 6
+
+# Bird Families tab — summary ``st.dataframe`` height when no family row is selected.
+BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX = 280
+
+# Country tab — rendered not-seen HTML session cache.
+COUNTRY_NOT_SEEN_HTML_CACHE_MAX_ENTRIES = 20
 
 MAP_DATE_FILTER_DEFAULT = False
 
@@ -148,13 +163,13 @@ def clamp_map_marker_circle_radius_px(value: int | float | None) -> int:
 def clamp_map_marker_circle_fill_opacity(value: float | None, *, fallback: float) -> float:
     """Clamp circle fill opacity to ``[0, 1]`` for map marker schemes and the design utility."""
     if value is None:
-        x = fallback
+        raw_opacity = fallback
     else:
         try:
-            x = float(value)
+            raw_opacity = float(value)
         except (TypeError, ValueError):
-            x = fallback
-    return max(0.0, min(1.0, x))
+            raw_opacity = fallback
+    return max(0.0, min(1.0, raw_opacity))
 
 
 # Nested :class:`~explorer.core.map_marker_scheme_model.MapMarkerColourScheme` — globals, then per-map

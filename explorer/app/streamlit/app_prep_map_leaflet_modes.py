@@ -25,12 +25,14 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_go_to_gps_ui import go_to_gps_pin_from_session
 from explorer.app.streamlit.app_prep_map_leaflet_caches import (
+    leaflet_payload_cache_lookup,
+    leaflet_payload_cache_store,
+)
+from explorer.app.streamlit.defaults import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    leaflet_payload_cache_lookup,
-    leaflet_payload_cache_store,
 )
 from explorer.app.streamlit.app_prep_map_types import LeafletMapPrepBundle
 from explorer.app.streamlit.defaults import (

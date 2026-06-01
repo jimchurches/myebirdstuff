@@ -101,6 +101,9 @@ CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
 
 CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE = 5
 CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS = 750
+CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS_MIN = 100
+# ``st.iframe`` height for the animated emoji strip; must match spinner theme CSS selectors.
+CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX = 52
 
 # ---------------------------------------------------------------------------
 # Sidebar footer

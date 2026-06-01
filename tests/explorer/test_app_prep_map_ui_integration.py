@@ -121,10 +121,11 @@ def test_apply_dataset_signature_unchanged_preserves_leaflet_cache(
 def test_leaflet_payload_cache_miss_when_revision_extra_changes(streamlit_stub) -> None:
     from explorer.app.streamlit.app_caches import leaflet_payload_cache_key
     from explorer.app.streamlit.app_constants import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY
-    from explorer.app.streamlit.app_prep_map_ui import (
-        _leaflet_payload_cache_lookup,
-        _leaflet_payload_cache_store,
+    from explorer.app.streamlit.app_prep_map_leaflet_caches import (
+        leaflet_payload_cache_lookup,
+        leaflet_payload_cache_store,
     )
+    from explorer.app.streamlit.defaults import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
 
     df = _tiny_df()
     payload_ck = leaflet_payload_cache_key(
@@ -140,22 +141,23 @@ def test_leaflet_payload_cache_miss_when_revision_extra_changes(streamlit_stub) 
     key_off = (payload_ck, rev_cluster_off, None)
     key_on = (payload_ck, rev_cluster_on, None)
 
-    _leaflet_payload_cache_store(
+    leaflet_payload_cache_store(
         ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
         key_off,
         {"revision": "off", "geojson": {"type": "FeatureCollection", "features": []}},
-        max_entries=4,
+        max_entries=ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     )
-    assert _leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_off) is not None
-    assert _leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_on) is None
+    assert leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_off) is not None
+    assert leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_on) is None
 
 
 def test_all_locations_payload_cache_hit_flips_false_then_true(streamlit_stub) -> None:
     from explorer.app.streamlit.app_constants import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY
-    from explorer.app.streamlit.app_prep_map_ui import (
-        _leaflet_payload_cache_lookup,
-        _leaflet_payload_cache_store,
+    from explorer.app.streamlit.app_prep_map_leaflet_caches import (
+        leaflet_payload_cache_lookup,
+        leaflet_payload_cache_store,
     )
+    from explorer.app.streamlit.defaults import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
 
     key = ("integration", "rev")
     entry = {
@@ -168,17 +170,17 @@ def test_all_locations_payload_cache_hit_flips_false_then_true(streamlit_stub) -
 
     def record_hit() -> None:
         hits.append(
-            _leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key)
+            leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key)
             is not None
         )
 
     record_hit()
     if not hits[-1]:
-        _leaflet_payload_cache_store(
+        leaflet_payload_cache_store(
             ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
             key,
             entry,
-            max_entries=4,
+            max_entries=ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
         )
     record_hit()
 

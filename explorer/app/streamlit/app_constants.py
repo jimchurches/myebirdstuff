@@ -24,7 +24,10 @@ from explorer.app.streamlit.defaults import (
     THEME_SECONDARY_BG_HEX,
     THEME_TEXT_HEX,
 )
-from explorer.app.streamlit.streamlit_ui_constants import DEFAULT_EBIRD_DATA_FILENAME
+from explorer.app.streamlit.streamlit_ui_constants import (
+    CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX,
+    DEFAULT_EBIRD_DATA_FILENAME,
+)
 
 STREAMLIT_APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = str(STREAMLIT_APP_DIR.parent.parent.parent)
@@ -313,9 +316,9 @@ div[data-testid="stSpinner"] div[class*="Spinner"] {{
   border-top-color: {THEME_PRIMARY_HEX} !important;
 }}
 
-/* Bird-emoji strip (``st.iframe`` spinner animation uses height 52): tuck under spinner, centered. */
-[data-testid="stAppViewContainer"] main iframe[height="52"],
-[data-testid="stSidebar"] iframe[height="52"] {{
+/* Bird-emoji strip (``st.iframe`` spinner animation): tuck under spinner, centered. */
+[data-testid="stAppViewContainer"] main iframe[height="{CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX}"],
+[data-testid="stSidebar"] iframe[height="{CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX}"] {{
   display: block !important;
   margin: 0.1rem auto 0.4rem auto !important;
   border: none !important;

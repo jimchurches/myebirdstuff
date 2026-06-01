@@ -30,7 +30,8 @@ from explorer.presentation.rankings_display import rankings_not_seen_recently_ta
 
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 from explorer.app.streamlit.yearly_summary_streamlit_html import get_yearly_recent_column_count
-from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT
+from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, COUNTRY_NOT_SEEN_HTML_CACHE_MAX_ENTRIES
+from explorer.core.settings_schema_defaults import TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT
 from explorer.app.streamlit.app_constants import (
     COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY,
     STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY,
@@ -43,7 +44,6 @@ from explorer.app.streamlit.app_constants import (
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 
 _COUNTRY_NOT_SEEN_CACHE_KEY = "_streamlit_country_not_seen_html_cache"
-_COUNTRY_NOT_SEEN_CACHE_MAX_ENTRIES = 20
 
 _COUNTRY_TAB_EXTRA_CSS = (
     """
@@ -198,9 +198,14 @@ def _render_country_not_seen_recently_expander(
         get_species_and_lifelist_urls if load_taxonomy(locale=loc) else (lambda _: (None, None))
     )
     try:
-        visible_rows = int(st.session_state.get(STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY, 16))
+        visible_rows = int(
+            st.session_state.get(
+                STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
+                TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT,
+            )
+        )
     except (TypeError, ValueError):
-        visible_rows = 16
+        visible_rows = TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT
 
     with st.container(key=STREAMLIT_COUNTRY_NOT_SEEN_WRAP_KEY):
         with st.expander(expander_title, expanded=False, key=STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY):
@@ -229,7 +234,7 @@ def _render_country_not_seen_recently_expander(
                     )
                 cached[cache_key] = inner
                 cached.move_to_end(cache_key)
-                while len(cached) > _COUNTRY_NOT_SEEN_CACHE_MAX_ENTRIES:
+                while len(cached) > COUNTRY_NOT_SEEN_HTML_CACHE_MAX_ENTRIES:
                     cached.popitem(last=False)
                 st.session_state[_COUNTRY_NOT_SEEN_CACHE_KEY] = cached
             else:

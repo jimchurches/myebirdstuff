@@ -138,18 +138,21 @@ def render_settings_tab(
                             )
                         )
                         try:
-                            _msc_save = int(
+                            marker_colour_scheme_save = int(
                                 st.session_state.get(
                                     STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
                                     MAP_MARKER_COLOUR_SCHEME_DEFAULT,
                                 )
                             )
-                            _msc_save = max(
-                                MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _msc_save)
+                            marker_colour_scheme_save = max(
+                                MAP_MARKER_COLOUR_SCHEME_MIN,
+                                min(MAP_MARKER_COLOUR_SCHEME_MAX, marker_colour_scheme_save),
                             )
                         except (TypeError, ValueError):
-                            _msc_save = MAP_MARKER_COLOUR_SCHEME_DEFAULT
-                        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY] = _msc_save
+                            marker_colour_scheme_save = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+                        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY] = (
+                            marker_colour_scheme_save
+                        )
                         st.session_state[SETTINGS_BASELINE_KEY] = settings_state_payload()
                         st.session_state[SETTINGS_FLASH_SAVE_KEY] = True
                         st.rerun()
@@ -276,10 +279,15 @@ def render_settings_tab(
             st.session_state[STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY] = str(basemap_default_w)
             st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = int(map_height_default_w)
             st.session_state[STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY] = int(map_height_default_w)
-            _msc = int(colour_scheme_default_w)
-            _msc = max(MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _msc))
-            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = _msc
-            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY] = _msc
+            marker_colour_scheme_index = int(colour_scheme_default_w)
+            marker_colour_scheme_index = max(
+                MAP_MARKER_COLOUR_SCHEME_MIN,
+                min(MAP_MARKER_COLOUR_SCHEME_MAX, marker_colour_scheme_index),
+            )
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = marker_colour_scheme_index
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY] = (
+                marker_colour_scheme_index
+            )
             st.session_state[STREAMLIT_MARK_LIFER_KEY] = bool(mark_lifer_w)
             st.session_state[STREAMLIT_MARK_LAST_SEEN_KEY] = bool(mark_last_seen_w)
             _cl = bool(cluster_all_locations_w)

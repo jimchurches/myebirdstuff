@@ -44,13 +44,16 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_DEFAULT,
+    MAP_IFRAME_MIN_HEIGHT_PX,
     THEME_PRIMARY_HEX,
 )
 from explorer.app.streamlit.streamlit_ui_constants import (
     BUY_ME_A_COFFEE_URL,
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS,
+    CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS_MIN,
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE,
     CHECKLIST_STATS_SPINNER_EMOJIS,
+    CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX,
     EBIRD_PROFILE_URL,
     GITHUB_REPO_URL,
     explorer_readme_github_url,
@@ -77,7 +80,7 @@ def inject_map_iframe_min_height_css(height_px: int) -> None:
     Targets iframes in the **main** column only (not the sidebar). Emit from the Map tab each full run
     so height tracks the sidebar **Map height (px)** slider.
     """
-    h = max(240, int(height_px))
+    h = max(MAP_IFRAME_MIN_HEIGHT_PX, int(height_px))
     st.html(
         f"""<style>
 section[data-testid="stMain"] iframe {{
@@ -109,7 +112,7 @@ def inject_spinner_emoji_animation() -> None:
     """
     emojis = list(CHECKLIST_STATS_SPINNER_EMOJIS)
     batch = max(1, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE))
-    ms = max(100, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS))
+    ms = max(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS_MIN, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS))
     emojis_js = json.dumps(emojis, ensure_ascii=False)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 html,body{{margin:0;padding:0;overflow:hidden;background:transparent;font-family:system-ui,sans-serif;}}
@@ -136,7 +139,7 @@ letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
   setInterval(tick, MS);
 }})();
 </script></body></html>"""
-    st.iframe(html, height=52)
+    st.iframe(html, height=CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX)
 
 
 def place_spinner_emoji_strip() -> Any:
@@ -374,8 +377,8 @@ def species_searchbox_fragment() -> None:
             "`pip install -r requirements.txt` (refs #70)."
         )
         return
-    ix = st.session_state.get(SESSION_SPECIES_IX_KEY)
-    if ix is None:
+    species_search_index = st.session_state.get(SESSION_SPECIES_IX_KEY)
+    if species_search_index is None:
         return
     persisted = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
     search_default = persisted
@@ -410,7 +413,7 @@ def species_searchbox_fragment() -> None:
         else:
             st.session_state[SESSION_SPECIES_SEARCH_USER_EDITING_KEY] = True
         return whoosh_species_suggestions(
-            ix,
+            species_search_index,
             term,
             max_options=SPECIES_SEARCH_MAX_OPTIONS,
             min_query_len=SPECIES_SEARCH_MIN_QUERY_LEN,

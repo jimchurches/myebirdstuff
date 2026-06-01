@@ -1,4 +1,4 @@
-"""Unit tests for Leaflet GeoJSON session LRU helpers in ``app_prep_map_ui`` (#222 §13–§15, draft A)."""
+"""Unit tests for Leaflet GeoJSON session LRU helpers in ``app_prep_map_leaflet_caches`` (#222 §13–§15, draft A)."""
 
 from __future__ import annotations
 
@@ -10,20 +10,22 @@ from explorer.app.streamlit.app_constants import (
     LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
 )
-from explorer.app.streamlit.app_prep_map_ui import (
-    _ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    _FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    _LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    _SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    _leaflet_payload_cache_lookup,
-    _leaflet_payload_cache_store,
+from explorer.app.streamlit.app_prep_map_leaflet_caches import (
+    leaflet_payload_cache_lookup,
+    leaflet_payload_cache_store,
+)
+from explorer.app.streamlit.defaults import (
+    ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
 )
 from tests.explorer.test_streamlit_ui_helpers import _install_streamlit_stub
 
 _MODE_CASES: list[tuple[str, int, dict, str]] = [
     (
         ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
-        _ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+        ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
         {
             "revision": "all-rev",
             "geojson": {"type": "FeatureCollection", "features": [{"type": "Feature"}]},
@@ -34,7 +36,7 @@ _MODE_CASES: list[tuple[str, int, dict, str]] = [
     ),
     (
         LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
-        _LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+        LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
         {
             "revision": "lifer-rev",
             "geojson": {"type": "FeatureCollection", "features": []},
@@ -46,7 +48,7 @@ _MODE_CASES: list[tuple[str, int, dict, str]] = [
     ),
     (
         SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
-        _SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+        SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
         {
             "revision": "species-rev",
             "geojson": {"type": "FeatureCollection", "features": []},
@@ -59,7 +61,7 @@ _MODE_CASES: list[tuple[str, int, dict, str]] = [
     ),
     (
         FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
-        _FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+        FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
         {
             "revision": "family-rev",
             "geojson": {"type": "FeatureCollection", "features": []},
@@ -94,7 +96,7 @@ def test_leaflet_payload_cache_miss_returns_none(
     entry: dict,
     mode_id: str,
 ) -> None:
-    assert _leaflet_payload_cache_lookup(session_key, ("k", mode_id)) is None
+    assert leaflet_payload_cache_lookup(session_key, ("k", mode_id)) is None
 
 
 @pytest.mark.parametrize(
@@ -110,8 +112,8 @@ def test_leaflet_payload_cache_store_and_hit_restores_fields(
     mode_id: str,
 ) -> None:
     key = ("cache-key", mode_id)
-    _leaflet_payload_cache_store(session_key, key, entry, max_entries=max_entries)
-    hit = _leaflet_payload_cache_lookup(session_key, key)
+    leaflet_payload_cache_store(session_key, key, entry, max_entries=max_entries)
+    hit = leaflet_payload_cache_lookup(session_key, key)
     assert hit is not None
     for field, expected in entry.items():
         assert hit[field] == expected
@@ -128,27 +130,27 @@ def test_leaflet_payload_cache_lru_evicts_oldest_when_over_max(
     mode_id: str,
 ) -> None:
     max_entries = 2
-    _leaflet_payload_cache_store(
+    leaflet_payload_cache_store(
         session_key,
         ("a", mode_id),
         {"revision": "1", "geojson": {}},
         max_entries=max_entries,
     )
-    _leaflet_payload_cache_store(
+    leaflet_payload_cache_store(
         session_key,
         ("b", mode_id),
         {"revision": "2", "geojson": {}},
         max_entries=max_entries,
     )
-    _leaflet_payload_cache_store(
+    leaflet_payload_cache_store(
         session_key,
         ("c", mode_id),
         {"revision": "3", "geojson": {}},
         max_entries=max_entries,
     )
-    assert _leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is None
-    assert _leaflet_payload_cache_lookup(session_key, ("b", mode_id)) is not None
-    assert _leaflet_payload_cache_lookup(session_key, ("c", mode_id)) is not None
+    assert leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is None
+    assert leaflet_payload_cache_lookup(session_key, ("b", mode_id)) is not None
+    assert leaflet_payload_cache_lookup(session_key, ("c", mode_id)) is not None
 
 
 @pytest.mark.parametrize(
@@ -162,24 +164,24 @@ def test_leaflet_payload_cache_hit_moves_entry_to_mru_end(
     mode_id: str,
 ) -> None:
     max_entries = 2
-    _leaflet_payload_cache_store(
+    leaflet_payload_cache_store(
         session_key,
         ("a", mode_id),
         {"revision": "1", "geojson": {}},
         max_entries=max_entries,
     )
-    _leaflet_payload_cache_store(
+    leaflet_payload_cache_store(
         session_key,
         ("b", mode_id),
         {"revision": "2", "geojson": {}},
         max_entries=max_entries,
     )
-    assert _leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is not None
-    _leaflet_payload_cache_store(
+    assert leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is not None
+    leaflet_payload_cache_store(
         session_key,
         ("c", mode_id),
         {"revision": "3", "geojson": {}},
         max_entries=max_entries,
     )
-    assert _leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is not None
-    assert _leaflet_payload_cache_lookup(session_key, ("b", mode_id)) is None
+    assert leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is not None
+    assert leaflet_payload_cache_lookup(session_key, ("b", mode_id)) is None

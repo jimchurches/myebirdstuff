@@ -29,6 +29,7 @@ from explorer.core.stats import safe_count
 
 from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
 from explorer.app.streamlit.defaults import (
+    BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
     RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
     TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE,
 )
@@ -50,8 +51,6 @@ _STREAMLIT_GROUP_COVERAGE_TABLE_KEY = "streamlit_group_coverage_summary_table"
 _STREAMLIT_GROUP_COVERAGE_FALLBACK_KEY = "streamlit_group_coverage_selected_group_fallback"
 
 _EBIRD_TAXONOMY_URL = "https://science.ebird.org/en/use-ebird-data/the-ebird-taxonomy"
-
-_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX = 280
 
 
 def compute_world_species_coverage(detail: pd.DataFrame) -> tuple[int, int, float]:
@@ -417,7 +416,7 @@ def render_families_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
             display_summary,
             width=RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
             hide_index=True,
-            height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
+            height=BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
             column_config={
                 "Family": st.column_config.TextColumn("Family", width="large"),
                 "Seen species": st.column_config.NumberColumn("Seen", width="small"),
@@ -445,7 +444,7 @@ def render_families_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
             display_summary,
             width=RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
             hide_index=True,
-            height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
+            height=BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
         )
 
     selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()
