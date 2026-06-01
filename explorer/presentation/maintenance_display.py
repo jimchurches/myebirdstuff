@@ -17,7 +17,7 @@ from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 EBIRD_LOCATION_EDIT_BASE = "https://ebird.org/mylocations/edit/"
 
 # Shared; Streamlit ``stats-tbl`` / ``stats-tbl-maint`` rules live in
-# ``checklist_stats_display._streamlit_checklist_html_tab_css`` (refs #79).
+# Reuses checklist tab CSS from ``checklist_stats_display._streamlit_checklist_html_tab_css``.
 MAINTENANCE_TABLE_CLASSES = "maint-tbl stats-tbl stats-tbl-maint"
 MAINTENANCE_PAIR_TABLE_CLASSES = "maint-tbl stats-tbl stats-tbl-maint maint-pair-tbl"
 

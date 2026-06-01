@@ -552,7 +552,7 @@ def rankings_subspecies_hierarchical_table(
 
     css = """
 /* Typography inherits from parent (e.g. Streamlit ``.streamlit-checklist-html-ab``); do not override
-   font-size here — that mismatched other rankings tables (refs #81). */
+   font-size here — that mismatched other rankings tables. */
 .subspecies-section {
   margin-bottom: 6px;
   border: 1px solid #e5e7eb;
