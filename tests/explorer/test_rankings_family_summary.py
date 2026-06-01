@@ -211,5 +211,5 @@ def test_attach_group_coverage_stores_world_metrics_once(monkeypatch):
 
     bundle = bf.attach_group_coverage_to_bundle({}, df_full, "en_AU")
     assert bundle[bf.WORLD_SPECIES_COVERAGE_METRICS_KEY] == (1, 1, 100.0)
-    assert bundle[bf.WORLD_SPECIES_COVERAGE_SECTION_KEY][0] == "World species coverage"
+    assert bundle[bf.WORLD_SPECIES_COVERAGE_SECTION_KEY][0] == "Species: Coverage"
     assert calls == ["compute"]

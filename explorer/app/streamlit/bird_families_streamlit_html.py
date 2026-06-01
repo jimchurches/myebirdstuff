@@ -374,7 +374,7 @@ def attach_group_coverage_to_bundle(
     if world_metrics is not None:
         obs, total, pct = world_metrics
         bundle[WORLD_SPECIES_COVERAGE_SECTION_KEY] = (
-            "World species coverage",
+            "Species: Coverage",
             world_species_coverage_list_html(obs, total, pct),
         )
     else:

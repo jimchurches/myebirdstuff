@@ -12,7 +12,7 @@ Species-group coverage lives on the **Bird Families** main tab
 
 **Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
 ``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
-include a narrow leading **Rank** column with soft accent styling (refs `#83`). **World species coverage**
+include a narrow leading **Rank** column with soft accent styling (refs `#83`). **Species: Coverage**
 is the first expander under **Interesting Lists** (refs `#262`). **Species: Not seen in
 the past year** is the last expander under Interesting Lists; it lists countable species with no
 observation in the trailing twelve months on the **full export** and is not Top-N–capped (refs `#106`).
