@@ -4,8 +4,7 @@
 Uses ``checklist_stats_streamlit_tab_sections_html`` (shared with ``format_checklist_stats_bundle`` column blocks).
 Styles: :func:`~explorer.app.streamlit.streamlit_theme.inject_streamlit_checklist_css` — injected **once** per page; all rules scoped under ``.streamlit-checklist-html-ab``.
 
-**Style:** green striping/accents (default); eBird-blue via ``explorer.app.streamlit.streamlit_theme`` (refs #95).
-Refs #70.
+**Style:** green striping/accents (default); eBird-blue via ``explorer.app.streamlit.streamlit_theme``.
 """
 
 from __future__ import annotations

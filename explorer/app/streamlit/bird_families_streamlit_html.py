@@ -1,5 +1,5 @@
 """
-**Bird Families** (Streamlit main tab): species-group coverage (eBird taxonomy; refs `#73`).
+**Bird Families** (Streamlit main tab): species-group coverage against eBird taxonomy.
 
 Uses ``st.dataframe`` with **single-row selection** and a **bounded height** summary grid.
 With **no family selected**, the lower panel shows **family-level coverage** in an HTML
@@ -29,6 +29,7 @@ from explorer.core.stats import safe_count
 
 from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
 from explorer.app.streamlit.defaults import (
+    BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
     RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
     TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE,
 )
@@ -51,8 +52,6 @@ _STREAMLIT_GROUP_COVERAGE_FALLBACK_KEY = "streamlit_group_coverage_selected_grou
 
 _EBIRD_TAXONOMY_URL = "https://science.ebird.org/en/use-ebird-data/the-ebird-taxonomy"
 
-_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX = 280
-
 
 def compute_world_species_coverage(detail: pd.DataFrame) -> tuple[int, int, float]:
     """Return (observed_species, living_taxonomy_species, observed_percent) from merged coverage detail."""
@@ -64,22 +63,22 @@ def compute_world_species_coverage(detail: pd.DataFrame) -> tuple[int, int, floa
     return observed, total, pct
 
 
-def _filter_taxonomy_for_coverage(tax: pd.DataFrame) -> pd.DataFrame:
+def _filter_taxonomy_for_coverage(taxonomy_frame: pd.DataFrame) -> pd.DataFrame:
     """Apply extinct-species filter per :data:`TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE`."""
-    if TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE or "is_extinct" not in tax.columns:
-        return tax
-    return tax[~tax["is_extinct"].fillna(False)].copy()
+    if TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE or "is_extinct" not in taxonomy_frame.columns:
+        return taxonomy_frame
+    return taxonomy_frame[~taxonomy_frame["is_extinct"].fillna(False)].copy()
 
 
 def _extinct_species_coverage_clause() -> str:
-    """Lowercase clause for footnotes; no trailing period (refs #262)."""
+    """Lowercase clause for coverage footnotes; no trailing period."""
     if TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE:
         return "extinct species are included in coverage totals"
     return "extinct species are excluded from coverage totals"
 
 
 def taxonomy_coverage_footnote_text() -> str:
-    """Plain-text footnote for family/world coverage tables (refs #262)."""
+    """Plain-text footnote for family/world coverage tables."""
     return (
         "Species and family groups follow the eBird/Clements taxonomy; "
         f"{_extinct_species_coverage_clause()}."
@@ -87,7 +86,7 @@ def taxonomy_coverage_footnote_text() -> str:
 
 
 def world_species_coverage_list_html(observed: int, total: int, pct: float) -> str:
-    """Simple metric table + footnote for Rankings **Interesting Lists** expander (refs #262)."""
+    """Metric table and footnote for Rankings **Interesting Lists** Species: Coverage expander."""
     rows = [
         ("Species in eBird taxonomy", f"{total:,}"),
         ("Observed species", f"{observed:,}"),
@@ -217,7 +216,7 @@ def family_coverage_summary_metrics_html(
 
 
 def _family_coverage_taxonomy_note_html() -> str:
-    """Footnote below the overview table; same caption style as Yearly Summary protocol note (refs #85)."""
+    """Footnote below the overview table; same caption style as Yearly Summary protocol note."""
     inner = (
         f'<p style="{_YEARLY_STREAMLIT_CAPTION_STYLE}">'
         "Species and family groups follow the "
@@ -230,7 +229,7 @@ def _family_coverage_taxonomy_note_html() -> str:
 
 
 def _bird_families_inject_css() -> str:
-    """Table max-width + family overview group rows (refs #73, #81)."""
+    """Inject table max-width CSS and render family overview group rows."""
     return (
         f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:{RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX}px;width:100%; }}"
         f" .{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} .family-coverage-overview tr.family-coverage-group th {{"
@@ -255,17 +254,17 @@ def _load_taxonomy_groups(locale: str) -> list[dict[str, Any]]:
 @st.cache_data(show_spinner=False)
 def build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Build summary/detail DataFrames for species-group coverage (eBird taxonomy + sppgroup)."""
-    tax = _load_taxonomy_species_rows(taxonomy_locale)
+    taxonomy_frame = _load_taxonomy_species_rows(taxonomy_locale)
     groups = _load_taxonomy_groups(taxonomy_locale)
-    if tax.empty or not groups:
+    if taxonomy_frame.empty or not groups:
         return pd.DataFrame(), pd.DataFrame()
 
-    tax = _filter_taxonomy_for_coverage(tax)
-    if tax.empty:
+    taxonomy_frame = _filter_taxonomy_for_coverage(taxonomy_frame)
+    if taxonomy_frame.empty:
         return pd.DataFrame(), pd.DataFrame()
 
-    tax = tax.copy()
-    tax[["group_name", "group_order"]] = tax["taxon_order"].apply(
+    taxonomy_frame = taxonomy_frame.copy()
+    taxonomy_frame[["group_name", "group_order"]] = taxonomy_frame["taxon_order"].apply(
         lambda x: pd.Series(assign_group_for_taxon_order(float(x), groups))
     )
 
@@ -316,14 +315,14 @@ def build_group_coverage_tables(df_full: pd.DataFrame, taxonomy_locale: str) -> 
         obs["individuals"] = obs["individuals"].fillna(0).astype(int)
         obs["first_sid"] = obs["first_sid"].fillna("").astype(str)
         obs["last_sid"] = obs["last_sid"].fillna("").astype(str)
-    tax_bases = set(tax["base_species"].astype(str))
-    unmatched = sorted(set(obs["base_species"].astype(str)) - tax_bases)
+    taxonomy_bases = set(taxonomy_frame["base_species"].astype(str))
+    unmatched = sorted(set(obs["base_species"].astype(str)) - taxonomy_bases)
     if unmatched:
         logger.debug(
             "Observed base species not in taxonomy (excluded from coverage): %s",
             unmatched,
         )
-    merged = tax.merge(obs, how="left", on="base_species")
+    merged = taxonomy_frame.merge(obs, how="left", on="base_species")
     merged["seen"] = merged["checklists"].notna()
     merged["checklists"] = merged["checklists"].fillna(0).astype(int)
     merged["individuals"] = merged["individuals"].fillna(0).astype(int)
@@ -417,7 +416,7 @@ def render_families_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
             display_summary,
             width=RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
             hide_index=True,
-            height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
+            height=BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
             column_config={
                 "Family": st.column_config.TextColumn("Family", width="large"),
                 "Seen species": st.column_config.NumberColumn("Seen", width="small"),
@@ -445,7 +444,7 @@ def render_families_streamlit_tab_from_bundle(bundle: dict[str, Any]) -> None:
             display_summary,
             width=RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
             hide_index=True,
-            height=_FAMILY_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
+            height=BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
         )
 
     selected_group = str(st.session_state.get(_STREAMLIT_GROUP_COVERAGE_SELECTED_KEY) or "").strip()

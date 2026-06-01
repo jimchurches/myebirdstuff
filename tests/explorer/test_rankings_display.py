@@ -52,7 +52,7 @@ def test_rankings_table_location_5col_empty_no_data():
 
 
 def test_rankings_table_location_5col_one_row_structure():
-    """One row produces five data columns when leading_rank_column is off (refs #81)."""
+    """One row produces five data columns when leading_rank_column is off."""
     row = ("Place One", "NSW", "AU", "3", "12")
     out = rankings_table_location_5col("Title", ["Location", "State", "Country", "Checklists", "Species"], [row])
     assert "<th>Rank</th>" not in out
@@ -63,7 +63,7 @@ def test_rankings_table_location_5col_one_row_structure():
 
 
 def test_rankings_table_location_5col_preserves_link_html_in_cells():
-    """Stats formatters emit pre-built ``<a>`` HTML; cells must not be HTML-escaped (refs #117)."""
+    """Stats formatters emit pre-built ``<a>`` HTML; cells must not be HTML-escaped."""
     loc = '<a href="https://ebird.org/lifelist/L1" target="_blank">Pelagic</a>'
     when = '<a href="https://ebird.org/checklist/S1" target="_blank">14 Dec 2024</a>'
     row = (loc, "NSW", "AU", when, "523 min")
@@ -79,7 +79,7 @@ def test_rankings_table_location_5col_preserves_link_html_in_cells():
 
 
 def test_rankings_table_location_5col_leading_rank_column():
-    """Optional leading Rank column for Top Lists (refs #83)."""
+    """Optional leading Rank column for Top Lists."""
     row = ("Place One", "NSW", "AU", "3", "12")
     out = rankings_table_location_5col(
         "Title",
@@ -100,7 +100,7 @@ def test_rankings_table_with_rank_empty_no_data():
 
 
 def test_rankings_table_with_rank_one_row_has_rank_one():
-    """Single row gets Rank 1 and content in output; placeholder middle column omitted (refs #81)."""
+    """Single row gets Rank 1 and content in output; placeholder middle column omitted."""
     out = rankings_table_with_rank("Top", ["Name", "", "Count"], [("Grey Teal", "—", "5")])
     assert "1</td>" in out
     assert "Grey Teal" in out
@@ -129,7 +129,7 @@ def test_rankings_visited_table_empty_no_data():
 
 
 def test_rankings_visited_table_one_row_no_rank_column():
-    """Default: six data columns, no Rank (refs #81)."""
+    """Default: six data columns, no Rank."""
     row = ("Loc A", "NSW", "AU", "2020-01-01", "2024-06-01", "9")
     out = rankings_visited_table([row], include_heading=False)
     assert "<th>Rank</th>" not in out
@@ -138,7 +138,7 @@ def test_rankings_visited_table_one_row_no_rank_column():
 
 
 def test_rankings_visited_table_leading_rank_column():
-    """Optional leading Rank for Top Lists (refs #83)."""
+    """Optional leading Rank for Top Lists."""
     row = ("Loc A", "NSW", "AU", "2020-01-01", "2024-06-01", "9")
     out = rankings_visited_table([row], include_heading=False, leading_rank_column=True)
     assert "<th>Rank</th>" in out
@@ -155,7 +155,7 @@ def test_rankings_seen_once_table_empty_no_data():
 
 
 def test_rankings_table_with_rank_species_url_fn_injects_links():
-    """When species_url_fn is provided and returns a URL, species name is linked (refs #56)."""
+    """When species_url_fn is provided and returns a URL, species name is linked."""
     def url_fn(name):
         return "https://ebird.org/species/grtea" if name == "Grey Teal" else None
     out = rankings_table_with_rank(
@@ -169,7 +169,7 @@ def test_rankings_table_with_rank_species_url_fn_injects_links():
 
 
 def test_rankings_table_with_rank_lifelist_url_fn_injects_link():
-    """When lifelist_url_fn is provided, the count number is the lifelist link (refs #56)."""
+    """When lifelist_url_fn is provided, the count number is the lifelist link."""
     def lifelist_fn(name):
         return "https://ebird.org/lifelist?spp=grtea" if name == "Grey Teal" else None
     out = rankings_table_with_rank(
@@ -183,7 +183,7 @@ def test_rankings_table_with_rank_lifelist_url_fn_injects_link():
 
 
 def test_rankings_seen_once_table_species_url_fn_injects_links():
-    """When species_url_fn is provided, Species column is linked (refs #56)."""
+    """When species_url_fn is provided, Species column is linked."""
     def url_fn(name):
         return "https://ebird.org/species/grtea" if name == "Grey Teal" else None
     out = rankings_seen_once_table(
@@ -196,7 +196,7 @@ def test_rankings_seen_once_table_species_url_fn_injects_links():
 
 
 def test_rankings_table_with_rank_link_urls_fn_one_lookup():
-    """link_urls_fn(common_name) -> (species_url, lifelist_url) uses one lookup per row (refs #56)."""
+    """link_urls_fn(common_name) -> (species_url, lifelist_url) uses one lookup per row."""
     def link_urls_fn(name):
         if name == "Grey Teal":
             return ("https://ebird.org/species/grtea", "https://ebird.org/lifelist?spp=grtea")
@@ -214,7 +214,7 @@ def test_rankings_table_with_rank_link_urls_fn_one_lookup():
 
 
 def test_rankings_subspecies_hierarchical_table_lifelist_link_on_total():
-    """When lifelist_url_fn/species_url_fn are provided, Total individuals line has lifelist link and species link glyph (refs #56)."""
+    """When lifelist_url_fn/species_url_fn are provided, Total individuals line has lifelist link and species link glyph."""
     blocks = [
         {
             "species_common": "Grey Teal",

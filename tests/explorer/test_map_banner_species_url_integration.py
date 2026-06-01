@@ -1,4 +1,4 @@
-"""Integration: map prep wires ``species_banner_url`` into banner HTML (#253)."""
+"""Integration: map prep wires ``species_banner_url`` into banner HTML."""
 
 from __future__ import annotations
 

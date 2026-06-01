@@ -1,4 +1,4 @@
-"""Optional Explorer performance instrumentation (refs #179, Phase 0).
+"""Optional Explorer performance instrumentation.
 
 Enable with environment variable ``EXPLORER_PERF=1`` (or ``true`` / ``yes`` / ``on``) or the same
 key in Streamlit **Secrets** on Community Cloud. Off by default; no session churn when disabled.

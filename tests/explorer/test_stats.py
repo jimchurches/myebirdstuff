@@ -508,7 +508,7 @@ class TestYearlySummaryStats:
         assert "Total checklists" in labels
 
     def test_yearly_summary_static_row_order(self):
-        """Main yearly table row order (refs #128); protocol detail rows follow separately."""
+        """Main yearly table row order; protocol detail rows follow separately."""
         expected_static = [
             "Lifers",
             "Total bird families",
@@ -622,7 +622,7 @@ class TestYearlySummaryStats:
         assert result == {}
 
     def test_get_sex_notation_by_year_spaced_and_count_tokens_refs_58(self):
-        """Issue #58: 1M 1F, M + F, 2M2F2?, MFMM?? (last already legacy)."""
+        """Sex-notation patterns: 1M 1F, M + F, 2M2F2?, MFMM?? (last already legacy)."""
         from explorer.core.stats import get_sex_notation_by_year
         df = pd.DataFrame({
             "Date": [

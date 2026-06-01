@@ -1,4 +1,4 @@
-"""Tests for explorer.core.region_display (country/state name display, refs #43)."""
+"""Tests for explorer.core.region_display (country/state name display)."""
 
 import pandas as pd
 import pytest

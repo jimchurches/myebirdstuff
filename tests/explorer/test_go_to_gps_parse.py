@@ -1,4 +1,4 @@
-"""Tests for Go to GPS coordinate parsing (refs #199)."""
+"""Tests for Go to GPS coordinate parsing."""
 
 from __future__ import annotations
 

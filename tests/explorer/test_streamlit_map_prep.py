@@ -1,12 +1,9 @@
-"""Tests for Streamlit map context prep (refs #70)."""
+"""Tests for Streamlit map context prep."""
 
-from collections import OrderedDict
 
 import pandas as pd
 import pytest
 
-from explorer.app.streamlit.defaults import active_map_marker_colour_scheme
-from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.map_prep import (
     data_signature_for_caches,
     mean_center_from_location_data,

@@ -1,4 +1,4 @@
-"""Streamlit ``@st.cache_*`` helpers shared by ``app.py`` (refs #98)."""
+"""Streamlit ``@st.cache_*`` helpers shared by the dashboard."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def cached_checklist_stats_payload(
     df: pd.DataFrame,
     taxonomy_locale: str,
 ) -> ChecklistStatsPayload | None:
-    """Structured checklist stats for the Checklist Statistics tab (refs #68)."""
+    """Structured checklist stats for the Checklist Statistics tab."""
     return _cached_checklist_stats_payload_impl(
         df,
         CHECKLIST_STATS_TOP_N_TABLE_LIMIT,
@@ -68,7 +68,7 @@ def cached_full_export_checklist_stats_payload(
 
 @st.cache_data(show_spinner=False)
 def cached_sex_notation_by_year(df: pd.DataFrame) -> dict:
-    """Sex-notation maintenance scan on full export (refs #79)."""
+    """Sex-notation maintenance scan on the full export dataframe."""
     from explorer.core.stats import get_sex_notation_by_year
 
     return get_sex_notation_by_year(df)
@@ -79,7 +79,7 @@ def cached_map_maintenance_data(
     loc_df: pd.DataFrame,
     threshold_m: int,
 ) -> tuple[list, list]:
-    """Exact- and near-duplicate location scan for the Maintenance tab (refs #79).
+    """Exact- and near-duplicate location scan for the Maintenance tab.
 
     Cached on *loc_df* + *threshold_m* so fragment reruns do not repeat BallTree work.
     """
@@ -99,7 +99,7 @@ def full_location_data_for_maintenance(df: pd.DataFrame) -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def cached_family_map_bundle(df_full: pd.DataFrame, taxonomy_locale: str) -> dict[str, Any]:
-    """Taxonomy merge + countable work frame for the **Families** map tab (refs #138).
+    """Taxonomy merge and countable work frame for the Family locations map tab.
 
     On fetch/parse failure returns empty structures so the UI can show a warning without crashing.
     """

@@ -10,13 +10,13 @@ rendered with ``st.markdown(..., unsafe_allow_html=True)``. Table styling matche
 Species-group coverage lives on the **Bird Families** main tab
 (:mod:`explorer.app.streamlit.bird_families_streamlit_html`).
 
-**Top N** and **visible rows** are controlled from **Settings → Tables & lists** (session keys
-``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``; refs `#81`). **Top Lists** tables
-include a narrow leading **Rank** column with soft accent styling (refs `#83`). **Species: Coverage**
-is the first expander under **Interesting Lists** (refs `#262`). **Species: Not seen in
-the past year** is the last expander under Interesting Lists; it lists countable species with no
-observation in the trailing twelve months on the **full export** and is not Top-N–capped (refs `#106`).
-A hint points to the **Country** tab for the in-country, working-set–scoped variant (refs `#108`).
+**Top N** and **visible rows** come from **Settings → Tables & lists** (session keys
+``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``). **Top Lists** tables
+include a narrow leading **Rank** column with soft accent styling. **Species: Coverage**
+is the first expander under **Interesting Lists**. **Species: Not seen in the past year** is the
+last expander under Interesting Lists; it lists countable species with no observation in the trailing
+twelve months on the **full export** and is not Top-N–capped. A hint points to the **Country** tab
+for the in-country, working-set–scoped variant.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ _RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"
 
 
 def _rankings_table_layout_inject_css() -> str:
-    """Rankings max-width for HTML expander tables (refs #81)."""
+    """Return scoped CSS that caps Rankings HTML table width."""
     return (
         f".{_STREAMLIT_TABLE_SCOPE}.{_RANKINGS_SCOPE_EXTRA} {{ max-width:{RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX}px;width:100%; }}"
     )
@@ -60,7 +60,7 @@ def _cached_rankings_stats_bundle(
     high_count_sort: str,
     high_count_tie_break: str,
 ) -> dict[str, Any]:
-    """Notebook-parity rankings bundle (full export + Top N + scroll + taxonomy links). refs #81."""
+    """Build rankings HTML bundle from full export, Top N, scroll hint, and taxonomy links."""
     loc = taxonomy_locale.strip() if taxonomy_locale else None
     link_urls_fn = get_species_and_lifelist_urls if load_taxonomy(locale=loc) else (lambda _: (None, None))
     payload = cached_full_export_checklist_stats_payload(
@@ -87,7 +87,7 @@ def sync_ranking_lists_families_bundle(bundle: dict[str, Any]) -> None:
 
 
 def _rankings_expander_sections(sections: list[tuple[str, str]]) -> None:
-    """One expander per (title, inner_html) with rankings-scoped table wrapper (refs #81)."""
+    """Render each section as a collapsed expander with rankings-scoped table wrapper."""
     for title, inner_html in sections:
         with st.expander(title, expanded=False):
             st.markdown(

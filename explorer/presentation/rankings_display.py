@@ -3,7 +3,7 @@ HTML builders for rankings tables in the Personal eBird Explorer.
 
 Scroll-wrapper and table builders used when rendering the Checklist Statistics
 rankings sections. Uses region_display for country/state names.
-Cell/row helpers: :mod:`explorer.presentation.stats_html_helpers` (refs #117).
+Cell/row helpers: :mod:`explorer.presentation.stats_html_helpers`.
 """
 
 from explorer.presentation.stats_html_helpers import (
@@ -22,12 +22,12 @@ _PLACEHOLDER_MIDDLE_VALUES = frozenset({"", "—", "–", "-"})
 
 
 def _td_trusted_html(cell: object) -> str:
-    """``<td>`` for cell content already HTML from stats formatters (links, etc.) (refs #117)."""
+    """``<td>`` for cell content already HTML from stats formatters (links, etc.)."""
     return td_html(str(cell))
 
 
 def _region_country(code):
-    """Lazy import avoids ``explorer.core`` ↔ ``rankings_display`` circular import (refs #117)."""
+    """Lazy import avoids ``explorer.core`` ↔ ``rankings_display`` circular import."""
     from explorer.core.region_display import country_for_display as _cfd
 
     return _cfd(code)
@@ -40,7 +40,7 @@ def _region_state(country_code, state_code):
 
 
 def _omit_placeholder_middle_column(headers_3col, rows_3col) -> bool:
-    """True when middle header is blank and every row's middle cell is a placeholder (refs #81)."""
+    """True when middle header is blank and every row's middle cell is a placeholder."""
     if len(headers_3col) < 3:
         return False
     if str(headers_3col[1]).strip():
@@ -59,7 +59,7 @@ def rankings_scroll_wrapper(table_html, scroll_hint, visible_rows):
 
     Top and bottom fades when ``scroll_hint`` is ``"shading"`` or ``"both"``. Padding on
     ``.rankings-scroll-inner`` (CSS) offsets the table slightly so the top gradient is less harsh on
-    the header row. Scroll-position–aware shading would need JavaScript (refs #81).
+    the header row. Scroll-position–aware shading would need JavaScript.
     """
     max_h = visible_rows * 38  # ~38px per row
     shade_css = "position:absolute;left:0;right:0;height:24px;pointer-events:none;z-index:5;"
@@ -105,7 +105,7 @@ def rankings_not_seen_recently_table(
     visible_rows=16,
     link_urls_fn=None,
 ):
-    """3-column table: Species (linked) | Last seen (HTML) | Days since (refs #106)."""
+    """3-column table: Species (linked) | Last seen (HTML) | Days since."""
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>{esc_text(title)}</h4>{no_data}" if include_heading else no_data
@@ -148,7 +148,7 @@ def rankings_table_location_5col(
 ):
     """5-column table: Location, State, Country, then two more (Top Lists tab).
 
-    *leading_rank_column*: prepend Rank (1..n) with soft accent styling (refs #83).
+    *leading_rank_column*: prepend Rank (1..n) with soft accent styling.
     """
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
@@ -207,13 +207,13 @@ def rankings_table_with_rank(
     """Build a rankings table with Rank as first column (1..n). rows_3col are (col1, col2, col3).
 
     If the middle header is blank and every middle cell is a placeholder (e.g. "—"), that column is
-    omitted so only Rank + two data columns remain (refs #81).
+    omitted so only Rank + two data columns remain.
 
-    Optional link helpers (refs #56). Prefer link_urls_fn(common_name) -> (species_url, lifelist_url)
+    Optional link helpers. Prefer link_urls_fn(common_name) -> (species_url, lifelist_url)
     so one lookup per row; when provided, add_lifelist_link controls whether the last column gets the
     lifelist link. Fallback: species_url_fn and lifelist_url_fn (two lookups per row when both used).
 
-    *rank_column_soft_accent*: add a class so scoped CSS can style the rank column (mock-up, refs #83).
+    *rank_column_soft_accent*: add a class so scoped CSS can style the rank column.
     """
     if not rows_3col:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
@@ -270,7 +270,7 @@ def rankings_visited_table(
     *,
     leading_rank_column=False,
 ):
-    """Location | State | Country | First visit | Last visit | Visits; optional leading Rank (refs #83)."""
+    """Location | State | Country | First visit | Last visit | Visits; optional leading Rank."""
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
         return f"<h4 style='margin:0 0 8px;'>Most visited locations</h4>{no_data}" if include_heading else no_data
@@ -336,7 +336,7 @@ def rankings_seen_once_table(
 ):
     """6-column table: Species | Location | State | Country | Visited date/time | Count.
 
-    Optional link (refs #56): link_urls_fn(common_name) -> (species_url, lifelist_url) uses first
+    Optional link: link_urls_fn(common_name) -> (species_url, lifelist_url) uses first
     element (one lookup per row). Fallback: species_url_fn(common_name) -> url.
     """
     if not rows:
@@ -552,7 +552,7 @@ def rankings_subspecies_hierarchical_table(
 
     css = """
 /* Typography inherits from parent (e.g. Streamlit ``.streamlit-checklist-html-ab``); do not override
-   font-size here — that mismatched other rankings tables (refs #81). */
+   font-size here — that mismatched other rankings tables. */
 .subspecies-section {
   margin-bottom: 6px;
   border: 1px solid #e5e7eb;

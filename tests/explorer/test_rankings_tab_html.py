@@ -1,4 +1,4 @@
-"""Tests for Rankings tab HTML shell (refs #69)."""
+"""Tests for Rankings tab HTML shell."""
 
 from explorer.presentation.checklist_stats_display import format_rankings_tab_html
 

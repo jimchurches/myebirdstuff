@@ -1,4 +1,4 @@
-"""Tests for :mod:`scripts.aggregate_perf_jsonl` (#205 batch 4 I5)."""
+"""Tests for :mod:`scripts.aggregate_perf_jsonl`."""
 
 from __future__ import annotations
 

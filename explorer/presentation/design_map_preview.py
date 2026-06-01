@@ -93,7 +93,7 @@ class PreviewMarkerRow:
 
 
 # Order: All-locations map pins → Species map roles (species, locations, lifer, last seen) → Lifer-map-only → Family.
-# ``visit_species_map_locations`` is the species-map background pin (refs #147); ``visit_all_locations`` is the
+# ``visit_species_map_locations`` is the species-map background pin; ``visit_all_locations`` is the
 # all-locations map only. ``species_visit_lifer`` / ``visit_last_seen`` match production overlays.
 PREVIEW_MARKER_ROWS: tuple[PreviewMarkerRow, ...] = (
     PreviewMarkerRow("visit_all_locations", frozenset({MAP_SCOPE_ALL_LOCATIONS})),

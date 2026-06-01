@@ -1,7 +1,7 @@
 """Pytest bootstrap: repo root on ``sys.path``.
 
 Do **not** add ``tests/explorer/__init__.py``: with pytest's path handling that directory can be
-imported as top-level ``explorer`` and shadow :mod:`explorer` at the repo root (refs #70).
+imported as top-level ``explorer`` and shadow :mod:`explorer` at the repo root.
 
 Opt-in map perf tests: ``pytest tests/explorer/test_map_perf_e2e.py --perf``.
 """

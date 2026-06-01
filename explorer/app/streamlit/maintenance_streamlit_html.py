@@ -1,7 +1,7 @@
 """
 **Maintenance** tab (Streamlit): top-level ``st.tabs`` + ``st.expander`` + HTML tables.
 
-Reuses builders from ``explorer.presentation.maintenance_display`` (refs #69, #79).
+Reuses builders from ``explorer.presentation.maintenance_display``.
 Uses the same scoped CSS as Checklist Statistics / Country (``CHECKLIST_STATS_*`` + ``.streamlit-checklist-html-ab``).
 """
 
@@ -81,7 +81,7 @@ def render_maintenance_streamlit_tab(
     sex_notation_by_year: Dict[Any, List[Tuple[Any, ...]]],
     species_url_fn: Callable[[str], Optional[str]],
 ) -> None:
-    """Three category tabs; expanders collapsed by default; HTML tables only (refs #79)."""
+    """Three category tabs with collapsed expanders and HTML tables only."""
     inject_streamlit_checklist_css()
 
     tab_sex, tab_inc, tab_loc = st.tabs(

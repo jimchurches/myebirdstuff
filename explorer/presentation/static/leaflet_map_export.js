@@ -1,4 +1,4 @@
-/** Standalone Leaflet viewer for exported HTML (#222). Popups use pre-rendered export_popup_html from Python. */
+/** Standalone Leaflet viewer for exported HTML. Popups use pre-rendered export_popup_html from Python. */
 (function () {
   "use strict";
 

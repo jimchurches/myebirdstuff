@@ -21,6 +21,7 @@ MAP_POPUP_SORT_ORDER_DEFAULT = "ascending"
 MAP_POPUP_SCROLL_HINT_DEFAULT = "shading"
 MAP_MARK_LIFER_DEFAULT = True
 MAP_MARK_LAST_SEEN_DEFAULT = True
+# Map height bounds are persisted in YAML; Streamlit UI re-exports these from ``defaults.py``.
 MAP_HEIGHT_PX_DEFAULT = 720
 MAP_HEIGHT_PX_MIN = 440
 MAP_HEIGHT_PX_MAX = 1200

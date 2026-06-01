@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from explorer.app.streamlit.defaults import MAP_POPUP_MACAULAY_LINK_SYMBOL, MAP_POPUP_MAX_WIDTH_PX
+from explorer.app.streamlit.defaults import MAP_POPUP_MACAULAY_LINK_SYMBOL
 from explorer.presentation.map_renderer import (
     build_species_map_location_popup_html,
     build_species_seen_sections_html,
@@ -111,7 +111,7 @@ def test_format_sighting_row_with_datetime():
 
 
 # ---------------------------------------------------------------------------
-# format_species_map_sighting_row / build_species_seen_sections_html (refs #145)
+# format_species_map_sighting_row / build_species_seen_sections_html
 # ---------------------------------------------------------------------------
 
 def test_format_species_map_sighting_row_omits_common_name():
@@ -393,7 +393,7 @@ def test_build_species_banner_html_is_div():
 
 
 def test_build_species_banner_html_with_species_url():
-    """When species_url is provided, display_name is wrapped in a link (refs #56)."""
+    """When species_url is provided, display_name is wrapped in a link."""
     html = build_species_banner_html(
         "Grey Teal",
         2,
@@ -588,7 +588,6 @@ def _lifer_lookup_df_for_date_tests() -> "pd.DataFrame":
 
 def test_resolve_lifer_last_seen_date_filter_hides_lifer_on_revisit_only():
     """Lifer before the window + revisit in range → no lifer pin when date filter is on."""
-    import pandas as pd
 
     lookup_df = _lifer_lookup_df_for_date_tests()
     seen = {"L1"}

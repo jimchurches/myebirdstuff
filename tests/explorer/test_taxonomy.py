@@ -1,4 +1,4 @@
-"""Unit tests for explorer.core.taxonomy (eBird species links, refs #56)."""
+"""Unit tests for explorer.core.taxonomy (eBird species links)."""
 
 import csv
 import io
@@ -126,7 +126,7 @@ def test_merged_lookup_includes_en_us_alternate_spellings():
 
 
 def test_load_taxonomy_en_au_merges_en_us_alternate_names():
-    """regional + US names for the same species code both link (refs #201, e.g. Gray Noddy / Grey Ternlet)."""
+    """regional + US names for the same species code both link (e.g. Gray Noddy / Grey Ternlet)."""
     au_csv = _make_csv(
         [{"common_name": "Grey Ternlet", "species_code": "grynod1", "category": "species"}]
     )

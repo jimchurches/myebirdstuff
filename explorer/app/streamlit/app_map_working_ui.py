@@ -1,4 +1,4 @@
-"""Map sidebar controls (basemap, view, dates, species) + working set resolution (refs #131)."""
+"""Map sidebar controls (basemap, view, dates, species) and working-set resolution."""
 
 from __future__ import annotations
 

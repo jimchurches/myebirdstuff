@@ -2,7 +2,6 @@
 
 import csv
 import io
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest

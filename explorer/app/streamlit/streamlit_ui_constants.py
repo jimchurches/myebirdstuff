@@ -67,12 +67,12 @@ NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
 )
 
 # ---------------------------------------------------------------------------
-# Checklist-stats spinner + emoji strip (refs #74)
+# Checklist-stats spinner + emoji strip
 # ---------------------------------------------------------------------------
 
 CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
 
-# Map-first prep (refs #179): Leaflet embed before heavy checklist/rankings caches so the map can paint sooner.
+# Map-first prep: Leaflet embed before heavy checklist/rankings caches so the map can paint sooner.
 MAP_PREP_SPINNER_TEXT = "Building map…"
 TAB_PREP_SPINNER_TEXT = "Preparing checklist, rankings, and other tabs…"
 
@@ -101,12 +101,15 @@ CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
 
 CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE = 5
 CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS = 750
+CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS_MIN = 100
+# ``st.iframe`` height for the animated emoji strip; must match spinner theme CSS selectors.
+CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX = 52
 
 # ---------------------------------------------------------------------------
 # Sidebar footer
 # ---------------------------------------------------------------------------
 
-# GitHub / eBird / Instagram / Explorer docs — outline pill + export button use the same (refs #127).
+# GitHub / eBird / Instagram / Explorer docs — outline pill + export button share footer link colour.
 SIDEBAR_FOOTER_LINK_HEX = "#868e96"
 
 GITHUB_REPO_URL = "https://github.com/jimchurches/myebirdstuff"
@@ -125,5 +128,5 @@ def explorer_readme_github_url() -> str:
 INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
 
 # Optional “Support this project” (Buy Me a Coffee). Override or hide with env ``STREAMLIT_BUYMEACOFFEE_URL``
-# (set to ``""`` in the environment to hide the block when the constant would otherwise show; refs #127).
+# (set to ``""`` in the environment to hide the block when the constant would otherwise show)
 BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/jimchurches"

@@ -244,7 +244,7 @@ def test_country_iso_rows_have_ebird_region_links():
 
 
 def test_format_country_yearly_table_html_matches_accordion_markup():
-    """Extracted yearly table HTML matches Country-tab accordion table structure (refs #75)."""
+    """Extracted yearly table HTML matches Country-tab accordion table structure."""
     from explorer.presentation.checklist_stats_display import (
         format_country_yearly_table_html,
         _format_country_summary_html,
@@ -300,7 +300,7 @@ def test_format_country_yearly_table_html_inline_links_optional():
 
 
 def test_compute_checklist_stats_country_displayed_as_name():
-    """Country codes are shown as country names in rankings tables (refs #43)."""
+    """Country codes are shown as country names in rankings tables."""
     pytest.importorskip("pycountry")
 
     data = {
@@ -318,7 +318,7 @@ def test_compute_checklist_stats_country_displayed_as_name():
 
 
 def test_compute_checklist_stats_unknown_country_code_shown_as_code():
-    """Unknown/invalid country codes are shown as-is (display fallback, refs #43)."""
+    """Unknown/invalid country codes are shown as-is (display fallback)."""
     pytest.importorskip("pycountry")
 
     data = {
@@ -351,7 +351,7 @@ def test_compute_checklist_stats_unknown_country_code_shown_as_code():
 
 
 def test_compute_checklist_stats_state_displayed_as_name():
-    """State/subdivision codes are shown as names in rankings tables (refs #43)."""
+    """State/subdivision codes are shown as names in rankings tables."""
     pytest.importorskip("pycountry")
 
     data = {
@@ -369,7 +369,7 @@ def test_compute_checklist_stats_state_displayed_as_name():
 
 
 def test_compute_checklist_stats_unknown_state_code_shown_as_code():
-    """Unknown subdivision codes are shown as-is (display fallback, refs #43)."""
+    """Unknown subdivision codes are shown as-is (display fallback)."""
     pytest.importorskip("pycountry")
 
     data = {
