@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
 
 from explorer.components.all_locations_map import render_all_locations_map_component
 

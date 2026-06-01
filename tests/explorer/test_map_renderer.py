@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from explorer.app.streamlit.defaults import MAP_POPUP_MACAULAY_LINK_SYMBOL, MAP_POPUP_MAX_WIDTH_PX
+from explorer.app.streamlit.defaults import MAP_POPUP_MACAULAY_LINK_SYMBOL
 from explorer.presentation.map_renderer import (
     build_species_map_location_popup_html,
     build_species_seen_sections_html,
@@ -588,7 +588,6 @@ def _lifer_lookup_df_for_date_tests() -> "pd.DataFrame":
 
 def test_resolve_lifer_last_seen_date_filter_hides_lifer_on_revisit_only():
     """Lifer before the window + revisit in range → no lifer pin when date filter is on."""
-    import pandas as pd
 
     lookup_df = _lifer_lookup_df_for_date_tests()
     seen = {"L1"}

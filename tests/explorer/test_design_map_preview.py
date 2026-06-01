@@ -8,7 +8,6 @@ from explorer.app.streamlit.defaults import (
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
 )
-from explorer.core.settings_schema_defaults import MAP_MARKER_COLOUR_SCHEME_DEFAULT
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_STROKE_HEX,
     family_map_resolved_highlight_halo_stroke_opacity,
