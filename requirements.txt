@@ -8,7 +8,7 @@ pandas>=3.0.3,<4
 
 # Core deps
 whoosh
-scikit-learn>=1.8.0,<2
+scikit-learn>=1.9.0,<2
 pycountry>=26.2.16
 PyYAML>=6.0.3,<7
 
@@ -25,4 +25,4 @@ pytest-cov>=7.1.0,<8
 Pygments>=2.20.0
 
 # Linting (CI + local; ruff checks explorer/ — see ruff.toml)
-ruff>=0.15.15,<1
+ruff>=0.15.16,<1
