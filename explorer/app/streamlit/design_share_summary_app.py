@@ -7,7 +7,7 @@ No integration with the main explorer app. Run from repo root::
     streamlit run explorer/app/streamlit/design_share_summary_app.py
 
 Upload an eBird CSV or use sample data; compare layout mockups at square post,
-portrait post, and story aspect ratios. PNG export is not implemented yet.
+portrait post, and story aspect ratios. PNG export uses Playwright (headless Chromium).
 """
 
 from __future__ import annotations
@@ -33,11 +33,16 @@ from explorer.core.share_summary_compute import (
     resolve_period,
     suggest_period_anchor,
 )
+from explorer.presentation.share_summary_png_export import (
+    share_summary_png_filename,
+    share_summary_to_png_bytes,
+)
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
     SpotlightStatId,
     _FORMAT_LABELS,
+    _FORMAT_PX,
     all_layout_previews_html,
     compute_share_summary_stats,
     period_for_custom,
@@ -49,6 +54,21 @@ from explorer.presentation.share_summary_preview import (
     spotlight_stat_label,
     summary_status_metrics,
 )
+
+
+@st.cache_data(show_spinner="Generating PNG…")
+def _cached_share_summary_png(
+    stats: ShareSummaryStats,
+    layout: LayoutId,
+    fmt: FormatId,
+    spotlight_stat: SpotlightStatId,
+) -> bytes:
+    return share_summary_to_png_bytes(
+        stats,
+        layout=layout,
+        fmt=fmt,
+        spotlight_stat=spotlight_stat,
+    )
 
 st.set_page_config(page_title="Share summary design", layout="wide")
 st.title("Share summary — layout prototype (#157)")
@@ -227,6 +247,28 @@ st.markdown(
     ),
     unsafe_allow_html=True,
 )
+
+st.subheader("PNG export")
+png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
+try:
+    png_bytes = _cached_share_summary_png(stats, selected_layout, fmt, spotlight_stat)
+except RuntimeError as exc:
+    st.warning(str(exc))
+else:
+    display_scale = min(1.0, 480 / max(_FORMAT_PX[fmt]))
+    st.image(
+        png_bytes,
+        caption=f"{png_filename} — right-click (desktop) or long-press (mobile) to save",
+        width=int(_FORMAT_PX[fmt][0] * display_scale),
+    )
+    st.download_button(
+        "Download PNG",
+        data=png_bytes,
+        file_name=png_filename,
+        mime="image/png",
+        type="secondary",
+        help="Optional — use if save-from-image is awkward on your device.",
+    )
 
 st.divider()
 st.subheader("All layouts")

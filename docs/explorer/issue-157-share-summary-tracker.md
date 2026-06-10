@@ -40,8 +40,8 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | Countries | **Done (prototype)** | All period types; default on tiles/minimal |
 | World bird coverage | **Summary row only** | Available stat; not on card tiles by default |
 | Best bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
-| PNG generation | **Agreed — Playwright** | Implementation not started; verify Streamlit Cloud |
-| PNG save UX | **Deferred** | Button vs right-click vs hybrid — decide when implementing |
+| PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
+| PNG save UX | **Hybrid (minimal)** | `st.image` for right-click/long-press + secondary **Download PNG** button |
 | Main app integration | **Design noted** | New **Socials** tab before Settings; tab-aware sidebar TBD |
 | Map thumbnail on card | **Dropped (v1)** | v2 |
 | Compare to last year | **Dropped (v1)** | v2 |
@@ -467,13 +467,15 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 |------|------|
 | `explorer/core/share_summary_compute.py` | Period definitions + stat computation |
 | `explorer/core/share_summary_defaults.py` | Colour schemes + default stat lists for share cards |
-| `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling |
+| `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling + export HTML |
+| `explorer/presentation/share_summary_png_export.py` | Playwright PNG pipeline + filename helper |
 | `explorer/app/streamlit/defaults.py` | Re-exports share-summary defaults for Streamlit tuning |
-| `explorer/app/streamlit/design_share_summary_app.py` | Standalone design utility (dev / tuning) |
+| `explorer/app/streamlit/design_share_summary_app.py` | Standalone design utility (dev / tuning); PNG preview + download |
 | `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Socials** before Settings |
 | `explorer/app/streamlit/app_map_working_ui.py` | Map sidebar today — refactor target for tab-aware sidebar |
 | `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Socials fragment |
 | `tests/explorer/test_share_summary_preview.py` | Preview / extraction tests |
+| `tests/explorer/test_share_summary_png_export.py` | PNG dimensions + filename (Playwright) |
 | `tests/explorer/test_share_summary_compute.py` | Period stats + date-range tests |
 
 ---
@@ -484,7 +486,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 |-------|------------------|-------------|--------|-------|
 | 0 | `157-social-summary-prototype` | Design app + tracker + core modules | **Ready to commit/PR** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
 | 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **In PR** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
-| 2 | `157-share-summary-png-export` | Playwright HTML→PNG; display image; save UX TBD | Not started | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) |
+| 2 | `275-share-summary-png-export` | Playwright HTML→PNG; display image; hybrid save UX | **In progress** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) |
 | 3 | `157-share-summary-ui` | **Socials** main tab (before Settings); tab-aware sidebar; preview + PNG | Not started | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) |
 | 4 | follow-ups | Best bird(s), stat picker, themes, layout tuning | Not started | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
 
@@ -511,8 +513,23 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 - **Weekly stats** use **Sun–Sat** calendar weeks (not ISO Mon–Sun).
 - **Empty periods** return zeroed stats object; cards may look sparse — may need “no data” state in UI.
 - Logo SVG is embedded via data URI; PNG export must bundle or inline the same asset.
-- **Playwright on Streamlit Cloud** — must verify headless Chromium in production; blocks Cloud PNG if unsupported.
-- **Phone save behaviour** — long-press / share sheet varies by browser; may force download button despite minimal UI preference.
+- **Playwright on Streamlit Cloud** — must verify headless Chromium in production; blocks Cloud PNG if unsupported (see below).
+- **Phone save behaviour** — long-press / share sheet varies by browser; design app ships secondary download button as fallback.
+
+### Streamlit Cloud verification (#275)
+
+**Local / CI:** `playwright` is a runtime dependency in `requirements.txt`. After `pip install -r requirements.txt`, run `python -m playwright install chromium`. Unit tests in `test_share_summary_png_export.py` assert PNG width/height; CI installs Chromium in the `unit-tests` job.
+
+**Streamlit Cloud (not yet verified on a live deploy):**
+
+| Check | Expected | Status |
+|-------|----------|--------|
+| `pip install playwright` during app deploy | Succeeds (listed in `requirements.txt`) | Assumed OK |
+| `playwright install chromium` on Cloud builder | May **not** run automatically — Cloud only runs `pip install` from requirements | **Open — manual verify** |
+| Headless Chromium launch at runtime | Needs browser binaries on the container filesystem (~100MB+) | **Open — manual verify** |
+| PNG section in design app / future Socials tab | Shows `st.image` + download, or warning if Chromium missing | Implemented with graceful `RuntimeError` message |
+
+**If Cloud blocks Chromium:** show HTML preview only on Cloud (current behaviour for scaled mockup) and document “PNG export requires local run” until a Pillow fallback or custom Cloud build step is added. Re-test save flow on iOS/Android once a Cloud deploy exists.
 
 ---
 
@@ -535,3 +552,4 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-09 | **Decisions batch:** default stats per layout, footer-only logo, trip title → green subtitle, Sun–Sat weekly titles, countries all periods, colour schemes in defaults.py, dropped media/map/compare/watermark v1 |
 | 2026-06-09 | GitHub sub-issues created: #273–#277; plan comment on #157 |
 | 2026-06-11 | #274: period stats hardening — shared stats, all-time taxonomy row, current/previous period + `suggest_period_anchor` heuristics documented |
+| 2026-06-11 | #275: Playwright PNG export — `share_summary_png_export.py`, design app `st.image` + download button; Cloud verification documented as open |

@@ -3,6 +3,7 @@
 from explorer.core.checklist_stats_compute import ChecklistStatsPayload
 from explorer.core.share_summary_compute import ShareSummaryStats
 from explorer.presentation.share_summary_preview import (
+    render_share_summary_export_html,
     render_share_summary_preview_html,
     sample_share_summary_stats,
     share_summary_stats_for_year,
@@ -80,6 +81,15 @@ def test_render_preview_includes_period_label_and_logo():
     assert "2025" in html
     assert "pebird-share-preview-wrap" in html
     assert "Personal eBird Explorer" in html
+
+
+def test_render_export_html_full_size_document():
+    html = render_share_summary_export_html(sample_share_summary_stats(), layout="hero", fmt="square")
+    assert "<!DOCTYPE html>" in html
+    assert "pebird-share-preview-wrap" not in html
+    assert "width:1080px" in html
+    assert "height:1080px" in html
+    assert "data:image/svg+xml;base64," in html
 
 
 def test_spotlight_layout_renders():

@@ -610,6 +610,64 @@ _LAYOUT_BUILDERS = {
 }
 
 
+def _card_inner_html(
+    stats: ShareSummaryStats,
+    *,
+    layout: LayoutId,
+    fmt: FormatId,
+    spotlight_stat: SpotlightStatId,
+) -> tuple[str, int, int]:
+    """Return (inner HTML, width, height) at export pixel dimensions."""
+    width, height = _FORMAT_PX[fmt]
+    if layout == "spotlight":
+        inner = _layout_spotlight(stats, width, height, fmt, spotlight_stat=spotlight_stat)
+    else:
+        builder = _LAYOUT_BUILDERS.get(layout, _layout_hero)
+        inner = builder(stats, width, height, fmt)
+    return inner, width, height
+
+
+def render_share_summary_export_html(
+    stats: ShareSummaryStats,
+    *,
+    layout: LayoutId = "hero",
+    fmt: FormatId = "square",
+    spotlight_stat: SpotlightStatId = "lifers",
+) -> str:
+    """Full-size HTML document for headless screenshot (Playwright PNG export)."""
+    inner, width, height = _card_inner_html(
+        stats,
+        layout=layout,
+        fmt=fmt,
+        spotlight_stat=spotlight_stat,
+    )
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width={width}, height={height}" />
+<style>
+  *, *::before, *::after {{ box-sizing: border-box; }}
+  html, body {{
+    margin: 0;
+    padding: 0;
+    width: {width}px;
+    height: {height}px;
+    overflow: hidden;
+  }}
+</style>
+</head>
+<body>
+<div style="
+  width:{width}px;height:{height}px;overflow:hidden;
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  background:{_colour('bg')};color:{_colour('text')};">
+  {inner}
+</div>
+</body>
+</html>"""
+
+
 def render_share_summary_preview_html(
     stats: ShareSummaryStats,
     *,
@@ -619,12 +677,12 @@ def render_share_summary_preview_html(
     spotlight_stat: SpotlightStatId = "lifers",
 ) -> str:
     """Return scaled HTML preview for one layout + aspect ratio."""
-    width, height = _FORMAT_PX[fmt]
-    if layout == "spotlight":
-        inner = _layout_spotlight(stats, width, height, fmt, spotlight_stat=spotlight_stat)
-    else:
-        builder = _LAYOUT_BUILDERS.get(layout, _layout_hero)
-        inner = builder(stats, width, height, fmt)
+    inner, width, height = _card_inner_html(
+        stats,
+        layout=layout,
+        fmt=fmt,
+        spotlight_stat=spotlight_stat,
+    )
     return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
 
 
@@ -663,6 +721,7 @@ __all__ = [
     "period_for_week_containing",
     "period_for_month",
     "period_for_year",
+    "render_share_summary_export_html",
     "render_share_summary_preview_html",
     "sample_share_summary_stats",
     "share_summary_stats_for_year",
