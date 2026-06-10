@@ -207,8 +207,9 @@ Do not duplicate HTML in UI code — use shared formatters.
 - **Map HTML export UX** — Shipped one-click sidebar export; alternative two-button design and browser-risk notes: [docs/explorer/map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) (use if users report export/download failures).
 
 - **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings).
+- **`explorer/core/share_summary_defaults.py`** — **Share-summary card** colour schemes and layout stat defaults (#157); re-exported from `defaults.py` for Streamlit tuning.
 
-Do not hardcode tunable numbers in UI files; use `defaults.py` for those.
+Do not hardcode tunable numbers in UI files; use `defaults.py` (or the matching `explorer/core/*_defaults.py` module) for those.
 
 ---
 

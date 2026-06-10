@@ -463,14 +463,15 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | File | Role |
 |------|------|
 | `explorer/core/share_summary_compute.py` | Period definitions + stat computation |
+| `explorer/core/share_summary_defaults.py` | Colour schemes + default stat lists for share cards |
 | `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling |
-| `explorer/app/streamlit/defaults.py` | Colour schemes + default stat lists for share cards |
+| `explorer/app/streamlit/defaults.py` | Re-exports share-summary defaults for Streamlit tuning |
 | `explorer/app/streamlit/design_share_summary_app.py` | Standalone design utility (dev / tuning) |
 | `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Socials** before Settings |
 | `explorer/app/streamlit/app_map_working_ui.py` | Map sidebar today — refactor target for tab-aware sidebar |
 | `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Socials fragment |
 | `tests/explorer/test_share_summary_preview.py` | Preview / extraction tests |
-| `tests/explorer/test_share_summary_compute.py` | Period stats tests (when added) |
+| `tests/explorer/test_share_summary_compute.py` | Period stats + date-range tests |
 
 ---
 

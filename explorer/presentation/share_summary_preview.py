@@ -251,11 +251,31 @@ def _yearly_row_lookup(
     return out
 
 
+def _countries_in_year_from_payload(payload: ChecklistStatsPayload, year: int) -> int | None:
+    """Count countries with checklists in *year* (from Country tab payload blocks)."""
+    sections = payload.country_sections or []
+    if not sections:
+        return None
+    count = 0
+    for country_key, years, _rows in sections:
+        if not country_key or country_key == "_UNKNOWN" or not years:
+            continue
+        if year in years:
+            count += 1
+    return count if count > 0 else None
+
+
 def share_summary_stats_for_year(
     payload: ChecklistStatsPayload,
     year: int,
 ) -> ShareSummaryStats | None:
-    """Extract summary stats for one calendar year from a checklist stats payload."""
+    """Extract summary stats for one calendar year from a checklist stats payload.
+
+    Reads the Yearly Summary table rows in *payload* plus country blocks for
+    **Countries**. ``longest_streak`` is left ``None`` here — yearly rows do not
+    include per-year streak; use :func:`compute_share_summary_stats` with
+    :func:`period_for_year` when a full year card is needed from raw CSV data.
+    """
     years = list(payload.years_list or [])
     if year not in years:
         return None
@@ -285,6 +305,7 @@ def share_summary_stats_for_year(
         individuals=_int("Total individuals"),
         days_with_checklist=_int("Days with checklist"),
         birding_hours=_float("Total birding hours"),
+        countries=_countries_in_year_from_payload(payload, year),
     )
 
 

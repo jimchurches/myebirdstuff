@@ -55,6 +55,24 @@ def test_share_summary_stats_for_year_extracts_species():
     assert stats is not None
     assert stats.species == 312
     assert stats.period_label == "2025"
+    assert stats.longest_streak is None
+
+
+def test_share_summary_stats_for_year_counts_countries_from_sections():
+    payload = _minimal_payload(years=[2025], species_vals=["10"])
+    payload = ChecklistStatsPayload(
+        **{
+            **payload.__dict__,
+            "country_sections": [
+                ("AU", [2024, 2025], []),
+                ("US", [2025], []),
+                ("_UNKNOWN", [2025], []),
+            ],
+        }
+    )
+    stats = share_summary_stats_for_year(payload, 2025)
+    assert stats is not None
+    assert stats.countries == 2
 
 
 def test_render_preview_includes_period_label_and_logo():
