@@ -15,6 +15,7 @@ from typing import Any, Iterable, Literal
 from explorer.core.checklist_stats_compute import ChecklistStatsPayload
 from explorer.core.share_summary_compute import (
     PeriodKind,
+    ShareSummaryAllTimeStats,
     ShareSummaryStats,
     compute_share_summary_stats,
     period_for_custom,
@@ -67,6 +68,8 @@ _STAT_LABELS: dict[str, str] = {
     "days_with_checklist": "Birding days",
     "longest_streak": "Longest streak",
     "countries": "Countries",
+    "shared_checklists": "Shared checklists",
+    "days_birding_with_others": "Days birding with others",
 }
 
 _SPOTLIGHT_TITLES: dict[SpotlightStatId, str] = {
@@ -134,6 +137,8 @@ def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
         ("countries", stats.countries, "countries"),
         ("longest_streak", stats.longest_streak, "streak"),
         ("birding_hours", stats.birding_hours, "hours"),
+        ("shared_checklists", stats.shared_checklists, "shared"),
+        ("days_birding_with_others", stats.days_birding_with_others, "shared_days"),
     ]
     out: list[tuple[str, str]] = []
     for key, val, fmt in raw:
@@ -151,6 +156,12 @@ def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
         elif fmt == "streak":
             display = f"{int(val):,}"
             label = "Longest streak (days)"
+        elif fmt == "shared":
+            display = f"{int(val):,}"
+            label = _STAT_LABELS["shared_checklists"]
+        elif fmt == "shared_days":
+            display = f"{int(val):,}"
+            label = _STAT_LABELS["days_birding_with_others"]
         else:
             display = f"{int(val):,}"
             label = _STAT_LABELS.get(key, key.replace("_", " ").title())
@@ -161,14 +172,22 @@ def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
 def summary_status_metrics(
     stats: ShareSummaryStats,
     *,
+    all_time: ShareSummaryAllTimeStats | None = None,
     world_bird_coverage_pct: float | None = None,
 ) -> list[tuple[str, str]]:
-    """Metrics row above card previews (period stats + optional global coverage).
+    """Metrics row above card previews (period stats + optional all-time taxonomy).
 
-    World bird coverage is **not** included on card tiles — status row only until layout TBD.
+    All-time metrics and world bird coverage are **not** on card tiles — summary row only.
     """
     pairs = list(stat_pairs(stats))
-    if world_bird_coverage_pct is not None:
+    if all_time is not None:
+        if all_time.total_species_taxa is not None:
+            pairs.append(("Total species (from taxa)", f"{all_time.total_species_taxa:,}"))
+        if all_time.total_families_taxa is not None:
+            pairs.append(("Total families (from taxa)", f"{all_time.total_families_taxa:,}"))
+        if all_time.world_bird_coverage_pct is not None:
+            pairs.append(("World bird coverage", f"{all_time.world_bird_coverage_pct:.1f}%"))
+    elif world_bird_coverage_pct is not None:
         pairs.append(("World bird coverage", f"{world_bird_coverage_pct:.1f}%"))
     return pairs
 
@@ -352,6 +371,8 @@ def sample_share_summary_stats(
             "birding_hours": 38.5,
             "longest_streak": 5,
             "countries": 3,
+            "shared_checklists": 4,
+            "days_birding_with_others": 3,
         },
         "custom": {
             "species": 56,
@@ -380,6 +401,8 @@ def sample_share_summary_stats(
         birding_hours=float(d["birding_hours"]),
         longest_streak=int(d["longest_streak"]) if "longest_streak" in d else None,
         countries=int(d["countries"]) if "countries" in d else None,
+        shared_checklists=int(d["shared_checklists"]) if "shared_checklists" in d else None,
+        days_birding_with_others=int(d["days_birding_with_others"]) if "days_birding_with_others" in d else None,
     )
 
 
@@ -629,6 +652,7 @@ __all__ = [
     "FormatId",
     "LayoutId",
     "SpotlightStatId",
+    "ShareSummaryAllTimeStats",
     "ShareSummaryStats",
     "all_layout_previews_html",
     "compute_share_summary_stats",

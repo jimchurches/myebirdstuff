@@ -5,14 +5,30 @@ from datetime import date
 import pandas as pd
 
 from explorer.core.share_summary_compute import (
+    compute_share_summary_all_time_stats,
     compute_share_summary_stats,
     format_custom_date_range,
     period_for_custom,
+    period_for_month,
+    period_for_previous_month,
+    period_for_previous_week_containing,
+    period_for_week_containing,
     period_for_year,
+    resolve_period,
+    suggest_period_anchor,
 )
+from explorer.presentation.share_summary_preview import summary_status_metrics
 
 
-def _row(*, sid: str, dt: str, species: str, loc: str = "L1", country: str = "AU") -> dict:
+def _row(
+    *,
+    sid: str,
+    dt: str,
+    species: str,
+    loc: str = "L1",
+    country: str = "AU",
+    observers: float = 1.0,
+) -> dict:
     return {
         "Submission ID": sid,
         "Date": dt,
@@ -24,6 +40,7 @@ def _row(*, sid: str, dt: str, species: str, loc: str = "L1", country: str = "AU
         "Country": country,
         "Protocol": "Traveling",
         "All Obs Reported": 1,
+        "Number of Observers": observers,
     }
 
 
@@ -139,6 +156,125 @@ def test_compute_share_summary_stats_custom_trip():
     assert stats.trip_title == "Tassie trip"
     assert stats.checklists == 2
     assert stats.locations == 2
+
+
+def test_shared_checklists_and_days_birding_with_others():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-06-01", species="Species a", observers=2),
+            _row(sid="S2", dt="2025-06-02", species="Species b", observers=2),
+            _row(sid="S3", dt="2025-06-02", species="Species c", observers=1),
+            _row(sid="S4", dt="2025-06-10", species="Species d", observers=1),
+        ]
+    )
+    stats = compute_share_summary_stats(df, period_for_month(2025, 6))
+    assert stats is not None
+    assert stats.shared_checklists == 2
+    assert stats.days_birding_with_others == 2
+
+
+def test_shared_stats_none_without_observers_column():
+    row = _row(sid="S1", dt="2025-06-01", species="Species a")
+    del row["Number of Observers"]
+    stats = compute_share_summary_stats(pd.DataFrame([row]), period_for_month(2025, 6))
+    assert stats is not None
+    assert stats.shared_checklists is None
+    assert stats.days_birding_with_others is None
+
+
+def test_resolve_period_current_and_previous_month():
+    ref = date(2026, 6, 2)
+    current = resolve_period("month", anchor="current", reference=ref)
+    previous = resolve_period("month", anchor="previous", reference=ref)
+    assert current.label == "June 2026"
+    assert previous.label == "May 2026"
+
+
+def test_resolve_period_previous_week():
+    ref = date(2026, 6, 3)  # Wed in week May 31 – Jun 6
+    previous = resolve_period("week", anchor="previous", reference=ref)
+    assert previous.start == date(2026, 5, 24)
+    assert previous.end == date(2026, 5, 30)
+
+
+def test_period_for_previous_month_january():
+    period = period_for_previous_month(2026, 1)
+    assert period.label == "December 2025"
+
+
+def test_period_for_previous_week_containing():
+    period = period_for_previous_week_containing(date(2026, 6, 3))
+    assert period.start == date(2026, 5, 24)
+    assert period.end == date(2026, 5, 30)
+
+
+def test_suggest_period_anchor_early_month():
+    assert suggest_period_anchor("month", date(2026, 6, 2)) == "previous"
+    assert suggest_period_anchor("month", date(2026, 6, 15)) == "current"
+
+
+def test_suggest_period_anchor_weekend():
+    assert suggest_period_anchor("week", date(2026, 6, 6)) == "current"  # Saturday
+    assert suggest_period_anchor("week", date(2026, 6, 1)) == "previous"  # Monday
+
+
+def test_summary_status_metrics_includes_all_time_stats():
+    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryStats
+
+    stats = ShareSummaryStats(period_label="2025", period_kind="year", species=10)
+    all_time = ShareSummaryAllTimeStats(
+        total_species_taxa=10_800,
+        total_families_taxa=248,
+        world_bird_coverage_pct=6.8,
+    )
+    pairs = dict(summary_status_metrics(stats, all_time=all_time))
+    assert pairs["Total species (from taxa)"] == "10,800"
+    assert pairs["Total families (from taxa)"] == "248"
+    assert pairs["World bird coverage"] == "6.8%"
+
+
+def test_compute_share_summary_all_time_stats_from_fixture(monkeypatch):
+    from pathlib import Path
+
+    from explorer.app.streamlit import bird_families_streamlit_html as bf
+    from explorer.core.data_loader import load_dataset
+
+    tax = pd.DataFrame(
+        [
+            {
+                "scientific_name": "Anas gracilis",
+                "common_name": "Grey Teal",
+                "species_code": "grytea1",
+                "taxon_order": 637.0,
+                "base_species": "anas gracilis",
+                "is_extinct": False,
+            },
+            {
+                "scientific_name": "Cacatua galerita",
+                "common_name": "Sulphur-crested Cockatoo",
+                "species_code": "sulcoc2",
+                "taxon_order": 12212.0,
+                "base_species": "cacatua galerita",
+                "is_extinct": False,
+            },
+        ]
+    )
+    groups = [
+        {"group_name": "Waterfowl", "group_order": 1, "bounds": [(0.0, 1000.0)]},
+        {"group_name": "Parrots", "group_order": 2, "bounds": [(12000.0, 13000.0)]},
+    ]
+    monkeypatch.setattr(bf, "_load_taxonomy_species_rows", lambda _loc: tax)
+    monkeypatch.setattr(bf, "_load_taxonomy_groups", lambda _loc: groups)
+
+    fixture = Path(__file__).resolve().parents[1] / "fixtures" / "ebird_integration_fixture.csv"
+    df = load_dataset(fixture)
+    assert df is not None and not df.empty
+    all_time = compute_share_summary_all_time_stats(df, taxonomy_locale="en_AU")
+    assert all_time is not None
+    assert all_time.total_species_taxa == 2
+    assert all_time.total_families_taxa == 2
+    assert all_time.world_bird_coverage_pct is not None
+    assert all_time.world_bird_coverage_pct > 0
 
 
 def test_trip_title_renders_on_card():

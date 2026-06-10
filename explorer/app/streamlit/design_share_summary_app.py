@@ -25,7 +25,14 @@ import streamlit as st
 
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.data_loader import load_dataset
-from explorer.core.share_summary_compute import ShareSummaryStats
+from explorer.core.share_summary_compute import (
+    PeriodAnchor,
+    ShareSummaryAllTimeStats,
+    ShareSummaryStats,
+    compute_share_summary_all_time_stats,
+    resolve_period,
+    suggest_period_anchor,
+)
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
@@ -65,6 +72,19 @@ with st.sidebar:
             "custom": "Custom date range (trip)",
         }[x],
     )
+    period_anchor: PeriodAnchor | None = None
+    if period_mode in ("year", "month", "week"):
+        default_anchor = suggest_period_anchor(period_mode, date.today())
+        period_anchor = st.radio(
+            "Period",
+            options=["current", "previous"],
+            index=0 if default_anchor == "current" else 1,
+            format_func=lambda x: {
+                "current": f"Current {period_mode}",
+                "previous": f"Previous {period_mode}",
+            }[x],
+            help="Current vs previous calendar period (e.g. post May results on 2 June → previous month).",
+        )
 
     st.header("Output")
     fmt: FormatId = st.selectbox(
@@ -93,7 +113,11 @@ with st.sidebar:
 
 df: pd.DataFrame | None = None
 stats: ShareSummaryStats = sample_share_summary_stats()
-world_bird_coverage_pct: float | None = 6.8
+all_time: ShareSummaryAllTimeStats | None = ShareSummaryAllTimeStats(
+    total_species_taxa=10_800,
+    total_families_taxa=248,
+    world_bird_coverage_pct=6.8,
+)
 
 if not use_sample:
     if uploaded is None:
@@ -136,23 +160,33 @@ if df is not None:
     min_d = dates.min().date()
     max_d = dates.max().date()
 
+    reference = date.today()
     if period_mode == "year":
-        years = sorted({int(y) for y in dates.dt.year.unique()})
-        year = st.sidebar.selectbox("Year", options=years, index=len(years) - 1)
-        period = period_for_year(year)
+        if period_anchor is not None:
+            period = resolve_period("year", anchor=period_anchor, reference=reference)
+        else:
+            years = sorted({int(y) for y in dates.dt.year.unique()})
+            year = st.sidebar.selectbox("Year", options=years, index=len(years) - 1)
+            period = period_for_year(year)
     elif period_mode == "month":
-        month_options = sorted({(int(r.year), int(r.month)) for r in dates.dt.to_pydatetime()})
-        labels = [date(y, m, 1).strftime("%B %Y") for y, m in month_options]
-        pick = st.sidebar.selectbox("Month", options=range(len(labels)), format_func=lambda i: labels[i])
-        y, m = month_options[pick]
-        period = period_for_month(y, m)
+        if period_anchor is not None:
+            period = resolve_period("month", anchor=period_anchor, reference=reference)
+        else:
+            month_options = sorted({(int(r.year), int(r.month)) for r in dates.dt.to_pydatetime()})
+            labels = [date(y, m, 1).strftime("%B %Y") for y, m in month_options]
+            pick = st.sidebar.selectbox("Month", options=range(len(labels)), format_func=lambda i: labels[i])
+            y, m = month_options[pick]
+            period = period_for_month(y, m)
     elif period_mode == "week":
-        week_starts = sorted({period_for_week_containing(d).start for d in dates.dt.date})
-        week_labels = [
-            period_for_week_containing(ws).label for ws in week_starts
-        ]
-        pick = st.sidebar.selectbox("Week", options=range(len(week_labels)), format_func=lambda i: week_labels[i])
-        period = period_for_week_containing(week_starts[pick])
+        if period_anchor is not None:
+            period = resolve_period("week", anchor=period_anchor, reference=reference)
+        else:
+            week_starts = sorted({period_for_week_containing(d).start for d in dates.dt.date})
+            week_labels = [
+                period_for_week_containing(ws).label for ws in week_starts
+            ]
+            pick = st.sidebar.selectbox("Week", options=range(len(week_labels)), format_func=lambda i: week_labels[i])
+            period = period_for_week_containing(week_starts[pick])
     else:
         start = st.sidebar.date_input("Start date", value=min_d, min_value=min_d, max_value=max_d)
         end = st.sidebar.date_input("End date", value=max_d, min_value=min_d, max_value=max_d)
@@ -168,21 +202,9 @@ if df is not None:
         st.warning("Could not compute stats for this period.")
         st.stop()
     stats = computed
-    try:
-        from explorer.app.streamlit.bird_families_streamlit_html import (
-            build_group_coverage_tables,
-            compute_world_species_coverage,
-        )
+    all_time = compute_share_summary_all_time_stats(df, taxonomy_locale=TAXONOMY_LOCALE_DEFAULT)
 
-        _summary, detail = build_group_coverage_tables(df, TAXONOMY_LOCALE_DEFAULT)
-        if not detail.empty:
-            _, _, world_bird_coverage_pct = compute_world_species_coverage(detail)
-        else:
-            world_bird_coverage_pct = None
-    except Exception:
-        world_bird_coverage_pct = None
-
-status_metrics = summary_status_metrics(stats, world_bird_coverage_pct=world_bird_coverage_pct)
+status_metrics = summary_status_metrics(stats, all_time=all_time)
 
 if stats.trip_title:
     st.subheader(stats.trip_title)
