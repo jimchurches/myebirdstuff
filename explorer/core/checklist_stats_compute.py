@@ -16,8 +16,12 @@ from explorer.core.stats import (
     compute_rankings,
     country_summary_stats,
     longest_streak,
+    protocol_excludes_timed_birding,
     rankings_not_seen_recently_in_country,
     safe_count,
+    shared_checklist_stats,
+    sum_shared_checklist_minutes,
+    sum_timed_birding_minutes,
     yearly_summary_stats,
 )
 
@@ -136,9 +140,7 @@ def compute_checklist_stats_payload(
         n_completed = f"{reported.sum():,}"
         incomplete = a.notna() & ~reported
         if "Protocol" in cl.columns:
-            excl_inc_hist = cl["Protocol"].astype(str).str.strip().str.lower().str.contains(
-                "incidental|historical|casual observation", na=False, regex=True
-            )
+            excl_inc_hist = protocol_excludes_timed_birding(cl["Protocol"])
         else:
             excl_inc_hist = pd.Series(False, index=cl.index)
         n_incomplete = f"{int((incomplete & ~excl_inc_hist).sum()):,}"
@@ -156,15 +158,7 @@ def compute_checklist_stats_payload(
     protocol_rows.append(("Incomplete checklists", n_incomplete))
     protocol_rows.append(("Completed checklists", n_completed))
 
-    total_minutes = 0.0
-    if dur_col:
-        timed = cl.dropna(subset=[dur_col]).copy()
-        if "Protocol" in timed.columns:
-            excl = timed["Protocol"].str.strip().str.lower().str.contains(
-                "incidental|historical|casual observation", na=False, regex=True
-            )
-            timed = timed[~excl]
-        total_minutes = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0).sum()
+    total_minutes = sum_timed_birding_minutes(cl, dur_col) if dur_col else 0.0
     total_hours = total_minutes / 60
     total_days_dec = total_minutes / (60 * 24)
     total_months = total_minutes / (60 * 24 * 30.44)
@@ -173,21 +167,8 @@ def compute_checklist_stats_payload(
     unique_dates = dates.dt.normalize().unique()
     n_days_with_checklist = len(unique_dates)
 
-    n_shared = 0
-    shared_minutes = 0.0
-    n_days_birding_with_others = 0
-    if "Number of Observers" in df.columns:
-        shared_cl = cl.dropna(subset=["Number of Observers"])
-        shared_mask = shared_cl["Number of Observers"].astype(float) > 1
-        n_shared = int(shared_mask.sum())
-        if n_shared > 0:
-            shared_ids = set(shared_cl.loc[shared_mask, "Submission ID"])
-            shared_subset = cl[cl["Submission ID"].isin(shared_ids)]
-            if "Date" in shared_subset.columns:
-                n_days_birding_with_others = shared_subset["Date"].dt.normalize().nunique()
-            if dur_col:
-                shared_dur = shared_subset.dropna(subset=[dur_col])
-                shared_minutes = pd.to_numeric(shared_dur[dur_col], errors="coerce").fillna(0).sum()
+    n_shared, n_days_birding_with_others = shared_checklist_stats(cl)
+    shared_minutes = sum_shared_checklist_minutes(cl, dur_col) if dur_col else 0.0
     shared_hours = shared_minutes / 60
 
     total_km = 0.0

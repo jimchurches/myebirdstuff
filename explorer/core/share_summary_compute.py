@@ -16,7 +16,14 @@ import pandas as pd
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.species_family import build_base_species_to_family_map
 from explorer.core.species_logic import countable_species_vectorized
-from explorer.core.stats import checklist_country_keys, longest_streak, safe_count
+from explorer.core.stats import (
+    checklist_country_keys,
+    longest_streak,
+    safe_count,
+    shared_checklist_stats,
+    sum_timed_birding_minutes,
+    timed_checklists_excl_incidental,
+)
 
 PeriodAnchor = Literal["current", "previous"]
 PeriodKind = Literal["year", "month", "week", "custom"]
@@ -234,27 +241,6 @@ def _countries_in_period(cl: pd.DataFrame) -> int | None:
     return int(known.nunique())
 
 
-def _shared_stats_in_period(cl: pd.DataFrame) -> tuple[int | None, int | None]:
-    """Shared checklists and days birding with others (Number of Observers > 1).
-
-    Same rules as :mod:`explorer.core.checklist_stats_compute`.
-    """
-    if "Number of Observers" not in cl.columns:
-        return None, None
-    shared_cl = cl.dropna(subset=["Number of Observers"])
-    if shared_cl.empty:
-        return 0, 0
-    shared_mask = shared_cl["Number of Observers"].astype(float) > 1
-    n_shared = int(shared_mask.sum())
-    n_days = 0
-    if n_shared > 0:
-        shared_ids = set(shared_cl.loc[shared_mask, "Submission ID"])
-        shared_subset = cl[cl["Submission ID"].isin(shared_ids)]
-        if "Date" in shared_subset.columns and not shared_subset.empty:
-            n_days = int(shared_subset["Date"].dt.normalize().nunique())
-    return n_shared, n_days
-
-
 def _mask_in_period(dates: pd.Series, period: ShareSummaryPeriod) -> pd.Series:
     ts = pd.to_datetime(dates, errors="coerce")
     return ts.notna() & (ts >= period.start_ts) & (ts <= period.end_ts)
@@ -314,16 +300,11 @@ def compute_share_summary_stats(
         families = int(fam_df.dropna(subset=["_family"])["_family"].nunique())
 
     birding_hours = None
-    dur_col = "Duration (Min)" if "Duration (Min)" in cl.columns else None
+    dur_col = "Duration (Min)" if "Duration (Min)" in in_period_cl.columns else None
     if dur_col:
-        timed = in_period_cl.dropna(subset=[dur_col]).copy()
-        if "Protocol" in timed.columns:
-            proto = timed["Protocol"].astype(str).str.strip().str.lower()
-            excl = proto.str.contains("incidental|historical|casual observation", na=False, regex=True)
-            timed = timed[~excl]
+        timed = timed_checklists_excl_incidental(in_period_cl, dur_col)
         if not timed.empty:
-            mins = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0).sum()
-            birding_hours = float(mins) / 60.0
+            birding_hours = sum_timed_birding_minutes(in_period_cl, dur_col) / 60.0
 
     days = int(in_period_cl["Date"].dt.normalize().nunique())
 
@@ -334,7 +315,9 @@ def compute_share_summary_stats(
         longest_streak_days = int(streak_val)
 
     countries = _countries_in_period(in_period_cl)
-    shared_checklists, days_birding_with_others = _shared_stats_in_period(in_period_cl)
+    shared_checklists, days_birding_with_others = shared_checklist_stats(
+        in_period_cl, absent_column="none"
+    )
 
     return ShareSummaryStats(
         period_label=period.label,

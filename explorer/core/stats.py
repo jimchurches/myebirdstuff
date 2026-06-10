@@ -236,6 +236,87 @@ def longest_streak(unique_dates, cl):
 
 
 # ---------------------------------------------------------------------------
+# Timed birding & shared checklists (checklist-stats + share-summary)
+# ---------------------------------------------------------------------------
+
+_PROTOCOL_EXCL_TIMED_BIRDING = "incidental|historical|casual observation"
+
+
+def protocol_excludes_timed_birding(protocol: pd.Series) -> pd.Series:
+    """True for protocols excluded from timed birding totals (incidental/historical/casual)."""
+    return protocol.astype(str).str.strip().str.lower().str.contains(
+        _PROTOCOL_EXCL_TIMED_BIRDING, na=False, regex=True
+    )
+
+
+def timed_checklists_excl_incidental(cl: pd.DataFrame, dur_col: str) -> pd.DataFrame:
+    """Checklist rows with *dur_col* set, excluding incidental/historical/casual protocols."""
+    timed = cl.dropna(subset=[dur_col]).copy()
+    if "Protocol" in timed.columns:
+        timed = timed[~protocol_excludes_timed_birding(timed["Protocol"])]
+    return timed
+
+
+def sum_timed_birding_minutes(cl: pd.DataFrame, dur_col: str) -> float:
+    """Sum checklist duration minutes with protocol exclusions applied."""
+    timed = timed_checklists_excl_incidental(cl, dur_col)
+    if timed.empty:
+        return 0.0
+    return float(pd.to_numeric(timed[dur_col], errors="coerce").fillna(0).sum())
+
+
+def shared_checklist_rows(cl: pd.DataFrame) -> pd.DataFrame | None:
+    """Rows in deduped checklist *cl* where Number of Observers > 1.
+
+    Returns ``None`` when the observers column is missing; empty frame when none qualify.
+    """
+    if "Number of Observers" not in cl.columns:
+        return None
+    shared_cl = cl.dropna(subset=["Number of Observers"])
+    if shared_cl.empty:
+        return shared_cl
+    nobs = pd.to_numeric(shared_cl["Number of Observers"], errors="coerce").fillna(0)
+    return shared_cl[nobs > 1]
+
+
+def shared_checklist_stats(
+    cl: pd.DataFrame,
+    *,
+    absent_column: str = "zero",
+) -> tuple[int | None, int | None]:
+    """Return ``(n_shared, n_days_birding_with_others)`` for checklist-level *cl*.
+
+    *absent_column*: ``\"zero\"`` when observers column missing (checklist stats default);
+    ``\"none\"`` for share summary (``None``, ``None``).
+    """
+    shared_rows = shared_checklist_rows(cl)
+    if shared_rows is None:
+        return (None, None) if absent_column == "none" else (0, 0)
+    n_shared = int(len(shared_rows))
+    if n_shared == 0:
+        return 0, 0
+    shared_ids = set(shared_rows["Submission ID"])
+    shared_subset = cl[cl["Submission ID"].isin(shared_ids)]
+    n_days = 0
+    if "Date" in shared_subset.columns and not shared_subset.empty:
+        n_days = int(shared_subset["Date"].dt.normalize().nunique())
+    return n_shared, n_days
+
+
+def sum_shared_checklist_minutes(cl: pd.DataFrame, dur_col: str) -> float:
+    """Sum duration minutes for shared checklists (observers > 1)."""
+    shared_rows = shared_checklist_rows(cl)
+    if shared_rows is None or shared_rows.empty:
+        return 0.0
+    shared_ids = set(shared_rows["Submission ID"])
+    shared_subset = cl[cl["Submission ID"].isin(shared_ids)]
+    shared_dur = shared_subset.dropna(subset=[dur_col])
+    if shared_dur.empty:
+        return 0.0
+    return float(pd.to_numeric(shared_dur[dur_col], errors="coerce").fillna(0).sum())
+
+
+# ---------------------------------------------------------------------------
 # Ranking helpers
 # ---------------------------------------------------------------------------
 
@@ -985,23 +1066,16 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         row_incidental_checklists = ("Incidental checklists", ["—"] * len(years_sorted))
 
     # Shared checklists / Days birding with others
-    if "Number of Observers" in cl.columns:
-        shared_cl = cl.dropna(subset=["Number of Observers"]).copy()
-        shared_cl["_nobs"] = pd.to_numeric(shared_cl["Number of Observers"], errors="coerce").fillna(0)
-        shared_mask = shared_cl["_nobs"] > 1
-        shared_sub = shared_cl[shared_mask]
-        if not shared_sub.empty:
-            by_yr_shared = shared_sub.groupby("_year").size()
-            vals_shared = [int(by_yr_shared.get(y, 0)) for y in years_sorted]
-            row_shared_checklists = ("Shared checklists", [f"{v:,}" for v in vals_shared])
-            shared_sub = shared_sub.copy()
-            shared_sub["_date"] = shared_sub["Date"].dt.normalize()
-            by_yr_days = shared_sub.groupby("_year")["_date"].nunique()
-            vals_days_bo = [int(by_yr_days.get(y, 0)) for y in years_sorted]
-            row_days_birding_with_others = ("Days birding with others", [f"{v:,}" for v in vals_days_bo])
-        else:
-            row_shared_checklists = ("Shared checklists", ["—"] * len(years_sorted))
-            row_days_birding_with_others = ("Days birding with others", ["—"] * len(years_sorted))
+    shared_sub = shared_checklist_rows(cl)
+    if shared_sub is not None and not shared_sub.empty:
+        by_yr_shared = shared_sub.groupby("_year").size()
+        vals_shared = [int(by_yr_shared.get(y, 0)) for y in years_sorted]
+        row_shared_checklists = ("Shared checklists", [f"{v:,}" for v in vals_shared])
+        shared_sub = shared_sub.copy()
+        shared_sub["_date"] = shared_sub["Date"].dt.normalize()
+        by_yr_days = shared_sub.groupby("_year")["_date"].nunique()
+        vals_days_bo = [int(by_yr_days.get(y, 0)) for y in years_sorted]
+        row_days_birding_with_others = ("Days birding with others", [f"{v:,}" for v in vals_days_bo])
     else:
         row_shared_checklists = ("Shared checklists", ["—"] * len(years_sorted))
         row_days_birding_with_others = ("Days birding with others", ["—"] * len(years_sorted))
@@ -1018,12 +1092,9 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
 
     # Total birding hours
     if dur_col:
-        timed = cl.dropna(subset=[dur_col]).copy()
+        timed = timed_checklists_excl_incidental(cl, dur_col)
         timed["_dur"] = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0)
         timed["_year"] = timed["Date"].dt.year
-        if has_protocol:
-            excl = timed["Protocol"].astype(str).str.strip().str.lower().str.contains("incidental|historical|casual observation", na=False, regex=True)
-            timed = timed[~excl]
         by_yr_min = timed.groupby("_year")["_dur"].sum()
         vals_hours = [by_yr_min.get(y, 0) / 60 for y in years_sorted]
         row_total_birding_hours = ("Total birding hours", [f"{v:.1f}" if v else "—" for v in vals_hours])
