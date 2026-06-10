@@ -20,6 +20,10 @@ from explorer.core.stats import (
     rankings_not_seen_recently,
     rankings_not_seen_recently_in_country,
     rankings_high_counts,
+    protocol_excludes_timed_birding,
+    shared_checklist_stats,
+    sum_timed_birding_minutes,
+    timed_checklists_excl_incidental,
 )
 
 
@@ -42,6 +46,49 @@ class TestSafeCount:
 
     def test_plain_int(self):
         assert safe_count(42) == 42
+
+
+# ---------------------------------------------------------------------------
+# Timed birding & shared checklists
+# ---------------------------------------------------------------------------
+
+class TestSharedChecklistStats:
+    def _cl(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "Submission ID": ["S1", "S2", "S3"],
+                "Date": pd.to_datetime(["2025-06-01", "2025-06-02", "2025-06-02"]),
+                "Number of Observers": [2.0, 2.0, 1.0],
+                "Duration (Min)": [60, 30, 45],
+            }
+        )
+
+    def test_shared_checklist_stats_counts(self):
+        n_shared, n_days = shared_checklist_stats(self._cl())
+        assert n_shared == 2
+        assert n_days == 2
+
+    def test_shared_checklist_stats_absent_column_none(self):
+        cl = self._cl().drop(columns=["Number of Observers"])
+        assert shared_checklist_stats(cl, absent_column="none") == (None, None)
+
+    def test_timed_checklists_excl_incidental(self):
+        cl = pd.DataFrame(
+            {
+                "Submission ID": ["S1", "S2"],
+                "Protocol": ["eBird - Traveling Count", "eBird - Casual Observation"],
+                "Duration (Min)": [60, 120],
+            }
+        )
+        timed = timed_checklists_excl_incidental(cl, "Duration (Min)")
+        assert len(timed) == 1
+        assert timed.iloc[0]["Submission ID"] == "S1"
+        assert sum_timed_birding_minutes(cl, "Duration (Min)") == 60.0
+
+    def test_protocol_excludes_timed_birding(self):
+        proto = pd.Series(["eBird - Traveling Count", "Incidental", "Historical checklist"])
+        mask = protocol_excludes_timed_birding(proto)
+        assert list(mask) == [False, True, True]
 
 
 # ---------------------------------------------------------------------------

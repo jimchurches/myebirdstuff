@@ -16,8 +16,16 @@ import pandas as pd
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.species_family import build_base_species_to_family_map
 from explorer.core.species_logic import countable_species_vectorized
-from explorer.core.stats import checklist_country_keys, longest_streak, safe_count
+from explorer.core.stats import (
+    checklist_country_keys,
+    longest_streak,
+    safe_count,
+    shared_checklist_stats,
+    sum_timed_birding_minutes,
+    timed_checklists_excl_incidental,
+)
 
+PeriodAnchor = Literal["current", "previous"]
 PeriodKind = Literal["year", "month", "week", "custom"]
 
 
@@ -112,6 +120,59 @@ def period_for_iso_week(year: int, week: int) -> ShareSummaryPeriod:
     return period_for_week_containing(date.fromisocalendar(int(year), int(week), 1))
 
 
+def period_for_previous_month(year: int, month: int) -> ShareSummaryPeriod:
+    """Calendar month immediately before *year*/*month*."""
+    if int(month) == 1:
+        return period_for_month(int(year) - 1, 12)
+    return period_for_month(int(year), int(month) - 1)
+
+
+def period_for_previous_week_containing(day: date) -> ShareSummaryPeriod:
+    """Sun–Sat week immediately before the week containing *day*."""
+    start, _ = _week_sun_sat_containing(day)
+    return period_for_week_containing(start - timedelta(days=1))
+
+
+def resolve_period(
+    kind: Literal["year", "month", "week"],
+    *,
+    anchor: PeriodAnchor,
+    reference: date,
+) -> ShareSummaryPeriod:
+    """Resolve year/month/week period from *reference* date and current/previous anchor."""
+    if kind == "year":
+        y = reference.year if anchor == "current" else reference.year - 1
+        return period_for_year(y)
+    if kind == "month":
+        if anchor == "current":
+            return period_for_month(reference.year, reference.month)
+        return period_for_previous_month(reference.year, reference.month)
+    # week
+    if anchor == "current":
+        return period_for_week_containing(reference)
+    return period_for_previous_week_containing(reference)
+
+
+def suggest_period_anchor(kind: Literal["year", "month", "week"], reference: date) -> PeriodAnchor:
+    """Heuristic default for current vs previous (social-posting context).
+
+    Examples: early in a new month → previous month; weekend → current week.
+    """
+    if kind == "month":
+        return "previous" if reference.day <= 7 else "current"
+    if kind == "year":
+        if reference.month == 1 and reference.day <= 14:
+            return "previous"
+        return "current"
+    if kind == "week":
+        if reference.weekday() >= 5:  # Saturday or Sunday
+            return "current"
+        if reference.weekday() <= 1:  # Monday or Tuesday
+            return "previous"
+        return "current"
+    return "current"
+
+
 def period_for_custom(
     start: date,
     end: date,
@@ -153,6 +214,18 @@ class ShareSummaryStats:
     days_with_checklist: int | None = None
     longest_streak: int | None = None
     countries: int | None = None
+    shared_checklists: int | None = None
+    days_birding_with_others: int | None = None
+
+
+@dataclass(frozen=True)
+class ShareSummaryAllTimeStats:
+    """All-time taxonomy metrics for the summary row (not period-scoped)."""
+
+    total_species_taxa: int | None = None
+    total_families_taxa: int | None = None
+    observed_species_taxa: int | None = None
+    world_bird_coverage_pct: float | None = None
 
 
 def _countries_in_period(cl: pd.DataFrame) -> int | None:
@@ -227,16 +300,11 @@ def compute_share_summary_stats(
         families = int(fam_df.dropna(subset=["_family"])["_family"].nunique())
 
     birding_hours = None
-    dur_col = "Duration (Min)" if "Duration (Min)" in cl.columns else None
+    dur_col = "Duration (Min)" if "Duration (Min)" in in_period_cl.columns else None
     if dur_col:
-        timed = in_period_cl.dropna(subset=[dur_col]).copy()
-        if "Protocol" in timed.columns:
-            proto = timed["Protocol"].astype(str).str.strip().str.lower()
-            excl = proto.str.contains("incidental|historical|casual observation", na=False, regex=True)
-            timed = timed[~excl]
+        timed = timed_checklists_excl_incidental(in_period_cl, dur_col)
         if not timed.empty:
-            mins = pd.to_numeric(timed[dur_col], errors="coerce").fillna(0).sum()
-            birding_hours = float(mins) / 60.0
+            birding_hours = sum_timed_birding_minutes(in_period_cl, dur_col) / 60.0
 
     days = int(in_period_cl["Date"].dt.normalize().nunique())
 
@@ -247,6 +315,9 @@ def compute_share_summary_stats(
         longest_streak_days = int(streak_val)
 
     countries = _countries_in_period(in_period_cl)
+    shared_checklists, days_birding_with_others = shared_checklist_stats(
+        in_period_cl, absent_column="none"
+    )
 
     return ShareSummaryStats(
         period_label=period.label,
@@ -262,4 +333,40 @@ def compute_share_summary_stats(
         birding_hours=birding_hours,
         longest_streak=longest_streak_days,
         countries=countries,
+        shared_checklists=shared_checklists,
+        days_birding_with_others=days_birding_with_others,
+    )
+
+
+def compute_share_summary_all_time_stats(
+    df: pd.DataFrame,
+    *,
+    taxonomy_locale: str | None = None,
+) -> ShareSummaryAllTimeStats | None:
+    """All-time taxonomy metrics via Bird Families coverage tables."""
+    if df.empty:
+        return None
+    loc = (taxonomy_locale or "").strip() or TAXONOMY_LOCALE_DEFAULT
+    try:
+        from explorer.app.streamlit.bird_families_streamlit_html import (
+            build_group_coverage_tables,
+            compute_world_species_coverage,
+        )
+    except ImportError:
+        return None
+
+    try:
+        summary, detail = build_group_coverage_tables(df, loc)
+    except Exception:
+        return None
+    if detail.empty:
+        return None
+
+    observed, total_sp, pct = compute_world_species_coverage(detail)
+    total_families = int(summary["group_name"].nunique()) if not summary.empty else None
+    return ShareSummaryAllTimeStats(
+        total_species_taxa=total_sp,
+        total_families_taxa=total_families,
+        observed_species_taxa=observed,
+        world_bird_coverage_pct=pct,
     )
