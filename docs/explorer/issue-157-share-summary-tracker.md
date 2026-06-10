@@ -70,7 +70,7 @@ Captured after second prototype review — closes most open layout/stat question
 
 ### Default stats per layout
 
-Configured in ``explorer/app/streamlit/defaults.py`` as ``SHARE_SUMMARY_HERO_DEFAULT_STATS`` / ``SHARE_SUMMARY_TILES_DEFAULT_STATS``.
+Configured in ``explorer/core/share_summary_defaults.py`` (re-exported from ``defaults.py``) as ``SHARE_SUMMARY_HERO_DEFAULT_STATS`` / ``SHARE_SUMMARY_TILES_DEFAULT_STATS``.
 
 | Layout | Default stats (in order) |
 |--------|--------------------------|
@@ -134,7 +134,7 @@ All should appear in the summary row (with values) so users can pick interesting
 ### Colours
 
 - Current palette looks good for v1.
-- Schemes live in ``defaults.py`` → ``SHARE_SUMMARY_COLOR_SCHEMES`` (array of dicts: ``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``).
+- Schemes live in ``explorer/core/share_summary_defaults.py`` → ``SHARE_SUMMARY_COLOR_SCHEMES`` (array of dicts: ``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``).
 - Active scheme: ``SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT`` (flip index to test new schemes without code changes).
 - **No UI control** for colour schemes yet.
 - **Dark theme:** add a second entry to the array when a good palette exists; otherwise mark v2 with colour-scheme work.

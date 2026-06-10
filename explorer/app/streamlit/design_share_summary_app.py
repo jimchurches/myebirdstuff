@@ -147,9 +147,7 @@ if df is not None:
         y, m = month_options[pick]
         period = period_for_month(y, m)
     elif period_mode == "week":
-        from explorer.core.share_summary_compute import _week_sun_sat_containing
-
-        week_starts = sorted({_week_sun_sat_containing(d)[0] for d in dates.dt.date})
+        week_starts = sorted({period_for_week_containing(d).start for d in dates.dt.date})
         week_labels = [
             period_for_week_containing(ws).label for ws in week_starts
         ]

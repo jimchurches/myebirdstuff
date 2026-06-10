@@ -24,7 +24,7 @@ from explorer.core.share_summary_compute import (
     period_for_year,
 )
 
-from explorer.app.streamlit.defaults import (
+from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,

@@ -38,6 +38,13 @@ from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
 )
+from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export for Streamlit UI
+    SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
+    SHARE_SUMMARY_COLOR_SCHEMES,
+    SHARE_SUMMARY_HERO_DEFAULT_STATS,
+    SHARE_SUMMARY_TILES_DEFAULT_STATS,
+    SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT,
+)
 
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster)
@@ -424,40 +431,8 @@ RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT = "shading"
 # and family/world coverage tables.
 TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE = False
 
-# ---------------------------------------------------------------------------
-# Share summary cards (#157) — colour schemes (no UI picker yet)
-# ---------------------------------------------------------------------------
-
-# Index into :data:`SHARE_SUMMARY_COLOR_SCHEMES` used by card HTML previews / PNG export.
-SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT = 0
-
-# Each scheme: ``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``.
-# Add entries here to trial themes; flip ``SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT`` to test.
-SHARE_SUMMARY_COLOR_SCHEMES: tuple[dict[str, str], ...] = (
-    {
-        "id": "light",
-        "bg": "#ffffff",
-        "bg_alt": "#f9fafb",
-        "text": "#111827",
-        "muted": "#6b7280",
-        "border": "#e5e7eb",
-        "accent": "#2d6a4f",
-    },
-)
-
-# Default stat labels per layout (user-selectable stats planned for v1 integration).
-SHARE_SUMMARY_HERO_DEFAULT_STATS: tuple[str, ...] = (
-    "Total species",
-    "Lifers",
-    "Total checklists",
-    "Unique locations",
-)
-SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = SHARE_SUMMARY_HERO_DEFAULT_STATS + (
-    "Countries",
-    "Birding days",
-)
-SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT = "lifers"
-
+# Share summary cards (#157): colour schemes and layout stat defaults — see
+# :mod:`explorer.core.share_summary_defaults` (re-exported above; no UI picker yet).
 
 def debug_defaults_enabled() -> list[str]:
     """Return names of debug toggles in this module that are currently ``True``.
