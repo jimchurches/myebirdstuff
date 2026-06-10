@@ -48,7 +48,7 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | Custom @handle watermark | **Dropped (v1)** | v2 |
 | Media uploads | **Dropped** | Not in eBird observation CSV |
 | User picks stats on card | **Agreed (v1)** | Defaults per layout; picker UI TBD |
-| Current vs previous period | **Open** | Radio/toggle for year/month/week |
+| Current vs previous period | **Done (design app)** | Radio for year/month/week; default via `suggest_period_anchor()` |
 | Colour schemes | **Config in defaults.py** | Index tunable; no UI yet |
 | Multiple themes (light/dark) | **Config only** | Add entries to colour scheme array |
 | User picks layout in app | **Agreed (v1)** | Hero grid, Stat tiles, Minimal list, **Spotlight** |
@@ -99,11 +99,12 @@ All should appear in the summary row (with values) so users can pick interesting
 | Total bird families | Period (taxonomy map) | Yes | No |
 | Birding hours | Period | Yes | **Summary only** |
 | Longest streak (days) | Period (year/month only) | Yes | No |
-| Shared checklists | Period | **Not yet** — reuse checklist-stats logic | No |
-| Days birding with others | Period | **Not yet** — reuse checklist-stats logic | No |
+| Shared checklists | Period | Yes | No |
+| Days birding with others | Period | Yes | No |
 | World bird coverage | All-time (taxonomy) | Yes (summary row) | No |
-| Total species (from taxa) | All-time | **Not yet** — Bird Families tab | No |
-| Total families (from taxa) | All-time | **Not yet** — Bird Families tab | No |
+| Total species (from taxa) | All-time | Yes (summary row) | No |
+| Observed species (from taxa) | All-time | Yes (summary row) | No |
+| Total families (from taxa) | All-time | Yes (summary row) | No |
 | Best bird(s) | User pick (≤3) | Roadmap | No |
 | Trip title | User text (custom range) | Yes | Replaces green subtitle |
 
@@ -139,13 +140,15 @@ All should appear in the summary row (with values) so users can pick interesting
 - **No UI control** for colour schemes yet.
 - **Dark theme:** add a second entry to the array when a good palette exists; otherwise mark v2 with colour-scheme work.
 
-### Period selection — current vs previous (open)
+### Period selection — current vs previous
 
-Idea: control for **current period** vs **previous period** (radio, toggle, or dropdown — wording TBD).
+Control for **current period** vs **previous period** (radio in design app; Socials tab wording TBD).
 
 Example: on Saturday afternoon finishing the birding month → “current month”; on 2 June posting May results → “previous month”. Same for year/week.
 
-Not implemented in prototype yet — discuss wording and UX when building Socials tab controls.
+**Default anchor** (`suggest_period_anchor` in `share_summary_compute.py`, reference = today): month → previous if day ≤ 7 else current; year → previous if 1–14 January else current; week → current on Sat/Sun, previous on Mon/Tue, else current.
+
+Period resolved via `resolve_period()` relative to reference date (design app uses `date.today()`).
 
 ### Card layout iteration (still open)
 
@@ -480,7 +483,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | Phase | Branch (example) | Deliverable | Status | Issue |
 |-------|------------------|-------------|--------|-------|
 | 0 | `157-social-summary-prototype` | Design app + tracker + core modules | **Ready to commit/PR** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
-| 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | Not started | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
+| 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **In PR** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
 | 2 | `157-share-summary-png-export` | Playwright HTML→PNG; display image; save UX TBD | Not started | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) |
 | 3 | `157-share-summary-ui` | **Socials** main tab (before Settings); tab-aware sidebar; preview + PNG | Not started | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) |
 | 4 | follow-ups | Best bird(s), stat picker, themes, layout tuning | Not started | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
@@ -531,3 +534,4 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2025-06-09 | **World bird coverage** on roadmap; mockup status row only (6.8% sample / live from taxonomy) |
 | 2026-06-09 | **Decisions batch:** default stats per layout, footer-only logo, trip title → green subtitle, Sun–Sat weekly titles, countries all periods, colour schemes in defaults.py, dropped media/map/compare/watermark v1 |
 | 2026-06-09 | GitHub sub-issues created: #273–#277; plan comment on #157 |
+| 2026-06-11 | #274: period stats hardening — shared stats, all-time taxonomy row, current/previous period + `suggest_period_anchor` heuristics documented |

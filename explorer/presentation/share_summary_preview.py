@@ -183,6 +183,8 @@ def summary_status_metrics(
     if all_time is not None:
         if all_time.total_species_taxa is not None:
             pairs.append(("Total species (from taxa)", f"{all_time.total_species_taxa:,}"))
+        if all_time.observed_species_taxa is not None:
+            pairs.append(("Observed species (from taxa)", f"{all_time.observed_species_taxa:,}"))
         if all_time.total_families_taxa is not None:
             pairs.append(("Total families (from taxa)", f"{all_time.total_families_taxa:,}"))
         if all_time.world_bird_coverage_pct is not None:

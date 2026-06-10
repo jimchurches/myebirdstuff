@@ -224,11 +224,13 @@ def test_summary_status_metrics_includes_all_time_stats():
     stats = ShareSummaryStats(period_label="2025", period_kind="year", species=10)
     all_time = ShareSummaryAllTimeStats(
         total_species_taxa=10_800,
+        observed_species_taxa=312,
         total_families_taxa=248,
         world_bird_coverage_pct=6.8,
     )
     pairs = dict(summary_status_metrics(stats, all_time=all_time))
     assert pairs["Total species (from taxa)"] == "10,800"
+    assert pairs["Observed species (from taxa)"] == "312"
     assert pairs["Total families (from taxa)"] == "248"
     assert pairs["World bird coverage"] == "6.8%"
 
