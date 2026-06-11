@@ -41,7 +41,8 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | World bird coverage | **Summary row only** | Available stat; not on card tiles by default |
 | Best bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
 | PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
-| PNG save UX | **Hybrid (minimal)** | `st.image` for right-click/long-press + secondary **Download PNG** button |
+| PNG save UX | **Done (design app)** | Sidebar **Export current card** (no in-app PNG preview) |
+| All layouts comparison grid | **Design utility only** | Side-by-side four layouts in `design_share_summary_app.py`; **not** in main app (#276) |
 | Main app integration | **Design noted** | New **Social Cards** tab before Settings; tab-aware sidebar TBD |
 | Map thumbnail on card | **Dropped (v1)** | v2 |
 | Compare to last year | **Dropped (v1)** | v2 |
@@ -195,8 +196,19 @@ Captured from initial prototype review:
 - **Tab order:** last data tab, **immediately before Settings** (after Maintenance).
   - Proposed strip: Map → Checklist Statistics → Ranking & Lists → Bird Families → Yearly Summary → Country → Maintenance → **Social Cards** → Settings
   - Code touchpoint: `NOTEBOOK_MAIN_TAB_LABELS` in `explorer/app/streamlit/streamlit_ui_constants.py`
-- **Tab content:** Like the design mockup — user can choose period, layout, aspect ratio, spotlight stat, trip title, etc., and see a live preview (then PNG via Playwright when built).
+- **Tab content:** Like the design mockup — period, layout, aspect ratio, spotlight stat, trip title, **current card** preview, and PNG export. Users change layout via sidebar controls; **no** all-layouts comparison grid (design utility only — see below).
 - **Not the standalone design app** long term — embed into main explorer once phases 1–2 are ready; keep `design_share_summary_app.py` as a dev utility until then.
+
+### Design utility vs main app (#276)
+
+| Feature | Design studio (`design_share_summary_app.py`) | Main app **Social Cards** tab |
+|---------|--------------------------------------------------|-------------------------------|
+| **Current card** preview | Yes | Yes |
+| **All layouts** grid (four layouts at once) | **Yes** — helps compare/tune HTML layouts during design | **No** — users cycle layout via sidebar **Layout** control |
+| **Available statistics** expander | Yes | TBD (#276) |
+| **Export current card** (sidebar) | Yes | Yes (target) |
+
+Rationale: end users do not need to see every layout variant on one screen; one preview plus layout picker is enough. The all-layouts section stays in the design utility for layout iteration only.
 
 ---
 
@@ -285,7 +297,7 @@ When the user selects the **Social Cards** tab:
   - Layout: Hero grid / Stat tiles / Minimal list / Spotlight
   - Spotlight stat (when Spotlight layout)
   - Optional: preview scale (maybe main panel only)
-- Main panel: card preview (+ PNG when Playwright lands).
+- Main panel: **current card** preview only (+ PNG export via sidebar). **No** all-layouts comparison grid — unlike the design studio.
 
 When the user leaves **Social Cards** (any other main tab):
 
@@ -316,7 +328,7 @@ Other data tabs (Checklist, Yearly, …) — **no change for v1**; map sidebar c
 
 ### UX reference
 
-Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Social Cards tab layout + control set.
+Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Social Cards tab **controls + current card preview**. Copy the **All layouts** section **only** for design tuning; omit it from the main app (#276).
 
 ---
 
@@ -470,7 +482,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling + export HTML |
 | `explorer/presentation/share_summary_png_export.py` | Playwright PNG pipeline + filename helper |
 | `explorer/app/streamlit/defaults.py` | Re-exports share-summary defaults for Streamlit tuning |
-| `explorer/app/streamlit/design_share_summary_app.py` | Standalone design utility (dev / tuning); PNG preview + download |
+| `explorer/app/streamlit/design_share_summary_app.py` | Design studio — current card + **All layouts** grid + sidebar export (not all mirrored in main app) |
 | `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Social Cards** before Settings |
 | `explorer/app/streamlit/app_map_working_ui.py` | Map sidebar today — refactor target for tab-aware sidebar |
 | `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Social Cards fragment |
@@ -554,3 +566,4 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-11 | #274: period stats hardening — shared stats, all-time taxonomy row, current/previous period + `suggest_period_anchor` heuristics documented |
 | 2026-06-11 | #275: Playwright PNG export — `share_summary_png_export.py`, design app `st.image` + download button; Cloud verification documented as open |
 | 2026-06-11 | Main app tab name decided: **Social Cards** (design studio + #276); retired ~~Socials~~ working title |
+| 2026-06-11 | **All layouts** grid: design utility only; main app shows current card + sidebar layout picker (#276) |

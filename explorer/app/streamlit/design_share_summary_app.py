@@ -72,6 +72,7 @@ def _cached_share_summary_png(
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 _STATS_EXPANDER_LABEL = "Available statistics"
+_CURRENT_CARD_LABEL = "Current card"
 
 st.set_page_config(page_title=_DESIGN_STUDIO_TITLE, layout="wide")
 st.title(_DESIGN_STUDIO_TITLE)
@@ -109,7 +110,7 @@ with st.sidebar:
             help="Current vs previous calendar period (e.g. post May results on 2 June → previous month).",
         )
 
-    st.header("Output")
+    st.header(_CURRENT_CARD_LABEL)
     fmt: FormatId = st.selectbox(
         "Aspect ratio",
         options=["square", "portrait_post", "story"],
@@ -117,7 +118,7 @@ with st.sidebar:
     )
     scale = st.slider("Preview scale", min_value=0.22, max_value=0.55, value=0.36, step=0.01)
     selected_layout: LayoutId = st.selectbox(
-        "Focus layout",
+        "Layout",
         options=["hero", "tiles", "minimal", "spotlight"],
         format_func=lambda x: {
             "hero": "Hero grid (4 stats)",
@@ -131,7 +132,7 @@ with st.sidebar:
         options=["species", "lifers", "checklists", "locations"],
         format_func=lambda x: spotlight_stat_label(x, period_mode),
         disabled=selected_layout != "spotlight",
-        help="Choose which stat to highlight when Spotlight layout is selected.",
+        help="Choose which stat to highlight when the Spotlight layout is selected.",
     )
 
 df: pd.DataFrame | None = None
@@ -245,12 +246,12 @@ if png_export_error:
     st.sidebar.warning(png_export_error)
 elif png_bytes is not None:
     st.sidebar.download_button(
-        "Export focused layout",
+        "Export current card",
         data=png_bytes,
         file_name=png_filename,
         mime="image/png",
         use_container_width=True,
-        help="PNG of the layout selected above — not the all-layouts comparison grid.",
+        help="PNG of the current card — not the all-layouts comparison below.",
     )
 
 tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
@@ -261,8 +262,7 @@ with tab_social_cards:
         for i, (label, value) in enumerate(status_metrics):
             cols[i % 4].metric(label, value)
 
-    st.divider()
-    st.subheader("Focused layout")
+    st.subheader(_CURRENT_CARD_LABEL)
     st.markdown(
         render_share_summary_preview_html(
             stats,
