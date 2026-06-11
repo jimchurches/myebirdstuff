@@ -229,9 +229,8 @@ def test_summary_status_metrics_includes_all_time_stats():
         world_bird_coverage_pct=6.8,
     )
     pairs = dict(summary_status_metrics(stats, all_time=all_time))
-    assert pairs["Total species (from taxa)"] == "10,800"
-    assert pairs["Observed species (from taxa)"] == "312"
-    assert pairs["Total families (from taxa)"] == "248"
+    assert pairs["World bird species (from taxa)"] == "312"
+    assert pairs["World bird families (from taxa)"] == "248"
     assert pairs["World bird coverage"] == "6.8%"
 
 

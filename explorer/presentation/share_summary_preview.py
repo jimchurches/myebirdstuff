@@ -169,6 +169,23 @@ def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
     return out
 
 
+_SUMMARY_STATUS_ORDER: tuple[str, ...] = (
+    "Total species",
+    "Lifers",
+    "Total checklists",
+    "Unique locations",
+    "Countries",
+    "Birding hours",
+    "Birding days",
+    "Longest streak (days)",
+    "Total individuals",
+    "Total bird families",
+    "World bird coverage",
+    "World bird species (from taxa)",
+    "World bird families (from taxa)",
+)
+
+
 def summary_status_metrics(
     stats: ShareSummaryStats,
     *,
@@ -179,19 +196,27 @@ def summary_status_metrics(
 
     All-time metrics and world bird coverage are **not** on card tiles — summary row only.
     """
-    pairs = list(stat_pairs(stats))
+    lookup: dict[str, str] = dict(stat_pairs(stats))
     if all_time is not None:
-        if all_time.total_species_taxa is not None:
-            pairs.append(("Total species (from taxa)", f"{all_time.total_species_taxa:,}"))
-        if all_time.observed_species_taxa is not None:
-            pairs.append(("Observed species (from taxa)", f"{all_time.observed_species_taxa:,}"))
-        if all_time.total_families_taxa is not None:
-            pairs.append(("Total families (from taxa)", f"{all_time.total_families_taxa:,}"))
         if all_time.world_bird_coverage_pct is not None:
-            pairs.append(("World bird coverage", f"{all_time.world_bird_coverage_pct:.1f}%"))
+            lookup["World bird coverage"] = f"{all_time.world_bird_coverage_pct:.1f}%"
+        if all_time.observed_species_taxa is not None:
+            lookup["World bird species (from taxa)"] = f"{all_time.observed_species_taxa:,}"
+        if all_time.total_families_taxa is not None:
+            lookup["World bird families (from taxa)"] = f"{all_time.total_families_taxa:,}"
     elif world_bird_coverage_pct is not None:
-        pairs.append(("World bird coverage", f"{world_bird_coverage_pct:.1f}%"))
-    return pairs
+        lookup["World bird coverage"] = f"{world_bird_coverage_pct:.1f}%"
+
+    ordered: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for label in _SUMMARY_STATUS_ORDER:
+        if label in lookup:
+            ordered.append((label, lookup[label]))
+            seen.add(label)
+    for label, value in lookup.items():
+        if label not in seen:
+            ordered.append((label, value))
+    return ordered
 
 
 def card_stat_pairs(

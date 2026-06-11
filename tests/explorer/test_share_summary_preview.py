@@ -1,7 +1,7 @@
 """Tests for :mod:`explorer.presentation.share_summary_preview`."""
 
 from explorer.core.checklist_stats_compute import ChecklistStatsPayload
-from explorer.core.share_summary_compute import ShareSummaryStats
+from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryStats
 from explorer.presentation.share_summary_preview import (
     render_share_summary_export_html,
     render_share_summary_preview_html,
@@ -120,7 +120,38 @@ def test_summary_status_metrics_includes_world_coverage():
 
     stats = sample_share_summary_stats()
     metrics = summary_status_metrics(stats, world_bird_coverage_pct=6.8)
-    assert metrics[-1] == ("World bird coverage", "6.8%")
+    labels = [lab for lab, _ in metrics]
+    assert "World bird coverage" in labels
+    assert labels.index("World bird coverage") > labels.index("Total bird families")
+
+
+def test_summary_status_metrics_preferred_order():
+    from explorer.presentation.share_summary_preview import summary_status_metrics
+
+    stats = sample_share_summary_stats(period_kind="month")
+    all_time = ShareSummaryAllTimeStats(
+        observed_species_taxa=312,
+        total_families_taxa=248,
+        world_bird_coverage_pct=6.8,
+    )
+    labels = [lab for lab, _ in summary_status_metrics(stats, all_time=all_time)]
+    assert labels[:8] == [
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding hours",
+        "Birding days",
+        "Longest streak (days)",
+    ]
+    assert labels[8:13] == [
+        "Total individuals",
+        "Total bird families",
+        "World bird coverage",
+        "World bird species (from taxa)",
+        "World bird families (from taxa)",
+    ]
 
 
 def test_card_stat_pairs_year_includes_countries():
