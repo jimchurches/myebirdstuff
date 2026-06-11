@@ -11,7 +11,7 @@ Living document for the social media summary feature. Update this file as ideas 
 | 0 | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) | Foundation — compute, layouts, tests, design app |
 | 1 | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) | Period stats hardening |
 | 2 | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) | Playwright PNG export |
-| 3 | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) | Socials tab in main app |
+| 3 | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) | Social Cards tab in main app |
 | 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — stat picker, best birds, layout tuning |
 
 **Prototype branch:** `157-social-summary-prototype` → PR for #273 to `beta-next`
@@ -42,7 +42,7 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | Best bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
 | PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
 | PNG save UX | **Hybrid (minimal)** | `st.image` for right-click/long-press + secondary **Download PNG** button |
-| Main app integration | **Design noted** | New **Socials** tab before Settings; tab-aware sidebar TBD |
+| Main app integration | **Design noted** | New **Social Cards** tab before Settings; tab-aware sidebar TBD |
 | Map thumbnail on card | **Dropped (v1)** | v2 |
 | Compare to last year | **Dropped (v1)** | v2 |
 | Custom @handle watermark | **Dropped (v1)** | v2 |
@@ -66,7 +66,7 @@ Captured after second prototype review — closes most open layout/stat question
 - **Compare to last year** — v2.
 - **Custom watermark / @handle** — v2.
 - **Colour scheme UI** — v2 (config-only for now; see Colours).
-- **App-wide mobile UX** — out of scope; Socials tab should still be phone-friendly.
+- **App-wide mobile UX** — out of scope; Social Cards tab should still be phone-friendly.
 
 ### Default stats per layout
 
@@ -142,7 +142,7 @@ All should appear in the summary row (with values) so users can pick interesting
 
 ### Period selection — current vs previous
 
-Control for **current period** vs **previous period** (radio in design app; Socials tab wording TBD).
+Control for **current period** vs **previous period** (radio in design app; Social Cards tab wording TBD).
 
 Example: on Saturday afternoon finishing the birding month → “current month”; on 2 June posting May results → “previous month”. Same for year/week.
 
@@ -159,7 +159,7 @@ Period resolved via `resolve_period()` relative to reference date (design app us
 ### Controls & sidebar (still open)
 
 - Exact control layout (sidebar vs in-tab vs hybrid) TBD.
-- If sidebar: show **Socials controls only on Socials tab**; restore map controls elsewhere; preserve session state when switching (see Tab-aware sidebar section).
+- If sidebar: show **Social Cards controls only on Social Cards tab**; restore map controls elsewhere; preserve session state when switching (see Tab-aware sidebar section).
 
 ---
 
@@ -191,9 +191,9 @@ Captured from initial prototype review:
 
 ### Main app placement (2025-06-09 — design notes)
 
-- **Tab name (WIP):** **Socials** — working title for the share-summary generator tab; rename later if needed.
+- **Tab name:** **Social Cards** — matches design studio tab label; Title Case like other main tabs. Retired working title: ~~Socials~~.
 - **Tab order:** last data tab, **immediately before Settings** (after Maintenance).
-  - Proposed strip: Map → Checklist Statistics → Ranking & Lists → Bird Families → Yearly Summary → Country → Maintenance → **Socials** → Settings
+  - Proposed strip: Map → Checklist Statistics → Ranking & Lists → Bird Families → Yearly Summary → Country → Maintenance → **Social Cards** → Settings
   - Code touchpoint: `NOTEBOOK_MAIN_TAB_LABELS` in `explorer/app/streamlit/streamlit_ui_constants.py`
 - **Tab content:** Like the design mockup — user can choose period, layout, aspect ratio, spotlight stat, trip title, etc., and see a live preview (then PNG via Playwright when built).
 - **Not the standalone design app** long term — embed into main explorer once phases 1–2 are ready; keep `design_share_summary_app.py` as a dev utility until then.
@@ -275,11 +275,11 @@ Optional highlight of one or more memorable species on a share card (year summar
 - Widgets **do** change when switching **map view** (All locations ↔ Species ↔ Lifers ↔ Families) — that logic already lives in the map sidebar.
 - Sidebar does **not** change when switching **main tabs** (Checklist Statistics, Yearly Summary, etc.) — map controls stay visible even on non-map tabs.
 
-### Desired behaviour for Socials
+### Desired behaviour for Social Cards
 
-When the user selects the **Socials** tab:
+When the user selects the **Social Cards** tab:
 
-- Sidebar should show **Socials controls** (mirroring the design app sidebar):
+- Sidebar should show **Social Cards controls** (mirroring the design app sidebar):
   - Period: year / month / week / custom (+ trip title when custom)
   - Aspect ratio: square / portrait post / story
   - Layout: Hero grid / Stat tiles / Minimal list / Spotlight
@@ -287,7 +287,7 @@ When the user selects the **Socials** tab:
   - Optional: preview scale (maybe main panel only)
 - Main panel: card preview (+ PNG when Playwright lands).
 
-When the user leaves **Socials** (any other main tab):
+When the user leaves **Social Cards** (any other main tab):
 
 - Sidebar should **restore map controls** for the **currently selected map view** (preserve existing map session state — basemap, species pick, date filter, etc.).
 
@@ -301,22 +301,22 @@ Other data tabs (Checklist, Yearly, …) — **no change for v1**; map sidebar c
 
 | Approach | Pros | Cons |
 |----------|------|------|
-| **A. Conditional sidebar + session tab key** | Clean swap Map ↔ Socials | Need a reliable way to set tab key (see below) |
-| **B. Socials controls in main panel only** | Simple; no tab detection | Sidebar still map-heavy on Socials tab |
+| **A. Conditional sidebar + session tab key** | Clean swap Map ↔ Social Cards | Need a reliable way to set tab key (see below) |
+| **B. Social Cards controls in main panel only** | Simple; no tab detection | Sidebar still map-heavy on Social Cards tab |
 | **C. Replace top tabs with nav that sets session state** | Sidebar always knows context | Larger UX change |
-| **D. `@st.fragment` Socials tab + sidebar section** | Partial reruns for preview | Sidebar still global; still need conditional render at top level |
+| **D. `@st.fragment` Social Cards tab + sidebar section** | Partial reruns for preview | Sidebar still global; still need conditional render at top level |
 
 **Likely path:** **A** — refactor sidebar into `render_map_sidebar(...)` and `render_socials_sidebar(...)`, gated by `st.session_state[STREAMLIT_MAIN_TAB_KEY]`. Set that key via one of:
 
 - Streamlit version/feature that reports tab selection (if available when we implement)
 - Lightweight sync widget (acceptable if minimal)
-- Socials-specific entry that sets key when its fragment mounts (evaluate against Streamlit behaviour)
+- Social Cards-specific entry that sets key when its fragment mounts (evaluate against Streamlit behaviour)
 
-**Map state preservation:** When switching away from Socials, only sidebar **widgets** swap; do not clear map working-set keys (`STREAMLIT_MAP_VIEW_LABEL_KEY`, species search, export recipe, etc.).
+**Map state preservation:** When switching away from Social Cards, only sidebar **widgets** swap; do not clear map working-set keys (`STREAMLIT_MAP_VIEW_LABEL_KEY`, species search, export recipe, etc.).
 
 ### UX reference
 
-Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Socials tab layout + control set.
+Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Social Cards tab layout + control set.
 
 ---
 
@@ -471,9 +471,9 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | `explorer/presentation/share_summary_png_export.py` | Playwright PNG pipeline + filename helper |
 | `explorer/app/streamlit/defaults.py` | Re-exports share-summary defaults for Streamlit tuning |
 | `explorer/app/streamlit/design_share_summary_app.py` | Standalone design utility (dev / tuning); PNG preview + download |
-| `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Socials** before Settings |
+| `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Social Cards** before Settings |
 | `explorer/app/streamlit/app_map_working_ui.py` | Map sidebar today — refactor target for tab-aware sidebar |
-| `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Socials fragment |
+| `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Social Cards fragment |
 | `tests/explorer/test_share_summary_preview.py` | Preview / extraction tests |
 | `tests/explorer/test_share_summary_png_export.py` | PNG dimensions + filename (Playwright) |
 | `tests/explorer/test_share_summary_compute.py` | Period stats + date-range tests |
@@ -487,7 +487,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 0 | `157-social-summary-prototype` | Design app + tracker + core modules | **Ready to commit/PR** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
 | 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **In PR** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
 | 2 | `275-share-summary-png-export` | Playwright HTML→PNG; display image; hybrid save UX | **In progress** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) |
-| 3 | `157-share-summary-ui` | **Socials** main tab (before Settings); tab-aware sidebar; preview + PNG | Not started | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) |
+| 3 | `157-share-summary-ui` | **Social Cards** main tab (before Settings); tab-aware sidebar; preview + PNG | Not started | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) |
 | 4 | follow-ups | Best bird(s), stat picker, themes, layout tuning | Not started | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
 
 ---
@@ -527,7 +527,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | `pip install playwright` during app deploy | Succeeds (listed in `requirements.txt`) | Assumed OK |
 | `playwright install chromium` on Cloud builder | May **not** run automatically — Cloud only runs `pip install` from requirements | **Open — manual verify** |
 | Headless Chromium launch at runtime | Needs browser binaries on the container filesystem (~100MB+) | **Open — manual verify** |
-| PNG section in design app / future Socials tab | Shows `st.image` + download, or warning if Chromium missing | Implemented with graceful `RuntimeError` message |
+| PNG section in design app / future Social Cards tab | Shows `st.image` + download, or warning if Chromium missing | Implemented with graceful `RuntimeError` message |
 
 **If Cloud blocks Chromium:** show HTML preview only on Cloud (current behaviour for scaled mockup) and document “PNG export requires local run” until a Pillow fallback or custom Cloud build step is added. Re-test save flow on iOS/Android once a Cloud deploy exists.
 
@@ -553,3 +553,4 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-09 | GitHub sub-issues created: #273–#277; plan comment on #157 |
 | 2026-06-11 | #274: period stats hardening — shared stats, all-time taxonomy row, current/previous period + `suggest_period_anchor` heuristics documented |
 | 2026-06-11 | #275: Playwright PNG export — `share_summary_png_export.py`, design app `st.image` + download button; Cloud verification documented as open |
+| 2026-06-11 | Main app tab name decided: **Social Cards** (design studio + #276); retired ~~Socials~~ working title |
