@@ -42,7 +42,6 @@ from explorer.presentation.share_summary_preview import (
     LayoutId,
     SpotlightStatId,
     _FORMAT_LABELS,
-    _FORMAT_PX,
     all_layout_previews_html,
     compute_share_summary_stats,
     period_for_custom,
@@ -231,6 +230,29 @@ if df is not None:
 
 status_metrics = summary_status_metrics(stats, all_time=all_time)
 
+png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
+png_bytes: bytes | None = None
+try:
+    png_bytes = _cached_share_summary_png(stats, selected_layout, fmt, spotlight_stat)
+except RuntimeError as exc:
+    png_export_error = str(exc)
+else:
+    png_export_error = None
+
+st.sidebar.markdown("---")
+st.sidebar.header("Export")
+if png_export_error:
+    st.sidebar.warning(png_export_error)
+elif png_bytes is not None:
+    st.sidebar.download_button(
+        "Export focused layout",
+        data=png_bytes,
+        file_name=png_filename,
+        mime="image/png",
+        use_container_width=True,
+        help="PNG of the layout selected above — not the all-layouts comparison grid.",
+    )
+
 tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
 
 with tab_social_cards:
@@ -251,28 +273,6 @@ with tab_social_cards:
         ),
         unsafe_allow_html=True,
     )
-
-    st.subheader("PNG export")
-    png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
-    try:
-        png_bytes = _cached_share_summary_png(stats, selected_layout, fmt, spotlight_stat)
-    except RuntimeError as exc:
-        st.warning(str(exc))
-    else:
-        display_scale = min(1.0, 480 / max(_FORMAT_PX[fmt]))
-        st.image(
-            png_bytes,
-            caption=f"{png_filename} — right-click (desktop) or long-press (mobile) to save",
-            width=int(_FORMAT_PX[fmt][0] * display_scale),
-        )
-        st.download_button(
-            "Download PNG",
-            data=png_bytes,
-            file_name=png_filename,
-            mime="image/png",
-            type="secondary",
-            help="Optional — use if save-from-image is awkward on your device.",
-        )
 
     st.divider()
     st.subheader("All layouts")
