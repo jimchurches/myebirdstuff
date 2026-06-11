@@ -30,6 +30,7 @@ from explorer.core.share_summary_compute import (
     ShareSummaryAllTimeStats,
     ShareSummaryStats,
     compute_share_summary_all_time_stats,
+    format_custom_date_range,
     resolve_period,
     suggest_period_anchor,
 )
@@ -73,6 +74,15 @@ _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 _STATS_EXPANDER_LABEL = "Available statistics"
 _CURRENT_CARD_LABEL = "Current card"
+_CARD_HEADING_LABEL = "Card Heading (optional)"
+_CARD_HEADING_PLACEHOLDER = "e.g. North Coast NSW Exploration"
+
+
+def _card_heading_or_none(text: str) -> str | None:
+    """Normalize sidebar card heading; maps to ``trip_title`` on stats/period objects."""
+    stripped = (text or "").strip()
+    return stripped or None
+
 
 st.set_page_config(page_title=_DESIGN_STUDIO_TITLE, layout="wide")
 st.title(_DESIGN_STUDIO_TITLE)
@@ -108,6 +118,27 @@ with st.sidebar:
                 "previous": f"Previous {period_mode}",
             }[x],
             help="Current vs previous calendar period (e.g. post May results on 2 June → previous month).",
+        )
+
+    sample_custom_start: date | None = None
+    sample_custom_end: date | None = None
+    sample_card_heading = ""
+    if period_mode == "custom" and use_sample:
+        sample_custom_start = st.date_input(
+            "Start date",
+            value=date(2025, 6, 1),
+            key="design_sample_custom_start",
+        )
+        sample_custom_end = st.date_input(
+            "End date",
+            value=date(2025, 6, 7),
+            key="design_sample_custom_end",
+        )
+        sample_card_heading = st.text_input(
+            _CARD_HEADING_LABEL,
+            value="",
+            placeholder=_CARD_HEADING_PLACEHOLDER,
+            key="design_sample_card_heading",
         )
 
     st.header(_CURRENT_CARD_LABEL)
@@ -170,11 +201,14 @@ else:
             period_label="May 31, 2025 - June 6, 2025",
             period_kind="week",
         )
-    else:
+    elif sample_custom_start is not None and sample_custom_end is not None:
+        start, end = sample_custom_start, sample_custom_end
+        if end < start:
+            start, end = end, start
         stats = sample_share_summary_stats(
-            period_label="1 – 7 June 2025",
+            period_label=format_custom_date_range(start, end),
             period_kind="custom",
-            trip_title="North Coast NSW Exploration",
+            trip_title=_card_heading_or_none(sample_card_heading),
         )
 
 if df is not None:
@@ -213,14 +247,27 @@ if df is not None:
             pick = st.sidebar.selectbox("Week", options=range(len(week_labels)), format_func=lambda i: week_labels[i])
             period = period_for_week_containing(week_starts[pick])
     else:
-        start = st.sidebar.date_input("Start date", value=min_d, min_value=min_d, max_value=max_d)
-        end = st.sidebar.date_input("End date", value=max_d, min_value=min_d, max_value=max_d)
-        trip_title = st.sidebar.text_input(
-            "Trip title (optional)",
-            value="",
-            placeholder="e.g. North Coast NSW Exploration",
+        start = st.sidebar.date_input(
+            "Start date",
+            value=min_d,
+            min_value=min_d,
+            max_value=max_d,
+            key="design_csv_custom_start",
         )
-        period = period_for_custom(start, end, trip_title=trip_title.strip() or None)
+        end = st.sidebar.date_input(
+            "End date",
+            value=max_d,
+            min_value=min_d,
+            max_value=max_d,
+            key="design_csv_custom_end",
+        )
+        card_heading = st.sidebar.text_input(
+            _CARD_HEADING_LABEL,
+            value="",
+            placeholder=_CARD_HEADING_PLACEHOLDER,
+            key="design_csv_card_heading",
+        )
+        period = period_for_custom(start, end, trip_title=_card_heading_or_none(card_heading))
 
     computed = compute_share_summary_stats(df, period)
     if computed is None:
