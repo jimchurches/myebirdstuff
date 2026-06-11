@@ -107,7 +107,19 @@ with st.sidebar:
         }[x],
     )
     period_anchor: PeriodAnchor | None = None
-    if period_mode in ("year", "month", "week"):
+    selected_year: int | None = None
+    if period_mode == "year":
+        selected_year = int(
+            st.number_input(
+                "Year",
+                min_value=2000,
+                max_value=2100,
+                value=date.today().year,
+                step=1,
+                key="design_period_year",
+            )
+        )
+    elif period_mode in ("month", "week"):
         default_anchor = suggest_period_anchor(period_mode, date.today())
         period_anchor = st.radio(
             "Period",
@@ -186,9 +198,8 @@ if not use_sample:
         st.stop()
 else:
     st.sidebar.markdown("---")
-    if period_mode == "year":
-        y = st.sidebar.number_input("Sample year", min_value=2000, max_value=2100, value=2025)
-        stats = sample_share_summary_stats(period_label=str(int(y)), period_kind="year")
+    if period_mode == "year" and selected_year is not None:
+        stats = sample_share_summary_stats(period_label=str(selected_year), period_kind="year")
     elif period_mode == "month":
         y = st.sidebar.number_input("Sample year", min_value=2000, max_value=2100, value=2025)
         m = st.sidebar.number_input("Sample month", min_value=1, max_value=12, value=6)
@@ -221,12 +232,10 @@ if df is not None:
 
     reference = date.today()
     if period_mode == "year":
-        if period_anchor is not None:
-            period = resolve_period("year", anchor=period_anchor, reference=reference)
-        else:
-            years = sorted({int(y) for y in dates.dt.year.unique()})
-            year = st.sidebar.selectbox("Year", options=years, index=len(years) - 1)
-            period = period_for_year(year)
+        if selected_year is None:
+            st.warning("Select a year in the sidebar.")
+            st.stop()
+        period = period_for_year(selected_year)
     elif period_mode == "month":
         if period_anchor is not None:
             period = resolve_period("month", anchor=period_anchor, reference=reference)
