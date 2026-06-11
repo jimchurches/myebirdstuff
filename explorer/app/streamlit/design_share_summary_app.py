@@ -72,6 +72,7 @@ def _cached_share_summary_png(
 
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
+_STATS_EXPANDER_LABEL = "Available statistics"
 
 st.set_page_config(page_title=_DESIGN_STUDIO_TITLE, layout="wide")
 st.title(_DESIGN_STUDIO_TITLE)
@@ -232,14 +233,10 @@ status_metrics = summary_status_metrics(stats, all_time=all_time)
 tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
 
 with tab_social_cards:
-    if stats.trip_title:
-        st.subheader(stats.trip_title)
-        st.caption(stats.period_label)
-    else:
-        st.subheader(f"Stats — {stats.period_label}")
-    cols = st.columns(4)
-    for i, (label, value) in enumerate(status_metrics):
-        cols[i % 4].metric(label, value)
+    with st.expander(_STATS_EXPANDER_LABEL, expanded=False):
+        cols = st.columns(4)
+        for i, (label, value) in enumerate(status_metrics):
+            cols[i % 4].metric(label, value)
 
     st.divider()
     st.subheader("Focused layout")
