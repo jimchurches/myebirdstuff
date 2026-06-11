@@ -197,7 +197,6 @@ if not use_sample:
         st.warning("No data found in this file.")
         st.stop()
 else:
-    st.sidebar.markdown("---")
     if period_mode == "year" and selected_year is not None:
         stats = sample_share_summary_stats(period_label=str(selected_year), period_kind="year")
     elif period_mode == "month":
@@ -296,7 +295,6 @@ except RuntimeError as exc:
 else:
     png_export_error = None
 
-st.sidebar.markdown("---")
 st.sidebar.header("Export")
 if png_export_error:
     st.sidebar.warning(png_export_error)
