@@ -70,8 +70,11 @@ def _cached_share_summary_png(
         spotlight_stat=spotlight_stat,
     )
 
-st.set_page_config(page_title="Share summary design", layout="wide")
-st.title("Share summary — layout prototype (#157)")
+_DESIGN_STUDIO_TITLE = "Social sharing design studio"
+_SOCIAL_CARDS_TAB_LABEL = "Social Cards"
+
+st.set_page_config(page_title=_DESIGN_STUDIO_TITLE, layout="wide")
+st.title(_DESIGN_STUDIO_TITLE)
 st.caption(
     "Exploratory tool only. Compare HTML mockups before choosing layouts for the main app."
 )
@@ -226,66 +229,69 @@ if df is not None:
 
 status_metrics = summary_status_metrics(stats, all_time=all_time)
 
-if stats.trip_title:
-    st.subheader(stats.trip_title)
-    st.caption(stats.period_label)
-else:
-    st.subheader(f"Stats — {stats.period_label}")
-cols = st.columns(4)
-for i, (label, value) in enumerate(status_metrics):
-    cols[i % 4].metric(label, value)
+tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
 
-st.divider()
-st.subheader("Focused layout")
-st.markdown(
-    render_share_summary_preview_html(
-        stats,
-        layout=selected_layout,
-        fmt=fmt,
-        scale=scale,
-        spotlight_stat=spotlight_stat,
-    ),
-    unsafe_allow_html=True,
-)
+with tab_social_cards:
+    if stats.trip_title:
+        st.subheader(stats.trip_title)
+        st.caption(stats.period_label)
+    else:
+        st.subheader(f"Stats — {stats.period_label}")
+    cols = st.columns(4)
+    for i, (label, value) in enumerate(status_metrics):
+        cols[i % 4].metric(label, value)
 
-st.subheader("PNG export")
-png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
-try:
-    png_bytes = _cached_share_summary_png(stats, selected_layout, fmt, spotlight_stat)
-except RuntimeError as exc:
-    st.warning(str(exc))
-else:
-    display_scale = min(1.0, 480 / max(_FORMAT_PX[fmt]))
-    st.image(
-        png_bytes,
-        caption=f"{png_filename} — right-click (desktop) or long-press (mobile) to save",
-        width=int(_FORMAT_PX[fmt][0] * display_scale),
-    )
-    st.download_button(
-        "Download PNG",
-        data=png_bytes,
-        file_name=png_filename,
-        mime="image/png",
-        type="secondary",
-        help="Optional — use if save-from-image is awkward on your device.",
+    st.divider()
+    st.subheader("Focused layout")
+    st.markdown(
+        render_share_summary_preview_html(
+            stats,
+            layout=selected_layout,
+            fmt=fmt,
+            scale=scale,
+            spotlight_stat=spotlight_stat,
+        ),
+        unsafe_allow_html=True,
     )
 
-st.divider()
-st.subheader("All layouts")
-previews = all_layout_previews_html(stats, fmt=fmt, scale=scale, spotlight_stat=spotlight_stat)
-layout_cols = st.columns(4)
-labels = {
-    "hero": "Hero grid",
-    "tiles": "Stat tiles",
-    "minimal": "Minimal list",
-    "spotlight": "Spotlight",
-}
-for col, (layout_id, html) in zip(layout_cols, previews.items()):
-    with col:
-        st.markdown(f"**{labels[layout_id]}**")
-        st.markdown(html, unsafe_allow_html=True)
+    st.subheader("PNG export")
+    png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
+    try:
+        png_bytes = _cached_share_summary_png(stats, selected_layout, fmt, spotlight_stat)
+    except RuntimeError as exc:
+        st.warning(str(exc))
+    else:
+        display_scale = min(1.0, 480 / max(_FORMAT_PX[fmt]))
+        st.image(
+            png_bytes,
+            caption=f"{png_filename} — right-click (desktop) or long-press (mobile) to save",
+            width=int(_FORMAT_PX[fmt][0] * display_scale),
+        )
+        st.download_button(
+            "Download PNG",
+            data=png_bytes,
+            file_name=png_filename,
+            mime="image/png",
+            type="secondary",
+            help="Optional — use if save-from-image is awkward on your device.",
+        )
 
-st.divider()
-st.caption(
-    "Living design notes: `docs/explorer/issue-157-share-summary-tracker.md`"
-)
+    st.divider()
+    st.subheader("All layouts")
+    previews = all_layout_previews_html(stats, fmt=fmt, scale=scale, spotlight_stat=spotlight_stat)
+    layout_cols = st.columns(4)
+    labels = {
+        "hero": "Hero grid",
+        "tiles": "Stat tiles",
+        "minimal": "Minimal list",
+        "spotlight": "Spotlight",
+    }
+    for col, (layout_id, html) in zip(layout_cols, previews.items()):
+        with col:
+            st.markdown(f"**{labels[layout_id]}**")
+            st.markdown(html, unsafe_allow_html=True)
+
+    st.divider()
+    st.caption(
+        "Living design notes: `docs/explorer/issue-157-share-summary-tracker.md`"
+    )
