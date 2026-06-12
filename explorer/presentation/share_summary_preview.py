@@ -449,6 +449,20 @@ def _footer_pad(fmt: FormatId, width: int, height: int) -> int:
     return 80
 
 
+def _content_bottom_pad(
+    fmt: FormatId,
+    width: int,
+    height: int,
+    *,
+    favourite_bird_count: int = 0,
+) -> int:
+    """Reserve space above the footer; extra breathing room when favourite birds are shown."""
+    pad = _footer_pad(fmt, width, height)
+    if favourite_bird_count:
+        pad += 12 + max(0, favourite_bird_count - 1) * 4
+    return pad
+
+
 def _card_shell(
     *,
     width: int,
@@ -516,7 +530,37 @@ def _footer_block() -> str:
 </div>"""
 
 
-def _layout_hero(stats: ShareSummaryStats, width: int, height: int, fmt: FormatId) -> str:
+def _favourite_birds_block(names: tuple[str, ...] | list[str], *, name_size_px: int = 36) -> str:
+    """Full-width list block under the stat grid (hero / tiles)."""
+    cleaned = [n.strip() for n in names if (n or "").strip()]
+    if not cleaned:
+        return ""
+    n = len(cleaned)
+    # Extra bottom padding when more names stack (square hero feels tight at 3).
+    pad_bottom = 36 + max(0, n - 1) * 6
+    items = "".join(
+        f'<div style="margin:5px 0;font-size:{name_size_px}px;font-weight:600;line-height:1.22;">'
+        f"{_esc(name)}</div>"
+        for name in cleaned
+    )
+    heading = "Favourite bird" if n == 1 else "Favourite birds"
+    return f"""
+<div style="flex:1 1 100%;width:100%;padding:28px 32px {pad_bottom}px;border-radius:16px;
+  border:1px solid {_colour("border")};background:{_colour("bg_alt")};">
+  <div style="margin-bottom:14px;font-size:22px;color:{_colour("muted")};
+    letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">{_esc(heading)}</div>
+  <div>{items}</div>
+</div>"""
+
+
+def _layout_hero(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    favourite_birds: tuple[str, ...] = (),
+) -> str:
     pairs = card_stat_pairs(stats, max_count=4, layout="hero")
     cells = []
     for label, value in pairs:
@@ -526,12 +570,14 @@ def _layout_hero(stats: ShareSummaryStats, width: int, height: int, fmt: FormatI
   <div style="font-size:64px;font-weight:700;line-height:1.1;">{_esc(value)}</div>
   <div style="margin-top:12px;font-size:24px;color:{_colour("muted")};">{_esc(label)}</div>
 </div>""")
-    pad_bottom = _footer_pad(fmt, width, height)
+    favourite_block = _favourite_birds_block(favourite_birds, name_size_px=36)
+    pad_bottom = _content_bottom_pad(fmt, width, height, favourite_bird_count=len(favourite_birds))
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats)}
   <div style="display:flex;flex-wrap:wrap;gap:24px;padding:16px 56px {pad_bottom}px;justify-content:center;">
     {''.join(cells)}
+    {favourite_block}
   </div>
   {_footer_block()}
 </div>"""
@@ -544,7 +590,14 @@ def _layout_subtitle(stats: ShareSummaryStats, layout_default: str) -> str | Non
     return layout_default
 
 
-def _layout_tiles(stats: ShareSummaryStats, width: int, height: int, fmt: FormatId) -> str:
+def _layout_tiles(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    favourite_birds: tuple[str, ...] = (),
+) -> str:
     pairs = card_stat_pairs(stats, max_count=6, layout="tiles")
     cells = []
     for label, value in pairs:
@@ -555,12 +608,14 @@ def _layout_tiles(stats: ShareSummaryStats, width: int, height: int, fmt: Format
   <div style="font-size:52px;font-weight:700;">{_esc(value)}</div>
   <div style="margin-top:8px;font-size:20px;color:{_colour("muted")};">{_esc(label)}</div>
 </div>""")
-    pad_bottom = _footer_pad(fmt, width, height)
+    favourite_block = _favourite_birds_block(favourite_birds, name_size_px=32)
+    pad_bottom = _content_bottom_pad(fmt, width, height, favourite_bird_count=len(favourite_birds))
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "My birding stats"))}
   <div style="display:flex;flex-wrap:wrap;gap:20px;padding:8px 48px {pad_bottom}px;">
     {''.join(cells)}
+    {favourite_block}
   </div>
   {_footer_block()}
 </div>"""
@@ -641,11 +696,15 @@ def _card_inner_html(
     layout: LayoutId,
     fmt: FormatId,
     spotlight_stat: SpotlightStatId,
+    favourite_birds: tuple[str, ...] = (),
 ) -> tuple[str, int, int]:
     """Return (inner HTML, width, height) at export pixel dimensions."""
     width, height = _FORMAT_PX[fmt]
     if layout == "spotlight":
         inner = _layout_spotlight(stats, width, height, fmt, spotlight_stat=spotlight_stat)
+    elif layout in ("hero", "tiles"):
+        builder = _LAYOUT_BUILDERS[layout]
+        inner = builder(stats, width, height, fmt, favourite_birds=favourite_birds)
     else:
         builder = _LAYOUT_BUILDERS.get(layout, _layout_hero)
         inner = builder(stats, width, height, fmt)
@@ -658,6 +717,7 @@ def render_share_summary_export_html(
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
     spotlight_stat: SpotlightStatId = "lifers",
+    favourite_birds: tuple[str, ...] = (),
 ) -> str:
     """Full-size HTML document for headless screenshot (Playwright PNG export)."""
     inner, width, height = _card_inner_html(
@@ -665,6 +725,7 @@ def render_share_summary_export_html(
         layout=layout,
         fmt=fmt,
         spotlight_stat=spotlight_stat,
+        favourite_birds=favourite_birds,
     )
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -700,13 +761,16 @@ def render_share_summary_preview_html(
     fmt: FormatId = "square",
     scale: float = 0.38,
     spotlight_stat: SpotlightStatId = "lifers",
+    favourite_birds: tuple[str, ...] = (),
 ) -> str:
     """Return scaled HTML preview for one layout + aspect ratio."""
+    birds = favourite_birds if layout in ("hero", "tiles") else ()
     inner, width, height = _card_inner_html(
         stats,
         layout=layout,
         fmt=fmt,
         spotlight_stat=spotlight_stat,
+        favourite_birds=birds,
     )
     return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
 
@@ -717,6 +781,7 @@ def all_layout_previews_html(
     fmt: FormatId = "square",
     scale: float = 0.38,
     spotlight_stat: SpotlightStatId = "lifers",
+    favourite_birds: tuple[str, ...] = (),
 ) -> dict[str, str]:
     """All prototype layouts for side-by-side comparison."""
     layouts: list[LayoutId] = ["hero", "tiles", "minimal", "spotlight"]
@@ -727,6 +792,7 @@ def all_layout_previews_html(
             fmt=fmt,
             scale=scale,
             spotlight_stat=spotlight_stat,
+            favourite_birds=favourite_birds,
         )
         for layout_id in layouts
     }

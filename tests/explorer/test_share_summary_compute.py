@@ -14,6 +14,8 @@ from explorer.core.share_summary_compute import (
     period_for_previous_week_containing,
     period_for_week_containing,
     period_for_year,
+    period_species_common_names,
+    period_species_name_map,
     resolve_period,
     suggest_period_anchor,
 )
@@ -291,3 +293,18 @@ def test_trip_title_renders_on_card():
     html = render_share_summary_preview_html(stats, layout="hero")
     assert "1 – 7 June 2025" in html
     assert "North Coast NSW Exploration" in html
+
+
+def test_period_species_common_names_scoped_to_period():
+    df = pd.DataFrame(
+        [
+            {**_row(sid="S1", dt="2025-06-01", species="Malurus cyaneus"), "Common Name": "Superb Fairywren"},
+            {**_row(sid="S2", dt="2025-06-02", species="Trichoglossus moluccanus"), "Common Name": "Rainbow Lorikeet"},
+            {**_row(sid="S3", dt="2024-01-01", species="Other sp"), "Common Name": "Outside Period"},
+        ]
+    )
+    period = period_for_month(2025, 6)
+    names = period_species_common_names(df, period)
+    assert names == ["Rainbow Lorikeet", "Superb Fairywren"]
+    name_map = period_species_name_map(df, period)
+    assert name_map["Superb Fairywren"] == "Malurus cyaneus"

@@ -95,14 +95,17 @@ def share_summary_to_png_bytes(
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
     spotlight_stat: SpotlightStatId = "lifers",
+    favourite_birds: tuple[str, ...] = (),
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
     width, height = _FORMAT_PX[fmt]
+    birds = favourite_birds if layout in ("hero", "tiles") else ()
     html = render_share_summary_export_html(
         stats,
         layout=layout,
         fmt=fmt,
         spotlight_stat=spotlight_stat,
+        favourite_birds=birds,
     )
     with _launch_chromium() as browser:
         page = browser.new_page(

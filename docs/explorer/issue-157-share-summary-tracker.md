@@ -12,7 +12,7 @@ Living document for the social media summary feature. Update this file as ideas 
 | 1 | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) | Period stats hardening |
 | 2 | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) | Playwright PNG export |
 | 3 | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) | Social Cards tab in main app |
-| 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — stat picker, best birds, layout tuning |
+| 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — stat picker, favourite birds, layout tuning |
 
 **Prototype branch:** `157-social-summary-prototype` → PR for #273 to `beta-next`
 
@@ -39,7 +39,7 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | Birding days | **Done (prototype)** | Unique checklist days; label “Birding days” |
 | Countries | **Done (prototype)** | All period types; default on tiles/minimal |
 | World bird coverage | **Summary row only** | Available stat; not on card tiles by default |
-| Best bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
+| Favourite bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
 | PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
 | PNG save UX | **Done (design app)** | Sidebar **Export current card** (no in-app PNG preview) |
 | All layouts comparison grid | **Design utility only** | Side-by-side four layouts in `design_share_summary_app.py`; **not** in main app (#276) |
@@ -106,7 +106,7 @@ All should appear in the summary row (with values) so users can pick interesting
 | Total species (from taxa) | All-time | Yes (summary row) | No |
 | Observed species (from taxa) | All-time | Yes (summary row) | No |
 | Total families (from taxa) | All-time | Yes (summary row) | No |
-| Best bird(s) | User pick (≤3) | Roadmap | No |
+| Favourite bird(s) | User pick (≤3) | Roadmap | No |
 | Trip title | User text (custom range) | Yes | Replaces green subtitle |
 
 **Note:** “Total bird families” (period) and “Total families (from taxa)” (all-time list) are **different metrics** — both may be offered; labels must distinguish them.
@@ -154,7 +154,7 @@ Period resolved via `resolve_period()` relative to reference date (design app us
 ### Card layout iteration (still open)
 
 - Hero 4-tile grid may need **sizing** to reduce blank space (same for 6-tile stat card).
-- Square layout might fit **9 tiles** (room for best-bird slot later); portrait/story differ.
+- Square layout might fit **9 tiles** (room for favourite-bird slot later); portrait/story differ.
 - Per-layout iteration expected during user testing.
 
 ### Controls & sidebar (still open)
@@ -230,7 +230,7 @@ Most items below were **resolved 2026-06-09** — see **Decisions (2026-06-09)**
 7. ~~Countries~~ — **Agreed:** all period types on tiles/minimal defaults.
 8. ~~Birding hours on card~~ — **Summary row only**, not default on cards.
 9. ~~Trip title placement~~ — **Agreed:** green subtitle; dates as large headline.
-10. **Best bird(s)** — roadmap.
+10. **Favourite bird(s)** — roadmap.
 11. **World bird coverage** — summary row; card placement when user picks stat.
 12. **Shared checklists / days birding with others** — wire into period compute (phase 1).
 13. **Total species/families (from taxa)** — wire from Bird Families bundle when stat picker lands.
@@ -260,17 +260,17 @@ Most items below were **resolved 2026-06-09** — see **Decisions (2026-06-09)**
 - **Summary row:** included so users can add it via stat picker later.
 - **Not** on default card tiles.
 
-### Best bird(s) (roadmap — not implemented)
+### Favourite bird(s) (roadmap — not implemented)
 
 Optional highlight of one or more memorable species on a share card (year summary, trip report, etc.).
 
-- **Pure user choice — not calculated.** No algorithmic “best bird” (no auto-pick by lifer, count, rarity, etc.). The user decides what counts as their best bird(s) for that card.
+- **Pure user choice — not calculated.** No algorithmic “favourite bird” (no auto-pick by lifer, count, rarity, etc.). The user decides what counts as their favourite bird(s) for that card.
 - **Picker, not free text:** up to **3 species** chosen from birds **recorded in the selected period** (same export, filtered by date range). Type-ahead / searchable list from that set — avoids spelling errors and invalid species.
 - **Display TBD:** dedicated layout slot, footer strip, or extra panel on existing layouts (Hero / tiles / story may need more room).
 - **Data:** common + scientific names from export for selected species; static PNG only (no eBird links on image).
 - **Open questions when implementing:**
   - Required for trip cards vs optional on all period types?
-  - One shared “best birds” list per card or separate picks per layout/format?
+  - One shared “favourite birds” list per card or separate picks per layout/format?
   - How to render 1 vs 2 vs 3 species (stacked names, mini list, icons)?
   - Sort order of picks — user-defined drag order?
 
@@ -500,17 +500,17 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **In PR** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
 | 2 | `275-share-summary-png-export` | Playwright HTML→PNG; display image; hybrid save UX | **In progress** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) |
 | 3 | `157-share-summary-ui` | **Social Cards** main tab (before Settings); tab-aware sidebar; preview + PNG | Not started | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) |
-| 4 | follow-ups | Best bird(s), stat picker, themes, layout tuning | Not started | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
+| 4 | follow-ups | Favourite bird(s), stat picker, themes, layout tuning | Not started | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
 
 ---
 
 ## Ideas backlog
 
 - **World bird coverage** — reuse `compute_world_species_coverage`; status metrics row in mockup; card placement TBD.
-- **Best bird(s)** — **pure user choice** (not algorithmic); up to **3 species** from a period-scoped picker (type-ahead over birds in range — no free-text spelling).
+- **Favourite bird(s)** — **pure user choice** (not algorithmic); up to **3 species** from a period-scoped picker (type-ahead over birds in range — no free-text spelling).
 - **Trip title on custom range** — optional user label alongside formatted dates (see User feedback).
 - **“Year birds”** spotlight card — species count with birding-friendly wording.
-- **Lifer highlight card** — big lifer count on spotlight card (separate from best-bird user picks).
+- **Lifer highlight card** — big lifer count on spotlight card (separate from favourite-bird user picks).
 - **Carousel / multiple PNGs** — one download per stat for Instagram carousel posts.
 - **Map mini-preview** — dropped v1.
 - **Compare to last year** — dropped v1.
@@ -558,8 +558,8 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2025-06-09 | Layout choice: Hero / Stat tiles / Minimal list / Spotlight for v1; period-aware spotlight labels |
 | 2025-06-09 | Main app: **Socials** tab (WIP name) before Settings; tab-aware sidebar design notes |
 | 2025-06-09 | Stats: **Birding days** + **Countries** (year); period context for when to show TBD |
-| 2025-06-09 | Roadmap: **Best bird(s)** — user picks up to 3 highlight species (not implemented) |
-| 2025-06-09 | Best bird(s) clarified: **user-only** choice; picker from period species (not calculated) |
+| 2025-06-09 | Roadmap: **Favourite bird(s)** — user picks up to 3 highlight species (not implemented) |
+| 2025-06-09 | Favourite bird(s) clarified: **user-only** choice; picker from period species (not calculated) |
 | 2025-06-09 | **World bird coverage** on roadmap; mockup status row only (6.8% sample / live from taxonomy) |
 | 2026-06-09 | **Decisions batch:** default stats per layout, footer-only logo, trip title → green subtitle, Sun–Sat weekly titles, countries all periods, colour schemes in defaults.py, dropped media/map/compare/watermark v1 |
 | 2026-06-09 | GitHub sub-issues created: #273–#277; plan comment on #157 |

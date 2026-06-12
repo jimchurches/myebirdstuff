@@ -246,6 +246,42 @@ def _mask_in_period(dates: pd.Series, period: ShareSummaryPeriod) -> pd.Series:
     return ts.notna() & (ts >= period.start_ts) & (ts <= period.end_ts)
 
 
+def period_species_common_names(df: pd.DataFrame, period: ShareSummaryPeriod) -> list[str]:
+    """Distinct common names from sightings in *period* (picker scope for favourite birds)."""
+    if df.empty or "Date" not in df.columns or "Common Name" not in df.columns:
+        return []
+    frame = df.copy()
+    frame["Date"] = pd.to_datetime(frame["Date"], errors="coerce")
+    in_period = frame[_mask_in_period(frame["Date"], period)]
+    if in_period.empty:
+        return []
+    names = in_period["Common Name"].dropna().astype(str).str.strip()
+    return sorted({n for n in names if n})
+
+
+def period_species_name_map(df: pd.DataFrame, period: ShareSummaryPeriod) -> dict[str, str]:
+    """First scientific name per common name in *period* (Whoosh index for species search)."""
+    if df.empty or "Date" not in df.columns or "Common Name" not in df.columns:
+        return {}
+    frame = df.copy()
+    frame["Date"] = pd.to_datetime(frame["Date"], errors="coerce")
+    in_period = frame[_mask_in_period(frame["Date"], period)]
+    if in_period.empty:
+        return {}
+    sci_col = "Scientific Name" if "Scientific Name" in in_period.columns else None
+    out: dict[str, str] = {}
+    for common in period_species_common_names(df, period):
+        rows = in_period[in_period["Common Name"].astype(str).str.strip() == common]
+        if rows.empty:
+            continue
+        sci = ""
+        if sci_col:
+            sci_vals = rows[sci_col].dropna().astype(str).str.strip()
+            sci = next((s for s in sci_vals if s), "")
+        out[common] = sci
+    return out
+
+
 def compute_share_summary_stats(
     df: pd.DataFrame,
     period: ShareSummaryPeriod,
