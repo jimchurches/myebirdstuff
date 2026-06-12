@@ -441,25 +441,23 @@ def _is_tall(fmt: FormatId, width: int, height: int) -> bool:
     return height > width
 
 
-def _footer_pad(fmt: FormatId, width: int, height: int) -> int:
-    if fmt == "story":
-        return 140
-    if fmt == "portrait_post":
-        return 120
-    return 80
-
-
-def _content_bottom_pad(
+def _footer_pad(
     fmt: FormatId,
     width: int,
     height: int,
     *,
     favourite_bird_count: int = 0,
 ) -> int:
-    """Reserve space above the footer; extra breathing room when favourite birds are shown."""
-    pad = _footer_pad(fmt, width, height)
+    """Reserve space above the absolute footer (logo + label ≈ 120px)."""
+    del width, height
+    if fmt == "story":
+        pad = 140
+    elif fmt == "portrait_post":
+        pad = 128
+    else:
+        pad = 120
     if favourite_bird_count:
-        pad += 12 + max(0, favourite_bird_count - 1) * 4
+        pad += 4 * favourite_bird_count
     return pad
 
 
@@ -536,20 +534,20 @@ def _favourite_birds_block(names: tuple[str, ...] | list[str], *, name_size_px: 
     if not cleaned:
         return ""
     n = len(cleaned)
-    # Extra bottom padding when more names stack (square hero feels tight at 3).
-    pad_bottom = 36 + max(0, n - 1) * 6
-    items = "".join(
-        f'<div style="margin:5px 0;font-size:{name_size_px}px;font-weight:600;line-height:1.22;">'
-        f"{_esc(name)}</div>"
-        for name in cleaned
-    )
+    item_rows = []
+    for i, name in enumerate(cleaned):
+        top = "0" if i == 0 else "8px"
+        item_rows.append(
+            f'<div style="margin-top:{top};font-size:{name_size_px}px;font-weight:600;line-height:1.22;">'
+            f"{_esc(name)}</div>"
+        )
     heading = "Favourite bird" if n == 1 else "Favourite birds"
     return f"""
-<div style="flex:1 1 100%;width:100%;padding:28px 32px {pad_bottom}px;border-radius:16px;
+<div style="flex:0 0 auto;width:100%;padding:28px 32px;border-radius:16px;
   border:1px solid {_colour("border")};background:{_colour("bg_alt")};">
-  <div style="margin-bottom:14px;font-size:22px;color:{_colour("muted")};
+  <div style="margin-bottom:12px;font-size:22px;color:{_colour("muted")};
     letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">{_esc(heading)}</div>
-  <div>{items}</div>
+  <div>{"".join(item_rows)}</div>
 </div>"""
 
 
@@ -571,11 +569,12 @@ def _layout_hero(
   <div style="margin-top:12px;font-size:24px;color:{_colour("muted")};">{_esc(label)}</div>
 </div>""")
     favourite_block = _favourite_birds_block(favourite_birds, name_size_px=36)
-    pad_bottom = _content_bottom_pad(fmt, width, height, favourite_bird_count=len(favourite_birds))
+    pad_bottom = _footer_pad(fmt, width, height, favourite_bird_count=len(favourite_birds))
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats)}
-  <div style="display:flex;flex-wrap:wrap;gap:24px;padding:16px 56px {pad_bottom}px;justify-content:center;">
+  <div style="display:flex;flex-wrap:wrap;gap:24px;padding:16px 56px {pad_bottom}px;
+    justify-content:center;align-content:flex-start;">
     {''.join(cells)}
     {favourite_block}
   </div>
@@ -609,11 +608,11 @@ def _layout_tiles(
   <div style="margin-top:8px;font-size:20px;color:{_colour("muted")};">{_esc(label)}</div>
 </div>""")
     favourite_block = _favourite_birds_block(favourite_birds, name_size_px=32)
-    pad_bottom = _content_bottom_pad(fmt, width, height, favourite_bird_count=len(favourite_birds))
+    pad_bottom = _footer_pad(fmt, width, height, favourite_bird_count=len(favourite_birds))
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "My birding stats"))}
-  <div style="display:flex;flex-wrap:wrap;gap:20px;padding:8px 48px {pad_bottom}px;">
+  <div style="display:flex;flex-wrap:wrap;gap:20px;padding:8px 48px {pad_bottom}px;align-content:flex-start;">
     {''.join(cells)}
     {favourite_block}
   </div>
