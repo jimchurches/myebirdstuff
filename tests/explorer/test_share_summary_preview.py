@@ -216,6 +216,24 @@ def test_card_stat_pairs_tiles_includes_countries_and_birding_days():
     ]
 
 
+def test_card_stat_pairs_selected_labels_includes_all_time():
+    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats
+    from explorer.presentation.share_summary_preview import card_stat_pairs
+
+    stats = sample_share_summary_stats()
+    all_time = ShareSummaryAllTimeStats(
+        world_bird_coverage_pct=6.8,
+        observed_species_taxa=847,
+    )
+    pairs = card_stat_pairs(
+        stats,
+        max_count=4,
+        selected_labels=("World bird coverage", "Lifers"),
+        all_time=all_time,
+    )
+    assert pairs == [("World bird coverage", "6.8%"), ("Lifers", "47")]
+
+
 def test_trip_title_on_all_layouts():
     stats = ShareSummaryStats(
         period_label="1 – 7 June 2025",

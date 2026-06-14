@@ -54,6 +54,8 @@ from explorer.presentation.share_summary_preview import (
     _FORMAT_LABELS,
     all_layout_previews_html,
     compute_share_summary_stats,
+    default_card_stat_labels,
+    layout_card_stat_max,
     period_for_custom,
     period_for_month,
     period_for_week_containing,
@@ -72,6 +74,8 @@ def _cached_share_summary_png(
     fmt: FormatId,
     spotlight_stat: SpotlightStatId,
     favourite_birds: tuple[str, ...],
+    card_stat_labels: tuple[str, ...],
+    all_time: ShareSummaryAllTimeStats | None,
 ) -> bytes:
     return share_summary_to_png_bytes(
         stats,
@@ -79,11 +83,16 @@ def _cached_share_summary_png(
         fmt=fmt,
         spotlight_stat=spotlight_stat,
         favourite_birds=favourite_birds,
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
     )
 
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 _STATS_EXPANDER_LABEL = "Available statistics"
+_CARD_STATS_LABEL = "Card statistics"
+_CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
+_CARD_STATS_PICKS_PREFIX = "design_card_stat_picks_"
 _CURRENT_CARD_LABEL = "Current card"
 _CARD_HEADING_LABEL = "Card Heading (optional)"
 _CARD_HEADING_PLACEHOLDER = "e.g. North Coast NSW Exploration"
@@ -285,6 +294,166 @@ def _sidebar_favourite_bird_controls(
             st.rerun()
 
     return _collect_favourite_bird_picks(slot_count, allowed=allowed)
+
+
+def _card_stat_picks_key(layout: LayoutId) -> str:
+    return f"{_CARD_STATS_PICKS_PREFIX}{layout}"
+
+
+def _card_stat_slot_count_key(layout: LayoutId) -> str:
+    return f"{_CARD_STATS_SLOT_COUNT_PREFIX}{layout}"
+
+
+def _sanitize_card_stat_picks(
+    picks: list[str],
+    *,
+    available: frozenset[str],
+    max_slots: int,
+) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in picks:
+        label = raw.strip() if isinstance(raw, str) else str(raw).strip()
+        if label and label in available and label not in seen:
+            seen.add(label)
+            out.append(label)
+        if len(out) >= max_slots:
+            break
+    return out
+
+
+def _ensure_card_stat_picks(
+    layout: LayoutId,
+    status_metrics: list[tuple[str, str]],
+) -> list[str]:
+    """Initialize or sanitize session picks for *layout*."""
+    max_slots = layout_card_stat_max(layout)
+    available = frozenset(label for label, _ in status_metrics)
+    picks_key = _card_stat_picks_key(layout)
+    count_key = _card_stat_slot_count_key(layout)
+
+    if picks_key not in st.session_state:
+        defaults = default_card_stat_labels(layout, status_metrics)
+        st.session_state[picks_key] = list(defaults)
+        st.session_state[count_key] = max(1, len(defaults))
+
+    sanitized = _sanitize_card_stat_picks(
+        list(st.session_state[picks_key]),
+        available=available,
+        max_slots=max_slots,
+    )
+    slot_count = min(int(st.session_state.get(count_key, max(1, len(sanitized)))), max_slots)
+    slot_count = max(1, slot_count, len(sanitized))
+    st.session_state[picks_key] = sanitized
+    st.session_state[count_key] = slot_count
+    return sanitized
+
+
+def _card_stat_labels_for_layout(
+    layout: LayoutId,
+    status_metrics: list[tuple[str, str]],
+) -> tuple[str, ...]:
+    if layout == "spotlight":
+        return ()
+    return tuple(_ensure_card_stat_picks(layout, status_metrics))
+
+
+def _card_stat_picker_ui(
+    layout: LayoutId,
+    status_metrics: list[tuple[str, str]],
+) -> tuple[str, ...]:
+    """Ordered stat picker for hero / tiles / minimal; hidden for spotlight."""
+    if layout == "spotlight":
+        return ()
+
+    max_slots = layout_card_stat_max(layout)
+    available_labels = [label for label, _ in status_metrics]
+    available = frozenset(available_labels)
+    if not available_labels:
+        st.caption("No statistics available for this period.")
+        return ()
+
+    picks_key = _card_stat_picks_key(layout)
+    count_key = _card_stat_slot_count_key(layout)
+    _ensure_card_stat_picks(layout, status_metrics)
+    slot_count = min(int(st.session_state[count_key]), max_slots)
+
+    picks: list[str] = list(st.session_state[picks_key])
+    while len(picks) < slot_count:
+        picks.append("")
+
+    st.caption(
+        f"Choose up to {max_slots} stats for this layout. Order matches position on the card."
+    )
+
+    for i in range(slot_count):
+        current = picks[i] if i < len(picks) else ""
+        other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
+        options = [""] + [lab for lab in available_labels if lab not in other]
+        row_label = "Stat" if slot_count == 1 else f"Stat {i + 1}"
+        col_sel, col_up, col_down, col_rm = st.columns([6, 1, 1, 1])
+        with col_sel:
+            choice = st.selectbox(
+                row_label,
+                options=options,
+                index=options.index(current) if current in options else 0,
+                format_func=lambda x: "—" if x == "" else x,
+                key=f"design_card_stat_sel_{layout}_{i}",
+            )
+            picks[i] = choice or ""
+        with col_up:
+            if i > 0 and st.button("↑", key=f"design_card_stat_up_{layout}_{i}", help="Move up"):
+                picks[i - 1], picks[i] = picks[i], picks[i - 1]
+                st.session_state[picks_key] = picks[:slot_count]
+                st.rerun()
+        with col_down:
+            if i < slot_count - 1 and st.button(
+                "↓", key=f"design_card_stat_down_{layout}_{i}", help="Move down"
+            ):
+                picks[i + 1], picks[i] = picks[i], picks[i + 1]
+                st.session_state[picks_key] = picks[:slot_count]
+                st.rerun()
+        with col_rm:
+            if (i > 0 or current) and st.button(
+                "Remove",
+                key=f"design_card_stat_rm_{layout}_{i}",
+                help="Remove this stat slot",
+            ):
+                if i == 0 and slot_count == 1:
+                    picks[0] = ""
+                elif i == 0:
+                    picks.pop(0)
+                    st.session_state[count_key] = slot_count - 1
+                else:
+                    picks.pop(i)
+                    st.session_state[count_key] = slot_count - 1
+                st.session_state[picks_key] = picks
+                st.rerun()
+
+    btn_col, reset_col = st.columns(2)
+    with btn_col:
+        if slot_count < max_slots and st.button(
+            "Add stat", key=f"design_card_stat_add_{layout}", use_container_width=True
+        ):
+            st.session_state[count_key] = slot_count + 1
+            st.rerun()
+    with reset_col:
+        if st.button(
+            "Reset to layout defaults",
+            key=f"design_card_stat_reset_{layout}",
+            use_container_width=True,
+        ):
+            defaults = list(default_card_stat_labels(layout, status_metrics))
+            st.session_state[picks_key] = defaults
+            st.session_state[count_key] = max(1, len(defaults))
+            st.rerun()
+
+    st.session_state[picks_key] = _sanitize_card_stat_picks(
+        picks[:slot_count],
+        available=available,
+        max_slots=max_slots,
+    )
+    return tuple(st.session_state[picks_key])
 
 
 st.set_page_config(page_title=_DESIGN_STUDIO_TITLE, layout="wide")
@@ -505,11 +674,79 @@ favourite_birds = _sidebar_favourite_bird_controls(
 
 status_metrics = summary_status_metrics(stats, all_time=all_time)
 
+card_stat_labels_by_layout: dict[LayoutId, tuple[str, ...]] = {
+    layout_id: _card_stat_labels_for_layout(layout_id, status_metrics)
+    for layout_id in ("hero", "tiles", "minimal")
+}
+card_stat_labels = card_stat_labels_by_layout.get(selected_layout, ())
+
+tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
+
+with tab_social_cards:
+    with st.expander(_STATS_EXPANDER_LABEL, expanded=False):
+        cols = st.columns(4)
+        for i, (label, value) in enumerate(status_metrics):
+            cols[i % 4].metric(label, value)
+
+    if selected_layout != "spotlight":
+        with st.expander(_CARD_STATS_LABEL, expanded=True):
+            card_stat_labels = _card_stat_picker_ui(selected_layout, status_metrics)
+            card_stat_labels_by_layout[selected_layout] = card_stat_labels
+
+    st.subheader(_CURRENT_CARD_LABEL)
+    st.markdown(
+        render_share_summary_preview_html(
+            stats,
+            layout=selected_layout,
+            fmt=fmt,
+            scale=scale,
+            spotlight_stat=spotlight_stat,
+            favourite_birds=favourite_birds,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    st.divider()
+    st.subheader("All layouts")
+    previews = all_layout_previews_html(
+        stats,
+        fmt=fmt,
+        scale=scale,
+        spotlight_stat=spotlight_stat,
+        favourite_birds=favourite_birds,
+        card_stat_labels_by_layout=card_stat_labels_by_layout,
+        all_time=all_time,
+    )
+    layout_cols = st.columns(4)
+    labels = {
+        "hero": "Hero grid",
+        "tiles": "Stat tiles",
+        "minimal": "Minimal list",
+        "spotlight": "Spotlight",
+    }
+    for col, (layout_id, html) in zip(layout_cols, previews.items()):
+        with col:
+            st.markdown(f"**{labels[layout_id]}**")
+            st.markdown(html, unsafe_allow_html=True)
+
+    st.divider()
+    st.caption(
+        "Living design notes: `docs/explorer/issue-157-share-summary-tracker.md`"
+    )
+
 png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
 png_bytes: bytes | None = None
 try:
     png_bytes = _cached_share_summary_png(
-        stats, selected_layout, fmt, spotlight_stat, favourite_birds
+        stats,
+        selected_layout,
+        fmt,
+        spotlight_stat,
+        favourite_birds,
+        card_stat_labels,
+        all_time,
     )
 except RuntimeError as exc:
     png_export_error = str(exc)
@@ -527,47 +764,4 @@ elif png_bytes is not None:
         mime="image/png",
         use_container_width=True,
         help="PNG of the current card — not the all-layouts comparison below.",
-    )
-
-tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
-
-with tab_social_cards:
-    with st.expander(_STATS_EXPANDER_LABEL, expanded=False):
-        cols = st.columns(4)
-        for i, (label, value) in enumerate(status_metrics):
-            cols[i % 4].metric(label, value)
-
-    st.subheader(_CURRENT_CARD_LABEL)
-    st.markdown(
-        render_share_summary_preview_html(
-            stats,
-            layout=selected_layout,
-            fmt=fmt,
-            scale=scale,
-            spotlight_stat=spotlight_stat,
-            favourite_birds=favourite_birds,
-        ),
-        unsafe_allow_html=True,
-    )
-
-    st.divider()
-    st.subheader("All layouts")
-    previews = all_layout_previews_html(
-        stats, fmt=fmt, scale=scale, spotlight_stat=spotlight_stat, favourite_birds=favourite_birds
-    )
-    layout_cols = st.columns(4)
-    labels = {
-        "hero": "Hero grid",
-        "tiles": "Stat tiles",
-        "minimal": "Minimal list",
-        "spotlight": "Spotlight",
-    }
-    for col, (layout_id, html) in zip(layout_cols, previews.items()):
-        with col:
-            st.markdown(f"**{labels[layout_id]}**")
-            st.markdown(html, unsafe_allow_html=True)
-
-    st.divider()
-    st.caption(
-        "Living design notes: `docs/explorer/issue-157-share-summary-tracker.md`"
     )

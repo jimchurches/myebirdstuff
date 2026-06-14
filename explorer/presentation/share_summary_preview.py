@@ -186,16 +186,13 @@ _SUMMARY_STATUS_ORDER: tuple[str, ...] = (
 )
 
 
-def summary_status_metrics(
+def _metrics_lookup(
     stats: ShareSummaryStats,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
     world_bird_coverage_pct: float | None = None,
-) -> list[tuple[str, str]]:
-    """Metrics row above card previews (period stats + optional all-time taxonomy).
-
-    All-time metrics and world bird coverage are **not** on card tiles — summary row only.
-    """
+) -> dict[str, str]:
+    """Label → display value for period stats and optional all-time taxonomy rows."""
     lookup: dict[str, str] = dict(stat_pairs(stats))
     if all_time is not None:
         if all_time.world_bird_coverage_pct is not None:
@@ -206,6 +203,21 @@ def summary_status_metrics(
             lookup["World bird families (from taxa)"] = f"{all_time.total_families_taxa:,}"
     elif world_bird_coverage_pct is not None:
         lookup["World bird coverage"] = f"{world_bird_coverage_pct:.1f}%"
+    return lookup
+
+
+def summary_status_metrics(
+    stats: ShareSummaryStats,
+    *,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    world_bird_coverage_pct: float | None = None,
+) -> list[tuple[str, str]]:
+    """Metrics row above card previews (period stats + optional all-time taxonomy)."""
+    lookup = _metrics_lookup(
+        stats,
+        all_time=all_time,
+        world_bird_coverage_pct=world_bird_coverage_pct,
+    )
 
     ordered: list[tuple[str, str]] = []
     seen: set[str] = set()
@@ -219,15 +231,71 @@ def summary_status_metrics(
     return ordered
 
 
+def available_card_metrics(
+    stats: ShareSummaryStats,
+    *,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    world_bird_coverage_pct: float | None = None,
+) -> list[tuple[str, str]]:
+    """Pickable stats for card layouts — same pool as the Available statistics expander."""
+    return summary_status_metrics(
+        stats,
+        all_time=all_time,
+        world_bird_coverage_pct=world_bird_coverage_pct,
+    )
+
+
+def layout_card_stat_max(layout: LayoutId | None) -> int:
+    """Maximum stat slots on grid/list layouts (spotlight uses a separate control)."""
+    if layout == "hero":
+        return 4
+    if layout in ("tiles", "minimal"):
+        return 6
+    return 6
+
+
+def default_card_stat_labels(
+    layout: LayoutId,
+    available_metrics: Iterable[tuple[str, str]],
+) -> tuple[str, ...]:
+    """Layout default stat labels filtered to *available_metrics*."""
+    available = {label for label, _ in available_metrics}
+    if layout == "hero":
+        preferred = SHARE_SUMMARY_HERO_DEFAULT_STATS
+    else:
+        preferred = SHARE_SUMMARY_TILES_DEFAULT_STATS
+    max_count = layout_card_stat_max(layout)
+    return tuple(lab for lab in preferred if lab in available)[:max_count]
+
+
 def card_stat_pairs(
     stats: ShareSummaryStats,
     *,
     max_count: int,
     layout: LayoutId | None = None,
+    selected_labels: tuple[str, ...] | None = None,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    world_bird_coverage_pct: float | None = None,
 ) -> list[tuple[str, str]]:
-    """Stats for share cards — layout defaults first, then any remaining computed stats."""
+    """Stats for share cards — user picks, layout defaults, or remaining computed stats."""
+    lookup = _metrics_lookup(
+        stats,
+        all_time=all_time,
+        world_bird_coverage_pct=world_bird_coverage_pct,
+    )
+
+    if selected_labels is not None:
+        out: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for lab in selected_labels:
+            if lab in lookup and lab not in seen:
+                out.append((lab, lookup[lab]))
+                seen.add(lab)
+            if len(out) >= max_count:
+                break
+        return out
+
     all_p = stat_pairs(stats)
-    lookup = {label: value for label, value in all_p}
 
     if layout == "hero":
         preferred = SHARE_SUMMARY_HERO_DEFAULT_STATS
@@ -551,6 +619,24 @@ def _favourite_birds_block(names: tuple[str, ...] | list[str], *, name_size_px: 
 </div>"""
 
 
+def _resolve_card_stat_pairs(
+    stats: ShareSummaryStats,
+    *,
+    layout: LayoutId,
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
+) -> list[tuple[str, str]]:
+    max_count = layout_card_stat_max(layout)
+    if card_stat_labels:
+        return card_stat_pairs(
+            stats,
+            max_count=max_count,
+            selected_labels=card_stat_labels,
+            all_time=all_time,
+        )
+    return card_stat_pairs(stats, max_count=max_count, layout=layout, all_time=all_time)
+
+
 def _layout_hero(
     stats: ShareSummaryStats,
     width: int,
@@ -558,8 +644,12 @@ def _layout_hero(
     fmt: FormatId,
     *,
     favourite_birds: tuple[str, ...] = (),
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
 ) -> str:
-    pairs = card_stat_pairs(stats, max_count=4, layout="hero")
+    pairs = _resolve_card_stat_pairs(
+        stats, layout="hero", card_stat_labels=card_stat_labels, all_time=all_time
+    )
     cells = []
     for label, value in pairs:
         cells.append(f"""
@@ -596,8 +686,12 @@ def _layout_tiles(
     fmt: FormatId,
     *,
     favourite_birds: tuple[str, ...] = (),
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
 ) -> str:
-    pairs = card_stat_pairs(stats, max_count=6, layout="tiles")
+    pairs = _resolve_card_stat_pairs(
+        stats, layout="tiles", card_stat_labels=card_stat_labels, all_time=all_time
+    )
     cells = []
     for label, value in pairs:
         cells.append(f"""
@@ -620,8 +714,18 @@ def _layout_tiles(
 </div>"""
 
 
-def _layout_minimal(stats: ShareSummaryStats, width: int, height: int, fmt: FormatId) -> str:
-    pairs = card_stat_pairs(stats, max_count=6, layout="minimal")
+def _layout_minimal(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
+) -> str:
+    pairs = _resolve_card_stat_pairs(
+        stats, layout="minimal", card_stat_labels=card_stat_labels, all_time=all_time
+    )
     rows = []
     for label, value in pairs:
         rows.append(f"""
@@ -696,6 +800,8 @@ def _card_inner_html(
     fmt: FormatId,
     spotlight_stat: SpotlightStatId,
     favourite_birds: tuple[str, ...] = (),
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
 ) -> tuple[str, int, int]:
     """Return (inner HTML, width, height) at export pixel dimensions."""
     width, height = _FORMAT_PX[fmt]
@@ -703,10 +809,25 @@ def _card_inner_html(
         inner = _layout_spotlight(stats, width, height, fmt, spotlight_stat=spotlight_stat)
     elif layout in ("hero", "tiles"):
         builder = _LAYOUT_BUILDERS[layout]
-        inner = builder(stats, width, height, fmt, favourite_birds=favourite_birds)
+        inner = builder(
+            stats,
+            width,
+            height,
+            fmt,
+            favourite_birds=favourite_birds,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+        )
     else:
         builder = _LAYOUT_BUILDERS.get(layout, _layout_hero)
-        inner = builder(stats, width, height, fmt)
+        inner = builder(
+            stats,
+            width,
+            height,
+            fmt,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+        )
     return inner, width, height
 
 
@@ -717,6 +838,8 @@ def render_share_summary_export_html(
     fmt: FormatId = "square",
     spotlight_stat: SpotlightStatId = "lifers",
     favourite_birds: tuple[str, ...] = (),
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
 ) -> str:
     """Full-size HTML document for headless screenshot (Playwright PNG export)."""
     inner, width, height = _card_inner_html(
@@ -725,6 +848,8 @@ def render_share_summary_export_html(
         fmt=fmt,
         spotlight_stat=spotlight_stat,
         favourite_birds=favourite_birds,
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
     )
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -761,15 +886,20 @@ def render_share_summary_preview_html(
     scale: float = 0.38,
     spotlight_stat: SpotlightStatId = "lifers",
     favourite_birds: tuple[str, ...] = (),
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
 ) -> str:
     """Return scaled HTML preview for one layout + aspect ratio."""
     birds = favourite_birds if layout in ("hero", "tiles") else ()
+    labels = card_stat_labels if layout in ("hero", "tiles", "minimal") else ()
     inner, width, height = _card_inner_html(
         stats,
         layout=layout,
         fmt=fmt,
         spotlight_stat=spotlight_stat,
         favourite_birds=birds,
+        card_stat_labels=labels,
+        all_time=all_time,
     )
     return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
 
@@ -781,9 +911,18 @@ def all_layout_previews_html(
     scale: float = 0.38,
     spotlight_stat: SpotlightStatId = "lifers",
     favourite_birds: tuple[str, ...] = (),
+    card_stat_labels_by_layout: dict[LayoutId, tuple[str, ...]] | None = None,
+    all_time: ShareSummaryAllTimeStats | None = None,
 ) -> dict[str, str]:
     """All prototype layouts for side-by-side comparison."""
     layouts: list[LayoutId] = ["hero", "tiles", "minimal", "spotlight"]
+    by_layout = card_stat_labels_by_layout or {}
+
+    def _labels_for(layout_id: LayoutId) -> tuple[str, ...]:
+        if layout_id in ("hero", "tiles", "minimal"):
+            return by_layout.get(layout_id, ())
+        return ()
+
     return {
         layout_id: render_share_summary_preview_html(
             stats,
@@ -792,6 +931,8 @@ def all_layout_previews_html(
             scale=scale,
             spotlight_stat=spotlight_stat,
             favourite_birds=favourite_birds,
+            card_stat_labels=_labels_for(layout_id),
+            all_time=all_time,
         )
         for layout_id in layouts
     }
@@ -820,6 +961,9 @@ __all__ = [
     "spotlight_stat_label",
     "stat_pairs",
     "summary_status_metrics",
+    "available_card_metrics",
+    "layout_card_stat_max",
+    "default_card_stat_labels",
     "card_stat_pairs",
     "_FORMAT_LABELS",
 ]
