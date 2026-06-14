@@ -36,3 +36,5 @@ SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = SHARE_SUMMARY_HERO_DEFAULT_
     "Birding days",
 )
 SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT = "lifers"
+# Display label on spotlight cards (matches Available statistics / card picker).
+SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"

@@ -130,19 +130,49 @@ def test_spotlight_layout_renders():
 
 
 def test_spotlight_species_label_by_period():
-    from explorer.presentation.share_summary_preview import spotlight_species_label, spotlight_value
+    from explorer.presentation.share_summary_preview import (
+        spotlight_label_from_id,
+        spotlight_pair_for_label,
+        spotlight_species_label,
+        spotlight_value,
+    )
+
+    assert spotlight_species_label("year") == "Year birds"
+    assert spotlight_species_label("month") == "Month birds"
+    assert spotlight_species_label("week") == "Week birds"
+    assert spotlight_species_label("custom") == "Species"
 
     year = ShareSummaryStats(period_label="2025", period_kind="year", species=312)
-    assert spotlight_value(year, "species") == ("Year birds", "312")
+    assert spotlight_value(year, "species") == ("Total species", "312")
+    assert spotlight_pair_for_label(year, "Total species") == ("Total species", "312")
+    assert spotlight_label_from_id("species") == "Total species"
 
     month = ShareSummaryStats(period_label="June 2025", period_kind="month", species=89)
-    assert spotlight_value(month, "species") == ("Month birds", "89")
+    assert spotlight_value(month, "species") == ("Total species", "89")
 
-    week = ShareSummaryStats(period_label="May 31, 2025 - June 6, 2025", period_kind="week", species=34)
-    assert spotlight_value(week, "species") == ("Week birds", "34")
+    week = ShareSummaryStats(
+        period_label="May 31, 2025 - June 6, 2025", period_kind="week", species=34
+    )
+    assert spotlight_value(week, "species") == ("Total species", "34")
 
     custom = ShareSummaryStats(period_label="1 – 7 June 2025", period_kind="custom", species=56)
-    assert spotlight_value(custom, "species") == ("Species", "56")
+    assert spotlight_value(custom, "species") == ("Total species", "56")
+
+
+def test_spotlight_layout_accepts_all_time_label():
+    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats
+    from explorer.presentation.share_summary_preview import render_share_summary_preview_html
+
+    stats = sample_share_summary_stats()
+    all_time = ShareSummaryAllTimeStats(world_bird_coverage_pct=6.8)
+    html = render_share_summary_preview_html(
+        stats,
+        layout="spotlight",
+        spotlight_label="World bird coverage",
+        all_time=all_time,
+    )
+    assert "World bird coverage" in html
+    assert "6.8%" in html
 
 
 def test_summary_status_metrics_includes_world_coverage():

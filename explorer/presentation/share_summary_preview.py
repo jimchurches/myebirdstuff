@@ -30,7 +30,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
-    SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT,
+    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
 )
 
 LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]
@@ -78,6 +78,13 @@ _SPOTLIGHT_TITLES: dict[SpotlightStatId, str] = {
     "locations": "Locations visited",
 }
 
+_LEGACY_SPOTLIGHT_ID_TO_LABEL: dict[SpotlightStatId, str] = {
+    "species": "Total species",
+    "lifers": "Lifers",
+    "checklists": "Total checklists",
+    "locations": "Unique locations",
+}
+
 
 def spotlight_species_label(period_kind: PeriodKind) -> str:
     """Spotlight label for species count — matches selected period."""
@@ -91,10 +98,47 @@ def spotlight_species_label(period_kind: PeriodKind) -> str:
 
 
 def spotlight_stat_label(stat: SpotlightStatId, period_kind: PeriodKind) -> str:
-    """Human label for a spotlight stat (sidebar + card)."""
+    """Human label for a legacy spotlight stat id."""
     if stat == "species":
         return spotlight_species_label(period_kind)
     return _SPOTLIGHT_TITLES[stat]
+
+
+def spotlight_label_from_id(stat: SpotlightStatId) -> str:
+    """Map legacy spotlight id to Available statistics label."""
+    return _LEGACY_SPOTLIGHT_ID_TO_LABEL[stat]
+
+
+def resolve_spotlight_label(
+    *,
+    spotlight_label: str | None = None,
+    spotlight_stat: SpotlightStatId | None = None,
+) -> str:
+    """Prefer explicit *spotlight_label*; fall back to legacy id → label."""
+    if spotlight_label and spotlight_label.strip():
+        return spotlight_label.strip()
+    if spotlight_stat is not None:
+        return spotlight_label_from_id(spotlight_stat)
+    return SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
+
+
+def spotlight_pair_for_label(
+    stats: ShareSummaryStats,
+    label: str,
+    *,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    world_bird_coverage_pct: float | None = None,
+) -> tuple[str, str] | None:
+    """Return (title, display value) for one Available statistics label."""
+    lookup = _metrics_lookup(
+        stats,
+        all_time=all_time,
+        world_bird_coverage_pct=world_bird_coverage_pct,
+    )
+    cleaned = (label or "").strip()
+    if not cleaned or cleaned not in lookup:
+        return None
+    return cleaned, lookup[cleaned]
 
 _YEARLY_ICON_RE = re.compile(
     r'\s*<span class="stats-info-icon">.*?</span>',
@@ -318,18 +362,8 @@ def card_stat_pairs(
 
 
 def spotlight_value(stats: ShareSummaryStats, stat: SpotlightStatId) -> tuple[str, str] | None:
-    """Return (title, display value) for single-stat spotlight cards."""
-    values: dict[SpotlightStatId, int | None] = {
-        "species": stats.species,
-        "lifers": stats.lifers,
-        "checklists": stats.checklists,
-        "locations": stats.locations,
-    }
-    val = values[stat]
-    if val is None:
-        return None
-    title = spotlight_stat_label(stat, stats.period_kind)
-    return title, f"{int(val):,}"
+    """Return (title, display value) for legacy single-stat spotlight ids."""
+    return spotlight_pair_for_label(stats, spotlight_label_from_id(stat))
 
 
 def _strip_yearly_label(label: str) -> str:
@@ -751,11 +785,12 @@ def _layout_spotlight(
     height: int,
     fmt: FormatId,
     *,
-    spotlight_stat: SpotlightStatId = SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT,
+    spotlight_label: str = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    all_time: ShareSummaryAllTimeStats | None = None,
 ) -> str:
-    pair = spotlight_value(stats, spotlight_stat)
+    pair = spotlight_pair_for_label(stats, spotlight_label, all_time=all_time)
     if pair is None:
-        title, value = "Lifers", "—"
+        title, value = spotlight_label, "—"
     else:
         title, value = pair
     pad_bottom = _footer_pad(fmt, width, height)
@@ -798,7 +833,8 @@ def _card_inner_html(
     *,
     layout: LayoutId,
     fmt: FormatId,
-    spotlight_stat: SpotlightStatId,
+    spotlight_stat: SpotlightStatId = "lifers",
+    spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
@@ -806,7 +842,10 @@ def _card_inner_html(
     """Return (inner HTML, width, height) at export pixel dimensions."""
     width, height = _FORMAT_PX[fmt]
     if layout == "spotlight":
-        inner = _layout_spotlight(stats, width, height, fmt, spotlight_stat=spotlight_stat)
+        label = resolve_spotlight_label(spotlight_label=spotlight_label, spotlight_stat=spotlight_stat)
+        inner = _layout_spotlight(
+            stats, width, height, fmt, spotlight_label=label, all_time=all_time
+        )
     elif layout in ("hero", "tiles"):
         builder = _LAYOUT_BUILDERS[layout]
         inner = builder(
@@ -837,6 +876,7 @@ def render_share_summary_export_html(
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
     spotlight_stat: SpotlightStatId = "lifers",
+    spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
@@ -847,6 +887,7 @@ def render_share_summary_export_html(
         layout=layout,
         fmt=fmt,
         spotlight_stat=spotlight_stat,
+        spotlight_label=spotlight_label,
         favourite_birds=favourite_birds,
         card_stat_labels=card_stat_labels,
         all_time=all_time,
@@ -885,6 +926,7 @@ def render_share_summary_preview_html(
     fmt: FormatId = "square",
     scale: float = 0.38,
     spotlight_stat: SpotlightStatId = "lifers",
+    spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
@@ -897,6 +939,7 @@ def render_share_summary_preview_html(
         layout=layout,
         fmt=fmt,
         spotlight_stat=spotlight_stat,
+        spotlight_label=spotlight_label,
         favourite_birds=birds,
         card_stat_labels=labels,
         all_time=all_time,
@@ -910,6 +953,7 @@ def all_layout_previews_html(
     fmt: FormatId = "square",
     scale: float = 0.38,
     spotlight_stat: SpotlightStatId = "lifers",
+    spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels_by_layout: dict[LayoutId, tuple[str, ...]] | None = None,
     all_time: ShareSummaryAllTimeStats | None = None,
@@ -930,6 +974,7 @@ def all_layout_previews_html(
             fmt=fmt,
             scale=scale,
             spotlight_stat=spotlight_stat,
+            spotlight_label=spotlight_label,
             favourite_birds=favourite_birds,
             card_stat_labels=_labels_for(layout_id),
             all_time=all_time,
@@ -957,6 +1002,9 @@ __all__ = [
     "sample_share_summary_stats",
     "share_summary_stats_for_year",
     "spotlight_value",
+    "spotlight_pair_for_label",
+    "spotlight_label_from_id",
+    "resolve_spotlight_label",
     "spotlight_species_label",
     "spotlight_stat_label",
     "stat_pairs",

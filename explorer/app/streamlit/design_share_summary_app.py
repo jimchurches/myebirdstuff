@@ -50,7 +50,6 @@ from explorer.presentation.share_summary_png_export import (
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
-    SpotlightStatId,
     _FORMAT_LABELS,
     all_layout_previews_html,
     compute_share_summary_stats,
@@ -62,9 +61,10 @@ from explorer.presentation.share_summary_preview import (
     period_for_year,
     render_share_summary_preview_html,
     sample_share_summary_stats,
-    spotlight_stat_label,
+    spotlight_label_from_id,
     summary_status_metrics,
 )
+from explorer.core.share_summary_defaults import SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
 
 @st.cache_data(show_spinner="Generating PNG…")
@@ -72,16 +72,16 @@ def _cached_share_summary_png(
     stats: ShareSummaryStats,
     layout: LayoutId,
     fmt: FormatId,
-    spotlight_stat: SpotlightStatId,
     favourite_birds: tuple[str, ...],
     card_stat_labels: tuple[str, ...],
+    spotlight_label: str,
     all_time: ShareSummaryAllTimeStats | None,
 ) -> bytes:
     return share_summary_to_png_bytes(
         stats,
         layout=layout,
         fmt=fmt,
-        spotlight_stat=spotlight_stat,
+        spotlight_label=spotlight_label,
         favourite_birds=favourite_birds,
         card_stat_labels=card_stat_labels,
         all_time=all_time,
@@ -93,6 +93,8 @@ _STATS_EXPANDER_LABEL = "Available statistics"
 _CARD_STATS_LABEL = "Card statistics"
 _CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
 _CARD_STATS_PICKS_PREFIX = "design_card_stat_picks_"
+_SPOTLIGHT_LABEL_KEY = "design_spotlight_label"
+_LEGACY_SPOTLIGHT_LABEL_KEY = "design_spotlight_stat"
 _CURRENT_CARD_LABEL = "Current card"
 _CARD_HEADING_LABEL = "Card Heading (optional)"
 _CARD_HEADING_PLACEHOLDER = "e.g. North Coast NSW Exploration"
@@ -349,15 +351,6 @@ def _ensure_card_stat_picks(
     return sanitized
 
 
-def _card_stat_labels_for_layout(
-    layout: LayoutId,
-    status_metrics: list[tuple[str, str]],
-) -> tuple[str, ...]:
-    if layout == "spotlight":
-        return ()
-    return tuple(_ensure_card_stat_picks(layout, status_metrics))
-
-
 def _card_stat_picker_ui(
     layout: LayoutId,
     status_metrics: list[tuple[str, str]],
@@ -453,7 +446,132 @@ def _card_stat_picker_ui(
         available=available,
         max_slots=max_slots,
     )
-    return tuple(st.session_state[picks_key])
+    final = tuple(st.session_state[picks_key])
+    if not final:
+        st.caption("Select at least one stat to show on the card.")
+    return final
+
+
+def _card_stat_labels_from_session(
+    layout: LayoutId,
+    status_metrics: list[tuple[str, str]],
+) -> tuple[str, ...]:
+    if layout == "spotlight":
+        return ()
+    return tuple(_ensure_card_stat_picks(layout, status_metrics))
+
+
+def _card_stat_labels_by_layout_from_session(
+    status_metrics: list[tuple[str, str]],
+) -> dict[LayoutId, tuple[str, ...]]:
+    return {
+        layout_id: _card_stat_labels_from_session(layout_id, status_metrics)
+        for layout_id in ("hero", "tiles", "minimal")
+    }
+
+
+def _spotlight_label_from_session(
+    status_metrics: list[tuple[str, str]],
+) -> str:
+    available = {label for label, _ in status_metrics}
+    raw = st.session_state.get(_SPOTLIGHT_LABEL_KEY)
+    if raw is None:
+        legacy = st.session_state.get(_LEGACY_SPOTLIGHT_LABEL_KEY)
+        if legacy in ("species", "lifers", "checklists", "locations"):
+            raw = spotlight_label_from_id(legacy)  # type: ignore[arg-type]
+        elif legacy in available:
+            raw = legacy
+    if isinstance(raw, str) and raw.strip() in available:
+        return raw.strip()
+    if SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT in available:
+        return SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
+    if status_metrics:
+        return status_metrics[0][0]
+    return SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
+
+
+def _spotlight_stat_picker(status_metrics: list[tuple[str, str]]) -> None:
+    labels = [label for label, _ in status_metrics]
+    if not labels:
+        st.caption("No statistics available for this period.")
+        return
+    current = _spotlight_label_from_session(status_metrics)
+    st.selectbox(
+        "Spotlight stat",
+        options=labels,
+        index=labels.index(current) if current in labels else 0,
+        key=_SPOTLIGHT_LABEL_KEY,
+        help="Single highlighted stat for the Spotlight layout.",
+    )
+
+
+@st.fragment
+def _current_card_fragment(
+    *,
+    stats: ShareSummaryStats,
+    all_time: ShareSummaryAllTimeStats | None,
+    selected_layout: LayoutId,
+    period_mode: str,
+    fmt: FormatId,
+    scale: float,
+    status_metrics: list[tuple[str, str]],
+    favourite_birds: tuple[str, ...],
+) -> None:
+    """Card statistics controls, live preview, and layout grid; isolated reruns."""
+    with st.expander(_CARD_STATS_LABEL, expanded=True):
+        if selected_layout == "spotlight":
+            _spotlight_stat_picker(status_metrics)
+        else:
+            _card_stat_picker_ui(selected_layout, status_metrics)
+
+    spotlight_label = _spotlight_label_from_session(status_metrics)
+    card_stat_labels_by_layout = _card_stat_labels_by_layout_from_session(status_metrics)
+    card_stat_labels = card_stat_labels_by_layout.get(selected_layout, ())
+
+    st.subheader(_CURRENT_CARD_LABEL)
+    st.markdown(
+        render_share_summary_preview_html(
+            stats,
+            layout=selected_layout,
+            fmt=fmt,
+            scale=scale,
+            spotlight_label=spotlight_label,
+            favourite_birds=favourite_birds,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    st.divider()
+    st.subheader("All layouts")
+    previews = all_layout_previews_html(
+        stats,
+        fmt=fmt,
+        scale=scale,
+        spotlight_label=spotlight_label,
+        favourite_birds=favourite_birds,
+        card_stat_labels_by_layout=card_stat_labels_by_layout,
+        all_time=all_time,
+    )
+    layout_cols = st.columns(4)
+    layout_labels = {
+        "hero": "Hero grid",
+        "tiles": "Stat tiles",
+        "minimal": "Minimal list",
+        "spotlight": "Spotlight",
+    }
+    for col, (layout_id, html) in zip(layout_cols, previews.items()):
+        with col:
+            st.markdown(f"**{layout_labels[layout_id]}**")
+            st.markdown(html, unsafe_allow_html=True)
+
+    st.caption(
+        "Preview updates as you edit stats. Click **Update PNG export** after changes "
+        "to refresh the sidebar download."
+    )
+    if st.button("Update PNG export", key="design_refresh_png_export", type="secondary"):
+        st.rerun()
 
 
 st.set_page_config(page_title=_DESIGN_STUDIO_TITLE, layout="wide")
@@ -541,13 +659,6 @@ with st.sidebar:
             "minimal": "Minimal list",
             "spotlight": "Single stat spotlight",
         }[x],
-    )
-    spotlight_stat: SpotlightStatId = st.selectbox(
-        "Spotlight stat",
-        options=["species", "lifers", "checklists", "locations"],
-        format_func=lambda x: spotlight_stat_label(x, period_mode),
-        disabled=selected_layout != "spotlight",
-        help="Choose which stat to highlight when the Spotlight layout is selected.",
     )
 
 df: pd.DataFrame | None = None
@@ -674,11 +785,8 @@ favourite_birds = _sidebar_favourite_bird_controls(
 
 status_metrics = summary_status_metrics(stats, all_time=all_time)
 
-card_stat_labels_by_layout: dict[LayoutId, tuple[str, ...]] = {
-    layout_id: _card_stat_labels_for_layout(layout_id, status_metrics)
-    for layout_id in ("hero", "tiles", "minimal")
-}
-card_stat_labels = card_stat_labels_by_layout.get(selected_layout, ())
+if _SPOTLIGHT_LABEL_KEY not in st.session_state:
+    st.session_state[_SPOTLIGHT_LABEL_KEY] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
 tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
 
@@ -688,48 +796,20 @@ with tab_social_cards:
         for i, (label, value) in enumerate(status_metrics):
             cols[i % 4].metric(label, value)
 
-    if selected_layout != "spotlight":
-        with st.expander(_CARD_STATS_LABEL, expanded=True):
-            card_stat_labels = _card_stat_picker_ui(selected_layout, status_metrics)
-            card_stat_labels_by_layout[selected_layout] = card_stat_labels
-
-    st.subheader(_CURRENT_CARD_LABEL)
-    st.markdown(
-        render_share_summary_preview_html(
-            stats,
-            layout=selected_layout,
-            fmt=fmt,
-            scale=scale,
-            spotlight_stat=spotlight_stat,
-            favourite_birds=favourite_birds,
-            card_stat_labels=card_stat_labels,
-            all_time=all_time,
-        ),
-        unsafe_allow_html=True,
-    )
-
-    st.divider()
-    st.subheader("All layouts")
-    previews = all_layout_previews_html(
-        stats,
+    _current_card_fragment(
+        stats=stats,
+        all_time=all_time,
+        selected_layout=selected_layout,
+        period_mode=period_mode,
         fmt=fmt,
         scale=scale,
-        spotlight_stat=spotlight_stat,
+        status_metrics=status_metrics,
         favourite_birds=favourite_birds,
-        card_stat_labels_by_layout=card_stat_labels_by_layout,
-        all_time=all_time,
     )
-    layout_cols = st.columns(4)
-    labels = {
-        "hero": "Hero grid",
-        "tiles": "Stat tiles",
-        "minimal": "Minimal list",
-        "spotlight": "Spotlight",
-    }
-    for col, (layout_id, html) in zip(layout_cols, previews.items()):
-        with col:
-            st.markdown(f"**{labels[layout_id]}**")
-            st.markdown(html, unsafe_allow_html=True)
+
+    spotlight_label = _spotlight_label_from_session(status_metrics)
+    card_stat_labels_by_layout = _card_stat_labels_by_layout_from_session(status_metrics)
+    card_stat_labels = card_stat_labels_by_layout.get(selected_layout, ())
 
     st.divider()
     st.caption(
@@ -743,9 +823,9 @@ try:
         stats,
         selected_layout,
         fmt,
-        spotlight_stat,
         favourite_birds,
         card_stat_labels,
+        spotlight_label,
         all_time,
     )
 except RuntimeError as exc:
