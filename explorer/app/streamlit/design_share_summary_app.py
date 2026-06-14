@@ -502,6 +502,27 @@ def _spotlight_stat_picker(status_metrics: list[tuple[str, str]]) -> None:
     )
 
 
+def _centered_card_download_button(
+    *,
+    label: str,
+    data: bytes,
+    file_name: str,
+    mime: str,
+    help_text: str,
+) -> None:
+    """Download control centred under the scaled card preview."""
+    _, btn_col, _ = st.columns([1, 1, 1])
+    with btn_col:
+        st.download_button(
+            label,
+            data=data,
+            file_name=file_name,
+            mime=mime,
+            use_container_width=True,
+            help=help_text,
+        )
+
+
 @st.fragment
 def _current_card_fragment(
     *,
@@ -514,7 +535,7 @@ def _current_card_fragment(
     status_metrics: list[tuple[str, str]],
     favourite_birds: tuple[str, ...],
 ) -> None:
-    """Card statistics controls, live preview, layout grid, and sidebar PNG export."""
+    """Card statistics controls, live preview, layout grid, and PNG export."""
     with st.expander(_CARD_STATS_LABEL, expanded=True):
         if selected_layout == "spotlight":
             _spotlight_stat_picker(status_metrics)
@@ -540,6 +561,28 @@ def _current_card_fragment(
         unsafe_allow_html=True,
     )
 
+    png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
+    try:
+        png_bytes = _cached_share_summary_png(
+            stats,
+            selected_layout,
+            fmt,
+            favourite_birds,
+            card_stat_labels,
+            spotlight_label,
+            all_time,
+        )
+    except RuntimeError as exc:
+        st.warning(str(exc))
+    else:
+        _centered_card_download_button(
+            label="Export current card",
+            data=png_bytes,
+            file_name=png_filename,
+            mime="image/png",
+            help_text="PNG of the current card above — not the all-layouts comparison below.",
+        )
+
     st.divider()
     st.subheader("All layouts")
     previews = all_layout_previews_html(
@@ -562,31 +605,6 @@ def _current_card_fragment(
         with col:
             st.markdown(f"**{layout_labels[layout_id]}**")
             st.markdown(html, unsafe_allow_html=True)
-
-    png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
-    with st.sidebar:
-        st.header("Export")
-        try:
-            png_bytes = _cached_share_summary_png(
-                stats,
-                selected_layout,
-                fmt,
-                favourite_birds,
-                card_stat_labels,
-                spotlight_label,
-                all_time,
-            )
-        except RuntimeError as exc:
-            st.warning(str(exc))
-        else:
-            st.download_button(
-                "Export current card",
-                data=png_bytes,
-                file_name=png_filename,
-                mime="image/png",
-                use_container_width=True,
-                help="PNG of the current card — not the all-layouts comparison below.",
-            )
 
 
 st.set_page_config(page_title=_DESIGN_STUDIO_TITLE, layout="wide")
@@ -664,7 +682,7 @@ with st.sidebar:
         options=["square", "portrait_post", "story"],
         format_func=lambda x: _FORMAT_LABELS[x],
     )
-    scale = st.slider("Preview scale", min_value=0.22, max_value=0.55, value=0.36, step=0.01)
+    scale = st.slider("Preview scale", min_value=0.22, max_value=0.55, value=0.42, step=0.01)
     selected_layout: LayoutId = st.selectbox(
         "Layout",
         options=["hero", "tiles", "minimal", "spotlight"],
