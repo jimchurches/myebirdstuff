@@ -41,7 +41,7 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | World bird coverage | **Summary row only** | Available stat; not on card tiles by default |
 | Favourite bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
 | PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
-| PNG save UX | **Done (design app)** | Sidebar **Export current card** (no in-app PNG preview) |
+| PNG save UX | **Done (design app)** | Sidebar **Export current card** — PNG regenerated inside `@st.fragment` so export matches preview (see **PNG export UX** below) |
 | All layouts comparison grid | **Design utility only** | Side-by-side four layouts in `design_share_summary_app.py`; **not** in main app (#276) |
 | Main app integration | **Design noted** | New **Social Cards** tab before Settings; tab-aware sidebar TBD |
 | Map thumbnail on card | **Dropped (v1)** | v2 |
@@ -206,9 +206,20 @@ Captured from initial prototype review:
 | **Current card** preview | Yes | Yes |
 | **All layouts** grid (four layouts at once) | **Yes** — helps compare/tune HTML layouts during design | **No** — users cycle layout via sidebar **Layout** control |
 | **Available statistics** expander | Yes | TBD (#276) |
-| **Export current card** (sidebar) | Yes | Yes (target) |
+| **Export current card** (sidebar) | Yes — PNG gen inside `@st.fragment` (stays in sync with card stat picks) | Yes — **generate on export click** with spinner (#276; see **PNG export UX**) |
 
 Rationale: end users do not need to see every layout variant on one screen; one preview plus layout picker is enough. The all-layouts section stays in the design utility for layout iteration only.
+
+### PNG export UX (#275 / #276)
+
+**Problem:** Card statistics and spotlight use `@st.fragment` so the HTML preview can rerun quickly. PNG generation **outside** the fragment did not rerun on fragment-only updates, so the download could lag behind the preview unless the user triggered a full app rerun.
+
+| Context | Approach | Rationale |
+|---------|----------|-----------|
+| **Design studio** | **Export block inside the fragment** — `_cached_share_summary_png` + sidebar `st.download_button` run at the end of `_current_card_fragment` | Card stat / spotlight edits rerun the fragment and refresh the PNG. Sidebar changes (period, layout, format, favourites) still cause a full rerun. `@st.cache_data` avoids repeat Playwright work for the same inputs. **No** separate “update export” button. |
+| **Main app Social Cards (#276)** | **Generate on export click** — one **Export current card** control; show a short spinner (“Generating PNG…”), run Playwright, then offer download | End users expect a single action. Playwright takes a few seconds — acceptable when they explicitly export. Avoids background PNG generation on every control change. **Do not** copy the design-studio pre-generation pattern unless the main tab uses the same fragment + stale-export constraint. |
+
+**Agreed 2026-06-11** — implement lazy export in #276; design studio uses in-fragment export.
 
 ---
 
@@ -298,6 +309,7 @@ When the user selects the **Social Cards** tab:
   - Spotlight stat (when Spotlight layout)
   - Optional: preview scale (maybe main panel only)
 - Main panel: **current card** preview only (+ PNG export via sidebar). **No** all-layouts comparison grid — unlike the design studio.
+- **PNG export (#276):** generate on **Export current card** click with spinner — not pre-generated on every control change (see **PNG export UX**).
 
 When the user leaves **Social Cards** (any other main tab):
 
@@ -567,3 +579,4 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-11 | #275: Playwright PNG export — `share_summary_png_export.py`, design app `st.image` + download button; Cloud verification documented as open |
 | 2026-06-11 | Main app tab name decided: **Social Cards** (design studio + #276); retired ~~Socials~~ working title |
 | 2026-06-11 | **All layouts** grid: design utility only; main app shows current card + sidebar layout picker (#276) |
+| 2026-06-11 | **PNG export UX:** design studio — export inside `@st.fragment`; main app (#276) — generate on export click with spinner |

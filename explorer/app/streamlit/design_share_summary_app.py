@@ -214,10 +214,7 @@ def _sidebar_favourite_bird_controls(
         st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY] = 1
     slot_count = min(int(st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY]), _MAX_FAVOURITE_BIRDS)
 
-    st.sidebar.subheader("Favourite birds (optional)")
-    st.sidebar.caption(
-        "Up to 3 highlights from this period. Search by common, scientific, or family name."
-    )
+    st.sidebar.subheader("Favourite birds")
 
     if not species_list:
         st.sidebar.info("No species in this period to pick from.")
@@ -517,7 +514,7 @@ def _current_card_fragment(
     status_metrics: list[tuple[str, str]],
     favourite_birds: tuple[str, ...],
 ) -> None:
-    """Card statistics controls, live preview, and layout grid; isolated reruns."""
+    """Card statistics controls, live preview, layout grid, and sidebar PNG export."""
     with st.expander(_CARD_STATS_LABEL, expanded=True):
         if selected_layout == "spotlight":
             _spotlight_stat_picker(status_metrics)
@@ -566,12 +563,30 @@ def _current_card_fragment(
             st.markdown(f"**{layout_labels[layout_id]}**")
             st.markdown(html, unsafe_allow_html=True)
 
-    st.caption(
-        "Preview updates as you edit stats. Click **Update PNG export** after changes "
-        "to refresh the sidebar download."
-    )
-    if st.button("Update PNG export", key="design_refresh_png_export", type="secondary"):
-        st.rerun()
+    png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
+    with st.sidebar:
+        st.header("Export")
+        try:
+            png_bytes = _cached_share_summary_png(
+                stats,
+                selected_layout,
+                fmt,
+                favourite_birds,
+                card_stat_labels,
+                spotlight_label,
+                all_time,
+            )
+        except RuntimeError as exc:
+            st.warning(str(exc))
+        else:
+            st.download_button(
+                "Export current card",
+                data=png_bytes,
+                file_name=png_filename,
+                mime="image/png",
+                use_container_width=True,
+                help="PNG of the current card — not the all-layouts comparison below.",
+            )
 
 
 st.set_page_config(page_title=_DESIGN_STUDIO_TITLE, layout="wide")
@@ -805,43 +820,4 @@ with tab_social_cards:
         scale=scale,
         status_metrics=status_metrics,
         favourite_birds=favourite_birds,
-    )
-
-    spotlight_label = _spotlight_label_from_session(status_metrics)
-    card_stat_labels_by_layout = _card_stat_labels_by_layout_from_session(status_metrics)
-    card_stat_labels = card_stat_labels_by_layout.get(selected_layout, ())
-
-    st.divider()
-    st.caption(
-        "Living design notes: `docs/explorer/issue-157-share-summary-tracker.md`"
-    )
-
-png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
-png_bytes: bytes | None = None
-try:
-    png_bytes = _cached_share_summary_png(
-        stats,
-        selected_layout,
-        fmt,
-        favourite_birds,
-        card_stat_labels,
-        spotlight_label,
-        all_time,
-    )
-except RuntimeError as exc:
-    png_export_error = str(exc)
-else:
-    png_export_error = None
-
-st.sidebar.header("Export")
-if png_export_error:
-    st.sidebar.warning(png_export_error)
-elif png_bytes is not None:
-    st.sidebar.download_button(
-        "Export current card",
-        data=png_bytes,
-        file_name=png_filename,
-        mime="image/png",
-        use_container_width=True,
-        help="PNG of the current card — not the all-layouts comparison below.",
     )
