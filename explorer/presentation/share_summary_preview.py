@@ -259,7 +259,7 @@ _SUMMARY_STATUS_ORDER: tuple[str, ...] = (
     "Total individuals",
     "Total bird families",
     "World bird coverage",
-    "World bird species (from taxa)",
+    "World bird species",
     "World bird families (from taxa)",
 )
 
@@ -276,7 +276,7 @@ def _metrics_lookup(
         if all_time.world_bird_coverage_pct is not None:
             lookup["World bird coverage"] = f"{all_time.world_bird_coverage_pct:.1f}%"
         if all_time.observed_species_taxa is not None:
-            lookup["World bird species (from taxa)"] = f"{all_time.observed_species_taxa:,}"
+            lookup["World bird species"] = f"{all_time.observed_species_taxa:,}"
         if all_time.total_families_taxa is not None:
             lookup["World bird families (from taxa)"] = f"{all_time.total_families_taxa:,}"
     elif world_bird_coverage_pct is not None:

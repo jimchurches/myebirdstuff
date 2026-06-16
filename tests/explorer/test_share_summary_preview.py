@@ -302,7 +302,7 @@ def test_summary_status_metrics_preferred_order():
         "Total individuals",
         "Total bird families",
         "World bird coverage",
-        "World bird species (from taxa)",
+        "World bird species",
         "World bird families (from taxa)",
     ]
 
