@@ -451,7 +451,7 @@ def _card_stat_picker_ui(
         can_down = i < ui_rows - 1
         can_remove = bool(current) if fixed_rows else (i > 0 or bool(current))
 
-        col_sel, col_actions = st.columns([11, 3], vertical_alignment="center")
+        col_sel, col_actions = st.columns([11, 3], vertical_alignment="bottom")
         with col_sel:
             choice = st.selectbox(
                 row_label,
@@ -506,7 +506,7 @@ def _card_stat_picker_ui(
                     st.session_state[picks_key] = picks[:ui_rows]
                     st.rerun()
 
-    col_sel_foot, col_actions_foot = st.columns([11, 3], vertical_alignment="center")
+    col_sel_foot, col_actions_foot = st.columns([11, 3], vertical_alignment="bottom")
     with col_sel_foot:
         if not fixed_rows and ui_rows < max_slots and st.button(
             "Add stat",
