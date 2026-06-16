@@ -282,15 +282,14 @@ def test_summary_status_metrics_includes_all_time_stats():
     stats = ShareSummaryStats(period_label="2025", period_kind="year", species=10)
     all_time = ShareSummaryAllTimeStats(
         total_species_taxa=10_800,
-        observed_species_taxa=312,
         total_families_taxa=248,
-        observed_families=186,
-        world_bird_coverage_pct=6.8,
     )
     pairs = dict(summary_status_metrics(stats, all_time=all_time))
-    assert pairs["Observed species"] == "312"
-    assert pairs["Observed families"] == "186"
-    assert pairs["Observed species (%)"] == "6.8%"
+    assert pairs["Species in eBird taxonomy"] == "10,800"
+    assert pairs["Families in eBird taxonomy"] == "248"
+    assert pairs["Observed species (%)"] == "0.1%"
+    assert "Observed species" not in pairs
+    assert "Observed families" not in pairs
 
 
 def test_compute_share_summary_all_time_stats_from_fixture(monkeypatch):

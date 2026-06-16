@@ -87,9 +87,14 @@ _FORMAT_LABELS: dict[FormatId, str] = {
     "story": "Story (1080×1920)",
 }
 
+# Taxonomy reference labels (eBird/Clements denominators — not user checklist counts).
+LABEL_SPECIES_IN_TAXONOMY = "Species in eBird taxonomy"
+LABEL_FAMILIES_IN_TAXONOMY = "Families in eBird taxonomy"
+LABEL_OBSERVED_SPECIES_PCT = "Observed species (%)"
+
 _STAT_LABELS: dict[str, str] = {
     "species": "Total species",
-    "families": "Total bird families",
+    "families": "Bird families",
     "individuals": "Total individuals",
     "checklists": "Total checklists",
     "completed_checklists": "Completed checklists",
@@ -160,14 +165,9 @@ def spotlight_pair_for_label(
     label: str,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
-    world_bird_coverage_pct: float | None = None,
 ) -> tuple[str, str] | None:
     """Return (title, display value) for one Available statistics label."""
-    lookup = _metrics_lookup(
-        stats,
-        all_time=all_time,
-        world_bird_coverage_pct=world_bird_coverage_pct,
-    )
+    lookup = _metrics_lookup(stats, all_time=all_time)
     cleaned = (label or "").strip()
     if not cleaned or cleaned not in lookup:
         return None
@@ -261,30 +261,39 @@ _SUMMARY_STATUS_ORDER: tuple[str, ...] = (
     "Days birding with others",
     "Longest streak (days)",
     "Total individuals",
-    "Observed species",
-    "Observed species (%)",
-    "Observed families",
-    "Total bird families",
+    "Bird families",
+    LABEL_OBSERVED_SPECIES_PCT,
+    LABEL_SPECIES_IN_TAXONOMY,
+    LABEL_FAMILIES_IN_TAXONOMY,
 )
+
+
+def _period_species_coverage_pct(
+    stats: ShareSummaryStats,
+    all_time: ShareSummaryAllTimeStats | None,
+) -> float | None:
+    """Period species count as a share of living eBird/Clements taxonomy species."""
+    if stats.species is None or all_time is None or not all_time.total_species_taxa:
+        return None
+    return stats.species / all_time.total_species_taxa * 100.0
 
 
 def _metrics_lookup(
     stats: ShareSummaryStats,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
-    world_bird_coverage_pct: float | None = None,
 ) -> dict[str, str]:
-    """Label → display value for period stats and optional all-time taxonomy rows."""
+    """Label → display value for period stats and optional taxonomy reference rows."""
     lookup: dict[str, str] = dict(stat_pairs(stats))
-    if all_time is not None:
-        if all_time.world_bird_coverage_pct is not None:
-            lookup["Observed species (%)"] = f"{all_time.world_bird_coverage_pct:.1f}%"
-        if all_time.observed_species_taxa is not None:
-            lookup["Observed species"] = f"{all_time.observed_species_taxa:,}"
-        if all_time.observed_families is not None:
-            lookup["Observed families"] = f"{all_time.observed_families:,}"
-    elif world_bird_coverage_pct is not None:
-        lookup["Observed species (%)"] = f"{world_bird_coverage_pct:.1f}%"
+    if all_time is None:
+        return lookup
+    if all_time.total_species_taxa is not None:
+        lookup[LABEL_SPECIES_IN_TAXONOMY] = f"{all_time.total_species_taxa:,}"
+    if all_time.total_families_taxa is not None:
+        lookup[LABEL_FAMILIES_IN_TAXONOMY] = f"{all_time.total_families_taxa:,}"
+    pct = _period_species_coverage_pct(stats, all_time)
+    if pct is not None:
+        lookup[LABEL_OBSERVED_SPECIES_PCT] = f"{pct:.1f}%"
     return lookup
 
 
@@ -292,14 +301,9 @@ def summary_status_metrics(
     stats: ShareSummaryStats,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
-    world_bird_coverage_pct: float | None = None,
 ) -> list[tuple[str, str]]:
-    """Metrics row above card previews (period stats + optional all-time taxonomy)."""
-    lookup = _metrics_lookup(
-        stats,
-        all_time=all_time,
-        world_bird_coverage_pct=world_bird_coverage_pct,
-    )
+    """Metrics row above card previews (period stats + optional taxonomy reference)."""
+    lookup = _metrics_lookup(stats, all_time=all_time)
 
     ordered: list[tuple[str, str]] = []
     seen: set[str] = set()
@@ -317,14 +321,9 @@ def available_card_metrics(
     stats: ShareSummaryStats,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
-    world_bird_coverage_pct: float | None = None,
 ) -> list[tuple[str, str]]:
     """Pickable stats for card layouts — same pool as the Available statistics expander."""
-    return summary_status_metrics(
-        stats,
-        all_time=all_time,
-        world_bird_coverage_pct=world_bird_coverage_pct,
-    )
+    return summary_status_metrics(stats, all_time=all_time)
 
 
 def layout_card_stat_max(layout: LayoutId | None, fmt: FormatId | None = None) -> int:
@@ -383,14 +382,9 @@ def card_stat_pairs(
     layout: LayoutId | None = None,
     selected_labels: tuple[str, ...] | None = None,
     all_time: ShareSummaryAllTimeStats | None = None,
-    world_bird_coverage_pct: float | None = None,
 ) -> list[tuple[str, str]]:
     """Stats for share cards — user picks, layout defaults, or remaining computed stats."""
-    lookup = _metrics_lookup(
-        stats,
-        all_time=all_time,
-        world_bird_coverage_pct=world_bird_coverage_pct,
-    )
+    lookup = _metrics_lookup(stats, all_time=all_time)
 
     if selected_labels is not None:
         out: list[tuple[str, str]] = []

@@ -246,7 +246,13 @@ class ShareSummaryStats:
 
 @dataclass(frozen=True)
 class ShareSummaryAllTimeStats:
-    """All-time taxonomy metrics for the summary row (not period-scoped)."""
+    """eBird/Clements taxonomy denominators for share-summary coverage stats.
+
+    ``total_species_taxa`` and ``total_families_taxa`` are exposed on cards.
+    ``observed_species_taxa``, ``observed_families``, and ``world_bird_coverage_pct``
+    are all-time coverage values from the Bird Families pipeline (internal / tests).
+    Card ``Observed species (%)`` uses period ``ShareSummaryStats.species`` instead.
+    """
 
     total_species_taxa: int | None = None
     total_families_taxa: int | None = None

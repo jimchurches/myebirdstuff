@@ -125,7 +125,7 @@ def test_minimal_story_renders_extra_selected_stats():
         "Countries",
         "Birding days",
         "Total individuals",
-        "Total bird families",
+        "Bird families",
     )
     html = render_share_summary_preview_html(
         stats,
@@ -134,7 +134,7 @@ def test_minimal_story_renders_extra_selected_stats():
         card_stat_labels=labels,
     )
     assert "Total individuals" in html
-    assert "Total bird families" in html
+    assert "Bird families" in html
 
 
 def test_tiles_story_renders_extra_selected_stats():
@@ -147,7 +147,7 @@ def test_tiles_story_renders_extra_selected_stats():
         "Countries",
         "Birding days",
         "Total individuals",
-        "Total bird families",
+        "Bird families",
     )
     html = render_share_summary_preview_html(
         stats,
@@ -156,7 +156,7 @@ def test_tiles_story_renders_extra_selected_stats():
         card_stat_labels=labels,
     )
     assert "Total individuals" in html
-    assert "Total bird families" in html
+    assert "Bird families" in html
 
 
 def test_hero_and_tiles_render_favourite_birds_block():
@@ -256,7 +256,7 @@ def test_spotlight_layout_accepts_all_time_label():
     from explorer.presentation.share_summary_preview import render_share_summary_preview_html
 
     stats = sample_share_summary_stats()
-    all_time = ShareSummaryAllTimeStats(world_bird_coverage_pct=6.8)
+    all_time = ShareSummaryAllTimeStats(total_species_taxa=10_800)
     html = render_share_summary_preview_html(
         stats,
         layout="spotlight",
@@ -264,17 +264,20 @@ def test_spotlight_layout_accepts_all_time_label():
         all_time=all_time,
     )
     assert "Observed species (%)" in html
-    assert "6.8%" in html
+    assert "2.9%" in html
 
 
 def test_summary_status_metrics_includes_observed_species_pct():
+    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats
     from explorer.presentation.share_summary_preview import summary_status_metrics
 
     stats = sample_share_summary_stats()
-    metrics = summary_status_metrics(stats, world_bird_coverage_pct=6.8)
+    all_time = ShareSummaryAllTimeStats(total_species_taxa=10_800)
+    metrics = summary_status_metrics(stats, all_time=all_time)
     labels = [lab for lab, _ in metrics]
     assert "Observed species (%)" in labels
-    assert labels.index("Observed species (%)") < labels.index("Total bird families")
+    assert dict(metrics)["Observed species (%)"] == "2.9%"
+    assert labels.index("Observed species (%)") > labels.index("Bird families")
 
 
 def test_summary_status_metrics_preferred_order():
@@ -282,10 +285,8 @@ def test_summary_status_metrics_preferred_order():
 
     stats = sample_share_summary_stats(period_kind="month")
     all_time = ShareSummaryAllTimeStats(
-        observed_species_taxa=312,
+        total_species_taxa=10_800,
         total_families_taxa=248,
-        observed_families=186,
-        world_bird_coverage_pct=6.8,
     )
     labels = [lab for lab, _ in summary_status_metrics(stats, all_time=all_time)]
     assert labels == [
@@ -301,11 +302,12 @@ def test_summary_status_metrics_preferred_order():
         "Days birding with others",
         "Longest streak (days)",
         "Total individuals",
-        "Observed species",
+        "Bird families",
         "Observed species (%)",
-        "Observed families",
-        "Total bird families",
+        "Species in eBird taxonomy",
+        "Families in eBird taxonomy",
     ]
+    assert dict(summary_status_metrics(stats, all_time=all_time))["Observed species (%)"] == "0.8%"
 
 
 def test_sample_share_summary_stats_lifetime_omits_lifers():
@@ -401,17 +403,14 @@ def test_card_stat_pairs_selected_labels_includes_all_time():
     from explorer.presentation.share_summary_preview import card_stat_pairs
 
     stats = sample_share_summary_stats()
-    all_time = ShareSummaryAllTimeStats(
-        world_bird_coverage_pct=6.8,
-        observed_species_taxa=847,
-    )
+    all_time = ShareSummaryAllTimeStats(total_species_taxa=10_800)
     pairs = card_stat_pairs(
         stats,
         max_count=4,
         selected_labels=("Observed species (%)", "Lifers"),
         all_time=all_time,
     )
-    assert pairs == [("Observed species (%)", "6.8%"), ("Lifers", "47")]
+    assert pairs == [("Observed species (%)", "2.9%"), ("Lifers", "47")]
 
 
 def test_trip_title_on_all_layouts():
