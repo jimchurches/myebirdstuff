@@ -83,6 +83,17 @@ def test_render_preview_includes_period_label_and_logo():
     assert "Personal eBird Explorer" in html
 
 
+def test_share_summary_color_scheme_ids_light_and_dark():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_COLOR_SCHEME_IDS,
+        share_summary_color_scheme_label,
+    )
+
+    assert SHARE_SUMMARY_COLOR_SCHEME_IDS == ("light", "dark")
+    assert share_summary_color_scheme_label("light") == "Light"
+    assert share_summary_color_scheme_label("dark") == "Dark"
+
+
 def test_preview_color_scheme_index_changes_palette():
     from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
 
@@ -237,17 +248,18 @@ def test_summary_status_metrics_preferred_order():
         world_bird_coverage_pct=6.8,
     )
     labels = [lab for lab, _ in summary_status_metrics(stats, all_time=all_time)]
-    assert labels[:8] == [
+    assert labels[:9] == [
         "Total species",
         "Lifers",
         "Total checklists",
+        "Completed checklists",
         "Unique locations",
         "Countries",
         "Birding hours",
         "Birding days",
         "Longest streak (days)",
     ]
-    assert labels[8:13] == [
+    assert labels[9:14] == [
         "Total individuals",
         "Total bird families",
         "World bird coverage",
@@ -263,6 +275,53 @@ def test_sample_share_summary_stats_lifetime_omits_lifers():
     assert stats.period_kind == "lifetime"
     assert stats.lifers is None
     assert stats.species == 847
+    assert stats.checklists == 1_240
+    assert stats.completed_checklists == 1_104
+
+
+def test_lifetime_default_card_stats():
+    from explorer.presentation.share_summary_preview import (
+        card_stat_pairs,
+        default_card_stat_labels,
+        sample_share_summary_stats,
+        summary_status_metrics,
+    )
+
+    stats = sample_share_summary_stats(period_kind="lifetime")
+    metrics = summary_status_metrics(stats)
+    hero = default_card_stat_labels("hero", metrics, period_kind="lifetime")
+    assert hero == (
+        "Total species",
+        "Countries",
+        "Total checklists",
+        "Unique locations",
+    )
+    tiles = default_card_stat_labels("minimal", metrics, period_kind="lifetime")
+    assert tiles == (
+        "Total species",
+        "Countries",
+        "Birding days",
+        "Total checklists",
+        "Total individuals",
+        "Longest streak (days)",
+    )
+    tile_labels = [lab for lab, _ in card_stat_pairs(stats, max_count=6, layout="tiles")]
+    assert tile_labels == list(tiles)
+
+
+def test_completed_checklists_in_summary_metrics():
+    from explorer.presentation.share_summary_preview import (
+        sample_share_summary_stats,
+        summary_status_metrics,
+    )
+
+    stats = sample_share_summary_stats(period_kind="year")
+    labels = [label for label, _ in summary_status_metrics(stats)]
+    assert "Total checklists" in labels
+    assert "Completed checklists" in labels
+    lookup = dict(summary_status_metrics(stats))
+    assert lookup["Total checklists"] == "186"
+    assert lookup["Completed checklists"] == "172"
 
 
 def test_card_stat_pairs_year_includes_countries():

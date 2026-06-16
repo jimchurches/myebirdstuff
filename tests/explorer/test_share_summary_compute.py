@@ -61,6 +61,21 @@ def test_compute_share_summary_stats_year():
     assert stats.species == 3
     assert stats.checklists == 2
     assert stats.lifers == 3
+    assert stats.completed_checklists == 2
+
+
+def test_compute_share_summary_stats_completed_checklists():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-01-10", species="Species a"),
+            _row(sid="S2", dt="2025-01-11", species="Species b"),
+        ]
+    )
+    df.loc[df["Submission ID"] == "S2", "All Obs Reported"] = 0
+    stats = compute_share_summary_stats(df, period_for_year(2025))
+    assert stats is not None
+    assert stats.checklists == 2
+    assert stats.completed_checklists == 1
 
 
 def test_longest_streak_for_month_period():

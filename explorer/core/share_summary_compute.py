@@ -31,6 +31,17 @@ PeriodKind = Literal["year", "month", "week", "custom", "lifetime"]
 LIFETIME_PERIOD_LABEL = "Lifetime"
 
 
+def _completed_checklist_mask(cl: pd.DataFrame) -> pd.Series | None:
+    """True for checklists with all observations reported (matches main app stats)."""
+    if "All Obs Reported" not in cl.columns:
+        return None
+    a = cl["All Obs Reported"]
+    return a.notna() & (
+        (pd.to_numeric(a, errors="coerce") == 1)
+        | (a.astype(str).str.strip().str.upper().isin(["TRUE", "YES", "Y"]))
+    )
+
+
 def _fmt_short_date(d: date) -> str:
     """Portable short date (e.g. ``5 Jan 2025``)."""
     return d.strftime("%d %b %Y").lstrip("0")
@@ -222,6 +233,7 @@ class ShareSummaryStats:
     families: int | None = None
     individuals: int | None = None
     checklists: int | None = None
+    completed_checklists: int | None = None
     locations: int | None = None
     lifers: int | None = None
     birding_hours: float | None = None
@@ -330,6 +342,10 @@ def compute_share_summary_stats(
     species = int(in_period_df["_base"].dropna().nunique()) if not in_period_df.empty else 0
     individuals = int(in_period_df["_count"].sum()) if not in_period_df.empty else 0
     checklists = int(len(in_period_cl))
+    completed_checklists = None
+    completed_mask = _completed_checklist_mask(in_period_cl)
+    if completed_mask is not None:
+        completed_checklists = int(completed_mask.sum())
     locations = int(in_period_cl["Location ID"].nunique()) if "Location ID" in in_period_cl.columns else None
 
     # Lifers: first checklist date for each species in the full dataset falls in period.
@@ -377,6 +393,7 @@ def compute_share_summary_stats(
         species=species,
         lifers=lifers,
         checklists=checklists,
+        completed_checklists=completed_checklists,
         locations=locations,
         families=families,
         individuals=individuals,

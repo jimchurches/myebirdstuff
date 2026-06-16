@@ -32,6 +32,8 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
+    SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
+    SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
@@ -90,6 +92,7 @@ _STAT_LABELS: dict[str, str] = {
     "families": "Total bird families",
     "individuals": "Total individuals",
     "checklists": "Total checklists",
+    "completed_checklists": "Completed checklists",
     "locations": "Unique locations",
     "lifers": "Lifers",
     "birding_hours": "Total birding hours",
@@ -203,6 +206,7 @@ def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
         ("species", stats.species, "species"),
         ("lifers", stats.lifers, "lifers"),
         ("checklists", stats.checklists, "checklists"),
+        ("completed_checklists", stats.completed_checklists, "completed_checklists"),
         ("locations", stats.locations, "locations"),
         ("families", stats.families, "families"),
         ("individuals", stats.individuals, "individuals"),
@@ -246,6 +250,7 @@ _SUMMARY_STATUS_ORDER: tuple[str, ...] = (
     "Total species",
     "Lifers",
     "Total checklists",
+    "Completed checklists",
     "Unique locations",
     "Countries",
     "Birding hours",
@@ -338,16 +343,29 @@ def layout_card_stat_storage_max(layout: LayoutId | None) -> int:
     return layout_card_stat_max(layout)
 
 
+def _preferred_default_stats(
+    layout: LayoutId,
+    period_kind: PeriodKind,
+) -> tuple[str, ...]:
+    """Default stat label order for *layout* and *period_kind*."""
+    if period_kind == "lifetime":
+        if layout == "hero":
+            return SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS
+        return SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS
+    if layout == "hero":
+        return SHARE_SUMMARY_HERO_DEFAULT_STATS
+    return SHARE_SUMMARY_TILES_DEFAULT_STATS
+
+
 def default_card_stat_labels(
     layout: LayoutId,
     available_metrics: Iterable[tuple[str, str]],
+    *,
+    period_kind: PeriodKind = "year",
 ) -> tuple[str, ...]:
     """Layout default stat labels filtered to *available_metrics*."""
     available = {label for label, _ in available_metrics}
-    if layout == "hero":
-        preferred = SHARE_SUMMARY_HERO_DEFAULT_STATS
-    else:
-        preferred = SHARE_SUMMARY_TILES_DEFAULT_STATS
+    preferred = _preferred_default_stats(layout, period_kind)
     max_count = layout_card_stat_max(layout)
     return tuple(lab for lab in preferred if lab in available)[:max_count]
 
@@ -380,15 +398,16 @@ def card_stat_pairs(
         return out
 
     all_p = stat_pairs(stats)
+    period_kind = stats.period_kind
 
     if layout == "hero":
-        preferred = SHARE_SUMMARY_HERO_DEFAULT_STATS
+        preferred = _preferred_default_stats("hero", period_kind)
     elif layout in ("tiles", "minimal"):
-        preferred = SHARE_SUMMARY_TILES_DEFAULT_STATS
+        preferred = _preferred_default_stats("tiles", period_kind)
     elif max_count <= 4:
-        preferred = SHARE_SUMMARY_HERO_DEFAULT_STATS
+        preferred = _preferred_default_stats("hero", period_kind)
     else:
-        preferred = SHARE_SUMMARY_TILES_DEFAULT_STATS
+        preferred = _preferred_default_stats("tiles", period_kind)
 
     labels: list[str] = []
     for lab in preferred:
@@ -488,6 +507,7 @@ def share_summary_stats_for_year(
         species=_int("Total species"),
         lifers=_int("Lifers"),
         checklists=_int("Total checklists"),
+        completed_checklists=_int("Completed checklists"),
         locations=_int("Unique locations"),
         families=_int("Total bird families"),
         individuals=_int("Total individuals"),
@@ -510,6 +530,7 @@ def sample_share_summary_stats(
             "species": 312,
             "lifers": 47,
             "checklists": 186,
+            "completed_checklists": 172,
             "locations": 42,
             "families": 89,
             "individuals": 12_450,
@@ -522,6 +543,7 @@ def sample_share_summary_stats(
             "species": 34,
             "lifers": 2,
             "checklists": 6,
+            "completed_checklists": 5,
             "locations": 4,
             "families": 28,
             "individuals": 420,
@@ -533,6 +555,7 @@ def sample_share_summary_stats(
             "species": 89,
             "lifers": 8,
             "checklists": 22,
+            "completed_checklists": 20,
             "locations": 11,
             "families": 45,
             "individuals": 1_840,
@@ -547,6 +570,7 @@ def sample_share_summary_stats(
             "species": 56,
             "lifers": 3,
             "checklists": 8,
+            "completed_checklists": 7,
             "locations": 6,
             "families": 32,
             "individuals": 680,
@@ -557,6 +581,7 @@ def sample_share_summary_stats(
         "lifetime": {
             "species": 847,
             "checklists": 1_240,
+            "completed_checklists": 1_104,
             "locations": 186,
             "families": 248,
             "individuals": 98_400,
@@ -576,6 +601,7 @@ def sample_share_summary_stats(
         species=int(d["species"]),
         lifers=int(d["lifers"]) if "lifers" in d else None,
         checklists=int(d["checklists"]),
+        completed_checklists=int(d["completed_checklists"]) if "completed_checklists" in d else None,
         locations=int(d["locations"]),
         families=int(d["families"]),
         individuals=int(d["individuals"]),

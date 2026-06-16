@@ -24,8 +24,8 @@ SHARE_SUMMARY_COLOR_SCHEMES: tuple[dict[str, str], ...] = (
         "accent": "#2d6a4f",
     },
     {
-        "id": "dark_forest",
-        "name": "Forest night",
+        "id": "dark",
+        "name": "Dark",
         "bg": "#0d120f",
         "bg_alt": "#161f19",
         "text": "#f0f3f1",
@@ -66,6 +66,21 @@ SHARE_SUMMARY_HERO_DEFAULT_STATS: tuple[str, ...] = (
 SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = SHARE_SUMMARY_HERO_DEFAULT_STATS + (
     "Countries",
     "Birding days",
+)
+# Lifetime (all data) — hero omits lifers; tiles/list share the same six-stat order.
+SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS: tuple[str, ...] = (
+    "Total species",
+    "Countries",
+    "Total checklists",
+    "Unique locations",
+)
+SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS: tuple[str, ...] = (
+    "Total species",
+    "Countries",
+    "Birding days",
+    "Total checklists",
+    "Total individuals",
+    "Longest streak (days)",
 )
 # List layout on story format (1080×1920) — defaults unchanged; user may add up to this many.
 SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS = 10

@@ -42,7 +42,6 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | Favourite bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
 | PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
 | PNG save UX | **Done (design app)** | **Export current card** below preview — PNG regenerated inside `@st.fragment` (Streamlit disallows sidebar inside fragments) |
-| All layouts comparison grid | **Design utility only** | Side-by-side four layouts in `design_share_summary_app.py`; **not** in main app (#276) |
 | Main app integration | **Design noted** | New **Social Cards** tab before Settings; tab-aware sidebar TBD |
 | Map thumbnail on card | **Dropped (v1)** | v2 |
 | Compare to last year | **Dropped (v1)** | v2 |
@@ -196,19 +195,18 @@ Captured from initial prototype review:
 - **Tab order:** last data tab, **immediately before Settings** (after Maintenance).
   - Proposed strip: Map → Checklist Statistics → Ranking & Lists → Bird Families → Yearly Summary → Country → Maintenance → **Social Cards** → Settings
   - Code touchpoint: `NOTEBOOK_MAIN_TAB_LABELS` in `explorer/app/streamlit/streamlit_ui_constants.py`
-- **Tab content:** Like the design mockup — period, layout, aspect ratio, spotlight stat, trip title, **current card** preview, and PNG export. Users change layout via sidebar controls; **no** all-layouts comparison grid (design utility only — see below).
-- **Not the standalone design app** long term — embed into main explorer once phases 1–2 are ready; keep `design_share_summary_app.py` as a dev utility until then.
+- **Tab content:** Like the design mockup — period, layout, aspect ratio, spotlight stat, trip title, **current card** preview, and PNG export. Users change layout via sidebar controls.
+- **Design utility** (`design_share_summary_app.py`) — kept for iteration without touching the main app; **UI should mirror the main app Social Cards tab** (sidebar + current card). Align fully when shipping #276.
 
 ### Design utility vs main app (#276)
 
 | Feature | Design studio (`design_share_summary_app.py`) | Main app **Social Cards** tab |
 |---------|--------------------------------------------------|-------------------------------|
 | **Current card** preview | Yes | Yes |
-| **All layouts** grid (four layouts at once) | **Yes** — helps compare/tune HTML layouts during design | **No** — users cycle layout via sidebar **Layout** control |
 | **Available statistics** expander | Yes | TBD (#276) |
 | **Export current card** | Yes — below **Current card** preview, inside `@st.fragment` | Yes — **generate on export click** with spinner (#276; see **PNG export UX**) |
 
-Rationale: end users do not need to see every layout variant on one screen; one preview plus layout picker is enough. The all-layouts section stays in the design utility for layout iteration only.
+Both use one **current card** preview; users cycle layout via sidebar **Layout** control.
 
 ### PNG export UX (#275 / #276)
 
@@ -308,7 +306,7 @@ When the user selects the **Social Cards** tab:
   - Layout: Hero grid / Stat tiles / Minimal list / Spotlight
   - Spotlight stat (when Spotlight layout)
   - Optional: preview scale (maybe main panel only)
-- Main panel: **current card** preview only (+ PNG export via sidebar). **No** all-layouts comparison grid — unlike the design studio.
+- Main panel: **current card** preview only (+ PNG export). Same pattern as the design studio.
 - **PNG export (#276):** generate on **Export current card** click with spinner — not pre-generated on every control change (see **PNG export UX**).
 
 When the user leaves **Social Cards** (any other main tab):
@@ -340,7 +338,7 @@ Other data tabs (Checklist, Yearly, …) — **no change for v1**; map sidebar c
 
 ### UX reference
 
-Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Social Cards tab **controls + current card preview**. Copy the **All layouts** section **only** for design tuning; omit it from the main app (#276).
+Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Social Cards tab **controls + current card preview** (#276).
 
 ---
 
@@ -494,7 +492,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling + export HTML |
 | `explorer/presentation/share_summary_png_export.py` | Playwright PNG pipeline + filename helper |
 | `explorer/app/streamlit/defaults.py` | Re-exports share-summary defaults for Streamlit tuning |
-| `explorer/app/streamlit/design_share_summary_app.py` | Design studio — current card + **All layouts** grid + sidebar export (not all mirrored in main app) |
+| `explorer/app/streamlit/design_share_summary_app.py` | Design studio — sidebar controls + current card preview (mirror for #276) |
 | `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Social Cards** before Settings |
 | `explorer/app/streamlit/app_map_working_ui.py` | Map sidebar today — refactor target for tab-aware sidebar |
 | `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Social Cards fragment |
@@ -578,5 +576,5 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-11 | #274: period stats hardening — shared stats, all-time taxonomy row, current/previous period + `suggest_period_anchor` heuristics documented |
 | 2026-06-11 | #275: Playwright PNG export — `share_summary_png_export.py`, design app `st.image` + download button; Cloud verification documented as open |
 | 2026-06-11 | Main app tab name decided: **Social Cards** (design studio + #276); retired ~~Socials~~ working title |
-| 2026-06-11 | **All layouts** grid: design utility only; main app shows current card + sidebar layout picker (#276) |
+| 2026-06-11 | Removed **All layouts** comparison grid from design studio; UI aligns with main app (current card + layout picker) |
 | 2026-06-11 | **PNG export UX:** design studio — export inside `@st.fragment`; main app (#276) — generate on export click with spinner |
