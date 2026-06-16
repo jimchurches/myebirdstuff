@@ -678,8 +678,8 @@ with st.sidebar:
             "year": "Yearly",
             "month": "Monthly",
             "week": "Weekly",
-            "custom": "Custom date range (trip)",
-            "lifetime": "Lifetime (all data)",
+            "custom": "Custom date range",
+            "lifetime": "Lifetime",
         }[x],
     )
     period_anchor: PeriodAnchor | None = None
@@ -730,19 +730,6 @@ with st.sidebar:
         )
 
     st.header(_CURRENT_CARD_LABEL)
-    color_theme_id = st.selectbox(
-        "Colour theme",
-        options=list(SHARE_SUMMARY_COLOR_SCHEME_IDS),
-        format_func=share_summary_color_scheme_label,
-        key=_COLOR_THEME_KEY,
-    )
-    color_scheme_index = share_summary_color_scheme_index(color_theme_id)
-    fmt: FormatId = st.selectbox(
-        "Aspect ratio",
-        options=["square", "portrait_post", "story"],
-        format_func=lambda x: _FORMAT_LABELS[x],
-    )
-    scale = st.slider("Preview scale", min_value=0.22, max_value=0.55, value=0.42, step=0.01)
     selected_layout: LayoutId = st.selectbox(
         "Layout",
         options=["hero", "tiles", "minimal", "spotlight"],
@@ -753,6 +740,19 @@ with st.sidebar:
             "spotlight": "Single stat spotlight",
         }[x],
     )
+    fmt: FormatId = st.selectbox(
+        "Aspect ratio",
+        options=["square", "portrait_post", "story"],
+        format_func=lambda x: _FORMAT_LABELS[x],
+    )
+    color_theme_id = st.selectbox(
+        "Theme",
+        options=list(SHARE_SUMMARY_COLOR_SCHEME_IDS),
+        format_func=share_summary_color_scheme_label,
+        key=_COLOR_THEME_KEY,
+    )
+    color_scheme_index = share_summary_color_scheme_index(color_theme_id)
+    scale = st.slider("Preview scale", min_value=0.22, max_value=0.55, value=0.42, step=0.01)
 
 df: pd.DataFrame | None = None
 resolved_period = None
