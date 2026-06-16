@@ -274,7 +274,7 @@ def test_summary_status_metrics_includes_observed_species_pct():
     metrics = summary_status_metrics(stats, world_bird_coverage_pct=6.8)
     labels = [lab for lab, _ in metrics]
     assert "Observed species (%)" in labels
-    assert labels.index("Observed species (%)") > labels.index("Total bird families")
+    assert labels.index("Observed species (%)") < labels.index("Total bird families")
 
 
 def test_summary_status_metrics_preferred_order():
@@ -288,23 +288,23 @@ def test_summary_status_metrics_preferred_order():
         world_bird_coverage_pct=6.8,
     )
     labels = [lab for lab, _ in summary_status_metrics(stats, all_time=all_time)]
-    assert labels[:9] == [
+    assert labels == [
         "Total species",
         "Lifers",
         "Total checklists",
         "Completed checklists",
+        "Shared checklists",
         "Unique locations",
         "Countries",
         "Birding hours",
         "Birding days",
+        "Days birding with others",
         "Longest streak (days)",
-    ]
-    assert labels[9:14] == [
         "Total individuals",
-        "Total bird families",
-        "Observed species (%)",
         "Observed species",
+        "Observed species (%)",
         "Observed families",
+        "Total bird families",
     ]
 
 

@@ -221,6 +221,8 @@ def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
     for key, val, fmt in raw:
         if val is None:
             continue
+        if key in ("shared_checklists", "days_birding_with_others") and val == 0:
+            continue
         if fmt == "hours":
             display = f"{val:,.1f}" if val else "—"
             label = "Birding hours"
@@ -251,16 +253,18 @@ _SUMMARY_STATUS_ORDER: tuple[str, ...] = (
     "Lifers",
     "Total checklists",
     "Completed checklists",
+    "Shared checklists",
     "Unique locations",
     "Countries",
     "Birding hours",
     "Birding days",
+    "Days birding with others",
     "Longest streak (days)",
     "Total individuals",
-    "Total bird families",
-    "Observed species (%)",
     "Observed species",
+    "Observed species (%)",
     "Observed families",
+    "Total bird families",
 )
 
 
