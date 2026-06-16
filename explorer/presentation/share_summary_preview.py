@@ -258,9 +258,9 @@ _SUMMARY_STATUS_ORDER: tuple[str, ...] = (
     "Longest streak (days)",
     "Total individuals",
     "Total bird families",
-    "World bird coverage",
-    "World bird species",
-    "World bird families (from taxa)",
+    "Observed species (%)",
+    "Observed species",
+    "Observed families",
 )
 
 
@@ -274,13 +274,13 @@ def _metrics_lookup(
     lookup: dict[str, str] = dict(stat_pairs(stats))
     if all_time is not None:
         if all_time.world_bird_coverage_pct is not None:
-            lookup["World bird coverage"] = f"{all_time.world_bird_coverage_pct:.1f}%"
+            lookup["Observed species (%)"] = f"{all_time.world_bird_coverage_pct:.1f}%"
         if all_time.observed_species_taxa is not None:
-            lookup["World bird species"] = f"{all_time.observed_species_taxa:,}"
-        if all_time.total_families_taxa is not None:
-            lookup["World bird families (from taxa)"] = f"{all_time.total_families_taxa:,}"
+            lookup["Observed species"] = f"{all_time.observed_species_taxa:,}"
+        if all_time.observed_families is not None:
+            lookup["Observed families"] = f"{all_time.observed_families:,}"
     elif world_bird_coverage_pct is not None:
-        lookup["World bird coverage"] = f"{world_bird_coverage_pct:.1f}%"
+        lookup["Observed species (%)"] = f"{world_bird_coverage_pct:.1f}%"
     return lookup
 
 

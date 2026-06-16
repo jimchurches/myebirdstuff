@@ -251,6 +251,7 @@ class ShareSummaryAllTimeStats:
     total_species_taxa: int | None = None
     total_families_taxa: int | None = None
     observed_species_taxa: int | None = None
+    observed_families: int | None = None
     world_bird_coverage_pct: float | None = None
 
 
@@ -432,9 +433,14 @@ def compute_share_summary_all_time_stats(
 
     observed, total_sp, pct = compute_world_species_coverage(detail)
     total_families = int(summary["group_name"].nunique()) if not summary.empty else None
+    observed_families = None
+    if not summary.empty and "seen_species" in summary.columns:
+        seen = pd.to_numeric(summary["seen_species"], errors="coerce").fillna(0)
+        observed_families = int((seen > 0).sum())
     return ShareSummaryAllTimeStats(
         total_species_taxa=total_sp,
         total_families_taxa=total_families,
         observed_species_taxa=observed,
+        observed_families=observed_families,
         world_bird_coverage_pct=pct,
     )

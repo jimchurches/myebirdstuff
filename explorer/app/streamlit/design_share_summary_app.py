@@ -773,6 +773,7 @@ all_time: ShareSummaryAllTimeStats | None = ShareSummaryAllTimeStats(
     total_species_taxa=10_800,
     total_families_taxa=248,
     observed_species_taxa=10_001,
+    observed_families=198,
     world_bird_coverage_pct=6.8,
 )
 

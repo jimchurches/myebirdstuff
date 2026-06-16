@@ -284,12 +284,13 @@ def test_summary_status_metrics_includes_all_time_stats():
         total_species_taxa=10_800,
         observed_species_taxa=312,
         total_families_taxa=248,
+        observed_families=186,
         world_bird_coverage_pct=6.8,
     )
     pairs = dict(summary_status_metrics(stats, all_time=all_time))
-    assert pairs["World bird species"] == "312"
-    assert pairs["World bird families (from taxa)"] == "248"
-    assert pairs["World bird coverage"] == "6.8%"
+    assert pairs["Observed species"] == "312"
+    assert pairs["Observed families"] == "186"
+    assert pairs["Observed species (%)"] == "6.8%"
 
 
 def test_compute_share_summary_all_time_stats_from_fixture(monkeypatch):
@@ -332,6 +333,8 @@ def test_compute_share_summary_all_time_stats_from_fixture(monkeypatch):
     assert all_time is not None
     assert all_time.total_species_taxa == 2
     assert all_time.total_families_taxa == 2
+    assert all_time.observed_families is not None
+    assert all_time.observed_families <= (all_time.total_families_taxa or 0)
     assert all_time.world_bird_coverage_pct is not None
     assert all_time.world_bird_coverage_pct > 0
 
