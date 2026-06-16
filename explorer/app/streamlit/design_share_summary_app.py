@@ -663,7 +663,7 @@ def _current_card_fragment(
         st.warning(str(exc))
     else:
         _centered_card_download_button(
-            label="Export current card",
+            label="Export card",
             data=png_bytes,
             file_name=png_filename,
             mime="image/png",
