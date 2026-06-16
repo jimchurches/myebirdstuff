@@ -94,6 +94,36 @@ def test_preview_color_scheme_index_changes_palette():
     assert light != dark
 
 
+def test_layout_card_stat_max_list_story_supports_ten():
+    from explorer.presentation.share_summary_preview import layout_card_stat_max
+
+    assert layout_card_stat_max("minimal", "story") == 10
+    assert layout_card_stat_max("minimal", "square") == 6
+    assert layout_card_stat_max("hero", "story") == 4
+
+
+def test_minimal_story_renders_extra_selected_stats():
+    stats = sample_share_summary_stats()
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+        "Total bird families",
+    )
+    html = render_share_summary_preview_html(
+        stats,
+        layout="minimal",
+        fmt="story",
+        card_stat_labels=labels,
+    )
+    assert "Total individuals" in html
+    assert "Total bird families" in html
+
+
 def test_hero_and_tiles_render_favourite_birds_block():
     stats = sample_share_summary_stats()
     birds = ("Superb Fairywren", "Rainbow Lorikeet")
@@ -152,6 +182,7 @@ def test_spotlight_species_label_by_period():
     assert spotlight_species_label("month") == "Month birds"
     assert spotlight_species_label("week") == "Week birds"
     assert spotlight_species_label("custom") == "Species"
+    assert spotlight_species_label("lifetime") == "Species"
 
     year = ShareSummaryStats(period_label="2025", period_kind="year", species=312)
     assert spotlight_value(year, "species") == ("Total species", "312")
@@ -223,6 +254,15 @@ def test_summary_status_metrics_preferred_order():
         "World bird species (from taxa)",
         "World bird families (from taxa)",
     ]
+
+
+def test_sample_share_summary_stats_lifetime_omits_lifers():
+    from explorer.presentation.share_summary_preview import sample_share_summary_stats
+
+    stats = sample_share_summary_stats(period_label="Lifetime", period_kind="lifetime")
+    assert stats.period_kind == "lifetime"
+    assert stats.lifers is None
+    assert stats.species == 847
 
 
 def test_card_stat_pairs_year_includes_countries():

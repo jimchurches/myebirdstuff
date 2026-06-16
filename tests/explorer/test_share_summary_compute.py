@@ -9,6 +9,7 @@ from explorer.core.share_summary_compute import (
     compute_share_summary_stats,
     format_custom_date_range,
     period_for_custom,
+    period_for_lifetime,
     period_for_month,
     period_for_previous_month,
     period_for_previous_week_containing,
@@ -91,6 +92,46 @@ def test_longest_streak_not_computed_for_custom_trip():
     )
     assert stats is not None
     assert stats.longest_streak is None
+
+
+def test_period_for_lifetime_uses_full_export_span():
+    period = period_for_lifetime(date(2018, 3, 15), date(2025, 11, 2))
+    assert period.kind == "lifetime"
+    assert period.start == date(2018, 3, 15)
+    assert period.end == date(2025, 11, 2)
+    assert period.label == "Lifetime"
+
+
+def test_compute_share_summary_stats_lifetime_omits_lifers():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2020-01-10", species="Species a"),
+            _row(sid="S2", dt="2024-06-01", species="Species b"),
+            _row(sid="S3", dt="2024-12-31", species="Species c"),
+        ]
+    )
+    period = period_for_lifetime(date(2020, 1, 10), date(2024, 12, 31))
+    stats = compute_share_summary_stats(df, period)
+    assert stats is not None
+    assert stats.period_kind == "lifetime"
+    assert stats.species == 3
+    assert stats.checklists == 3
+    assert stats.lifers is None
+
+
+def test_compute_share_summary_stats_lifetime_longest_streak():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2020-01-01", species="Species a"),
+            _row(sid="S2", dt="2020-01-02", species="Species a"),
+            _row(sid="S3", dt="2020-01-03", species="Species a"),
+            _row(sid="S4", dt="2020-06-01", species="Species b"),
+        ]
+    )
+    period = period_for_lifetime(date(2020, 1, 1), date(2020, 12, 31))
+    stats = compute_share_summary_stats(df, period)
+    assert stats is not None
+    assert stats.longest_streak == 3
 
 
 def test_countries_for_year_period():

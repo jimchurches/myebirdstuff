@@ -67,6 +67,8 @@ SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = SHARE_SUMMARY_HERO_DEFAULT_
     "Countries",
     "Birding days",
 )
+# List layout on story format (1080×1920) — defaults unchanged; user may add up to this many.
+SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS = 10
 SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT = "lifers"
 # Display label on spotlight cards (matches Available statistics / card picker).
 SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"

@@ -26,7 +26,9 @@ from explorer.core.stats import (
 )
 
 PeriodAnchor = Literal["current", "previous"]
-PeriodKind = Literal["year", "month", "week", "custom"]
+PeriodKind = Literal["year", "month", "week", "custom", "lifetime"]
+
+LIFETIME_PERIOD_LABEL = "Lifetime"
 
 
 def _fmt_short_date(d: date) -> str:
@@ -197,6 +199,18 @@ def period_for_custom(
     )
 
 
+def period_for_lifetime(start: date, end: date) -> ShareSummaryPeriod:
+    """Full export span — inclusive dates from first to last checklist in the CSV."""
+    if end < start:
+        start, end = end, start
+    return ShareSummaryPeriod(
+        kind="lifetime",
+        start=start,
+        end=end,
+        label=LIFETIME_PERIOD_LABEL,
+    )
+
+
 @dataclass(frozen=True)
 class ShareSummaryStats:
     """Headline stats for one share-summary period."""
@@ -320,12 +334,13 @@ def compute_share_summary_stats(
 
     # Lifers: first checklist date for each species in the full dataset falls in period.
     lifers = None
-    base_all = countable_species_vectorized(df_all.dropna(subset=["Date"]))
-    lifer_df = df_all.dropna(subset=["Date"]).assign(_base=base_all).dropna(subset=["_base"])
-    if not lifer_df.empty:
-        first_seen = lifer_df.groupby("_base")["Date"].min()
-        first_in_period = first_seen[_mask_in_period(first_seen, period)]
-        lifers = int(len(first_in_period))
+    if period.kind != "lifetime":
+        base_all = countable_species_vectorized(df_all.dropna(subset=["Date"]))
+        lifer_df = df_all.dropna(subset=["Date"]).assign(_base=base_all).dropna(subset=["_base"])
+        if not lifer_df.empty:
+            first_seen = lifer_df.groupby("_base")["Date"].min()
+            first_in_period = first_seen[_mask_in_period(first_seen, period)]
+            lifers = int(len(first_in_period))
 
     families = None
     loc = (taxonomy_locale or "").strip() or TAXONOMY_LOCALE_DEFAULT
@@ -345,7 +360,7 @@ def compute_share_summary_stats(
     days = int(in_period_cl["Date"].dt.normalize().nunique())
 
     longest_streak_days = None
-    if period.kind in ("year", "month"):
+    if period.kind in ("year", "month", "lifetime"):
         unique_dates = in_period_cl["Date"].dt.normalize().unique()
         streak_val, *_ = longest_streak(unique_dates, in_period_cl)
         longest_streak_days = int(streak_val)

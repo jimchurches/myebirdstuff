@@ -55,7 +55,9 @@ from explorer.presentation.share_summary_preview import (
     compute_share_summary_stats,
     default_card_stat_labels,
     layout_card_stat_max,
+    layout_card_stat_storage_max,
     period_for_custom,
+    period_for_lifetime,
     period_for_month,
     period_for_week_containing,
     period_for_year,
@@ -311,6 +313,26 @@ def _card_stat_slot_count_key(layout: LayoutId) -> str:
     return f"{_CARD_STATS_SLOT_COUNT_PREFIX}{layout}"
 
 
+def _story_list_stat_picker(fmt: FormatId, layout: LayoutId) -> bool:
+    return layout == "minimal" and fmt == "story"
+
+
+def _card_stat_ui_row_count(layout: LayoutId, fmt: FormatId, *, slot_count: int) -> int:
+    max_slots = layout_card_stat_max(layout, fmt)
+    if _story_list_stat_picker(fmt, layout):
+        return max_slots
+    return min(max(1, slot_count), max_slots)
+
+
+def _effective_card_stat_labels(
+    picks: list[str],
+    layout: LayoutId,
+    fmt: FormatId,
+) -> tuple[str, ...]:
+    max_slots = layout_card_stat_max(layout, fmt)
+    return tuple(label for label in picks if label)[:max_slots]
+
+
 def _sanitize_card_stat_picks(
     picks: list[str],
     *,
@@ -332,66 +354,86 @@ def _sanitize_card_stat_picks(
 def _ensure_card_stat_picks(
     layout: LayoutId,
     status_metrics: list[tuple[str, str]],
+    fmt: FormatId,
 ) -> list[str]:
-    """Initialize or sanitize session picks for *layout*."""
-    max_slots = layout_card_stat_max(layout)
+    """Initialize or sanitize session picks for *layout*; returns UI row values."""
+    max_slots = layout_card_stat_max(layout, fmt)
+    storage_max = layout_card_stat_storage_max(layout)
     available = frozenset(label for label, _ in status_metrics)
     picks_key = _card_stat_picks_key(layout)
     count_key = _card_stat_slot_count_key(layout)
+    fixed_rows = _story_list_stat_picker(fmt, layout)
 
     if picks_key not in st.session_state:
-        defaults = default_card_stat_labels(layout, status_metrics)
-        st.session_state[picks_key] = list(defaults)
-        st.session_state[count_key] = max(1, len(defaults))
+        defaults = list(default_card_stat_labels(layout, status_metrics))
+        if fixed_rows:
+            st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
+            st.session_state[count_key] = max_slots
+        else:
+            st.session_state[picks_key] = defaults
+            st.session_state[count_key] = max(1, len(defaults))
 
     sanitized = _sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
         available=available,
-        max_slots=max_slots,
+        max_slots=storage_max,
     )
-    slot_count = min(int(st.session_state.get(count_key, max(1, len(sanitized)))), max_slots)
-    slot_count = max(1, slot_count, len(sanitized))
-    st.session_state[picks_key] = sanitized
-    st.session_state[count_key] = slot_count
-    return sanitized
+    slot_count = int(st.session_state.get(count_key, max(1, len(sanitized))))
+    ui_rows = _card_stat_ui_row_count(layout, fmt, slot_count=slot_count)
+
+    raw = list(st.session_state[picks_key])
+    if fixed_rows:
+        picks = (raw + [""] * ui_rows)[:ui_rows]
+    else:
+        compact = [p for p in raw if p]
+        picks = (compact + [""] * ui_rows)[:ui_rows]
+        st.session_state[count_key] = ui_rows
+
+    st.session_state[picks_key] = picks
+    return picks
 
 
 def _card_stat_picker_ui(
     layout: LayoutId,
     status_metrics: list[tuple[str, str]],
+    fmt: FormatId,
 ) -> tuple[str, ...]:
-    """Ordered stat picker for hero / tiles / minimal; hidden for spotlight."""
+    """Ordered stat picker for hero / tiles / list; hidden for spotlight."""
     if layout == "spotlight":
         return ()
 
-    max_slots = layout_card_stat_max(layout)
+    max_slots = layout_card_stat_max(layout, fmt)
+    fixed_rows = _story_list_stat_picker(fmt, layout)
     available_labels = [label for label, _ in status_metrics]
-    available = frozenset(available_labels)
     if not available_labels:
         st.caption("No statistics available for this period.")
         return ()
 
     picks_key = _card_stat_picks_key(layout)
     count_key = _card_stat_slot_count_key(layout)
-    _ensure_card_stat_picks(layout, status_metrics)
-    slot_count = min(int(st.session_state[count_key]), max_slots)
-
-    picks: list[str] = list(st.session_state[picks_key])
-    while len(picks) < slot_count:
-        picks.append("")
-
-    st.caption(
-        f"Choose up to {max_slots} stats for this layout. Order matches position on the card."
+    picks = _ensure_card_stat_picks(layout, status_metrics, fmt)
+    ui_rows = _card_stat_ui_row_count(
+        layout, fmt, slot_count=int(st.session_state[count_key])
     )
 
-    for i in range(slot_count):
+    if fixed_rows:
+        st.caption(
+            f"Story list supports up to {max_slots} stats. "
+            "Empty rows are ignored. Order matches the card."
+        )
+    else:
+        st.caption(
+            f"Choose up to {max_slots} stats for this layout. Order matches position on the card."
+        )
+
+    for i in range(ui_rows):
         current = picks[i] if i < len(picks) else ""
         other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
         options = [""] + [lab for lab in available_labels if lab not in other]
-        row_label = "Stat" if slot_count == 1 else f"Stat {i + 1}"
+        row_label = "Stat" if ui_rows == 1 else f"Stat {i + 1}"
         can_up = i > 0
-        can_down = i < slot_count - 1
-        can_remove = i > 0 or bool(current)
+        can_down = i < ui_rows - 1
+        can_remove = bool(current) if fixed_rows else (i > 0 or bool(current))
 
         col_sel, col_actions = st.columns([11, 3], vertical_alignment="center")
         with col_sel:
@@ -414,7 +456,7 @@ def _card_stat_picker_ui(
                     use_container_width=True,
                 ):
                     picks[i - 1], picks[i] = picks[i], picks[i - 1]
-                    st.session_state[picks_key] = picks[:slot_count]
+                    st.session_state[picks_key] = picks[:ui_rows]
                     st.rerun()
             with btn_down:
                 if st.button(
@@ -425,7 +467,7 @@ def _card_stat_picker_ui(
                     use_container_width=True,
                 ):
                     picks[i + 1], picks[i] = picks[i], picks[i + 1]
-                    st.session_state[picks_key] = picks[:slot_count]
+                    st.session_state[picks_key] = picks[:ui_rows]
                     st.rerun()
             with btn_rm:
                 if st.button(
@@ -435,24 +477,26 @@ def _card_stat_picker_ui(
                     disabled=not can_remove,
                     use_container_width=True,
                 ):
-                    if i == 0 and slot_count == 1:
+                    if fixed_rows:
+                        picks[i] = ""
+                    elif i == 0 and ui_rows == 1:
                         picks[0] = ""
                     elif i == 0:
                         picks.pop(0)
-                        st.session_state[count_key] = slot_count - 1
+                        st.session_state[count_key] = ui_rows - 1
                     else:
                         picks.pop(i)
-                        st.session_state[count_key] = slot_count - 1
-                    st.session_state[picks_key] = picks
+                        st.session_state[count_key] = ui_rows - 1
+                    st.session_state[picks_key] = picks[:ui_rows]
                     st.rerun()
 
     foot_add, foot_reset, _ = st.columns([1, 1, 6], vertical_alignment="center")
     with foot_add:
-        if slot_count < max_slots and st.button(
+        if not fixed_rows and ui_rows < max_slots and st.button(
             "Add stat",
             key=f"design_card_stat_add_{layout}",
         ):
-            st.session_state[count_key] = slot_count + 1
+            st.session_state[count_key] = ui_rows + 1
             st.rerun()
     with foot_reset:
         if st.button(
@@ -461,16 +505,16 @@ def _card_stat_picker_ui(
             help="Restore this layout's default stat list",
         ):
             defaults = list(default_card_stat_labels(layout, status_metrics))
-            st.session_state[picks_key] = defaults
-            st.session_state[count_key] = max(1, len(defaults))
+            if fixed_rows:
+                st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
+                st.session_state[count_key] = max_slots
+            else:
+                st.session_state[picks_key] = defaults
+                st.session_state[count_key] = max(1, len(defaults))
             st.rerun()
 
-    st.session_state[picks_key] = _sanitize_card_stat_picks(
-        picks[:slot_count],
-        available=available,
-        max_slots=max_slots,
-    )
-    final = tuple(st.session_state[picks_key])
+    st.session_state[picks_key] = picks[:ui_rows]
+    final = _effective_card_stat_labels(picks, layout, fmt)
     if not final:
         st.caption("Select at least one stat to show on the card.")
     return final
@@ -479,17 +523,20 @@ def _card_stat_picker_ui(
 def _card_stat_labels_from_session(
     layout: LayoutId,
     status_metrics: list[tuple[str, str]],
+    fmt: FormatId,
 ) -> tuple[str, ...]:
     if layout == "spotlight":
         return ()
-    return tuple(_ensure_card_stat_picks(layout, status_metrics))
+    picks = _ensure_card_stat_picks(layout, status_metrics, fmt)
+    return _effective_card_stat_labels(picks, layout, fmt)
 
 
 def _card_stat_labels_by_layout_from_session(
     status_metrics: list[tuple[str, str]],
+    fmt: FormatId,
 ) -> dict[LayoutId, tuple[str, ...]]:
     return {
-        layout_id: _card_stat_labels_from_session(layout_id, status_metrics)
+        layout_id: _card_stat_labels_from_session(layout_id, status_metrics, fmt)
         for layout_id in ("hero", "tiles", "minimal")
     }
 
@@ -568,10 +615,10 @@ def _current_card_fragment(
         if selected_layout == "spotlight":
             _spotlight_stat_picker(status_metrics)
         else:
-            _card_stat_picker_ui(selected_layout, status_metrics)
+            _card_stat_picker_ui(selected_layout, status_metrics, fmt)
 
     spotlight_label = _spotlight_label_from_session(status_metrics)
-    card_stat_labels_by_layout = _card_stat_labels_by_layout_from_session(status_metrics)
+    card_stat_labels_by_layout = _card_stat_labels_by_layout_from_session(status_metrics, fmt)
     card_stat_labels = card_stat_labels_by_layout.get(selected_layout, ())
 
     st.subheader(_CURRENT_CARD_LABEL)
@@ -629,7 +676,7 @@ def _current_card_fragment(
     layout_labels = {
         "hero": "Hero grid",
         "tiles": "Stat tiles",
-        "minimal": "Minimal list",
+        "minimal": "List",
         "spotlight": "Spotlight",
     }
     for col, (layout_id, html) in zip(layout_cols, previews.items()):
@@ -652,12 +699,13 @@ with st.sidebar:
     st.header("Period")
     period_mode = st.selectbox(
         "Range",
-        options=["year", "month", "week", "custom"],
+        options=["year", "month", "week", "custom", "lifetime"],
         format_func=lambda x: {
             "year": "Yearly",
             "month": "Monthly",
             "week": "Weekly",
             "custom": "Custom date range (trip)",
+            "lifetime": "Lifetime (all data)",
         }[x],
     )
     period_anchor: PeriodAnchor | None = None
@@ -727,7 +775,7 @@ with st.sidebar:
         format_func=lambda x: {
             "hero": "Hero grid (4 stats)",
             "tiles": "Stat tiles (6)",
-            "minimal": "Minimal list",
+            "minimal": "List",
             "spotlight": "Single stat spotlight",
         }[x],
     )
@@ -766,6 +814,8 @@ else:
             period_label="May 31, 2025 - June 6, 2025",
             period_kind="week",
         )
+    elif period_mode == "lifetime":
+        stats = sample_share_summary_stats(period_label="Lifetime", period_kind="lifetime")
     elif sample_custom_start is not None and sample_custom_end is not None:
         start, end = sample_custom_start, sample_custom_end
         if end < start:
@@ -809,7 +859,9 @@ if df is not None:
             ]
             pick = st.sidebar.selectbox("Week", options=range(len(week_labels)), format_func=lambda i: week_labels[i])
             period = period_for_week_containing(week_starts[pick])
-    else:
+    elif period_mode == "lifetime":
+        period = period_for_lifetime(min_d, max_d)
+    elif period_mode == "custom":
         start = st.sidebar.date_input(
             "Start date",
             value=min_d,

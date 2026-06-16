@@ -22,6 +22,7 @@ from explorer.core.share_summary_compute import (
     compute_share_summary_stats,
     period_for_custom,
     period_for_iso_week,
+    period_for_lifetime,
     period_for_month,
     period_for_week_containing,
     period_for_year,
@@ -31,6 +32,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
+    SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
 )
@@ -114,6 +116,8 @@ _LEGACY_SPOTLIGHT_ID_TO_LABEL: dict[SpotlightStatId, str] = {
 
 def spotlight_species_label(period_kind: PeriodKind) -> str:
     """Spotlight label for species count — matches selected period."""
+    if period_kind == "lifetime":
+        return "Species"
     if period_kind == "year":
         return "Year birds"
     if period_kind == "month":
@@ -314,13 +318,24 @@ def available_card_metrics(
     )
 
 
-def layout_card_stat_max(layout: LayoutId | None) -> int:
+def layout_card_stat_max(layout: LayoutId | None, fmt: FormatId | None = None) -> int:
     """Maximum stat slots on grid/list layouts (spotlight uses a separate control)."""
     if layout == "hero":
         return 4
-    if layout in ("tiles", "minimal"):
+    if layout == "tiles":
+        return 6
+    if layout == "minimal":
+        if fmt == "story":
+            return SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
         return 6
     return 6
+
+
+def layout_card_stat_storage_max(layout: LayoutId | None) -> int:
+    """Session storage cap — list layout retains extra picks when switching aspect ratio."""
+    if layout == "minimal":
+        return SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
+    return layout_card_stat_max(layout)
 
 
 def default_card_stat_labels(
@@ -539,6 +554,19 @@ def sample_share_summary_stats(
             "birding_hours": 18.0,
             "countries": 2,
         },
+        "lifetime": {
+            "species": 847,
+            "checklists": 1_240,
+            "locations": 186,
+            "families": 248,
+            "individuals": 98_400,
+            "days_with_checklist": 412,
+            "birding_hours": 892.0,
+            "longest_streak": 21,
+            "countries": 12,
+            "shared_checklists": 86,
+            "days_birding_with_others": 54,
+        },
     }
     d = demo.get(period_kind, demo["year"])
     return ShareSummaryStats(
@@ -546,7 +574,7 @@ def sample_share_summary_stats(
         period_kind=period_kind,
         trip_title=trip_title,
         species=int(d["species"]),
-        lifers=int(d["lifers"]),
+        lifers=int(d["lifers"]) if "lifers" in d else None,
         checklists=int(d["checklists"]),
         locations=int(d["locations"]),
         families=int(d["families"]),
@@ -622,6 +650,8 @@ def _subtitle_for_period(stats: ShareSummaryStats) -> str:
         return "Monthly birding summary"
     if stats.period_kind == "week":
         return "Weekly birding summary"
+    if stats.period_kind == "lifetime":
+        return "My eBird data"
     return "Birding summary"
 
 
@@ -682,10 +712,11 @@ def _resolve_card_stat_pairs(
     stats: ShareSummaryStats,
     *,
     layout: LayoutId,
+    fmt: FormatId | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
 ) -> list[tuple[str, str]]:
-    max_count = layout_card_stat_max(layout)
+    max_count = layout_card_stat_max(layout, fmt)
     if card_stat_labels:
         return card_stat_pairs(
             stats,
@@ -783,15 +814,23 @@ def _layout_minimal(
     all_time: ShareSummaryAllTimeStats | None = None,
 ) -> str:
     pairs = _resolve_card_stat_pairs(
-        stats, layout="minimal", card_stat_labels=card_stat_labels, all_time=all_time
+        stats,
+        layout="minimal",
+        fmt=fmt,
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
     )
+    if fmt == "story" and len(pairs) > 6:
+        label_px, value_px, row_pad = "24px", "38px", "12px"
+    else:
+        label_px, value_px, row_pad = "28px", "44px", "20px"
     rows = []
     for label, value in pairs:
         rows.append(f"""
 <div style="display:flex;justify-content:space-between;align-items:baseline;
-  padding:20px 0;border-bottom:1px solid {_colour("border")};">
-  <span style="font-size:28px;color:{_colour("muted")};">{_esc(label)}</span>
-  <span style="font-size:44px;font-weight:700;">{_esc(value)}</span>
+  padding:{row_pad} 0;border-bottom:1px solid {_colour("border")};">
+  <span style="font-size:{label_px};color:{_colour("muted")};">{_esc(label)}</span>
+  <span style="font-size:{value_px};font-weight:700;">{_esc(value)}</span>
 </div>""")
     pad_bottom = _footer_pad(fmt, width, height)
     return f"""
@@ -1024,6 +1063,7 @@ __all__ = [
     "all_layout_previews_html",
     "compute_share_summary_stats",
     "period_for_custom",
+    "period_for_lifetime",
     "period_for_iso_week",
     "period_for_week_containing",
     "period_for_month",
@@ -1042,6 +1082,7 @@ __all__ = [
     "summary_status_metrics",
     "available_card_metrics",
     "layout_card_stat_max",
+    "layout_card_stat_storage_max",
     "default_card_stat_labels",
     "card_stat_pairs",
     "_FORMAT_LABELS",
