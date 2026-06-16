@@ -381,7 +381,11 @@ def _card_stat_picker_ui(
         other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
         options = [""] + [lab for lab in available_labels if lab not in other]
         row_label = "Stat" if slot_count == 1 else f"Stat {i + 1}"
-        col_sel, col_up, col_down, col_rm = st.columns([6, 1, 1, 1])
+        can_up = i > 0
+        can_down = i < slot_count - 1
+        can_remove = i > 0 or bool(current)
+
+        col_sel, col_actions = st.columns([11, 3], vertical_alignment="center")
         with col_sel:
             choice = st.selectbox(
                 row_label,
@@ -391,47 +395,62 @@ def _card_stat_picker_ui(
                 key=f"design_card_stat_sel_{layout}_{i}",
             )
             picks[i] = choice or ""
-        with col_up:
-            if i > 0 and st.button("↑", key=f"design_card_stat_up_{layout}_{i}", help="Move up"):
-                picks[i - 1], picks[i] = picks[i], picks[i - 1]
-                st.session_state[picks_key] = picks[:slot_count]
-                st.rerun()
-        with col_down:
-            if i < slot_count - 1 and st.button(
-                "↓", key=f"design_card_stat_down_{layout}_{i}", help="Move down"
-            ):
-                picks[i + 1], picks[i] = picks[i], picks[i + 1]
-                st.session_state[picks_key] = picks[:slot_count]
-                st.rerun()
-        with col_rm:
-            if (i > 0 or current) and st.button(
-                "Remove",
-                key=f"design_card_stat_rm_{layout}_{i}",
-                help="Remove this stat slot",
-            ):
-                if i == 0 and slot_count == 1:
-                    picks[0] = ""
-                elif i == 0:
-                    picks.pop(0)
-                    st.session_state[count_key] = slot_count - 1
-                else:
-                    picks.pop(i)
-                    st.session_state[count_key] = slot_count - 1
-                st.session_state[picks_key] = picks
-                st.rerun()
+        with col_actions:
+            btn_up, btn_down, btn_rm = st.columns(3, gap="small")
+            with btn_up:
+                if st.button(
+                    "↑",
+                    key=f"design_card_stat_up_{layout}_{i}",
+                    help="Move up",
+                    disabled=not can_up,
+                    use_container_width=True,
+                ):
+                    picks[i - 1], picks[i] = picks[i], picks[i - 1]
+                    st.session_state[picks_key] = picks[:slot_count]
+                    st.rerun()
+            with btn_down:
+                if st.button(
+                    "↓",
+                    key=f"design_card_stat_down_{layout}_{i}",
+                    help="Move down",
+                    disabled=not can_down,
+                    use_container_width=True,
+                ):
+                    picks[i + 1], picks[i] = picks[i], picks[i + 1]
+                    st.session_state[picks_key] = picks[:slot_count]
+                    st.rerun()
+            with btn_rm:
+                if st.button(
+                    "✕",
+                    key=f"design_card_stat_rm_{layout}_{i}",
+                    help="Remove this stat",
+                    disabled=not can_remove,
+                    use_container_width=True,
+                ):
+                    if i == 0 and slot_count == 1:
+                        picks[0] = ""
+                    elif i == 0:
+                        picks.pop(0)
+                        st.session_state[count_key] = slot_count - 1
+                    else:
+                        picks.pop(i)
+                        st.session_state[count_key] = slot_count - 1
+                    st.session_state[picks_key] = picks
+                    st.rerun()
 
-    btn_col, reset_col = st.columns(2)
-    with btn_col:
+    foot_add, foot_reset, _ = st.columns([1, 1, 6], vertical_alignment="center")
+    with foot_add:
         if slot_count < max_slots and st.button(
-            "Add stat", key=f"design_card_stat_add_{layout}", use_container_width=True
+            "Add stat",
+            key=f"design_card_stat_add_{layout}",
         ):
             st.session_state[count_key] = slot_count + 1
             st.rerun()
-    with reset_col:
+    with foot_reset:
         if st.button(
-            "Reset to layout defaults",
+            "Reset defaults",
             key=f"design_card_stat_reset_{layout}",
-            use_container_width=True,
+            help="Restore this layout's default stat list",
         ):
             defaults = list(default_card_stat_labels(layout, status_metrics))
             st.session_state[picks_key] = defaults
