@@ -34,7 +34,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
-    SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
+    SHARE_SUMMARY_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
 )
@@ -328,18 +328,20 @@ def layout_card_stat_max(layout: LayoutId | None, fmt: FormatId | None = None) -
     if layout == "hero":
         return 4
     if layout == "tiles":
+        if fmt == "story":
+            return SHARE_SUMMARY_STORY_MAX_STATS
         return 6
     if layout == "minimal":
         if fmt == "story":
-            return SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
+            return SHARE_SUMMARY_STORY_MAX_STATS
         return 6
     return 6
 
 
 def layout_card_stat_storage_max(layout: LayoutId | None) -> int:
-    """Session storage cap — list layout retains extra picks when switching aspect ratio."""
-    if layout == "minimal":
-        return SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
+    """Session storage cap — story layouts retain extra picks when switching aspect ratio."""
+    if layout in ("minimal", "tiles"):
+        return SHARE_SUMMARY_STORY_MAX_STATS
     return layout_card_stat_max(layout)
 
 
@@ -788,6 +790,19 @@ def _layout_hero(
 </div>"""
 
 
+def favourite_birds_for_card(
+    layout: LayoutId,
+    fmt: FormatId,
+    favourite_birds: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Favourite birds render on hero and on stat tiles except square aspect ratio."""
+    if layout == "hero":
+        return favourite_birds
+    if layout == "tiles" and fmt != "square":
+        return favourite_birds
+    return ()
+
+
 def _layout_subtitle(stats: ShareSummaryStats, layout_default: str) -> str | None:
     """Layout-specific green subtitle; trip title wins on custom ranges."""
     if stats.trip_title:
@@ -806,24 +821,35 @@ def _layout_tiles(
     all_time: ShareSummaryAllTimeStats | None = None,
 ) -> str:
     pairs = _resolve_card_stat_pairs(
-        stats, layout="tiles", card_stat_labels=card_stat_labels, all_time=all_time
+        stats,
+        layout="tiles",
+        fmt=fmt,
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
     )
+    if fmt == "story" and len(pairs) > 6:
+        value_px, label_px, cell_pad, grid_gap = "40px", "18px", "20px 12px", "12px"
+    else:
+        value_px, label_px, cell_pad, grid_gap = "52px", "20px", "32px 20px", "20px"
     cells = []
     for label, value in pairs:
         cells.append(f"""
-<div style="flex:1 1 30%;min-width:28%;padding:32px 20px;border-radius:12px;
+<div style="padding:{cell_pad};border-radius:12px;
   background:linear-gradient(145deg,{_colour("bg_alt")},{_colour("bg")});
   border:1px solid {_colour("border")};text-align:center;">
-  <div style="font-size:52px;font-weight:700;">{_esc(value)}</div>
-  <div style="margin-top:8px;font-size:20px;color:{_colour("muted")};">{_esc(label)}</div>
+  <div style="font-size:{value_px};font-weight:700;">{_esc(value)}</div>
+  <div style="margin-top:8px;font-size:{label_px};color:{_colour("muted")};">{_esc(label)}</div>
 </div>""")
-    favourite_block = _favourite_birds_block(favourite_birds, name_size_px=32)
-    pad_bottom = _footer_pad(fmt, width, height, favourite_bird_count=len(favourite_birds))
+    birds = favourite_birds_for_card("tiles", fmt, favourite_birds)
+    favourite_block = _favourite_birds_block(birds, name_size_px=32)
+    pad_bottom = _footer_pad(fmt, width, height, favourite_bird_count=len(birds))
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "My birding stats"))}
-  <div style="display:flex;flex-wrap:wrap;gap:20px;padding:8px 48px {pad_bottom}px;align-content:flex-start;">
-    {''.join(cells)}
+  <div style="padding:8px 48px {pad_bottom}px;">
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:{grid_gap};">
+      {''.join(cells)}
+    </div>
     {favourite_block}
   </div>
   {_footer_block()}
@@ -1026,7 +1052,7 @@ def render_share_summary_preview_html(
 ) -> str:
     """Return scaled HTML preview for one layout + aspect ratio."""
     with _color_scheme_context(color_scheme_index):
-        birds = favourite_birds if layout in ("hero", "tiles") else ()
+        birds = favourite_birds_for_card(layout, fmt, favourite_birds)
         labels = card_stat_labels if layout in ("hero", "tiles", "minimal") else ()
         inner, width, height = _card_inner_html(
             stats,
@@ -1109,6 +1135,7 @@ __all__ = [
     "available_card_metrics",
     "layout_card_stat_max",
     "layout_card_stat_storage_max",
+    "favourite_birds_for_card",
     "default_card_stat_labels",
     "card_stat_pairs",
     "_FORMAT_LABELS",

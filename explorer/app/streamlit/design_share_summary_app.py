@@ -215,9 +215,12 @@ def _sidebar_favourite_bird_controls(
     name_map: dict[str, str],
     taxonomy_locale: str,
     layout: LayoutId,
+    fmt: FormatId,
 ) -> tuple[str, ...]:
-    """Progressive favourite-bird picker; hidden unless *layout* is hero or tiles."""
+    """Progressive favourite-bird picker; hidden unless layout/format supports it."""
     if layout not in ("hero", "tiles"):
+        return ()
+    if layout == "tiles" and fmt == "square":
         return ()
 
     if _FAVOURITE_BIRD_SLOT_COUNT_KEY not in st.session_state:
@@ -313,13 +316,14 @@ def _card_stat_slot_count_key(layout: LayoutId, period_kind: PeriodKind) -> str:
     return f"{_CARD_STATS_SLOT_COUNT_PREFIX}{layout}_{period_kind}"
 
 
-def _story_list_stat_picker(fmt: FormatId, layout: LayoutId) -> bool:
-    return layout == "minimal" and fmt == "story"
+def _story_format_stat_picker(fmt: FormatId, layout: LayoutId) -> bool:
+    """Fixed stat rows on story format for grid and list layouts."""
+    return fmt == "story" and layout in ("minimal", "tiles")
 
 
 def _card_stat_ui_row_count(layout: LayoutId, fmt: FormatId, *, slot_count: int) -> int:
     max_slots = layout_card_stat_max(layout, fmt)
-    if _story_list_stat_picker(fmt, layout):
+    if _story_format_stat_picker(fmt, layout):
         return max_slots
     return min(max(1, slot_count), max_slots)
 
@@ -363,7 +367,7 @@ def _ensure_card_stat_picks(
     available = frozenset(label for label, _ in status_metrics)
     picks_key = _card_stat_picks_key(layout, period_kind)
     count_key = _card_stat_slot_count_key(layout, period_kind)
-    fixed_rows = _story_list_stat_picker(fmt, layout)
+    fixed_rows = _story_format_stat_picker(fmt, layout)
 
     if picks_key not in st.session_state:
         defaults = list(
@@ -407,7 +411,7 @@ def _card_stat_picker_ui(
         return ()
 
     max_slots = layout_card_stat_max(layout, fmt)
-    fixed_rows = _story_list_stat_picker(fmt, layout)
+    fixed_rows = _story_format_stat_picker(fmt, layout)
     available_labels = [label for label, _ in status_metrics]
     if not available_labels:
         st.caption("No statistics available for this period.")
@@ -422,7 +426,7 @@ def _card_stat_picker_ui(
 
     if fixed_rows:
         st.caption(
-            f"Story list supports up to {max_slots} stats. "
+            f"Story format supports up to {max_slots} stats. "
             "Empty rows are ignored. Order matches the card."
         )
     else:
@@ -735,8 +739,8 @@ with st.sidebar:
         options=["hero", "tiles", "minimal", "spotlight"],
         format_func=lambda x: {
             "hero": "Hero grid (4 stats)",
-            "tiles": "Stat tiles (6)",
-            "minimal": "List",
+            "tiles": "Statistics Grid",
+            "minimal": "Statistics List",
             "spotlight": "Single stat spotlight",
         }[x],
     )
@@ -878,6 +882,7 @@ favourite_birds = _sidebar_favourite_bird_controls(
     name_map=period_name_map,
     taxonomy_locale=TAXONOMY_LOCALE_DEFAULT,
     layout=selected_layout,
+    fmt=fmt,
 )
 
 status_metrics = summary_status_metrics(stats, all_time=all_time)

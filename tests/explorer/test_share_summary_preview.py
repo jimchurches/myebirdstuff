@@ -105,11 +105,13 @@ def test_preview_color_scheme_index_changes_palette():
     assert light != dark
 
 
-def test_layout_card_stat_max_list_story_supports_ten():
+def test_layout_card_stat_max_story_supports_ten():
     from explorer.presentation.share_summary_preview import layout_card_stat_max
 
     assert layout_card_stat_max("minimal", "story") == 10
+    assert layout_card_stat_max("tiles", "story") == 10
     assert layout_card_stat_max("minimal", "square") == 6
+    assert layout_card_stat_max("tiles", "square") == 6
     assert layout_card_stat_max("hero", "story") == 4
 
 
@@ -135,16 +137,53 @@ def test_minimal_story_renders_extra_selected_stats():
     assert "Total bird families" in html
 
 
+def test_tiles_story_renders_extra_selected_stats():
+    stats = sample_share_summary_stats()
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+        "Total bird families",
+    )
+    html = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        fmt="story",
+        card_stat_labels=labels,
+    )
+    assert "Total individuals" in html
+    assert "Total bird families" in html
+
+
 def test_hero_and_tiles_render_favourite_birds_block():
     stats = sample_share_summary_stats()
     birds = ("Superb Fairywren", "Rainbow Lorikeet")
     hero = render_share_summary_preview_html(stats, layout="hero", favourite_birds=birds)
-    tiles = render_share_summary_preview_html(stats, layout="tiles", favourite_birds=birds)
+    tiles = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="portrait_post", favourite_birds=birds
+    )
     for html in (hero, tiles):
         assert "Favourite birds" in html
         assert "Favourite bird</div>" not in html  # plural heading only
         assert "Superb Fairywren" in html
         assert "Rainbow Lorikeet" in html
+
+
+def test_tiles_square_omits_favourite_birds():
+    stats = sample_share_summary_stats()
+    html = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        fmt="square",
+        favourite_birds=("Superb Fairywren",),
+    )
+    assert "Favourite bird" not in html
+    assert "Superb Fairywren" not in html
+    assert "grid-template-columns:repeat(2" in html
 
 
 def test_hero_uses_singular_favourite_bird_heading_for_one_pick():

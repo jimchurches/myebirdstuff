@@ -17,6 +17,7 @@ from explorer.presentation.share_summary_preview import (
     LayoutId,
     SpotlightStatId,
     _FORMAT_PX,
+    favourite_birds_for_card,
     render_share_summary_export_html,
 )
 
@@ -103,7 +104,7 @@ def share_summary_to_png_bytes(
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
     width, height = _FORMAT_PX[fmt]
-    birds = favourite_birds if layout in ("hero", "tiles") else ()
+    birds = favourite_birds_for_card(layout, fmt, favourite_birds)
     labels = card_stat_labels if layout in ("hero", "tiles", "minimal") else ()
     html = render_share_summary_export_html(
         stats,
