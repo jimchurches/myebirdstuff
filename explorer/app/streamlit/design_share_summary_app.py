@@ -400,6 +400,14 @@ def _ensure_card_stat_picks(
     return picks
 
 
+def _card_stat_slot_label(layout: LayoutId, index: int, *, total: int) -> str:
+    """User-facing label for one card-stat picker row."""
+    kind = "List item" if layout == "minimal" else "Tile"
+    if total == 1:
+        return kind
+    return f"{kind} {index + 1}"
+
+
 def _card_stat_picker_ui(
     layout: LayoutId,
     status_metrics: list[tuple[str, str]],
@@ -438,7 +446,7 @@ def _card_stat_picker_ui(
         current = picks[i] if i < len(picks) else ""
         other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
         options = [""] + [lab for lab in available_labels if lab not in other]
-        row_label = "Stat" if ui_rows == 1 else f"Stat {i + 1}"
+        row_label = _card_stat_slot_label(layout, i, total=ui_rows)
         can_up = i > 0
         can_down = i < ui_rows - 1
         can_remove = bool(current) if fixed_rows else (i > 0 or bool(current))
