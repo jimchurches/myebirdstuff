@@ -15,6 +15,7 @@ SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT = 0
 SHARE_SUMMARY_COLOR_SCHEMES: tuple[dict[str, str], ...] = (
     {
         "id": "light",
+        "name": "Light",
         "bg": "#ffffff",
         "bg_alt": "#f9fafb",
         "text": "#111827",
@@ -22,6 +23,37 @@ SHARE_SUMMARY_COLOR_SCHEMES: tuple[dict[str, str], ...] = (
         "border": "#e5e7eb",
         "accent": "#2d6a4f",
     },
+    {
+        "id": "dark_forest",
+        "name": "Forest night",
+        "bg": "#0d120f",
+        "bg_alt": "#161f19",
+        "text": "#f0f3f1",
+        "muted": "#8fa79a",
+        "border": "#263329",
+        "accent": "#74c69d",
+    },
+)
+
+
+def share_summary_color_scheme_index(scheme_id: str) -> int:
+    """Resolve a scheme id (e.g. ``light``) to its index in :data:`SHARE_SUMMARY_COLOR_SCHEMES`."""
+    for i, scheme in enumerate(SHARE_SUMMARY_COLOR_SCHEMES):
+        if scheme["id"] == scheme_id:
+            return i
+    return SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT
+
+
+def share_summary_color_scheme_label(scheme_id: str) -> str:
+    """Human label for a scheme id."""
+    for scheme in SHARE_SUMMARY_COLOR_SCHEMES:
+        if scheme["id"] == scheme_id:
+            return scheme.get("name") or scheme_id
+    return scheme_id
+
+
+SHARE_SUMMARY_COLOR_SCHEME_IDS: tuple[str, ...] = tuple(
+    scheme["id"] for scheme in SHARE_SUMMARY_COLOR_SCHEMES
 )
 
 # Default stat labels per layout (user-selectable stats planned for v1 integration).

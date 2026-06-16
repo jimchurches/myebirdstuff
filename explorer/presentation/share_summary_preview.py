@@ -6,6 +6,8 @@ Standalone design utility — not wired into the main explorer app yet.
 
 from __future__ import annotations
 
+import contextvars
+import contextlib
 import html as html_module
 import re
 from functools import lru_cache
@@ -37,10 +39,34 @@ LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]
 FormatId = Literal["square", "portrait_post", "story"]
 SpotlightStatId = Literal["species", "lifers", "checklists", "locations"]
 
+_color_scheme_index: contextvars.ContextVar[int | None] = contextvars.ContextVar(
+    "share_summary_color_scheme_index",
+    default=None,
+)
+
+
+def _active_color_scheme_index() -> int:
+    override = _color_scheme_index.get()
+    if override is not None:
+        return override
+    return SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT
+
+
+@contextlib.contextmanager
+def _color_scheme_context(index: int | None):
+    token = None
+    if index is not None:
+        token = _color_scheme_index.set(index)
+    try:
+        yield
+    finally:
+        if token is not None:
+            _color_scheme_index.reset(token)
+
 
 def _colour(key: str) -> str:
     schemes = SHARE_SUMMARY_COLOR_SCHEMES
-    idx = SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT
+    idx = _active_color_scheme_index()
     scheme = schemes[idx] if 0 <= idx < len(schemes) else schemes[0]
     return scheme[key]
 
@@ -148,13 +174,12 @@ _YEARLY_ICON_RE = re.compile(
 _LOGO_PATH = Path(__file__).resolve().parents[2] / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
 
 
-@lru_cache(maxsize=1)
-def _logo_svg_inline(*, height_px: int = 56, accent: bool = True) -> str:
+@lru_cache(maxsize=16)
+def _logo_svg_inline(*, height_px: int = 56, fill: str) -> str:
     """Small inline logo for card headers/footers."""
     if not _LOGO_PATH.is_file():
         return ""
     raw = _LOGO_PATH.read_text(encoding="utf-8")
-    fill = _colour("accent") if accent else _colour("muted")
     raw = raw.replace('fill="#000000"', f'fill="{fill}"')
     return (
         f'<img src="data:image/svg+xml;base64,{_svg_to_data_uri(raw)}" '
@@ -620,7 +645,7 @@ def _header_block(stats: ShareSummaryStats, *, subtitle: str | None = None) -> s
 
 
 def _footer_block() -> str:
-    logo = _logo_svg_inline(height_px=40, accent=False)
+    logo = _logo_svg_inline(height_px=40, fill=_colour("muted"))
     logo_row = logo if logo else ""
     return f"""
 <div style="position:absolute;left:0;right:0;bottom:0;padding:24px 56px 28px;text-align:center;
@@ -880,19 +905,21 @@ def render_share_summary_export_html(
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
+    color_scheme_index: int | None = None,
 ) -> str:
     """Full-size HTML document for headless screenshot (Playwright PNG export)."""
-    inner, width, height = _card_inner_html(
-        stats,
-        layout=layout,
-        fmt=fmt,
-        spotlight_stat=spotlight_stat,
-        spotlight_label=spotlight_label,
-        favourite_birds=favourite_birds,
-        card_stat_labels=card_stat_labels,
-        all_time=all_time,
-    )
-    return f"""<!DOCTYPE html>
+    with _color_scheme_context(color_scheme_index):
+        inner, width, height = _card_inner_html(
+            stats,
+            layout=layout,
+            fmt=fmt,
+            spotlight_stat=spotlight_stat,
+            spotlight_label=spotlight_label,
+            favourite_birds=favourite_birds,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+        )
+        return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -930,21 +957,23 @@ def render_share_summary_preview_html(
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
+    color_scheme_index: int | None = None,
 ) -> str:
     """Return scaled HTML preview for one layout + aspect ratio."""
-    birds = favourite_birds if layout in ("hero", "tiles") else ()
-    labels = card_stat_labels if layout in ("hero", "tiles", "minimal") else ()
-    inner, width, height = _card_inner_html(
-        stats,
-        layout=layout,
-        fmt=fmt,
-        spotlight_stat=spotlight_stat,
-        spotlight_label=spotlight_label,
-        favourite_birds=birds,
-        card_stat_labels=labels,
-        all_time=all_time,
-    )
-    return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
+    with _color_scheme_context(color_scheme_index):
+        birds = favourite_birds if layout in ("hero", "tiles") else ()
+        labels = card_stat_labels if layout in ("hero", "tiles", "minimal") else ()
+        inner, width, height = _card_inner_html(
+            stats,
+            layout=layout,
+            fmt=fmt,
+            spotlight_stat=spotlight_stat,
+            spotlight_label=spotlight_label,
+            favourite_birds=birds,
+            card_stat_labels=labels,
+            all_time=all_time,
+        )
+        return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
 
 
 def all_layout_previews_html(
@@ -957,6 +986,7 @@ def all_layout_previews_html(
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels_by_layout: dict[LayoutId, tuple[str, ...]] | None = None,
     all_time: ShareSummaryAllTimeStats | None = None,
+    color_scheme_index: int | None = None,
 ) -> dict[str, str]:
     """All prototype layouts for side-by-side comparison."""
     layouts: list[LayoutId] = ["hero", "tiles", "minimal", "spotlight"]
@@ -978,6 +1008,7 @@ def all_layout_previews_html(
             favourite_birds=favourite_birds,
             card_stat_labels=_labels_for(layout_id),
             all_time=all_time,
+            color_scheme_index=color_scheme_index,
         )
         for layout_id in layouts
     }

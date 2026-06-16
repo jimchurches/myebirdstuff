@@ -83,6 +83,17 @@ def test_render_preview_includes_period_label_and_logo():
     assert "Personal eBird Explorer" in html
 
 
+def test_preview_color_scheme_index_changes_palette():
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+
+    stats = sample_share_summary_stats()
+    light = render_share_summary_preview_html(stats, layout="hero", color_scheme_index=0)
+    dark = render_share_summary_preview_html(stats, layout="hero", color_scheme_index=1)
+    assert SHARE_SUMMARY_COLOR_SCHEMES[0]["bg"] in light
+    assert SHARE_SUMMARY_COLOR_SCHEMES[1]["bg"] in dark
+    assert light != dark
+
+
 def test_hero_and_tiles_render_favourite_birds_block():
     stats = sample_share_summary_stats()
     birds = ("Superb Fairywren", "Rainbow Lorikeet")

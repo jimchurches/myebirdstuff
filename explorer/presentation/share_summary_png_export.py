@@ -99,6 +99,7 @@ def share_summary_to_png_bytes(
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
+    color_scheme_index: int | None = None,
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
     width, height = _FORMAT_PX[fmt]
@@ -113,6 +114,7 @@ def share_summary_to_png_bytes(
         favourite_birds=birds,
         card_stat_labels=labels,
         all_time=all_time,
+        color_scheme_index=color_scheme_index,
     )
     with _launch_chromium() as browser:
         page = browser.new_page(

@@ -64,7 +64,12 @@ from explorer.presentation.share_summary_preview import (
     spotlight_label_from_id,
     summary_status_metrics,
 )
-from explorer.core.share_summary_defaults import SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
+from explorer.core.share_summary_defaults import (
+    SHARE_SUMMARY_COLOR_SCHEME_IDS,
+    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    share_summary_color_scheme_index,
+    share_summary_color_scheme_label,
+)
 
 
 @st.cache_data(show_spinner="Generating PNG…")
@@ -76,6 +81,7 @@ def _cached_share_summary_png(
     card_stat_labels: tuple[str, ...],
     spotlight_label: str,
     all_time: ShareSummaryAllTimeStats | None,
+    color_scheme_index: int,
 ) -> bytes:
     return share_summary_to_png_bytes(
         stats,
@@ -85,10 +91,12 @@ def _cached_share_summary_png(
         favourite_birds=favourite_birds,
         card_stat_labels=card_stat_labels,
         all_time=all_time,
+        color_scheme_index=color_scheme_index,
     )
 
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
+_COLOR_THEME_KEY = "design_color_theme"
 _STATS_EXPANDER_LABEL = "Available statistics"
 _CARD_STATS_LABEL = "Card statistics"
 _CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
@@ -553,6 +561,7 @@ def _current_card_fragment(
     scale: float,
     status_metrics: list[tuple[str, str]],
     favourite_birds: tuple[str, ...],
+    color_scheme_index: int,
 ) -> None:
     """Card statistics controls, live preview, layout grid, and PNG export."""
     with st.expander(_CARD_STATS_LABEL, expanded=True):
@@ -576,6 +585,7 @@ def _current_card_fragment(
             favourite_birds=favourite_birds,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
+            color_scheme_index=color_scheme_index,
         ),
         unsafe_allow_html=True,
     )
@@ -590,6 +600,7 @@ def _current_card_fragment(
             card_stat_labels,
             spotlight_label,
             all_time,
+            color_scheme_index,
         )
     except RuntimeError as exc:
         st.warning(str(exc))
@@ -612,6 +623,7 @@ def _current_card_fragment(
         favourite_birds=favourite_birds,
         card_stat_labels_by_layout=card_stat_labels_by_layout,
         all_time=all_time,
+        color_scheme_index=color_scheme_index,
     )
     layout_cols = st.columns(4)
     layout_labels = {
@@ -696,6 +708,13 @@ with st.sidebar:
         )
 
     st.header(_CURRENT_CARD_LABEL)
+    color_theme_id = st.selectbox(
+        "Colour theme",
+        options=list(SHARE_SUMMARY_COLOR_SCHEME_IDS),
+        format_func=share_summary_color_scheme_label,
+        key=_COLOR_THEME_KEY,
+    )
+    color_scheme_index = share_summary_color_scheme_index(color_theme_id)
     fmt: FormatId = st.selectbox(
         "Aspect ratio",
         options=["square", "portrait_post", "story"],
@@ -857,4 +876,5 @@ with tab_social_cards:
         scale=scale,
         status_metrics=status_metrics,
         favourite_birds=favourite_birds,
+        color_scheme_index=color_scheme_index,
     )
