@@ -518,7 +518,7 @@ def _card_stat_picker_ui(
         foot_up, foot_down, foot_rm = st.columns(3, gap="small")
         with foot_down:
             if st.button(
-                "Reset defaults",
+                "Reset",
                 key=f"design_card_stat_reset_{layout}",
                 help="Restore this layout's default stat list",
                 use_container_width=True,
