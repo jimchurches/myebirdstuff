@@ -506,30 +506,33 @@ def _card_stat_picker_ui(
                     st.session_state[picks_key] = picks[:ui_rows]
                     st.rerun()
 
-    foot_add, foot_reset, _ = st.columns([1, 1, 6], vertical_alignment="center")
-    with foot_add:
+    col_sel_foot, col_actions_foot = st.columns([11, 3], vertical_alignment="center")
+    with col_sel_foot:
         if not fixed_rows and ui_rows < max_slots and st.button(
             "Add stat",
             key=f"design_card_stat_add_{layout}",
         ):
             st.session_state[count_key] = ui_rows + 1
             st.rerun()
-    with foot_reset:
-        if st.button(
-            "Reset defaults",
-            key=f"design_card_stat_reset_{layout}",
-            help="Restore this layout's default stat list",
-        ):
-            defaults = list(
-                default_card_stat_labels(layout, status_metrics, period_kind=period_kind)
-            )
-            if fixed_rows:
-                st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
-                st.session_state[count_key] = max_slots
-            else:
-                st.session_state[picks_key] = defaults
-                st.session_state[count_key] = max(1, len(defaults))
-            st.rerun()
+    with col_actions_foot:
+        foot_up, foot_down, foot_rm = st.columns(3, gap="small")
+        with foot_down:
+            if st.button(
+                "Reset defaults",
+                key=f"design_card_stat_reset_{layout}",
+                help="Restore this layout's default stat list",
+                use_container_width=True,
+            ):
+                defaults = list(
+                    default_card_stat_labels(layout, status_metrics, period_kind=period_kind)
+                )
+                if fixed_rows:
+                    st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
+                    st.session_state[count_key] = max_slots
+                else:
+                    st.session_state[picks_key] = defaults
+                    st.session_state[count_key] = max(1, len(defaults))
+                st.rerun()
 
     st.session_state[picks_key] = picks[:ui_rows]
     final = _effective_card_stat_labels(picks, layout, fmt)
