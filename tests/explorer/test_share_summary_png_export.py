@@ -58,6 +58,6 @@ def test_share_summary_to_png_bytes_dimensions(fmt, expected, chromium_available
 def test_share_summary_to_png_bytes_spotlight(chromium_available):
     del chromium_available
     stats = sample_share_summary_stats(period_kind="year")
-    png = share_summary_to_png_bytes(stats, layout="spotlight", fmt="square", spotlight_stat="lifers")
+    png = share_summary_to_png_bytes(stats, layout="spotlight", fmt="square", spotlight_label="Lifers")
     assert png_dimensions(png) == (1080, 1080)
     assert png[:8] == b"\x89PNG\r\n\x1a\n"

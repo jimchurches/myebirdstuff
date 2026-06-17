@@ -215,40 +215,28 @@ def test_render_export_html_full_size_document():
 
 def test_spotlight_layout_renders():
     stats = ShareSummaryStats(period_label="2025", period_kind="year", lifers=47)
-    html = render_share_summary_preview_html(stats, layout="spotlight", spotlight_stat="lifers")
+    html = render_share_summary_preview_html(stats, layout="spotlight", spotlight_label="Lifers")
     assert "47" in html
     assert "Lifers" in html
 
 
-def test_spotlight_species_label_by_period():
-    from explorer.presentation.share_summary_preview import (
-        spotlight_label_from_id,
-        spotlight_pair_for_label,
-        spotlight_species_label,
-        spotlight_value,
-    )
-
-    assert spotlight_species_label("year") == "Year birds"
-    assert spotlight_species_label("month") == "Month birds"
-    assert spotlight_species_label("week") == "Week birds"
-    assert spotlight_species_label("custom") == "Species"
-    assert spotlight_species_label("lifetime") == "Species"
+def test_spotlight_pair_for_label_by_period():
+    from explorer.presentation.share_summary_preview import spotlight_pair_for_label
 
     year = ShareSummaryStats(period_label="2025", period_kind="year", species=312)
-    assert spotlight_value(year, "species") == ("Total species", "312")
     assert spotlight_pair_for_label(year, "Total species") == ("Total species", "312")
-    assert spotlight_label_from_id("species") == "Total species"
 
     month = ShareSummaryStats(period_label="June 2025", period_kind="month", species=89)
-    assert spotlight_value(month, "species") == ("Total species", "89")
+    assert spotlight_pair_for_label(month, "Total species") == ("Total species", "89")
 
     week = ShareSummaryStats(
         period_label="May 31, 2025 - June 6, 2025", period_kind="week", species=34
     )
-    assert spotlight_value(week, "species") == ("Total species", "34")
+    assert spotlight_pair_for_label(week, "Total species") == ("Total species", "34")
 
     custom = ShareSummaryStats(period_label="1 – 7 June 2025", period_kind="custom", species=56)
-    assert spotlight_value(custom, "species") == ("Total species", "56")
+    assert spotlight_pair_for_label(custom, "Total species") == ("Total species", "56")
+    assert spotlight_pair_for_label(custom, "Nonexistent stat") is None
 
 
 def test_spotlight_layout_accepts_all_time_label():

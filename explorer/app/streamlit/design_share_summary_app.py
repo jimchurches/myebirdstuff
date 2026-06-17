@@ -63,7 +63,6 @@ from explorer.presentation.share_summary_preview import (
     period_for_year,
     render_share_summary_preview_html,
     sample_share_summary_stats,
-    spotlight_label_from_id,
     summary_status_metrics,
 )
 from explorer.core.share_summary_defaults import (
@@ -105,7 +104,6 @@ _CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
 _CARD_STATS_PICKS_PREFIX = "design_card_stat_picks_"
 _CARD_STATS_SCOPE_PREFIX = "design_card_stat_scope_"
 _SPOTLIGHT_LABEL_KEY = "design_spotlight_label"
-_LEGACY_SPOTLIGHT_LABEL_KEY = "design_spotlight_stat"
 _CURRENT_CARD_LABEL = "Current card"
 _CARD_HEADING_LABEL = "Card Heading (optional)"
 _CARD_HEADING_PLACEHOLDER = "e.g. North Coast NSW Exploration"
@@ -623,12 +621,6 @@ def _spotlight_label_from_session(
 ) -> str:
     available = {label for label, _ in status_metrics}
     raw = st.session_state.get(_SPOTLIGHT_LABEL_KEY)
-    if raw is None:
-        legacy = st.session_state.get(_LEGACY_SPOTLIGHT_LABEL_KEY)
-        if legacy in ("species", "lifers", "checklists", "locations"):
-            raw = spotlight_label_from_id(legacy)  # type: ignore[arg-type]
-        elif legacy in available:
-            raw = legacy
     if isinstance(raw, str) and raw.strip() in available:
         return raw.strip()
     if SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT in available:

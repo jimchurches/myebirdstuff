@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
-    SpotlightStatId,
     _FORMAT_PX,
     favourite_birds_for_card,
     render_share_summary_export_html,
@@ -88,7 +87,6 @@ def share_summary_to_png_bytes(
     *,
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
-    spotlight_stat: SpotlightStatId = "lifers",
     spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
@@ -103,7 +101,6 @@ def share_summary_to_png_bytes(
         stats,
         layout=layout,
         fmt=fmt,
-        spotlight_stat=spotlight_stat,
         spotlight_label=spotlight_label,
         favourite_birds=birds,
         card_stat_labels=labels,

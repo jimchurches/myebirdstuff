@@ -41,7 +41,6 @@ from explorer.core.share_summary_defaults import (
 
 LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]
 FormatId = Literal["square", "portrait_post", "story"]
-SpotlightStatId = Literal["species", "lifers", "checklists", "locations"]
 
 _color_scheme_index: contextvars.ContextVar[int | None] = contextvars.ContextVar(
     "share_summary_color_scheme_index",
@@ -125,43 +124,10 @@ _STAT_SPECS: tuple[_StatSpec, ...] = (
     _StatSpec("days_birding_with_others", "Days birding with others", hide_if_zero=True),
 )
 
-_LEGACY_SPOTLIGHT_ID_TO_LABEL: dict[SpotlightStatId, str] = {
-    "species": "Total species",
-    "lifers": "Lifers",
-    "checklists": "Total checklists",
-    "locations": "Unique locations",
-}
-
-
-def spotlight_species_label(period_kind: PeriodKind) -> str:
-    """Spotlight label for species count — matches selected period."""
-    if period_kind == "lifetime":
-        return "Species"
-    if period_kind == "year":
-        return "Year birds"
-    if period_kind == "month":
-        return "Month birds"
-    if period_kind == "week":
-        return "Week birds"
-    return "Species"
-
-
-def spotlight_label_from_id(stat: SpotlightStatId) -> str:
-    """Map legacy spotlight id to Available statistics label."""
-    return _LEGACY_SPOTLIGHT_ID_TO_LABEL[stat]
-
-
-def resolve_spotlight_label(
-    *,
-    spotlight_label: str | None = None,
-    spotlight_stat: SpotlightStatId | None = None,
-) -> str:
-    """Prefer explicit *spotlight_label*; fall back to legacy id → label."""
-    if spotlight_label and spotlight_label.strip():
-        return spotlight_label.strip()
-    if spotlight_stat is not None:
-        return spotlight_label_from_id(spotlight_stat)
-    return SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
+def resolve_spotlight_label(spotlight_label: str | None) -> str:
+    """Normalize the chosen spotlight label, falling back to the default."""
+    cleaned = (spotlight_label or "").strip()
+    return cleaned or SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
 
 def spotlight_pair_for_label(
@@ -383,11 +349,6 @@ def card_stat_pairs(
             labels.append(lab)
 
     return [(lab, lookup[lab]) for lab in labels[:max_count]]
-
-
-def spotlight_value(stats: ShareSummaryStats, stat: SpotlightStatId) -> tuple[str, str] | None:
-    """Return (title, display value) for legacy single-stat spotlight ids."""
-    return spotlight_pair_for_label(stats, spotlight_label_from_id(stat))
 
 
 def _strip_yearly_label(label: str) -> str:
@@ -915,7 +876,6 @@ def _card_inner_html(
     *,
     layout: LayoutId,
     fmt: FormatId,
-    spotlight_stat: SpotlightStatId = "lifers",
     spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
@@ -924,7 +884,7 @@ def _card_inner_html(
     """Return (inner HTML, width, height) at export pixel dimensions."""
     width, height = _FORMAT_PX[fmt]
     if layout == "spotlight":
-        label = resolve_spotlight_label(spotlight_label=spotlight_label, spotlight_stat=spotlight_stat)
+        label = resolve_spotlight_label(spotlight_label)
         inner = _layout_spotlight(
             stats, width, height, fmt, spotlight_label=label, all_time=all_time
         )
@@ -957,7 +917,6 @@ def render_share_summary_export_html(
     *,
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
-    spotlight_stat: SpotlightStatId = "lifers",
     spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
@@ -970,7 +929,6 @@ def render_share_summary_export_html(
             stats,
             layout=layout,
             fmt=fmt,
-            spotlight_stat=spotlight_stat,
             spotlight_label=spotlight_label,
             favourite_birds=favourite_birds,
             card_stat_labels=card_stat_labels,
@@ -1009,7 +967,6 @@ def render_share_summary_preview_html(
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
     scale: float = 0.38,
-    spotlight_stat: SpotlightStatId = "lifers",
     spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
@@ -1024,7 +981,6 @@ def render_share_summary_preview_html(
             stats,
             layout=layout,
             fmt=fmt,
-            spotlight_stat=spotlight_stat,
             spotlight_label=spotlight_label,
             favourite_birds=birds,
             card_stat_labels=labels,
@@ -1037,7 +993,6 @@ def render_share_summary_preview_html(
 __all__ = [
     "FormatId",
     "LayoutId",
-    "SpotlightStatId",
     "ShareSummaryAllTimeStats",
     "ShareSummaryStats",
     "compute_share_summary_stats",
@@ -1050,11 +1005,8 @@ __all__ = [
     "render_share_summary_preview_html",
     "sample_share_summary_stats",
     "share_summary_stats_for_year",
-    "spotlight_value",
     "spotlight_pair_for_label",
-    "spotlight_label_from_id",
     "resolve_spotlight_label",
-    "spotlight_species_label",
     "stat_pairs",
     "summary_status_metrics",
     "layout_card_stat_max",

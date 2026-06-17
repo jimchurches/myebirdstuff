@@ -200,8 +200,6 @@ def test_countries_computed_for_custom_trip():
 
 
 def test_period_for_week_containing_sun_sat():
-    from explorer.core.share_summary_compute import period_for_week_containing
-
     period = period_for_week_containing(date(2026, 6, 3))  # Wed
     assert period.start == date(2026, 5, 31)  # Sunday
     assert period.end == date(2026, 6, 6)  # Saturday
