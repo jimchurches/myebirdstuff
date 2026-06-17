@@ -98,7 +98,8 @@ All should appear in the summary row (with values) so users can pick interesting
 | Total individuals | Period | Yes | No |
 | Total bird families | Period (taxonomy map) | Yes | No |
 | Birding hours | Period | Yes | **Summary only** |
-| Longest streak (days) | Period (year/month only) | Yes | No |
+| Total distance (km) | Period (**year** and **lifetime** only) | Yes | No |
+| Longest streak (days) | Period (year/month/lifetime) | Yes | No |
 | Shared checklists | Period | Yes | No |
 | Days birding with others | Period | Yes | No |
 | World bird coverage | All-time (taxonomy) | Yes (summary row) | No |
@@ -111,6 +112,12 @@ All should appear in the summary row (with values) so users can pick interesting
 **Note:** “Total bird families” (period) and “Total families (from taxa)” (all-time list) are **different metrics** — both may be offered; labels must distinguish them.
 
 **Also discussed, not in list above:** spotlight single-stat cards (“Year birds”, etc.) — layout choice, not a separate metric. **Label fine-tuning:** custom/trip species spotlight uses **Species** (not “Birds”) to match other layouts; year/month/week still use “Year birds” / “Month birds” / “Week birds” — revisit during tuning.
+
+### Roadmap ideas (not scheduled)
+
+**Best day / best checklist (card stat)** — Rankings in the main app link to the checklist or date on eBird; that context is valuable. As a card highlight without links, a possible pattern: tile title **Best day**, value only (e.g. `97 species` or `2,506 individuals`) — no date, no URL. Deferred until card UX is clearer.
+
+**Geographic scope (states / provinces)** — Not just another stat: a **period constraint** like custom date range. Examples: “Australian” year, “New South Wales” lifetime — filter all stats to a country or state/province before computing the card. Touches period resolution, sidebar controls, and sample/live data paths; on author todo list separately from v1 stat catalogue.
 
 ### Countries
 
@@ -578,3 +585,5 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-11 | Main app tab name decided: **Social Cards** (design studio + #276); retired ~~Socials~~ working title |
 | 2026-06-11 | Removed **All layouts** comparison grid from design studio; UI aligns with main app (current card + layout picker) |
 | 2026-06-11 | **PNG export UX:** design studio — export inside `@st.fragment`; main app (#276) — generate on export click with spinner |
+| 2026-06-11 | **Total distance (km)** — year and lifetime periods only; same column as Yearly Summary |
+| 2026-06-11 | Roadmap notes: **Best day** card stat (value-only, no link); **geographic scope** (country/state filter) |

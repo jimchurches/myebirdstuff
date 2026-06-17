@@ -31,8 +31,9 @@ def _row(
     loc: str = "L1",
     country: str = "AU",
     observers: float = 1.0,
+    distance_km: float | None = None,
 ) -> dict:
-    return {
+    row = {
         "Submission ID": sid,
         "Date": dt,
         "Scientific Name": species,
@@ -45,6 +46,9 @@ def _row(
         "All Obs Reported": 1,
         "Number of Observers": observers,
     }
+    if distance_km is not None:
+        row["Distance Traveled (km)"] = distance_km
+    return row
 
 
 def test_compute_share_summary_stats_year():
@@ -76,6 +80,30 @@ def test_compute_share_summary_stats_completed_checklists():
     assert stats is not None
     assert stats.checklists == 2
     assert stats.completed_checklists == 1
+
+
+def test_compute_share_summary_stats_distance_year_and_lifetime_only():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-01-10", species="Species a", distance_km=10.5),
+            _row(sid="S2", dt="2025-06-01", species="Species b", distance_km=5.0),
+            _row(sid="S3", dt="2024-06-01", species="Species c", distance_km=100.0),
+        ]
+    )
+    year = compute_share_summary_stats(df, period_for_year(2025))
+    assert year is not None
+    assert year.distance_km == 15.5
+
+    lifetime = compute_share_summary_stats(
+        df,
+        period_for_lifetime(date(2024, 1, 1), date(2025, 12, 31)),
+    )
+    assert lifetime is not None
+    assert lifetime.distance_km == 115.5
+
+    month = compute_share_summary_stats(df, period_for_month(2025, 6))
+    assert month is not None
+    assert month.distance_km is None
 
 
 def test_longest_streak_for_month_period():

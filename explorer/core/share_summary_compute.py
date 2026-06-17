@@ -237,6 +237,7 @@ class ShareSummaryStats:
     locations: int | None = None
     lifers: int | None = None
     birding_hours: float | None = None
+    distance_km: float | None = None
     days_with_checklist: int | None = None
     longest_streak: int | None = None
     countries: int | None = None
@@ -380,6 +381,14 @@ def compute_share_summary_stats(
         if not timed.empty:
             birding_hours = sum_timed_birding_minutes(in_period_cl, dur_col) / 60.0
 
+    distance_km = None
+    if period.kind in ("year", "lifetime"):
+        dist_col = "Distance Traveled (km)" if "Distance Traveled (km)" in in_period_cl.columns else None
+        if dist_col:
+            distance_km = float(
+                pd.to_numeric(in_period_cl[dist_col], errors="coerce").fillna(0).sum()
+            )
+
     days = int(in_period_cl["Date"].dt.normalize().nunique())
 
     longest_streak_days = None
@@ -406,6 +415,7 @@ def compute_share_summary_stats(
         individuals=individuals,
         days_with_checklist=days,
         birding_hours=birding_hours,
+        distance_km=distance_km,
         longest_streak=longest_streak_days,
         countries=countries,
         shared_checklists=shared_checklists,

@@ -310,6 +310,19 @@ def test_summary_status_metrics_preferred_order():
     assert dict(summary_status_metrics(stats, all_time=all_time))["Observed species (%)"] == "0.8%"
 
 
+def test_summary_status_metrics_includes_distance_for_year_only():
+    from explorer.presentation.share_summary_preview import summary_status_metrics
+
+    year_labels = [lab for lab, _ in summary_status_metrics(sample_share_summary_stats())]
+    assert "Total distance (km)" in year_labels
+    assert dict(summary_status_metrics(sample_share_summary_stats()))["Total distance (km)"] == "1,842.5"
+
+    month_labels = [
+        lab for lab, _ in summary_status_metrics(sample_share_summary_stats(period_kind="month"))
+    ]
+    assert "Total distance (km)" not in month_labels
+
+
 def test_sample_share_summary_stats_lifetime_omits_lifers():
     from explorer.presentation.share_summary_preview import sample_share_summary_stats
 

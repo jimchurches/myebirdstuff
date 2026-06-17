@@ -101,6 +101,7 @@ _STAT_LABELS: dict[str, str] = {
     "locations": "Unique locations",
     "lifers": "Lifers",
     "birding_hours": "Total birding hours",
+    "distance_km": "Total distance (km)",
     "days_with_checklist": "Birding days",
     "longest_streak": "Longest streak",
     "countries": "Countries",
@@ -214,6 +215,7 @@ def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
         ("countries", stats.countries, "countries"),
         ("longest_streak", stats.longest_streak, "streak"),
         ("birding_hours", stats.birding_hours, "hours"),
+        ("distance_km", stats.distance_km, "distance_km"),
         ("shared_checklists", stats.shared_checklists, "shared"),
         ("days_birding_with_others", stats.days_birding_with_others, "shared_days"),
     ]
@@ -226,6 +228,9 @@ def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
         if fmt == "hours":
             display = f"{val:,.1f}" if val else "—"
             label = "Birding hours"
+        elif fmt == "distance_km":
+            display = f"{val:,.1f}" if val else "—"
+            label = _STAT_LABELS["distance_km"]
         elif fmt == "birding_days":
             display = f"{int(val):,}"
             label = "Birding days"
@@ -257,6 +262,7 @@ _SUMMARY_STATUS_ORDER: tuple[str, ...] = (
     "Unique locations",
     "Countries",
     "Birding hours",
+    "Total distance (km)",
     "Birding days",
     "Days birding with others",
     "Longest streak (days)",
@@ -536,6 +542,7 @@ def sample_share_summary_stats(
             "individuals": 12_450,
             "days_with_checklist": 98,
             "birding_hours": 214.5,
+            "distance_km": 1_842.5,
             "longest_streak": 14,
             "countries": 5,
         },
@@ -587,6 +594,7 @@ def sample_share_summary_stats(
             "individuals": 98_400,
             "days_with_checklist": 412,
             "birding_hours": 892.0,
+            "distance_km": 28_450.0,
             "longest_streak": 21,
             "countries": 12,
             "shared_checklists": 86,
@@ -607,6 +615,7 @@ def sample_share_summary_stats(
         individuals=int(d["individuals"]),
         days_with_checklist=int(d["days_with_checklist"]),
         birding_hours=float(d["birding_hours"]),
+        distance_km=float(d["distance_km"]) if "distance_km" in d else None,
         longest_streak=int(d["longest_streak"]) if "longest_streak" in d else None,
         countries=int(d["countries"]) if "countries" in d else None,
         shared_checklists=int(d["shared_checklists"]) if "shared_checklists" in d else None,
