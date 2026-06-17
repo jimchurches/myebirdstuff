@@ -128,11 +128,6 @@ def period_for_week_containing(day: date) -> ShareSummaryPeriod:
     )
 
 
-def period_for_iso_week(year: int, week: int) -> ShareSummaryPeriod:
-    """Deprecated alias — use :func:`period_for_week_containing` (Sun–Sat weeks)."""
-    return period_for_week_containing(date.fromisocalendar(int(year), int(week), 1))
-
-
 def period_for_previous_month(year: int, month: int) -> ShareSummaryPeriod:
     """Calendar month immediately before *year*/*month*."""
     if int(month) == 1:

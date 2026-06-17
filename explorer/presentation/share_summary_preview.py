@@ -10,6 +10,7 @@ import contextvars
 import contextlib
 import html as html_module
 import re
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Literal
@@ -21,7 +22,6 @@ from explorer.core.share_summary_compute import (
     ShareSummaryStats,
     compute_share_summary_stats,
     period_for_custom,
-    period_for_iso_week,
     period_for_lifetime,
     period_for_month,
     period_for_week_containing,
@@ -92,28 +92,38 @@ LABEL_SPECIES_IN_TAXONOMY = "Species in eBird taxonomy"
 LABEL_FAMILIES_IN_TAXONOMY = "Families in eBird taxonomy"
 LABEL_OBSERVED_SPECIES_PCT = "Observed species (%)"
 
-_STAT_LABELS: dict[str, str] = {
-    "species": "Total species",
-    "families": "Bird families",
-    "individuals": "Total individuals",
-    "checklists": "Total checklists",
-    "completed_checklists": "Completed checklists",
-    "locations": "Unique locations",
-    "lifers": "Lifers",
-    "birding_hours": "Total birding hours",
-    "distance_km": "Total distance (km)",
-    "days_with_checklist": "Birding days",
-    "longest_streak": "Longest streak",
-    "countries": "Countries",
-    "shared_checklists": "Shared checklists",
-    "days_birding_with_others": "Days birding with others",
-}
+@dataclass(frozen=True)
+class _StatSpec:
+    """One headline stat: which :class:`ShareSummaryStats` field, its card label, and formatting.
 
-_SPOTLIGHT_TITLES: dict[SpotlightStatId, str] = {
-    "lifers": "Lifers",
-    "checklists": "Checklists",
-    "locations": "Locations visited",
-}
+    ``decimals`` 0 → integer with thousands separators; 1 → one decimal place (and a ``—``
+    placeholder when the value is zero). ``hide_if_zero`` drops the stat entirely at zero.
+    """
+
+    attr: str
+    label: str
+    decimals: int = 0
+    hide_if_zero: bool = False
+
+
+# Ordered headline stats. This order is the fallback priority used by ``card_stat_pairs`` and the
+# single source of truth for stat labels (the Available statistics expander reorders separately).
+_STAT_SPECS: tuple[_StatSpec, ...] = (
+    _StatSpec("species", "Total species"),
+    _StatSpec("lifers", "Lifers"),
+    _StatSpec("checklists", "Total checklists"),
+    _StatSpec("completed_checklists", "Completed checklists"),
+    _StatSpec("locations", "Unique locations"),
+    _StatSpec("families", "Bird families"),
+    _StatSpec("individuals", "Total individuals"),
+    _StatSpec("days_with_checklist", "Birding days"),
+    _StatSpec("countries", "Countries"),
+    _StatSpec("longest_streak", "Longest streak (days)"),
+    _StatSpec("birding_hours", "Birding hours", decimals=1),
+    _StatSpec("distance_km", "Total distance (km)", decimals=1),
+    _StatSpec("shared_checklists", "Shared checklists", hide_if_zero=True),
+    _StatSpec("days_birding_with_others", "Days birding with others", hide_if_zero=True),
+)
 
 _LEGACY_SPOTLIGHT_ID_TO_LABEL: dict[SpotlightStatId, str] = {
     "species": "Total species",
@@ -134,13 +144,6 @@ def spotlight_species_label(period_kind: PeriodKind) -> str:
     if period_kind == "week":
         return "Week birds"
     return "Species"
-
-
-def spotlight_stat_label(stat: SpotlightStatId, period_kind: PeriodKind) -> str:
-    """Human label for a legacy spotlight stat id."""
-    if stat == "species":
-        return spotlight_species_label(period_kind)
-    return _SPOTLIGHT_TITLES[stat]
 
 
 def spotlight_label_from_id(stat: SpotlightStatId) -> str:
@@ -203,53 +206,18 @@ def _svg_to_data_uri(svg: str) -> str:
 
 def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
     """Ordered (label, display value) pairs for layouts; skips missing stats."""
-    raw: list[tuple[str, int | float | None, str]] = [
-        ("species", stats.species, "species"),
-        ("lifers", stats.lifers, "lifers"),
-        ("checklists", stats.checklists, "checklists"),
-        ("completed_checklists", stats.completed_checklists, "completed_checklists"),
-        ("locations", stats.locations, "locations"),
-        ("families", stats.families, "families"),
-        ("individuals", stats.individuals, "individuals"),
-        ("days_with_checklist", stats.days_with_checklist, "birding_days"),
-        ("countries", stats.countries, "countries"),
-        ("longest_streak", stats.longest_streak, "streak"),
-        ("birding_hours", stats.birding_hours, "hours"),
-        ("distance_km", stats.distance_km, "distance_km"),
-        ("shared_checklists", stats.shared_checklists, "shared"),
-        ("days_birding_with_others", stats.days_birding_with_others, "shared_days"),
-    ]
     out: list[tuple[str, str]] = []
-    for key, val, fmt in raw:
+    for spec in _STAT_SPECS:
+        val = getattr(stats, spec.attr)
         if val is None:
             continue
-        if key in ("shared_checklists", "days_birding_with_others") and val == 0:
+        if spec.hide_if_zero and val == 0:
             continue
-        if fmt == "hours":
-            display = f"{val:,.1f}" if val else "—"
-            label = "Birding hours"
-        elif fmt == "distance_km":
-            display = f"{val:,.1f}" if val else "—"
-            label = _STAT_LABELS["distance_km"]
-        elif fmt == "birding_days":
-            display = f"{int(val):,}"
-            label = "Birding days"
-        elif fmt == "countries":
-            display = f"{int(val):,}"
-            label = "Countries"
-        elif fmt == "streak":
-            display = f"{int(val):,}"
-            label = "Longest streak (days)"
-        elif fmt == "shared":
-            display = f"{int(val):,}"
-            label = _STAT_LABELS["shared_checklists"]
-        elif fmt == "shared_days":
-            display = f"{int(val):,}"
-            label = _STAT_LABELS["days_birding_with_others"]
+        if spec.decimals:
+            display = f"{val:,.{spec.decimals}f}" if val else "—"
         else:
             display = f"{int(val):,}"
-            label = _STAT_LABELS.get(key, key.replace("_", " ").title())
-        out.append((label, display))
+        out.append((spec.label, display))
     return out
 
 
@@ -321,15 +289,6 @@ def summary_status_metrics(
         if label not in seen:
             ordered.append((label, value))
     return ordered
-
-
-def available_card_metrics(
-    stats: ShareSummaryStats,
-    *,
-    all_time: ShareSummaryAllTimeStats | None = None,
-) -> list[tuple[str, str]]:
-    """Pickable stats for card layouts — same pool as the Available statistics expander."""
-    return summary_status_metrics(stats, all_time=all_time)
 
 
 def layout_card_stat_max(layout: LayoutId | None, fmt: FormatId | None = None) -> int:
@@ -1074,44 +1033,6 @@ def render_share_summary_preview_html(
         return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
 
 
-def all_layout_previews_html(
-    stats: ShareSummaryStats,
-    *,
-    fmt: FormatId = "square",
-    scale: float = 0.38,
-    spotlight_stat: SpotlightStatId = "lifers",
-    spotlight_label: str | None = None,
-    favourite_birds: tuple[str, ...] = (),
-    card_stat_labels_by_layout: dict[LayoutId, tuple[str, ...]] | None = None,
-    all_time: ShareSummaryAllTimeStats | None = None,
-    color_scheme_index: int | None = None,
-) -> dict[str, str]:
-    """All prototype layouts for side-by-side comparison."""
-    layouts: list[LayoutId] = ["hero", "tiles", "minimal", "spotlight"]
-    by_layout = card_stat_labels_by_layout or {}
-
-    def _labels_for(layout_id: LayoutId) -> tuple[str, ...]:
-        if layout_id in ("hero", "tiles", "minimal"):
-            return by_layout.get(layout_id, ())
-        return ()
-
-    return {
-        layout_id: render_share_summary_preview_html(
-            stats,
-            layout=layout_id,
-            fmt=fmt,
-            scale=scale,
-            spotlight_stat=spotlight_stat,
-            spotlight_label=spotlight_label,
-            favourite_birds=favourite_birds,
-            card_stat_labels=_labels_for(layout_id),
-            all_time=all_time,
-            color_scheme_index=color_scheme_index,
-        )
-        for layout_id in layouts
-    }
-
-
 # Re-export period helpers for the design app.
 __all__ = [
     "FormatId",
@@ -1119,11 +1040,9 @@ __all__ = [
     "SpotlightStatId",
     "ShareSummaryAllTimeStats",
     "ShareSummaryStats",
-    "all_layout_previews_html",
     "compute_share_summary_stats",
     "period_for_custom",
     "period_for_lifetime",
-    "period_for_iso_week",
     "period_for_week_containing",
     "period_for_month",
     "period_for_year",
@@ -1136,10 +1055,8 @@ __all__ = [
     "spotlight_label_from_id",
     "resolve_spotlight_label",
     "spotlight_species_label",
-    "spotlight_stat_label",
     "stat_pairs",
     "summary_status_metrics",
-    "available_card_metrics",
     "layout_card_stat_max",
     "layout_card_stat_storage_max",
     "favourite_birds_for_card",

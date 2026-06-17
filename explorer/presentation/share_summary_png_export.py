@@ -53,14 +53,7 @@ def share_summary_png_filename(
 ) -> str:
     """Suggested download filename, e.g. ``2025-birding-summary.png``."""
     del layout, fmt  # reserved for future disambiguation in filename
-    if stats.trip_title:
-        base = _slugify(stats.trip_title)
-    elif stats.period_kind == "year":
-        base = _slugify(stats.period_label)
-    elif stats.period_kind == "month":
-        base = _slugify(stats.period_label)
-    else:
-        base = _slugify(stats.period_label)
+    base = _slugify(stats.trip_title or stats.period_label)
     return f"{base}-birding-summary.png"
 
 
