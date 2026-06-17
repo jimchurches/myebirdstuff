@@ -316,6 +316,16 @@ def _card_stat_slot_count_key(layout: LayoutId, period_kind: PeriodKind) -> str:
     return f"{_CARD_STATS_SLOT_COUNT_PREFIX}{layout}_{period_kind}"
 
 
+def _card_stat_selectbox_key(layout: LayoutId, index: int) -> str:
+    return f"design_card_stat_sel_{layout}_{index}"
+
+
+def _clear_card_stat_selectbox_keys(layout: LayoutId) -> None:
+    """Drop stale selectbox widget state so Reset / session picks take effect."""
+    for i in range(layout_card_stat_storage_max(layout)):
+        st.session_state.pop(_card_stat_selectbox_key(layout, i), None)
+
+
 def _story_format_stat_picker(fmt: FormatId, layout: LayoutId) -> bool:
     """Fixed stat rows on story format for grid and list layouts."""
     return fmt == "story" and layout in ("minimal", "tiles")
@@ -458,7 +468,7 @@ def _card_stat_picker_ui(
                 options=options,
                 index=options.index(current) if current in options else 0,
                 format_func=lambda x: "—" if x == "" else x,
-                key=f"design_card_stat_sel_{layout}_{i}",
+                key=_card_stat_selectbox_key(layout, i),
             )
             picks[i] = choice or ""
         with col_actions:
@@ -526,6 +536,7 @@ def _card_stat_picker_ui(
                 defaults = list(
                     default_card_stat_labels(layout, status_metrics, period_kind=period_kind)
                 )
+                _clear_card_stat_selectbox_keys(layout)
                 if fixed_rows:
                     st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
                     st.session_state[count_key] = max_slots
