@@ -4,7 +4,7 @@ from explorer.app.streamlit.design_share_summary_app import (
     _card_stat_data_scope,
     _period_has_checklist_data,
 )
-from explorer.core.share_summary_compute import ShareSummaryStats
+from explorer.core.share_summary_compute import ShareSummaryGeoScope, ShareSummaryStats
 
 
 def test_card_stat_data_scope_changes_when_source_or_period_changes():
@@ -28,6 +28,24 @@ def test_card_stat_data_scope_changes_when_source_or_period_changes():
     )
     assert sample != csv
     assert csv != other_month
+
+
+def test_card_stat_data_scope_changes_when_geo_scope_changes():
+    world = _card_stat_data_scope(
+        use_sample=False,
+        period_kind="year",
+        period_label="2025",
+        upload_name="MyEBirdData.csv",
+        geo_scope=ShareSummaryGeoScope(),
+    )
+    country = _card_stat_data_scope(
+        use_sample=False,
+        period_kind="year",
+        period_label="2025",
+        upload_name="MyEBirdData.csv",
+        geo_scope=ShareSummaryGeoScope(country_key="AU-NSW"),
+    )
+    assert world != country
 
 
 def test_period_has_checklist_data():

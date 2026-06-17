@@ -25,13 +25,18 @@ import streamlit as st
 
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.data_loader import load_dataset
+from explorer.core.region_display import map_focus_key_for_display
 from explorer.core.share_summary_compute import (
     PeriodAnchor,
     PeriodKind,
     ShareSummaryAllTimeStats,
+    ShareSummaryGeoScope,
     ShareSummaryStats,
     compute_share_summary_all_time_stats,
+    filter_df_by_geo_scope,
     format_custom_date_range,
+    geo_country_keys_from_df,
+    geo_region_options_for_country,
     period_species_common_names,
     period_species_name_map,
     resolve_period,
@@ -110,6 +115,9 @@ _CARD_HEADING_PLACEHOLDER = "e.g. North Coast NSW Exploration"
 _FAVOURITE_BIRD_SLOT_COUNT_KEY = "design_favourite_bird_slot_count"
 _FAVOURITE_BIRD_PICK_PREFIX = "design_favourite_bird_pick_"
 _FAVOURITE_BIRD_SEARCH_REMOUNT_PREFIX = "design_favourite_bird_search_remount_"
+_GEO_WORLD_OPTION = ""
+_GEO_COUNTRY_SELECT_KEY = "design_geo_country"
+_GEO_REGION_SELECT_KEY = "design_geo_region"
 _MAX_FAVOURITE_BIRDS = 3
 _SAMPLE_PERIOD_SPECIES: tuple[str, ...] = (
     "Superb Fairywren",
@@ -206,6 +214,45 @@ def _remove_favourite_bird_slot(slot_index: int, slot_count: int) -> None:
         return
     _clear_favourite_bird_slots_from(slot_index)
     st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY] = slot_index
+
+
+def _geo_country_select_label(country_key: str) -> str:
+    if not country_key:
+        return "World"
+    return map_focus_key_for_display(country_key)
+
+
+def _sidebar_geo_scope_controls(df: pd.DataFrame) -> ShareSummaryGeoScope:
+    """Country and region pickers; World is the default (no filter)."""
+    country_keys = geo_country_keys_from_df(df)
+    country_options = [_GEO_WORLD_OPTION, *country_keys]
+    country_key = st.selectbox(
+        "Country",
+        options=country_options,
+        format_func=_geo_country_select_label,
+        key=_GEO_COUNTRY_SELECT_KEY,
+    )
+    if not country_key:
+        st.session_state.pop(_GEO_REGION_SELECT_KEY, None)
+        return ShareSummaryGeoScope()
+
+    region_pairs = geo_region_options_for_country(df, country_key)
+    region_options = [_GEO_WORLD_OPTION, *[code for code, _ in region_pairs]]
+    region_labels = {_GEO_WORLD_OPTION: "All regions"}
+    region_labels.update({code: label for code, label in region_pairs})
+    current_region = st.session_state.get(_GEO_REGION_SELECT_KEY, _GEO_WORLD_OPTION)
+    if current_region not in region_options:
+        st.session_state[_GEO_REGION_SELECT_KEY] = _GEO_WORLD_OPTION
+    region_code = st.selectbox(
+        "Region",
+        options=region_options,
+        format_func=lambda code: region_labels[code],
+        key=_GEO_REGION_SELECT_KEY,
+    )
+    return ShareSummaryGeoScope(
+        country_key=country_key,
+        region_code=region_code or None,
+    )
 
 
 def _sidebar_favourite_bird_controls(
@@ -325,10 +372,12 @@ def _card_stat_data_scope(
     period_kind: PeriodKind,
     period_label: str,
     upload_name: str | None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> str:
     """Session scope token — when this changes, card-stat picks re-initialize."""
     source = "sample" if use_sample else (upload_name or "csv")
-    return f"{source}|{period_kind}|{period_label}"
+    geo_token = (geo_scope or ShareSummaryGeoScope()).scope_token()
+    return f"{source}|{period_kind}|{period_label}|{geo_token}"
 
 
 def _period_has_checklist_data(stats: ShareSummaryStats) -> bool:
@@ -747,12 +796,18 @@ st.caption(
     "Exploratory tool only. Compare HTML mockups before choosing layouts for the main app."
 )
 
+df: pd.DataFrame | None = None
+geo_scope = ShareSummaryGeoScope()
+
 with st.sidebar:
     st.header("Data")
     use_sample = st.toggle("Use sample data", value=True)
     uploaded = None if use_sample else st.file_uploader("eBird CSV export", type=["csv"])
+    if not use_sample and uploaded is not None:
+        with st.spinner("Loading CSV…"):
+            df = load_dataset(uploaded)
 
-    st.header("Period")
+    st.header("Scope")
     period_mode = st.selectbox(
         "Range",
         options=["year", "month", "week", "custom", "lifetime"],
@@ -811,6 +866,15 @@ with st.sidebar:
             key="design_sample_card_heading",
         )
 
+    if use_sample:
+        st.caption("Geography: World (sample data)")
+    elif uploaded is None:
+        pass
+    elif df is not None and df.empty:
+        st.caption("No data in file.")
+    elif df is not None:
+        geo_scope = _sidebar_geo_scope_controls(df)
+
     st.header(_CURRENT_CARD_LABEL)
     selected_layout: LayoutId = st.selectbox(
         "Layout",
@@ -836,7 +900,6 @@ with st.sidebar:
     color_scheme_index = share_summary_color_scheme_index(color_theme_id)
     scale = st.slider("Preview scale", min_value=0.22, max_value=0.55, value=0.42, step=0.01)
 
-df: pd.DataFrame | None = None
 resolved_period = None
 stats: ShareSummaryStats = sample_share_summary_stats()
 all_time: ShareSummaryAllTimeStats | None = ShareSummaryAllTimeStats(
@@ -848,8 +911,6 @@ if not use_sample:
     if uploaded is None:
         st.info("Upload an eBird CSV in the sidebar, or enable **Use sample data**.")
         st.stop()
-    with st.spinner("Loading CSV…"):
-        df = load_dataset(uploaded)
     if df is None or df.empty:
         st.warning("No data found in this file.")
         st.stop()
@@ -881,7 +942,8 @@ else:
         )
 
 if df is not None:
-    dates = pd.to_datetime(df["Date"], errors="coerce").dropna()
+    df_scoped = filter_df_by_geo_scope(df, geo_scope)
+    dates = pd.to_datetime(df_scoped["Date"], errors="coerce").dropna()
     if dates.empty:
         st.warning("No dated checklists in this file.")
         st.stop()
@@ -939,16 +1001,20 @@ if df is not None:
         period = period_for_custom(start, end, trip_title=_card_heading_or_none(card_heading))
 
     resolved_period = period
-    computed = compute_share_summary_stats(df, period)
+    computed = compute_share_summary_stats(df_scoped, period)
     if computed is None:
         st.warning("Could not compute stats for this period.")
         st.stop()
     stats = computed
-    all_time = compute_share_summary_all_time_stats(df, taxonomy_locale=TAXONOMY_LOCALE_DEFAULT)
+    all_time = (
+        compute_share_summary_all_time_stats(df_scoped, taxonomy_locale=TAXONOMY_LOCALE_DEFAULT)
+        if geo_scope.is_world
+        else None
+    )
 
 if df is not None and resolved_period is not None:
-    period_species = period_species_common_names(df, resolved_period)
-    period_name_map = period_species_name_map(df, resolved_period)
+    period_species = period_species_common_names(df_scoped, resolved_period)
+    period_name_map = period_species_name_map(df_scoped, resolved_period)
 else:
     period_species = list(_SAMPLE_PERIOD_SPECIES)
     period_name_map = dict(_SAMPLE_PERIOD_NAME_MAP)
@@ -969,6 +1035,7 @@ card_stat_data_scope = _card_stat_data_scope(
     period_kind=stats.period_kind,
     period_label=stats.period_label,
     upload_name=upload_name,
+    geo_scope=geo_scope,
 )
 
 if _SPOTLIGHT_LABEL_KEY not in st.session_state:
