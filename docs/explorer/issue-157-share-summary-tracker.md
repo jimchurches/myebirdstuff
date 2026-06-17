@@ -77,7 +77,7 @@ Configured in ``explorer/core/share_summary_defaults.py`` (re-exported from ``de
 | **Hero** (4 tiles) | Total species, Lifers, Total checklists, Unique locations |
 | **Stat tiles** (6) | Above + Countries, Birding days |
 | **Minimal list** (6) | Same as stat tiles |
-| **Spotlight** | **Lifers** (``SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT``) |
+| **Spotlight** | **Lifers** (``SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT``) |
 
 Users will eventually pick stats from the full catalogue; defaults above are the starting point.
 

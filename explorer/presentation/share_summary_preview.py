@@ -80,7 +80,7 @@ _FORMAT_PX: dict[FormatId, tuple[int, int]] = {
     "story": (1080, 1920),
 }
 
-_FORMAT_LABELS: dict[FormatId, str] = {
+FORMAT_LABELS: dict[FormatId, str] = {
     "square": "Square post (1080×1080)",
     "portrait_post": "Portrait post (1080×1350)",
     "story": "Story (1080×1920)",
@@ -1014,5 +1014,5 @@ __all__ = [
     "favourite_birds_for_card",
     "default_card_stat_labels",
     "card_stat_pairs",
-    "_FORMAT_LABELS",
+    "FORMAT_LABELS",
 ]

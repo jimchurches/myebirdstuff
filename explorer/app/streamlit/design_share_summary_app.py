@@ -51,7 +51,7 @@ from explorer.presentation.share_summary_png_export import (
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
-    _FORMAT_LABELS,
+    FORMAT_LABELS,
     compute_share_summary_stats,
     default_card_stat_labels,
     layout_card_stat_max,
@@ -825,7 +825,7 @@ with st.sidebar:
     fmt: FormatId = st.selectbox(
         "Aspect ratio",
         options=["square", "portrait_post", "story"],
-        format_func=lambda x: _FORMAT_LABELS[x],
+        format_func=lambda x: FORMAT_LABELS[x],
     )
     color_theme_id = st.selectbox(
         "Theme",

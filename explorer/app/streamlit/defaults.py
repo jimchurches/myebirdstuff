@@ -43,7 +43,7 @@ from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export f
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
-    SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT,
+    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
 )
 
 # ---------------------------------------------------------------------------

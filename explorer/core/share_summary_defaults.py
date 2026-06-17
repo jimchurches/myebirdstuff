@@ -84,6 +84,5 @@ SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS: tuple[str, ...] = (
 )
 # Story format (1080×1920) — statistics grid and list may show up to this many stats.
 SHARE_SUMMARY_STORY_MAX_STATS = 10
-SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT = "lifers"
 # Display label on spotlight cards (matches Available statistics / card picker).
 SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"
