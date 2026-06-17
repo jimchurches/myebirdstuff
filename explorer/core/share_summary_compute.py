@@ -13,11 +13,13 @@ from typing import Literal
 
 import pandas as pd
 
+from explorer.core.region_display import map_focus_key_for_display, state_for_display
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.species_family import build_base_species_to_family_map
 from explorer.core.species_logic import countable_species_vectorized
 from explorer.core.stats import (
     checklist_country_keys,
+    format_region_parts,
     longest_streak,
     safe_count,
     shared_checklist_stats,
@@ -92,6 +94,127 @@ class ShareSummaryPeriod:
     @property
     def end_ts(self) -> pd.Timestamp:
         return pd.Timestamp(self.end) + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
+
+
+@dataclass(frozen=True)
+class ShareSummaryGeoScope:
+    """Geographic filter for share-summary stats.
+
+    *country_key* ``None`` means **World** (no geographic filter).
+    *region_code* is the state/province subdivision code within *country_key*
+    (e.g. ``NSW`` for ``AU-NSW``); ``None`` means all regions in that country.
+    """
+
+    country_key: str | None = None
+    region_code: str | None = None
+
+    @property
+    def is_world(self) -> bool:
+        return not (self.country_key or "").strip()
+
+    def scope_token(self) -> str:
+        """Stable token for session keys (world, country, or country+region)."""
+        if self.is_world:
+            return "world"
+        ck = str(self.country_key).strip()
+        rc = (self.region_code or "").strip()
+        return f"{ck}|{rc}" if rc else ck
+
+
+def _checklist_region_code(country_key: str, state_province: object) -> str | None:
+    """State/province code for one checklist row, aligned with *country_key*."""
+    ck = str(country_key or "").strip()
+    if not ck or ck == "_UNKNOWN":
+        return None
+    if state_province is None or (isinstance(state_province, float) and pd.isna(state_province)):
+        return None
+    cc, st = format_region_parts(state_province)
+    st_s = str(st).strip() if st else ""
+    if ck.startswith("_R:"):
+        tail = ck[3:].strip()
+        if not st_s:
+            return tail or None
+        return st_s
+    if cc and str(cc).strip().upper() == ck.upper():
+        return st_s or None
+    if not cc and st_s:
+        return st_s
+    return None
+
+
+def _checklist_geo_frame(cl: pd.DataFrame) -> pd.DataFrame:
+    """Per-checklist country key and optional region code (one row per Submission ID)."""
+    if cl.empty or "Submission ID" not in cl.columns:
+        return pd.DataFrame(columns=["Submission ID", "_country_key", "_region_code"])
+    frame = cl.drop_duplicates(subset=["Submission ID"]).copy()
+    frame["_country_key"] = checklist_country_keys(frame)
+    sp_col = "State/Province" if "State/Province" in frame.columns else None
+    if sp_col:
+        frame["_region_code"] = [
+            _checklist_region_code(ck, sp)
+            for ck, sp in zip(frame["_country_key"], frame[sp_col], strict=True)
+        ]
+    else:
+        frame["_region_code"] = None
+    return frame[["Submission ID", "_country_key", "_region_code"]]
+
+
+def geo_country_keys_from_df(df: pd.DataFrame) -> list[str]:
+    """Distinct country keys in *df*, sorted by display name (excludes ``_UNKNOWN``)."""
+    if df.empty:
+        return []
+    geo = _checklist_geo_frame(df.drop_duplicates(subset=["Submission ID"]))
+    keys = {str(k) for k in geo["_country_key"].dropna().unique() if k and str(k) != "_UNKNOWN"}
+    return sorted(keys, key=lambda k: map_focus_key_for_display(k).lower())
+
+
+def geo_region_options_for_country(
+    df: pd.DataFrame,
+    country_key: str,
+) -> list[tuple[str, str]]:
+    """``(region_code, display_label)`` pairs for *country_key*, sorted by label."""
+    ck = str(country_key or "").strip()
+    if not ck or df.empty:
+        return []
+    geo = _checklist_geo_frame(df.drop_duplicates(subset=["Submission ID"]))
+    sub = geo[geo["_country_key"] == ck]
+    codes = {str(c).strip() for c in sub["_region_code"].dropna() if str(c).strip()}
+    cc = ck[3:] if ck.startswith("_R:") else ck
+    pairs = [
+        (code, state_for_display(cc, code) or code)
+        for code in codes
+    ]
+    return sorted(pairs, key=lambda p: p[1].lower())
+
+
+def filter_df_by_geo_scope(df: pd.DataFrame, scope: ShareSummaryGeoScope) -> pd.DataFrame:
+    """Return sighting rows whose checklists fall in *scope*."""
+    if df.empty or scope.is_world:
+        return df
+    if "Submission ID" not in df.columns:
+        return df.iloc[0:0].copy()
+    ck = str(scope.country_key or "").strip()
+    geo = _checklist_geo_frame(df)
+    mask = geo["_country_key"] == ck
+    rc = (scope.region_code or "").strip()
+    if rc:
+        mask = mask & (geo["_region_code"].astype(str).str.strip() == rc)
+    sids = set(geo.loc[mask, "Submission ID"])
+    return df[df["Submission ID"].isin(sids)].copy()
+
+
+def geo_scope_display_label(scope: ShareSummaryGeoScope) -> str:
+    """Human-readable scope for card footer debug text."""
+    if scope.is_world:
+        return "World"
+    country = map_focus_key_for_display(scope.country_key or "")
+    rc = (scope.region_code or "").strip()
+    if not rc:
+        return country
+    cc = scope.country_key or ""
+    cc_norm = cc[3:] if str(cc).startswith("_R:") else cc
+    region = state_for_display(cc_norm, rc) or rc
+    return f"{country} · {region}"
 
 
 def period_for_year(year: int) -> ShareSummaryPeriod:

@@ -30,6 +30,7 @@ def _row(
     species: str,
     loc: str = "L1",
     country: str = "AU",
+    state_province: str | None = None,
     observers: float = 1.0,
     distance_km: float | None = None,
 ) -> dict:
@@ -46,6 +47,8 @@ def _row(
         "All Obs Reported": 1,
         "Number of Observers": observers,
     }
+    if state_province is not None:
+        row["State/Province"] = state_province
     if distance_km is not None:
         row["Distance Traveled (km)"] = distance_km
     return row
@@ -392,3 +395,64 @@ def test_period_species_common_names_scoped_to_period():
     assert names == ["Rainbow Lorikeet", "Superb Fairywren"]
     name_map = period_species_name_map(df, period)
     assert name_map["Superb Fairywren"] == "Malurus cyaneus"
+
+
+def test_geo_scope_world_leaves_df_unchanged():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope, filter_df_by_geo_scope
+
+    df = pd.DataFrame([_row(sid="S1", dt="2025-01-01", species="Species a")])
+    out = filter_df_by_geo_scope(df, ShareSummaryGeoScope())
+    assert len(out) == len(df)
+
+
+def test_filter_df_by_geo_scope_country_and_region():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope, filter_df_by_geo_scope
+
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-01-10", species="Species a", state_province="AU-NSW"),
+            _row(sid="S2", dt="2025-01-11", species="Species b", state_province="AU-VIC"),
+            _row(sid="S3", dt="2025-01-12", species="Species c", country="US", state_province="US-CA"),
+        ]
+    )
+    au = filter_df_by_geo_scope(df, ShareSummaryGeoScope(country_key="AU"))
+    assert set(au["Submission ID"]) == {"S1", "S2"}
+
+    nsw = filter_df_by_geo_scope(df, ShareSummaryGeoScope(country_key="AU", region_code="NSW"))
+    assert set(nsw["Submission ID"]) == {"S1"}
+
+    stats_nsw = compute_share_summary_stats(nsw, period_for_year(2025))
+    assert stats_nsw is not None
+    assert stats_nsw.species == 1
+
+    stats_au = compute_share_summary_stats(au, period_for_year(2025))
+    assert stats_au is not None
+    assert stats_au.species == 2
+
+
+def test_geo_country_and_region_options():
+    from explorer.core.share_summary_compute import (
+        geo_country_keys_from_df,
+        geo_region_options_for_country,
+    )
+
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-01-10", species="Species a", state_province="AU-NSW"),
+            _row(sid="S2", dt="2025-01-11", species="Species b", state_province="AU-VIC"),
+        ]
+    )
+    countries = geo_country_keys_from_df(df)
+    assert countries == ["AU"]
+    regions = geo_region_options_for_country(df, "AU")
+    assert [code for code, _ in regions] == ["NSW", "VIC"]
+
+
+def test_geo_scope_display_label():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope, geo_scope_display_label
+
+    assert geo_scope_display_label(ShareSummaryGeoScope()) == "World"
+    assert "Australia" in geo_scope_display_label(ShareSummaryGeoScope(country_key="AU"))
+    label = geo_scope_display_label(ShareSummaryGeoScope(country_key="AU", region_code="NSW"))
+    assert "Australia" in label
+    assert "New South Wales" in label
