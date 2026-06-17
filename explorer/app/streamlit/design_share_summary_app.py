@@ -103,6 +103,7 @@ _STATS_EXPANDER_LABEL = "Available statistics"
 _CARD_STATS_LABEL = "Card statistics"
 _CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
 _CARD_STATS_PICKS_PREFIX = "design_card_stat_picks_"
+_CARD_STATS_SCOPE_PREFIX = "design_card_stat_scope_"
 _SPOTLIGHT_LABEL_KEY = "design_spotlight_label"
 _LEGACY_SPOTLIGHT_LABEL_KEY = "design_spotlight_stat"
 _CURRENT_CARD_LABEL = "Current card"
@@ -316,6 +317,27 @@ def _card_stat_slot_count_key(layout: LayoutId, period_kind: PeriodKind) -> str:
     return f"{_CARD_STATS_SLOT_COUNT_PREFIX}{layout}_{period_kind}"
 
 
+def _card_stat_scope_key(layout: LayoutId, period_kind: PeriodKind) -> str:
+    return f"{_CARD_STATS_SCOPE_PREFIX}{layout}_{period_kind}"
+
+
+def _card_stat_data_scope(
+    *,
+    use_sample: bool,
+    period_kind: PeriodKind,
+    period_label: str,
+    upload_name: str | None,
+) -> str:
+    """Session scope token — when this changes, card-stat picks re-initialize."""
+    source = "sample" if use_sample else (upload_name or "csv")
+    return f"{source}|{period_kind}|{period_label}"
+
+
+def _period_has_checklist_data(stats: ShareSummaryStats) -> bool:
+    """False when the selected period has no checklists in the loaded export."""
+    return stats.checklists is not None and stats.checklists > 0
+
+
 def _card_stat_selectbox_key(layout: LayoutId, index: int) -> str:
     return f"design_card_stat_sel_{layout}_{index}"
 
@@ -370,6 +392,8 @@ def _ensure_card_stat_picks(
     status_metrics: list[tuple[str, str]],
     fmt: FormatId,
     period_kind: PeriodKind,
+    *,
+    data_scope: str,
 ) -> list[str]:
     """Initialize or sanitize session picks for *layout*; returns UI row values."""
     max_slots = layout_card_stat_max(layout, fmt)
@@ -377,18 +401,40 @@ def _ensure_card_stat_picks(
     available = frozenset(label for label, _ in status_metrics)
     picks_key = _card_stat_picks_key(layout, period_kind)
     count_key = _card_stat_slot_count_key(layout, period_kind)
+    scope_key = _card_stat_scope_key(layout, period_kind)
     fixed_rows = _story_format_stat_picker(fmt, layout)
+    defaults = list(
+        default_card_stat_labels(layout, status_metrics, period_kind=period_kind)
+    )
+
+    if st.session_state.get(scope_key) != data_scope:
+        st.session_state[scope_key] = data_scope
+        st.session_state.pop(picks_key, None)
+        st.session_state.pop(count_key, None)
+        _clear_card_stat_selectbox_keys(layout)
 
     if picks_key not in st.session_state:
-        defaults = list(
-            default_card_stat_labels(layout, status_metrics, period_kind=period_kind)
-        )
+        if fixed_rows:
+            st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
+            st.session_state[count_key] = max_slots
+        else:
+            st.session_state[picks_key] = defaults
+            st.session_state[count_key] = max(1, len(defaults) if defaults else 1)
+
+    sanitized = _sanitize_card_stat_picks(
+        list(st.session_state[picks_key]),
+        available=available,
+        max_slots=storage_max,
+    )
+    if not sanitized and defaults:
+        _clear_card_stat_selectbox_keys(layout)
         if fixed_rows:
             st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
             st.session_state[count_key] = max_slots
         else:
             st.session_state[picks_key] = defaults
             st.session_state[count_key] = max(1, len(defaults))
+        sanitized = list(defaults)
 
     sanitized = _sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
@@ -423,6 +469,8 @@ def _card_stat_picker_ui(
     status_metrics: list[tuple[str, str]],
     fmt: FormatId,
     period_kind: PeriodKind,
+    *,
+    data_scope: str,
 ) -> tuple[str, ...]:
     """Ordered stat picker for hero / tiles / list; hidden for spotlight."""
     if layout == "spotlight":
@@ -437,7 +485,9 @@ def _card_stat_picker_ui(
 
     picks_key = _card_stat_picks_key(layout, period_kind)
     count_key = _card_stat_slot_count_key(layout, period_kind)
-    picks = _ensure_card_stat_picks(layout, status_metrics, fmt, period_kind)
+    picks = _ensure_card_stat_picks(
+        layout, status_metrics, fmt, period_kind, data_scope=data_scope
+    )
     ui_rows = _card_stat_ui_row_count(
         layout, fmt, slot_count=int(st.session_state[count_key])
     )
@@ -557,10 +607,14 @@ def _card_stat_labels_from_session(
     status_metrics: list[tuple[str, str]],
     fmt: FormatId,
     period_kind: PeriodKind,
+    *,
+    data_scope: str,
 ) -> tuple[str, ...]:
     if layout == "spotlight":
         return ()
-    picks = _ensure_card_stat_picks(layout, status_metrics, fmt, period_kind)
+    picks = _ensure_card_stat_picks(
+        layout, status_metrics, fmt, period_kind, data_scope=data_scope
+    )
     return _effective_card_stat_labels(picks, layout, fmt)
 
 
@@ -632,17 +686,28 @@ def _current_card_fragment(
     status_metrics: list[tuple[str, str]],
     favourite_birds: tuple[str, ...],
     color_scheme_index: int,
+    card_stat_data_scope: str,
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     with st.expander(_CARD_STATS_LABEL, expanded=True):
         if selected_layout == "spotlight":
             _spotlight_stat_picker(status_metrics)
         else:
-            _card_stat_picker_ui(selected_layout, status_metrics, fmt, stats.period_kind)
+            _card_stat_picker_ui(
+                selected_layout,
+                status_metrics,
+                fmt,
+                stats.period_kind,
+                data_scope=card_stat_data_scope,
+            )
 
     spotlight_label = _spotlight_label_from_session(status_metrics)
     card_stat_labels = _card_stat_labels_from_session(
-        selected_layout, status_metrics, fmt, stats.period_kind
+        selected_layout,
+        status_metrics,
+        fmt,
+        stats.period_kind,
+        data_scope=card_stat_data_scope,
     )
 
     st.subheader(_CURRENT_CARD_LABEL)
@@ -907,12 +972,26 @@ favourite_birds = _sidebar_favourite_bird_controls(
 
 status_metrics = summary_status_metrics(stats, all_time=all_time)
 
+upload_name = uploaded.name if uploaded is not None else None
+card_stat_data_scope = _card_stat_data_scope(
+    use_sample=use_sample,
+    period_kind=stats.period_kind,
+    period_label=stats.period_label,
+    upload_name=upload_name,
+)
+
 if _SPOTLIGHT_LABEL_KEY not in st.session_state:
     st.session_state[_SPOTLIGHT_LABEL_KEY] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
 tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
 
 with tab_social_cards:
+    if not use_sample and not _period_has_checklist_data(stats):
+        st.warning(
+            f"No checklists in **{stats.period_label}** in this export. "
+            "Try **Previous month** (or another range) in the sidebar, or pick a period that includes your data."
+        )
+
     with st.expander(_STATS_EXPANDER_LABEL, expanded=False):
         cols = st.columns(4)
         for i, (label, value) in enumerate(status_metrics):
@@ -928,4 +1007,5 @@ with tab_social_cards:
         status_metrics=status_metrics,
         favourite_birds=favourite_birds,
         color_scheme_index=color_scheme_index,
+        card_stat_data_scope=card_stat_data_scope,
     )
