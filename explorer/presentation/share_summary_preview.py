@@ -9,13 +9,11 @@ from __future__ import annotations
 import contextvars
 import contextlib
 import html as html_module
-import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Literal
 
-from explorer.core.checklist_stats_compute import ChecklistStatsPayload
 from explorer.core.share_summary_compute import (
     PeriodKind,
     ShareSummaryAllTimeStats,
@@ -142,11 +140,6 @@ def spotlight_pair_for_label(
     if not cleaned or cleaned not in lookup:
         return None
     return cleaned, lookup[cleaned]
-
-_YEARLY_ICON_RE = re.compile(
-    r'\s*<span class="stats-info-icon">.*?</span>',
-    flags=re.DOTALL,
-)
 
 _LOGO_PATH = Path(__file__).resolve().parents[2] / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
 
@@ -349,98 +342,6 @@ def card_stat_pairs(
             labels.append(lab)
 
     return [(lab, lookup[lab]) for lab in labels[:max_count]]
-
-
-def _strip_yearly_label(label: str) -> str:
-    return _YEARLY_ICON_RE.sub("", label or "").strip()
-
-
-def _parse_display_int(cell: str) -> int | None:
-    s = (cell or "").strip().replace(",", "")
-    if not s or s == "—":
-        return None
-    try:
-        return int(float(s))
-    except ValueError:
-        return None
-
-
-def _parse_display_float(cell: str) -> float | None:
-    s = (cell or "").strip().replace(",", "")
-    if not s or s == "—":
-        return None
-    try:
-        return float(s)
-    except ValueError:
-        return None
-
-
-def _yearly_row_lookup(
-    yearly_rows: Iterable[tuple[str, list[str]]],
-) -> dict[str, list[str]]:
-    out: dict[str, list[str]] = {}
-    for label, vals in yearly_rows:
-        out[_strip_yearly_label(label)] = list(vals)
-    return out
-
-
-def _countries_in_year_from_payload(payload: ChecklistStatsPayload, year: int) -> int | None:
-    """Count countries with checklists in *year* (from Country tab payload blocks)."""
-    sections = payload.country_sections or []
-    if not sections:
-        return None
-    count = 0
-    for country_key, years, _rows in sections:
-        if not country_key or country_key == "_UNKNOWN" or not years:
-            continue
-        if year in years:
-            count += 1
-    return count if count > 0 else None
-
-
-def share_summary_stats_for_year(
-    payload: ChecklistStatsPayload,
-    year: int,
-) -> ShareSummaryStats | None:
-    """Extract summary stats for one calendar year from a checklist stats payload.
-
-    Reads the Yearly Summary table rows in *payload* plus country blocks for
-    **Countries**. ``longest_streak`` is left ``None`` here — yearly rows do not
-    include per-year streak; use :func:`compute_share_summary_stats` with
-    :func:`period_for_year` when a full year card is needed from raw CSV data.
-    """
-    years = list(payload.years_list or [])
-    if year not in years:
-        return None
-    idx = years.index(year)
-    rows = _yearly_row_lookup(payload.yearly_rows or [])
-
-    def _int(label: str) -> int | None:
-        vals = rows.get(label)
-        if not vals or idx >= len(vals):
-            return None
-        return _parse_display_int(vals[idx])
-
-    def _float(label: str) -> float | None:
-        vals = rows.get(label)
-        if not vals or idx >= len(vals):
-            return None
-        return _parse_display_float(vals[idx])
-
-    return ShareSummaryStats(
-        period_label=str(year),
-        period_kind="year",
-        species=_int("Total species"),
-        lifers=_int("Lifers"),
-        checklists=_int("Total checklists"),
-        completed_checklists=_int("Completed checklists"),
-        locations=_int("Unique locations"),
-        families=_int("Total bird families"),
-        individuals=_int("Total individuals"),
-        days_with_checklist=_int("Days with checklist"),
-        birding_hours=_float("Total birding hours"),
-        countries=_countries_in_year_from_payload(payload, year),
-    )
 
 
 def sample_share_summary_stats(
@@ -1004,7 +905,6 @@ __all__ = [
     "render_share_summary_export_html",
     "render_share_summary_preview_html",
     "sample_share_summary_stats",
-    "share_summary_stats_for_year",
     "spotlight_pair_for_label",
     "resolve_spotlight_label",
     "stat_pairs",

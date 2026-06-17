@@ -1,79 +1,11 @@
 """Tests for :mod:`explorer.presentation.share_summary_preview`."""
 
-from explorer.core.checklist_stats_compute import ChecklistStatsPayload
 from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryStats
 from explorer.presentation.share_summary_preview import (
     render_share_summary_export_html,
     render_share_summary_preview_html,
     sample_share_summary_stats,
-    share_summary_stats_for_year,
 )
-
-
-def _minimal_payload(*, years: list[int], species_vals: list[str]) -> ChecklistStatsPayload:
-    yearly_rows = [("Total species", species_vals)]
-    return ChecklistStatsPayload(
-        n_checklists=1,
-        n_species=1,
-        n_individuals=1,
-        n_completed_display="1",
-        protocol_rows=[],
-        total_minutes=0.0,
-        total_hours=0.0,
-        total_days_dec=0.0,
-        total_months=0.0,
-        total_years=0.0,
-        n_days_with_checklist=1,
-        n_shared=0,
-        shared_minutes=0.0,
-        shared_hours=0.0,
-        n_days_birding_with_others=0,
-        total_km=0.0,
-        parkruns=0.0,
-        marathons=0.0,
-        times_equator=0.0,
-        times_godwit=0.0,
-        streak=0,
-        streak_start_date="",
-        streak_start_loc="",
-        streak_start_sid="",
-        streak_start_lid="",
-        streak_end_date="",
-        streak_end_loc="",
-        streak_end_sid="",
-        streak_end_lid="",
-        rankings={},
-        years_list=years,
-        yearly_rows=yearly_rows,
-        incomplete_by_year={},
-        country_sections=[],
-    )
-
-
-def test_share_summary_stats_for_year_extracts_species():
-    payload = _minimal_payload(years=[2024, 2025], species_vals=["100", "312"])
-    stats = share_summary_stats_for_year(payload, 2025)
-    assert stats is not None
-    assert stats.species == 312
-    assert stats.period_label == "2025"
-    assert stats.longest_streak is None
-
-
-def test_share_summary_stats_for_year_counts_countries_from_sections():
-    payload = _minimal_payload(years=[2025], species_vals=["10"])
-    payload = ChecklistStatsPayload(
-        **{
-            **payload.__dict__,
-            "country_sections": [
-                ("AU", [2024, 2025], []),
-                ("US", [2025], []),
-                ("_UNKNOWN", [2025], []),
-            ],
-        }
-    )
-    stats = share_summary_stats_for_year(payload, 2025)
-    assert stats is not None
-    assert stats.countries == 2
 
 
 def test_render_preview_includes_period_label_and_logo():
