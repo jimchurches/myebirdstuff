@@ -157,13 +157,14 @@ def _card_heading_or_none(text: str) -> str | None:
 
 
 @st.cache_data
-def _design_sample_dataset() -> pd.DataFrame:
+def _design_sample_dataset(sample_year: int) -> pd.DataFrame:
     """Small multi-region export for sample mode (AU NSW/QLD, India Goa)."""
+    y = int(sample_year)
     checklists: list[tuple[str, str, str, str, float, float, list[tuple[str, str]]]] = [
         (
             "S9001",
             "AU-NSW",
-            "2025-06-05",
+            f"{y}-06-05",
             "Royal National Park",
             -34.07,
             151.08,
@@ -176,7 +177,7 @@ def _design_sample_dataset() -> pd.DataFrame:
         (
             "S9002",
             "AU-NSW",
-            "2025-06-12",
+            f"{y}-06-12",
             "Blue Mountains",
             -33.71,
             150.31,
@@ -189,7 +190,7 @@ def _design_sample_dataset() -> pd.DataFrame:
         (
             "S9003",
             "AU-QLD",
-            "2025-05-20",
+            f"{y}-05-20",
             "Roma Street Parkland",
             -27.46,
             153.02,
@@ -202,7 +203,7 @@ def _design_sample_dataset() -> pd.DataFrame:
         (
             "S9004",
             "IN-GA",
-            "2025-11-28",
+            f"{y}-11-28",
             "Arambol Beach",
             15.688,
             73.703,
@@ -908,7 +909,7 @@ with st.sidebar:
     use_sample = st.toggle("Use sample data", value=True)
     uploaded = None if use_sample else st.file_uploader("eBird CSV export", type=["csv"])
     if use_sample:
-        df = _design_sample_dataset()
+        df = _design_sample_dataset(date.today().year)
     elif uploaded is not None:
         with st.spinner("Loading CSV…"):
             df = load_dataset(uploaded)
