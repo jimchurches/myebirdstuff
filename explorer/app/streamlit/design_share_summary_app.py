@@ -494,28 +494,19 @@ def _clear_card_stat_selectbox_keys(layout: LayoutId) -> None:
         st.session_state.pop(_card_stat_selectbox_key(layout, i), None)
 
 
-def _seed_card_stat_selectbox_keys(layout: LayoutId, picks: list[str]) -> None:
-    """Align selectbox widget keys with session picks (after init or scope change)."""
-    storage_max = layout_card_stat_storage_max(layout)
-    padded = (picks + [""] * storage_max)[:storage_max]
-    for i, value in enumerate(padded):
-        st.session_state[_card_stat_selectbox_key(layout, i)] = value
-
-
-def _coerce_card_stat_selectbox_value(
+def _sync_card_stat_selectbox_value(
     layout: LayoutId,
     index: int,
     *,
     options: list[str],
-    fallback: str,
+    desired: str,
 ) -> str:
-    """Return a selectbox value that is valid for *options*, clearing stale widget state."""
+    """Set selectbox session state before the widget renders (avoids index + key conflict)."""
     key = _card_stat_selectbox_key(layout, index)
-    raw = st.session_state.get(key, fallback)
-    value = raw.strip() if isinstance(raw, str) else str(raw).strip()
+    value = desired.strip() if isinstance(desired, str) else str(desired).strip()
     if value not in options:
-        value = fallback if fallback in options else ""
-        st.session_state[key] = value
+        value = ""
+    st.session_state[key] = value
     return value
 
 
@@ -594,7 +585,6 @@ def _ensure_card_stat_picks(
         else:
             st.session_state[picks_key] = defaults
             st.session_state[count_key] = max(1, len(defaults) if defaults else 1)
-        _seed_card_stat_selectbox_keys(layout, list(st.session_state[picks_key]))
 
     sanitized = _sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
@@ -610,7 +600,6 @@ def _ensure_card_stat_picks(
             st.session_state[picks_key] = defaults
             st.session_state[count_key] = max(1, len(defaults))
         sanitized = list(defaults)
-        _seed_card_stat_selectbox_keys(layout, list(st.session_state[picks_key]))
 
     sanitized = _sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
@@ -683,8 +672,8 @@ def _card_stat_picker_ui(
         current = picks[i] if i < len(picks) else ""
         other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
         options = [""] + [lab for lab in available_labels if lab not in other]
-        current = _coerce_card_stat_selectbox_value(
-            layout, i, options=options, fallback=current
+        current = _sync_card_stat_selectbox_value(
+            layout, i, options=options, desired=current
         )
         picks[i] = current
         row_label = _card_stat_slot_label(layout, i, total=ui_rows)
@@ -697,7 +686,6 @@ def _card_stat_picker_ui(
             choice = st.selectbox(
                 row_label,
                 options=options,
-                index=options.index(current) if current in options else 0,
                 format_func=lambda x: "—" if x == "" else x,
                 key=_card_stat_selectbox_key(layout, i),
             )
