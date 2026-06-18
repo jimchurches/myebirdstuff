@@ -293,9 +293,8 @@ def test_country_scope_hero_default_card_stats():
     )
 
     stats = sample_share_summary_stats(period_kind="lifetime")
-    country_defaults = (
+    expected = (
         "Total species",
-        "Total individuals",
         "Total checklists",
         "Unique locations",
     )
@@ -310,7 +309,55 @@ def test_country_scope_hero_default_card_stats():
             period_kind="lifetime",
             geo_scope=scope,
         )
-        assert hero == country_defaults
+        assert hero == expected
+
+
+def test_country_scope_tiles_default_card_stats_exclude_world_only():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope
+    from explorer.presentation.share_summary_preview import (
+        default_card_stat_labels,
+        sample_share_summary_stats,
+        summary_status_metrics,
+    )
+
+    stats = sample_share_summary_stats(period_kind="year")
+    scope = ShareSummaryGeoScope(country_key="AU")
+    metrics = summary_status_metrics(stats, geo_scope=scope)
+    tiles = default_card_stat_labels("tiles", metrics, period_kind="year", geo_scope=scope)
+    assert tiles == (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Birding days",
+    )
+    assert "Countries" not in tiles
+    assert "Total individuals" not in tiles
+
+
+def test_render_preview_uses_card_stat_labels_at_country_scope():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope
+    from explorer.presentation.share_summary_preview import (
+        render_share_summary_preview_html,
+        sample_share_summary_stats,
+    )
+
+    stats = sample_share_summary_stats(period_kind="year")
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Birding days",
+    )
+    html = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        card_stat_labels=labels,
+        geo_scope=ShareSummaryGeoScope(country_key="AU"),
+    )
+    assert "Lifers" in html
+    assert "Total individuals" not in html
 
 
 def test_completed_checklists_in_summary_metrics():

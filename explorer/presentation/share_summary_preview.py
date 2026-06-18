@@ -30,9 +30,6 @@ from explorer.core.share_summary_compute import (
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
-    SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS,
-    SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS,
-    SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
@@ -294,31 +291,19 @@ def _preferred_default_stats(
     period_kind: PeriodKind,
     geo_scope: ShareSummaryGeoScope | None = None,
 ) -> tuple[str, ...]:
-    """Default stat label order for *layout*, *period_kind*, and geographic scope."""
-    geo_constrained = geo_scope is not None and not geo_scope.is_world
+    """Default stat label order for *layout* and *period_kind*.
+
+    Geographic scope does not change the preferred order; unavailable stats (e.g.
+    Countries at country scope) are filtered in :func:`default_card_stat_labels`.
+    """
+    del geo_scope  # reserved for callers; scope affects availability not preference
     if period_kind == "lifetime":
         if layout == "hero":
-            return (
-                SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS
-                if geo_constrained
-                else SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS
-            )
-        return (
-            SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS
-            if geo_constrained
-            else SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS
-        )
+            return SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS
+        return SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS
     if layout == "hero":
-        return (
-            SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS
-            if geo_constrained
-            else SHARE_SUMMARY_HERO_DEFAULT_STATS
-        )
-    return (
-        SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS
-        if geo_constrained
-        else SHARE_SUMMARY_TILES_DEFAULT_STATS
-    )
+        return SHARE_SUMMARY_HERO_DEFAULT_STATS
+    return SHARE_SUMMARY_TILES_DEFAULT_STATS
 
 
 def default_card_stat_labels(

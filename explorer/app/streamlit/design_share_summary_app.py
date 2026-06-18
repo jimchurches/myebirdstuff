@@ -494,6 +494,31 @@ def _clear_card_stat_selectbox_keys(layout: LayoutId) -> None:
         st.session_state.pop(_card_stat_selectbox_key(layout, i), None)
 
 
+def _seed_card_stat_selectbox_keys(layout: LayoutId, picks: list[str]) -> None:
+    """Align selectbox widget keys with session picks (after init or scope change)."""
+    storage_max = layout_card_stat_storage_max(layout)
+    padded = (picks + [""] * storage_max)[:storage_max]
+    for i, value in enumerate(padded):
+        st.session_state[_card_stat_selectbox_key(layout, i)] = value
+
+
+def _coerce_card_stat_selectbox_value(
+    layout: LayoutId,
+    index: int,
+    *,
+    options: list[str],
+    fallback: str,
+) -> str:
+    """Return a selectbox value that is valid for *options*, clearing stale widget state."""
+    key = _card_stat_selectbox_key(layout, index)
+    raw = st.session_state.get(key, fallback)
+    value = raw.strip() if isinstance(raw, str) else str(raw).strip()
+    if value not in options:
+        value = fallback if fallback in options else ""
+        st.session_state[key] = value
+    return value
+
+
 def _story_format_stat_picker(fmt: FormatId, layout: LayoutId) -> bool:
     """Fixed stat rows on story format for grid and list layouts."""
     return fmt == "story" and layout in ("minimal", "tiles")
@@ -569,6 +594,7 @@ def _ensure_card_stat_picks(
         else:
             st.session_state[picks_key] = defaults
             st.session_state[count_key] = max(1, len(defaults) if defaults else 1)
+        _seed_card_stat_selectbox_keys(layout, list(st.session_state[picks_key]))
 
     sanitized = _sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
@@ -584,6 +610,7 @@ def _ensure_card_stat_picks(
             st.session_state[picks_key] = defaults
             st.session_state[count_key] = max(1, len(defaults))
         sanitized = list(defaults)
+        _seed_card_stat_selectbox_keys(layout, list(st.session_state[picks_key]))
 
     sanitized = _sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
@@ -656,6 +683,10 @@ def _card_stat_picker_ui(
         current = picks[i] if i < len(picks) else ""
         other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
         options = [""] + [lab for lab in available_labels if lab not in other]
+        current = _coerce_card_stat_selectbox_value(
+            layout, i, options=options, fallback=current
+        )
+        picks[i] = current
         row_label = _card_stat_slot_label(layout, i, total=ui_rows)
         can_up = i > 0
         can_down = i < ui_rows - 1
@@ -757,23 +788,6 @@ def _card_stat_picker_ui(
     return final
 
 
-def _card_stat_labels_from_session(
-    layout: LayoutId,
-    status_metrics: list[tuple[str, str]],
-    fmt: FormatId,
-    period_kind: PeriodKind,
-    *,
-    data_scope: str,
-    geo_scope: ShareSummaryGeoScope,
-) -> tuple[str, ...]:
-    if layout == "spotlight":
-        return ()
-    picks = _ensure_card_stat_picks(
-        layout, status_metrics, fmt, period_kind, data_scope=data_scope, geo_scope=geo_scope
-    )
-    return _effective_card_stat_labels(picks, layout, fmt)
-
-
 def _spotlight_label_from_session(
     status_metrics: list[tuple[str, str]],
 ) -> str:
@@ -840,11 +854,12 @@ def _current_card_fragment(
     geo_scope: ShareSummaryGeoScope,
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
+    card_stat_labels: tuple[str, ...] = ()
     with st.expander(_CARD_STATS_LABEL, expanded=True):
         if selected_layout == "spotlight":
             _spotlight_stat_picker(status_metrics)
         else:
-            _card_stat_picker_ui(
+            card_stat_labels = _card_stat_picker_ui(
                 selected_layout,
                 status_metrics,
                 fmt,
@@ -854,14 +869,6 @@ def _current_card_fragment(
             )
 
     spotlight_label = _spotlight_label_from_session(status_metrics)
-    card_stat_labels = _card_stat_labels_from_session(
-        selected_layout,
-        status_metrics,
-        fmt,
-        stats.period_kind,
-        data_scope=card_stat_data_scope,
-        geo_scope=geo_scope,
-    )
 
     st.subheader(_CURRENT_CARD_LABEL)
     st.markdown(
