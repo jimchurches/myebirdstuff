@@ -331,6 +331,54 @@ def test_card_stat_pairs_tiles_includes_countries_and_birding_days():
     ]
 
 
+def test_summary_status_metrics_hides_world_only_stats_when_not_world():
+    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryGeoScope
+    from explorer.presentation.share_summary_preview import (
+        LABEL_OBSERVED_SPECIES_PCT,
+        LABEL_SPECIES_IN_TAXONOMY,
+        sample_share_summary_stats,
+        summary_status_metrics,
+    )
+
+    stats = sample_share_summary_stats(period_kind="year")
+    all_time = ShareSummaryAllTimeStats(total_species_taxa=10_800, total_families_taxa=248)
+    world = dict(
+        summary_status_metrics(
+            stats,
+            all_time=all_time,
+            geo_scope=ShareSummaryGeoScope(),
+        )
+    )
+    assert "Countries" in world
+    assert LABEL_SPECIES_IN_TAXONOMY in world
+    assert LABEL_OBSERVED_SPECIES_PCT in world
+
+    regional = dict(
+        summary_status_metrics(
+            stats,
+            all_time=all_time,
+            geo_scope=ShareSummaryGeoScope(country_key="AU", region_code="NSW"),
+        )
+    )
+    assert "Countries" not in regional
+    assert LABEL_SPECIES_IN_TAXONOMY not in regional
+    assert LABEL_OBSERVED_SPECIES_PCT not in regional
+    assert "Total species" in regional
+
+
+def test_render_preview_html_includes_scope_label_in_footer():
+    from explorer.presentation.share_summary_preview import (
+        render_share_summary_preview_html,
+        sample_share_summary_stats,
+    )
+
+    html = render_share_summary_preview_html(
+        sample_share_summary_stats(),
+        scope_label="Australia · New South Wales",
+    )
+    assert "Australia · New South Wales" in html
+
+
 def test_card_stat_pairs_selected_labels_includes_all_time():
     from explorer.core.share_summary_compute import ShareSummaryAllTimeStats
     from explorer.presentation.share_summary_preview import card_stat_pairs

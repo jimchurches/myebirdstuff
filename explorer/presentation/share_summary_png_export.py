@@ -21,7 +21,7 @@ from explorer.presentation.share_summary_preview import (
 )
 
 if TYPE_CHECKING:
-    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryStats
+    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryGeoScope, ShareSummaryStats
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
@@ -92,6 +92,8 @@ def share_summary_to_png_bytes(
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
+    scope_label: str | None = None,
+    geo_scope: "ShareSummaryGeoScope | None" = None,
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
     width, height = _FORMAT_PX[fmt]
@@ -106,6 +108,8 @@ def share_summary_to_png_bytes(
         card_stat_labels=labels,
         all_time=all_time,
         color_scheme_index=color_scheme_index,
+        geo_scope=geo_scope,
+        scope_label=scope_label,
     )
     with _launch_chromium() as browser:
         page = browser.new_page(

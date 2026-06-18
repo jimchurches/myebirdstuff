@@ -37,7 +37,8 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | Period: custom / trip | **Done (prototype)** | Date range + trip title as green subtitle |
 | Longest streak (year/month) | **Agreed** | Summary row when applicable; not week/custom v1 |
 | Birding days | **Done (prototype)** | Unique checklist days; label “Birding days” |
-| Countries | **Done (prototype)** | All period types; default on tiles/minimal |
+| Countries | **Done (prototype)** | All period types; default on tiles/minimal; **hidden when geographic scope ≠ World** |
+| Geographic scope (country / region) | **Done (design app)** | Scope sidebar; sample AU NSW/QLD + India Goa; filters all stats; footer debug label |
 | World bird coverage | **Summary row only** | Available stat; not on card tiles by default |
 | Favourite bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
 | PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
@@ -117,11 +118,19 @@ All should appear in the summary row (with values) so users can pick interesting
 
 **Best day / best checklist (card stat)** — Rankings in the main app link to the checklist or date on eBird; that context is valuable. As a card highlight without links, a possible pattern: tile title **Best day**, value only (e.g. `97 species` or `2,506 individuals`) — no date, no URL. Deferred until card UX is clearer.
 
-**Geographic scope (states / provinces)** — Not just another stat: a **period constraint** like custom date range. Examples: “Australian” year, “New South Wales” lifetime — filter all stats to a country or state/province before computing the card. Touches period resolution, sidebar controls, and sample/live data paths; on author todo list separately from v1 stat catalogue.
+### Geographic scope (country / region) — design app
+
+- **Scope** sidebar section: time range + **Country** (World default) + **Region** when a country is selected.
+- Filters all period stats before card compute (`filter_df_by_geo_scope` in `share_summary_compute.py`).
+- **Sample data:** synthetic checklists in AU-NSW, AU-QLD, and IN-GA (Goa) so controls work without a CSV upload.
+- **World-only stats** (hidden when scope is not World): Countries, Species in eBird taxonomy, Families in eBird taxonomy, Observed species (%).
+- **Footer debug line** above the logo shows the active scope label (e.g. `Australia · New South Wales`); polish for production cards later.
+- **Lifers under regional scope** — semantics TBD (country lifers vs world lifers).
+- Main app (#276) integration not started on this branch.
 
 ### Countries
 
-- **Default** on stat tiles and minimal list for **all period types** (year, month, week, custom).
+- **Default** on stat tiles and minimal list for **all period types** (year, month, week, custom) when geographic scope is **World**.
 - May revisit after user testing (previously year-only).
 
 ### Longest streak
@@ -587,3 +596,4 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-11 | **PNG export UX:** design studio — export inside `@st.fragment`; main app (#276) — generate on export click with spinner |
 | 2026-06-11 | **Total distance (km)** — year and lifetime periods only; same column as Yearly Summary |
 | 2026-06-11 | Roadmap notes: **Best day** card stat (value-only, no link); **geographic scope** (country/state filter) |
+| 2026-06-18 | **Geographic scope (design app):** Scope country/region controls, multi-region sample data, world-only stat hiding, footer scope debug label |

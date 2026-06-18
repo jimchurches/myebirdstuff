@@ -36,6 +36,7 @@ from explorer.core.share_summary_compute import (
     filter_df_by_geo_scope,
     geo_country_keys_from_df,
     geo_region_options_for_country,
+    geo_scope_display_label,
     period_species_common_names,
     period_species_name_map,
     resolve_period,
@@ -87,6 +88,8 @@ def _cached_share_summary_png(
     spotlight_label: str,
     all_time: ShareSummaryAllTimeStats | None,
     color_scheme_index: int,
+    scope_label: str | None,
+    geo_scope: ShareSummaryGeoScope,
 ) -> bytes:
     return share_summary_to_png_bytes(
         stats,
@@ -97,6 +100,8 @@ def _cached_share_summary_png(
         card_stat_labels=card_stat_labels,
         all_time=all_time,
         color_scheme_index=color_scheme_index,
+        scope_label=scope_label,
+        geo_scope=geo_scope,
     )
 
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
@@ -113,6 +118,7 @@ _CARD_HEADING_LABEL = "Card Heading (optional)"
 _CARD_HEADING_PLACEHOLDER = "e.g. North Coast NSW Exploration"
 _FAVOURITE_BIRD_SLOT_COUNT_KEY = "design_favourite_bird_slot_count"
 _FAVOURITE_BIRD_PICK_PREFIX = "design_favourite_bird_pick_"
+_FAVOURITE_BIRD_DATA_SCOPE_KEY = "design_favourite_bird_data_scope"
 _FAVOURITE_BIRD_SEARCH_REMOUNT_PREFIX = "design_favourite_bird_search_remount_"
 _GEO_WORLD_OPTION = ""
 _GEO_COUNTRY_SELECT_KEY = "design_geo_country"
@@ -334,6 +340,17 @@ def _sidebar_geo_scope_controls(df: pd.DataFrame) -> ShareSummaryGeoScope:
         country_key=country_key,
         region_code=region_code or None,
     )
+
+
+def _sync_favourite_bird_data_scope(data_scope: str) -> None:
+    """Clear favourite-bird picks when upload, period, or geography changes."""
+    prev = st.session_state.get(_FAVOURITE_BIRD_DATA_SCOPE_KEY)
+    if prev == data_scope:
+        return
+    st.session_state[_FAVOURITE_BIRD_DATA_SCOPE_KEY] = data_scope
+    if prev is not None:
+        _clear_favourite_bird_slots_from(0)
+        st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY] = 1
 
 
 def _sidebar_favourite_bird_controls(
@@ -808,6 +825,8 @@ def _current_card_fragment(
     favourite_birds: tuple[str, ...],
     color_scheme_index: int,
     card_stat_data_scope: str,
+    scope_label: str,
+    geo_scope: ShareSummaryGeoScope,
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     with st.expander(_CARD_STATS_LABEL, expanded=True):
@@ -843,6 +862,8 @@ def _current_card_fragment(
             card_stat_labels=card_stat_labels,
             all_time=all_time,
             color_scheme_index=color_scheme_index,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
         ),
         unsafe_allow_html=True,
     )
@@ -858,6 +879,8 @@ def _current_card_fragment(
             spotlight_label,
             all_time,
             color_scheme_index,
+            scope_label,
+            geo_scope,
         )
     except RuntimeError as exc:
         st.warning(str(exc))
@@ -1087,16 +1110,6 @@ else:
     period_species = list(_SAMPLE_PERIOD_SPECIES)
     period_name_map = dict(_SAMPLE_PERIOD_NAME_MAP)
 
-favourite_birds = _sidebar_favourite_bird_controls(
-    species_list=period_species,
-    name_map=period_name_map,
-    taxonomy_locale=TAXONOMY_LOCALE_DEFAULT,
-    layout=selected_layout,
-    fmt=fmt,
-)
-
-status_metrics = summary_status_metrics(stats, all_time=all_time)
-
 upload_name = uploaded.name if uploaded is not None else None
 card_stat_data_scope = _card_stat_data_scope(
     use_sample=use_sample,
@@ -1105,6 +1118,18 @@ card_stat_data_scope = _card_stat_data_scope(
     upload_name=upload_name,
     geo_scope=geo_scope,
 )
+scope_label = geo_scope_display_label(geo_scope)
+_sync_favourite_bird_data_scope(card_stat_data_scope)
+
+favourite_birds = _sidebar_favourite_bird_controls(
+    species_list=period_species,
+    name_map=period_name_map,
+    taxonomy_locale=TAXONOMY_LOCALE_DEFAULT,
+    layout=selected_layout,
+    fmt=fmt,
+)
+
+status_metrics = summary_status_metrics(stats, all_time=all_time, geo_scope=geo_scope)
 
 if _SPOTLIGHT_LABEL_KEY not in st.session_state:
     st.session_state[_SPOTLIGHT_LABEL_KEY] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
@@ -1133,4 +1158,6 @@ with tab_social_cards:
         favourite_birds=favourite_birds,
         color_scheme_index=color_scheme_index,
         card_stat_data_scope=card_stat_data_scope,
+        scope_label=scope_label,
+        geo_scope=geo_scope,
     )

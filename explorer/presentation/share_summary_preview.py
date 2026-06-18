@@ -17,6 +17,7 @@ from typing import Any, Iterable, Literal
 from explorer.core.share_summary_compute import (
     PeriodKind,
     ShareSummaryAllTimeStats,
+    ShareSummaryGeoScope,
     ShareSummaryStats,
     compute_share_summary_stats,
     period_for_custom,
@@ -89,6 +90,10 @@ LABEL_SPECIES_IN_TAXONOMY = "Species in eBird taxonomy"
 LABEL_FAMILIES_IN_TAXONOMY = "Families in eBird taxonomy"
 LABEL_OBSERVED_SPECIES_PCT = "Observed species (%)"
 
+
+def _geo_scope_is_world(geo_scope: ShareSummaryGeoScope | None) -> bool:
+    return geo_scope is None or geo_scope.is_world
+
 @dataclass(frozen=True)
 class _StatSpec:
     """One headline stat: which :class:`ShareSummaryStats` field, its card label, and formatting.
@@ -133,9 +138,10 @@ def spotlight_pair_for_label(
     label: str,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> tuple[str, str] | None:
     """Return (title, display value) for one Available statistics label."""
-    lookup = _metrics_lookup(stats, all_time=all_time)
+    lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
     cleaned = (label or "").strip()
     if not cleaned or cleaned not in lookup:
         return None
@@ -163,10 +169,16 @@ def _svg_to_data_uri(svg: str) -> str:
     return base64.b64encode(svg.encode("utf-8")).decode("ascii")
 
 
-def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
+def stat_pairs(
+    stats: ShareSummaryStats,
+    *,
+    geo_scope: ShareSummaryGeoScope | None = None,
+) -> list[tuple[str, str]]:
     """Ordered (label, display value) pairs for layouts; skips missing stats."""
     out: list[tuple[str, str]] = []
     for spec in _STAT_SPECS:
+        if spec.attr == "countries" and not _geo_scope_is_world(geo_scope):
+            continue
         val = getattr(stats, spec.attr)
         if val is None:
             continue
@@ -215,10 +227,11 @@ def _metrics_lookup(
     stats: ShareSummaryStats,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> dict[str, str]:
     """Label → display value for period stats and optional taxonomy reference rows."""
-    lookup: dict[str, str] = dict(stat_pairs(stats))
-    if all_time is None:
+    lookup: dict[str, str] = dict(stat_pairs(stats, geo_scope=geo_scope))
+    if not _geo_scope_is_world(geo_scope) or all_time is None:
         return lookup
     if all_time.total_species_taxa is not None:
         lookup[LABEL_SPECIES_IN_TAXONOMY] = f"{all_time.total_species_taxa:,}"
@@ -234,9 +247,10 @@ def summary_status_metrics(
     stats: ShareSummaryStats,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> list[tuple[str, str]]:
     """Metrics row above card previews (period stats + optional taxonomy reference)."""
-    lookup = _metrics_lookup(stats, all_time=all_time)
+    lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
 
     ordered: list[tuple[str, str]] = []
     seen: set[str] = set()
@@ -306,9 +320,10 @@ def card_stat_pairs(
     layout: LayoutId | None = None,
     selected_labels: tuple[str, ...] | None = None,
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> list[tuple[str, str]]:
     """Stats for share cards — user picks, layout defaults, or remaining computed stats."""
-    lookup = _metrics_lookup(stats, all_time=all_time)
+    lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
 
     if selected_labels is not None:
         out: list[tuple[str, str]] = []
@@ -321,7 +336,7 @@ def card_stat_pairs(
                 break
         return out
 
-    all_p = stat_pairs(stats)
+    all_p = stat_pairs(stats, geo_scope=geo_scope)
     period_kind = stats.period_kind
 
     if layout == "hero":
@@ -530,12 +545,19 @@ def _header_block(stats: ShareSummaryStats, *, subtitle: str | None = None) -> s
 </div>"""
 
 
-def _footer_block() -> str:
+def _footer_block(*, scope_label: str | None = None) -> str:
     logo = _logo_svg_inline(height_px=40, fill=_colour("muted"))
     logo_row = logo if logo else ""
+    scope_row = ""
+    if scope_label:
+        scope_row = (
+            f'<p style="margin:0 0 12px;font-size:18px;color:{_colour("muted")};'
+            f'letter-spacing:0.04em;">{_esc(scope_label)}</p>'
+        )
     return f"""
 <div style="position:absolute;left:0;right:0;bottom:0;padding:24px 56px 28px;text-align:center;
   border-top:1px solid {_colour("border")};background:{_colour("bg_alt")};">
+  {scope_row}
   {logo_row}
   <p style="margin:8px 0 0;font-size:20px;color:{_colour("muted")};">Personal eBird Explorer</p>
 </div>"""
@@ -571,6 +593,7 @@ def _resolve_card_stat_pairs(
     fmt: FormatId | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> list[tuple[str, str]]:
     max_count = layout_card_stat_max(layout, fmt)
     if card_stat_labels:
@@ -579,8 +602,15 @@ def _resolve_card_stat_pairs(
             max_count=max_count,
             selected_labels=card_stat_labels,
             all_time=all_time,
+            geo_scope=geo_scope,
         )
-    return card_stat_pairs(stats, max_count=max_count, layout=layout, all_time=all_time)
+    return card_stat_pairs(
+        stats,
+        max_count=max_count,
+        layout=layout,
+        all_time=all_time,
+        geo_scope=geo_scope,
+    )
 
 
 def _layout_hero(
@@ -592,9 +622,15 @@ def _layout_hero(
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> str:
     pairs = _resolve_card_stat_pairs(
-        stats, layout="hero", card_stat_labels=card_stat_labels, all_time=all_time
+        stats,
+        layout="hero",
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
+        geo_scope=geo_scope,
     )
     cells = []
     for label, value in pairs:
@@ -614,7 +650,7 @@ def _layout_hero(
     {''.join(cells)}
     {favourite_block}
   </div>
-  {_footer_block()}
+  {_footer_block(scope_label=scope_label)}
 </div>"""
 
 
@@ -647,6 +683,8 @@ def _layout_tiles(
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> str:
     pairs = _resolve_card_stat_pairs(
         stats,
@@ -654,6 +692,7 @@ def _layout_tiles(
         fmt=fmt,
         card_stat_labels=card_stat_labels,
         all_time=all_time,
+        geo_scope=geo_scope,
     )
     if fmt == "story" and len(pairs) > 6:
         value_px, label_px, cell_pad, grid_gap = "40px", "18px", "20px 12px", "12px"
@@ -680,7 +719,7 @@ def _layout_tiles(
     </div>
     {favourite_block}
   </div>
-  {_footer_block()}
+  {_footer_block(scope_label=scope_label)}
 </div>"""
 
 
@@ -692,6 +731,8 @@ def _layout_minimal(
     *,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> str:
     pairs = _resolve_card_stat_pairs(
         stats,
@@ -699,6 +740,7 @@ def _layout_minimal(
         fmt=fmt,
         card_stat_labels=card_stat_labels,
         all_time=all_time,
+        geo_scope=geo_scope,
     )
     if fmt == "story" and len(pairs) > 6:
         label_px, value_px, row_pad = "24px", "38px", "12px"
@@ -719,7 +761,7 @@ def _layout_minimal(
   <div style="padding:24px 72px {pad_bottom}px;">
     {''.join(rows)}
   </div>
-  {_footer_block()}
+  {_footer_block(scope_label=scope_label)}
 </div>"""
 
 
@@ -731,8 +773,15 @@ def _layout_spotlight(
     *,
     spotlight_label: str = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> str:
-    pair = spotlight_pair_for_label(stats, spotlight_label, all_time=all_time)
+    pair = spotlight_pair_for_label(
+        stats,
+        spotlight_label,
+        all_time=all_time,
+        geo_scope=geo_scope,
+    )
     if pair is None:
         title, value = spotlight_label, "—"
     else:
@@ -761,7 +810,7 @@ def _layout_spotlight(
     <div style="margin-top:20px;font-size:{label_size};color:{_colour('muted')};font-weight:500;">
       {_esc(title)}</div>
   </div>
-  {_footer_block()}
+  {_footer_block(scope_label=scope_label)}
 </div>"""
 
 
@@ -781,13 +830,22 @@ def _card_inner_html(
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> tuple[str, int, int]:
     """Return (inner HTML, width, height) at export pixel dimensions."""
     width, height = _FORMAT_PX[fmt]
     if layout == "spotlight":
         label = resolve_spotlight_label(spotlight_label)
         inner = _layout_spotlight(
-            stats, width, height, fmt, spotlight_label=label, all_time=all_time
+            stats,
+            width,
+            height,
+            fmt,
+            spotlight_label=label,
+            all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
         )
     elif layout in ("hero", "tiles"):
         builder = _LAYOUT_BUILDERS[layout]
@@ -799,6 +857,8 @@ def _card_inner_html(
             favourite_birds=favourite_birds,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
         )
     else:
         builder = _LAYOUT_BUILDERS.get(layout, _layout_hero)
@@ -809,6 +869,8 @@ def _card_inner_html(
             fmt,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
         )
     return inner, width, height
 
@@ -823,6 +885,8 @@ def render_share_summary_export_html(
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> str:
     """Full-size HTML document for headless screenshot (Playwright PNG export)."""
     with _color_scheme_context(color_scheme_index):
@@ -834,6 +898,8 @@ def render_share_summary_export_html(
             favourite_birds=favourite_birds,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
         )
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -873,6 +939,8 @@ def render_share_summary_preview_html(
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> str:
     """Return scaled HTML preview for one layout + aspect ratio."""
     with _color_scheme_context(color_scheme_index):
@@ -886,6 +954,8 @@ def render_share_summary_preview_html(
             favourite_birds=birds,
             card_stat_labels=labels,
             all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
         )
         return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
 
