@@ -120,6 +120,11 @@ class ShareSummaryGeoScope:
         rc = (self.region_code or "").strip()
         return f"{ck}|{rc}" if rc else ck
 
+    @property
+    def is_country_only(self) -> bool:
+        """True when scoped to a whole country (no state/province subdivision)."""
+        return not self.is_world and not (self.region_code or "").strip()
+
 
 def _checklist_region_code(country_key: str, state_province: object) -> str | None:
     """State/province code for one checklist row, aligned with *country_key*."""

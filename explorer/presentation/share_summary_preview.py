@@ -30,6 +30,9 @@ from explorer.core.share_summary_compute import (
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
+    SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS,
+    SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS,
+    SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
@@ -289,15 +292,33 @@ def layout_card_stat_storage_max(layout: LayoutId | None) -> int:
 def _preferred_default_stats(
     layout: LayoutId,
     period_kind: PeriodKind,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> tuple[str, ...]:
-    """Default stat label order for *layout* and *period_kind*."""
+    """Default stat label order for *layout*, *period_kind*, and geographic scope."""
+    geo_constrained = geo_scope is not None and not geo_scope.is_world
     if period_kind == "lifetime":
         if layout == "hero":
-            return SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS
-        return SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS
+            return (
+                SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS
+                if geo_constrained
+                else SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS
+            )
+        return (
+            SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS
+            if geo_constrained
+            else SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS
+        )
     if layout == "hero":
-        return SHARE_SUMMARY_HERO_DEFAULT_STATS
-    return SHARE_SUMMARY_TILES_DEFAULT_STATS
+        return (
+            SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS
+            if geo_constrained
+            else SHARE_SUMMARY_HERO_DEFAULT_STATS
+        )
+    return (
+        SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS
+        if geo_constrained
+        else SHARE_SUMMARY_TILES_DEFAULT_STATS
+    )
 
 
 def default_card_stat_labels(
@@ -305,10 +326,11 @@ def default_card_stat_labels(
     available_metrics: Iterable[tuple[str, str]],
     *,
     period_kind: PeriodKind = "year",
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> tuple[str, ...]:
     """Layout default stat labels filtered to *available_metrics*."""
     available = {label for label, _ in available_metrics}
-    preferred = _preferred_default_stats(layout, period_kind)
+    preferred = _preferred_default_stats(layout, period_kind, geo_scope=geo_scope)
     max_count = layout_card_stat_max(layout)
     return tuple(lab for lab in preferred if lab in available)[:max_count]
 
@@ -340,13 +362,13 @@ def card_stat_pairs(
     period_kind = stats.period_kind
 
     if layout == "hero":
-        preferred = _preferred_default_stats("hero", period_kind)
+        preferred = _preferred_default_stats("hero", period_kind, geo_scope=geo_scope)
     elif layout in ("tiles", "minimal"):
-        preferred = _preferred_default_stats("tiles", period_kind)
+        preferred = _preferred_default_stats("tiles", period_kind, geo_scope=geo_scope)
     elif max_count <= 4:
-        preferred = _preferred_default_stats("hero", period_kind)
+        preferred = _preferred_default_stats("hero", period_kind, geo_scope=geo_scope)
     else:
-        preferred = _preferred_default_stats("tiles", period_kind)
+        preferred = _preferred_default_stats("tiles", period_kind, geo_scope=geo_scope)
 
     labels: list[str] = []
     for lab in preferred:

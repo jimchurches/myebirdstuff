@@ -63,9 +63,19 @@ SHARE_SUMMARY_HERO_DEFAULT_STATS: tuple[str, ...] = (
     "Total checklists",
     "Unique locations",
 )
+# Country/region scope — omits world-only stats such as Countries.
+SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS: tuple[str, ...] = (
+    "Total species",
+    "Total individuals",
+    "Total checklists",
+    "Unique locations",
+)
 SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = SHARE_SUMMARY_HERO_DEFAULT_STATS + (
     "Countries",
     "Birding days",
+)
+SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS: tuple[str, ...] = (
+    SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS + ("Birding days", "Bird families")
 )
 # Lifetime (all data) — hero omits lifers; tiles/list share the same six-stat order.
 SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS: tuple[str, ...] = (
@@ -80,6 +90,14 @@ SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS: tuple[str, ...] = (
     "Birding days",
     "Total checklists",
     "Total individuals",
+    "Longest streak (days)",
+)
+SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS: tuple[str, ...] = (
+    "Total species",
+    "Total individuals",
+    "Birding days",
+    "Total checklists",
+    "Unique locations",
     "Longest streak (days)",
 )
 # Story format (1080×1920) — statistics grid and list may show up to this many stats.

@@ -540,6 +540,7 @@ def _ensure_card_stat_picks(
     period_kind: PeriodKind,
     *,
     data_scope: str,
+    geo_scope: ShareSummaryGeoScope,
 ) -> list[str]:
     """Initialize or sanitize session picks for *layout*; returns UI row values."""
     max_slots = layout_card_stat_max(layout, fmt)
@@ -550,7 +551,9 @@ def _ensure_card_stat_picks(
     scope_key = _card_stat_scope_key(layout, period_kind)
     fixed_rows = _story_format_stat_picker(fmt, layout)
     defaults = list(
-        default_card_stat_labels(layout, status_metrics, period_kind=period_kind)
+        default_card_stat_labels(
+            layout, status_metrics, period_kind=period_kind, geo_scope=geo_scope
+        )
     )
 
     if st.session_state.get(scope_key) != data_scope:
@@ -617,6 +620,7 @@ def _card_stat_picker_ui(
     period_kind: PeriodKind,
     *,
     data_scope: str,
+    geo_scope: ShareSummaryGeoScope,
 ) -> tuple[str, ...]:
     """Ordered stat picker for hero / tiles / list; hidden for spotlight."""
     if layout == "spotlight":
@@ -632,7 +636,7 @@ def _card_stat_picker_ui(
     picks_key = _card_stat_picks_key(layout, period_kind)
     count_key = _card_stat_slot_count_key(layout, period_kind)
     picks = _ensure_card_stat_picks(
-        layout, status_metrics, fmt, period_kind, data_scope=data_scope
+        layout, status_metrics, fmt, period_kind, data_scope=data_scope, geo_scope=geo_scope
     )
     ui_rows = _card_stat_ui_row_count(
         layout, fmt, slot_count=int(st.session_state[count_key])
@@ -730,7 +734,12 @@ def _card_stat_picker_ui(
                 use_container_width=True,
             ):
                 defaults = list(
-                    default_card_stat_labels(layout, status_metrics, period_kind=period_kind)
+                    default_card_stat_labels(
+                        layout,
+                        status_metrics,
+                        period_kind=period_kind,
+                        geo_scope=geo_scope,
+                    )
                 )
                 _clear_card_stat_selectbox_keys(layout)
                 if fixed_rows:
@@ -755,11 +764,12 @@ def _card_stat_labels_from_session(
     period_kind: PeriodKind,
     *,
     data_scope: str,
+    geo_scope: ShareSummaryGeoScope,
 ) -> tuple[str, ...]:
     if layout == "spotlight":
         return ()
     picks = _ensure_card_stat_picks(
-        layout, status_metrics, fmt, period_kind, data_scope=data_scope
+        layout, status_metrics, fmt, period_kind, data_scope=data_scope, geo_scope=geo_scope
     )
     return _effective_card_stat_labels(picks, layout, fmt)
 
@@ -840,6 +850,7 @@ def _current_card_fragment(
                 fmt,
                 stats.period_kind,
                 data_scope=card_stat_data_scope,
+                geo_scope=geo_scope,
             )
 
     spotlight_label = _spotlight_label_from_session(status_metrics)
@@ -849,6 +860,7 @@ def _current_card_fragment(
         fmt,
         stats.period_kind,
         data_scope=card_stat_data_scope,
+        geo_scope=geo_scope,
     )
 
     st.subheader(_CURRENT_CARD_LABEL)

@@ -405,6 +405,14 @@ def test_geo_scope_world_leaves_df_unchanged():
     assert len(out) == len(df)
 
 
+def test_geo_scope_is_country_only():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope
+
+    assert ShareSummaryGeoScope().is_country_only is False
+    assert ShareSummaryGeoScope(country_key="AU").is_country_only is True
+    assert ShareSummaryGeoScope(country_key="AU", region_code="NSW").is_country_only is False
+
+
 def test_filter_df_by_geo_scope_country_and_region():
     from explorer.core.share_summary_compute import ShareSummaryGeoScope, filter_df_by_geo_scope
 

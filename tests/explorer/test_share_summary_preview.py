@@ -284,6 +284,35 @@ def test_lifetime_default_card_stats():
     assert tile_labels == list(tiles)
 
 
+def test_country_scope_hero_default_card_stats():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope
+    from explorer.presentation.share_summary_preview import (
+        default_card_stat_labels,
+        sample_share_summary_stats,
+        summary_status_metrics,
+    )
+
+    stats = sample_share_summary_stats(period_kind="lifetime")
+    country_defaults = (
+        "Total species",
+        "Total individuals",
+        "Total checklists",
+        "Unique locations",
+    )
+    for scope in (
+        ShareSummaryGeoScope(country_key="AU"),
+        ShareSummaryGeoScope(country_key="AU", region_code="NSW"),
+    ):
+        metrics = summary_status_metrics(stats, geo_scope=scope)
+        hero = default_card_stat_labels(
+            "hero",
+            metrics,
+            period_kind="lifetime",
+            geo_scope=scope,
+        )
+        assert hero == country_defaults
+
+
 def test_completed_checklists_in_summary_metrics():
     from explorer.presentation.share_summary_preview import (
         sample_share_summary_stats,
