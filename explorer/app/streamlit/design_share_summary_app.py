@@ -24,7 +24,7 @@ import pandas as pd
 import streamlit as st
 
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
-from explorer.core.data_loader import load_dataset
+from explorer.core.data_loader import add_datetime_column, load_dataset
 from explorer.core.region_display import map_focus_key_for_display
 from explorer.core.share_summary_compute import (
     PeriodAnchor,
@@ -34,7 +34,6 @@ from explorer.core.share_summary_compute import (
     ShareSummaryStats,
     compute_share_summary_all_time_stats,
     filter_df_by_geo_scope,
-    format_custom_date_range,
     geo_country_keys_from_df,
     geo_region_options_for_country,
     period_species_common_names,
@@ -149,6 +148,88 @@ def _card_heading_or_none(text: str) -> str | None:
     """Normalize sidebar card heading; maps to ``trip_title`` on stats/period objects."""
     stripped = (text or "").strip()
     return stripped or None
+
+
+@st.cache_data
+def _design_sample_dataset() -> pd.DataFrame:
+    """Small multi-region export for sample mode (AU NSW/QLD, India Goa)."""
+    checklists: list[tuple[str, str, str, str, float, float, list[tuple[str, str]]]] = [
+        (
+            "S9001",
+            "AU-NSW",
+            "2025-06-05",
+            "Royal National Park",
+            -34.07,
+            151.08,
+            [
+                ("Superb Fairywren", "Malurus cyaneus"),
+                ("Laughing Kookaburra", "Dacelo novaeguineae"),
+                ("Australian Magpie", "Gymnorhina tibicen"),
+            ],
+        ),
+        (
+            "S9002",
+            "AU-NSW",
+            "2025-06-12",
+            "Blue Mountains",
+            -33.71,
+            150.31,
+            [
+                ("Crimson Rosella", "Platycercus elegans"),
+                ("Eastern Yellow Robin", "Eopsaltria australis"),
+                ("Willie Wagtail", "Rhipidura leucophrys"),
+            ],
+        ),
+        (
+            "S9003",
+            "AU-QLD",
+            "2025-05-20",
+            "Roma Street Parkland",
+            -27.46,
+            153.02,
+            [
+                ("Rainbow Lorikeet", "Trichoglossus moluccanus"),
+                ("Sulphur-crested Cockatoo", "Cacatua galerita"),
+                ("Australian Pelican", "Pelecanus conspicillatus"),
+            ],
+        ),
+        (
+            "S9004",
+            "IN-GA",
+            "2025-11-28",
+            "Arambol Beach",
+            15.688,
+            73.703,
+            [
+                ("Indian Pond-Heron", "Ardeola grayii"),
+                ("House Crow", "Corvus splendens"),
+                ("White-throated Kingfisher", "Halcyon smyrnensis"),
+            ],
+        ),
+    ]
+    records: list[dict] = []
+    for sid, state, dt, loc_name, lat, lon, species in checklists:
+        for common, scientific in species:
+            records.append(
+                {
+                    "Submission ID": sid,
+                    "Date": dt,
+                    "Time": "08:00 AM",
+                    "State/Province": state,
+                    "Location ID": f"L_{sid}",
+                    "Location": loc_name,
+                    "Latitude": lat,
+                    "Longitude": lon,
+                    "Common Name": common,
+                    "Scientific Name": scientific,
+                    "Count": 2,
+                    "Protocol": "eBird - Traveling Count",
+                    "All Obs Reported": 1,
+                    "Duration (Min)": 60.0,
+                    "Number of Observers": 1.0,
+                }
+            )
+    return add_datetime_column(pd.DataFrame(records))
 
 
 @st.cache_resource
@@ -803,7 +884,9 @@ with st.sidebar:
     st.header("Data")
     use_sample = st.toggle("Use sample data", value=True)
     uploaded = None if use_sample else st.file_uploader("eBird CSV export", type=["csv"])
-    if not use_sample and uploaded is not None:
+    if use_sample:
+        df = _design_sample_dataset()
+    elif uploaded is not None:
         with st.spinner("Loading CSV…"):
             df = load_dataset(uploaded)
 
@@ -866,14 +949,12 @@ with st.sidebar:
             key="design_sample_card_heading",
         )
 
-    if use_sample:
-        st.caption("Geography: World (sample data)")
-    elif uploaded is None:
-        pass
+    if df is not None and not df.empty:
+        geo_scope = _sidebar_geo_scope_controls(df)
+    elif not use_sample and uploaded is None:
+        st.caption("Upload a CSV to choose country and region.")
     elif df is not None and df.empty:
         st.caption("No data in file.")
-    elif df is not None:
-        geo_scope = _sidebar_geo_scope_controls(df)
 
     st.header(_CURRENT_CARD_LABEL)
     selected_layout: LayoutId = st.selectbox(
@@ -914,32 +995,6 @@ if not use_sample:
     if df is None or df.empty:
         st.warning("No data found in this file.")
         st.stop()
-else:
-    if period_mode == "year" and selected_year is not None:
-        stats = sample_share_summary_stats(period_label=str(selected_year), period_kind="year")
-    elif period_mode == "month":
-        y = st.sidebar.number_input("Sample year", min_value=2000, max_value=2100, value=2025)
-        m = st.sidebar.number_input("Sample month", min_value=1, max_value=12, value=6)
-        stats = sample_share_summary_stats(
-            period_label=date(int(y), int(m), 1).strftime("%B %Y"),
-            period_kind="month",
-        )
-    elif period_mode == "week":
-        stats = sample_share_summary_stats(
-            period_label="May 31, 2025 - June 6, 2025",
-            period_kind="week",
-        )
-    elif period_mode == "lifetime":
-        stats = sample_share_summary_stats(period_label="Lifetime", period_kind="lifetime")
-    elif sample_custom_start is not None and sample_custom_end is not None:
-        start, end = sample_custom_start, sample_custom_end
-        if end < start:
-            start, end = end, start
-        stats = sample_share_summary_stats(
-            period_label=format_custom_date_range(start, end),
-            period_kind="custom",
-            trip_title=_card_heading_or_none(sample_card_heading),
-        )
 
 if df is not None:
     df_scoped = filter_df_by_geo_scope(df, geo_scope)
@@ -978,27 +1033,40 @@ if df is not None:
     elif period_mode == "lifetime":
         period = period_for_lifetime(min_d, max_d)
     elif period_mode == "custom":
-        start = st.sidebar.date_input(
-            "Start date",
-            value=min_d,
-            min_value=min_d,
-            max_value=max_d,
-            key="design_csv_custom_start",
-        )
-        end = st.sidebar.date_input(
-            "End date",
-            value=max_d,
-            min_value=min_d,
-            max_value=max_d,
-            key="design_csv_custom_end",
-        )
-        card_heading = st.sidebar.text_input(
-            _CARD_HEADING_LABEL,
-            value="",
-            placeholder=_CARD_HEADING_PLACEHOLDER,
-            key="design_csv_card_heading",
-        )
-        period = period_for_custom(start, end, trip_title=_card_heading_or_none(card_heading))
+        if use_sample:
+            start, end = sample_custom_start, sample_custom_end
+            if start is None or end is None:
+                st.warning("Choose custom dates in the sidebar.")
+                st.stop()
+            if end < start:
+                start, end = end, start
+            period = period_for_custom(
+                start,
+                end,
+                trip_title=_card_heading_or_none(sample_card_heading),
+            )
+        else:
+            start = st.sidebar.date_input(
+                "Start date",
+                value=min_d,
+                min_value=min_d,
+                max_value=max_d,
+                key="design_csv_custom_start",
+            )
+            end = st.sidebar.date_input(
+                "End date",
+                value=max_d,
+                min_value=min_d,
+                max_value=max_d,
+                key="design_csv_custom_end",
+            )
+            card_heading = st.sidebar.text_input(
+                _CARD_HEADING_LABEL,
+                value="",
+                placeholder=_CARD_HEADING_PLACEHOLDER,
+                key="design_csv_card_heading",
+            )
+            period = period_for_custom(start, end, trip_title=_card_heading_or_none(card_heading))
 
     resolved_period = period
     computed = compute_share_summary_stats(df_scoped, period)

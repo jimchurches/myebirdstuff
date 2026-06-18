@@ -2,9 +2,15 @@
 
 from explorer.app.streamlit.design_share_summary_app import (
     _card_stat_data_scope,
+    _design_sample_dataset,
     _period_has_checklist_data,
 )
-from explorer.core.share_summary_compute import ShareSummaryGeoScope, ShareSummaryStats
+from explorer.core.share_summary_compute import (
+    ShareSummaryGeoScope,
+    ShareSummaryStats,
+    geo_country_keys_from_df,
+    geo_region_options_for_country,
+)
 
 
 def test_card_stat_data_scope_changes_when_source_or_period_changes():
@@ -46,6 +52,16 @@ def test_card_stat_data_scope_changes_when_geo_scope_changes():
         geo_scope=ShareSummaryGeoScope(country_key="AU-NSW"),
     )
     assert world != country
+
+
+def test_design_sample_dataset_has_expected_geo_options():
+    df = _design_sample_dataset()
+    countries = geo_country_keys_from_df(df)
+    assert countries == ["AU", "IN"]
+    au_regions = [code for code, _ in geo_region_options_for_country(df, "AU")]
+    assert set(au_regions) == {"NSW", "QLD"}
+    in_regions = [code for code, _ in geo_region_options_for_country(df, "IN")]
+    assert in_regions == ["GA"]
 
 
 def test_period_has_checklist_data():
