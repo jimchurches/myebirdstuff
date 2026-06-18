@@ -569,20 +569,22 @@ def _header_block(stats: ShareSummaryStats, *, subtitle: str | None = None) -> s
 
 
 def _footer_block(*, scope_label: str | None = None) -> str:
-    logo = _logo_svg_inline(height_px=40, fill=_colour("muted"))
-    logo_row = logo if logo else ""
+    logo = _logo_svg_inline(height_px=46, fill=_colour("muted"))
+    logo_row = (
+        f'<div style="margin:4px 0;line-height:0;">{logo}</div>' if logo else ""
+    )
     scope_row = ""
     if scope_label:
         scope_row = (
-            f'<p style="margin:0 0 12px;font-size:18px;color:{_colour("muted")};'
-            f'letter-spacing:0.04em;">{_esc(scope_label)}</p>'
+            f'<p style="margin:0 0 7px;font-size:22px;font-weight:600;line-height:1.05;'
+            f'color:{_colour("muted")};letter-spacing:0.04em;">{_esc(scope_label)}</p>'
         )
     return f"""
-<div style="position:absolute;left:0;right:0;bottom:0;padding:24px 56px 28px;text-align:center;
+<div style="position:absolute;left:0;right:0;bottom:0;padding:22px 56px 26px;text-align:center;
   border-top:1px solid {_colour("border")};background:{_colour("bg_alt")};">
   {scope_row}
   {logo_row}
-  <p style="margin:8px 0 0;font-size:20px;color:{_colour("muted")};">Personal eBird Explorer</p>
+  <p style="margin:5px 0 0;font-size:18px;color:{_colour("muted")};">Personal eBird Explorer</p>
 </div>"""
 
 
