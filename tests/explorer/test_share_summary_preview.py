@@ -295,6 +295,7 @@ def test_country_scope_hero_default_card_stats():
     stats = sample_share_summary_stats(period_kind="lifetime")
     expected = (
         "Total species",
+        "Total individuals",
         "Total checklists",
         "Unique locations",
     )
@@ -327,12 +328,13 @@ def test_country_scope_tiles_default_card_stats_exclude_world_only():
     assert tiles == (
         "Total species",
         "Lifers",
+        "Birding days",
+        "Total individuals",
         "Total checklists",
         "Unique locations",
-        "Birding days",
     )
     assert "Countries" not in tiles
-    assert "Total individuals" not in tiles
+    assert "Bird families" not in tiles
 
 
 def test_render_preview_uses_card_stat_labels_at_country_scope():
@@ -346,9 +348,10 @@ def test_render_preview_uses_card_stat_labels_at_country_scope():
     labels = (
         "Total species",
         "Lifers",
+        "Birding days",
+        "Total individuals",
         "Total checklists",
         "Unique locations",
-        "Birding days",
     )
     html = render_share_summary_preview_html(
         stats,
@@ -357,7 +360,8 @@ def test_render_preview_uses_card_stat_labels_at_country_scope():
         geo_scope=ShareSummaryGeoScope(country_key="AU"),
     )
     assert "Lifers" in html
-    assert "Total individuals" not in html
+    assert "Total individuals" in html
+    assert "Bird families" not in html
 
 
 def test_completed_checklists_in_summary_metrics():
