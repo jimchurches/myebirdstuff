@@ -862,7 +862,7 @@ def _current_card_fragment(
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     card_stat_labels: tuple[str, ...] = ()
-    with st.expander(_CARD_STATS_LABEL, expanded=True):
+    with st.expander(_CARD_STATS_LABEL, expanded=False):
         if selected_layout == "spotlight":
             _spotlight_stat_picker(status_metrics)
         else:
