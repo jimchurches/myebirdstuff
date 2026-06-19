@@ -359,6 +359,7 @@ class ShareSummaryStats:
     completed_checklists: int | None = None
     locations: int | None = None
     lifers: int | None = None
+    region_lifers: int | None = None
     birding_hours: float | None = None
     distance_km: float | None = None
     days_with_checklist: int | None = None
@@ -439,13 +440,78 @@ def period_species_name_map(df: pd.DataFrame, period: ShareSummaryPeriod) -> dic
     return out
 
 
+def geo_region_lifer_stat_label(scope: ShareSummaryGeoScope) -> str:
+    """Display label for geo-scoped lifers, e.g. ``Australia Lifers`` or ``New South Wales Lifers``."""
+    if scope.is_world:
+        return ""
+    rc = (scope.region_code or "").strip()
+    if rc:
+        cc = scope.country_key or ""
+        cc_norm = cc[3:] if str(cc).startswith("_R:") else cc
+        place = state_for_display(cc_norm, rc) or rc
+    else:
+        place = map_focus_key_for_display(scope.country_key or "")
+    return f"{place} Lifers"
+
+
+def _region_lifers_in_period(df: pd.DataFrame, period: ShareSummaryPeriod) -> int:
+    """Species whose first sighting in *df* (geo-scoped export) falls in *period*."""
+    frame = df.copy()
+    frame["Date"] = pd.to_datetime(frame["Date"], errors="coerce")
+    base = countable_species_vectorized(frame.dropna(subset=["Date"]))
+    obs = frame.dropna(subset=["Date"]).assign(_base=base).dropna(subset=["_base"])
+    if obs.empty:
+        return 0
+    first_seen = obs.groupby("_base")["Date"].min()
+    first_in_period = first_seen[_mask_in_period(first_seen, period)]
+    return int(len(first_in_period))
+
+
+def _lifers_in_period(
+    df: pd.DataFrame,
+    in_period_df: pd.DataFrame,
+    period: ShareSummaryPeriod,
+    *,
+    lifer_reference_df: pd.DataFrame | None = None,
+) -> int | None:
+    """Count lifers whose global first sighting falls in *period*.
+
+    When *lifer_reference_df* is set (geo-scoped stats), first-seen dates come from
+    the full export while *in_period_df* restricts which species count (seen in scope
+    during the period). Without it, first-seen uses *df* only (legacy / world scope).
+    """
+    if period.kind == "lifetime":
+        return None
+    ref = lifer_reference_df if lifer_reference_df is not None else df
+    ref = ref.copy()
+    ref["Date"] = pd.to_datetime(ref["Date"], errors="coerce")
+    base_all = countable_species_vectorized(ref.dropna(subset=["Date"]))
+    lifer_df = ref.dropna(subset=["Date"]).assign(_base=base_all).dropna(subset=["_base"])
+    if lifer_df.empty:
+        return 0
+    first_seen = lifer_df.groupby("_base")["Date"].min()
+    first_in_period = first_seen[_mask_in_period(first_seen, period)]
+    if lifer_reference_df is not None:
+        period_bases = in_period_df["_base"].dropna().unique()
+        first_in_period = first_in_period[first_in_period.index.isin(period_bases)]
+    return int(len(first_in_period))
+
+
 def compute_share_summary_stats(
     df: pd.DataFrame,
     period: ShareSummaryPeriod,
     *,
     taxonomy_locale: str | None = None,
+    lifer_reference_df: pd.DataFrame | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> ShareSummaryStats | None:
-    """Compute headline share stats for *period* from a sighting-level export frame."""
+    """Compute headline share stats for *period* from a sighting-level export frame.
+
+    Pass the unfiltered export as *lifer_reference_df* when *df* is geo-filtered so
+    lifers use global first-seen dates but only count species seen in scope during
+    the period. Pass *geo_scope* when *df* is geo-filtered to compute regional lifers
+    (first sighting within the scope).
+    """
     if df.empty or "Date" not in df.columns:
         return None
 
@@ -456,11 +522,16 @@ def compute_share_summary_stats(
         return None
 
     in_period_cl = cl[_mask_in_period(cl["Date"], period)]
+    geo_constrained = geo_scope is not None and not geo_scope.is_world
     if in_period_cl.empty:
+        region_lifers = _region_lifers_in_period(df, period) if geo_constrained else None
+        if period.kind == "lifetime":
+            region_lifers = None
         return ShareSummaryStats(
             period_label=period.label,
             period_kind=period.kind,
             trip_title=period.trip_title,
+            region_lifers=region_lifers if geo_constrained else None,
         )
 
     df_all = df.copy()
@@ -479,15 +550,17 @@ def compute_share_summary_stats(
         completed_checklists = int(completed_mask.sum())
     locations = int(in_period_cl["Location ID"].nunique()) if "Location ID" in in_period_cl.columns else None
 
-    # Lifers: first checklist date for each species in the full dataset falls in period.
-    lifers = None
-    if period.kind != "lifetime":
-        base_all = countable_species_vectorized(df_all.dropna(subset=["Date"]))
-        lifer_df = df_all.dropna(subset=["Date"]).assign(_base=base_all).dropna(subset=["_base"])
-        if not lifer_df.empty:
-            first_seen = lifer_df.groupby("_base")["Date"].min()
-            first_in_period = first_seen[_mask_in_period(first_seen, period)]
-            lifers = int(len(first_in_period))
+    # Lifers: global first checklist date per species; geo scope keeps period species only.
+    lifers = _lifers_in_period(
+        df_all,
+        in_period_df,
+        period,
+        lifer_reference_df=lifer_reference_df,
+    )
+
+    region_lifers = None
+    if geo_constrained and period.kind != "lifetime":
+        region_lifers = _region_lifers_in_period(df_all, period)
 
     families = None
     loc = (taxonomy_locale or "").strip() or TAXONOMY_LOCALE_DEFAULT
@@ -531,6 +604,7 @@ def compute_share_summary_stats(
         trip_title=period.trip_title,
         species=species,
         lifers=lifers,
+        region_lifers=region_lifers,
         checklists=checklists,
         completed_checklists=completed_checklists,
         locations=locations,

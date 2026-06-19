@@ -494,6 +494,21 @@ def _clear_card_stat_selectbox_keys(layout: LayoutId) -> None:
         st.session_state.pop(_card_stat_selectbox_key(layout, i), None)
 
 
+def _resolve_card_stat_selectbox_value(
+    *,
+    session_value: object,
+    desired: str,
+    options: list[str],
+) -> str:
+    """Pick a valid selectbox value, preferring the widget over stale session picks."""
+    if session_value is not None:
+        value = session_value.strip() if isinstance(session_value, str) else str(session_value).strip()
+        if value in options:
+            return value
+    fallback = desired.strip() if isinstance(desired, str) else str(desired).strip()
+    return fallback if fallback in options else ""
+
+
 def _sync_card_stat_selectbox_value(
     layout: LayoutId,
     index: int,
@@ -501,11 +516,13 @@ def _sync_card_stat_selectbox_value(
     options: list[str],
     desired: str,
 ) -> str:
-    """Set selectbox session state before the widget renders (avoids index + key conflict)."""
+    """Align selectbox session state without clobbering a valid user choice."""
     key = _card_stat_selectbox_key(layout, index)
-    value = desired.strip() if isinstance(desired, str) else str(desired).strip()
-    if value not in options:
-        value = ""
+    value = _resolve_card_stat_selectbox_value(
+        session_value=st.session_state.get(key),
+        desired=desired,
+        options=options,
+    )
     st.session_state[key] = value
     return value
 
@@ -702,6 +719,7 @@ def _card_stat_picker_ui(
                 ):
                     picks[i - 1], picks[i] = picks[i], picks[i - 1]
                     st.session_state[picks_key] = picks[:ui_rows]
+                    _clear_card_stat_selectbox_keys(layout)
                     st.rerun()
             with btn_down:
                 if st.button(
@@ -713,6 +731,7 @@ def _card_stat_picker_ui(
                 ):
                     picks[i + 1], picks[i] = picks[i], picks[i + 1]
                     st.session_state[picks_key] = picks[:ui_rows]
+                    _clear_card_stat_selectbox_keys(layout)
                     st.rerun()
             with btn_rm:
                 if st.button(
@@ -1100,7 +1119,10 @@ if df is not None:
             period = period_for_custom(start, end, trip_title=_card_heading_or_none(card_heading))
 
     resolved_period = period
-    computed = compute_share_summary_stats(df_scoped, period)
+    lifer_ref = df if not geo_scope.is_world else None
+    computed = compute_share_summary_stats(
+        df_scoped, period, lifer_reference_df=lifer_ref, geo_scope=geo_scope
+    )
     if computed is None:
         st.warning("Could not compute stats for this period.")
         st.stop()

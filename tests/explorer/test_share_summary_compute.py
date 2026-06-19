@@ -438,6 +438,89 @@ def test_filter_df_by_geo_scope_country_and_region():
     assert stats_au.species == 2
 
 
+def test_geo_scoped_lifers_use_global_first_seen():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope, filter_df_by_geo_scope
+
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2024-06-01", species="Species a", country="ID"),
+            _row(sid="S2", dt="2026-01-10", species="Species a", state_province="AU-NSW"),
+            _row(sid="S3", dt="2026-01-11", species="Species b", state_province="AU-NSW"),
+        ]
+    )
+    au = filter_df_by_geo_scope(df, ShareSummaryGeoScope(country_key="AU"))
+    period = period_for_year(2026)
+    world = compute_share_summary_stats(df, period)
+    au_country_only = compute_share_summary_stats(au, period)
+    au_global = compute_share_summary_stats(
+        au,
+        period,
+        lifer_reference_df=df,
+        geo_scope=ShareSummaryGeoScope(country_key="AU"),
+    )
+    assert world is not None and au_global is not None and au_country_only is not None
+    assert world.lifers == 1
+    assert au_global.lifers == world.lifers
+    assert au_global.region_lifers == 2
+    assert au_country_only.lifers == 2
+
+
+def test_geo_region_lifer_stat_label():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope, geo_region_lifer_stat_label
+
+    assert geo_region_lifer_stat_label(ShareSummaryGeoScope()) == ""
+    assert geo_region_lifer_stat_label(ShareSummaryGeoScope(country_key="AU")) == "Australia Lifers"
+    assert (
+        geo_region_lifer_stat_label(
+            ShareSummaryGeoScope(country_key="AU", region_code="NSW")
+        )
+        == "New South Wales Lifers"
+    )
+
+
+def test_region_lifers_differ_from_global_when_species_new_to_region():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope, filter_df_by_geo_scope
+
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2024-06-01", species="Species a", country="ID"),
+            _row(sid="S2", dt="2026-01-10", species="Species a", state_province="AU-NSW"),
+            _row(sid="S3", dt="2026-01-11", species="Species b", state_province="AU-NSW"),
+        ]
+    )
+    au = filter_df_by_geo_scope(df, ShareSummaryGeoScope(country_key="AU"))
+    period = period_for_year(2026)
+    stats = compute_share_summary_stats(
+        au,
+        period,
+        lifer_reference_df=df,
+        geo_scope=ShareSummaryGeoScope(country_key="AU"),
+    )
+    assert stats is not None
+    assert stats.lifers == 1
+    assert stats.region_lifers == 2
+
+
+def test_region_lifers_omitted_for_world_and_lifetime():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope, filter_df_by_geo_scope
+
+    df = pd.DataFrame(
+        [_row(sid="S1", dt="2026-01-10", species="Species a", state_province="AU-NSW")]
+    )
+    world = compute_share_summary_stats(df, period_for_year(2026))
+    assert world is not None
+    assert world.region_lifers is None
+
+    au = filter_df_by_geo_scope(df, ShareSummaryGeoScope(country_key="AU"))
+    lifetime = compute_share_summary_stats(
+        au,
+        period_for_lifetime(date(2026, 1, 1), date(2026, 12, 31)),
+        geo_scope=ShareSummaryGeoScope(country_key="AU"),
+    )
+    assert lifetime is not None
+    assert lifetime.region_lifers is None
+
+
 def test_geo_country_and_region_options():
     from explorer.core.share_summary_compute import (
         geo_country_keys_from_df,

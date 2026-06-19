@@ -4,6 +4,7 @@ from explorer.app.streamlit.design_share_summary_app import (
     _card_stat_data_scope,
     _design_sample_dataset,
     _period_has_checklist_data,
+    _resolve_card_stat_selectbox_value,
 )
 from explorer.core.share_summary_compute import (
     ShareSummaryGeoScope,
@@ -52,6 +53,26 @@ def test_card_stat_data_scope_changes_when_geo_scope_changes():
         geo_scope=ShareSummaryGeoScope(country_key="AU-NSW"),
     )
     assert world != country
+
+
+def test_resolve_card_stat_selectbox_value_prefers_widget_over_stale_pick():
+    options = ["", "Lifers", "Australia Lifers", "Total species"]
+    assert (
+        _resolve_card_stat_selectbox_value(
+            session_value="Australia Lifers",
+            desired="Lifers",
+            options=options,
+        )
+        == "Australia Lifers"
+    )
+    assert (
+        _resolve_card_stat_selectbox_value(
+            session_value="Countries",
+            desired="Lifers",
+            options=options,
+        )
+        == "Lifers"
+    )
 
 
 def test_design_sample_dataset_has_expected_geo_options():
