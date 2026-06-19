@@ -609,7 +609,7 @@ def _footer_block(*, scope_label: str | None = None) -> str:
     scope_row = ""
     if scope_label:
         scope_row = (
-            f'<p style="margin:0 0 7px;font-size:22px;font-weight:600;line-height:1.05;'
+            f'<p style="margin:0 0 7px;font-size:36px;font-weight:600;line-height:1.05;'
             f'color:{_colour("muted")};letter-spacing:0.04em;">{_esc(scope_label)}</p>'
         )
     return f"""
