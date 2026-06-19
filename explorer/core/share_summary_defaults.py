@@ -115,3 +115,46 @@ SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS: tuple[str, ...] = (
 SHARE_SUMMARY_STORY_MAX_STATS = 10
 # Display label on spotlight cards (matches Available statistics / card picker).
 SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"
+
+# Card green subtitle headings (tunable without editing layout code).
+# Hero uses period subtitles below; tiles / minimal / spotlight use layout subtitles unless
+# period_kind is ``lifetime``, when :data:`SHARE_SUMMARY_LIFETIME_SUBTITLE` applies to all layouts.
+SHARE_SUMMARY_PERIOD_SUBTITLE_YEAR = "Birding year in review"
+SHARE_SUMMARY_PERIOD_SUBTITLE_MONTH = "Monthly birding summary"
+SHARE_SUMMARY_PERIOD_SUBTITLE_WEEK = "Weekly birding summary"
+SHARE_SUMMARY_PERIOD_SUBTITLE_LIFETIME = "My eBird Stats"
+SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM = "Birding summary"
+SHARE_SUMMARY_LIFETIME_SUBTITLE = "My eBird Stats"
+SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES = "My birding stats"
+SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL = "Summary"
+SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT = "My birding stats"
+
+_PERIOD_SUBTITLE_BY_KIND: dict[str, str] = {
+    "year": SHARE_SUMMARY_PERIOD_SUBTITLE_YEAR,
+    "month": SHARE_SUMMARY_PERIOD_SUBTITLE_MONTH,
+    "week": SHARE_SUMMARY_PERIOD_SUBTITLE_WEEK,
+    "lifetime": SHARE_SUMMARY_PERIOD_SUBTITLE_LIFETIME,
+    "custom": SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM,
+}
+
+_LAYOUT_SUBTITLE_BY_LAYOUT: dict[str, str] = {
+    "tiles": SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
+    "minimal": SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
+    "spotlight": SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT,
+}
+
+
+def share_summary_card_subtitle(
+    *,
+    layout: str,
+    period_kind: str,
+    trip_title: str | None = None,
+) -> str | None:
+    """Green subtitle heading for a card layout; ``None`` when trip title replaces it."""
+    if trip_title:
+        return None
+    if period_kind == "lifetime":
+        return SHARE_SUMMARY_LIFETIME_SUBTITLE
+    if layout == "hero":
+        return _PERIOD_SUBTITLE_BY_KIND.get(period_kind, SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM)
+    return _LAYOUT_SUBTITLE_BY_LAYOUT.get(layout, SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM)

@@ -411,6 +411,54 @@ def test_card_stat_pairs_tiles_includes_countries_and_birding_days():
     ]
 
 
+def test_summary_status_metrics_includes_region_lifers_when_geo_scoped():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope, geo_region_lifer_stat_label
+    from explorer.presentation.share_summary_preview import summary_status_metrics
+
+    scope = ShareSummaryGeoScope(country_key="AU", region_code="NSW")
+    label = geo_region_lifer_stat_label(scope)
+    stats = ShareSummaryStats(
+        period_label="2026",
+        period_kind="year",
+        lifers=3,
+        region_lifers=5,
+    )
+    metrics = dict(summary_status_metrics(stats, geo_scope=scope))
+    assert metrics["Lifers"] == "3"
+    assert metrics[label] == "5"
+    labels = [lab for lab, _ in summary_status_metrics(stats, geo_scope=scope)]
+    assert labels.index("Lifers") < labels.index(label)
+
+
+def test_render_preview_html_includes_region_lifer_label():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope
+    from explorer.presentation.share_summary_preview import (
+        render_share_summary_preview_html,
+        sample_share_summary_stats,
+    )
+
+    stats = sample_share_summary_stats(period_kind="year")
+    stats = ShareSummaryStats(
+        period_label=stats.period_label,
+        period_kind=stats.period_kind,
+        species=stats.species,
+        lifers=stats.lifers,
+        region_lifers=4,
+        checklists=stats.checklists,
+        locations=stats.locations,
+    )
+    scope = ShareSummaryGeoScope(country_key="AU")
+    html = render_share_summary_preview_html(
+        stats,
+        layout="spotlight",
+        spotlight_label="Australia Lifers",
+        card_stat_labels=("Australia Lifers",),
+        geo_scope=scope,
+    )
+    assert "Australia Lifers" in html
+    assert "4" in html
+
+
 def test_summary_status_metrics_hides_world_only_stats_when_not_world():
     from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryGeoScope
     from explorer.presentation.share_summary_preview import (
@@ -475,6 +523,11 @@ def test_card_stat_pairs_selected_labels_includes_all_time():
 
 
 def test_trip_title_on_all_layouts():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
+    )
+
     stats = ShareSummaryStats(
         period_label="1 – 7 June 2025",
         period_kind="custom",
@@ -492,7 +545,76 @@ def test_trip_title_on_all_layouts():
 
     tiles_html = render_share_summary_preview_html(stats, layout="tiles")
     minimal_html = render_share_summary_preview_html(stats, layout="minimal")
-    assert "My birding stats" not in tiles_html
-    assert ">Summary</p>" not in minimal_html
+    assert SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES not in tiles_html
+    assert SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL not in minimal_html
+
+
+def test_lifetime_card_subtitles_read_from_defaults():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_LIFETIME_SUBTITLE,
+        share_summary_card_subtitle,
+    )
+
+    for layout in ("hero", "tiles", "minimal", "spotlight"):
+        assert share_summary_card_subtitle(layout=layout, period_kind="lifetime") == (
+            SHARE_SUMMARY_LIFETIME_SUBTITLE
+        )
+
+
+def test_lifetime_layouts_render_subtitle_from_defaults():
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_LIFETIME_SUBTITLE
+
+    stats = ShareSummaryStats(
+        period_label="Lifetime",
+        period_kind="lifetime",
+        species=847,
+        checklists=1240,
+        locations=186,
+    )
+    for layout in ("hero", "tiles", "minimal", "spotlight"):
+        html = render_share_summary_preview_html(stats, layout=layout)
+        assert SHARE_SUMMARY_LIFETIME_SUBTITLE in html
+
+
+def test_non_lifetime_layout_subtitles_read_from_defaults():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT,
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
+        SHARE_SUMMARY_PERIOD_SUBTITLE_YEAR,
+        share_summary_card_subtitle,
+    )
+
+    assert share_summary_card_subtitle(layout="hero", period_kind="year") == (
+        SHARE_SUMMARY_PERIOD_SUBTITLE_YEAR
+    )
+    assert share_summary_card_subtitle(layout="tiles", period_kind="year") == (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES
+    )
+    assert share_summary_card_subtitle(layout="minimal", period_kind="year") == (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL
+    )
+    assert share_summary_card_subtitle(layout="spotlight", period_kind="year") == (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT
+    )
+
+
+def test_year_layouts_render_period_and_layout_subtitles_from_defaults():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
+        SHARE_SUMMARY_PERIOD_SUBTITLE_YEAR,
+    )
+
+    stats = ShareSummaryStats(period_label="2025", period_kind="year", species=312)
+    hero_html = render_share_summary_preview_html(stats, layout="hero")
+    tiles_html = render_share_summary_preview_html(stats, layout="tiles")
+    minimal_html = render_share_summary_preview_html(stats, layout="minimal")
+    assert SHARE_SUMMARY_PERIOD_SUBTITLE_YEAR in hero_html
+    assert SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES in tiles_html
+    assert SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL in minimal_html
+
+
+def test_portrait_post_export_dimensions():
     html = render_share_summary_preview_html(sample_share_summary_stats(), fmt="portrait_post")
     assert "1350px" in html

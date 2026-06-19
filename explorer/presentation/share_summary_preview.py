@@ -20,6 +20,7 @@ from explorer.core.share_summary_compute import (
     ShareSummaryGeoScope,
     ShareSummaryStats,
     compute_share_summary_stats,
+    geo_region_lifer_stat_label,
     period_for_custom,
     period_for_lifetime,
     period_for_month,
@@ -40,6 +41,8 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM,
+    share_summary_card_subtitle,
 )
 
 LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]
@@ -235,6 +238,9 @@ def _metrics_lookup(
 ) -> dict[str, str]:
     """Label → display value for period stats and optional taxonomy reference rows."""
     lookup: dict[str, str] = dict(stat_pairs(stats, geo_scope=geo_scope))
+    if geo_scope is not None and not _geo_scope_is_world(geo_scope):
+        if stats.region_lifers is not None:
+            lookup[geo_region_lifer_stat_label(geo_scope)] = f"{int(stats.region_lifers):,}"
     if not _geo_scope_is_world(geo_scope) or all_time is None:
         return lookup
     if all_time.total_species_taxa is not None:
@@ -258,10 +264,18 @@ def summary_status_metrics(
 
     ordered: list[tuple[str, str]] = []
     seen: set[str] = set()
+    region_label = (
+        geo_region_lifer_stat_label(geo_scope)
+        if geo_scope is not None and not _geo_scope_is_world(geo_scope)
+        else ""
+    )
     for label in _SUMMARY_STATUS_ORDER:
         if label in lookup:
             ordered.append((label, lookup[label]))
             seen.add(label)
+            if label == "Lifers" and region_label and region_label in lookup:
+                ordered.append((region_label, lookup[region_label]))
+                seen.add(region_label)
     for label, value in lookup.items():
         if label not in seen:
             ordered.append((label, value))
@@ -538,15 +552,12 @@ def _card_shell(
 def _subtitle_for_period(stats: ShareSummaryStats) -> str:
     if stats.trip_title:
         return stats.trip_title
-    if stats.period_kind == "year":
-        return "Birding year in review"
-    if stats.period_kind == "month":
-        return "Monthly birding summary"
-    if stats.period_kind == "week":
-        return "Weekly birding summary"
-    if stats.period_kind == "lifetime":
-        return "My eBird data"
-    return "Birding summary"
+    sub = share_summary_card_subtitle(
+        layout="hero",
+        period_kind=stats.period_kind,
+        trip_title=stats.trip_title,
+    )
+    return sub or SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM
 
 
 def _headline_for_period(stats: ShareSummaryStats) -> str:
@@ -692,11 +703,13 @@ def favourite_birds_for_card(
     return ()
 
 
-def _layout_subtitle(stats: ShareSummaryStats, layout_default: str) -> str | None:
+def _layout_subtitle(stats: ShareSummaryStats, layout: LayoutId) -> str | None:
     """Layout-specific green subtitle; trip title wins on custom ranges."""
-    if stats.trip_title:
-        return None
-    return layout_default
+    return share_summary_card_subtitle(
+        layout=layout,
+        period_kind=stats.period_kind,
+        trip_title=stats.trip_title,
+    )
 
 
 def _layout_tiles(
@@ -737,7 +750,7 @@ def _layout_tiles(
     pad_bottom = _footer_pad(fmt, width, height, favourite_bird_count=len(birds))
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
-  {_header_block(stats, subtitle=_layout_subtitle(stats, "My birding stats"))}
+  {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
   <div style="padding:8px 48px {pad_bottom}px;">
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:{grid_gap};">
       {''.join(cells)}
@@ -782,7 +795,7 @@ def _layout_minimal(
     pad_bottom = _footer_pad(fmt, width, height)
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
-  {_header_block(stats, subtitle=_layout_subtitle(stats, "Summary"))}
+  {_header_block(stats, subtitle=_layout_subtitle(stats, "minimal"))}
   <div style="padding:24px 72px {pad_bottom}px;">
     {''.join(rows)}
   </div>
@@ -821,7 +834,15 @@ def _layout_spotlight(
 <p style="margin:0 0 28px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
   {_esc(stats.period_label)}</p>"""
     else:
-        header_html = f"""
+        subtitle = _layout_subtitle(stats, "spotlight")
+        if subtitle:
+            header_html = f"""
+<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase;
+  color:{_colour('accent')};font-weight:600;">{_esc(subtitle)}</p>
+<p style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
+  {_esc(stats.period_label)}</p>"""
+        else:
+            header_html = f"""
 <p style="margin:0 0 32px;font-size:36px;letter-spacing:0.04em;color:{_colour('accent')};font-weight:600;">
   {_esc(stats.period_label)}</p>"""
     return f"""
