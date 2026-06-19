@@ -53,12 +53,23 @@ from explorer.presentation.share_summary_png_export import (
     share_summary_png_filename,
     share_summary_to_png_bytes,
 )
+from explorer.presentation.share_summary_circles_preview import (
+    TILES_CIRCLE_CLUSTER_MAX,
+)
+from explorer.presentation.share_summary_hex_preview import (
+    HEX_VARIANT_IDS,
+    HEX_VARIANT_LABELS,
+    HexVariantId,
+    render_hex_grid_preview_html,
+)
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
+    TilesStyleId,
     FORMAT_LABELS,
     compute_share_summary_stats,
     default_card_stat_labels,
+    favourite_birds_for_card,
     layout_card_stat_max,
     layout_card_stat_storage_max,
     period_for_custom,
@@ -73,6 +84,7 @@ from explorer.presentation.share_summary_preview import (
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_IDS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    SHARE_SUMMARY_STORY_MAX_STATS,
     share_summary_color_scheme_index,
     share_summary_color_scheme_label,
 )
@@ -90,6 +102,7 @@ def _cached_share_summary_png(
     color_scheme_index: int,
     scope_label: str | None,
     geo_scope: ShareSummaryGeoScope,
+    tiles_style: TilesStyleId = "grid",
 ) -> bytes:
     return share_summary_to_png_bytes(
         stats,
@@ -102,10 +115,13 @@ def _cached_share_summary_png(
         color_scheme_index=color_scheme_index,
         scope_label=scope_label,
         geo_scope=geo_scope,
+        tiles_style=tiles_style,
     )
 
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
+_HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments"
+_TILES_STYLE_KEY = "design_tiles_style"
 _COLOR_THEME_KEY = "design_color_theme"
 _STATS_EXPANDER_LABEL = "Available statistics"
 _CARD_STATS_LABEL = "Card statistics"
@@ -532,8 +548,29 @@ def _story_format_stat_picker(fmt: FormatId, layout: LayoutId) -> bool:
     return fmt == "story" and layout in ("minimal", "tiles")
 
 
-def _card_stat_ui_row_count(layout: LayoutId, fmt: FormatId, *, slot_count: int) -> int:
-    max_slots = layout_card_stat_max(layout, fmt)
+def _tiles_circle_cluster_picker(layout: LayoutId, tiles_style: TilesStyleId) -> bool:
+    return layout == "tiles" and tiles_style == "circles"
+
+
+def _card_stat_max_slots(
+    layout: LayoutId,
+    fmt: FormatId,
+    *,
+    tiles_style: TilesStyleId = "grid",
+) -> int:
+    if _tiles_circle_cluster_picker(layout, tiles_style):
+        return TILES_CIRCLE_CLUSTER_MAX
+    return layout_card_stat_max(layout, fmt)
+
+
+def _card_stat_ui_row_count(
+    layout: LayoutId,
+    fmt: FormatId,
+    *,
+    slot_count: int,
+    tiles_style: TilesStyleId = "grid",
+) -> int:
+    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
     if _story_format_stat_picker(fmt, layout):
         return max_slots
     return min(max(1, slot_count), max_slots)
@@ -543,8 +580,10 @@ def _effective_card_stat_labels(
     picks: list[str],
     layout: LayoutId,
     fmt: FormatId,
+    *,
+    tiles_style: TilesStyleId = "grid",
 ) -> tuple[str, ...]:
-    max_slots = layout_card_stat_max(layout, fmt)
+    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
     return tuple(label for label in picks if label)[:max_slots]
 
 
@@ -574,10 +613,16 @@ def _ensure_card_stat_picks(
     *,
     data_scope: str,
     geo_scope: ShareSummaryGeoScope,
+    tiles_style: TilesStyleId = "grid",
 ) -> list[str]:
     """Initialize or sanitize session picks for *layout*; returns UI row values."""
-    max_slots = layout_card_stat_max(layout, fmt)
-    storage_max = layout_card_stat_storage_max(layout)
+    circle_cluster = _tiles_circle_cluster_picker(layout, tiles_style)
+    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    storage_max = (
+        TILES_CIRCLE_CLUSTER_MAX
+        if circle_cluster
+        else layout_card_stat_storage_max(layout)
+    )
     available = frozenset(label for label, _ in status_metrics)
     picks_key = _card_stat_picks_key(layout, period_kind)
     count_key = _card_stat_slot_count_key(layout, period_kind)
@@ -624,7 +669,9 @@ def _ensure_card_stat_picks(
         max_slots=storage_max,
     )
     slot_count = int(st.session_state.get(count_key, max(1, len(sanitized))))
-    ui_rows = _card_stat_ui_row_count(layout, fmt, slot_count=slot_count)
+    ui_rows = _card_stat_ui_row_count(
+        layout, fmt, slot_count=slot_count, tiles_style=tiles_style
+    )
 
     raw = list(st.session_state[picks_key])
     if fixed_rows:
@@ -654,12 +701,13 @@ def _card_stat_picker_ui(
     *,
     data_scope: str,
     geo_scope: ShareSummaryGeoScope,
+    tiles_style: TilesStyleId = "grid",
 ) -> tuple[str, ...]:
     """Ordered stat picker for hero / tiles / list; hidden for spotlight."""
     if layout == "spotlight":
         return ()
 
-    max_slots = layout_card_stat_max(layout, fmt)
+    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
     fixed_rows = _story_format_stat_picker(fmt, layout)
     available_labels = [label for label, _ in status_metrics]
     if not available_labels:
@@ -669,10 +717,19 @@ def _card_stat_picker_ui(
     picks_key = _card_stat_picks_key(layout, period_kind)
     count_key = _card_stat_slot_count_key(layout, period_kind)
     picks = _ensure_card_stat_picks(
-        layout, status_metrics, fmt, period_kind, data_scope=data_scope, geo_scope=geo_scope
+        layout,
+        status_metrics,
+        fmt,
+        period_kind,
+        data_scope=data_scope,
+        geo_scope=geo_scope,
+        tiles_style=tiles_style,
     )
     ui_rows = _card_stat_ui_row_count(
-        layout, fmt, slot_count=int(st.session_state[count_key])
+        layout,
+        fmt,
+        slot_count=int(st.session_state[count_key]),
+        tiles_style=tiles_style,
     )
 
     if fixed_rows:
@@ -789,7 +846,12 @@ def _card_stat_picker_ui(
                 st.rerun()
 
     st.session_state[picks_key] = picks[:ui_rows]
-    final = _effective_card_stat_labels(picks, layout, fmt)
+    final = _effective_card_stat_labels(
+        picks,
+        layout,
+        fmt,
+        tiles_style=tiles_style,
+    )
     if not final:
         st.caption("Select at least one stat to show on the card.")
     return final
@@ -859,6 +921,7 @@ def _current_card_fragment(
     card_stat_data_scope: str,
     scope_label: str,
     geo_scope: ShareSummaryGeoScope,
+    tiles_style: TilesStyleId = "grid",
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     card_stat_labels: tuple[str, ...] = ()
@@ -873,6 +936,7 @@ def _current_card_fragment(
                 stats.period_kind,
                 data_scope=card_stat_data_scope,
                 geo_scope=geo_scope,
+                tiles_style=tiles_style,
             )
 
     spotlight_label = _spotlight_label_from_session(status_metrics)
@@ -883,6 +947,7 @@ def _current_card_fragment(
             stats,
             layout=selected_layout,
             fmt=fmt,
+            tiles_style=tiles_style,
             scale=scale,
             spotlight_label=spotlight_label,
             favourite_birds=favourite_birds,
@@ -908,6 +973,7 @@ def _current_card_fragment(
             color_scheme_index,
             scope_label,
             geo_scope,
+            tiles_style,
         )
     except RuntimeError as exc:
         st.warning(str(exc))
@@ -1017,6 +1083,15 @@ with st.sidebar:
             "spotlight": "Single stat spotlight",
         }[x],
     )
+    tiles_style: TilesStyleId = "grid"
+    if selected_layout == "tiles":
+        tiles_style = st.radio(
+            "Statistics presentation",
+            options=["grid", "circles"],
+            format_func=lambda x: "Statistics Grid" if x == "grid" else "Circle cluster",
+            key=_TILES_STYLE_KEY,
+            horizontal=True,
+        )
     fmt: FormatId = st.selectbox(
         "Aspect ratio",
         options=["square", "portrait_post", "story"],
@@ -1164,7 +1239,28 @@ status_metrics = summary_status_metrics(stats, all_time=all_time, geo_scope=geo_
 if _SPOTLIGHT_LABEL_KEY not in st.session_state:
     st.session_state[_SPOTLIGHT_LABEL_KEY] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
-tab_social_cards, = st.tabs([_SOCIAL_CARDS_TAB_LABEL])
+tab_social_cards, tab_hex_experiments = st.tabs(
+    [_SOCIAL_CARDS_TAB_LABEL, _HEX_EXPERIMENTS_TAB_LABEL]
+)
+
+hex_card_stat_labels = default_card_stat_labels(
+    "tiles",
+    status_metrics,
+    period_kind=stats.period_kind,
+    geo_scope=geo_scope,
+)
+if fmt == "story" and len(hex_card_stat_labels) < SHARE_SUMMARY_STORY_MAX_STATS:
+    picked = set(hex_card_stat_labels)
+    extra: list[str] = []
+    for label, _ in status_metrics:
+        if label in picked:
+            continue
+        extra.append(label)
+        if len(hex_card_stat_labels) + len(extra) >= SHARE_SUMMARY_STORY_MAX_STATS:
+            break
+    hex_card_stat_labels = hex_card_stat_labels + tuple(extra)
+hex_favourite_birds = favourite_birds_for_card("tiles", fmt, favourite_birds)
+hex_preview_scale = min(scale, 0.32)
 
 with tab_social_cards:
     if not use_sample and not _period_has_checklist_data(stats):
@@ -1190,4 +1286,67 @@ with tab_social_cards:
         card_stat_data_scope=card_stat_data_scope,
         scope_label=scope_label,
         geo_scope=geo_scope,
+        tiles_style=tiles_style,
+    )
+
+_DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"
+
+with tab_hex_experiments:
+    st.markdown(
+        "Uniform **hexicons** for the Statistics Grid. **Organic hive** samples (bottom half) "
+        "use edge-to-edge tessellation in irregular, jagged clusters — like a natural honeycomb "
+        "blob, not balanced rows or a dashboard grid. Legacy overlapping-row samples are kept "
+        "for comparison only."
+    )
+    if _DESIGN_HEX_SELECTED_KEY not in st.session_state:
+        st.session_state[_DESIGN_HEX_SELECTED_KEY] = HEX_VARIANT_IDS[0]
+    selected_hex: HexVariantId = st.selectbox(
+        "Enlarged preview",
+        options=HEX_VARIANT_IDS,
+        format_func=lambda v: HEX_VARIANT_LABELS[v],
+        key=_DESIGN_HEX_SELECTED_KEY,
+    )
+    hex_cols = st.columns(2)
+    for i, variant in enumerate(HEX_VARIANT_IDS):
+        with hex_cols[i % 2]:
+            title = HEX_VARIANT_LABELS[variant]
+            if variant == selected_hex:
+                title = f"{title} · selected"
+            st.markdown(f"**{title}**")
+            st.markdown(
+                render_hex_grid_preview_html(
+                    stats,
+                    variant=variant,
+                    fmt=fmt,
+                    scale=hex_preview_scale,
+                    favourite_birds=hex_favourite_birds,
+                    card_stat_labels=hex_card_stat_labels,
+                    all_time=all_time,
+                    color_scheme_index=color_scheme_index,
+                    geo_scope=geo_scope,
+                    scope_label=scope_label,
+                ),
+                unsafe_allow_html=True,
+            )
+
+    st.divider()
+    st.subheader("Selected preview (larger)")
+    st.caption(
+        f"{HEX_VARIANT_LABELS[selected_hex]} — use **Preview scale** in the sidebar "
+        f"(currently {scale:.0%} of export size)."
+    )
+    st.markdown(
+        render_hex_grid_preview_html(
+            stats,
+            variant=selected_hex,
+            fmt=fmt,
+            scale=scale,
+            favourite_birds=hex_favourite_birds,
+            card_stat_labels=hex_card_stat_labels,
+            all_time=all_time,
+            color_scheme_index=color_scheme_index,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
+        ),
+        unsafe_allow_html=True,
     )

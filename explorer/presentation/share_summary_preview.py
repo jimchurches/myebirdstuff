@@ -45,6 +45,8 @@ from explorer.core.share_summary_defaults import (
     share_summary_card_subtitle,
 )
 
+TilesStyleId = Literal["grid", "circles"]
+
 LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]
 FormatId = Literal["square", "portrait_post", "story"]
 
@@ -650,21 +652,22 @@ def _resolve_card_stat_pairs(
     layout: LayoutId,
     fmt: FormatId | None = None,
     card_stat_labels: tuple[str, ...] = (),
+    max_count: int | None = None,
     all_time: ShareSummaryAllTimeStats | None = None,
     geo_scope: ShareSummaryGeoScope | None = None,
 ) -> list[tuple[str, str]]:
-    max_count = layout_card_stat_max(layout, fmt)
+    resolved_max = max_count if max_count is not None else layout_card_stat_max(layout, fmt)
     if card_stat_labels:
         return card_stat_pairs(
             stats,
-            max_count=max_count,
+            max_count=resolved_max,
             selected_labels=card_stat_labels,
             all_time=all_time,
             geo_scope=geo_scope,
         )
     return card_stat_pairs(
         stats,
-        max_count=max_count,
+        max_count=resolved_max,
         layout=layout,
         all_time=all_time,
         geo_scope=geo_scope,
@@ -894,6 +897,7 @@ def _card_inner_html(
     *,
     layout: LayoutId,
     fmt: FormatId,
+    tiles_style: TilesStyleId = "grid",
     spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
@@ -911,6 +915,19 @@ def _card_inner_html(
             height,
             fmt,
             spotlight_label=label,
+            all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
+        )
+    elif layout == "tiles" and tiles_style == "circles":
+        from explorer.presentation.share_summary_circles_preview import layout_tiles_circle_cluster
+
+        inner = layout_tiles_circle_cluster(
+            stats,
+            width,
+            height,
+            fmt,
+            card_stat_labels=card_stat_labels,
             all_time=all_time,
             geo_scope=geo_scope,
             scope_label=scope_label,
@@ -948,6 +965,7 @@ def render_share_summary_export_html(
     *,
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
+    tiles_style: TilesStyleId = "grid",
     spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
@@ -962,6 +980,7 @@ def render_share_summary_export_html(
             stats,
             layout=layout,
             fmt=fmt,
+            tiles_style=tiles_style,
             spotlight_label=spotlight_label,
             favourite_birds=favourite_birds,
             card_stat_labels=card_stat_labels,
@@ -1001,6 +1020,7 @@ def render_share_summary_preview_html(
     *,
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
+    tiles_style: TilesStyleId = "grid",
     scale: float = 0.38,
     spotlight_label: str | None = None,
     favourite_birds: tuple[str, ...] = (),
@@ -1018,6 +1038,7 @@ def render_share_summary_preview_html(
             stats,
             layout=layout,
             fmt=fmt,
+            tiles_style=tiles_style,
             spotlight_label=spotlight_label,
             favourite_birds=birds,
             card_stat_labels=labels,
@@ -1031,6 +1052,7 @@ def render_share_summary_preview_html(
 # Re-export period helpers for the design app.
 __all__ = [
     "FormatId",
+    "TilesStyleId",
     "LayoutId",
     "ShareSummaryAllTimeStats",
     "ShareSummaryStats",
