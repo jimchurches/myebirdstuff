@@ -156,18 +156,18 @@ def test_spotlight_pair_for_label_by_period():
     from explorer.presentation.share_summary_preview import spotlight_pair_for_label
 
     year = ShareSummaryStats(period_label="2025", period_kind="year", species=312)
-    assert spotlight_pair_for_label(year, "Total species") == ("Total species", "312")
+    assert spotlight_pair_for_label(year, "Total species") == ("Species", "312")
 
     month = ShareSummaryStats(period_label="June 2025", period_kind="month", species=89)
-    assert spotlight_pair_for_label(month, "Total species") == ("Total species", "89")
+    assert spotlight_pair_for_label(month, "Total species") == ("Species", "89")
 
     week = ShareSummaryStats(
         period_label="May 31, 2025 - June 6, 2025", period_kind="week", species=34
     )
-    assert spotlight_pair_for_label(week, "Total species") == ("Total species", "34")
+    assert spotlight_pair_for_label(week, "Total species") == ("Species", "34")
 
     custom = ShareSummaryStats(period_label="1 – 7 June 2025", period_kind="custom", species=56)
-    assert spotlight_pair_for_label(custom, "Total species") == ("Total species", "56")
+    assert spotlight_pair_for_label(custom, "Total species") == ("Species", "56")
     assert spotlight_pair_for_label(custom, "Nonexistent stat") is None
 
 
@@ -281,7 +281,14 @@ def test_lifetime_default_card_stats():
         "Longest streak (days)",
     )
     tile_labels = [lab for lab, _ in card_stat_pairs(stats, max_count=6, layout="tiles")]
-    assert tile_labels == list(tiles)
+    assert tile_labels == [
+        "Species",
+        "Countries",
+        "Birding days",
+        "Total checklists",
+        "Total individuals",
+        "Longest streak (days)",
+    ]
 
 
 def test_country_scope_hero_default_card_stats():
@@ -379,6 +386,13 @@ def test_completed_checklists_in_summary_metrics():
     assert lookup["Completed checklists"] == "172"
 
 
+def test_stat_card_display_label_maps_picker_to_short_tile():
+    from explorer.presentation.share_summary_preview import stat_card_display_label
+
+    assert stat_card_display_label("Total species") == "Species"
+    assert stat_card_display_label("Lifers") == "Lifers"
+
+
 def test_card_stat_pairs_year_includes_countries():
     from explorer.presentation.share_summary_preview import card_stat_pairs
 
@@ -393,7 +407,7 @@ def test_card_stat_pairs_hero_default_four():
 
     stats = sample_share_summary_stats(period_kind="custom", trip_title="Trip")
     labels = [lab for lab, _ in card_stat_pairs(stats, max_count=4, layout="hero")]
-    assert labels == ["Total species", "Lifers", "Total checklists", "Unique locations"]
+    assert labels == ["Species", "Lifers", "Total checklists", "Unique locations"]
 
 
 def test_card_stat_pairs_tiles_includes_countries_and_birding_days():
@@ -402,7 +416,7 @@ def test_card_stat_pairs_tiles_includes_countries_and_birding_days():
     stats = sample_share_summary_stats(period_kind="month")
     labels = [lab for lab, _ in card_stat_pairs(stats, max_count=6, layout="tiles")]
     assert labels == [
-        "Total species",
+        "Species",
         "Lifers",
         "Total checklists",
         "Unique locations",

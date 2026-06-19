@@ -105,6 +105,9 @@ def _geo_scope_is_world(geo_scope: ShareSummaryGeoScope | None) -> bool:
 class _StatSpec:
     """One headline stat: which :class:`ShareSummaryStats` field, its card label, and formatting.
 
+    ``label`` is the picker / session key (Available statistics, defaults, reorder).
+    ``card_label`` overrides the short tile heading on rendered cards when set.
+
     ``decimals`` 0 → integer with thousands separators; 1 → one decimal place (and a ``—``
     placeholder when the value is zero). ``hide_if_zero`` drops the stat entirely at zero.
     """
@@ -113,12 +116,13 @@ class _StatSpec:
     label: str
     decimals: int = 0
     hide_if_zero: bool = False
+    card_label: str | None = None
 
 
 # Ordered headline stats. This order is the fallback priority used by ``card_stat_pairs`` and the
 # single source of truth for stat labels (the Available statistics expander reorders separately).
 _STAT_SPECS: tuple[_StatSpec, ...] = (
-    _StatSpec("species", "Total species"),
+    _StatSpec("species", "Total species", card_label="Species"),
     _StatSpec("lifers", "Lifers"),
     _StatSpec("checklists", "Total checklists"),
     _StatSpec("completed_checklists", "Completed checklists"),
@@ -133,6 +137,19 @@ _STAT_SPECS: tuple[_StatSpec, ...] = (
     _StatSpec("shared_checklists", "Shared checklists", hide_if_zero=True),
     _StatSpec("days_birding_with_others", "Days birding with others", hide_if_zero=True),
 )
+
+_CARD_LABEL_BY_PICKER: dict[str, str] = {
+    spec.label: spec.card_label for spec in _STAT_SPECS if spec.card_label is not None
+}
+
+
+def stat_card_display_label(picker_label: str) -> str:
+    """Short tile label for cards; picker keys and defaults keep ``picker_label``."""
+    return _CARD_LABEL_BY_PICKER.get(picker_label, picker_label)
+
+
+def _card_stat_pair(picker_label: str, value: str) -> tuple[str, str]:
+    return stat_card_display_label(picker_label), value
 
 def resolve_spotlight_label(spotlight_label: str | None) -> str:
     """Normalize the chosen spotlight label, falling back to the default."""
@@ -152,7 +169,7 @@ def spotlight_pair_for_label(
     cleaned = (label or "").strip()
     if not cleaned or cleaned not in lookup:
         return None
-    return cleaned, lookup[cleaned]
+    return _card_stat_pair(cleaned, lookup[cleaned])
 
 _LOGO_PATH = Path(__file__).resolve().parents[2] / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
 
@@ -367,7 +384,7 @@ def card_stat_pairs(
         seen: set[str] = set()
         for lab in selected_labels:
             if lab in lookup and lab not in seen:
-                out.append((lab, lookup[lab]))
+                out.append(_card_stat_pair(lab, lookup[lab]))
                 seen.add(lab)
             if len(out) >= max_count:
                 break
@@ -393,7 +410,7 @@ def card_stat_pairs(
         if lab not in labels:
             labels.append(lab)
 
-    return [(lab, lookup[lab]) for lab in labels[:max_count]]
+    return [_card_stat_pair(lab, lookup[lab]) for lab in labels[:max_count]]
 
 
 def sample_share_summary_stats(
@@ -1023,6 +1040,7 @@ __all__ = [
     "sample_share_summary_stats",
     "spotlight_pair_for_label",
     "resolve_spotlight_label",
+    "stat_card_display_label",
     "stat_pairs",
     "summary_status_metrics",
     "layout_card_stat_max",
