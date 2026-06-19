@@ -20,6 +20,7 @@ from explorer.core.species_logic import countable_species_vectorized
 from explorer.core.stats import (
     checklist_country_keys,
     format_region_parts,
+    incidental_checklist_mask,
     longest_streak,
     safe_count,
     shared_checklist_stats,
@@ -357,6 +358,7 @@ class ShareSummaryStats:
     individuals: int | None = None
     checklists: int | None = None
     completed_checklists: int | None = None
+    incidental_checklists: int | None = None
     locations: int | None = None
     lifers: int | None = None
     region_lifers: int | None = None
@@ -548,6 +550,10 @@ def compute_share_summary_stats(
     completed_mask = _completed_checklist_mask(in_period_cl)
     if completed_mask is not None:
         completed_checklists = int(completed_mask.sum())
+    incidental_checklists = None
+    incidental_mask = incidental_checklist_mask(in_period_cl)
+    if incidental_mask is not None:
+        incidental_checklists = int(incidental_mask.sum())
     locations = int(in_period_cl["Location ID"].nunique()) if "Location ID" in in_period_cl.columns else None
 
     # Lifers: global first checklist date per species; geo scope keeps period species only.
@@ -607,6 +613,7 @@ def compute_share_summary_stats(
         region_lifers=region_lifers,
         checklists=checklists,
         completed_checklists=completed_checklists,
+        incidental_checklists=incidental_checklists,
         locations=locations,
         families=families,
         individuals=individuals,

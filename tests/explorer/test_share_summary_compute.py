@@ -85,6 +85,27 @@ def test_compute_share_summary_stats_completed_checklists():
     assert stats.completed_checklists == 1
 
 
+def test_compute_share_summary_stats_incidental_checklists():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-01-10", species="Species a"),
+            _row(sid="S2", dt="2025-01-11", species="Species b"),
+            _row(sid="S3", dt="2025-01-12", species="Species c"),
+            _row(sid="S4", dt="2025-01-13", species="Species d"),
+        ]
+    )
+    df.loc[df["Submission ID"] == "S2", "All Obs Reported"] = 0
+    df.loc[df["Submission ID"] == "S3", "Protocol"] = "Incidental"
+    df.loc[df["Submission ID"] == "S3", "All Obs Reported"] = 0
+    df.loc[df["Submission ID"] == "S4", "Protocol"] = "eBird - Casual Observation"
+    df.loc[df["Submission ID"] == "S4", "All Obs Reported"] = 0
+    stats = compute_share_summary_stats(df, period_for_year(2025))
+    assert stats is not None
+    assert stats.checklists == 4
+    assert stats.completed_checklists == 1
+    assert stats.incidental_checklists == 2
+
+
 def test_compute_share_summary_stats_distance_year_and_lifetime_only():
     df = pd.DataFrame(
         [

@@ -214,6 +214,7 @@ def test_summary_status_metrics_preferred_order():
         "Lifers",
         "Total checklists",
         "Completed checklists",
+        "Incidental checklists",
         "Shared checklists",
         "Unique locations",
         "Countries",
@@ -381,9 +382,32 @@ def test_completed_checklists_in_summary_metrics():
     labels = [label for label, _ in summary_status_metrics(stats)]
     assert "Total checklists" in labels
     assert "Completed checklists" in labels
+    assert "Incidental checklists" in labels
+    assert labels.index("Incidental checklists") == labels.index("Completed checklists") + 1
     lookup = dict(summary_status_metrics(stats))
     assert lookup["Total checklists"] == "186"
     assert lookup["Completed checklists"] == "172"
+    assert lookup["Incidental checklists"] == "14"
+
+
+def test_incidental_checklists_not_on_default_card_stats():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS,
+        SHARE_SUMMARY_HERO_DEFAULT_STATS,
+        SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
+        SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
+        SHARE_SUMMARY_TILES_DEFAULT_STATS,
+    )
+
+    defaults = (
+        SHARE_SUMMARY_HERO_DEFAULT_STATS,
+        SHARE_SUMMARY_TILES_DEFAULT_STATS,
+        SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
+        SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
+        SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS,
+    )
+    for stat_defaults in defaults:
+        assert "Incidental checklists" not in stat_defaults
 
 
 def test_stat_card_display_label_maps_picker_to_short_tile():
