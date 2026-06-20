@@ -118,8 +118,7 @@ _PREVIEW_SCALE_FULL = 1.0
 _TILES_STYLE_KEY = "design_tiles_style"
 _SPOTLIGHT_STYLE_KEY = "design_spotlight_style"
 _COLOR_THEME_KEY = "design_color_theme"
-_STATS_EXPANDER_LABEL = "Available statistics"
-_CARD_STATS_LABEL = "Card statistics"
+_STATISTICS_LABEL = "Statistics"
 _CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
 _CARD_STATS_PICKS_PREFIX = "design_card_stat_picks_"
 _CARD_STATS_SCOPE_PREFIX = "design_card_stat_scope_"
@@ -484,6 +483,138 @@ def _card_stat_slot_label(layout: LayoutId, index: int, *, total: int) -> str:
     return f"{kind} {index + 1}"
 
 
+def _status_metrics_lookup(status_metrics: list[tuple[str, str]]) -> dict[str, str]:
+    return dict(status_metrics)
+
+
+def _stats_on_card(picks: list[str]) -> set[str]:
+    return {label for label in picks if label}
+
+
+def _card_can_accept_stat(
+    layout: LayoutId,
+    fmt: FormatId,
+    picks: list[str],
+    slot_count: int,
+    *,
+    tiles_style: TilesStyleId = "grid",
+) -> bool:
+    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    fixed_rows = _story_format_stat_picker(fmt, layout)
+    ui_rows = _card_stat_ui_row_count(
+        layout, fmt, slot_count=slot_count, tiles_style=tiles_style
+    )
+    active = (picks + [""] * ui_rows)[:ui_rows]
+    if any(not label for label in active):
+        return True
+    if fixed_rows:
+        return False
+    return ui_rows < max_slots
+
+
+def _add_stat_to_card(
+    label: str,
+    *,
+    layout: LayoutId,
+    period_kind: PeriodKind,
+    fmt: FormatId,
+    tiles_style: TilesStyleId,
+) -> None:
+    """Fill the next empty card slot, or append a row when allowed."""
+    picks_key = _card_stat_picks_key(layout, period_kind)
+    count_key = _card_stat_slot_count_key(layout, period_kind)
+    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    fixed_rows = _story_format_stat_picker(fmt, layout)
+    picks = list(st.session_state.get(picks_key, []))
+    slot_count = int(st.session_state.get(count_key, 1))
+    ui_rows = _card_stat_ui_row_count(
+        layout, fmt, slot_count=slot_count, tiles_style=tiles_style
+    )
+    active = (picks + [""] * ui_rows)[:ui_rows]
+
+    for i in range(ui_rows):
+        if not active[i]:
+            active[i] = label
+            st.session_state[picks_key] = active + picks[ui_rows:]
+            _clear_card_stat_selectbox_keys(layout)
+            return
+
+    if fixed_rows:
+        padded = (picks + [""] * max_slots)[:max_slots]
+        for i in range(max_slots):
+            if not padded[i]:
+                padded[i] = label
+                st.session_state[picks_key] = padded
+                _clear_card_stat_selectbox_keys(layout)
+                return
+        return
+
+    if ui_rows < max_slots:
+        active.append(label)
+        st.session_state[count_key] = ui_rows + 1
+        st.session_state[picks_key] = active
+        _clear_card_stat_selectbox_keys(layout)
+
+
+def _not_on_card_chip_strip(
+    *,
+    layout: LayoutId,
+    period_kind: PeriodKind,
+    fmt: FormatId,
+    status_metrics: list[tuple[str, str]],
+    picks: list[str],
+    slot_count: int,
+    metrics_lookup: dict[str, str],
+    tiles_style: TilesStyleId = "grid",
+) -> None:
+    """Compact chips for stats not yet on the card; click to add."""
+    on_card = _stats_on_card(picks)
+    not_on_card = [
+        (stat_label, metrics_lookup[stat_label])
+        for stat_label, _ in status_metrics
+        if stat_label not in on_card
+    ]
+    if not not_on_card:
+        st.caption("All available stats are on the card.")
+        return
+
+    count = len(not_on_card)
+    can_add = _card_can_accept_stat(
+        layout, fmt, picks, slot_count, tiles_style=tiles_style
+    )
+    st.caption(
+        f"{count} more stat{'s' if count != 1 else ''} available"
+        + (" — click to add to the card." if can_add else " — card is full.")
+    )
+
+    cols_per_row = 3
+    for row_start in range(0, len(not_on_card), cols_per_row):
+        row_items = not_on_card[row_start : row_start + cols_per_row]
+        cols = st.columns(len(row_items))
+        for col_index, (stat_label, value) in enumerate(row_items):
+            with cols[col_index]:
+                chip_index = row_start + col_index
+                if st.button(
+                    f"{stat_label} · {value}",
+                    key=f"design_stat_chip_{layout}_{period_kind}_{chip_index}",
+                    use_container_width=True,
+                    disabled=not can_add,
+                    help=(
+                        f"Add {stat_label} to the card"
+                        if can_add
+                        else "Remove or clear a slot to add another stat"
+                    ),
+                ):
+                    _add_stat_to_card(
+                        stat_label,
+                        layout=layout,
+                        period_kind=period_kind,
+                        fmt=fmt,
+                        tiles_style=tiles_style,
+                    )
+                    st.rerun()
+
+
 def _card_stat_picker_ui(
     layout: LayoutId,
     status_metrics: list[tuple[str, str]],
@@ -501,6 +632,7 @@ def _card_stat_picker_ui(
     max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
     fixed_rows = _story_format_stat_picker(fmt, layout)
     available_labels = [label for label, _ in status_metrics]
+    metrics_lookup = _status_metrics_lookup(status_metrics)
     if not available_labels:
         st.caption("No statistics available for this period.")
         return ()
@@ -546,7 +678,7 @@ def _card_stat_picker_ui(
         can_down = i < ui_rows - 1
         can_remove = bool(current) if fixed_rows else (i > 0 or bool(current))
 
-        col_sel, col_actions = st.columns([11, 3], vertical_alignment="bottom")
+        col_sel, col_val, col_actions = st.columns([7, 2, 3], vertical_alignment="bottom")
         with col_sel:
             choice = st.selectbox(
                 row_label,
@@ -555,6 +687,9 @@ def _card_stat_picker_ui(
                 key=_card_stat_selectbox_key(layout, i),
             )
             picks[i] = choice or ""
+        with col_val:
+            value = metrics_lookup.get(picks[i], "") if picks[i] else ""
+            st.markdown(f"**{value}**" if value else "—")
         with col_actions:
             btn_up, btn_down, btn_rm = st.columns(3, gap="small")
             with btn_up:
@@ -602,7 +737,7 @@ def _card_stat_picker_ui(
                     st.session_state[picks_key] = picks[:ui_rows]
                     st.rerun()
 
-    col_sel_foot, col_actions_foot = st.columns([11, 3], vertical_alignment="bottom")
+    col_sel_foot, col_val_foot, col_actions_foot = st.columns([7, 2, 3], vertical_alignment="bottom")
     with col_sel_foot:
         if not fixed_rows and ui_rows < max_slots and st.button(
             "Add stat",
@@ -645,6 +780,18 @@ def _card_stat_picker_ui(
     )
     if not final:
         st.caption("Select at least one stat to show on the card.")
+
+    st.divider()
+    _not_on_card_chip_strip(
+        layout=layout,
+        period_kind=period_kind,
+        fmt=fmt,
+        status_metrics=status_metrics,
+        picks=picks[:ui_rows],
+        slot_count=int(st.session_state[count_key]),
+        metrics_lookup=metrics_lookup,
+        tiles_style=tiles_style,
+    )
     return final
 
 
@@ -662,18 +809,66 @@ def _spotlight_label_from_session(
     return SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
 
+def _spotlight_alternate_chip_strip(
+    status_metrics: list[tuple[str, str]],
+    *,
+    current: str,
+    metrics_lookup: dict[str, str],
+) -> None:
+    """Quick-switch chips for stats not currently spotlighted."""
+    others = [
+        (label, metrics_lookup[label])
+        for label, _ in status_metrics
+        if label != current
+    ]
+    if not others:
+        return
+    count = len(others)
+    st.caption(
+        f"{count} other stat{'s' if count != 1 else ''} available — click to spotlight."
+    )
+    cols_per_row = 3
+    for row_start in range(0, len(others), cols_per_row):
+        row_items = others[row_start : row_start + cols_per_row]
+        cols = st.columns(len(row_items))
+        for col_index, (stat_label, value) in enumerate(row_items):
+            with cols[col_index]:
+                chip_index = row_start + col_index
+                if st.button(
+                    f"{stat_label} · {value}",
+                    key=f"design_spotlight_chip_{chip_index}",
+                    use_container_width=True,
+                    help=f"Spotlight {stat_label}",
+                ):
+                    st.session_state[_SPOTLIGHT_LABEL_KEY] = stat_label
+                    st.rerun()
+
+
 def _spotlight_stat_picker(status_metrics: list[tuple[str, str]]) -> None:
     labels = [label for label, _ in status_metrics]
     if not labels:
         st.caption("No statistics available for this period.")
         return
+    metrics_lookup = _status_metrics_lookup(status_metrics)
     current = _spotlight_label_from_session(status_metrics)
-    st.selectbox(
-        "Spotlight stat",
-        options=labels,
-        index=labels.index(current) if current in labels else 0,
-        key=_SPOTLIGHT_LABEL_KEY,
-        help="Single highlighted stat for the Spotlight layout.",
+    col_sel, col_val = st.columns([4, 1], vertical_alignment="bottom")
+    with col_sel:
+        st.selectbox(
+            "Spotlight stat",
+            options=labels,
+            index=labels.index(current) if current in labels else 0,
+            key=_SPOTLIGHT_LABEL_KEY,
+            help="Single highlighted stat for the Spotlight layout.",
+        )
+    selected = _spotlight_label_from_session(status_metrics)
+    with col_val:
+        st.markdown(f"**{metrics_lookup.get(selected, '—')}**")
+
+    st.divider()
+    _spotlight_alternate_chip_strip(
+        status_metrics,
+        current=selected,
+        metrics_lookup=metrics_lookup,
     )
 
 
@@ -746,7 +941,7 @@ def _current_card_fragment(
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     card_stat_labels: tuple[str, ...] = ()
-    with st.expander(_CARD_STATS_LABEL, expanded=False):
+    with st.expander(_STATISTICS_LABEL, expanded=False):
         if selected_layout == "spotlight":
             _spotlight_stat_picker(status_metrics)
         else:
@@ -1081,11 +1276,6 @@ with tab_social_cards:
             f"No checklists in **{stats.period_label}** in this export. "
             "Try **Previous month** (or another range) in the sidebar, or pick a period that includes your data."
         )
-
-    with st.expander(_STATS_EXPANDER_LABEL, expanded=False):
-        cols = st.columns(4)
-        for i, (label, value) in enumerate(status_metrics):
-            cols[i % 4].metric(label, value)
 
     _current_card_fragment(
         stats=stats,
