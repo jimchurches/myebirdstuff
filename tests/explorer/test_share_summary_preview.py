@@ -91,51 +91,6 @@ def test_tiles_story_renders_extra_selected_stats():
     assert "Bird families" in html
 
 
-def test_hero_and_tiles_render_favourite_birds_block():
-    stats = sample_share_summary_stats()
-    birds = ("Superb Fairywren", "Rainbow Lorikeet")
-    hero = render_share_summary_preview_html(stats, layout="hero", favourite_birds=birds)
-    tiles = render_share_summary_preview_html(
-        stats, layout="tiles", fmt="portrait_post", favourite_birds=birds
-    )
-    for html in (hero, tiles):
-        assert "Favourite birds" in html
-        assert "Favourite bird</div>" not in html  # plural heading only
-        assert "Superb Fairywren" in html
-        assert "Rainbow Lorikeet" in html
-
-
-def test_tiles_square_omits_favourite_birds():
-    stats = sample_share_summary_stats()
-    html = render_share_summary_preview_html(
-        stats,
-        layout="tiles",
-        fmt="square",
-        favourite_birds=("Superb Fairywren",),
-    )
-    assert "Favourite bird" not in html
-    assert "Superb Fairywren" not in html
-    assert "grid-template-columns:repeat(2" in html
-
-
-def test_hero_uses_singular_favourite_bird_heading_for_one_pick():
-    stats = sample_share_summary_stats()
-    html = render_share_summary_preview_html(
-        stats, layout="hero", favourite_birds=("Superb Fairywren",)
-    )
-    assert "Favourite bird</div>" in html
-    assert "Favourite birds</div>" not in html
-
-
-def test_minimal_layout_ignores_favourite_birds():
-    stats = sample_share_summary_stats()
-    html = render_share_summary_preview_html(
-        stats, layout="minimal", favourite_birds=("Superb Fairywren",)
-    )
-    assert "Favourite bird" not in html
-    assert "Superb Fairywren" not in html
-
-
 def test_minimal_square_uses_tighter_stat_row_sizing():
     stats = sample_share_summary_stats()
     square = render_share_summary_preview_html(stats, layout="minimal", fmt="square")

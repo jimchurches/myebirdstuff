@@ -28,8 +28,6 @@ from explorer.presentation.share_summary_preview import (
     _header_block,
     _layout_subtitle,
     _resolve_card_stat_pairs,
-    favourite_birds_for_card,
-    _favourite_birds_block,
 )
 
 HexVariantId = Literal[
@@ -550,7 +548,6 @@ def _layout_tiles_hex(
     fmt: FormatId,
     *,
     variant: HexVariantId,
-    favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     geo_scope: ShareSummaryGeoScope | None = None,
@@ -564,16 +561,13 @@ def _layout_tiles_hex(
         all_time=all_time,
         geo_scope=geo_scope,
     )
-    birds = favourite_birds_for_card("tiles", fmt, favourite_birds)
-    favourite_block = _favourite_birds_block(birds, name_size_px=32)
-    pad_bottom = _footer_pad(fmt, width, height, favourite_bird_count=len(birds))
+    pad_bottom = _footer_pad(fmt, width, height)
     subtitle = _layout_subtitle(stats, "tiles")
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=subtitle)}
   <div style="padding:8px 48px {pad_bottom}px;display:flex;flex-direction:column;align-items:center;">
     {_hex_grid_html(pairs, variant=variant, fmt=fmt)}
-    {favourite_block}
   </div>
   {_footer_block(scope_label=scope_label)}
 </div>"""
@@ -585,7 +579,6 @@ def render_hex_grid_preview_html(
     variant: HexVariantId = "clip_flat_classic",
     fmt: FormatId = "square",
     scale: float = 0.38,
-    favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
@@ -601,7 +594,6 @@ def render_hex_grid_preview_html(
             height,
             fmt,
             variant=variant,
-            favourite_birds=favourite_birds,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
             geo_scope=geo_scope,

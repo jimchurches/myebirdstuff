@@ -37,17 +37,8 @@ from explorer.core.share_summary_compute import (
     geo_country_keys_from_df,
     geo_region_options_for_country,
     geo_scope_display_label,
-    period_species_common_names,
-    period_species_name_map,
     resolve_period,
     suggest_period_anchor,
-)
-from explorer.core.species_search import build_ram_species_whoosh_index, whoosh_species_suggestions
-from explorer.app.streamlit.streamlit_ui_constants import (
-    SPECIES_SEARCH_DEBOUNCE_MS,
-    SPECIES_SEARCH_MAX_OPTIONS,
-    SPECIES_SEARCH_MIN_QUERY_LEN,
-    SPECIES_SEARCH_PLACEHOLDER,
 )
 from explorer.presentation.share_summary_png_export import (
     share_summary_png_filename,
@@ -70,7 +61,6 @@ from explorer.presentation.share_summary_preview import (
     FORMAT_PIXELS,
     compute_share_summary_stats,
     default_card_stat_labels,
-    favourite_birds_for_card,
     layout_card_stat_max,
     layout_card_stat_storage_max,
     period_for_custom,
@@ -96,7 +86,6 @@ def _cached_share_summary_png(
     stats: ShareSummaryStats,
     layout: LayoutId,
     fmt: FormatId,
-    favourite_birds: tuple[str, ...],
     card_stat_labels: tuple[str, ...],
     spotlight_label: str,
     all_time: ShareSummaryAllTimeStats | None,
@@ -110,7 +99,6 @@ def _cached_share_summary_png(
         layout=layout,
         fmt=fmt,
         spotlight_label=spotlight_label,
-        favourite_birds=favourite_birds,
         card_stat_labels=card_stat_labels,
         all_time=all_time,
         color_scheme_index=color_scheme_index,
@@ -136,38 +124,9 @@ _SPOTLIGHT_LABEL_KEY = "design_spotlight_label"
 _CURRENT_CARD_LABEL = "Current card"
 _CARD_HEADING_LABEL = "Card Heading (optional)"
 _CARD_HEADING_PLACEHOLDER = "e.g. North Coast NSW Exploration"
-_FAVOURITE_BIRD_SLOT_COUNT_KEY = "design_favourite_bird_slot_count"
-_FAVOURITE_BIRD_PICK_PREFIX = "design_favourite_bird_pick_"
-_FAVOURITE_BIRD_DATA_SCOPE_KEY = "design_favourite_bird_data_scope"
-_FAVOURITE_BIRD_SEARCH_REMOUNT_PREFIX = "design_favourite_bird_search_remount_"
 _GEO_WORLD_OPTION = ""
 _GEO_COUNTRY_SELECT_KEY = "design_geo_country"
 _GEO_REGION_SELECT_KEY = "design_geo_region"
-_MAX_FAVOURITE_BIRDS = 3
-_SAMPLE_PERIOD_SPECIES: tuple[str, ...] = (
-    "Superb Fairywren",
-    "Rainbow Lorikeet",
-    "Australian Pelican",
-    "Laughing Kookaburra",
-    "Sulphur-crested Cockatoo",
-    "Australian Magpie",
-    "Willie Wagtail",
-    "Eastern Yellow Robin",
-    "White-faced Heron",
-    "Crimson Rosella",
-)
-_SAMPLE_PERIOD_NAME_MAP: dict[str, str] = {
-    "Superb Fairywren": "Malurus cyaneus",
-    "Rainbow Lorikeet": "Trichoglossus moluccanus",
-    "Australian Pelican": "Pelecanus conspicillatus",
-    "Laughing Kookaburra": "Dacelo novaeguineae",
-    "Sulphur-crested Cockatoo": "Cacatua galerita",
-    "Australian Magpie": "Gymnorhina tibicen",
-    "Willie Wagtail": "Rhipidura leucophrys",
-    "Eastern Yellow Robin": "Eopsaltria australis",
-    "White-faced Heron": "Egretta novaehollandiae",
-    "Crimson Rosella": "Platycercus elegans",
-}
 
 
 def _card_heading_or_none(text: str) -> str | None:
@@ -259,71 +218,6 @@ def _design_sample_dataset(sample_year: int) -> pd.DataFrame:
     return add_datetime_column(pd.DataFrame(records))
 
 
-@st.cache_resource
-def _period_species_whoosh_index(
-    species_key: tuple[str, ...],
-    name_map_key: tuple[tuple[str, str], ...],
-    taxonomy_locale: str,
-):
-    return build_ram_species_whoosh_index(
-        list(species_key),
-        dict(name_map_key),
-        taxonomy_locale=taxonomy_locale,
-    )
-
-
-def _collect_favourite_bird_picks(slot_count: int, *, allowed: frozenset[str] | None = None) -> tuple[str, ...]:
-    """Non-empty picks in slot order (deduped, max 3)."""
-    seen: set[str] = set()
-    picks: list[str] = []
-    for i in range(slot_count):
-        raw = st.session_state.get(f"{_FAVOURITE_BIRD_PICK_PREFIX}{i}") or ""
-        name = raw.strip() if isinstance(raw, str) else str(raw).strip()
-        if not name or name in seen:
-            continue
-        if allowed is not None and name not in allowed:
-            continue
-        seen.add(name)
-        picks.append(name)
-    return tuple(picks[:_MAX_FAVOURITE_BIRDS])
-
-
-def _favourite_bird_search_remount_key(slot_index: int) -> str:
-    return f"{_FAVOURITE_BIRD_SEARCH_REMOUNT_PREFIX}{slot_index}"
-
-
-def _bump_favourite_bird_search_remount(slot_index: int) -> None:
-    key = _favourite_bird_search_remount_key(slot_index)
-    st.session_state[key] = int(st.session_state.get(key, 0)) + 1
-
-
-def _clear_favourite_bird_slots_from(from_index: int) -> None:
-    for j in range(from_index, _MAX_FAVOURITE_BIRDS):
-        st.session_state.pop(f"{_FAVOURITE_BIRD_PICK_PREFIX}{j}", None)
-        _bump_favourite_bird_search_remount(j)
-
-
-def _remove_favourite_bird_slot(slot_index: int, slot_count: int) -> None:
-    """Remove *slot_index*; shift later picks up when multiple slots are open."""
-    if slot_index == 0 and slot_count == 1:
-        _clear_favourite_bird_slots_from(0)
-        return
-    if slot_index == 0:
-        shifted: list[str] = []
-        for j in range(1, slot_count):
-            raw = st.session_state.get(f"{_FAVOURITE_BIRD_PICK_PREFIX}{j}") or ""
-            name = raw.strip() if isinstance(raw, str) else str(raw).strip()
-            shifted.append(name)
-        _clear_favourite_bird_slots_from(0)
-        for j, name in enumerate(shifted):
-            if name:
-                st.session_state[f"{_FAVOURITE_BIRD_PICK_PREFIX}{j}"] = name
-        st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY] = slot_count - 1
-        return
-    _clear_favourite_bird_slots_from(slot_index)
-    st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY] = slot_index
-
-
 def _geo_country_select_label(country_key: str) -> str:
     if not country_key:
         return "World"
@@ -361,116 +255,6 @@ def _sidebar_geo_scope_controls(df: pd.DataFrame) -> ShareSummaryGeoScope:
         country_key=country_key,
         region_code=region_code or None,
     )
-
-
-def _sync_favourite_bird_data_scope(data_scope: str) -> None:
-    """Clear favourite-bird picks when upload, period, or geography changes."""
-    prev = st.session_state.get(_FAVOURITE_BIRD_DATA_SCOPE_KEY)
-    if prev == data_scope:
-        return
-    st.session_state[_FAVOURITE_BIRD_DATA_SCOPE_KEY] = data_scope
-    if prev is not None:
-        _clear_favourite_bird_slots_from(0)
-        st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY] = 1
-
-
-def _sidebar_favourite_bird_controls(
-    *,
-    species_list: list[str],
-    name_map: dict[str, str],
-    taxonomy_locale: str,
-    layout: LayoutId,
-    fmt: FormatId,
-) -> tuple[str, ...]:
-    """Progressive favourite-bird picker; hidden unless layout/format supports it."""
-    if layout not in ("hero", "tiles"):
-        return ()
-    if layout == "tiles" and fmt == "square":
-        return ()
-
-    if _FAVOURITE_BIRD_SLOT_COUNT_KEY not in st.session_state:
-        st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY] = 1
-    slot_count = min(int(st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY]), _MAX_FAVOURITE_BIRDS)
-
-    st.sidebar.subheader("Favourite birds")
-
-    if not species_list:
-        st.sidebar.info("No species in this period to pick from.")
-        return ()
-
-    allowed = frozenset(species_list)
-    species_key = tuple(species_list)
-    name_map_key = tuple(sorted(name_map.items()))
-    search_index = _period_species_whoosh_index(species_key, name_map_key, taxonomy_locale)
-
-    try:
-        from streamlit_searchbox import st_searchbox
-    except ImportError:
-        st_searchbox = None  # type: ignore[misc, assignment]
-
-    for i in range(slot_count):
-        label = "Favourite bird" if slot_count == 1 else f"Favourite bird {i + 1}"
-        slot_key = f"{_FAVOURITE_BIRD_PICK_PREFIX}{i}"
-        current = (st.session_state.get(slot_key) or "").strip()
-
-        if st_searchbox is not None:
-
-            def _search(term: str, *, _allowed=allowed, _index=search_index) -> list[str]:
-                suggestions = whoosh_species_suggestions(
-                    _index,
-                    term,
-                    max_options=SPECIES_SEARCH_MAX_OPTIONS,
-                    min_query_len=SPECIES_SEARCH_MIN_QUERY_LEN,
-                )
-                return [s for s in suggestions if s in _allowed]
-
-            def _on_submit(selected, *, _slot=slot_key, _allowed=allowed) -> None:
-                raw = selected if isinstance(selected, str) else str(selected)
-                name = raw.strip()
-                if name and name not in _allowed:
-                    return
-                st.session_state[_slot] = name
-
-            with st.sidebar:
-                remount = int(st.session_state.get(_favourite_bird_search_remount_key(i), 0))
-                pick = st_searchbox(
-                    _search,
-                    key=f"design_favourite_bird_search_{i}_{remount}",
-                    placeholder=SPECIES_SEARCH_PLACEHOLDER,
-                    label=label,
-                    default=current or None,
-                    default_searchterm=current,
-                    debounce=SPECIES_SEARCH_DEBOUNCE_MS,
-                    submit_function=_on_submit,
-                )
-            if pick is not None:
-                raw = pick if isinstance(pick, str) else str(pick)
-                name = raw.strip()
-                if name in allowed:
-                    st.session_state[slot_key] = name
-        else:
-            options = [""] + species_list
-            pick = st.sidebar.selectbox(
-                label,
-                options=options,
-                index=options.index(current) if current in options else 0,
-                format_func=lambda x: "—" if x == "" else x,
-                key=f"design_favourite_bird_select_{i}",
-            )
-            st.session_state[slot_key] = pick or ""
-
-        can_remove = bool(current) or i > 0 or slot_count > 1
-        if can_remove:
-            if st.sidebar.button("Remove", key=f"design_favourite_bird_remove_{i}", use_container_width=True):
-                _remove_favourite_bird_slot(i, slot_count)
-                st.rerun()
-
-    if slot_count < _MAX_FAVOURITE_BIRDS:
-        if st.sidebar.button("Add favourite bird", key="design_favourite_bird_add", use_container_width=True):
-            st.session_state[_FAVOURITE_BIRD_SLOT_COUNT_KEY] = slot_count + 1
-            st.rerun()
-
-    return _collect_favourite_bird_picks(slot_count, allowed=allowed)
 
 
 def _card_stat_picks_key(layout: LayoutId, period_kind: PeriodKind) -> str:
@@ -960,7 +744,6 @@ def _current_card_fragment(
     fmt: FormatId,
     scale: float,
     status_metrics: list[tuple[str, str]],
-    favourite_birds: tuple[str, ...],
     color_scheme_index: int,
     card_stat_data_scope: str,
     scope_label: str,
@@ -994,7 +777,6 @@ def _current_card_fragment(
             tiles_style=tiles_style,
             scale=scale,
             spotlight_label=spotlight_label,
-            favourite_birds=favourite_birds,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
             color_scheme_index=color_scheme_index,
@@ -1010,7 +792,6 @@ def _current_card_fragment(
             stats,
             selected_layout,
             fmt,
-            favourite_birds,
             card_stat_labels,
             spotlight_label,
             all_time,
@@ -1252,13 +1033,6 @@ if df is not None:
         else None
     )
 
-if df is not None and resolved_period is not None:
-    period_species = period_species_common_names(df_scoped, resolved_period)
-    period_name_map = period_species_name_map(df_scoped, resolved_period)
-else:
-    period_species = list(_SAMPLE_PERIOD_SPECIES)
-    period_name_map = dict(_SAMPLE_PERIOD_NAME_MAP)
-
 upload_name = uploaded.name if uploaded is not None else None
 card_stat_data_scope = _card_stat_data_scope(
     use_sample=use_sample,
@@ -1268,15 +1042,6 @@ card_stat_data_scope = _card_stat_data_scope(
     geo_scope=geo_scope,
 )
 scope_label = geo_scope_display_label(geo_scope)
-_sync_favourite_bird_data_scope(card_stat_data_scope)
-
-favourite_birds = _sidebar_favourite_bird_controls(
-    species_list=period_species,
-    name_map=period_name_map,
-    taxonomy_locale=TAXONOMY_LOCALE_DEFAULT,
-    layout=selected_layout,
-    fmt=fmt,
-)
 
 status_metrics = summary_status_metrics(stats, all_time=all_time, geo_scope=geo_scope)
 
@@ -1303,7 +1068,6 @@ if fmt == "story" and len(hex_card_stat_labels) < SHARE_SUMMARY_STORY_MAX_STATS:
         if len(hex_card_stat_labels) + len(extra) >= SHARE_SUMMARY_STORY_MAX_STATS:
             break
     hex_card_stat_labels = hex_card_stat_labels + tuple(extra)
-hex_favourite_birds = favourite_birds_for_card("tiles", fmt, favourite_birds)
 hex_preview_scale = min(scale, 0.32)
 
 with tab_social_cards:
@@ -1325,7 +1089,6 @@ with tab_social_cards:
         fmt=fmt,
         scale=scale,
         status_metrics=status_metrics,
-        favourite_birds=favourite_birds,
         color_scheme_index=color_scheme_index,
         card_stat_data_scope=card_stat_data_scope,
         scope_label=scope_label,
@@ -1363,7 +1126,6 @@ with tab_hex_experiments:
                     variant=variant,
                     fmt=fmt,
                     scale=hex_preview_scale,
-                    favourite_birds=hex_favourite_birds,
                     card_stat_labels=hex_card_stat_labels,
                     all_time=all_time,
                     color_scheme_index=color_scheme_index,
@@ -1385,7 +1147,6 @@ with tab_hex_experiments:
             variant=selected_hex,
             fmt=fmt,
             scale=scale,
-            favourite_birds=hex_favourite_birds,
             card_stat_labels=hex_card_stat_labels,
             all_time=all_time,
             color_scheme_index=color_scheme_index,

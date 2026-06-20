@@ -17,7 +17,6 @@ from explorer.presentation.share_summary_preview import (
     LayoutId,
     TilesStyleId,
     _FORMAT_PX,
-    favourite_birds_for_card,
     render_share_summary_export_html,
 )
 
@@ -89,7 +88,6 @@ def share_summary_to_png_bytes(
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
     spotlight_label: str | None = None,
-    favourite_birds: tuple[str, ...] = (),
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
@@ -99,7 +97,6 @@ def share_summary_to_png_bytes(
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
     width, height = _FORMAT_PX[fmt]
-    birds = favourite_birds_for_card(layout, fmt, favourite_birds)
     labels = card_stat_labels if layout in ("hero", "tiles", "minimal") else ()
     html = render_share_summary_export_html(
         stats,
@@ -107,7 +104,6 @@ def share_summary_to_png_bytes(
         fmt=fmt,
         tiles_style=tiles_style,
         spotlight_label=spotlight_label,
-        favourite_birds=birds,
         card_stat_labels=labels,
         all_time=all_time,
         color_scheme_index=color_scheme_index,
