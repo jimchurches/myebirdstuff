@@ -891,7 +891,7 @@ with st.sidebar:
         "Layout",
         options=["hero", "tiles", "minimal", "spotlight"],
         format_func=lambda x: {
-            "hero": "Hero grid (4 stats)",
+            "hero": "Hero Grid",
             "tiles": "Statistics Grid",
             "minimal": "Statistics List",
             "spotlight": "Single stat spotlight",
