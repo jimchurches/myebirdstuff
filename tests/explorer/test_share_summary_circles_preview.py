@@ -13,7 +13,9 @@ from explorer.presentation.share_summary_circles_preview import (
     circles_layout_non_overlapping,
     circles_within_canvas,
     layout_tiles_circle_cluster,
+    layout_spotlight_circle,
     place_circle_centers,
+    _spotlight_circle_diameter,
 )
 from explorer.presentation.share_summary_preview import (
     render_share_summary_preview_html,
@@ -133,3 +135,56 @@ def test_share_summary_preview_tiles_circle_cluster():
     )
     assert "pebird-share-preview-wrap" in html
     assert html.count("border-radius:50%") >= 6
+
+
+def test_spotlight_circle_is_larger_than_tiles_cluster_circle():
+    canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
+    tiles_d = _diameter_for_variant(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+    spotlight_d = _spotlight_circle_diameter(canvas_w, canvas_h, "square")
+    assert spotlight_d > tiles_d * 1.5
+
+
+def test_spotlight_circle_value_font_matches_classic_for_short_numbers():
+    from explorer.presentation.share_summary_circles_preview import (
+        _circle_value_font_px,
+        _spotlight_circle_value_base_px,
+    )
+
+    canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
+    diameter = _spotlight_circle_diameter(canvas_w, canvas_h, "square")
+    base = _spotlight_circle_value_base_px(diameter, width=1080, height=1080)
+    assert base == 160
+    assert _circle_value_font_px("47", base, diameter=diameter) == 160
+    assert _circle_value_font_px("312", base, diameter=diameter) == 160
+    assert _circle_value_font_px("12,450", base, diameter=diameter) < 160
+
+
+def test_share_summary_preview_spotlight_circle():
+    stats = sample_share_summary_stats()
+    html = render_share_summary_preview_html(
+        stats,
+        layout="spotlight",
+        spotlight_style="circle",
+        fmt="square",
+        scale=1.0,
+        spotlight_label="Lifers",
+        scope_label="World",
+    )
+    assert "pebird-share-preview-wrap" in html
+    assert html.count("border-radius:50%") == 1
+    assert "47" in html
+    assert "Lifers" in html
+
+
+def test_layout_spotlight_circle_renders():
+    stats = sample_share_summary_stats()
+    html = layout_spotlight_circle(
+        stats,
+        1080,
+        1080,
+        "square",
+        spotlight_label="Lifers",
+        scope_label="World",
+    )
+    assert "border-radius:50%" in html
+    assert "47" in html

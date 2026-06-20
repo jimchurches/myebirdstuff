@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
+    SpotlightStyleId,
     TilesStyleId,
     _FORMAT_PX,
     render_share_summary_export_html,
@@ -94,6 +95,7 @@ def share_summary_to_png_bytes(
     scope_label: str | None = None,
     geo_scope: "ShareSummaryGeoScope | None" = None,
     tiles_style: TilesStyleId = "grid",
+    spotlight_style: SpotlightStyleId = "classic",
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
     width, height = _FORMAT_PX[fmt]
@@ -103,6 +105,7 @@ def share_summary_to_png_bytes(
         layout=layout,
         fmt=fmt,
         tiles_style=tiles_style,
+        spotlight_style=spotlight_style,
         spotlight_label=spotlight_label,
         card_stat_labels=labels,
         all_time=all_time,

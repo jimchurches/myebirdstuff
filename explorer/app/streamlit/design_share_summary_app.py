@@ -56,6 +56,7 @@ from explorer.presentation.share_summary_hex_preview import (
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
+    SpotlightStyleId,
     TilesStyleId,
     FORMAT_LABELS,
     FORMAT_PIXELS,
@@ -93,6 +94,7 @@ def _cached_share_summary_png(
     scope_label: str | None,
     geo_scope: ShareSummaryGeoScope,
     tiles_style: TilesStyleId = "grid",
+    spotlight_style: SpotlightStyleId = "classic",
 ) -> bytes:
     return share_summary_to_png_bytes(
         stats,
@@ -105,6 +107,7 @@ def _cached_share_summary_png(
         scope_label=scope_label,
         geo_scope=geo_scope,
         tiles_style=tiles_style,
+        spotlight_style=spotlight_style,
     )
 
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
@@ -113,6 +116,7 @@ _HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments"
 _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
 _TILES_STYLE_KEY = "design_tiles_style"
+_SPOTLIGHT_STYLE_KEY = "design_spotlight_style"
 _COLOR_THEME_KEY = "design_color_theme"
 _STATS_EXPANDER_LABEL = "Available statistics"
 _CARD_STATS_LABEL = "Card statistics"
@@ -738,6 +742,7 @@ def _current_card_fragment(
     scope_label: str,
     geo_scope: ShareSummaryGeoScope,
     tiles_style: TilesStyleId = "grid",
+    spotlight_style: SpotlightStyleId = "classic",
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     card_stat_labels: tuple[str, ...] = ()
@@ -764,6 +769,7 @@ def _current_card_fragment(
             layout=selected_layout,
             fmt=fmt,
             tiles_style=tiles_style,
+            spotlight_style=spotlight_style,
             scale=scale,
             spotlight_label=spotlight_label,
             card_stat_labels=card_stat_labels,
@@ -788,6 +794,7 @@ def _current_card_fragment(
             scope_label,
             geo_scope,
             tiles_style,
+            spotlight_style,
         )
     except RuntimeError as exc:
         st.warning(str(exc))
@@ -904,6 +911,15 @@ with st.sidebar:
             options=["grid", "circles"],
             format_func=lambda x: "Statistics Grid" if x == "grid" else "Circle cluster",
             key=_TILES_STYLE_KEY,
+            horizontal=True,
+        )
+    spotlight_style: SpotlightStyleId = "classic"
+    if selected_layout == "spotlight":
+        spotlight_style = st.radio(
+            "Spotlight presentation",
+            options=["classic", "circle"],
+            format_func=lambda x: "Classic" if x == "classic" else "Circle",
+            key=_SPOTLIGHT_STYLE_KEY,
             horizontal=True,
         )
     fmt: FormatId = st.selectbox(
@@ -1083,6 +1099,7 @@ with tab_social_cards:
         scope_label=scope_label,
         geo_scope=geo_scope,
         tiles_style=tiles_style,
+        spotlight_style=spotlight_style,
     )
 
 _DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"

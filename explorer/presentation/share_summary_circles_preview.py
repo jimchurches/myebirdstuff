@@ -27,6 +27,7 @@ from explorer.presentation.share_summary_preview import (
     _header_block,
     _layout_subtitle,
     _resolve_card_stat_pairs,
+    spotlight_pair_for_label,
 )
 
 CircleVariantId = Literal[
@@ -458,6 +459,95 @@ def layout_tiles_circle_cluster(
         canvas_w=canvas_w,
         canvas_h=canvas_h,
     )}
+  </div>
+  {_footer_block(scope_label=scope_label)}
+</div>"""
+
+
+def _spotlight_circle_diameter(canvas_w: int, canvas_h: int, fmt: FormatId) -> int:
+    """Single spotlight circle — much larger than Statistics Grid cluster circles."""
+    pad = _SHADOW_PAD_PX + 12
+    avail = min(canvas_w, canvas_h) - 2 * pad
+    max_fit = min(canvas_w - 2 * pad, canvas_h - 2 * pad)
+    if fmt == "story":
+        cap, ratio = 460, 0.56
+    elif fmt == "portrait_post":
+        cap, ratio = 420, 0.54
+    else:
+        cap, ratio = 380, 0.52
+    base = min(int(avail * ratio), cap)
+    return max(240, min(int(base * 1.5), max_fit))
+
+
+def _spotlight_circle_value_base_px(
+    diameter: int,
+    *,
+    width: int,
+    height: int,
+) -> int:
+    """Match classic spotlight num size (160/200px), capped to the circle width."""
+    classic = 200 if height > width else 160
+    inner_w = max(68, diameter - 44)
+    max_by_width = int(inner_w / 0.58)
+    return min(classic, max_by_width)
+
+
+def layout_spotlight_circle(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    spotlight_label: str,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
+) -> str:
+    """Spotlight stat in one large circle below the card header."""
+    pair = spotlight_pair_for_label(
+        stats,
+        spotlight_label,
+        all_time=all_time,
+        geo_scope=geo_scope,
+    )
+    if pair is None:
+        title, value = spotlight_label, "—"
+    else:
+        title, value = pair
+    pad_bottom = _footer_pad(fmt, width, height)
+    subtitle = _layout_subtitle(stats, "spotlight")
+    canvas_w, canvas_h = _circle_canvas_size(
+        width,
+        height,
+        fmt,
+        scope_label=scope_label,
+    )
+    diameter = _spotlight_circle_diameter(canvas_w, canvas_h, fmt)
+    value_base = _spotlight_circle_value_base_px(
+        diameter,
+        width=width,
+        height=height,
+    )
+    cx = canvas_w / 2
+    cy = canvas_h / 2 - canvas_h * _CIRCLE_CLUSTER_UP_BIAS
+    circle = _circle_tile_html(
+        title,
+        value,
+        diameter=diameter,
+        value_px=f"{value_base}px",
+        label_px="24px",
+        shadow=True,
+    )
+    return f"""
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+  {_header_block(stats, subtitle=subtitle)}
+  <div style="padding:0 48px {pad_bottom}px;display:flex;justify-content:center;">
+    <div style="position:relative;width:{canvas_w}px;height:{canvas_h}px;margin:0 auto;overflow:hidden;">
+      <div style="position:absolute;left:{cx:.1f}px;top:{cy:.1f}px;
+        transform:translate(-50%,-50%);">
+        {circle}
+      </div>
+    </div>
   </div>
   {_footer_block(scope_label=scope_label)}
 </div>"""
