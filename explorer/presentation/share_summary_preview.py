@@ -807,6 +807,9 @@ def _layout_minimal(
     )
     if fmt == "story" and len(pairs) > 6:
         label_px, value_px, row_pad = "24px", "38px", "12px"
+    elif fmt == "square":
+        # Tighter rows so six stats clear the enlarged footer scope label on 1080×1080.
+        label_px, value_px, row_pad = "28px", "40px", "17px"
     else:
         label_px, value_px, row_pad = "28px", "44px", "20px"
     rows = []

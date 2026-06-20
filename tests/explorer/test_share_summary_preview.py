@@ -136,6 +136,16 @@ def test_minimal_layout_ignores_favourite_birds():
     assert "Superb Fairywren" not in html
 
 
+def test_minimal_square_uses_tighter_stat_row_sizing():
+    stats = sample_share_summary_stats()
+    square = render_share_summary_preview_html(stats, layout="minimal", fmt="square")
+    portrait = render_share_summary_preview_html(stats, layout="minimal", fmt="portrait_post")
+    assert 'font-size:40px;font-weight:700;">312</span>' in square
+    assert "padding:17px 0;border-bottom" in square
+    assert 'font-size:44px;font-weight:700;">312</span>' in portrait
+    assert "padding:20px 0;border-bottom" in portrait
+
+
 def test_render_export_html_full_size_document():
     html = render_share_summary_export_html(sample_share_summary_stats(), layout="hero", fmt="square")
     assert "<!DOCTYPE html>" in html
