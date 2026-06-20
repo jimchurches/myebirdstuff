@@ -67,6 +67,7 @@ from explorer.presentation.share_summary_preview import (
     LayoutId,
     TilesStyleId,
     FORMAT_LABELS,
+    FORMAT_PIXELS,
     compute_share_summary_stats,
     default_card_stat_labels,
     favourite_birds_for_card,
@@ -121,6 +122,9 @@ def _cached_share_summary_png(
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 _HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments"
+_PREVIEW_SCALE_MIN = 0.22
+_PREVIEW_SCALE_DEFAULT = 0.42
+_PREVIEW_SCALE_FULL = 1.0
 _TILES_STYLE_KEY = "design_tiles_style"
 _COLOR_THEME_KEY = "design_color_theme"
 _STATS_EXPANDER_LABEL = "Available statistics"
@@ -886,6 +890,46 @@ def _spotlight_stat_picker(status_metrics: list[tuple[str, str]]) -> None:
     )
 
 
+def _preview_scale_caption(fmt: FormatId, scale: float) -> str | None:
+    """Hint when preview is at or near export pixel size."""
+    if scale < _PREVIEW_SCALE_FULL - 0.005:
+        return None
+    width, height = FORMAT_PIXELS[fmt]
+    return (
+        f"Export size ({width}×{height}px). "
+        "Scroll the page to see the full card — story format is tall."
+        if height > width
+        else f"Export size ({width}×{height}px) — matches the PNG export."
+    )
+
+
+def _sidebar_preview_scale_controls(fmt: FormatId) -> float:
+    """Preview scale slider; 100% matches PNG export dimensions."""
+    full_size = st.toggle(
+        "Full size preview",
+        value=False,
+        help="Show the card at export pixel size (100%). Overrides the scale slider.",
+        key="design_preview_full_size",
+    )
+    if full_size:
+        st.caption(
+            _preview_scale_caption(fmt, _PREVIEW_SCALE_FULL)
+            or f"Export size ({FORMAT_PIXELS[fmt][0]}×{FORMAT_PIXELS[fmt][1]}px)."
+        )
+        return _PREVIEW_SCALE_FULL
+
+    scale = st.slider(
+        "Preview scale",
+        min_value=_PREVIEW_SCALE_MIN,
+        max_value=0.55,
+        value=_PREVIEW_SCALE_DEFAULT,
+        step=0.01,
+        help="Compact preview in the main panel. Enable **Full size preview** for 100%.",
+        key="design_preview_scale",
+    )
+    return scale
+
+
 def _centered_card_download_button(
     *,
     label: str,
@@ -1104,7 +1148,7 @@ with st.sidebar:
         key=_COLOR_THEME_KEY,
     )
     color_scheme_index = share_summary_color_scheme_index(color_theme_id)
-    scale = st.slider("Preview scale", min_value=0.22, max_value=0.55, value=0.42, step=0.01)
+    scale = _sidebar_preview_scale_controls(fmt)
 
 resolved_period = None
 stats: ShareSummaryStats = sample_share_summary_stats()
@@ -1332,8 +1376,8 @@ with tab_hex_experiments:
     st.divider()
     st.subheader("Selected preview (larger)")
     st.caption(
-        f"{HEX_VARIANT_LABELS[selected_hex]} — use **Preview scale** in the sidebar "
-        f"(currently {scale:.0%} of export size)."
+        f"{HEX_VARIANT_LABELS[selected_hex]} — use **Preview scale** or **Full size preview** "
+        f"in the sidebar (currently {scale:.0%} of export size)."
     )
     st.markdown(
         render_hex_grid_preview_html(

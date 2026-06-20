@@ -88,6 +88,8 @@ _FORMAT_PX: dict[FormatId, tuple[int, int]] = {
     "story": (1080, 1920),
 }
 
+FORMAT_PIXELS: dict[FormatId, tuple[int, int]] = _FORMAT_PX
+
 FORMAT_LABELS: dict[FormatId, str] = {
     "square": "Square post (1080×1080)",
     "portrait_post": "Portrait post (1080×1350)",
