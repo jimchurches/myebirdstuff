@@ -110,7 +110,6 @@ def _cached_share_summary_png(
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 _HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments"
-_PREVIEW_SCALE_MIN = 0.22
 _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
 _TILES_STYLE_KEY = "design_tiles_style"
@@ -688,29 +687,19 @@ def _preview_scale_caption(fmt: FormatId, scale: float) -> str | None:
 
 
 def _sidebar_preview_scale_controls(fmt: FormatId) -> float:
-    """Preview scale slider; 100% matches PNG export dimensions."""
-    full_size = st.toggle(
-        "Full size preview",
-        value=False,
-        help="Show the card at export pixel size (100%). Overrides the scale slider.",
-        key="design_preview_full_size",
-    )
-    if full_size:
-        st.caption(
-            _preview_scale_caption(fmt, _PREVIEW_SCALE_FULL)
-            or f"Export size ({FORMAT_PIXELS[fmt][0]}×{FORMAT_PIXELS[fmt][1]}px)."
-        )
-        return _PREVIEW_SCALE_FULL
-
+    """Preview scale slider from compact default up to export pixel size."""
     scale = st.slider(
         "Preview scale",
-        min_value=_PREVIEW_SCALE_MIN,
-        max_value=0.55,
+        min_value=_PREVIEW_SCALE_DEFAULT,
+        max_value=_PREVIEW_SCALE_FULL,
         value=_PREVIEW_SCALE_DEFAULT,
         step=0.01,
-        help="Compact preview in the main panel. Enable **Full size preview** for 100%.",
+        help="Drag right for full export size (100%). Default 0.42 is a compact preview.",
         key="design_preview_scale",
     )
+    caption = _preview_scale_caption(fmt, scale)
+    if caption:
+        st.caption(caption)
     return scale
 
 
@@ -1138,8 +1127,8 @@ with tab_hex_experiments:
     st.divider()
     st.subheader("Selected preview (larger)")
     st.caption(
-        f"{HEX_VARIANT_LABELS[selected_hex]} — use **Preview scale** or **Full size preview** "
-        f"in the sidebar (currently {scale:.0%} of export size)."
+        f"{HEX_VARIANT_LABELS[selected_hex]} — use **Preview scale** in the sidebar "
+        f"(currently {scale:.0%} of export size)."
     )
     st.markdown(
         render_hex_grid_preview_html(
