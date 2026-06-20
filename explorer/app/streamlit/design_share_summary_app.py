@@ -1112,7 +1112,7 @@ with st.sidebar:
             "hero": "Hero Grid",
             "tiles": "Statistics Grid",
             "minimal": "Statistics List",
-            "spotlight": "Single stat spotlight",
+            "spotlight": "Spotlight",
         }[x],
     )
     tiles_style: TilesStyleId = "grid"
