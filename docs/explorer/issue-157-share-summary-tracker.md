@@ -219,8 +219,10 @@ Captured from initial prototype review:
 | Feature | Design studio (`design_share_summary_app.py`) | Main app **Social Cards** tab |
 |---------|--------------------------------------------------|-------------------------------|
 | **Current card** preview | Yes | Yes |
-| **Available statistics** expander | Yes | TBD (#276) |
+| **Statistics** panel (unified) | Yes — card slots with inline values + click-to-add chips for stats not on card | Port unified panel from design studio (#276); **do not** ship separate Available statistics + Card statistics expanders |
 | **Export current card** | Yes — below **Current card** preview, inside `@st.fragment` | Yes — **generate on export click** with spinner (#276; see **PNG export UX**) |
+
+**#276 port scope (agreed direction):** port the design utility **Social Cards tab + sidebar layout** to the main app tab, wired to the loaded export DataFrame — **without** the sample-data toggle / CSV re-upload. Ship the unified **Statistics** panel as-is.
 
 Both use one **current card** preview; users cycle layout via sidebar **Layout** control.
 
