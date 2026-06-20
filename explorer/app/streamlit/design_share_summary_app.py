@@ -556,6 +556,23 @@ def _add_stat_to_card(
         _clear_card_stat_selectbox_keys(layout)
 
 
+def _add_stat_to_card_on_click(
+    stat_label: str,
+    layout: LayoutId,
+    period_kind: PeriodKind,
+    fmt: FormatId,
+    tiles_style: TilesStyleId,
+) -> None:
+    """Callback — runs before widgets so selectbox keys can be cleared safely."""
+    _add_stat_to_card(
+        stat_label,
+        layout=layout,
+        period_kind=period_kind,
+        fmt=fmt,
+        tiles_style=tiles_style,
+    )
+
+
 def _not_on_card_chip_strip(
     *,
     layout: LayoutId,
@@ -594,7 +611,7 @@ def _not_on_card_chip_strip(
         for col_index, (stat_label, value) in enumerate(row_items):
             with cols[col_index]:
                 chip_index = row_start + col_index
-                if st.button(
+                st.button(
                     f"{stat_label} · {value}",
                     key=f"design_stat_chip_{layout}_{period_kind}_{chip_index}",
                     use_container_width=True,
@@ -604,15 +621,9 @@ def _not_on_card_chip_strip(
                         if can_add
                         else "Remove or clear a slot to add another stat"
                     ),
-                ):
-                    _add_stat_to_card(
-                        stat_label,
-                        layout=layout,
-                        period_kind=period_kind,
-                        fmt=fmt,
-                        tiles_style=tiles_style,
-                    )
-                    st.rerun()
+                    on_click=_add_stat_to_card_on_click,
+                    args=(stat_label, layout, period_kind, fmt, tiles_style),
+                )
 
 
 def _card_stat_picker_ui(
@@ -809,6 +820,11 @@ def _spotlight_label_from_session(
     return SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
 
+def _select_spotlight_stat(stat_label: str) -> None:
+    """Callback — runs before widgets so the selectbox key can be updated."""
+    st.session_state[_SPOTLIGHT_LABEL_KEY] = stat_label
+
+
 def _spotlight_alternate_chip_strip(
     status_metrics: list[tuple[str, str]],
     *,
@@ -834,14 +850,14 @@ def _spotlight_alternate_chip_strip(
         for col_index, (stat_label, value) in enumerate(row_items):
             with cols[col_index]:
                 chip_index = row_start + col_index
-                if st.button(
+                st.button(
                     f"{stat_label} · {value}",
                     key=f"design_spotlight_chip_{chip_index}",
                     use_container_width=True,
                     help=f"Spotlight {stat_label}",
-                ):
-                    st.session_state[_SPOTLIGHT_LABEL_KEY] = stat_label
-                    st.rerun()
+                    on_click=_select_spotlight_stat,
+                    args=(stat_label,),
+                )
 
 
 def _spotlight_stat_picker(status_metrics: list[tuple[str, str]]) -> None:
