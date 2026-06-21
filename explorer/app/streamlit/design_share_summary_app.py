@@ -856,12 +856,7 @@ def _card_stat_picker_ui(
         label for label in available_labels if label not in _stats_on_card(picks[:ui_rows])
     ]
     if stats_not_on_card and not can_add_more:
-        _col_num, col_banner = st.columns(
-            [stat_row_cols[0], sum(stat_row_cols[1:])],
-            vertical_alignment="center",
-        )
-        with col_banner:
-            st.info("Card is full.")
+        st.info("Card is full.")
 
     st.session_state[picks_key] = picks[:ui_rows]
     final = _effective_card_stat_labels(
