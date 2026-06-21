@@ -615,6 +615,9 @@ def _add_stat_to_card_on_click(
     )
 
 
+_CHIP_STRIP_COLS_PER_ROW = 3
+
+
 def _not_on_card_chip_strip(
     *,
     layout: LayoutId,
@@ -645,31 +648,32 @@ def _not_on_card_chip_strip(
         tiles_style=tiles_style,
         status_metrics=status_metrics,
     )
-    count = len(not_on_card)
-    st.caption(
-        f"{count} more stat{'s' if count != 1 else ''} available"
-        + (" — click to add to the card." if can_add else " — card is full.")
-    )
 
-    cols_per_row = 3
-    for row_start in range(0, len(not_on_card), cols_per_row):
-        row_items = not_on_card[row_start : row_start + cols_per_row]
-        cols = st.columns(len(row_items))
-        for col_index, (stat_label, value) in enumerate(row_items):
+    available_stat_count = len(status_metrics)
+    for row_start in range(0, len(not_on_card), _CHIP_STRIP_COLS_PER_ROW):
+        row_items = not_on_card[row_start : row_start + _CHIP_STRIP_COLS_PER_ROW]
+        cols = st.columns(_CHIP_STRIP_COLS_PER_ROW)
+        for col_index in range(_CHIP_STRIP_COLS_PER_ROW):
             with cols[col_index]:
+                if col_index >= len(row_items):
+                    continue
+                stat_label, value = row_items[col_index]
                 chip_index = row_start + col_index
                 st.button(
                     f"{stat_label} · {value}",
                     key=f"design_stat_chip_{layout}_{period_kind}_{chip_index}",
-                    use_container_width=True,
+                    type="tertiary",
+                    use_container_width=False,
                     disabled=not can_add,
-                    help=(
-                        f"Add {stat_label} to the card"
-                        if can_add
-                        else "Remove or clear a slot to add another stat"
-                    ),
                     on_click=_add_stat_to_card_on_click,
-                    args=(stat_label, layout, period_kind, fmt, tiles_style, len(status_metrics)),
+                    args=(
+                        stat_label,
+                        layout,
+                        period_kind,
+                        fmt,
+                        tiles_style,
+                        available_stat_count,
+                    ),
                 )
 
 
