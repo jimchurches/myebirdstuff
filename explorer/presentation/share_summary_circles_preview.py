@@ -38,16 +38,19 @@ CircleVariantId = Literal[
     "cluster_wide",
     "cluster_compact",
     "hero_cluster",
+    "tiles_cluster",
 ]
 
 CIRCLE_LAYOUT_MAX_STATS = 9
 CIRCLE_LAYOUT_MIN_STATS = 6
 TILES_CIRCLE_CLUSTER_MIN = 6
 TILES_CIRCLE_CLUSTER_MAX = 7
-TILES_CIRCLE_CLUSTER_VARIANT: CircleVariantId = "cluster_wide"
+TILES_CIRCLE_CLUSTER_VARIANT: CircleVariantId = "tiles_cluster"
 HERO_CIRCLE_CLUSTER_MAX = 4
 HERO_CIRCLE_CLUSTER_VARIANT: CircleVariantId = "hero_cluster"
-HERO_CIRCLE_DIAMETER_SEARCH_START = 320
+CLUSTER_DIAMETER_SEARCH_START = 320
+HERO_CIRCLE_DIAMETER_SEARCH_START = CLUSTER_DIAMETER_SEARCH_START
+TILES_CIRCLE_DIAMETER_SEARCH_START = CLUSTER_DIAMETER_SEARCH_START
 _SHADOW_PAD_PX = 12
 
 
@@ -110,6 +113,13 @@ CIRCLE_VARIANT_SPECS: dict[CircleVariantId, _CircleVariantSpec] = {
         ring_step=1.04,
         shadow=True,
     ),
+    "tiles_cluster": _CircleVariantSpec(
+        "Statistics Grid cluster — count-aware sizing with moderate ring gap",
+        gap_px=11,
+        ring1_angle_offset_rad=math.pi / 10,
+        ring_step=1.04,
+        shadow=True,
+    ),
 }
 
 CIRCLE_VARIANT_LABELS: dict[CircleVariantId, str] = {
@@ -119,6 +129,19 @@ CIRCLE_VARIANT_IDS: tuple[CircleVariantId, ...] = tuple(CIRCLE_VARIANT_SPECS.key
 
 
 _CIRCLE_CLUSTER_UP_BIAS = 0.07  # shift cluster up as fraction of canvas height
+
+
+def _cluster_body_canvas_size(
+    width: int,
+    height: int,
+    *,
+    header_reserve: int,
+    footer_reserve: int,
+    vertical_pad: int = 12,
+) -> tuple[int, int]:
+    canvas_w = width - 96
+    canvas_h = height - header_reserve - footer_reserve - vertical_pad
+    return canvas_w, max(340, canvas_h)
 
 
 def _circle_canvas_size(
@@ -145,14 +168,37 @@ def _hero_circle_canvas_size(
     *,
     scope_label: str | None,
 ) -> tuple[int, int]:
-    """Hero circle body — slightly tighter vertical reserves than the grid cluster."""
+    """Hero circle body — tighter vertical reserves than the legacy grid cluster."""
     del fmt
-    header_reserve = 168
-    footer_reserve = 160 if scope_label else 120
-    vertical_pad = 12
-    canvas_w = width - 96
-    canvas_h = height - header_reserve - footer_reserve - vertical_pad
-    return canvas_w, max(340, canvas_h)
+    return _cluster_body_canvas_size(
+        width,
+        height,
+        header_reserve=168,
+        footer_reserve=160 if scope_label else 120,
+    )
+
+
+def _tiles_circle_canvas_size(
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    scope_label: str | None,
+) -> tuple[int, int]:
+    """Statistics Grid circle body — room for layout subtitle above the period headline."""
+    del fmt
+    return _cluster_body_canvas_size(
+        width,
+        height,
+        header_reserve=180,
+        footer_reserve=160 if scope_label else 120,
+    )
+
+
+def _max_single_cluster_diameter(canvas_w: int, canvas_h: int) -> int:
+    """Upper bound for a lone circle in a cluster layout."""
+    pad = _SHADOW_PAD_PX + 8
+    return max(96, min(canvas_w, canvas_h) - 2 * pad)
 
 
 def _circle_diameter(
@@ -166,8 +212,13 @@ def _circle_diameter(
     """Uniform circle size — fits radial rings inside the canvas safe area."""
     pad = _SHADOW_PAD_PX + 8
     avail = min(canvas_w / 2, canvas_h / 2) - pad - 4
+    if count <= 1:
+        return _max_single_cluster_diameter(canvas_w, canvas_h)
     if count <= 7:
-        d_max = (avail - ring_step * gap_px) / (ring_step + 0.5)
+        ring_count = count - 1
+        # Single-ring clusters: tighter rings (few outer circles) can use larger tiles.
+        ring_factor = 0.42 + 0.08 * min(ring_count, 6)
+        d_max = (avail - ring_step * gap_px) / (ring_step + ring_factor)
     else:
         d_max = (avail - 2 * ring_step * gap_px) / (2 * ring_step + 0.5)
     if count <= 4:
@@ -294,6 +345,28 @@ def _radial_centres_relative(
     return centres_rel
 
 
+def largest_cluster_diameter(
+    count: int,
+    *,
+    canvas_w: int,
+    canvas_h: int,
+    variant: CircleVariantId,
+    search_start: int = CLUSTER_DIAMETER_SEARCH_START,
+) -> int:
+    """Largest uniform circle diameter that fits *count* stats without overlap."""
+    start = search_start
+    if count <= 1:
+        start = min(start, _max_single_cluster_diameter(canvas_w, canvas_h))
+    _, diameter = place_circle_centers(
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=start,
+        variant=variant,
+    )
+    return diameter
+
+
 def place_circle_centers(
     count: int,
     *,
@@ -307,6 +380,8 @@ def place_circle_centers(
     del period_label
     if count <= 0:
         return [], diameter
+    if count == 1:
+        diameter = min(diameter, _max_single_cluster_diameter(canvas_w, canvas_h))
 
     spec = CIRCLE_VARIANT_SPECS[variant]
     for try_d in range(diameter, 95, -1):
@@ -471,18 +546,23 @@ def layout_tiles_circle_cluster(
     scope_label: str | None = None,
 ) -> str:
     """Statistics Grid stats in a wide radial circle cluster (production style)."""
+    filled_labels = tuple(label for label in card_stat_labels if label)
+    if filled_labels:
+        pair_max = min(len(filled_labels), TILES_CIRCLE_CLUSTER_MAX)
+    else:
+        pair_max = TILES_CIRCLE_CLUSTER_MIN
     pairs = _resolve_card_stat_pairs(
         stats,
         layout="tiles",
         fmt=fmt,
-        card_stat_labels=card_stat_labels,
-        max_count=TILES_CIRCLE_CLUSTER_MAX,
+        card_stat_labels=filled_labels,
+        max_count=pair_max,
         all_time=all_time,
         geo_scope=geo_scope,
     )
     pad_bottom = _footer_pad(fmt, width, height)
     subtitle = _layout_subtitle(stats, "tiles")
-    canvas_w, canvas_h = _circle_canvas_size(
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
         width,
         height,
         fmt,
@@ -498,6 +578,7 @@ def layout_tiles_circle_cluster(
         period_label=stats.period_label,
         canvas_w=canvas_w,
         canvas_h=canvas_h,
+        diameter_start=TILES_CIRCLE_DIAMETER_SEARCH_START,
     )}
   </div>
   {_footer_block(scope_label=scope_label)}
@@ -783,13 +864,17 @@ __all__ = [
     "TILES_CIRCLE_CLUSTER_MAX",
     "TILES_CIRCLE_CLUSTER_MIN",
     "TILES_CIRCLE_CLUSTER_VARIANT",
+    "TILES_CIRCLE_DIAMETER_SEARCH_START",
+    "CLUSTER_DIAMETER_SEARCH_START",
     "HERO_CIRCLE_CLUSTER_MAX",
     "HERO_CIRCLE_CLUSTER_VARIANT",
+    "HERO_CIRCLE_DIAMETER_SEARCH_START",
     "CIRCLE_VARIANT_IDS",
     "CIRCLE_VARIANT_LABELS",
     "CircleVariantId",
     "circles_layout_non_overlapping",
     "circles_within_canvas",
+    "largest_cluster_diameter",
     "layout_hero_circle",
     "layout_tiles_circle_cluster",
     "place_circle_centers",

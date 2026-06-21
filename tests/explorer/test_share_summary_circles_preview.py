@@ -1,5 +1,7 @@
 """Tests for circular share summary cluster layout."""
 
+import re
+
 from explorer.presentation.share_summary_circles_preview import (
     CIRCLE_VARIANT_IDS,
     CIRCLE_VARIANT_SPECS,
@@ -7,11 +9,13 @@ from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_VARIANT,
     _circle_canvas_size,
     _hero_circle_canvas_size,
+    _tiles_circle_canvas_size,
     _centres_in_grid_reading_order,
     _circle_diameter,
     _circle_value_font_px,
     circles_layout_non_overlapping,
     circles_within_canvas,
+    largest_cluster_diameter,
     layout_hero_circle,
     layout_tiles_circle_cluster,
     layout_spotlight_circle,
@@ -36,13 +40,29 @@ def _diameter_for_variant(count: int, canvas_w: int, canvas_h: int, variant: str
     )
 
 
+def _placed_diameter(
+    count: int,
+    canvas_w: int,
+    canvas_h: int,
+    variant: str,
+) -> int:
+    return largest_cluster_diameter(
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        variant=variant,  # type: ignore[arg-type]
+    )
+
+
 def test_circle_variant_ids_count():
-    assert len(CIRCLE_VARIANT_IDS) == 7
+    assert len(CIRCLE_VARIANT_IDS) == 8
 
 
 def test_grid_reading_order_does_not_start_with_centre():
-    canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
-    diameter = _diameter_for_variant(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
+    diameter = _placed_diameter(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
     centres, _ = place_circle_centers(
         6,
         canvas_w=canvas_w,
@@ -61,8 +81,10 @@ def test_grid_reading_order_does_not_start_with_centre():
 
 
 def test_radial_cluster_centre_circle_is_shifted_up():
-    canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
-    diameter = _diameter_for_variant(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
+    diameter = _placed_diameter(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
     centres = place_circle_centers(
         6,
         canvas_w=canvas_w,
@@ -77,9 +99,27 @@ def test_radial_cluster_centre_circle_is_shifted_up():
 
 
 def test_circles_non_overlapping_for_six_and_seven():
-    canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
     for count in (6, 7):
-        diameter = _diameter_for_variant(count, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+        diameter = _placed_diameter(count, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+        assert circles_layout_non_overlapping(
+            count,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter=diameter,
+            variant=TILES_CIRCLE_CLUSTER_VARIANT,
+            period_label="2025",
+        )
+
+
+def test_circles_non_overlapping_for_tiles_counts_four_to_seven():
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
+    for count in range(4, 8):
+        diameter = _placed_diameter(count, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
         assert circles_layout_non_overlapping(
             count,
             canvas_w=canvas_w,
@@ -94,7 +134,7 @@ def test_circles_non_overlapping_for_hero_four():
     canvas_w, canvas_h = _hero_circle_canvas_size(
         1080, 1080, "square", scope_label="World"
     )
-    diameter = _diameter_for_variant(4, canvas_w, canvas_h, HERO_CIRCLE_CLUSTER_VARIANT)
+    diameter = _placed_diameter(4, canvas_w, canvas_h, HERO_CIRCLE_CLUSTER_VARIANT)
     assert circles_layout_non_overlapping(
         4,
         canvas_w=canvas_w,
@@ -109,20 +149,54 @@ def test_hero_circle_square_uses_larger_diameter_than_before():
     canvas_w, canvas_h = _hero_circle_canvas_size(
         1080, 1080, "square", scope_label="World"
     )
-    _, diameter = place_circle_centers(
-        4,
-        canvas_w=canvas_w,
-        canvas_h=canvas_h,
-        diameter=320,
-        variant=HERO_CIRCLE_CLUSTER_VARIANT,
-    )
+    diameter = _placed_diameter(4, canvas_w, canvas_h, HERO_CIRCLE_CLUSTER_VARIANT)
     assert diameter >= 180
 
 
+def test_tiles_circle_square_six_stats_uses_larger_diameter_than_before():
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
+    diameter = _placed_diameter(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+    assert diameter >= 165
+
+
+def test_tiles_circle_diameter_scales_down_with_more_stats_on_square():
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
+    by_count = {
+        count: _placed_diameter(count, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+        for count in range(4, 8)
+    }
+    assert by_count[4] >= by_count[7]
+
+
+def test_tiles_circle_diameter_all_formats():
+    formats: tuple[FormatId, ...] = ("square", "portrait_post", "story")
+    for fmt in formats:
+        w, h = (1080, 1080) if fmt == "square" else ((1080, 1350) if fmt == "portrait_post" else (1080, 1920))
+        canvas_w, canvas_h = _tiles_circle_canvas_size(w, h, fmt, scope_label="World")
+        for count in (6, 7):
+            diameter = _placed_diameter(
+                count, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT
+            )
+            assert circles_within_canvas(
+                count,
+                canvas_w=canvas_w,
+                canvas_h=canvas_h,
+                diameter=diameter,
+                variant=TILES_CIRCLE_CLUSTER_VARIANT,
+                period_label="2026",
+            )
+
+
 def test_circles_within_canvas_for_six_and_seven():
-    canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
     for count in (6, 7):
-        diameter = _diameter_for_variant(count, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+        diameter = _placed_diameter(count, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
         assert circles_within_canvas(
             count,
             canvas_w=canvas_w,
@@ -145,6 +219,44 @@ def test_layout_tiles_circle_cluster_renders():
     assert "border-radius:50%" in html
     assert "box-shadow:0 8px 18px" in html
     assert "Species" in html
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == 6
+    assert min(int(size) for size in sizes) >= 165
+
+
+def test_layout_tiles_circle_cluster_defaults_to_six_not_seven():
+    stats = sample_share_summary_stats()
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1080,
+        "square",
+        scope_label="World",
+        card_stat_labels=(),
+    )
+    assert html.count("border-radius:50%") == 6
+
+
+def test_layout_tiles_circle_cluster_supports_seventh_user_stat():
+    stats = sample_share_summary_stats()
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+    )
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1080,
+        "square",
+        scope_label="World",
+        card_stat_labels=labels,
+    )
+    assert html.count("border-radius:50%") == 7
 
 
 def test_layout_hero_circle_renders():
@@ -180,7 +292,7 @@ def test_share_summary_preview_tiles_circle_cluster():
         scope_label="World",
     )
     assert "pebird-share-preview-wrap" in html
-    assert html.count("border-radius:50%") >= 6
+    assert html.count("border-radius:50%") == 6
 
 
 def test_share_summary_preview_hero_circle_all_formats():
@@ -201,14 +313,13 @@ def test_share_summary_preview_hero_circle_all_formats():
 
 def test_spotlight_circle_is_larger_than_tiles_cluster_circle():
     canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
-    tiles_d = _diameter_for_variant(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
+    tiles_d = _placed_diameter(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
     spotlight_d = _spotlight_circle_diameter(canvas_w, canvas_h, "square")
     assert spotlight_d > tiles_d * 1.5
 
 
 def test_spotlight_circle_value_font_matches_classic_for_short_numbers():
     from explorer.presentation.share_summary_circles_preview import (
-        _circle_value_font_px,
         _spotlight_circle_value_base_px,
     )
 
