@@ -186,7 +186,14 @@ def _tiles_circle_canvas_size(
     scope_label: str | None,
 ) -> tuple[int, int]:
     """Statistics Grid circle body — room for layout subtitle above the period headline."""
-    del fmt
+    if fmt == "story":
+        return _cluster_body_canvas_size(
+            width,
+            height,
+            header_reserve=200,
+            footer_reserve=210 if scope_label else 172,
+            vertical_pad=20,
+        )
     return _cluster_body_canvas_size(
         width,
         height,
@@ -476,6 +483,202 @@ def _centres_in_grid_reading_order(
     ]
 
 
+# Deterministic scattered path for story-format Statistics Grid circles.
+_STORY_SCATTER_TOP_CLEARANCE = 20
+_STORY_SCATTER_BOTTOM_CLEARANCE = 52
+_STORY_SCATTER_MIN_EDGE_GAP_PX = 20
+# (x_fraction, y_fraction, x_nudge_px, y_nudge_px) per slot — hand-tuned for a loose scatter.
+_STORY_SCATTER_PRESETS: dict[int, tuple[tuple[float, float, float, float], ...]] = {
+    6: (
+        (0.21, 0.03, 0.0, 0.0),
+        (0.74, 0.16, 12.0, 10.0),
+        (0.33, 0.31, -10.0, -8.0),
+        (0.67, 0.47, 8.0, 14.0),
+        (0.26, 0.66, -6.0, -6.0),
+        (0.78, 0.88, 10.0, 8.0),
+    ),
+    7: (
+        (0.23, 0.02, 0.0, 0.0),
+        (0.69, 0.14, -8.0, 12.0),
+        (0.36, 0.27, 10.0, -10.0),
+        (0.61, 0.42, -6.0, 8.0),
+        (0.28, 0.58, 8.0, -6.0),
+        (0.73, 0.74, -10.0, 10.0),
+        (0.46, 0.90, 4.0, -8.0),
+    ),
+}
+
+
+def _story_scatter_profile(count: int) -> list[tuple[float, float, float, float]]:
+    """Fixed scatter coordinates for *count* stats (identical on every card)."""
+    preset = _STORY_SCATTER_PRESETS.get(count)
+    if preset is not None:
+        return list(preset)
+    points: list[tuple[float, float, float, float]] = []
+    for i in range(count):
+        t = i / max(1, count - 1)
+        x_frac = 0.5 + 0.27 * math.sin(i * 1.65 + 0.35) + 0.07 * math.cos(i * 2.15)
+        y_frac = t + 0.035 * math.sin(i * 2.05 + 0.5)
+        x_frac = max(0.18, min(0.82, x_frac))
+        y_frac = max(0.0, min(1.0, y_frac))
+        points.append((x_frac, y_frac, 0.0, 0.0))
+    return points
+
+
+def _story_scatter_vertical_band(
+    canvas_h: int,
+    *,
+    diameter: int,
+) -> tuple[float, float]:
+    """Return (y_min, y_max) centre coordinates inside the safe vertical band."""
+    radius = diameter / 2
+    shadow = _SHADOW_PAD_PX + 8
+    y_min = shadow + _STORY_SCATTER_TOP_CLEARANCE + radius
+    y_max = canvas_h - shadow - _STORY_SCATTER_BOTTOM_CLEARANCE - radius
+    return y_min, y_max
+
+
+def _story_scatter_centres(
+    count: int,
+    *,
+    canvas_w: int,
+    canvas_h: int,
+    diameter: int,
+    gap_px: int,
+) -> list[tuple[float, float]]:
+    """Scatter circles down the story canvas using the full vertical band."""
+    del gap_px
+    if count <= 0:
+        return []
+    y_min, y_max = _story_scatter_vertical_band(canvas_h, diameter=diameter)
+    span = max(0.0, y_max - y_min)
+    centres: list[tuple[float, float]] = []
+    for x_frac, y_frac, nudge_x, nudge_y in _story_scatter_profile(count):
+        x = canvas_w * x_frac + nudge_x
+        y = y_min + y_frac * span + nudge_y
+        centres.append((x, y))
+    return centres
+
+
+def _story_scatter_fits(
+    count: int,
+    *,
+    canvas_w: int,
+    canvas_h: int,
+    diameter: int,
+    gap_px: int,
+) -> bool:
+    centres = _story_scatter_centres(
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+        gap_px=gap_px,
+    )
+    if len(centres) != count:
+        return False
+    r = diameter / 2
+    min_edge_gap = max(float(gap_px), float(_STORY_SCATTER_MIN_EDGE_GAP_PX))
+    # Include shadow bleed so circles do not look visually crowded.
+    min_dist = diameter + min_edge_gap + 2 * _SHADOW_PAD_PX
+    min_dist_sq = min_dist * min_dist
+    for i, (x1, y1) in enumerate(centres):
+        for x2, y2 in centres[i + 1 :]:
+            dx = x1 - x2
+            dy = y1 - y2
+            if dx * dx + dy * dy + 1e-6 < min_dist_sq:
+                return False
+    pad = r + _SHADOW_PAD_PX
+    top_limit = _STORY_SCATTER_TOP_CLEARANCE / 2
+    bottom_limit = canvas_h - _STORY_SCATTER_BOTTOM_CLEARANCE - _SHADOW_PAD_PX
+    for x, y in centres:
+        if x - pad < 0 or x + pad > canvas_w or y - pad < top_limit or y + pad > bottom_limit:
+            return False
+    return True
+
+
+def _story_scatter_diameter(
+    count: int,
+    canvas_w: int,
+    canvas_h: int,
+    *,
+    gap_px: int,
+) -> int:
+    """Largest circle size that fits the scattered story layout."""
+    if count <= 0:
+        return 96
+    by_width = int(canvas_w * 0.56)
+    for try_d in range(min(by_width, 300), 95, -1):
+        if _story_scatter_fits(
+            count,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter=try_d,
+            gap_px=gap_px,
+        ):
+            return try_d
+    return 96
+
+
+# Backwards-compatible aliases used by tests and layout entry point.
+_STORY_ZIGZAG_TOP_CLEARANCE = _STORY_SCATTER_TOP_CLEARANCE
+_STORY_ZIGZAG_BOTTOM_CLEARANCE = _STORY_SCATTER_BOTTOM_CLEARANCE
+_story_zigzag_diameter = _story_scatter_diameter
+_story_zigzag_centres = _story_scatter_centres
+_story_zigzag_non_overlapping = _story_scatter_fits
+
+
+def _story_zigzag_canvas_html(
+    pairs: list[tuple[str, str]],
+    *,
+    variant: CircleVariantId,
+    canvas_w: int,
+    canvas_h: int,
+) -> str:
+    count = len(pairs)
+    spec = CIRCLE_VARIANT_SPECS[variant]
+    gap_px = spec.gap_px
+    diameter = _story_zigzag_diameter(
+        count,
+        canvas_w,
+        canvas_h,
+        gap_px=gap_px,
+    )
+    centres = _story_zigzag_centres(
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+        gap_px=gap_px,
+    )
+    if count > 6:
+        value_px, label_px = "40px", "16px"
+    else:
+        value_px, label_px = "48px", "18px"
+    shadow = spec.shadow
+    tiles = []
+    for (label, value), (x, y) in zip(pairs, centres, strict=False):
+        tile = _circle_tile_html(
+            label,
+            value,
+            diameter=diameter,
+            value_px=value_px,
+            label_px=label_px,
+            shadow=shadow,
+        )
+        tiles.append(
+            f"""
+<div style="position:absolute;left:{x:.1f}px;top:{y:.1f}px;
+  transform:translate(-50%,-50%);">
+  {tile}
+</div>"""
+        )
+    return f"""
+<div style="position:relative;width:{canvas_w}px;height:{canvas_h}px;margin:0 auto;overflow:hidden;">
+  {''.join(tiles)}
+</div>"""
+
+
 def _circles_canvas_html(
     pairs: list[tuple[str, str]],
     *,
@@ -568,18 +771,27 @@ def layout_tiles_circle_cluster(
         fmt,
         scope_label=scope_label,
     )
+    if fmt == "story":
+        circles_html = _story_zigzag_canvas_html(
+            pairs,
+            variant=TILES_CIRCLE_CLUSTER_VARIANT,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+        )
+    else:
+        circles_html = _circles_canvas_html(
+            pairs,
+            variant=TILES_CIRCLE_CLUSTER_VARIANT,
+            period_label=stats.period_label,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter_start=TILES_CIRCLE_DIAMETER_SEARCH_START,
+        )
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
   {_header_block(stats, subtitle=subtitle)}
   <div style="padding:0 48px {pad_bottom}px;display:flex;justify-content:center;">
-    {_circles_canvas_html(
-        pairs,
-        variant=TILES_CIRCLE_CLUSTER_VARIANT,
-        period_label=stats.period_label,
-        canvas_w=canvas_w,
-        canvas_h=canvas_h,
-        diameter_start=TILES_CIRCLE_DIAMETER_SEARCH_START,
-    )}
+    {circles_html}
   </div>
   {_footer_block(scope_label=scope_label)}
 </div>"""
