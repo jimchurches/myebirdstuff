@@ -347,10 +347,15 @@ def _card_stat_max_slots(
     fmt: FormatId,
     *,
     tiles_style: TilesStyleId = "grid",
+    status_metrics: list[tuple[str, str]] | None = None,
+    available_stat_count: int | None = None,
 ) -> int:
     if _tiles_circle_cluster_picker(layout, tiles_style):
         return TILES_CIRCLE_CLUSTER_MAX
-    return layout_card_stat_max(layout, fmt)
+    count = available_stat_count
+    if count is None and status_metrics is not None:
+        count = len(status_metrics)
+    return layout_card_stat_max(layout, fmt, available_stat_count=count)
 
 
 def _card_stat_ui_row_count(
@@ -359,8 +364,16 @@ def _card_stat_ui_row_count(
     *,
     slot_count: int,
     tiles_style: TilesStyleId = "grid",
+    status_metrics: list[tuple[str, str]] | None = None,
+    available_stat_count: int | None = None,
 ) -> int:
-    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    max_slots = _card_stat_max_slots(
+        layout,
+        fmt,
+        tiles_style=tiles_style,
+        status_metrics=status_metrics,
+        available_stat_count=available_stat_count,
+    )
     if _story_format_stat_picker(fmt, layout):
         return max_slots
     return min(max(1, slot_count), max_slots)
@@ -372,8 +385,11 @@ def _effective_card_stat_labels(
     fmt: FormatId,
     *,
     tiles_style: TilesStyleId = "grid",
+    status_metrics: list[tuple[str, str]] | None = None,
 ) -> tuple[str, ...]:
-    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    max_slots = _card_stat_max_slots(
+        layout, fmt, tiles_style=tiles_style, status_metrics=status_metrics
+    )
     return tuple(label for label in picks if label)[:max_slots]
 
 
@@ -407,7 +423,9 @@ def _ensure_card_stat_picks(
 ) -> list[str]:
     """Initialize or sanitize session picks for *layout*; returns UI row values."""
     circle_cluster = _tiles_circle_cluster_picker(layout, tiles_style)
-    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    max_slots = _card_stat_max_slots(
+        layout, fmt, tiles_style=tiles_style, status_metrics=status_metrics
+    )
     storage_max = (
         TILES_CIRCLE_CLUSTER_MAX
         if circle_cluster
@@ -420,7 +438,11 @@ def _ensure_card_stat_picks(
     fixed_rows = _story_format_stat_picker(fmt, layout)
     defaults = list(
         default_card_stat_labels(
-            layout, status_metrics, period_kind=period_kind, geo_scope=geo_scope
+            layout,
+            status_metrics,
+            period_kind=period_kind,
+            geo_scope=geo_scope,
+            fmt=fmt,
         )
     )
 
@@ -429,6 +451,11 @@ def _ensure_card_stat_picks(
         st.session_state.pop(picks_key, None)
         st.session_state.pop(count_key, None)
         _clear_card_stat_selectbox_keys(layout)
+
+    if fixed_rows and picks_key in st.session_state:
+        raw = list(st.session_state[picks_key])
+        st.session_state[picks_key] = (raw + [""] * max_slots)[:max_slots]
+        st.session_state[count_key] = max_slots
 
     if picks_key not in st.session_state:
         if fixed_rows:
@@ -460,7 +487,11 @@ def _ensure_card_stat_picks(
     )
     slot_count = int(st.session_state.get(count_key, max(1, len(sanitized))))
     ui_rows = _card_stat_ui_row_count(
-        layout, fmt, slot_count=slot_count, tiles_style=tiles_style
+        layout,
+        fmt,
+        slot_count=slot_count,
+        tiles_style=tiles_style,
+        status_metrics=status_metrics,
     )
 
     raw = list(st.session_state[picks_key])
@@ -490,11 +521,18 @@ def _card_can_accept_stat(
     slot_count: int,
     *,
     tiles_style: TilesStyleId = "grid",
+    status_metrics: list[tuple[str, str]] | None = None,
 ) -> bool:
-    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    max_slots = _card_stat_max_slots(
+        layout, fmt, tiles_style=tiles_style, status_metrics=status_metrics
+    )
     fixed_rows = _story_format_stat_picker(fmt, layout)
     ui_rows = _card_stat_ui_row_count(
-        layout, fmt, slot_count=slot_count, tiles_style=tiles_style
+        layout,
+        fmt,
+        slot_count=slot_count,
+        tiles_style=tiles_style,
+        status_metrics=status_metrics,
     )
     active = (picks + [""] * ui_rows)[:ui_rows]
     if any(not label for label in active):
@@ -511,16 +549,26 @@ def _add_stat_to_card(
     period_kind: PeriodKind,
     fmt: FormatId,
     tiles_style: TilesStyleId,
+    available_stat_count: int | None = None,
 ) -> None:
     """Fill the next empty card slot, or append a row when allowed."""
     picks_key = _card_stat_picks_key(layout, period_kind)
     count_key = _card_stat_slot_count_key(layout, period_kind)
-    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    max_slots = _card_stat_max_slots(
+        layout,
+        fmt,
+        tiles_style=tiles_style,
+        available_stat_count=available_stat_count,
+    )
     fixed_rows = _story_format_stat_picker(fmt, layout)
     picks = list(st.session_state.get(picks_key, []))
     slot_count = int(st.session_state.get(count_key, 1))
     ui_rows = _card_stat_ui_row_count(
-        layout, fmt, slot_count=slot_count, tiles_style=tiles_style
+        layout,
+        fmt,
+        slot_count=slot_count,
+        tiles_style=tiles_style,
+        available_stat_count=available_stat_count,
     )
     active = (picks + [""] * ui_rows)[:ui_rows]
 
@@ -554,6 +602,7 @@ def _add_stat_to_card_on_click(
     period_kind: PeriodKind,
     fmt: FormatId,
     tiles_style: TilesStyleId,
+    available_stat_count: int,
 ) -> None:
     """Callback — runs before widgets so selectbox keys can be cleared safely."""
     _add_stat_to_card(
@@ -562,6 +611,7 @@ def _add_stat_to_card_on_click(
         period_kind=period_kind,
         fmt=fmt,
         tiles_style=tiles_style,
+        available_stat_count=available_stat_count,
     )
 
 
@@ -588,7 +638,17 @@ def _not_on_card_chip_strip(
         return
 
     can_add = _card_can_accept_stat(
-        layout, fmt, picks, slot_count, tiles_style=tiles_style
+        layout,
+        fmt,
+        picks,
+        slot_count,
+        tiles_style=tiles_style,
+        status_metrics=status_metrics,
+    )
+    count = len(not_on_card)
+    st.caption(
+        f"{count} more stat{'s' if count != 1 else ''} available"
+        + (" — click to add to the card." if can_add else " — card is full.")
     )
 
     cols_per_row = 3
@@ -609,7 +669,7 @@ def _not_on_card_chip_strip(
                         else "Remove or clear a slot to add another stat"
                     ),
                     on_click=_add_stat_to_card_on_click,
-                    args=(stat_label, layout, period_kind, fmt, tiles_style),
+                    args=(stat_label, layout, period_kind, fmt, tiles_style, len(status_metrics)),
                 )
 
 
@@ -627,7 +687,9 @@ def _card_stat_picker_ui(
     if layout == "spotlight":
         return ()
 
-    max_slots = _card_stat_max_slots(layout, fmt, tiles_style=tiles_style)
+    max_slots = _card_stat_max_slots(
+        layout, fmt, tiles_style=tiles_style, status_metrics=status_metrics
+    )
     fixed_rows = _story_format_stat_picker(fmt, layout)
     available_labels = [label for label, _ in status_metrics]
     metrics_lookup = _status_metrics_lookup(status_metrics)
@@ -651,6 +713,7 @@ def _card_stat_picker_ui(
         fmt,
         slot_count=int(st.session_state[count_key]),
         tiles_style=tiles_style,
+        status_metrics=status_metrics,
     )
 
     if fixed_rows:
@@ -764,6 +827,7 @@ def _card_stat_picker_ui(
                         status_metrics,
                         period_kind=period_kind,
                         geo_scope=geo_scope,
+                        fmt=fmt,
                     )
                 )
                 _clear_card_stat_selectbox_keys(layout)
@@ -775,12 +839,33 @@ def _card_stat_picker_ui(
                     st.session_state[count_key] = max(1, len(defaults))
                 st.rerun()
 
+    slot_count = int(st.session_state[count_key])
+    can_add_more = _card_can_accept_stat(
+        layout,
+        fmt,
+        picks[:ui_rows],
+        slot_count,
+        tiles_style=tiles_style,
+        status_metrics=status_metrics,
+    )
+    stats_not_on_card = [
+        label for label in available_labels if label not in _stats_on_card(picks[:ui_rows])
+    ]
+    if stats_not_on_card and not can_add_more:
+        _col_num, col_banner = st.columns(
+            [stat_row_cols[0], sum(stat_row_cols[1:])],
+            vertical_alignment="center",
+        )
+        with col_banner:
+            st.info("Card is full.")
+
     st.session_state[picks_key] = picks[:ui_rows]
     final = _effective_card_stat_labels(
         picks,
         layout,
         fmt,
         tiles_style=tiles_style,
+        status_metrics=status_metrics,
     )
     if not final:
         st.caption("Select at least one stat to show on the card.")
@@ -792,7 +877,7 @@ def _card_stat_picker_ui(
         fmt=fmt,
         status_metrics=status_metrics,
         picks=picks[:ui_rows],
-        slot_count=int(st.session_state[count_key]),
+        slot_count=slot_count,
         metrics_lookup=metrics_lookup,
         tiles_style=tiles_style,
     )

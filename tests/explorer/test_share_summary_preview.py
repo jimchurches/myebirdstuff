@@ -40,7 +40,9 @@ def test_preview_color_scheme_index_changes_palette():
 def test_layout_card_stat_max_story_supports_ten():
     from explorer.presentation.share_summary_preview import layout_card_stat_max
 
-    assert layout_card_stat_max("minimal", "story") == 10
+    assert layout_card_stat_max("minimal", "story") == 18
+    assert layout_card_stat_max("minimal", "story", available_stat_count=14) == 14
+    assert layout_card_stat_max("minimal", "story", available_stat_count=25) == 18
     assert layout_card_stat_max("tiles", "story") == 10
     assert layout_card_stat_max("minimal", "square") == 6
     assert layout_card_stat_max("tiles", "square") == 6

@@ -38,6 +38,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
+    SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
     SHARE_SUMMARY_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
@@ -306,7 +307,12 @@ def summary_status_metrics(
     return ordered
 
 
-def layout_card_stat_max(layout: LayoutId | None, fmt: FormatId | None = None) -> int:
+def layout_card_stat_max(
+    layout: LayoutId | None,
+    fmt: FormatId | None = None,
+    *,
+    available_stat_count: int | None = None,
+) -> int:
     """Maximum stat slots on grid/list layouts (spotlight uses a separate control)."""
     if layout == "hero":
         return 4
@@ -316,14 +322,19 @@ def layout_card_stat_max(layout: LayoutId | None, fmt: FormatId | None = None) -
         return 6
     if layout == "minimal":
         if fmt == "story":
-            return SHARE_SUMMARY_STORY_MAX_STATS
+            cap = SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
+            if available_stat_count is not None:
+                return min(max(1, available_stat_count), cap)
+            return cap
         return 6
     return 6
 
 
 def layout_card_stat_storage_max(layout: LayoutId | None) -> int:
     """Session storage cap — story layouts retain extra picks when switching aspect ratio."""
-    if layout in ("minimal", "tiles"):
+    if layout == "minimal":
+        return SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
+    if layout == "tiles":
         return SHARE_SUMMARY_STORY_MAX_STATS
     return layout_card_stat_max(layout)
 
@@ -366,11 +377,17 @@ def default_card_stat_labels(
     *,
     period_kind: PeriodKind = "year",
     geo_scope: ShareSummaryGeoScope | None = None,
+    fmt: FormatId | None = None,
 ) -> tuple[str, ...]:
     """Layout default stat labels filtered to *available_metrics*."""
-    available = {label for label, _ in available_metrics}
+    available_list = list(available_metrics)
+    available = {label for label, _ in available_list}
     preferred = _preferred_default_stats(layout, period_kind, geo_scope=geo_scope)
-    max_count = layout_card_stat_max(layout)
+    max_count = layout_card_stat_max(
+        layout,
+        fmt,
+        available_stat_count=len(available_list) if layout == "minimal" and fmt == "story" else None,
+    )
     return tuple(lab for lab in preferred if lab in available)[:max_count]
 
 
@@ -630,7 +647,15 @@ def _resolve_card_stat_pairs(
     all_time: ShareSummaryAllTimeStats | None = None,
     geo_scope: ShareSummaryGeoScope | None = None,
 ) -> list[tuple[str, str]]:
-    resolved_max = max_count if max_count is not None else layout_card_stat_max(layout, fmt)
+    lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
+    available_count = (
+        len(lookup) if layout == "minimal" and fmt == "story" else None
+    )
+    resolved_max = (
+        max_count
+        if max_count is not None
+        else layout_card_stat_max(layout, fmt, available_stat_count=available_count)
+    )
     if card_stat_labels:
         return card_stat_pairs(
             stats,
@@ -759,7 +784,9 @@ def _layout_minimal(
         all_time=all_time,
         geo_scope=geo_scope,
     )
-    if fmt == "story" and len(pairs) > 6:
+    if fmt == "story" and len(pairs) > 10:
+        label_px, value_px, row_pad = "22px", "32px", "10px"
+    elif fmt == "story" and len(pairs) > 6:
         label_px, value_px, row_pad = "24px", "38px", "12px"
     elif fmt == "square":
         # Tighter rows so six stats clear the enlarged footer scope label on 1080×1080.

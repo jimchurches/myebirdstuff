@@ -111,8 +111,10 @@ SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS: tuple[str, ...] = (
     "Total checklists",
     "Unique locations",
 )
-# Story format (1080×1920) — statistics grid and list may show up to this many stats.
+# Story format (1080×1920) — statistics grid may show up to this many stats.
 SHARE_SUMMARY_STORY_MAX_STATS = 10
+# Statistics List (minimal) on story — cap 18; slot count is min(available, cap).
+SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS = 18
 # Display label on spotlight cards (matches Available statistics / card picker).
 SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"
 
