@@ -587,13 +587,8 @@ def _not_on_card_chip_strip(
         st.caption("All available stats are on the card.")
         return
 
-    count = len(not_on_card)
     can_add = _card_can_accept_stat(
         layout, fmt, picks, slot_count, tiles_style=tiles_style
-    )
-    st.caption(
-        f"{count} more stat{'s' if count != 1 else ''} available"
-        + (" — click to add to the card." if can_add else " — card is full.")
     )
 
     cols_per_row = 3
@@ -662,10 +657,6 @@ def _card_stat_picker_ui(
         st.caption(
             f"Story format supports up to {max_slots} stats. "
             "Empty rows are ignored. Order matches the card."
-        )
-    else:
-        st.caption(
-            f"Choose up to {max_slots} stats for this layout. Order matches position on the card."
         )
 
     stat_row_cols = [0.5, 6, 1.8, 2.2]
