@@ -37,6 +37,7 @@ CircleVariantId = Literal[
     "cluster_stagger_b",
     "cluster_wide",
     "cluster_compact",
+    "hero_cluster",
 ]
 
 CIRCLE_LAYOUT_MAX_STATS = 9
@@ -44,6 +45,9 @@ CIRCLE_LAYOUT_MIN_STATS = 6
 TILES_CIRCLE_CLUSTER_MIN = 6
 TILES_CIRCLE_CLUSTER_MAX = 7
 TILES_CIRCLE_CLUSTER_VARIANT: CircleVariantId = "cluster_wide"
+HERO_CIRCLE_CLUSTER_MAX = 4
+HERO_CIRCLE_CLUSTER_VARIANT: CircleVariantId = "hero_cluster"
+HERO_CIRCLE_DIAMETER_SEARCH_START = 320
 _SHADOW_PAD_PX = 12
 
 
@@ -99,6 +103,13 @@ CIRCLE_VARIANT_SPECS: dict[CircleVariantId, _CircleVariantSpec] = {
         ring_step=1.0,
         shadow=False,
     ),
+    "hero_cluster": _CircleVariantSpec(
+        "Hero cluster — larger circles with moderate ring gap",
+        gap_px=10,
+        ring1_angle_offset_rad=math.pi / 10,
+        ring_step=1.04,
+        shadow=True,
+    ),
 }
 
 CIRCLE_VARIANT_LABELS: dict[CircleVariantId, str] = {
@@ -127,6 +138,23 @@ def _circle_canvas_size(
     return canvas_w, max(340, canvas_h)
 
 
+def _hero_circle_canvas_size(
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    scope_label: str | None,
+) -> tuple[int, int]:
+    """Hero circle body — slightly tighter vertical reserves than the grid cluster."""
+    del fmt
+    header_reserve = 168
+    footer_reserve = 160 if scope_label else 120
+    vertical_pad = 12
+    canvas_w = width - 96
+    canvas_h = height - header_reserve - footer_reserve - vertical_pad
+    return canvas_w, max(340, canvas_h)
+
+
 def _circle_diameter(
     count: int,
     canvas_w: int,
@@ -142,8 +170,16 @@ def _circle_diameter(
         d_max = (avail - ring_step * gap_px) / (ring_step + 0.5)
     else:
         d_max = (avail - 2 * ring_step * gap_px) / (2 * ring_step + 0.5)
-    width_cap = int(canvas_w * 0.20) if count > 6 else int(canvas_w * 0.23)
-    return max(96, min(int(d_max), width_cap, 210))
+    if count <= 4:
+        width_cap = int(canvas_w * 0.30)
+        max_diameter = 260
+    elif count > 6:
+        width_cap = int(canvas_w * 0.20)
+        max_diameter = 210
+    else:
+        width_cap = int(canvas_w * 0.23)
+        max_diameter = 210
+    return max(96, min(int(d_max), width_cap, max_diameter))
 
 
 def _cluster_fit_scale(
@@ -273,7 +309,7 @@ def place_circle_centers(
         return [], diameter
 
     spec = CIRCLE_VARIANT_SPECS[variant]
-    for try_d in range(diameter, 95, -4):
+    for try_d in range(diameter, 95, -1):
         centres_rel = _radial_centres_relative(count, diameter=try_d, spec=spec)
         radius = try_d / 2
         if _cluster_fit_scale(
@@ -372,21 +408,25 @@ def _circles_canvas_html(
     period_label: str,
     canvas_w: int,
     canvas_h: int,
+    diameter_start: int | None = None,
 ) -> str:
     count = len(pairs)
     spec = CIRCLE_VARIANT_SPECS[variant]
-    diameter = _circle_diameter(
+    estimate = _circle_diameter(
         count,
         canvas_w,
         canvas_h,
         gap_px=spec.gap_px,
         ring_step=spec.ring_step,
     )
+    search_from = (
+        max(estimate, diameter_start) if diameter_start is not None else estimate
+    )
     centres, diameter = place_circle_centers(
         count,
         canvas_w=canvas_w,
         canvas_h=canvas_h,
-        diameter=diameter,
+        diameter=search_from,
         variant=variant,
         period_label=period_label,
     )
@@ -458,6 +498,51 @@ def layout_tiles_circle_cluster(
         period_label=stats.period_label,
         canvas_w=canvas_w,
         canvas_h=canvas_h,
+    )}
+  </div>
+  {_footer_block(scope_label=scope_label)}
+</div>"""
+
+
+def layout_hero_circle(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
+) -> str:
+    """Hero Grid stats in a radial circle cluster (up to four stats)."""
+    pairs = _resolve_card_stat_pairs(
+        stats,
+        layout="hero",
+        fmt=fmt,
+        card_stat_labels=card_stat_labels,
+        max_count=HERO_CIRCLE_CLUSTER_MAX,
+        all_time=all_time,
+        geo_scope=geo_scope,
+    )
+    pad_bottom = _footer_pad(fmt, width, height)
+    canvas_w, canvas_h = _hero_circle_canvas_size(
+        width,
+        height,
+        fmt,
+        scope_label=scope_label,
+    )
+    return f"""
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+  {_header_block(stats)}
+  <div style="padding:0 48px {pad_bottom}px;display:flex;justify-content:center;">
+    {_circles_canvas_html(
+        pairs,
+        variant=HERO_CIRCLE_CLUSTER_VARIANT,
+        period_label=stats.period_label,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter_start=HERO_CIRCLE_DIAMETER_SEARCH_START,
     )}
   </div>
   {_footer_block(scope_label=scope_label)}
@@ -698,11 +783,14 @@ __all__ = [
     "TILES_CIRCLE_CLUSTER_MAX",
     "TILES_CIRCLE_CLUSTER_MIN",
     "TILES_CIRCLE_CLUSTER_VARIANT",
+    "HERO_CIRCLE_CLUSTER_MAX",
+    "HERO_CIRCLE_CLUSTER_VARIANT",
     "CIRCLE_VARIANT_IDS",
     "CIRCLE_VARIANT_LABELS",
     "CircleVariantId",
     "circles_layout_non_overlapping",
     "circles_within_canvas",
+    "layout_hero_circle",
     "layout_tiles_circle_cluster",
     "place_circle_centers",
     "render_circles_preview_html",

@@ -47,6 +47,7 @@ from explorer.core.share_summary_defaults import (
 )
 
 TilesStyleId = Literal["grid", "circles"]
+HeroStyleId = Literal["classic", "circle"]
 SpotlightStyleId = Literal["classic", "circle"]
 
 LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]
@@ -882,6 +883,7 @@ def _card_inner_html(
     layout: LayoutId,
     fmt: FormatId,
     tiles_style: TilesStyleId = "grid",
+    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
     spotlight_label: str | None = None,
     card_stat_labels: tuple[str, ...] = (),
@@ -917,6 +919,19 @@ def _card_inner_html(
                 geo_scope=geo_scope,
                 scope_label=scope_label,
             )
+    elif layout == "hero" and hero_style == "circle":
+        from explorer.presentation.share_summary_circles_preview import layout_hero_circle
+
+        inner = layout_hero_circle(
+            stats,
+            width,
+            height,
+            fmt,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
+        )
     elif layout == "tiles" and tiles_style == "circles":
         from explorer.presentation.share_summary_circles_preview import layout_tiles_circle_cluster
 
@@ -963,6 +978,7 @@ def render_share_summary_export_html(
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
     tiles_style: TilesStyleId = "grid",
+    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
     spotlight_label: str | None = None,
     card_stat_labels: tuple[str, ...] = (),
@@ -978,6 +994,7 @@ def render_share_summary_export_html(
             layout=layout,
             fmt=fmt,
             tiles_style=tiles_style,
+            hero_style=hero_style,
             spotlight_style=spotlight_style,
             spotlight_label=spotlight_label,
             card_stat_labels=card_stat_labels,
@@ -1018,6 +1035,7 @@ def render_share_summary_preview_html(
     layout: LayoutId = "hero",
     fmt: FormatId = "square",
     tiles_style: TilesStyleId = "grid",
+    hero_style: HeroStyleId = "classic",
     scale: float = 0.38,
     spotlight_style: SpotlightStyleId = "classic",
     spotlight_label: str | None = None,
@@ -1035,6 +1053,7 @@ def render_share_summary_preview_html(
             layout=layout,
             fmt=fmt,
             tiles_style=tiles_style,
+            hero_style=hero_style,
             spotlight_style=spotlight_style,
             spotlight_label=spotlight_label,
             card_stat_labels=labels,
@@ -1049,6 +1068,7 @@ def render_share_summary_preview_html(
 __all__ = [
     "FormatId",
     "TilesStyleId",
+    "HeroStyleId",
     "SpotlightStyleId",
     "LayoutId",
     "ShareSummaryAllTimeStats",

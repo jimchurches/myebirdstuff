@@ -3,21 +3,23 @@
 from explorer.presentation.share_summary_circles_preview import (
     CIRCLE_VARIANT_IDS,
     CIRCLE_VARIANT_SPECS,
+    HERO_CIRCLE_CLUSTER_VARIANT,
     TILES_CIRCLE_CLUSTER_VARIANT,
     _circle_canvas_size,
+    _hero_circle_canvas_size,
     _centres_in_grid_reading_order,
     _circle_diameter,
     _circle_value_font_px,
-    _centres_in_grid_reading_order,
-    _circle_diameter,
     circles_layout_non_overlapping,
     circles_within_canvas,
+    layout_hero_circle,
     layout_tiles_circle_cluster,
     layout_spotlight_circle,
     place_circle_centers,
     _spotlight_circle_diameter,
 )
 from explorer.presentation.share_summary_preview import (
+    FormatId,
     render_share_summary_preview_html,
     sample_share_summary_stats,
 )
@@ -35,7 +37,7 @@ def _diameter_for_variant(count: int, canvas_w: int, canvas_h: int, variant: str
 
 
 def test_circle_variant_ids_count():
-    assert len(CIRCLE_VARIANT_IDS) == 6
+    assert len(CIRCLE_VARIANT_IDS) == 7
 
 
 def test_grid_reading_order_does_not_start_with_centre():
@@ -88,6 +90,35 @@ def test_circles_non_overlapping_for_six_and_seven():
         )
 
 
+def test_circles_non_overlapping_for_hero_four():
+    canvas_w, canvas_h = _hero_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
+    diameter = _diameter_for_variant(4, canvas_w, canvas_h, HERO_CIRCLE_CLUSTER_VARIANT)
+    assert circles_layout_non_overlapping(
+        4,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+        variant=HERO_CIRCLE_CLUSTER_VARIANT,
+        period_label="2025",
+    )
+
+
+def test_hero_circle_square_uses_larger_diameter_than_before():
+    canvas_w, canvas_h = _hero_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
+    _, diameter = place_circle_centers(
+        4,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=320,
+        variant=HERO_CIRCLE_CLUSTER_VARIANT,
+    )
+    assert diameter >= 180
+
+
 def test_circles_within_canvas_for_six_and_seven():
     canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
     for count in (6, 7):
@@ -116,6 +147,21 @@ def test_layout_tiles_circle_cluster_renders():
     assert "Species" in html
 
 
+def test_layout_hero_circle_renders():
+    stats = sample_share_summary_stats()
+    html = layout_hero_circle(
+        stats,
+        1080,
+        1080,
+        "square",
+        scope_label="World",
+    )
+    assert "border-radius:50%" in html
+    assert "box-shadow:0 8px 18px" in html
+    assert "Species" in html
+    assert html.count("border-radius:50%") == 4
+
+
 def test_circle_value_font_shrinks_for_long_numbers():
     assert _circle_value_font_px("312", 48, diameter=170) == 48
     assert _circle_value_font_px("12,450", 48, diameter=170) == 36
@@ -135,6 +181,22 @@ def test_share_summary_preview_tiles_circle_cluster():
     )
     assert "pebird-share-preview-wrap" in html
     assert html.count("border-radius:50%") >= 6
+
+
+def test_share_summary_preview_hero_circle_all_formats():
+    stats = sample_share_summary_stats()
+    formats: tuple[FormatId, ...] = ("square", "portrait_post", "story")
+    for fmt in formats:
+        html = render_share_summary_preview_html(
+            stats,
+            layout="hero",
+            hero_style="circle",
+            fmt=fmt,
+            scale=1.0,
+            scope_label="World",
+        )
+        assert "pebird-share-preview-wrap" in html
+        assert html.count("border-radius:50%") == 4
 
 
 def test_spotlight_circle_is_larger_than_tiles_cluster_circle():

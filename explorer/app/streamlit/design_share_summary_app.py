@@ -55,6 +55,7 @@ from explorer.presentation.share_summary_hex_preview import (
 )
 from explorer.presentation.share_summary_preview import (
     FormatId,
+    HeroStyleId,
     LayoutId,
     SpotlightStyleId,
     TilesStyleId,
@@ -94,6 +95,7 @@ def _cached_share_summary_png(
     scope_label: str | None,
     geo_scope: ShareSummaryGeoScope,
     tiles_style: TilesStyleId = "grid",
+    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
 ) -> bytes:
     return share_summary_to_png_bytes(
@@ -107,6 +109,7 @@ def _cached_share_summary_png(
         scope_label=scope_label,
         geo_scope=geo_scope,
         tiles_style=tiles_style,
+        hero_style=hero_style,
         spotlight_style=spotlight_style,
     )
 
@@ -116,6 +119,7 @@ _HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments"
 _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
 _TILES_STYLE_KEY = "design_tiles_style"
+_HERO_STYLE_KEY = "design_hero_style"
 _SPOTLIGHT_STYLE_KEY = "design_spotlight_style"
 _COLOR_THEME_KEY = "design_color_theme"
 _STATISTICS_LABEL = "Card statistics"
@@ -1030,6 +1034,7 @@ def _current_card_fragment(
     scope_label: str,
     geo_scope: ShareSummaryGeoScope,
     tiles_style: TilesStyleId = "grid",
+    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
@@ -1057,6 +1062,7 @@ def _current_card_fragment(
             layout=selected_layout,
             fmt=fmt,
             tiles_style=tiles_style,
+            hero_style=hero_style,
             spotlight_style=spotlight_style,
             scale=scale,
             spotlight_label=spotlight_label,
@@ -1082,6 +1088,7 @@ def _current_card_fragment(
             scope_label,
             geo_scope,
             tiles_style,
+            hero_style,
             spotlight_style,
         )
     except RuntimeError as exc:
@@ -1193,6 +1200,15 @@ with st.sidebar:
         }[x],
     )
     tiles_style: TilesStyleId = "grid"
+    hero_style: HeroStyleId = "classic"
+    if selected_layout == "hero":
+        hero_style = st.radio(
+            "Hero presentation",
+            options=["classic", "circle"],
+            format_func=lambda x: "Hero Grid" if x == "classic" else "Circle cluster",
+            key=_HERO_STYLE_KEY,
+            horizontal=True,
+        )
     if selected_layout == "tiles":
         tiles_style = st.radio(
             "Statistics presentation",
@@ -1382,6 +1398,7 @@ with tab_social_cards:
         scope_label=scope_label,
         geo_scope=geo_scope,
         tiles_style=tiles_style,
+        hero_style=hero_style,
         spotlight_style=spotlight_style,
     )
 
