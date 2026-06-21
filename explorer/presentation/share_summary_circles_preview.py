@@ -487,24 +487,26 @@ def _centres_in_grid_reading_order(
 _STORY_SCATTER_TOP_CLEARANCE = 20
 _STORY_SCATTER_BOTTOM_CLEARANCE = 52
 _STORY_SCATTER_MIN_EDGE_GAP_PX = 20
+_STORY_SCATTER_MAX_DIAMETER_PX = 320
+_STORY_SCATTER_WIDTH_FRACTION = 0.58
 # (x_fraction, y_fraction, x_nudge_px, y_nudge_px) per slot — hand-tuned for a loose scatter.
 _STORY_SCATTER_PRESETS: dict[int, tuple[tuple[float, float, float, float], ...]] = {
     6: (
-        (0.21, 0.03, 0.0, 0.0),
-        (0.74, 0.16, 12.0, 10.0),
-        (0.33, 0.31, -10.0, -8.0),
-        (0.67, 0.47, 8.0, 14.0),
-        (0.26, 0.66, -6.0, -6.0),
-        (0.78, 0.88, 10.0, 8.0),
+        (0.17, 0.02, 0.0, 0.0),
+        (0.78, 0.12, 12.0, 6.0),
+        (0.37, 0.27, -6.0, -4.0),
+        (0.67, 0.40, 6.0, 8.0),
+        (0.25, 0.55, -6.0, -2.0),
+        (0.80, 0.67, 10.0, 4.0),
     ),
     7: (
-        (0.23, 0.02, 0.0, 0.0),
-        (0.69, 0.14, -8.0, 12.0),
-        (0.36, 0.27, 10.0, -10.0),
-        (0.61, 0.42, -6.0, 8.0),
-        (0.28, 0.58, 8.0, -6.0),
-        (0.73, 0.74, -10.0, 10.0),
-        (0.46, 0.90, 4.0, -8.0),
+        (0.19, 0.01, 0.0, 0.0),
+        (0.74, 0.10, -8.0, 8.0),
+        (0.38, 0.21, 10.0, -8.0),
+        (0.64, 0.33, -6.0, 6.0),
+        (0.26, 0.45, 8.0, -4.0),
+        (0.77, 0.58, -10.0, 8.0),
+        (0.44, 0.70, 4.0, -6.0),
     ),
 }
 
@@ -607,8 +609,8 @@ def _story_scatter_diameter(
     """Largest circle size that fits the scattered story layout."""
     if count <= 0:
         return 96
-    by_width = int(canvas_w * 0.56)
-    for try_d in range(min(by_width, 300), 95, -1):
+    by_width = int(canvas_w * _STORY_SCATTER_WIDTH_FRACTION)
+    for try_d in range(min(by_width, _STORY_SCATTER_MAX_DIAMETER_PX), 95, -1):
         if _story_scatter_fits(
             count,
             canvas_w=canvas_w,
@@ -653,6 +655,8 @@ def _story_zigzag_canvas_html(
     )
     if count > 6:
         value_px, label_px = "40px", "16px"
+    elif diameter >= 260:
+        value_px, label_px = "52px", "19px"
     else:
         value_px, label_px = "48px", "18px"
     shadow = spec.shadow

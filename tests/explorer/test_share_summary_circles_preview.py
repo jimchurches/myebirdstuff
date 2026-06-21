@@ -296,7 +296,7 @@ def test_layout_tiles_circle_cluster_story_zigzag_renders():
     assert html.count("border-radius:50%") == 6
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert len(sizes) == 6
-    assert int(sizes[0]) >= 205
+    assert int(sizes[0]) >= 260
 
 
 def test_circles_within_canvas_for_six_and_seven():
