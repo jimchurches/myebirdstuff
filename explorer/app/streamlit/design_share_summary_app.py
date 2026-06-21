@@ -118,7 +118,7 @@ _PREVIEW_SCALE_FULL = 1.0
 _TILES_STYLE_KEY = "design_tiles_style"
 _SPOTLIGHT_STYLE_KEY = "design_spotlight_style"
 _COLOR_THEME_KEY = "design_color_theme"
-_STATISTICS_LABEL = "Statistics"
+_STATISTICS_LABEL = "Card statistics"
 _CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
 _CARD_STATS_PICKS_PREFIX = "design_card_stat_picks_"
 _CARD_STATS_SCOPE_PREFIX = "design_card_stat_scope_"
@@ -475,14 +475,6 @@ def _ensure_card_stat_picks(
     return picks
 
 
-def _card_stat_slot_label(layout: LayoutId, index: int, *, total: int) -> str:
-    """User-facing label for one card-stat picker row."""
-    kind = "List item" if layout == "minimal" else "Tile"
-    if total == 1:
-        return kind
-    return f"{kind} {index + 1}"
-
-
 def _status_metrics_lookup(status_metrics: list[tuple[str, str]]) -> dict[str, str]:
     return dict(status_metrics)
 
@@ -676,6 +668,8 @@ def _card_stat_picker_ui(
             f"Choose up to {max_slots} stats for this layout. Order matches position on the card."
         )
 
+    stat_row_cols = [0.5, 6, 1.8, 2.2]
+
     for i in range(ui_rows):
         current = picks[i] if i < len(picks) else ""
         other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
@@ -684,18 +678,23 @@ def _card_stat_picker_ui(
             layout, i, options=options, desired=current
         )
         picks[i] = current
-        row_label = _card_stat_slot_label(layout, i, total=ui_rows)
         can_up = i > 0
         can_down = i < ui_rows - 1
         can_remove = bool(current) if fixed_rows else (i > 0 or bool(current))
 
-        col_sel, col_val, col_actions = st.columns([7, 2, 3], vertical_alignment="bottom")
+        col_num, col_sel, col_val, col_actions = st.columns(
+            stat_row_cols,
+            vertical_alignment="center",
+        )
+        with col_num:
+            st.markdown(f"**{i + 1}**")
         with col_sel:
             choice = st.selectbox(
-                row_label,
+                "Stat",
                 options=options,
                 format_func=lambda x: "—" if x == "" else x,
                 key=_card_stat_selectbox_key(layout, i),
+                label_visibility="collapsed",
             )
             picks[i] = choice or ""
         with col_val:
@@ -748,7 +747,10 @@ def _card_stat_picker_ui(
                     st.session_state[picks_key] = picks[:ui_rows]
                     st.rerun()
 
-    col_sel_foot, col_val_foot, col_actions_foot = st.columns([7, 2, 3], vertical_alignment="bottom")
+    col_num_foot, col_sel_foot, col_val_foot, col_actions_foot = st.columns(
+        stat_row_cols,
+        vertical_alignment="center",
+    )
     with col_sel_foot:
         if not fixed_rows and ui_rows < max_slots and st.button(
             "Add stat",
