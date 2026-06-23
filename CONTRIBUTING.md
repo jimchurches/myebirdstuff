@@ -43,7 +43,7 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
   - Treat coverage as a baseline safety guardrail, not the optimization target.
 - **Lint:**  
   `ruff check explorer/`  
-  (same as CI; `ruff` is in `requirements.txt`, rules in `ruff.toml` — Pyflakes, pycodestyle, and isort; line-length left for a later pass).  
+  (same as CI; `ruff` is in `requirements.txt`, rules in `ruff.toml` — Pyflakes, pycodestyle, and isort; line-length left for a later pass).
   For broader Python style guidance beyond what Ruff checks, see **[docs/python-style-guide.md](docs/python-style-guide.md)**.
 
 ---
