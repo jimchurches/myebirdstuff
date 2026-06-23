@@ -23,8 +23,8 @@ if _REPO_ROOT not in sys.path:
 import pandas as pd
 import streamlit as st
 
-from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.data_loader import load_dataset
+from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.share_summary_compute import (
     PeriodAnchor,
     ShareSummaryAllTimeStats,
@@ -34,10 +34,10 @@ from explorer.core.share_summary_compute import (
     suggest_period_anchor,
 )
 from explorer.presentation.share_summary_preview import (
+    _FORMAT_LABELS,
     FormatId,
     LayoutId,
     SpotlightStatId,
-    _FORMAT_LABELS,
     all_layout_previews_html,
     compute_share_summary_stats,
     period_for_custom,

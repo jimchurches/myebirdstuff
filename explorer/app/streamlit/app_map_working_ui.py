@@ -9,17 +9,19 @@ import pandas as pd
 import streamlit as st
 
 from explorer.app.streamlit.app_constants import (
+    DEFAULT_TAXONOMY_LOCALE,
     EBIRD_DATA_SIG_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
-    REPO_ROOT,
-    LEAFLET_MAP_MOUNT_NONCE_KEY,
     LEAFLET_EXPORT_BUILT_CACHE_KEY,
     LEAFLET_EXPORT_RECIPE_KEY,
+    LEAFLET_MAP_MOUNT_NONCE_KEY,
     MAP_VIEW_LABEL_TO_MODE,
     PERSIST_MAP_DATE_FILTER_KEY,
     PERSIST_MAP_DATE_RANGE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
+    REPO_ROOT,
+    SESSION_PREV_EFFECTIVE_BASEMAP_KEY,
     SESSION_PREV_MAP_VIEW_KEY,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_IX_SIG_KEY,
@@ -27,23 +29,21 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_SEARCH_KEY,
     SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY,
     SESSION_SPECIES_WS_KEY,
+    SETTINGS_CONFIG_SOURCE_KEY,
+    STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
+    STREAMLIT_FAMILY_MAP_FAMILY_KEY,
+    STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
+    STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
     STREAMLIT_MAP_BASEMAP_KEY,
     STREAMLIT_MAP_BASEMAP_SAVED_KEY,
     STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY,
-    STREAMLIT_ALL_LOCATIONS_SCOPE_KEY,
     STREAMLIT_MAP_DATE_FILTER_KEY,
     STREAMLIT_MAP_DATE_RANGE_KEY,
     STREAMLIT_MAP_HEIGHT_PX_KEY,
-    STREAMLIT_MAP_VIEW_LABEL_KEY,
-    SESSION_PREV_EFFECTIVE_BASEMAP_KEY,
-    STREAMLIT_TAXONOMY_LOCALE_KEY,
-    STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
-    STREAMLIT_SPECIES_HIDE_ONLY_KEY,
     STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
-    STREAMLIT_FAMILY_MAP_FAMILY_KEY,
-    STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
-    SETTINGS_CONFIG_SOURCE_KEY,
-    DEFAULT_TAXONOMY_LOCALE,
+    STREAMLIT_MAP_VIEW_LABEL_KEY,
+    STREAMLIT_SPECIES_HIDE_ONLY_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
 from explorer.app.streamlit.app_go_to_gps_ui import render_go_to_gps_sidebar_expander
 from explorer.app.streamlit.app_map_ui import (
@@ -52,20 +52,22 @@ from explorer.app.streamlit.app_map_ui import (
     inject_spinner_theme_css,
     species_searchbox_fragment,
 )
-from explorer.app.streamlit.app_settings_state import apply_pending_map_cluster_toggle
-from explorer.app.streamlit.app_settings_state import apply_pending_map_basemap_override
-from explorer.app.streamlit.app_settings_state import apply_pending_map_height_override
-from explorer.app.streamlit.app_settings_state import apply_pending_map_marker_colour_scheme
+from explorer.app.streamlit.app_settings_state import (
+    apply_pending_map_basemap_override,
+    apply_pending_map_cluster_toggle,
+    apply_pending_map_height_override,
+    apply_pending_map_marker_colour_scheme,
+)
 from explorer.app.streamlit.defaults import (
-    MAP_MARKER_COLOUR_SCHEME_1,
-    MAP_MARKER_COLOUR_SCHEME_2,
-    MAP_MARKER_COLOUR_SCHEME_3,
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
     MAP_DATE_FILTER_DEFAULT,
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_STEP,
+    MAP_MARKER_COLOUR_SCHEME_1,
+    MAP_MARKER_COLOUR_SCHEME_2,
+    MAP_MARKER_COLOUR_SCHEME_3,
     MAP_SPECIES_HIDE_ONLY_DEFAULT,
     MAP_VIEW_LABELS,
 )
@@ -73,8 +75,9 @@ from explorer.app.streamlit.map_working import (
     date_inception_to_today_default,
     streamlit_working_set_and_status,
 )
-from explorer.core.explorer_paths import settings_yaml_path_for_source
-from explorer.app.streamlit.perf_instrumentation import render_explorer_perf_sidebar_panel
+from explorer.app.streamlit.perf_instrumentation import (
+    render_explorer_perf_sidebar_panel,
+)
 from explorer.app.streamlit.streamlit_ui_constants import (
     MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION,
     MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION,
@@ -88,6 +91,7 @@ from explorer.core.all_locations_viewport import (
     ALL_LOCATIONS_SCOPE_FOCUSED,
     all_locations_scope_option_values,
 )
+from explorer.core.explorer_paths import settings_yaml_path_for_source
 from explorer.core.region_display import map_focus_key_for_display
 from explorer.core.species_search import (
     SPECIES_WHOOSH_INDEX_VERSION,

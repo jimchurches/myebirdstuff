@@ -7,19 +7,17 @@ from typing import Any
 
 import streamlit as st
 
-from explorer.presentation.checklist_stats_display import COUNTRY_TAB_SORT_ALPHABETICAL
-from explorer.core.explorer_paths import settings_yaml_path_for_source
 from explorer.app.streamlit.app_caches import cached_species_url_fn
 from explorer.app.streamlit.app_constants import (
     DEFAULT_TAXONOMY_LOCALE,
     EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
     REPO_ROOT,
+    SESSION_UPLOAD_CACHE_KEY,
     SETTINGS_BASELINE_KEY,
     SETTINGS_CONFIG_PATH_KEY,
     SETTINGS_CONFIG_SOURCE_KEY,
     SETTINGS_LOADED_FROM_KEY,
     SETTINGS_WARNED_KEY,
-    SESSION_UPLOAD_CACHE_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
 from explorer.app.streamlit.app_settings_state import (
@@ -29,8 +27,15 @@ from explorer.app.streamlit.app_settings_state import (
     load_settings_yaml_via_module,
     settings_state_payload,
 )
-from explorer.app.streamlit.perf_instrumentation import perf_set_dataset_context, perf_span
-from explorer.app.streamlit.streamlit_theme import inject_streamlit_chrome_theme_tokens_css
+from explorer.app.streamlit.perf_instrumentation import (
+    perf_set_dataset_context,
+    perf_span,
+)
+from explorer.app.streamlit.streamlit_theme import (
+    inject_streamlit_chrome_theme_tokens_css,
+)
+from explorer.core.explorer_paths import settings_yaml_path_for_source
+from explorer.presentation.checklist_stats_display import COUNTRY_TAB_SORT_ALPHABETICAL
 
 
 @dataclass(frozen=True)

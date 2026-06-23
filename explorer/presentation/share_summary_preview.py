@@ -24,13 +24,12 @@ from explorer.core.share_summary_compute import (
     period_for_week_containing,
     period_for_year,
 )
-
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
-    SHARE_SUMMARY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT,
+    SHARE_SUMMARY_TILES_DEFAULT_STATS,
 )
 
 LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]

@@ -22,23 +22,23 @@ from typing import Optional
 
 import streamlit as st
 
-from explorer.core.checklist_stats_compute import ChecklistStatsPayload
-from explorer.presentation.checklist_stats_display import (
-    build_yearly_summary_streamlit_tab_html_dict,
-    format_yearly_streamlit_all_tab_protocol_note_html,
-)
 from explorer.app.streamlit.app_constants import (
     STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
     STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY,
     YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY,
 )
+from explorer.app.streamlit.perf_instrumentation import perf_fragment
+from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
+from explorer.core.checklist_stats_compute import ChecklistStatsPayload
 from explorer.core.settings_schema_defaults import (
     YEARLY_RECENT_COLUMN_COUNT_DEFAULT,
     YEARLY_RECENT_COLUMN_COUNT_MAX,
     YEARLY_RECENT_COLUMN_COUNT_MIN,
 )
-from explorer.app.streamlit.perf_instrumentation import perf_fragment
-from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
+from explorer.presentation.checklist_stats_display import (
+    build_yearly_summary_streamlit_tab_html_dict,
+    format_yearly_streamlit_all_tab_protocol_note_html,
+)
 
 
 def get_yearly_recent_column_count() -> int:

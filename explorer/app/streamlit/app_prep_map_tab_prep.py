@@ -26,15 +26,21 @@ from explorer.app.streamlit.app_constants import (
 from explorer.app.streamlit.checklist_stats_streamlit_html import (
     sync_checklist_stats_tab_session_inputs,
 )
-from explorer.app.streamlit.country_stats_streamlit_html import sync_country_tab_session_inputs
-from explorer.app.streamlit.maintenance_streamlit_html import sync_maintenance_tab_session_inputs
+from explorer.app.streamlit.country_stats_streamlit_html import (
+    sync_country_tab_session_inputs,
+)
+from explorer.app.streamlit.maintenance_streamlit_html import (
+    sync_maintenance_tab_session_inputs,
+)
+from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.app.streamlit.rankings_streamlit_html import (
     build_ranking_lists_families_bundle,
     sync_ranking_lists_families_bundle,
 )
-from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.app.streamlit.streamlit_ui_constants import TAB_PREP_SPINNER_TEXT
-from explorer.app.streamlit.yearly_summary_streamlit_html import sync_yearly_summary_session_inputs
+from explorer.app.streamlit.yearly_summary_streamlit_html import (
+    sync_yearly_summary_session_inputs,
+)
 
 
 def run_tab_prep_spinner_and_sync(

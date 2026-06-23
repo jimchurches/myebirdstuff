@@ -18,7 +18,10 @@ from typing import Any, Dict, Hashable, Tuple
 import pandas as pd
 
 from explorer.core.lifer_last_seen_prep import prepare_lifer_last_seen
-from explorer.core.species_logic import base_species_for_lifer, countable_species_vectorized
+from explorer.core.species_logic import (
+    base_species_for_lifer,
+    countable_species_vectorized,
+)
 from explorer.core.stats import safe_count
 
 

@@ -227,7 +227,7 @@ from explorer.core import data_loader
 from explorer.app.streamlit import defaults
 ```
 
-Ruff enforces basic import hygiene (unused imports, undefined names). Import order is not currently enforced by CI but should be followed in new code.
+Ruff enforces import hygiene (unused imports, undefined names) and import order (`I` rules, isort). The order described above is checked by CI.
 
 ### Do not use wildcard imports
 

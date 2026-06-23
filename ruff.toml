@@ -1,11 +1,13 @@
 # Ruff — https://docs.astral.sh/ruff/
 # CI runs: ruff check explorer/
+# Python style standard: docs/python-style-guide.md
 
 target-version = "py312"
 
 [lint]
-# Pyflakes + pycodestyle (no isort in CI yet — import order varies across modules).
-select = ["E", "F", "W"]
+# Pyflakes + pycodestyle + isort.
+# Import order standard is described in docs/python-style-guide.md (Imports section).
+select = ["E", "F", "W", "I"]
 # Long lines are common in docstrings and Streamlit markup; a stricter wrap pass can be a follow-up.
 ignore = ["E501"]
 

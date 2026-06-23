@@ -18,15 +18,6 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from explorer.presentation.checklist_stats_display import _YEARLY_STREAMLIT_CAPTION_STYLE
-from explorer.core.species_family import (
-    assign_group_for_taxon_order,
-    load_taxonomy_groups,
-    load_taxonomy_species_rows,
-)
-from explorer.core.species_logic import countable_species_vectorized
-from explorer.core.stats import safe_count
-
 from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
 from explorer.app.streamlit.defaults import (
     BIRD_FAMILIES_COVERAGE_SUMMARY_DATAFRAME_HEIGHT_PX,
@@ -35,6 +26,16 @@ from explorer.app.streamlit.defaults import (
 )
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
+from explorer.core.species_family import (
+    assign_group_for_taxon_order,
+    load_taxonomy_groups,
+    load_taxonomy_species_rows,
+)
+from explorer.core.species_logic import countable_species_vectorized
+from explorer.core.stats import safe_count
+from explorer.presentation.checklist_stats_display import (
+    _YEARLY_STREAMLIT_CAPTION_STYLE,
+)
 
 logger = logging.getLogger(__name__)
 

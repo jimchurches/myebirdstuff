@@ -9,15 +9,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from explorer.presentation.checklist_stats_display import (
-    COUNTRY_TAB_SORT_ALPHABETICAL,
-    COUNTRY_TAB_SORT_LIFERS_WORLD,
-    COUNTRY_TAB_SORT_TOTAL_SPECIES,
-)
-from explorer.core.settings_schema_defaults import (
-    MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
-    TAXONOMY_LOCALE_DEFAULT,
-)
 from explorer.app.streamlit.defaults import (
     SETTINGS_PANEL_MAX_WIDTH_REM,
     THEME_PRIMARY_HEX,
@@ -27,6 +18,15 @@ from explorer.app.streamlit.defaults import (
 from explorer.app.streamlit.streamlit_ui_constants import (
     CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX,
     DEFAULT_EBIRD_DATA_FILENAME,
+)
+from explorer.core.settings_schema_defaults import (
+    MAINTENANCE_CLOSE_LOCATION_METERS_DEFAULT,
+    TAXONOMY_LOCALE_DEFAULT,
+)
+from explorer.presentation.checklist_stats_display import (
+    COUNTRY_TAB_SORT_ALPHABETICAL,
+    COUNTRY_TAB_SORT_LIFERS_WORLD,
+    COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
 
 STREAMLIT_APP_DIR = Path(__file__).resolve().parent

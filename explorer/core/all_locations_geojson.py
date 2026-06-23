@@ -21,7 +21,10 @@ from explorer.core.leaflet_geojson_build_metrics import (
     LeafletGeoJsonBuildMetrics,
     empty_leaflet_geojson_build_metrics,
 )
-from explorer.presentation.map_renderer import build_visit_popup_entry_rows, format_visit_time
+from explorer.presentation.map_renderer import (
+    build_visit_popup_entry_rows,
+    format_visit_time,
+)
 
 
 def _lifelist_url(location_id: str) -> str:

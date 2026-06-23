@@ -29,7 +29,6 @@ from explorer.app.streamlit.defaults import (
 )
 from explorer.core.family_map_compute import DENSITY_BAND_LABELS
 from explorer.core.map_leaflet_viewport import all_locations_cluster_icon_style_payload
-from explorer.presentation.map_renderer import build_legend_html, map_overlay_theme_stylesheet
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_STROKE_HEX,
     family_map_has_highlight_halo,
@@ -49,6 +48,10 @@ from explorer.core.map_marker_colour_resolve import (
     resolve_species_colours,
     resolve_species_map_background_colours,
     resolve_species_map_lifer_colours,
+)
+from explorer.presentation.map_renderer import (
+    build_legend_html,
+    map_overlay_theme_stylesheet,
 )
 
 _HEX_RE = re.compile(r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
