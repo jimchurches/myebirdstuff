@@ -46,6 +46,8 @@ from explorer.presentation.share_summary_png_export import (
 )
 from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_MAX,
+    TILES_CIRCLE_CLUSTER_STORY_MAX,
+    tiles_circle_cluster_max,
 )
 from explorer.presentation.share_summary_hex_preview import (
     HEX_VARIANT_IDS,
@@ -355,7 +357,7 @@ def _card_stat_max_slots(
     available_stat_count: int | None = None,
 ) -> int:
     if _tiles_circle_cluster_picker(layout, tiles_style):
-        return TILES_CIRCLE_CLUSTER_MAX
+        return tiles_circle_cluster_max(fmt)
     count = available_stat_count
     if count is None and status_metrics is not None:
         count = len(status_metrics)
@@ -431,7 +433,9 @@ def _ensure_card_stat_picks(
         layout, fmt, tiles_style=tiles_style, status_metrics=status_metrics
     )
     storage_max = (
-        TILES_CIRCLE_CLUSTER_MAX
+        TILES_CIRCLE_CLUSTER_STORY_MAX
+        if circle_cluster and fmt == "story"
+        else TILES_CIRCLE_CLUSTER_MAX
         if circle_cluster
         else layout_card_stat_storage_max(layout)
     )
@@ -725,10 +729,16 @@ def _card_stat_picker_ui(
     )
 
     if fixed_rows:
-        st.caption(
-            f"Story format supports up to {max_slots} stats. "
-            "Empty rows are ignored. Order matches the card."
-        )
+        if _tiles_circle_cluster_picker(layout, tiles_style):
+            st.caption(
+                f"Story format supports up to {max_slots} stats. "
+                "Empty slots show as blank circles on the card."
+            )
+        else:
+            st.caption(
+                f"Story format supports up to {max_slots} stats. "
+                "Empty rows are ignored. Order matches the card."
+            )
 
     stat_row_cols = [0.5, 6, 1.8, 2.2]
 
@@ -807,6 +817,7 @@ def _card_stat_picker_ui(
                         picks.pop(i)
                         st.session_state[count_key] = ui_rows - 1
                     st.session_state[picks_key] = picks[:ui_rows]
+                    _clear_card_stat_selectbox_keys(layout)
                     st.rerun()
 
     col_num_foot, col_sel_foot, col_val_foot, col_actions_foot = st.columns(

@@ -2,11 +2,13 @@
 
 import re
 
+import pytest
 from explorer.presentation.share_summary_circles_preview import (
     CIRCLE_VARIANT_IDS,
     CIRCLE_VARIANT_SPECS,
     HERO_CIRCLE_CLUSTER_VARIANT,
     TILES_CIRCLE_CLUSTER_VARIANT,
+    STORY_CIRCLE_LAYOUTS,
     _circle_canvas_size,
     _hero_circle_canvas_size,
     _tiles_circle_canvas_size,
@@ -180,14 +182,17 @@ def test_tiles_circle_diameter_all_formats():
     for fmt in formats:
         w, h = (1080, 1080) if fmt == "square" else ((1080, 1350) if fmt == "portrait_post" else (1080, 1920))
         canvas_w, canvas_h = _tiles_circle_canvas_size(w, h, fmt, scope_label="World")
-        for count in (6, 7):
+        for count in (6, 7, 8, 9, 10):
             if fmt == "story":
                 spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
+                diameter = _story_zigzag_diameter(
+                    count, canvas_w, canvas_h, gap_px=spec.gap_px
+                )
                 assert _story_zigzag_non_overlapping(
                     count,
                     canvas_w=canvas_w,
                     canvas_h=canvas_h,
-                    diameter=180,
+                    diameter=diameter,
                     gap_px=spec.gap_px,
                 )
                 continue
@@ -215,7 +220,6 @@ def test_story_zigzag_weaves_horizontally():
         canvas_w=canvas_w,
         canvas_h=canvas_h,
         diameter=diameter,
-        gap_px=spec.gap_px,
     )
     xs = [x for x, _ in centres]
     ys = [y for _, y in centres]
@@ -234,7 +238,7 @@ def test_story_zigzag_keeps_circles_above_footer_clearance():
         1080, 1920, "story", scope_label="World"
     )
     spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
-    for count in (6, 7):
+    for count in (6, 7, 8, 9, 10):
         diameter = _story_zigzag_diameter(count, canvas_w, canvas_h, gap_px=spec.gap_px)
         assert _story_zigzag_non_overlapping(
             count,
@@ -248,7 +252,6 @@ def test_story_zigzag_keeps_circles_above_footer_clearance():
             canvas_w=canvas_w,
             canvas_h=canvas_h,
             diameter=diameter,
-            gap_px=spec.gap_px,
         )
         bottom = max(y for _, y in centres) + diameter / 2 + 12
         assert bottom <= canvas_h - 52
@@ -269,14 +272,13 @@ def test_story_scatter_maintains_minimum_edge_padding():
     spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
     min_edge_gap = max(spec.gap_px, _STORY_SCATTER_MIN_EDGE_GAP_PX)
     min_dist = min_edge_gap + 2 * _SHADOW_PAD_PX
-    for count in (6, 7):
+    for count in (6, 7, 8, 9, 10):
         diameter = _story_zigzag_diameter(count, canvas_w, canvas_h, gap_px=spec.gap_px)
         centres = _story_zigzag_centres(
             count,
             canvas_w=canvas_w,
             canvas_h=canvas_h,
             diameter=diameter,
-            gap_px=spec.gap_px,
         )
         for i, (x1, y1) in enumerate(centres):
             for x2, y2 in centres[i + 1 :]:
@@ -296,7 +298,138 @@ def test_layout_tiles_circle_cluster_story_zigzag_renders():
     assert html.count("border-radius:50%") == 6
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert len(sizes) == 6
-    assert int(sizes[0]) >= 260
+    assert int(sizes[0]) >= 235
+
+
+def test_story_circle_layouts_defined_for_six_through_ten():
+    for count in (6, 7, 8, 9, 10):
+        assert count in STORY_CIRCLE_LAYOUTS
+        assert len(STORY_CIRCLE_LAYOUTS[count]) == count
+        for x_norm, y_norm in STORY_CIRCLE_LAYOUTS[count]:
+            assert 0.0 <= x_norm <= 1.0
+            assert 0.0 <= y_norm <= 1.0
+
+
+def test_story_circle_layouts_are_count_specific_reflows():
+    """Each count uses its own template — not base-six plus extras."""
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1920, "story", scope_label="World"
+    )
+    spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
+    diameter = _story_zigzag_diameter(6, canvas_w, canvas_h, gap_px=spec.gap_px)
+    base = _story_zigzag_centres(
+        6,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+    )
+    seven = _story_zigzag_centres(
+        7,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=_story_zigzag_diameter(7, canvas_w, canvas_h, gap_px=spec.gap_px),
+    )
+    assert len(seven) == 7
+    matches = sum(
+        1
+        for i in range(6)
+        if seven[i][0] == pytest.approx(base[i][0], abs=0.5)
+        and seven[i][1] == pytest.approx(base[i][1], abs=0.5)
+    )
+    assert matches < 6
+
+
+def test_story_circle_layouts_use_vertical_body():
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1920, "story", scope_label="World"
+    )
+    spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
+    for count in (6, 7, 8, 9, 10):
+        diameter = _story_zigzag_diameter(count, canvas_w, canvas_h, gap_px=spec.gap_px)
+        centres = _story_zigzag_centres(
+            count,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter=diameter,
+        )
+        ys = [y for _, y in centres]
+        top = min(ys) - diameter / 2
+        bottom = max(ys) + diameter / 2
+        assert bottom - top >= canvas_h * 0.55
+
+
+def test_layout_tiles_circle_cluster_story_renders_blank_slots():
+    stats = sample_share_summary_stats()
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "",
+        "",
+        "",
+        "",
+    )
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1920,
+        "story",
+        scope_label="World",
+        card_stat_labels=labels,
+    )
+    assert html.count("border-radius:50%") == 10
+    assert html.count("border:2px dashed") == 4
+
+
+def test_layout_tiles_circle_cluster_story_supports_tenth_stat():
+    stats = sample_share_summary_stats()
+    labels = tuple(
+        [
+            "Total species",
+            "Lifers",
+            "Total checklists",
+            "Unique locations",
+            "Countries",
+            "Birding days",
+            "Total individuals",
+            "Media",
+            "Hotspots",
+            "States/Provinces",
+        ]
+    )
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1920,
+        "story",
+        scope_label="World",
+        card_stat_labels=labels,
+    )
+    assert html.count("border-radius:50%") == 10
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == 10
+    assert int(sizes[0]) >= 190
+
+
+def test_story_ten_stat_uses_full_vertical_band():
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1920, "story", scope_label="World"
+    )
+    spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
+    diameter = _story_zigzag_diameter(10, canvas_w, canvas_h, gap_px=spec.gap_px)
+    centres = _story_zigzag_centres(
+        10,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+    )
+    ys = [y for _, y in centres]
+    assert max(ys) - min(ys) >= canvas_h * 0.45
+    assert min(ys) - diameter / 2 >= 15
+    assert max(ys) + diameter / 2 <= canvas_h - 52
 
 
 def test_circles_within_canvas_for_six_and_seven():
