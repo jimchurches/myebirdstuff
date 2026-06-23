@@ -23,8 +23,12 @@ from explorer.app.streamlit.app_map_ui import (
     sidebar_bottom_slot_end,
     sidebar_bottom_slot_start,
 )
-from explorer.app.streamlit.app_prep_map_blank_viewport import seed_blank_map_default_viewport_recipe
-from explorer.app.streamlit.app_prep_map_leaflet_caches import apply_dataset_signature_for_map_caches
+from explorer.app.streamlit.app_prep_map_blank_viewport import (
+    seed_blank_map_default_viewport_recipe,
+)
+from explorer.app.streamlit.app_prep_map_leaflet_caches import (
+    apply_dataset_signature_for_map_caches,
+)
 from explorer.app.streamlit.app_prep_map_leaflet_modes import (
     prep_family_leaflet_mode,
     prep_standard_map_leaflet_modes,
@@ -36,8 +40,8 @@ from explorer.app.streamlit.app_prep_map_map_tab import (
 )
 from explorer.app.streamlit.app_prep_map_tab_prep import run_tab_prep_spinner_and_sync
 from explorer.app.streamlit.app_prep_map_types import LeafletMapPrepBundle
-from explorer.app.streamlit.streamlit_ui_constants import MAP_PREP_SPINNER_TEXT
 from explorer.app.streamlit.perf_instrumentation import perf_span
+from explorer.app.streamlit.streamlit_ui_constants import MAP_PREP_SPINNER_TEXT
 from explorer.components.all_locations_map import (
     render_all_locations_map_component,  # noqa: F401 — re-export for integration tests
 )

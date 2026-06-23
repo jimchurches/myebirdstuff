@@ -56,6 +56,7 @@ from explorer.core.map_marker_colour_resolve import (
     resolve_location_visit_colours,
 )
 
+
 def lifer_leaflet_viewport_recipe(framing_pairs: list[list[float]]) -> dict[str, Any]:
     """Camera recipe ``v1`` for the Lifer Leaflet iframe (fit-bounds / single-point rules)."""
     if not framing_pairs:

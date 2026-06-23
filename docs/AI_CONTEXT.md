@@ -46,6 +46,23 @@ This repository contains more than just the Streamlit app.
 
 ---
 
+## Python Style Guide
+
+**[`docs/python-style-guide.md`](python-style-guide.md) is the single source of truth for Python style, readability, naming, comments, docstrings, and related code review expectations in this project.**
+
+Read it before writing or reviewing Python in this repository.
+
+The short version:
+
+- Prefer clear names over abbreviations.
+- Keep functions small and single-purpose.
+- Write comments that explain *why*, not *what*.
+- Use docstrings for all public functions and modules.
+- Do not hardcode magic values — give them names in the right constants file.
+- Do not rewrite working code purely for style compliance.
+
+---
+
 ## Core Principles (Follow These First)
 
 ### 1. Prefer small changes
@@ -91,6 +108,8 @@ Preserve cache correctness.
 - Code should be easy to understand later
 - Avoid unnecessary abstraction or optimisation
 
+See **[`docs/python-style-guide.md`](python-style-guide.md)** for concrete guidance on naming, comments, functions, and docstrings.
+
 ---
 
 ### 5.5. Code as if you are being mentored (and graded)
@@ -111,10 +130,7 @@ Expectations (the “marking rubric”):
 - Choose the simplest design that keeps the UI thin and the logic testable.
 - Optimise only when necessary, and do it transparently (measure → change → re-check).
 
-Mindset:
-
-> Write Python the way a highly regarded engineer who loves teaching would want it written:
-> neat, easy to read, efficient where it matters, and easy to follow.
+See **[`docs/python-style-guide.md`](python-style-guide.md)** for the full project standard, including the guiding mindset.
 
 ---
 

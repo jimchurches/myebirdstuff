@@ -9,20 +9,13 @@ from typing import Any
 
 import streamlit as st
 
-from explorer.core.species_search import whoosh_species_suggestions
 from explorer.app.streamlit.app_constants import (
     EXPLORER_MAIN_SCRIPT_RUN_ID_KEY,
     EXPLORER_MAP_HTML_BYTES_KEY,
-    REPO_ROOT,
     LEAFLET_MAP_MOUNT_NONCE_KEY,
-    STREAMLIT_MAP_BASEMAP_KEY,
-    STREAMLIT_MAP_BASEMAP_SAVED_KEY,
-    STREAMLIT_MAP_HEIGHT_PX_KEY,
-    STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
-    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
-    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
+    REPO_ROOT,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
     SESSION_SPECIES_SEARCH_KEY,
@@ -31,32 +24,34 @@ from explorer.app.streamlit.app_constants import (
     SESSION_SPECIES_SEARCH_USER_EDITING_KEY,
     SESSION_SPECIES_WS_KEY,
     SPINNER_THEME_CSS,
-)
-from explorer.app.streamlit.explorer_update_notice import render_explorer_update_notice_sidebar
-from explorer.core.settings_schema_defaults import (
-    MAP_MARKER_COLOUR_SCHEME_DEFAULT,
-    MAP_MARKER_COLOUR_SCHEME_MAX,
-    MAP_MARKER_COLOUR_SCHEME_MIN,
+    STREAMLIT_MAP_BASEMAP_KEY,
+    STREAMLIT_MAP_BASEMAP_SAVED_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_KEY,
+    STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY,
+    STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY,
 )
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_OPTIONS,
+    MAP_HEIGHT_PX_DEFAULT,
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
-    MAP_HEIGHT_PX_DEFAULT,
     MAP_IFRAME_MIN_HEIGHT_PX,
     THEME_PRIMARY_HEX,
+)
+from explorer.app.streamlit.explorer_update_notice import (
+    render_explorer_update_notice_sidebar,
 )
 from explorer.app.streamlit.streamlit_ui_constants import (
     BUY_ME_A_COFFEE_URL,
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS,
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS_MIN,
     CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE,
-    CHECKLIST_STATS_SPINNER_EMOJIS,
     CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX,
+    CHECKLIST_STATS_SPINNER_EMOJIS,
     EBIRD_PROFILE_URL,
     GITHUB_REPO_URL,
-    explorer_readme_github_url,
     INSTAGRAM_PROFILE_URL,
     SIDEBAR_FOOTER_LINK_HEX,
     SPECIES_SEARCH_DEBOUNCE_MS,
@@ -65,7 +60,14 @@ from explorer.app.streamlit.streamlit_ui_constants import (
     SPECIES_SEARCH_MIN_QUERY_LEN,
     SPECIES_SEARCH_PLACEHOLDER,
     SPECIES_SEARCH_RERUN_SCOPE,
+    explorer_readme_github_url,
 )
+from explorer.core.settings_schema_defaults import (
+    MAP_MARKER_COLOUR_SCHEME_DEFAULT,
+    MAP_MARKER_COLOUR_SCHEME_MAX,
+    MAP_MARKER_COLOUR_SCHEME_MIN,
+)
+from explorer.core.species_search import whoosh_species_suggestions
 
 
 def _species_searchbox_widget_key() -> str:

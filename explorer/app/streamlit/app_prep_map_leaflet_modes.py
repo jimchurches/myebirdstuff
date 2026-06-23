@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 from typing import Any, Callable, Literal
 
@@ -28,14 +29,11 @@ from explorer.app.streamlit.app_prep_map_leaflet_caches import (
     leaflet_payload_cache_lookup,
     leaflet_payload_cache_store,
 )
+from explorer.app.streamlit.app_prep_map_types import LeafletMapPrepBundle
 from explorer.app.streamlit.defaults import (
     ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     FAMILY_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     LIFER_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-    SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
-)
-from explorer.app.streamlit.app_prep_map_types import LeafletMapPrepBundle
-from explorer.app.streamlit.defaults import (
     MAP_DEFAULT_LOCATION_CLUSTER_DISABLE_AT_ZOOM,
     MAP_DEFAULT_LOCATION_CLUSTER_MAX_RADIUS_PX,
     MAP_DEFAULT_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
@@ -44,6 +42,7 @@ from explorer.app.streamlit.defaults import (
     MAP_LIFER_LOCATION_CLUSTER_MAX_RADIUS_PX,
     MAP_LIFER_LOCATION_CLUSTER_REMOVE_OUTSIDE_VISIBLE_BOUNDS,
     MAP_LIFER_LOCATION_CLUSTER_SPIDERFY_ON_MAX_ZOOM,
+    SPECIES_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     active_map_marker_colour_scheme,
 )
 from explorer.core.all_locations_geojson import build_all_locations_geojson_payload
@@ -57,7 +56,9 @@ from explorer.core.all_locations_viewport import (
     ALL_LOCATIONS_SCOPE_FOCUSED,
     location_id_to_country_map,
 )
-from explorer.core.family_locations_geojson import build_family_locations_geojson_payload
+from explorer.core.family_locations_geojson import (
+    build_family_locations_geojson_payload,
+)
 from explorer.core.family_map_compute import (
     build_common_name_to_species_url,
     build_family_location_pins,
@@ -92,13 +93,11 @@ from explorer.core.species_locations_geojson import (
     compute_species_map_banner_fields,
 )
 from explorer.core.species_logic import base_species_for_lifer, filter_species
-import importlib
-
 from explorer.presentation.map_renderer import (
     STREAMLIT_COMPONENT_MAP_LEGEND_STYLE,
     build_all_locations_banner_html,
-    build_lifer_locations_banner_html,
     build_legend_html,
+    build_lifer_locations_banner_html,
     build_species_banner_html,
     build_species_locations_awaiting_selection_banner_html,
 )

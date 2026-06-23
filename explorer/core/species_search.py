@@ -12,7 +12,7 @@ import tempfile
 from typing import Any, Dict, List, Sequence
 
 from whoosh.analysis import StemmingAnalyzer
-from whoosh.fields import Schema, TEXT
+from whoosh.fields import TEXT, Schema
 from whoosh.index import create_in
 from whoosh.qparser import MultifieldParser, OrGroup
 

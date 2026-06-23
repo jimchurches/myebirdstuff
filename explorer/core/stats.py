@@ -17,7 +17,6 @@ from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.species_family import build_base_species_to_family_map
 from explorer.core.species_logic import countable_species_vectorized
 
-
 # ---------------------------------------------------------------------------
 # Shared utility
 # ---------------------------------------------------------------------------

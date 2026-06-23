@@ -43,7 +43,8 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
   - Treat coverage as a baseline safety guardrail, not the optimization target.
 - **Lint:**  
   `ruff check explorer/`  
-  (same as CI; `ruff` is in `requirements.txt`, rules in `ruff.toml` — currently Pyflakes + pycodestyle, with line-length and import-order left for a later pass).
+  (same as CI; `ruff` is in `requirements.txt`, rules in `ruff.toml` — Pyflakes, pycodestyle, and isort; line-length left for a later pass).
+  For broader Python style guidance beyond what Ruff checks, see **[docs/python-style-guide.md](docs/python-style-guide.md)**.
 
 ---
 
@@ -51,7 +52,7 @@ If something crosses a line, report it to the maintainers (e.g. via GitHub issue
 
 - **Design and modules** — See [docs/development.md](docs/development.md) (architecture, separation of UI vs core logic, Streamlit notes). **Map/theme tweakables** (clustering, pin size/opacity, colours) live in [`explorer/app/streamlit/defaults.py`](explorer/app/streamlit/defaults.py). Fixed UI strings, URLs, and spinner emoji lists live in [`explorer/app/streamlit/streamlit_ui_constants.py`](explorer/app/streamlit/streamlit_ui_constants.py). Persisted settings schema defaults live in [`explorer/core/settings_schema_defaults.py`](explorer/core/settings_schema_defaults.py). See [docs/AI_CONTEXT.md — Defaults](docs/AI_CONTEXT.md#defaults).
 - **Performance instrumentation** — Keep #179 instrumentation in place (off by default) and avoid breaking stage continuity unless needed. See [docs/development.md — Performance Instrumentation Guardrails](docs/development.md#performance-instrumentation-guardrails) and [docs/AI_CONTEXT.md — Performance Instrumentation](docs/AI_CONTEXT.md#performance-instrumentation-do-not-remove-casually).
-- **AI-assisted work** — If you use AI tools, follow **[docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)** (AI Coding Rules and related sections).
+- **AI-assisted work** — If you use AI tools, follow **[docs/AI_CONTEXT.md](docs/AI_CONTEXT.md)** (AI Coding Rules and related sections) and **[docs/python-style-guide.md](docs/python-style-guide.md)** (Python style standard).
 - **Secrets** — Do not commit API keys, tokens, or personal paths. Use local config patterns described in the explorer docs (e.g. `config/config_template.yaml` and gitignored secret files). When in doubt, ask before adding something that could leak private data.
 
 ---

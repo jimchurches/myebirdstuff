@@ -13,6 +13,11 @@ from urllib.parse import quote as url_quote
 
 from explorer.app.streamlit.defaults import THEME_PRIMARY_HEX
 from explorer.core.checklist_stats_compute import ChecklistStatsPayload
+from explorer.core.constants import (
+    COUNTRY_TAB_SORT_ALPHABETICAL,
+    COUNTRY_TAB_SORT_LIFERS_WORLD,
+    COUNTRY_TAB_SORT_TOTAL_SPECIES,
+)
 from explorer.core.region_display import country_for_display
 from explorer.presentation.rankings_display import (
     rankings_high_counts_table,
@@ -22,11 +27,6 @@ from explorer.presentation.rankings_display import (
     rankings_table_location_5col,
     rankings_table_with_rank,
     rankings_visited_table,
-)
-from explorer.core.constants import (
-    COUNTRY_TAB_SORT_ALPHABETICAL,
-    COUNTRY_TAB_SORT_LIFERS_WORLD,
-    COUNTRY_TAB_SORT_TOTAL_SPECIES,
 )
 
 LinkUrlsFn = Optional[Callable[[str], Tuple[Optional[str], Optional[str]]]]
