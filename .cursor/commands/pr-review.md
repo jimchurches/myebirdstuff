@@ -76,9 +76,10 @@ Apply the checklist **only to files in the PR diff**. Do not audit the rest of t
 ### Code quality
 
 - [ ] Change is focused — no unrelated drive-by edits
-- [ ] Names clear; structure readable
+- [ ] Names clear; structure readable — apply `docs/python-style-guide.md` as the reference
 - [ ] Tests/documentation updated if behaviour changed
 - [ ] Comments explain *what* and *why*, not “see #123” as the only explanation
+- [ ] Style issues in pre-existing code not flagged for wholesale rewrite; gentle local improvements in touched code are fine
 
 ### Security & safety (in-scope)
 

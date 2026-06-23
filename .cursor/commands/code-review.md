@@ -8,13 +8,7 @@ Perform a thorough code review that verifies functionality, maintainability, and
 security before approving a change. Focus on architecture, readability,
 performance implications, and provide actionable suggestions for improvement.
 
-For **myebirdstuff**, skim `docs/AI_CONTEXT.md` for repo guardrails (Streamlit vs core, caching, dataframe usage) and call out anything that conflicts.
-
-The AI_CONTEXT.md document gives more context including the following mindset statement:
-
-> Write Python the way a highly regarded engineer who loves teaching would want it written:
-> neat, easy to read, efficient where it matters, and easy to follow.
-
+For **myebirdstuff**, read **`docs/AI_CONTEXT.md`** for repo guardrails (Streamlit vs core, caching, dataframe usage) and **`docs/python-style-guide.md`** for the guiding mindset and full Python style standard. The style guide is the single source of truth for naming, comments, docstrings, and related expectations — apply it pragmatically, not as strict compliance with the Google Python Style Guide.
 
 ## Steps
 
@@ -30,9 +24,10 @@ The AI_CONTEXT.md document gives more context including the following mindset st
     - Exercise edge cases or guard conditions mentally or by running locally
     - Check error handling paths and logging for clarity
 3. **Assess quality**
-    - Ensure functions are focused, names are descriptive, and code is readable
+    - Ensure functions are focused, names are descriptive, and code is readable — apply `docs/python-style-guide.md` as the reference, not every Google Python Style Guide rule
     - Watch for duplication, dead code, or missing tests
     - Verify documentation and comments reflect the latest changes
+    - Do not flag pre-existing code that pre-dates the style guide for wholesale rewrite; gentle local improvements (a renamed variable, an improved docstring) in code already being changed are encouraged
 4. **Review security and risk**
     - Look for injection points, insecure defaults, or missing validation
     - Confirm secrets or credentials are not exposed
@@ -69,7 +64,7 @@ The AI_CONTEXT.md document gives more context including the following mindset st
 
 - Architecture and design decisions considered
 - Performance bottlenecks or regressions assessed
-- Coding standards and best practices followed
+- Coding standards followed — reference `docs/python-style-guide.md` for this project's standard
 - Resource management, error handling, and logging reviewed
 - Suggested alternatives, additional test cases, or documentation updates captured
 - **PR hygiene:** commit message / issue linkage, migration or config notes for other contributors, anything that should live in the PR description rather than only in chat
