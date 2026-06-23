@@ -7,14 +7,20 @@ from __future__ import annotations
 
 from typing import Any
 
+from explorer.presentation.map_popup_heading_text import (
+    prevent_orphan_closing_punctuation,
+)
 from explorer.presentation.map_popup_models import (
     LocationPopupModel,
     SpeciesMapLocationPopupModel,
     assemble_location_popup_html,
     assemble_species_map_location_popup_html,
 )
-from explorer.presentation.map_popup_heading_text import prevent_orphan_closing_punctuation
-from explorer.presentation.map_renderer import MAP_POPUP_MACAULAY_LINK_SYMBOL, esc_attr, esc_text
+from explorer.presentation.map_renderer import (
+    MAP_POPUP_MACAULAY_LINK_SYMBOL,
+    esc_attr,
+    esc_text,
+)
 from explorer.presentation.stats_html_helpers import safe_http_url
 
 _HEADING_MARGIN_ALL = 4

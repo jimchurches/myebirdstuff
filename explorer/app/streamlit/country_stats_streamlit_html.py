@@ -14,24 +14,9 @@ the selected country only and data matches the filtered working set.
 from __future__ import annotations
 
 from collections import OrderedDict
+
 import streamlit as st
 
-from explorer.core.checklist_stats_compute import ChecklistStatsPayload
-from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
-from explorer.presentation.checklist_stats_display import (
-    sort_country_sections_for_display,
-    country_display_name_plain,
-    country_yearly_links_bar_html,
-    format_country_yearly_table_html,
-    slice_yearly_table_rows,
-    yearly_streamlit_year_window_slice,
-)
-from explorer.presentation.rankings_display import rankings_not_seen_recently_table
-
-from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
-from explorer.app.streamlit.yearly_summary_streamlit_html import get_yearly_recent_column_count
-from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, COUNTRY_NOT_SEEN_HTML_CACHE_MAX_ENTRIES
-from explorer.core.settings_schema_defaults import TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT
 from explorer.app.streamlit.app_constants import (
     COUNTRY_TAB_CHECKLIST_PAYLOAD_KEY,
     STREAMLIT_COUNTRY_NOT_SEEN_EXPANDER_KEY,
@@ -41,7 +26,27 @@ from explorer.app.streamlit.app_constants import (
     STREAMLIT_RANKINGS_VISIBLE_ROWS_KEY,
     STREAMLIT_TAXONOMY_LOCALE_KEY,
 )
+from explorer.app.streamlit.defaults import (
+    COUNTRY_NOT_SEEN_HTML_CACHE_MAX_ENTRIES,
+    RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT,
+)
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
+from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
+from explorer.app.streamlit.yearly_summary_streamlit_html import (
+    get_yearly_recent_column_count,
+)
+from explorer.core.checklist_stats_compute import ChecklistStatsPayload
+from explorer.core.settings_schema_defaults import TABLES_RANKINGS_VISIBLE_ROWS_DEFAULT
+from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
+from explorer.presentation.checklist_stats_display import (
+    country_display_name_plain,
+    country_yearly_links_bar_html,
+    format_country_yearly_table_html,
+    slice_yearly_table_rows,
+    sort_country_sections_for_display,
+    yearly_streamlit_year_window_slice,
+)
+from explorer.presentation.rankings_display import rankings_not_seen_recently_table
 
 _COUNTRY_NOT_SEEN_CACHE_KEY = "_streamlit_country_not_seen_html_cache"
 

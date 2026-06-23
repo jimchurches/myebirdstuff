@@ -17,11 +17,11 @@ from explorer.core.share_summary_compute import (
 )
 from explorer.core.share_summary_defaults import SHARE_SUMMARY_STORY_MAX_STATS
 from explorer.presentation.share_summary_preview import (
-    FormatId,
     _FORMAT_PX,
+    FormatId,
     _card_shell,
-    _colour,
     _color_scheme_context,
+    _colour,
     _esc,
     _footer_block,
     _footer_pad,

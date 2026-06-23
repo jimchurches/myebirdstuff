@@ -11,12 +11,12 @@ import time
 from typing import Any, Callable
 
 from explorer.app.streamlit.defaults import MapMarkerColourScheme
+from explorer.core.family_map_compute import FamilyLocationPin
+from explorer.core.family_map_overlays import family_map_marker_style
 from explorer.core.leaflet_geojson_build_metrics import (
     LeafletGeoJsonBuildMetrics,
     empty_leaflet_geojson_build_metrics,
 )
-from explorer.core.family_map_compute import FamilyLocationPin
-from explorer.core.family_map_overlays import family_map_marker_style
 from explorer.core.map_marker_colour_resolve import (
     family_map_has_highlight_halo,
     family_map_resolved_circle_radius_px,

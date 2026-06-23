@@ -7,7 +7,10 @@ re-exported here so call sites can keep importing from this module.
 
 from __future__ import annotations
 
-from explorer.app.streamlit.defaults import MAP_POPUP_MACAULAY_LINK_SYMBOL, MAP_POPUP_MAX_WIDTH_PX
+from explorer.app.streamlit.defaults import (
+    MAP_POPUP_MACAULAY_LINK_SYMBOL,
+    MAP_POPUP_MAX_WIDTH_PX,
+)
 
 # Species-map popups: when to leave <details> open (see map_renderer species popup builders).
 SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS = 3

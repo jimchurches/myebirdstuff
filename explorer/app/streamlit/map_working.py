@@ -14,6 +14,7 @@ import pandas as pd
 
 from explorer.core.working_set import WorkingSet, rebuild_working_set_from_date_filter
 
+
 def location_ids_with_checklists(df: pd.DataFrame) -> Set[Any]:
     """Location IDs that have at least one checklist row."""
     if df.empty or "Submission ID" not in df.columns:

@@ -10,14 +10,26 @@ from explorer.app.streamlit.app_bootstrap import TaxonomyPopupAssets
 from explorer.app.streamlit.app_landing_ui import title_with_logo
 from explorer.app.streamlit.app_prep_map_ui import render_prep_spinner_and_map_tab
 from explorer.app.streamlit.app_settings_ui import render_settings_tab
-from explorer.app.streamlit.checklist_stats_streamlit_html import run_checklist_stats_streamlit_fragment
-from explorer.app.streamlit.country_stats_streamlit_html import run_country_tab_streamlit_fragment
-from explorer.app.streamlit.maintenance_streamlit_html import run_maintenance_streamlit_tab_fragment
-from explorer.app.streamlit.bird_families_streamlit_html import run_families_streamlit_tab_fragment
-from explorer.app.streamlit.rankings_streamlit_html import run_rankings_streamlit_tab_fragment
+from explorer.app.streamlit.bird_families_streamlit_html import (
+    run_families_streamlit_tab_fragment,
+)
+from explorer.app.streamlit.checklist_stats_streamlit_html import (
+    run_checklist_stats_streamlit_fragment,
+)
+from explorer.app.streamlit.country_stats_streamlit_html import (
+    run_country_tab_streamlit_fragment,
+)
+from explorer.app.streamlit.maintenance_streamlit_html import (
+    run_maintenance_streamlit_tab_fragment,
+)
+from explorer.app.streamlit.rankings_streamlit_html import (
+    run_rankings_streamlit_tab_fragment,
+)
 from explorer.app.streamlit.streamlit_theme import inject_main_tab_panel_top_compact_css
 from explorer.app.streamlit.streamlit_ui_constants import NOTEBOOK_MAIN_TAB_LABELS
-from explorer.app.streamlit.yearly_summary_streamlit_html import run_yearly_summary_streamlit_fragment
+from explorer.app.streamlit.yearly_summary_streamlit_html import (
+    run_yearly_summary_streamlit_fragment,
+)
 
 if TYPE_CHECKING:
     from explorer.app.streamlit.app_map_working_ui import MapWorkingContext

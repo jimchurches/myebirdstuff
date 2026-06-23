@@ -15,10 +15,10 @@ The preview map matches the main explorer’s initial framing: Canberra centre, 
 
 from __future__ import annotations
 
-from dataclasses import replace
 import os
 import re
 import sys
+from dataclasses import replace
 
 # ``streamlit run explorer/app/streamlit/design_map_app.py`` puts the script directory on ``sys.path``,
 # not the repo root — same as :mod:`explorer.app.streamlit.app`.
@@ -28,11 +28,6 @@ if _REPO_ROOT not in sys.path:
 
 import streamlit as st
 
-from explorer.core.map_marker_colour_resolve import (
-    MAP_MARKER_CATCHALL_FILL_HEX,
-    MAP_MARKER_CATCHALL_STROKE_HEX,
-    family_map_has_highlight_halo,
-)
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
@@ -40,6 +35,7 @@ from explorer.app.streamlit.defaults import (
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
     MAP_HEIGHT_PX_STEP,
+    MAP_MARKER_ACTIVE_COLOUR_SCHEME,
     MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK,
     MAP_MARKER_CIRCLE_RADIUS_PX_MAX,
     MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT,
@@ -47,7 +43,6 @@ from explorer.app.streamlit.defaults import (
     MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT,
     MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT,
     MAP_MARKER_CLUSTER_INNER_FILL_OPACITY_DEFAULT,
-    MAP_MARKER_ACTIVE_COLOUR_SCHEME,
     active_map_marker_colour_scheme,
     clamp_map_marker_circle_fill_opacity,
     clamp_map_marker_circle_radius_px,
@@ -55,7 +50,7 @@ from explorer.app.streamlit.defaults import (
 from explorer.app.streamlit.design_map_constants import (
     FAMILY_DENSITY_BAND_UI_LABELS,
     H_BASEMAP,
-    H_FO_DEFAULT,
+    H_CB_FAM_HALO_PREVIEW,
     H_CLUSTER_BORDER_O,
     H_CLUSTER_BORDER_W,
     H_CLUSTER_HALO_O,
@@ -70,23 +65,22 @@ from explorer.app.streamlit.design_map_constants import (
     H_CLUSTER_SMALL_BORDER,
     H_CLUSTER_SMALL_FILL,
     H_CLUSTER_SMALL_HALO,
-    H_FO_FAMILY,
+    H_FO_DEFAULT,
     H_FO_FAM_HALO,
-    H_O_FAM_HALO_EDGE,
-    H_CB_FAM_HALO_PREVIEW,
+    H_FO_FAMILY,
     H_FO_LIFER_MAP_LIFER,
     H_FO_LIFER_MAP_SUBSPECIES,
     H_FO_LOCATIONS,
     H_FO_SPECIES,
     H_FO_SPECIES_MAP_LOCATIONS,
-    H_HEIGHT,
     H_GLOBAL_EDGE,
     H_GLOBAL_FILL,
+    H_HEIGHT,
     H_HEX_DE,
     H_HEX_DF,
-    H_HEX_FAM_HL,
     H_HEX_FAM_HALO_EDGE,
     H_HEX_FAM_HALO_FILL,
+    H_HEX_FAM_HL,
     H_HEX_FF,
     H_HEX_FS,
     H_HEX_LML_E,
@@ -97,23 +91,24 @@ from explorer.app.streamlit.design_map_constants import (
     H_HEX_LSF,
     H_HEX_SE,
     H_HEX_SF,
-    H_HEX_SMPL_E,
-    H_HEX_SMPL_F,
     H_HEX_SML_E,
     H_HEX_SML_F,
+    H_HEX_SMPL_E,
+    H_HEX_SMPL_F,
+    H_O_FAM_HALO_EDGE,
     H_PRESET,
     H_RADIUS_DEFAULT,
-    H_RADIUS_FAMILIES,
     H_RADIUS_FAM_HALO_DELTA,
-    H_SW_GLOBAL,
+    H_RADIUS_FAMILIES,
     H_RADIUS_LIFER_MAP_LIFER,
     H_RADIUS_LIFER_MAP_SUBSPECIES,
     H_RADIUS_LOCATIONS,
     H_RADIUS_SPECIES,
     H_RADIUS_SPECIES_MAP_LOCATIONS,
     H_SW_FAM,
-    H_SW_FAM_HL,
     H_SW_FAM_HALO,
+    H_SW_FAM_HL,
+    H_SW_GLOBAL,
     H_SW_LIFER,
     H_SW_SPECIES,
     H_SW_SPECIES_MAP_LOCATIONS,
@@ -121,16 +116,21 @@ from explorer.app.streamlit.design_map_constants import (
     PREVIEW_SCOPE_LABELS,
 )
 from explorer.components.all_locations_map import render_all_locations_map_component
+from explorer.core.map_marker_colour_resolve import (
+    MAP_MARKER_CATCHALL_FILL_HEX,
+    MAP_MARKER_CATCHALL_STROKE_HEX,
+    family_map_has_highlight_halo,
+)
 from explorer.presentation.design_map_export import format_full_defaults_export
 from explorer.presentation.design_map_preview import (
-    MAP_SCOPES,
     MAP_SCOPE_ALL,
     MAP_SCOPE_ALL_LOCATIONS,
     MAP_SCOPE_FAMILY_LOCATIONS,
     MAP_SCOPE_LIFER_LOCATIONS,
     MAP_SCOPE_SPECIES_LOCATIONS,
-    MARKER_SCHEME_FALLBACK_DEFAULT_STROKE_WEIGHT,
+    MAP_SCOPES,
     MARKER_SCHEME_FALLBACK_DEFAULT_FILL_OPACITY,
+    MARKER_SCHEME_FALLBACK_DEFAULT_STROKE_WEIGHT,
     DesignMapPreviewConfig,
     build_design_preview_leaflet_bundle,
     normalize_hex_colour,

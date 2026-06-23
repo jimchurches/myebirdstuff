@@ -57,60 +57,60 @@ if TYPE_CHECKING:  # pragma: no cover
         resolve_lifer_last_seen,
     )
 
-from explorer.core.constants import (
-    COUNTRY_TAB_SORT_ALPHABETICAL,
-    COUNTRY_TAB_SORT_LIFERS_WORLD,
-    COUNTRY_TAB_SORT_TOTAL_SPECIES,
-)
-from explorer.core.data_loader import load_dataset, add_datetime_column
-from explorer.core.path_resolution import find_data_file
-from explorer.core.species_logic import (
-    base_species_name,
-    is_countable,
-    filter_species,
-    countable_species_vectorized,
-    base_species_for_lifer,
-)
-from explorer.core.stats import (
-    safe_count,
-    longest_streak,
-    compute_rankings,
-    yearly_summary_stats,
-    get_sex_notation_by_year,
-)
-from explorer.core.duplicate_checks import get_map_maintenance_data
-from explorer.core.ui_state import ExplorerState
-from explorer.core.region_display import country_for_display, state_for_display
-from explorer.presentation.rankings_display import (
-    rankings_scroll_wrapper,
-    rankings_table,
-    rankings_table_location_5col,
-    rankings_table_with_rank,
-    rankings_visited_table,
-    rankings_seen_once_table,
-)
-from explorer.core.taxonomy import (
-    load_taxonomy,
-    get_species_url,
-    get_species_lifelist_url,
-    get_species_and_lifelist_urls,
-)
-from explorer.core.working_set import WorkingSet, rebuild_working_set_from_date_filter
-from explorer.core.lifer_last_seen_prep import (
-    LiferLastSeenPrep,
-    aggregate_lifer_sites,
-    prepare_lifer_last_seen,
-)
 from explorer.core.checklist_stats_compute import (
     ChecklistStatsPayload,
     compute_checklist_stats_payload,
     protocol_display_name,
 )
+from explorer.core.constants import (
+    COUNTRY_TAB_SORT_ALPHABETICAL,
+    COUNTRY_TAB_SORT_LIFERS_WORLD,
+    COUNTRY_TAB_SORT_TOTAL_SPECIES,
+)
+from explorer.core.data_loader import add_datetime_column, load_dataset
+from explorer.core.duplicate_checks import get_map_maintenance_data
+from explorer.core.lifer_last_seen_prep import (
+    LiferLastSeenPrep,
+    aggregate_lifer_sites,
+    prepare_lifer_last_seen,
+)
+from explorer.core.path_resolution import find_data_file
+from explorer.core.region_display import country_for_display, state_for_display
+from explorer.core.species_logic import (
+    base_species_for_lifer,
+    base_species_name,
+    countable_species_vectorized,
+    filter_species,
+    is_countable,
+)
+from explorer.core.stats import (
+    compute_rankings,
+    get_sex_notation_by_year,
+    longest_streak,
+    safe_count,
+    yearly_summary_stats,
+)
+from explorer.core.taxonomy import (
+    get_species_and_lifelist_urls,
+    get_species_lifelist_url,
+    get_species_url,
+    load_taxonomy,
+)
+from explorer.core.ui_state import ExplorerState
+from explorer.core.working_set import WorkingSet, rebuild_working_set_from_date_filter
 from explorer.presentation.maintenance_display import (
     EBIRD_LOCATION_EDIT_BASE,
+    format_incomplete_checklists_maintenance_html,
     format_map_maintenance_html,
     format_sex_notation_maintenance_html,
-    format_incomplete_checklists_maintenance_html,
+)
+from explorer.presentation.rankings_display import (
+    rankings_scroll_wrapper,
+    rankings_seen_once_table,
+    rankings_table,
+    rankings_table_location_5col,
+    rankings_table_with_rank,
+    rankings_visited_table,
 )
 
 # Whoosh is a heavy optional stack for search. Lazy-load so lightweight imports

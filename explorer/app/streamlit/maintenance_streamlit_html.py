@@ -12,6 +12,17 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
 
+from explorer.app.streamlit.app_caches import (
+    cached_map_maintenance_data,
+    cached_species_url_fn,
+)
+from explorer.app.streamlit.app_constants import (
+    DEFAULT_TAXONOMY_LOCALE,
+    MAINTENANCE_TAB_SYNC_KEY,
+    STREAMLIT_TAXONOMY_LOCALE_KEY,
+)
+from explorer.app.streamlit.perf_instrumentation import perf_fragment, perf_span
+from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 from explorer.presentation.maintenance_display import (
     incomplete_checklists_intro_html,
     incomplete_checklists_year_table_html,
@@ -21,14 +32,6 @@ from explorer.presentation.maintenance_display import (
     sex_notation_intro_html,
     sex_notation_year_table_html,
 )
-from explorer.app.streamlit.app_caches import cached_map_maintenance_data, cached_species_url_fn
-from explorer.app.streamlit.app_constants import (
-    DEFAULT_TAXONOMY_LOCALE,
-    MAINTENANCE_TAB_SYNC_KEY,
-    STREAMLIT_TAXONOMY_LOCALE_KEY,
-)
-from explorer.app.streamlit.perf_instrumentation import perf_fragment, perf_span
-from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
 
 # Same wrapper class as Checklist Statistics + Country HTML tabs (typography, tables, links).
 _WRAPPER_OPEN = '<div class="streamlit-checklist-html-ab">'

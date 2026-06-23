@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from typing import Any
 
 import streamlit as st
@@ -23,8 +24,6 @@ from explorer.app.streamlit.app_prep_map_leaflet_caches import (
     sync_leaflet_export_recipe,
 )
 from explorer.app.streamlit.app_prep_map_types import LeafletMapPrepBundle
-import importlib
-
 from explorer.app.streamlit.streamlit_ui_constants import (
     MAP_EXPORT_HTML_FILENAME,
     SIDEBAR_FOOTER_LINK_HEX,

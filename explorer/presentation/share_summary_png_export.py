@@ -13,17 +13,21 @@ import struct
 from typing import TYPE_CHECKING
 
 from explorer.presentation.share_summary_preview import (
+    _FORMAT_PX,
     FormatId,
     HeroStyleId,
     LayoutId,
     SpotlightStyleId,
     TilesStyleId,
-    _FORMAT_PX,
     render_share_summary_export_html,
 )
 
 if TYPE_CHECKING:
-    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryGeoScope, ShareSummaryStats
+    from explorer.core.share_summary_compute import (
+        ShareSummaryAllTimeStats,
+        ShareSummaryGeoScope,
+        ShareSummaryStats,
+    )
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _SLUG_RE = re.compile(r"[^a-z0-9]+")

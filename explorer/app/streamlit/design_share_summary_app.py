@@ -23,9 +23,9 @@ if _REPO_ROOT not in sys.path:
 import pandas as pd
 import streamlit as st
 
-from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.data_loader import add_datetime_column, load_dataset
 from explorer.core.region_display import map_focus_key_for_display
+from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.share_summary_compute import (
     PeriodAnchor,
     PeriodKind,
@@ -40,9 +40,12 @@ from explorer.core.share_summary_compute import (
     resolve_period,
     suggest_period_anchor,
 )
-from explorer.presentation.share_summary_png_export import (
-    share_summary_png_filename,
-    share_summary_to_png_bytes,
+from explorer.core.share_summary_defaults import (
+    SHARE_SUMMARY_COLOR_SCHEME_IDS,
+    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    SHARE_SUMMARY_STORY_MAX_STATS,
+    share_summary_color_scheme_index,
+    share_summary_color_scheme_label,
 )
 from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_MAX,
@@ -55,14 +58,18 @@ from explorer.presentation.share_summary_hex_preview import (
     HexVariantId,
     render_hex_grid_preview_html,
 )
+from explorer.presentation.share_summary_png_export import (
+    share_summary_png_filename,
+    share_summary_to_png_bytes,
+)
 from explorer.presentation.share_summary_preview import (
+    FORMAT_LABELS,
+    FORMAT_PIXELS,
     FormatId,
     HeroStyleId,
     LayoutId,
     SpotlightStyleId,
     TilesStyleId,
-    FORMAT_LABELS,
-    FORMAT_PIXELS,
     compute_share_summary_stats,
     default_card_stat_labels,
     layout_card_stat_max,
@@ -75,13 +82,6 @@ from explorer.presentation.share_summary_preview import (
     render_share_summary_preview_html,
     sample_share_summary_stats,
     summary_status_metrics,
-)
-from explorer.core.share_summary_defaults import (
-    SHARE_SUMMARY_COLOR_SCHEME_IDS,
-    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
-    SHARE_SUMMARY_STORY_MAX_STATS,
-    share_summary_color_scheme_index,
-    share_summary_color_scheme_label,
 )
 
 

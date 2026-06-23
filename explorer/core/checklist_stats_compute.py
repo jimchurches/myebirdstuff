@@ -25,7 +25,6 @@ from explorer.core.stats import (
     yearly_summary_stats,
 )
 
-
 PROTOCOL_ORDER = ["Traveling", "Stationary", "Incidental", "Pelagic Protocol", "Historical", "Other"]
 PROTOCOL_MAP = {
     "traveling": "Traveling",

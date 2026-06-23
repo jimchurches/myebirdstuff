@@ -16,27 +16,27 @@ import html as _html_module
 
 import pandas as pd
 
+from explorer.app.streamlit.defaults import (
+    MAP_LEGEND_PIN_BORDER_PX,
+    MAP_LEGEND_PIN_DOT_PX,
+)
 from explorer.core.lifer_last_seen_prep import (
     observation_date_within_filter,
     subset_lifer_lookup_for_species,
 )
 from explorer.core.stats import format_observed_count_for_map_popup
-from explorer.app.streamlit.defaults import (
-    MAP_LEGEND_PIN_BORDER_PX,
-    MAP_LEGEND_PIN_DOT_PX,
-)
-from explorer.presentation.stats_html_helpers import esc_attr, esc_text
-from explorer.presentation.map_ui_constants import (
-    MAP_POPUP_MACAULAY_LINK_SYMBOL,
-    MAP_POPUP_MAX_WIDTH_PX,
-    SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS,
-)
 from explorer.presentation.map_popup_models import (
     LocationPopupModel,
     SpeciesMapLocationPopupModel,
     assemble_location_popup_html,
     assemble_species_map_location_popup_html,
 )
+from explorer.presentation.map_ui_constants import (
+    MAP_POPUP_MACAULAY_LINK_SYMBOL,
+    MAP_POPUP_MAX_WIDTH_PX,
+    SPECIES_MAP_POPUP_OPEN_SPECIES_SECTION_MAX_OBSERVATIONS,
+)
+from explorer.presentation.stats_html_helpers import esc_attr, esc_text
 
 # ---------------------------------------------------------------------------
 # UI theme (aligned with Streamlit Checklist Statistics HTML + ``.streamlit/config.toml``)

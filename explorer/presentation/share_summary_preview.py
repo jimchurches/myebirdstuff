@@ -6,8 +6,8 @@ Standalone design utility — not wired into the main explorer app yet.
 
 from __future__ import annotations
 
-import contextvars
 import contextlib
+import contextvars
 import html as html_module
 from dataclasses import dataclass
 from functools import lru_cache
@@ -27,7 +27,6 @@ from explorer.core.share_summary_compute import (
     period_for_week_containing,
     period_for_year,
 )
-
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
@@ -39,10 +38,10 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
+    SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM,
+    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
     SHARE_SUMMARY_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
-    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
-    SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM,
     share_summary_card_subtitle,
 )
 
@@ -896,7 +895,9 @@ def _card_inner_html(
     if layout == "spotlight":
         label = resolve_spotlight_label(spotlight_label)
         if spotlight_style == "circle":
-            from explorer.presentation.share_summary_circles_preview import layout_spotlight_circle
+            from explorer.presentation.share_summary_circles_preview import (
+                layout_spotlight_circle,
+            )
 
             inner = layout_spotlight_circle(
                 stats,
@@ -920,7 +921,9 @@ def _card_inner_html(
                 scope_label=scope_label,
             )
     elif layout == "hero" and hero_style == "circle":
-        from explorer.presentation.share_summary_circles_preview import layout_hero_circle
+        from explorer.presentation.share_summary_circles_preview import (
+            layout_hero_circle,
+        )
 
         inner = layout_hero_circle(
             stats,
@@ -933,7 +936,9 @@ def _card_inner_html(
             scope_label=scope_label,
         )
     elif layout == "tiles" and tiles_style == "circles":
-        from explorer.presentation.share_summary_circles_preview import layout_tiles_circle_cluster
+        from explorer.presentation.share_summary_circles_preview import (
+            layout_tiles_circle_cluster,
+        )
 
         inner = layout_tiles_circle_cluster(
             stats,

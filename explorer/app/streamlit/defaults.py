@@ -20,6 +20,9 @@ Map code under ``explorer/`` imports cluster/pin/theme values from this module w
 
 from __future__ import annotations
 
+from explorer.core.basemap_manifest import (
+    MAP_BASEMAP_LABELS,  # noqa: F401 — re-export for Streamlit UI
+)
 from explorer.core.map_marker_scheme_model import (
     MapMarkerAllLocationsStyle,
     MapMarkerClusterStyle,
@@ -30,7 +33,6 @@ from explorer.core.map_marker_scheme_model import (
     MapMarkerSpeciesLocationsStyle,
     MapMarkerSpeciesMapBackgroundStyle,
 )
-from explorer.core.basemap_manifest import MAP_BASEMAP_LABELS  # noqa: F401 — re-export for Streamlit UI
 from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export for Streamlit UI
     MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_OPTIONS,
@@ -42,17 +44,17 @@ from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export f
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_HERO_DEFAULT_STATS,
-    SHARE_SUMMARY_TILES_DEFAULT_STATS,
-    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
-    SHARE_SUMMARY_LIFETIME_SUBTITLE,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
+    SHARE_SUMMARY_LIFETIME_SUBTITLE,
     SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM,
     SHARE_SUMMARY_PERIOD_SUBTITLE_LIFETIME,
     SHARE_SUMMARY_PERIOD_SUBTITLE_MONTH,
     SHARE_SUMMARY_PERIOD_SUBTITLE_WEEK,
     SHARE_SUMMARY_PERIOD_SUBTITLE_YEAR,
+    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    SHARE_SUMMARY_TILES_DEFAULT_STATS,
     share_summary_card_subtitle,
 )
 
