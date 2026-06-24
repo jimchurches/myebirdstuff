@@ -611,6 +611,197 @@ STORY_CIRCLE_LAYOUT_DIAMETERS: dict[int, int] = {
     10: 255,
 }
 
+# Portrait Statistics Grid — normalised centre positions (playground export).
+PORTRAIT_TILES_CIRCLE_LAYOUTS: dict[int, tuple[tuple[float, float], ...]] = {
+    6: (
+        (0.46, 0.47),
+        (0.94, 0.54),
+        (0.68, 0.94),
+        (0.03, 0.81),
+        (0.08, 0.14),
+        (0.81, 0.05),
+    ),
+}
+
+PORTRAIT_TILES_CIRCLE_LAYOUT_DIAMETERS: dict[int, int] = {
+    6: 255,
+}
+
+# Formats using hand-tuned Statistics Grid circle templates (non-story).
+FORMAT_TILES_CIRCLE_LAYOUTS: dict[str, dict[int, tuple[tuple[float, float], ...]]] = {
+    "portrait_post": PORTRAIT_TILES_CIRCLE_LAYOUTS,
+}
+
+FORMAT_TILES_CIRCLE_LAYOUT_DIAMETERS: dict[str, dict[int, int]] = {
+    "portrait_post": PORTRAIT_TILES_CIRCLE_LAYOUT_DIAMETERS,
+}
+
+
+def _cluster_body_bounds(
+    canvas_w: int,
+    canvas_h: int,
+    *,
+    diameter: int,
+) -> tuple[float, float, float, float]:
+    """Pixel bounds for circle centres on square/portrait cluster canvases."""
+    pad = diameter / 2 + _SHADOW_PAD_PX
+    return pad, canvas_w - pad, pad, canvas_h - pad
+
+
+def _cluster_template_centres(
+    layouts: dict[int, tuple[tuple[float, float], ...]],
+    count: int,
+    *,
+    canvas_w: int,
+    canvas_h: int,
+    diameter: int,
+) -> list[tuple[float, float]]:
+    """Map normalised cluster templates to pixel centres."""
+    layout = layouts.get(count)
+    if layout is None:
+        return []
+    x_min, x_max, y_min, y_max = _cluster_body_bounds(
+        canvas_w,
+        canvas_h,
+        diameter=diameter,
+    )
+    x_span = max(0.0, x_max - x_min)
+    y_span = max(0.0, y_max - y_min)
+    return [
+        (x_min + x_norm * x_span, y_min + y_norm * y_span)
+        for x_norm, y_norm in layout
+    ]
+
+
+def _cluster_template_fits(
+    layouts: dict[int, tuple[tuple[float, float], ...]],
+    count: int,
+    *,
+    canvas_w: int,
+    canvas_h: int,
+    diameter: int,
+    gap_px: int,
+) -> bool:
+    centres = _cluster_template_centres(
+        layouts,
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+    )
+    if len(centres) != count:
+        return False
+    min_dist = _story_circle_min_centre_distance(diameter, gap_px)
+    min_dist_sq = min_dist * min_dist
+    pad = diameter / 2 + _SHADOW_PAD_PX
+    for i, (x1, y1) in enumerate(centres):
+        for x2, y2 in centres[i + 1 :]:
+            dx = x1 - x2
+            dy = y1 - y2
+            if dx * dx + dy * dy + 1e-6 < min_dist_sq:
+                return False
+        if x1 - pad < 0 or x1 + pad > canvas_w or y1 - pad < 0 or y1 + pad > canvas_h:
+            return False
+    return True
+
+
+def _cluster_template_diameter(
+    layouts: dict[int, tuple[tuple[float, float], ...]],
+    diameters: dict[int, int],
+    count: int,
+    canvas_w: int,
+    canvas_h: int,
+    *,
+    gap_px: int,
+) -> int:
+    """Largest or fixed circle size that fits a hand-tuned cluster template."""
+    if count <= 0 or count not in layouts:
+        return 96
+    fixed = diameters.get(count)
+    if fixed is not None and _cluster_template_fits(
+        layouts,
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=fixed,
+        gap_px=gap_px,
+    ):
+        return fixed
+    by_width = int(canvas_w * _STORY_CIRCLE_WIDTH_FRACTION)
+    for try_d in range(min(by_width, _STORY_CIRCLE_MAX_DIAMETER_PX), 95, -1):
+        if _cluster_template_fits(
+            layouts,
+            count,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter=try_d,
+            gap_px=gap_px,
+        ):
+            return try_d
+    return 96
+
+
+def _cluster_template_canvas_html(
+    pairs: list[tuple[str, str]],
+    *,
+    layouts: dict[int, tuple[tuple[float, float], ...]],
+    diameters: dict[int, int],
+    variant: CircleVariantId,
+    canvas_w: int,
+    canvas_h: int,
+) -> str:
+    count = len(pairs)
+    spec = CIRCLE_VARIANT_SPECS[variant]
+    gap_px = spec.gap_px
+    diameter = _cluster_template_diameter(
+        layouts,
+        diameters,
+        count,
+        canvas_w,
+        canvas_h,
+        gap_px=gap_px,
+    )
+    centres = _cluster_template_centres(
+        layouts,
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+    )
+    if count > 6:
+        value_px, label_px = "40px", "16px"
+    elif diameter >= 260:
+        value_px, label_px = "52px", "19px"
+    elif diameter >= 240:
+        value_px, label_px = "46px", "17px"
+    else:
+        value_px, label_px = "48px", "18px"
+    shadow = spec.shadow
+    tiles = []
+    for (label, value), (x, y) in zip(pairs, centres, strict=False):
+        if label or value:
+            tile = _circle_tile_html(
+                label,
+                value,
+                diameter=diameter,
+                value_px=value_px,
+                label_px=label_px,
+                shadow=shadow,
+            )
+        else:
+            tile = _empty_circle_tile_html(diameter=diameter, shadow=shadow)
+        tiles.append(
+            f"""
+<div style="position:absolute;left:{x:.1f}px;top:{y:.1f}px;
+  transform:translate(-50%,-50%);">
+  {tile}
+</div>"""
+        )
+    return f"""
+<div style="position:relative;width:{canvas_w}px;height:{canvas_h}px;margin:0 auto;overflow:hidden;">
+  {''.join(tiles)}
+</div>"""
+
 
 def _story_circle_min_centre_distance(diameter: int, gap_px: int) -> float:
     min_edge_gap = max(float(gap_px), float(_STORY_CIRCLE_MIN_EDGE_GAP_PX))
@@ -881,6 +1072,15 @@ def layout_tiles_circle_cluster(
     if fmt == "story":
         circles_html = _story_template_canvas_html(
             pairs,
+            variant=TILES_CIRCLE_CLUSTER_VARIANT,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+        )
+    elif fmt in FORMAT_TILES_CIRCLE_LAYOUTS and len(pairs) in FORMAT_TILES_CIRCLE_LAYOUTS[fmt]:
+        circles_html = _cluster_template_canvas_html(
+            pairs,
+            layouts=FORMAT_TILES_CIRCLE_LAYOUTS[fmt],
+            diameters=FORMAT_TILES_CIRCLE_LAYOUT_DIAMETERS[fmt],
             variant=TILES_CIRCLE_CLUSTER_VARIANT,
             canvas_w=canvas_w,
             canvas_h=canvas_h,
@@ -1182,6 +1382,10 @@ __all__ = [
     "CIRCLE_LAYOUT_MIN_STATS",
     "STORY_CIRCLE_LAYOUTS",
     "STORY_CIRCLE_LAYOUT_DIAMETERS",
+    "PORTRAIT_TILES_CIRCLE_LAYOUTS",
+    "PORTRAIT_TILES_CIRCLE_LAYOUT_DIAMETERS",
+    "FORMAT_TILES_CIRCLE_LAYOUTS",
+    "FORMAT_TILES_CIRCLE_LAYOUT_DIAMETERS",
     "TILES_CIRCLE_CLUSTER_MAX",
     "TILES_CIRCLE_CLUSTER_STORY_MAX",
     "TILES_CIRCLE_CLUSTER_MIN",

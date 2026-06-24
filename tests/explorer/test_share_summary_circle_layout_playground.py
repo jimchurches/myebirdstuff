@@ -45,6 +45,16 @@ def test_circle_layout_playground_spotlight_is_not_draggable():
     assert "fixed centre" in html
 
 
+def test_circle_layout_playground_portrait_tiles_uses_code_layout():
+    html = render_circle_layout_playground_html(
+        initial_card_type="tiles",
+        initial_fmt="portrait_post",
+    )
+    assert "PORTRAIT_TILES_CIRCLE_LAYOUTS" in html
+    assert '"6": 255' in html
+    assert "0.46" in html
+
+
 def test_story_circle_body_bounds_for_playground_matches_preview():
     canvas_w, canvas_h = _tiles_circle_canvas_size(
         1080,

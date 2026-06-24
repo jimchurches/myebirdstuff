@@ -451,6 +451,21 @@ def test_circles_within_canvas_for_six_and_seven():
         )
 
 
+def test_layout_tiles_circle_cluster_portrait_hand_tuned_six():
+    stats = sample_share_summary_stats()
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1350,
+        "portrait_post",
+        scope_label="World",
+    )
+    assert html.count("border-radius:50%") == 6
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == 6
+    assert int(sizes[0]) == 255
+
+
 def test_layout_tiles_circle_cluster_renders():
     stats = sample_share_summary_stats()
     html = layout_tiles_circle_cluster(

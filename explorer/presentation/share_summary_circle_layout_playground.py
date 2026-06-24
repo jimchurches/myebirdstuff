@@ -15,6 +15,8 @@ from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
 from explorer.presentation.share_summary_circles_preview import (
     HERO_CIRCLE_CLUSTER_VARIANT,
     HERO_CIRCLE_DIAMETER_SEARCH_START,
+    PORTRAIT_TILES_CIRCLE_LAYOUT_DIAMETERS,
+    PORTRAIT_TILES_CIRCLE_LAYOUTS,
     STORY_CIRCLE_LAYOUT_DIAMETERS,
     STORY_CIRCLE_LAYOUTS,
     TILES_CIRCLE_CLUSTER_VARIANT,
@@ -198,11 +200,12 @@ def _cluster_auto_diameters(
 
 def _export_meta(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str, str]:
     if card_type == "tiles":
-        target = (
-            "STORY_CIRCLE_LAYOUTS + STORY_CIRCLE_LAYOUT_DIAMETERS"
-            if fmt == "story"
-            else "tiles circle cluster (algorithm today — add layout dict if tuning)"
-        )
+        if fmt == "story":
+            target = "STORY_CIRCLE_LAYOUTS + STORY_CIRCLE_LAYOUT_DIAMETERS"
+        elif fmt == "portrait_post":
+            target = "PORTRAIT_TILES_CIRCLE_LAYOUTS + PORTRAIT_TILES_CIRCLE_LAYOUT_DIAMETERS"
+        else:
+            target = "tiles circle cluster (algorithm today — add layout dict if tuning)"
         presentation_key = "tiles_style"
     elif card_type == "hero":
         target = "hero circle cluster (algorithm today — add layout dict if tuning)"
@@ -296,6 +299,50 @@ def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str
                 "code_presets": True,
                 **export_meta,
             }
+        if fmt == "portrait_post":
+            counts = range(6, 8)
+            variant = TILES_CIRCLE_CLUSTER_VARIANT
+            diameter_start = TILES_CIRCLE_DIAMETER_SEARCH_START
+            algo_layouts = _cluster_layouts_for_counts(
+                canvas_w,
+                canvas_h,
+                counts=counts,
+                variant=variant,
+                diameter_start=diameter_start,
+            )
+            layouts = dict(algo_layouts)
+            for count, positions in PORTRAIT_TILES_CIRCLE_LAYOUTS.items():
+                layouts[str(count)] = [[x, y] for x, y in positions]
+            diameters = {
+                str(count): value for count, value in PORTRAIT_TILES_CIRCLE_LAYOUT_DIAMETERS.items()
+            }
+            auto_diameters = _cluster_auto_diameters(
+                canvas_w,
+                canvas_h,
+                counts=counts,
+                variant=variant,
+                diameter_start=diameter_start,
+            )
+            return {
+                **frame,
+                "canvas_w": canvas_w,
+                "canvas_h": canvas_h,
+                "bounds": "cluster",
+                "draggable": True,
+                "min_count": min(counts),
+                "max_count": max(counts),
+                "default_count": 6,
+                "min_diameter": _MIN_CLUSTER_DIAMETER,
+                "max_diameter": _MAX_CLUSTER_DIAMETER,
+                "default_diameter": PORTRAIT_TILES_CIRCLE_LAYOUT_DIAMETERS.get(
+                    6, auto_diameters["6"]
+                ),
+                "layouts": layouts,
+                "diameters": diameters,
+                "auto_diameters": auto_diameters,
+                "code_presets": bool(PORTRAIT_TILES_CIRCLE_LAYOUTS),
+                **export_meta,
+            }
         counts = range(6, 8)
         variant = TILES_CIRCLE_CLUSTER_VARIANT
         diameter_start = TILES_CIRCLE_DIAMETER_SEARCH_START
@@ -382,10 +429,6 @@ def render_circle_layout_playground_html(
         f'<option value="{fmt}"{" selected" if fmt == initial_fmt else ""}>'
         f"{html.escape(FORMAT_LABELS[fmt])}</option>"
         for fmt in PLAYGROUND_FORMATS
-    )
-    story_preset_options = "".join(
-        f'<option value="{count}">{count} circles (code)</option>'
-        for count in sorted(STORY_CIRCLE_LAYOUTS)
     )
 
     return f"""<!DOCTYPE html>
@@ -532,8 +575,7 @@ def render_circle_layout_playground_html(
     </label>
     <label id="preset-wrap"{" class=\"hidden\"" if not start["code_presets"] else ""}>Preset
       <select id="preset">
-        <option value="">—</option>
-        {story_preset_options}
+        <option value="">Load code preset…</option>
       </select>
     </label>
     <button type="button" id="reset-btn">Reset layout</button>
@@ -673,6 +715,21 @@ def render_circle_layout_playground_html(
     return diameter;
   }}
 
+  function refreshPresetOptions() {{
+    const m = mode();
+    presetSelect.innerHTML = '<option value="">Load code preset…</option>';
+    if (!m.code_presets) return;
+    const counts = Object.keys(m.diameters).length
+      ? Object.keys(m.diameters).map(Number).sort((a, b) => a - b)
+      : Object.keys(m.layouts).map(Number).sort((a, b) => a - b);
+    for (const n of counts) {{
+      const opt = document.createElement("option");
+      opt.value = String(n);
+      opt.textContent = n + " circles (code)";
+      presetSelect.appendChild(opt);
+    }}
+  }}
+
   function applyModeUi() {{
     const m = mode();
     countInput.min = String(m.min_count);
@@ -681,6 +738,7 @@ def render_circle_layout_playground_html(
     diameterInput.max = String(m.max_diameter);
     countWrap.classList.toggle("hidden", cardType === "spotlight");
     presetWrap.classList.toggle("hidden", !m.code_presets);
+    refreshPresetOptions();
   }}
 
   function applyScale() {{
