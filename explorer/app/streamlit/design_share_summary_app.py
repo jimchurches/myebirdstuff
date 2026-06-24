@@ -1422,16 +1422,11 @@ _DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"
 
 with tab_circle_layout:
     st.caption(
-        "Dev-only drag-and-drop tuner for story circle positions and diameter. "
-        "Copy output into ``share_summary_circles_preview.py``."
+        "Dev-only circle tuner — Statistics Grid, Hero Grid, and Spotlight at all "
+        "export sizes. Copy output into ``share_summary_circles_preview.py``."
     )
-    if fmt != "story":
-        st.info(
-            "Story format (1080×1920) is the playground canvas. "
-            "Switch **Format** in the sidebar to Story to match the live card."
-        )
     st.iframe(
-        render_circle_layout_playground_html(fmt="story"),
+        render_circle_layout_playground_html(),
         height=CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX,
     )
 

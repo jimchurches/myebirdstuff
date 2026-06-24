@@ -1,29 +1,46 @@
 """
-Rough drag-and-drop playground for tuning story circle layouts (#275).
+Rough drag-and-drop playground for tuning circle card layouts (#275).
 
-Self-contained HTML for ``st.iframe`` in the design studio. Normalised coordinates
-match ``STORY_CIRCLE_LAYOUTS``; diameter exports match ``STORY_CIRCLE_LAYOUT_DIAMETERS``.
+Self-contained HTML for ``st.iframe`` in the design studio. Supports Statistics Grid,
+Hero Grid, and Spotlight circle presentations at square, portrait, and story sizes.
 """
 
 from __future__ import annotations
 
 import html
 import json
-from typing import Any
+from typing import Any, Literal
 
 from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
 from explorer.presentation.share_summary_circles_preview import (
+    HERO_CIRCLE_CLUSTER_VARIANT,
+    HERO_CIRCLE_DIAMETER_SEARCH_START,
     STORY_CIRCLE_LAYOUT_DIAMETERS,
     STORY_CIRCLE_LAYOUTS,
+    TILES_CIRCLE_CLUSTER_VARIANT,
+    TILES_CIRCLE_DIAMETER_SEARCH_START,
+    _circle_canvas_size,
+    _hero_circle_canvas_size,
+    _spotlight_circle_diameter,
     _story_circle_body_bounds,
     _story_circle_diameter,
     _tiles_circle_canvas_size,
+    place_circle_centers,
 )
 from explorer.presentation.share_summary_preview import (
     FORMAT_LABELS,
     FORMAT_PIXELS,
     FormatId,
 )
+
+PlaygroundCardType = Literal["tiles", "hero", "spotlight"]
+PLAYGROUND_CARD_TYPES: tuple[PlaygroundCardType, ...] = ("tiles", "hero", "spotlight")
+PLAYGROUND_CARD_LABELS: dict[PlaygroundCardType, str] = {
+    "tiles": "Statistics Grid",
+    "hero": "Hero Grid",
+    "spotlight": "Spotlight",
+}
+PLAYGROUND_FORMATS: tuple[FormatId, ...] = ("square", "portrait_post", "story")
 
 PLAYGROUND_SAMPLE_STATS: tuple[tuple[str, str], ...] = (
     ("287", "Total species"),
@@ -37,108 +54,339 @@ PLAYGROUND_SAMPLE_STATS: tuple[tuple[str, str], ...] = (
     ("2.6%", "Observed species (%)"),
     ("65,064", "Total individuals"),
 )
+SPOTLIGHT_SAMPLE_STAT: tuple[str, str] = ("6", "Lifers")
 
 _STORY_TOP_CLEARANCE = 20
 _STORY_BOTTOM_CLEARANCE = 52
 _SHADOW_PAD = 12
-_MIN_CIRCLE_DIAMETER = 96
-_MAX_CIRCLE_DIAMETER = 340
-_MIN_CIRCLE_COUNT = 6
-_MAX_CIRCLE_COUNT = 10
-_DISPLAY_SCALE = 0.38
+_CLUSTER_UP_BIAS = 0.07
+_MIN_CLUSTER_DIAMETER = 96
+_MAX_CLUSTER_DIAMETER = 340
+_MIN_SPOTLIGHT_DIAMETER = 200
+_MAX_SPOTLIGHT_DIAMETER = 520
 
-CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX = 920
+CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX = 1000
 
 
 def _playground_scheme() -> dict[str, str]:
     return SHARE_SUMMARY_COLOR_SCHEMES[0]
 
 
-def _story_card_layout(fmt: FormatId) -> dict[str, int]:
-    width, height = FORMAT_PIXELS[fmt]
-    canvas_w, canvas_h = _tiles_circle_canvas_size(
-        width,
-        height,
-        fmt,
-        scope_label="World",
-    )
+def _card_frame(fmt: FormatId) -> dict[str, int]:
+    card_w, card_h = FORMAT_PIXELS[fmt]
     if fmt == "story":
-        header_reserve = 200
-        footer_reserve = 210
+        header_reserve, footer_reserve = 200, 210
     else:
-        header_reserve = 180
-        footer_reserve = 160
+        header_reserve, footer_reserve = 180, 160
     return {
-        "card_w": width,
-        "card_h": height,
-        "canvas_w": canvas_w,
-        "canvas_h": canvas_h,
+        "card_w": card_w,
+        "card_h": card_h,
         "header_reserve": header_reserve,
         "footer_reserve": footer_reserve,
         "side_pad": 48,
     }
 
 
-def _layouts_payload() -> dict[str, list[list[float]]]:
-    out: dict[str, list[list[float]]] = {}
-    for count, positions in STORY_CIRCLE_LAYOUTS.items():
-        out[str(count)] = [[x, y] for x, y in positions]
-    return out
+def _cluster_norm_positions(
+    centres: list[tuple[float, float]],
+    canvas_w: int,
+    canvas_h: int,
+    *,
+    diameter: int,
+) -> list[list[float]]:
+    pad = diameter / 2 + _SHADOW_PAD
+    x_min, x_max = pad, canvas_w - pad
+    y_min, y_max = pad, canvas_h - pad
+    span_x = max(1e-6, x_max - x_min)
+    span_y = max(1e-6, y_max - y_min)
+    return [
+        [round((x - x_min) / span_x, 4), round((y - y_min) / span_y, 4)]
+        for x, y in centres
+    ]
 
 
-def _diameters_payload() -> dict[str, int]:
+def _algorithmic_layout(
+    count: int,
+    canvas_w: int,
+    canvas_h: int,
+    *,
+    variant: str,
+    diameter_start: int,
+) -> tuple[list[list[float]], int]:
+    centres, diameter = place_circle_centers(
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter_start,
+        variant=variant,  # type: ignore[arg-type]
+    )
+    norms = _cluster_norm_positions(
+        centres,
+        canvas_w,
+        canvas_h,
+        diameter=diameter,
+    )
+    return norms, diameter
+
+
+def _spotlight_center_norm(canvas_w: int, canvas_h: int, *, diameter: int) -> list[float]:
+    pad = diameter / 2 + _SHADOW_PAD
+    cx = canvas_w / 2
+    cy = canvas_h / 2 - canvas_h * _CLUSTER_UP_BIAS
+    span_x = max(1e-6, canvas_w - 2 * pad)
+    span_y = max(1e-6, canvas_h - 2 * pad)
+    return [round((cx - pad) / span_x, 4), round((cy - pad) / span_y, 4)]
+
+
+def _story_layouts_payload() -> dict[str, list[list[float]]]:
+    return {str(count): [[x, y] for x, y in positions] for count, positions in STORY_CIRCLE_LAYOUTS.items()}
+
+
+def _story_diameters_payload() -> dict[str, int]:
     return {str(count): diameter for count, diameter in STORY_CIRCLE_LAYOUT_DIAMETERS.items()}
 
 
-def _auto_diameters_payload(canvas_w: int, canvas_h: int) -> dict[str, int]:
+def _story_auto_diameters(canvas_w: int, canvas_h: int) -> dict[str, int]:
+    gap_px = 18
     return {
-        str(count): _default_diameter(count, canvas_w, canvas_h)
+        str(count): _story_circle_diameter(count, canvas_w, canvas_h, gap_px=gap_px)
         for count in STORY_CIRCLE_LAYOUTS
     }
 
 
-def _default_diameter(count: int, canvas_w: int, canvas_h: int) -> int:
-    gap_px = 18
-    return _story_circle_diameter(count, canvas_w, canvas_h, gap_px=gap_px)
+def _cluster_layouts_for_counts(
+    canvas_w: int,
+    canvas_h: int,
+    *,
+    counts: range,
+    variant: str,
+    diameter_start: int,
+) -> dict[str, list[list[float]]]:
+    out: dict[str, list[list[float]]] = {}
+    for count in counts:
+        norms, _ = _algorithmic_layout(
+            count,
+            canvas_w,
+            canvas_h,
+            variant=variant,
+            diameter_start=diameter_start,
+        )
+        out[str(count)] = norms
+    return out
+
+
+def _cluster_auto_diameters(
+    canvas_w: int,
+    canvas_h: int,
+    *,
+    counts: range,
+    variant: str,
+    diameter_start: int,
+) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for count in counts:
+        _, diameter = _algorithmic_layout(
+            count,
+            canvas_w,
+            canvas_h,
+            variant=variant,
+            diameter_start=diameter_start,
+        )
+        out[str(count)] = diameter
+    return out
+
+
+def _export_meta(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str, str]:
+    if card_type == "tiles":
+        target = (
+            "STORY_CIRCLE_LAYOUTS + STORY_CIRCLE_LAYOUT_DIAMETERS"
+            if fmt == "story"
+            else "tiles circle cluster (algorithm today — add layout dict if tuning)"
+        )
+        presentation_key = "tiles_style"
+    elif card_type == "hero":
+        target = "hero circle cluster (algorithm today — add layout dict if tuning)"
+        presentation_key = "hero_style"
+    else:
+        target = "_spotlight_circle_diameter (or per-format diameter dict if tuning)"
+        presentation_key = "spotlight_style"
+    return {
+        "layout_id": card_type,
+        "layout_label": PLAYGROUND_CARD_LABELS[card_type],
+        "format_id": fmt,
+        "format_label": FORMAT_LABELS[fmt],
+        "presentation": "circles",
+        "presentation_key": presentation_key,
+        "target_code": target,
+    }
+
+
+def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str, Any]:
+    frame = _card_frame(fmt)
+    export_meta = _export_meta(card_type, fmt)
+    if card_type == "spotlight":
+        canvas_w, canvas_h = _circle_canvas_size(
+            frame["card_w"],
+            frame["card_h"],
+            fmt,
+            scope_label="World",
+        )
+        diameter = _spotlight_circle_diameter(canvas_w, canvas_h, fmt)
+        center_norm = _spotlight_center_norm(canvas_w, canvas_h, diameter=diameter)
+        max_diameter = min(
+            _MAX_SPOTLIGHT_DIAMETER,
+            min(canvas_w, canvas_h) - 2 * (_SHADOW_PAD + 12),
+        )
+        return {
+            **frame,
+            "canvas_w": canvas_w,
+            "canvas_h": canvas_h,
+            "bounds": "cluster",
+            "draggable": False,
+            "min_count": 1,
+            "max_count": 1,
+            "default_count": 1,
+            "min_diameter": _MIN_SPOTLIGHT_DIAMETER,
+            "max_diameter": max_diameter,
+            "default_diameter": diameter,
+            "layouts": {"1": [center_norm]},
+            "diameters": {},
+            "auto_diameters": {"1": diameter},
+            "center_norm": center_norm,
+            "code_presets": False,
+            **export_meta,
+        }
+
+    if card_type == "hero":
+        canvas_w, canvas_h = _hero_circle_canvas_size(
+            frame["card_w"],
+            frame["card_h"],
+            fmt,
+            scope_label="World",
+        )
+        counts = range(1, 5)
+        variant = HERO_CIRCLE_CLUSTER_VARIANT
+        diameter_start = HERO_CIRCLE_DIAMETER_SEARCH_START
+    else:
+        canvas_w, canvas_h = _tiles_circle_canvas_size(
+            frame["card_w"],
+            frame["card_h"],
+            fmt,
+            scope_label="World",
+        )
+        if fmt == "story":
+            counts = range(6, 11)
+            return {
+                **frame,
+                "canvas_w": canvas_w,
+                "canvas_h": canvas_h,
+                "bounds": "story",
+                "draggable": True,
+                "min_count": 6,
+                "max_count": 10,
+                "default_count": 10,
+                "min_diameter": _MIN_CLUSTER_DIAMETER,
+                "max_diameter": _MAX_CLUSTER_DIAMETER,
+                "default_diameter": STORY_CIRCLE_LAYOUT_DIAMETERS.get(10, 255),
+                "layouts": _story_layouts_payload(),
+                "diameters": _story_diameters_payload(),
+                "auto_diameters": _story_auto_diameters(canvas_w, canvas_h),
+                "top_clearance": _STORY_TOP_CLEARANCE,
+                "bottom_clearance": _STORY_BOTTOM_CLEARANCE,
+                "code_presets": True,
+                **export_meta,
+            }
+        counts = range(6, 8)
+        variant = TILES_CIRCLE_CLUSTER_VARIANT
+        diameter_start = TILES_CIRCLE_DIAMETER_SEARCH_START
+
+    layouts = _cluster_layouts_for_counts(
+        canvas_w,
+        canvas_h,
+        counts=counts,
+        variant=variant,
+        diameter_start=diameter_start,
+    )
+    auto_diameters = _cluster_auto_diameters(
+        canvas_w,
+        canvas_h,
+        counts=counts,
+        variant=variant,
+        diameter_start=diameter_start,
+    )
+    default_count = max(counts)
+    return {
+        **frame,
+        "canvas_w": canvas_w,
+        "canvas_h": canvas_h,
+        "bounds": "cluster",
+        "draggable": True,
+        "min_count": min(counts),
+        "max_count": max(counts),
+        "default_count": default_count,
+        "min_diameter": _MIN_CLUSTER_DIAMETER,
+        "max_diameter": _MAX_CLUSTER_DIAMETER,
+        "default_diameter": auto_diameters[str(default_count)],
+        "layouts": layouts,
+        "diameters": {},
+        "auto_diameters": auto_diameters,
+        "code_presets": False,
+        **export_meta,
+    }
+
+
+def _modes_payload() -> dict[str, dict[str, dict[str, Any]]]:
+    return {
+        card_type: {fmt: _build_mode_config(card_type, fmt) for fmt in PLAYGROUND_FORMATS}
+        for card_type in PLAYGROUND_CARD_TYPES
+    }
 
 
 def render_circle_layout_playground_html(
     *,
-    fmt: FormatId = "story",
-    initial_count: int = 10,
-    initial_diameter: int | None = None,
+    initial_card_type: PlaygroundCardType = "tiles",
+    initial_fmt: FormatId = "story",
 ) -> str:
     """Full HTML document for the circle layout playground iframe."""
-    layout = _story_card_layout(fmt)
-    count = max(_MIN_CIRCLE_COUNT, min(initial_count, _MAX_CIRCLE_COUNT))
-    diameter = initial_diameter
-    if diameter is None:
-        diameter = _default_diameter(count, layout["canvas_w"], layout["canvas_h"])
-    diameter = max(_MIN_CIRCLE_DIAMETER, min(diameter, _MAX_CIRCLE_DIAMETER))
-
     scheme = _playground_scheme()
+    modes = _modes_payload()
+    start = modes[initial_card_type][initial_fmt]
     config: dict[str, Any] = {
-        "fmt": fmt,
-        "fmt_label": FORMAT_LABELS.get(fmt, fmt),
-        "count": count,
-        "diameter": diameter,
-        "min_count": _MIN_CIRCLE_COUNT,
-        "max_count": _MAX_CIRCLE_COUNT,
-        "min_diameter": _MIN_CIRCLE_DIAMETER,
-        "max_diameter": _MAX_CIRCLE_DIAMETER,
-        "display_scale": _DISPLAY_SCALE,
-        "top_clearance": _STORY_TOP_CLEARANCE,
-        "bottom_clearance": _STORY_BOTTOM_CLEARANCE,
-        "shadow_pad": _SHADOW_PAD,
-        "layouts": _layouts_payload(),
-        "diameters": _diameters_payload(),
-        "auto_diameters": _auto_diameters_payload(layout["canvas_w"], layout["canvas_h"]),
+        "card_type": initial_card_type,
+        "fmt": initial_fmt,
+        "modes": modes,
+        "card_types": [
+            {"id": card_type, "label": PLAYGROUND_CARD_LABELS[card_type]}
+            for card_type in PLAYGROUND_CARD_TYPES
+        ],
+        "formats": [
+            {"id": fmt, "label": FORMAT_LABELS[fmt]} for fmt in PLAYGROUND_FORMATS
+        ],
         "stats": list(PLAYGROUND_SAMPLE_STATS),
+        "spotlight_stat": list(SPOTLIGHT_SAMPLE_STAT),
+        "shadow_pad": _SHADOW_PAD,
         "colors": scheme,
-        **layout,
+        "count": start["default_count"],
+        "diameter": start["default_diameter"],
     }
     config_json = json.dumps(config)
-    title = html.escape(f"Circle layout — {FORMAT_LABELS.get(fmt, fmt)}")
+    title = html.escape("Circle layout playground")
+
+    card_type_options = "".join(
+        f'<option value="{card_type}"'
+        f'{" selected" if card_type == initial_card_type else ""}>'
+        f"{html.escape(PLAYGROUND_CARD_LABELS[card_type])}</option>"
+        for card_type in PLAYGROUND_CARD_TYPES
+    )
+    format_options = "".join(
+        f'<option value="{fmt}"{" selected" if fmt == initial_fmt else ""}>'
+        f"{html.escape(FORMAT_LABELS[fmt])}</option>"
+        for fmt in PLAYGROUND_FORMATS
+    )
+    story_preset_options = "".join(
+        f'<option value="{count}">{count} circles (code)</option>'
+        for count in sorted(STORY_CIRCLE_LAYOUTS)
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -181,15 +429,15 @@ def render_circle_layout_playground_html(
     border: 1px solid {scheme["border"]};
     border-radius: 6px;
   }}
-  .toolbar button {{
-    padding: 7px 12px;
+  .toolbar button, .toolbar select {{
+    padding: 7px 10px;
     border: 1px solid {scheme["border"]};
     border-radius: 8px;
     background: {scheme["bg_alt"]};
     color: {scheme["text"]};
-    cursor: pointer;
     font-size: 13px;
   }}
+  .toolbar button {{ cursor: pointer; }}
   .toolbar button:hover {{ border-color: {scheme["accent"]}; }}
   .hint {{
     margin: 0 0 10px;
@@ -197,13 +445,8 @@ def render_circle_layout_playground_html(
     color: {scheme["muted"]};
     line-height: 1.45;
   }}
-  .stage-wrap {{
-    overflow: auto;
-    padding: 8px 0 12px;
-  }}
-  .card-shell {{
-    transform-origin: top left;
-  }}
+  .stage-wrap {{ overflow: auto; padding: 8px 0 12px; }}
+  .card-shell {{ transform-origin: top left; }}
   .card {{
     position: relative;
     overflow: hidden;
@@ -212,139 +455,89 @@ def render_circle_layout_playground_html(
     border: 1px solid {scheme["border"]};
     box-shadow: 0 10px 28px rgba(0,0,0,0.08);
   }}
-  .card-header {{
-    padding: 28px 48px 0;
-    text-align: center;
-  }}
+  .card-header {{ padding: 28px 48px 0; text-align: center; }}
   .card-header .subtitle {{
-    margin: 0;
-    font-size: 22px;
-    letter-spacing: 0.06em;
-    color: {scheme["accent"]};
-    font-weight: 600;
+    margin: 0; font-size: 22px; letter-spacing: 0.06em;
+    color: {scheme["accent"]}; font-weight: 600;
   }}
   .card-header .title {{
-    margin: 8px 0 0;
-    font-size: 56px;
-    font-weight: 800;
-    line-height: 1.05;
+    margin: 8px 0 0; font-size: 56px; font-weight: 800; line-height: 1.05;
   }}
-  .card-body-wrap {{
-    padding: 0 48px;
-    display: flex;
-    justify-content: center;
-  }}
+  .card-body-wrap {{ padding: 0 48px; display: flex; justify-content: center; }}
   .card-body {{
     position: relative;
     background: repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 11px,
-      rgba(45,106,79,0.03) 11px,
-      rgba(45,106,79,0.03) 22px
+      -45deg, transparent, transparent 11px,
+      rgba(45,106,79,0.03) 11px, rgba(45,106,79,0.03) 22px
     );
     border: 1px dashed {scheme["border"]};
     touch-action: none;
   }}
   .card-footer {{
-    margin-top: 0;
-    padding: 18px 24px 22px;
-    text-align: center;
+    padding: 18px 24px 22px; text-align: center;
     border-top: 1px solid {scheme["border"]};
-    background: {scheme["bg_alt"]};
-    color: {scheme["muted"]};
+    background: {scheme["bg_alt"]}; color: {scheme["muted"]};
   }}
-  .card-footer .scope {{
-    margin: 0;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }}
-  .card-footer .brand {{
-    margin: 6px 0 0;
-    font-size: 14px;
-  }}
+  .card-footer .scope {{ margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }}
+  .card-footer .brand {{ margin: 6px 0 0; font-size: 14px; }}
   .circle {{
-    position: absolute;
-    transform: translate(-50%, -50%);
-    cursor: grab;
-    user-select: none;
-    touch-action: none;
+    position: absolute; transform: translate(-50%, -50%);
+    user-select: none; touch-action: none;
   }}
-  .circle.dragging {{
-    cursor: grabbing;
-    z-index: 20;
-  }}
+  .circle.draggable {{ cursor: grab; }}
+  .circle.draggable.dragging {{ cursor: grabbing; z-index: 20; }}
+  .circle.locked {{ cursor: default; }}
   .circle-inner {{
     border-radius: 50%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 16px;
     box-shadow: 0 8px 18px rgba(0,0,0,0.12);
     border: 2px solid {scheme["border"]};
     background: linear-gradient(145deg, {scheme["bg_alt"]}, {scheme["bg"]});
   }}
-  .circle-value {{
-    font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
-    letter-spacing: -0.02em;
-  }}
-  .circle-label {{
-    margin-top: 6px;
-    color: {scheme["muted"]};
-    line-height: 1.12;
-  }}
+  .circle-value {{ font-weight: 700; line-height: 1; white-space: nowrap; letter-spacing: -0.02em; }}
+  .circle-label {{ margin-top: 6px; color: {scheme["muted"]}; line-height: 1.12; }}
   .output {{
-    margin-top: 8px;
-    padding: 10px 12px;
-    border: 1px solid {scheme["border"]};
-    border-radius: 10px;
-    background: {scheme["bg"]};
+    margin-top: 8px; padding: 10px 12px;
+    border: 1px solid {scheme["border"]}; border-radius: 10px; background: {scheme["bg"]};
   }}
-  .output h3 {{
-    margin: 0 0 6px;
-    font-size: 13px;
-  }}
+  .output h3 {{ margin: 0 0 6px; font-size: 13px; }}
   .output pre {{
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-size: 12px;
-    line-height: 1.45;
+    margin: 0; white-space: pre-wrap; word-break: break-word;
+    font-size: 12px; line-height: 1.45;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }}
-  .meta {{
-    margin-top: 6px;
-    font-size: 11px;
-    color: {scheme["muted"]};
-  }}
+  .meta {{ margin-top: 6px; font-size: 11px; color: {scheme["muted"]}; }}
+  .hidden {{ display: none; }}
 </style>
 </head>
 <body>
   <p class="hint">
-    Drag circles on the story body canvas. Coordinates are normalised 0–1 for
-    <code>STORY_CIRCLE_LAYOUTS</code>; copy includes <code>diameter_px</code> for
-    <code>STORY_CIRCLE_LAYOUT_DIAMETERS</code>.
+    Dev tuner for circle presentations. Drag to reposition (except Spotlight — centred).
+    Copy output into <code>share_summary_circles_preview.py</code> when tuning layouts.
   </p>
   <div class="toolbar">
-    <label>Circle count
-      <input type="number" id="count" min="{_MIN_CIRCLE_COUNT}" max="{_MAX_CIRCLE_COUNT}" value="{count}"/>
+    <label>Card type
+      <select id="card-type">{card_type_options}</select>
     </label>
-    <label>Diameter <span id="diameter-val">{diameter}</span>px
-      <input type="range" id="diameter" min="{_MIN_CIRCLE_DIAMETER}" max="{_MAX_CIRCLE_DIAMETER}" value="{diameter}"/>
+    <label>Format
+      <select id="format">{format_options}</select>
     </label>
-    <label>Preset
+    <label id="count-wrap">Circle count
+      <input type="number" id="count" min="1" max="10" value="{start["default_count"]}"/>
+    </label>
+    <label>Diameter <span id="diameter-val">{start["default_diameter"]}</span>px
+      <input type="range" id="diameter" min="{start["min_diameter"]}" max="{start["max_diameter"]}"
+        value="{start["default_diameter"]}"/>
+    </label>
+    <label id="preset-wrap"{" class=\"hidden\"" if not start["code_presets"] else ""}>Preset
       <select id="preset">
         <option value="">—</option>
-        {"".join(f'<option value="{n}">{n} circles (code)</option>' for n in sorted(STORY_CIRCLE_LAYOUTS))}
+        {story_preset_options}
       </select>
     </label>
-    <button type="button" id="reset-btn">Reset preset</button>
-    <button type="button" id="copy-btn">Copy Python tuple</button>
+    <button type="button" id="reset-btn">Reset layout</button>
+    <button type="button" id="copy-btn">Copy export</button>
   </div>
   <div class="stage-wrap">
     <div class="card-shell" id="card-shell">
@@ -374,13 +567,22 @@ def render_circle_layout_playground_html(
   const body = document.getElementById("body");
   const card = document.getElementById("card");
   const cardShell = document.getElementById("card-shell");
+  const cardTypeSelect = document.getElementById("card-type");
+  const formatSelect = document.getElementById("format");
   const countInput = document.getElementById("count");
+  const countWrap = document.getElementById("count-wrap");
   const diameterInput = document.getElementById("diameter");
   const diameterVal = document.getElementById("diameter-val");
+  const presetWrap = document.getElementById("preset-wrap");
   const presetSelect = document.getElementById("preset");
   const exportText = document.getElementById("export-text");
   const metaText = document.getElementById("meta-text");
 
+  const FORMAT_LABELS = Object.fromEntries(CFG.formats.map((f) => [f.id, f.label]));
+  const CARD_LABELS = Object.fromEntries(CFG.card_types.map((c) => [c.id, c.label]));
+
+  let cardType = CFG.card_type;
+  let fmt = CFG.fmt;
   let count = CFG.count;
   let diameter = CFG.diameter;
   let norms = [];
@@ -388,14 +590,24 @@ def render_circle_layout_playground_html(
 
   function clamp(n, lo, hi) {{ return Math.min(hi, Math.max(lo, n)); }}
 
+  function mode() {{ return CFG.modes[cardType][fmt]; }}
+
+  function displayScale(m) {{
+    return Math.min(720 / m.card_h, 460 / m.card_w, 0.55);
+  }}
+
   function bodyBounds() {{
+    const m = mode();
     const pad = diameter / 2 + CFG.shadow_pad;
-    return {{
-      xMin: pad,
-      xMax: CFG.canvas_w - pad,
-      yMin: CFG.top_clearance / 2 + pad,
-      yMax: CFG.canvas_h - CFG.bottom_clearance - CFG.shadow_pad - pad,
-    }};
+    if (m.bounds === "story") {{
+      return {{
+        xMin: pad,
+        xMax: m.canvas_w - pad,
+        yMin: m.top_clearance / 2 + pad,
+        yMax: m.canvas_h - m.bottom_clearance - CFG.shadow_pad - pad,
+      }};
+    }}
+    return {{ xMin: pad, xMax: m.canvas_w - pad, yMin: pad, yMax: m.canvas_h - pad }};
   }}
 
   function normToPixel(nx, ny) {{
@@ -426,18 +638,21 @@ def render_circle_layout_playground_html(
   }}
 
   function labelFontPx() {{
+    if (cardType === "spotlight") return "24px";
     return count > 6 ? "16px" : "18px";
   }}
 
   function valueFontBase() {{
+    if (cardType === "spotlight") return diameter >= 360 ? 160 : 140;
     if (count > 9) return 40;
     if (diameter >= 260) return 52;
     if (diameter >= 240) return 46;
     return count > 6 ? 40 : 48;
   }}
 
-  function defaultNorms(n) {{
-    const preset = CFG.layouts[String(n)];
+  function layoutForCount(n) {{
+    const m = mode();
+    const preset = m.layouts[String(n)];
     if (preset && preset.length === n) {{
       return preset.map((p) => [p[0], p[1]]);
     }}
@@ -449,26 +664,54 @@ def render_circle_layout_playground_html(
     return out;
   }}
 
+  function presetDiameter(n) {{
+    const m = mode();
+    const fixed = m.diameters[String(n)];
+    if (fixed) return fixed;
+    const auto = m.auto_diameters[String(n)];
+    if (auto) return auto;
+    return diameter;
+  }}
+
+  function applyModeUi() {{
+    const m = mode();
+    countInput.min = String(m.min_count);
+    countInput.max = String(m.max_count);
+    diameterInput.min = String(m.min_diameter);
+    diameterInput.max = String(m.max_diameter);
+    countWrap.classList.toggle("hidden", cardType === "spotlight");
+    presetWrap.classList.toggle("hidden", !m.code_presets);
+  }}
+
   function applyScale() {{
-    const scale = CFG.display_scale;
-    card.style.width = CFG.card_w + "px";
-    card.style.height = CFG.card_h + "px";
+    const m = mode();
+    const scale = displayScale(m);
+    card.style.width = m.card_w + "px";
+    card.style.height = m.card_h + "px";
     cardShell.style.transform = "scale(" + scale + ")";
-    cardShell.style.width = (CFG.card_w * scale) + "px";
-    cardShell.style.height = (CFG.card_h * scale) + "px";
-    body.style.width = CFG.canvas_w + "px";
-    body.style.height = CFG.canvas_h + "px";
+    cardShell.style.width = (m.card_w * scale) + "px";
+    cardShell.style.height = (m.card_h * scale) + "px";
+    body.style.width = m.canvas_w + "px";
+    body.style.height = m.canvas_h + "px";
+  }}
+
+  function circleStat(index) {{
+    if (cardType === "spotlight") return CFG.spotlight_stat;
+    return CFG.stats[index % CFG.stats.length];
   }}
 
   function renderCircles() {{
     body.innerHTML = "";
+    const m = mode();
     const labelPx = labelFontPx();
     const baseVal = valueFontBase();
-    norms.slice(0, count).forEach((pair, index) => {{
-      const stat = CFG.stats[index % CFG.stats.length];
+    const slots = cardType === "spotlight" ? 1 : count;
+    for (let index = 0; index < slots; index += 1) {{
+      const pair = cardType === "spotlight" ? m.center_norm : norms[index];
+      const stat = circleStat(index);
       const pos = normToPixel(pair[0], pair[1]);
       const el = document.createElement("div");
-      el.className = "circle";
+      el.className = "circle" + (m.draggable ? " draggable" : " locked");
       el.dataset.index = String(index);
       el.style.left = pos.x + "px";
       el.style.top = pos.y + "px";
@@ -487,9 +730,9 @@ def render_circle_layout_playground_html(
       inner.appendChild(val);
       inner.appendChild(lab);
       el.appendChild(inner);
-      el.addEventListener("pointerdown", onPointerDown);
+      if (m.draggable) el.addEventListener("pointerdown", onPointerDown);
       body.appendChild(el);
-    }});
+    }}
     updateExport();
   }}
 
@@ -498,7 +741,7 @@ def render_circle_layout_playground_html(
     target.setPointerCapture(event.pointerId);
     target.classList.add("dragging");
     const rect = body.getBoundingClientRect();
-    const scale = CFG.display_scale;
+    const scale = displayScale(mode());
     const index = Number(target.dataset.index);
     const pair = norms[index];
     const pos = normToPixel(pair[0], pair[1]);
@@ -514,7 +757,7 @@ def render_circle_layout_playground_html(
   function onPointerMove(event) {{
     if (!drag) return;
     const rect = body.getBoundingClientRect();
-    const scale = CFG.display_scale;
+    const scale = displayScale(mode());
     const x = (event.clientX - rect.left) / scale - drag.offsetX;
     const y = (event.clientY - rect.top) / scale - drag.offsetY;
     const norm = pixelToNorm(x, y);
@@ -531,39 +774,60 @@ def render_circle_layout_playground_html(
     drag = null;
   }}
 
-  function formatTuple() {{
-    const lines = norms.slice(0, count).map((p) =>
-      "        (" + p[0].toFixed(2) + ", " + p[1].toFixed(2) + "),"
-    );
-    return count + ": (\\n" + lines.join("\\n") + "\\n    ),\\n" +
-      "diameter_px: " + diameter + ",";
-  }}
-
-  function presetDiameter(n) {{
-    const fixed = CFG.diameters[String(n)];
-    if (fixed) return fixed;
-    const auto = CFG.auto_diameters[String(n)];
-    if (auto) return auto;
-    return diameter;
+  function formatExport() {{
+    const m = mode();
+    const lines = [
+      "# Circle layout playground export",
+      "# Implement this card design in share_summary_circles_preview.py",
+      "",
+      "card_type: " + cardType,
+      "layout: " + m.layout_label,
+      "format: " + fmt,
+      "format_label: " + m.format_label,
+      "card_px: " + m.card_w + "×" + m.card_h,
+      "canvas_px: " + m.canvas_w + "×" + m.canvas_h,
+      "presentation: circles",
+      "presentation_key: " + m.presentation_key,
+      "circle_count: " + (cardType === "spotlight" ? 1 : count),
+      "positions: " + (m.draggable
+        ? "draggable — normalised 0–1 within body bounds"
+        : "fixed centre — canvas_w/2, canvas_h/2 − up_bias"),
+      "target_code: " + m.target_code,
+      "",
+    ];
+    if (cardType === "spotlight") {{
+      lines.push("diameter_px: " + diameter + ",");
+    }} else {{
+      const posLines = norms.slice(0, count).map((p) =>
+        "        (" + p[0].toFixed(2) + ", " + p[1].toFixed(2) + "),"
+      );
+      lines.push(count + ": (");
+      lines.push(...posLines);
+      lines.push("    ),");
+      lines.push("diameter_px: " + diameter + ",");
+    }}
+    return lines.join("\\n");
   }}
 
   function updateExport() {{
-    exportText.textContent = formatTuple();
+    exportText.textContent = formatExport();
+    const m = mode();
     const b = bodyBounds();
     metaText.textContent =
-      "Canvas " + CFG.canvas_w + "×" + CFG.canvas_h + "px · " +
-      "card " + CFG.card_w + "×" + CFG.card_h + " · " +
-      "diameter " + diameter + "px · " +
-      "usable body x=" + Math.round(b.xMin) + "–" + Math.round(b.xMax) +
+      CARD_LABELS[cardType] + " · " + FORMAT_LABELS[fmt] + " · " +
+      "canvas " + m.canvas_w + "×" + m.canvas_h + "px · " +
+      "card " + m.card_w + "×" + m.card_h + " · diameter " + diameter + "px · " +
+      "body x=" + Math.round(b.xMin) + "–" + Math.round(b.xMax) +
       " y=" + Math.round(b.yMin) + "–" + Math.round(b.yMax);
   }}
 
   function setCount(n) {{
-    count = clamp(n, CFG.min_count, CFG.max_count);
+    const m = mode();
+    count = clamp(n, m.min_count, m.max_count);
     countInput.value = String(count);
     const next = norms.slice(0, count);
     if (next.length < count) {{
-      const defaults = defaultNorms(count);
+      const defaults = layoutForCount(count);
       for (let i = next.length; i < count; i += 1) {{
         next.push(defaults[i]);
       }}
@@ -573,14 +837,15 @@ def render_circle_layout_playground_html(
   }}
 
   function setDiameter(d) {{
-    diameter = clamp(d, CFG.min_diameter, CFG.max_diameter);
+    const m = mode();
+    diameter = clamp(d, m.min_diameter, m.max_diameter);
     diameterInput.value = String(diameter);
     diameterVal.textContent = String(diameter);
     renderCircles();
   }}
 
   function loadPreset(n) {{
-    const preset = CFG.layouts[String(n)];
+    const preset = mode().layouts[String(n)];
     if (!preset) return;
     count = n;
     countInput.value = String(count);
@@ -588,6 +853,25 @@ def render_circle_layout_playground_html(
     setDiameter(presetDiameter(n));
   }}
 
+  function activateMode() {{
+    const m = mode();
+    count = m.default_count;
+    diameter = m.default_diameter;
+    norms = layoutForCount(count);
+    applyModeUi();
+    applyScale();
+    setDiameter(diameter);
+    setCount(count);
+  }}
+
+  cardTypeSelect.addEventListener("change", () => {{
+    cardType = cardTypeSelect.value;
+    activateMode();
+  }});
+  formatSelect.addEventListener("change", () => {{
+    fmt = formatSelect.value;
+    activateMode();
+  }});
   countInput.addEventListener("change", () => setCount(Number(countInput.value)));
   diameterInput.addEventListener("input", () => setDiameter(Number(diameterInput.value)));
   presetSelect.addEventListener("change", () => {{
@@ -596,19 +880,19 @@ def render_circle_layout_playground_html(
     presetSelect.value = "";
   }});
   document.getElementById("reset-btn").addEventListener("click", () => {{
-    norms = defaultNorms(count);
+    norms = layoutForCount(count);
     setDiameter(presetDiameter(count));
   }});
   document.getElementById("copy-btn").addEventListener("click", async () => {{
-    const text = formatTuple();
+    const text = formatExport();
     try {{
       await navigator.clipboard.writeText(text);
       document.getElementById("copy-btn").textContent = "Copied!";
       setTimeout(() => {{
-        document.getElementById("copy-btn").textContent = "Copy Python tuple";
+        document.getElementById("copy-btn").textContent = "Copy export";
       }}, 1200);
     }} catch (err) {{
-      window.prompt("Copy layout tuple:", text);
+      window.prompt("Copy layout export:", text);
     }}
   }});
 
@@ -616,8 +900,9 @@ def render_circle_layout_playground_html(
   document.addEventListener("pointerup", onPointerUp);
   document.addEventListener("pointercancel", onPointerUp);
 
-  norms = defaultNorms(count);
+  applyModeUi();
   applyScale();
+  norms = layoutForCount(count);
   renderCircles();
 }})();
 </script>
@@ -637,7 +922,11 @@ def story_circle_body_bounds_for_playground(
 
 __all__ = [
     "CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX",
+    "PLAYGROUND_CARD_LABELS",
+    "PLAYGROUND_CARD_TYPES",
+    "PLAYGROUND_FORMATS",
     "PLAYGROUND_SAMPLE_STATS",
+    "SPOTLIGHT_SAMPLE_STAT",
     "render_circle_layout_playground_html",
     "story_circle_body_bounds_for_playground",
 ]
