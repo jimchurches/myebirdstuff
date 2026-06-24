@@ -885,14 +885,19 @@ def render_circle_layout_playground_html(
     const m = mode();
     count = clamp(n, m.min_count, m.max_count);
     countInput.value = String(count);
-    const next = norms.slice(0, count);
-    if (next.length < count) {{
-      const defaults = layoutForCount(count);
-      for (let i = next.length; i < count; i += 1) {{
-        next.push(defaults[i]);
+    const preset = m.layouts[String(count)];
+    if (preset && preset.length === count) {{
+      norms = preset.map((p) => [p[0], p[1]]);
+    }} else {{
+      const next = norms.slice(0, count);
+      if (next.length < count) {{
+        const defaults = layoutForCount(count);
+        for (let i = next.length; i < count; i += 1) {{
+          next.push(defaults[i]);
+        }}
       }}
+      norms = next;
     }}
-    norms = next;
     renderCircles();
   }}
 

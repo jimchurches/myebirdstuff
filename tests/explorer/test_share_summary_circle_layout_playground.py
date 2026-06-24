@@ -58,6 +58,16 @@ def test_circle_layout_playground_tiles_supports_one_through_ten_circles():
         assert f'"max_count": {PLAYGROUND_TILES_MAX_COUNT}' in fmt_html
 
 
+def test_circle_layout_playground_count_change_loads_full_preset():
+    html = render_circle_layout_playground_html(
+        initial_card_type="tiles",
+        initial_fmt="portrait_post",
+    )
+    assert 'const preset = m.layouts[String(count)];' in html
+    assert "preset && preset.length === count" in html
+    assert "norms = preset.map((p) => [p[0], p[1]]);" in html
+
+
 def test_circle_layout_playground_spotlight_is_not_draggable():
     html = render_circle_layout_playground_html(
         initial_card_type="spotlight",
