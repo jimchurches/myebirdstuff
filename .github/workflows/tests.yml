@@ -199,6 +199,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-gps-script.txt
 
+      - name: Install Playwright Chromium (share-summary PNG export)
+        run: python -m playwright install chromium
+
       - name: Run pytest with coverage baseline (fail under 65%)
         run: |
           # Signal-first policy: this threshold is a floor to catch major blind spots,

@@ -239,6 +239,7 @@ def longest_streak(unique_dates, cl):
 # ---------------------------------------------------------------------------
 
 _PROTOCOL_EXCL_TIMED_BIRDING = "incidental|historical|casual observation"
+_INCIDENTAL_PROTOCOL_PATTERN = "incidental|casual observation"
 
 
 def protocol_excludes_timed_birding(protocol: pd.Series) -> pd.Series:
@@ -246,6 +247,14 @@ def protocol_excludes_timed_birding(protocol: pd.Series) -> pd.Series:
     return protocol.astype(str).str.strip().str.lower().str.contains(
         _PROTOCOL_EXCL_TIMED_BIRDING, na=False, regex=True
     )
+
+
+def incidental_checklist_mask(cl: pd.DataFrame) -> pd.Series | None:
+    """True for incidental/casual observation protocols (matches yearly summary stats)."""
+    if "Protocol" not in cl.columns:
+        return None
+    proto_lower = cl["Protocol"].astype(str).str.strip().str.lower()
+    return proto_lower.str.contains(_INCIDENTAL_PROTOCOL_PATTERN, na=False, regex=True)
 
 
 def timed_checklists_excl_incidental(cl: pd.DataFrame, dur_col: str) -> pd.DataFrame:
@@ -964,7 +973,8 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     proto_lower = cl["Protocol"].astype(str).str.strip().str.lower() if has_protocol else None
     traveling_mask = proto_lower.str.contains("traveling|travelling", na=False) if has_protocol else pd.Series(False, index=cl.index)
     stationary_mask = proto_lower.str.contains("stationary", na=False) if has_protocol else pd.Series(False, index=cl.index)
-    incidental_mask = proto_lower.str.contains("incidental|casual observation", na=False, regex=True) if has_protocol else pd.Series(False, index=cl.index)
+    _incidental = incidental_checklist_mask(cl)
+    incidental_mask = _incidental if _incidental is not None else pd.Series(False, index=cl.index)
     completed_mask = pd.Series(True, index=cl.index)
     if has_all_obs:
         a = cl["All Obs Reported"]

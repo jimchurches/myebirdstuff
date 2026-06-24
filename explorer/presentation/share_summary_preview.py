@@ -6,20 +6,23 @@ Standalone design utility — not wired into the main explorer app yet.
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import html as html_module
-import re
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Literal
 
-from explorer.core.checklist_stats_compute import ChecklistStatsPayload
 from explorer.core.share_summary_compute import (
     PeriodKind,
     ShareSummaryAllTimeStats,
+    ShareSummaryGeoScope,
     ShareSummaryStats,
     compute_share_summary_stats,
+    geo_region_lifer_stat_label,
     period_for_custom,
-    period_for_iso_week,
+    period_for_lifetime,
     period_for_month,
     period_for_week_containing,
     period_for_year,
@@ -27,19 +30,55 @@ from explorer.core.share_summary_compute import (
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
-    SHARE_SUMMARY_HERO_DEFAULT_STATS,
-    SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT,
+    SHARE_SUMMARY_COUNTRY_FOUR_STAT_DEFAULT_STATS,
+    SHARE_SUMMARY_COUNTRY_LIFETIME_FOUR_STAT_DEFAULT_STATS,
+    SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS,
+    SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS,
+    SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS,
+    SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS,
+    SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
+    SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
+    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    SHARE_SUMMARY_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
+    share_summary_card_subtitle,
+    share_summary_period_subtitle,
 )
 
-LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]
+TilesPresentationId = Literal["grid", "circles"]
+SpotlightPresentationId = Literal["classic", "circle"]
+
+LayoutId = Literal["tiles", "minimal", "spotlight"]
 FormatId = Literal["square", "portrait_post", "story"]
-SpotlightStatId = Literal["species", "lifers", "checklists", "locations"]
+
+_color_scheme_index: contextvars.ContextVar[int | None] = contextvars.ContextVar(
+    "share_summary_color_scheme_index",
+    default=None,
+)
+
+
+def _active_color_scheme_index() -> int:
+    override = _color_scheme_index.get()
+    if override is not None:
+        return override
+    return SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT
+
+
+@contextlib.contextmanager
+def _color_scheme_context(index: int | None):
+    token = None
+    if index is not None:
+        token = _color_scheme_index.set(index)
+    try:
+        yield
+    finally:
+        if token is not None:
+            _color_scheme_index.reset(token)
 
 
 def _colour(key: str) -> str:
     schemes = SHARE_SUMMARY_COLOR_SCHEMES
-    idx = SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT
+    idx = _active_color_scheme_index()
     scheme = schemes[idx] if 0 <= idx < len(schemes) else schemes[0]
     return scheme[key]
 
@@ -50,66 +89,103 @@ _FORMAT_PX: dict[FormatId, tuple[int, int]] = {
     "story": (1080, 1920),
 }
 
-_FORMAT_LABELS: dict[FormatId, str] = {
+FORMAT_PIXELS: dict[FormatId, tuple[int, int]] = _FORMAT_PX
+
+FORMAT_LABELS: dict[FormatId, str] = {
     "square": "Square post (1080×1080)",
     "portrait_post": "Portrait post (1080×1350)",
     "story": "Story (1080×1920)",
 }
 
-_STAT_LABELS: dict[str, str] = {
-    "species": "Total species",
-    "families": "Total bird families",
-    "individuals": "Total individuals",
-    "checklists": "Total checklists",
-    "locations": "Unique locations",
-    "lifers": "Lifers",
-    "birding_hours": "Total birding hours",
-    "days_with_checklist": "Birding days",
-    "longest_streak": "Longest streak",
-    "countries": "Countries",
-    "shared_checklists": "Shared checklists",
-    "days_birding_with_others": "Days birding with others",
-}
-
-_SPOTLIGHT_TITLES: dict[SpotlightStatId, str] = {
-    "lifers": "Lifers",
-    "checklists": "Checklists",
-    "locations": "Locations visited",
-}
+# Taxonomy reference labels (eBird/Clements denominators — not user checklist counts).
+LABEL_SPECIES_IN_TAXONOMY = "Species in eBird taxonomy"
+LABEL_FAMILIES_IN_TAXONOMY = "Families in eBird taxonomy"
+LABEL_OBSERVED_SPECIES_PCT = "Observed species (%)"
 
 
-def spotlight_species_label(period_kind: PeriodKind) -> str:
-    """Spotlight label for species count — matches selected period."""
-    if period_kind == "year":
-        return "Year birds"
-    if period_kind == "month":
-        return "Month birds"
-    if period_kind == "week":
-        return "Week birds"
-    return "Species"
+def _geo_scope_is_world(geo_scope: ShareSummaryGeoScope | None) -> bool:
+    return geo_scope is None or geo_scope.is_world
+
+@dataclass(frozen=True)
+class _StatSpec:
+    """One headline stat: which :class:`ShareSummaryStats` field, its card label, and formatting.
+
+    ``label`` is the picker / session key (Available statistics, defaults, reorder).
+    ``card_label`` overrides the short tile heading on rendered cards when set.
+
+    ``decimals`` 0 → integer with thousands separators; 1 → one decimal place (and a ``—``
+    placeholder when the value is zero). ``hide_if_zero`` drops the stat entirely at zero.
+    """
+
+    attr: str
+    label: str
+    decimals: int = 0
+    hide_if_zero: bool = False
+    card_label: str | None = None
 
 
-def spotlight_stat_label(stat: SpotlightStatId, period_kind: PeriodKind) -> str:
-    """Human label for a spotlight stat (sidebar + card)."""
-    if stat == "species":
-        return spotlight_species_label(period_kind)
-    return _SPOTLIGHT_TITLES[stat]
-
-_YEARLY_ICON_RE = re.compile(
-    r'\s*<span class="stats-info-icon">.*?</span>',
-    flags=re.DOTALL,
+# Ordered headline stats. This order is the fallback priority used by ``card_stat_pairs`` and the
+# single source of truth for stat labels (the Available statistics expander reorders separately).
+_STAT_SPECS: tuple[_StatSpec, ...] = (
+    _StatSpec("species", "Total species", card_label="Species"),
+    _StatSpec("lifers", "Lifers"),
+    _StatSpec("checklists", "Total checklists"),
+    _StatSpec("completed_checklists", "Completed checklists"),
+    _StatSpec("incidental_checklists", "Incidental checklists"),
+    _StatSpec("locations", "Unique locations"),
+    _StatSpec("families", "Bird families"),
+    _StatSpec("individuals", "Total individuals"),
+    _StatSpec("days_with_checklist", "Birding days"),
+    _StatSpec("countries", "Countries"),
+    _StatSpec("longest_streak", "Longest streak (days)"),
+    _StatSpec("birding_hours", "Birding hours", decimals=1),
+    _StatSpec("distance_km", "Total distance (km)", decimals=1),
+    _StatSpec("shared_checklists", "Shared checklists", hide_if_zero=True),
+    _StatSpec("days_birding_with_others", "Days birding with others", hide_if_zero=True),
 )
+
+_CARD_LABEL_BY_PICKER: dict[str, str] = {
+    spec.label: spec.card_label for spec in _STAT_SPECS if spec.card_label is not None
+}
+
+
+def stat_card_display_label(picker_label: str) -> str:
+    """Short tile label for cards; picker keys and defaults keep ``picker_label``."""
+    return _CARD_LABEL_BY_PICKER.get(picker_label, picker_label)
+
+
+def _card_stat_pair(picker_label: str, value: str) -> tuple[str, str]:
+    return stat_card_display_label(picker_label), value
+
+def resolve_spotlight_label(spotlight_label: str | None) -> str:
+    """Normalize the chosen spotlight label, falling back to the default."""
+    cleaned = (spotlight_label or "").strip()
+    return cleaned or SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
+
+
+def spotlight_pair_for_label(
+    stats: ShareSummaryStats,
+    label: str,
+    *,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+) -> tuple[str, str] | None:
+    """Return (title, display value) for one Available statistics label."""
+    lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
+    cleaned = (label or "").strip()
+    if not cleaned or cleaned not in lookup:
+        return None
+    return _card_stat_pair(cleaned, lookup[cleaned])
 
 _LOGO_PATH = Path(__file__).resolve().parents[2] / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
 
 
-@lru_cache(maxsize=1)
-def _logo_svg_inline(*, height_px: int = 56, accent: bool = True) -> str:
+@lru_cache(maxsize=16)
+def _logo_svg_inline(*, height_px: int = 56, fill: str) -> str:
     """Small inline logo for card headers/footers."""
     if not _LOGO_PATH.is_file():
         return ""
     raw = _LOGO_PATH.read_text(encoding="utf-8")
-    fill = _colour("accent") if accent else _colour("muted")
     raw = raw.replace('fill="#000000"', f'fill="{fill}"')
     return (
         f'<img src="data:image/svg+xml;base64,{_svg_to_data_uri(raw)}" '
@@ -123,74 +199,201 @@ def _svg_to_data_uri(svg: str) -> str:
     return base64.b64encode(svg.encode("utf-8")).decode("ascii")
 
 
-def stat_pairs(stats: ShareSummaryStats) -> list[tuple[str, str]]:
+def stat_pairs(
+    stats: ShareSummaryStats,
+    *,
+    geo_scope: ShareSummaryGeoScope | None = None,
+) -> list[tuple[str, str]]:
     """Ordered (label, display value) pairs for layouts; skips missing stats."""
-    raw: list[tuple[str, int | float | None, str]] = [
-        ("species", stats.species, "species"),
-        ("lifers", stats.lifers, "lifers"),
-        ("checklists", stats.checklists, "checklists"),
-        ("locations", stats.locations, "locations"),
-        ("families", stats.families, "families"),
-        ("individuals", stats.individuals, "individuals"),
-        ("days_with_checklist", stats.days_with_checklist, "birding_days"),
-        ("countries", stats.countries, "countries"),
-        ("longest_streak", stats.longest_streak, "streak"),
-        ("birding_hours", stats.birding_hours, "hours"),
-        ("shared_checklists", stats.shared_checklists, "shared"),
-        ("days_birding_with_others", stats.days_birding_with_others, "shared_days"),
-    ]
     out: list[tuple[str, str]] = []
-    for key, val, fmt in raw:
+    for spec in _STAT_SPECS:
+        if spec.attr == "countries" and not _geo_scope_is_world(geo_scope):
+            continue
+        val = getattr(stats, spec.attr)
         if val is None:
             continue
-        if fmt == "hours":
-            display = f"{val:,.1f}" if val else "—"
-            label = "Birding hours"
-        elif fmt == "birding_days":
-            display = f"{int(val):,}"
-            label = "Birding days"
-        elif fmt == "countries":
-            display = f"{int(val):,}"
-            label = "Countries"
-        elif fmt == "streak":
-            display = f"{int(val):,}"
-            label = "Longest streak (days)"
-        elif fmt == "shared":
-            display = f"{int(val):,}"
-            label = _STAT_LABELS["shared_checklists"]
-        elif fmt == "shared_days":
-            display = f"{int(val):,}"
-            label = _STAT_LABELS["days_birding_with_others"]
+        if spec.hide_if_zero and val == 0:
+            continue
+        if spec.decimals:
+            display = f"{val:,.{spec.decimals}f}" if val else "—"
         else:
             display = f"{int(val):,}"
-            label = _STAT_LABELS.get(key, key.replace("_", " ").title())
-        out.append((label, display))
+        out.append((spec.label, display))
     return out
+
+
+_SUMMARY_STATUS_ORDER: tuple[str, ...] = (
+    "Total species",
+    "Lifers",
+    "Total checklists",
+    "Completed checklists",
+    "Incidental checklists",
+    "Shared checklists",
+    "Unique locations",
+    "Countries",
+    "Birding hours",
+    "Total distance (km)",
+    "Birding days",
+    "Days birding with others",
+    "Longest streak (days)",
+    "Total individuals",
+    "Bird families",
+    LABEL_OBSERVED_SPECIES_PCT,
+    LABEL_SPECIES_IN_TAXONOMY,
+    LABEL_FAMILIES_IN_TAXONOMY,
+)
+
+
+def _period_species_coverage_pct(
+    stats: ShareSummaryStats,
+    all_time: ShareSummaryAllTimeStats | None,
+) -> float | None:
+    """Period species count as a share of living eBird/Clements taxonomy species."""
+    if stats.species is None or all_time is None or not all_time.total_species_taxa:
+        return None
+    return stats.species / all_time.total_species_taxa * 100.0
+
+
+def _metrics_lookup(
+    stats: ShareSummaryStats,
+    *,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+) -> dict[str, str]:
+    """Label → display value for period stats and optional taxonomy reference rows."""
+    lookup: dict[str, str] = dict(stat_pairs(stats, geo_scope=geo_scope))
+    if geo_scope is not None and not _geo_scope_is_world(geo_scope):
+        if stats.region_lifers is not None:
+            lookup[geo_region_lifer_stat_label(geo_scope)] = f"{int(stats.region_lifers):,}"
+    if not _geo_scope_is_world(geo_scope) or all_time is None:
+        return lookup
+    if all_time.total_species_taxa is not None:
+        lookup[LABEL_SPECIES_IN_TAXONOMY] = f"{all_time.total_species_taxa:,}"
+    if all_time.total_families_taxa is not None:
+        lookup[LABEL_FAMILIES_IN_TAXONOMY] = f"{all_time.total_families_taxa:,}"
+    pct = _period_species_coverage_pct(stats, all_time)
+    if pct is not None:
+        lookup[LABEL_OBSERVED_SPECIES_PCT] = f"{pct:.1f}%"
+    return lookup
 
 
 def summary_status_metrics(
     stats: ShareSummaryStats,
     *,
     all_time: ShareSummaryAllTimeStats | None = None,
-    world_bird_coverage_pct: float | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> list[tuple[str, str]]:
-    """Metrics row above card previews (period stats + optional all-time taxonomy).
+    """Metrics row above card previews (period stats + optional taxonomy reference)."""
+    lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
 
-    All-time metrics and world bird coverage are **not** on card tiles — summary row only.
-    """
-    pairs = list(stat_pairs(stats))
-    if all_time is not None:
-        if all_time.total_species_taxa is not None:
-            pairs.append(("Total species (from taxa)", f"{all_time.total_species_taxa:,}"))
-        if all_time.observed_species_taxa is not None:
-            pairs.append(("Observed species (from taxa)", f"{all_time.observed_species_taxa:,}"))
-        if all_time.total_families_taxa is not None:
-            pairs.append(("Total families (from taxa)", f"{all_time.total_families_taxa:,}"))
-        if all_time.world_bird_coverage_pct is not None:
-            pairs.append(("World bird coverage", f"{all_time.world_bird_coverage_pct:.1f}%"))
-    elif world_bird_coverage_pct is not None:
-        pairs.append(("World bird coverage", f"{world_bird_coverage_pct:.1f}%"))
-    return pairs
+    ordered: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    region_label = (
+        geo_region_lifer_stat_label(geo_scope)
+        if geo_scope is not None and not _geo_scope_is_world(geo_scope)
+        else ""
+    )
+    for label in _SUMMARY_STATUS_ORDER:
+        if label in lookup:
+            ordered.append((label, lookup[label]))
+            seen.add(label)
+            if label == "Lifers" and region_label and region_label in lookup:
+                ordered.append((region_label, lookup[region_label]))
+                seen.add(region_label)
+    for label, value in lookup.items():
+        if label not in seen:
+            ordered.append((label, value))
+    return ordered
+
+
+def layout_card_stat_max(
+    layout: LayoutId | None,
+    fmt: FormatId | None = None,
+    *,
+    available_stat_count: int | None = None,
+) -> int:
+    """Maximum stat slots on grid/list layouts (spotlight uses a separate control)."""
+    if layout == "tiles":
+        if fmt == "story":
+            return SHARE_SUMMARY_STORY_MAX_STATS
+        return 6
+    if layout == "minimal":
+        if fmt == "story":
+            cap = SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
+            if available_stat_count is not None:
+                return min(max(1, available_stat_count), cap)
+            return cap
+        return 6
+    return 6
+
+
+def layout_card_stat_storage_max(layout: LayoutId | None) -> int:
+    """Session storage cap — story layouts retain extra picks when switching aspect ratio."""
+    if layout == "minimal":
+        return SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
+    if layout == "tiles":
+        return SHARE_SUMMARY_STORY_MAX_STATS
+    return layout_card_stat_max(layout)
+
+
+def _four_stat_default_labels(
+    period_kind: PeriodKind,
+    geo_scope: ShareSummaryGeoScope | None = None,
+) -> tuple[str, ...]:
+    """Default four-stat label order when a card shows at most four metrics."""
+    geo_constrained = geo_scope is not None and not geo_scope.is_world
+    if period_kind == "lifetime":
+        return (
+            SHARE_SUMMARY_COUNTRY_LIFETIME_FOUR_STAT_DEFAULT_STATS
+            if geo_constrained
+            else SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS
+        )
+    return (
+        SHARE_SUMMARY_COUNTRY_FOUR_STAT_DEFAULT_STATS
+        if geo_constrained
+        else SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS
+    )
+
+
+def _preferred_default_stats(
+    layout: LayoutId,
+    period_kind: PeriodKind,
+    geo_scope: ShareSummaryGeoScope | None = None,
+) -> tuple[str, ...]:
+    """Default stat label order for *layout*, *period_kind*, and geographic scope."""
+    del layout
+    geo_constrained = geo_scope is not None and not geo_scope.is_world
+    if period_kind == "lifetime":
+        return (
+            SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS
+            if geo_constrained
+            else SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS
+        )
+    return (
+        SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS
+        if geo_constrained
+        else SHARE_SUMMARY_TILES_DEFAULT_STATS
+    )
+
+
+def default_card_stat_labels(
+    layout: LayoutId,
+    available_metrics: Iterable[tuple[str, str]],
+    *,
+    period_kind: PeriodKind = "year",
+    geo_scope: ShareSummaryGeoScope | None = None,
+    fmt: FormatId | None = None,
+) -> tuple[str, ...]:
+    """Layout default stat labels filtered to *available_metrics*."""
+    available_list = list(available_metrics)
+    available = {label for label, _ in available_list}
+    preferred = _preferred_default_stats(layout, period_kind, geo_scope=geo_scope)
+    max_count = layout_card_stat_max(
+        layout,
+        fmt,
+        available_stat_count=len(available_list) if layout == "minimal" and fmt == "story" else None,
+    )
+    return tuple(lab for lab in preferred if lab in available)[:max_count]
 
 
 def card_stat_pairs(
@@ -198,19 +401,33 @@ def card_stat_pairs(
     *,
     max_count: int,
     layout: LayoutId | None = None,
+    selected_labels: tuple[str, ...] | None = None,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
 ) -> list[tuple[str, str]]:
-    """Stats for share cards — layout defaults first, then any remaining computed stats."""
-    all_p = stat_pairs(stats)
-    lookup = {label: value for label, value in all_p}
+    """Stats for share cards — user picks, layout defaults, or remaining computed stats."""
+    lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
 
-    if layout == "hero":
-        preferred = SHARE_SUMMARY_HERO_DEFAULT_STATS
-    elif layout in ("tiles", "minimal"):
-        preferred = SHARE_SUMMARY_TILES_DEFAULT_STATS
+    if selected_labels is not None:
+        out: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for lab in selected_labels:
+            if lab in lookup and lab not in seen:
+                out.append(_card_stat_pair(lab, lookup[lab]))
+                seen.add(lab)
+            if len(out) >= max_count:
+                break
+        return out
+
+    all_p = stat_pairs(stats, geo_scope=geo_scope)
+    period_kind = stats.period_kind
+
+    if layout in ("tiles", "minimal"):
+        preferred = _preferred_default_stats(layout, period_kind, geo_scope=geo_scope)
     elif max_count <= 4:
-        preferred = SHARE_SUMMARY_HERO_DEFAULT_STATS
+        preferred = _four_stat_default_labels(period_kind, geo_scope=geo_scope)
     else:
-        preferred = SHARE_SUMMARY_TILES_DEFAULT_STATS
+        preferred = _preferred_default_stats("tiles", period_kind, geo_scope=geo_scope)
 
     labels: list[str] = []
     for lab in preferred:
@@ -220,113 +437,7 @@ def card_stat_pairs(
         if lab not in labels:
             labels.append(lab)
 
-    return [(lab, lookup[lab]) for lab in labels[:max_count]]
-
-
-def spotlight_value(stats: ShareSummaryStats, stat: SpotlightStatId) -> tuple[str, str] | None:
-    """Return (title, display value) for single-stat spotlight cards."""
-    values: dict[SpotlightStatId, int | None] = {
-        "species": stats.species,
-        "lifers": stats.lifers,
-        "checklists": stats.checklists,
-        "locations": stats.locations,
-    }
-    val = values[stat]
-    if val is None:
-        return None
-    title = spotlight_stat_label(stat, stats.period_kind)
-    return title, f"{int(val):,}"
-
-
-def _strip_yearly_label(label: str) -> str:
-    return _YEARLY_ICON_RE.sub("", label or "").strip()
-
-
-def _parse_display_int(cell: str) -> int | None:
-    s = (cell or "").strip().replace(",", "")
-    if not s or s == "—":
-        return None
-    try:
-        return int(float(s))
-    except ValueError:
-        return None
-
-
-def _parse_display_float(cell: str) -> float | None:
-    s = (cell or "").strip().replace(",", "")
-    if not s or s == "—":
-        return None
-    try:
-        return float(s)
-    except ValueError:
-        return None
-
-
-def _yearly_row_lookup(
-    yearly_rows: Iterable[tuple[str, list[str]]],
-) -> dict[str, list[str]]:
-    out: dict[str, list[str]] = {}
-    for label, vals in yearly_rows:
-        out[_strip_yearly_label(label)] = list(vals)
-    return out
-
-
-def _countries_in_year_from_payload(payload: ChecklistStatsPayload, year: int) -> int | None:
-    """Count countries with checklists in *year* (from Country tab payload blocks)."""
-    sections = payload.country_sections or []
-    if not sections:
-        return None
-    count = 0
-    for country_key, years, _rows in sections:
-        if not country_key or country_key == "_UNKNOWN" or not years:
-            continue
-        if year in years:
-            count += 1
-    return count if count > 0 else None
-
-
-def share_summary_stats_for_year(
-    payload: ChecklistStatsPayload,
-    year: int,
-) -> ShareSummaryStats | None:
-    """Extract summary stats for one calendar year from a checklist stats payload.
-
-    Reads the Yearly Summary table rows in *payload* plus country blocks for
-    **Countries**. ``longest_streak`` is left ``None`` here — yearly rows do not
-    include per-year streak; use :func:`compute_share_summary_stats` with
-    :func:`period_for_year` when a full year card is needed from raw CSV data.
-    """
-    years = list(payload.years_list or [])
-    if year not in years:
-        return None
-    idx = years.index(year)
-    rows = _yearly_row_lookup(payload.yearly_rows or [])
-
-    def _int(label: str) -> int | None:
-        vals = rows.get(label)
-        if not vals or idx >= len(vals):
-            return None
-        return _parse_display_int(vals[idx])
-
-    def _float(label: str) -> float | None:
-        vals = rows.get(label)
-        if not vals or idx >= len(vals):
-            return None
-        return _parse_display_float(vals[idx])
-
-    return ShareSummaryStats(
-        period_label=str(year),
-        period_kind="year",
-        species=_int("Total species"),
-        lifers=_int("Lifers"),
-        checklists=_int("Total checklists"),
-        locations=_int("Unique locations"),
-        families=_int("Total bird families"),
-        individuals=_int("Total individuals"),
-        days_with_checklist=_int("Days with checklist"),
-        birding_hours=_float("Total birding hours"),
-        countries=_countries_in_year_from_payload(payload, year),
-    )
+    return [_card_stat_pair(lab, lookup[lab]) for lab in labels[:max_count]]
 
 
 def sample_share_summary_stats(
@@ -342,11 +453,14 @@ def sample_share_summary_stats(
             "species": 312,
             "lifers": 47,
             "checklists": 186,
+            "completed_checklists": 172,
+            "incidental_checklists": 14,
             "locations": 42,
             "families": 89,
             "individuals": 12_450,
             "days_with_checklist": 98,
             "birding_hours": 214.5,
+            "distance_km": 1_842.5,
             "longest_streak": 14,
             "countries": 5,
         },
@@ -354,6 +468,7 @@ def sample_share_summary_stats(
             "species": 34,
             "lifers": 2,
             "checklists": 6,
+            "completed_checklists": 5,
             "locations": 4,
             "families": 28,
             "individuals": 420,
@@ -365,6 +480,8 @@ def sample_share_summary_stats(
             "species": 89,
             "lifers": 8,
             "checklists": 22,
+            "completed_checklists": 20,
+            "incidental_checklists": 2,
             "locations": 11,
             "families": 45,
             "individuals": 1_840,
@@ -379,12 +496,28 @@ def sample_share_summary_stats(
             "species": 56,
             "lifers": 3,
             "checklists": 8,
+            "completed_checklists": 7,
             "locations": 6,
             "families": 32,
             "individuals": 680,
             "days_with_checklist": 7,
             "birding_hours": 18.0,
             "countries": 2,
+        },
+        "lifetime": {
+            "species": 847,
+            "checklists": 1_240,
+            "completed_checklists": 1_104,
+            "locations": 186,
+            "families": 248,
+            "individuals": 98_400,
+            "days_with_checklist": 412,
+            "birding_hours": 892.0,
+            "distance_km": 28_450.0,
+            "longest_streak": 21,
+            "countries": 12,
+            "shared_checklists": 86,
+            "days_birding_with_others": 54,
         },
     }
     d = demo.get(period_kind, demo["year"])
@@ -393,13 +526,16 @@ def sample_share_summary_stats(
         period_kind=period_kind,
         trip_title=trip_title,
         species=int(d["species"]),
-        lifers=int(d["lifers"]),
+        lifers=int(d["lifers"]) if "lifers" in d else None,
         checklists=int(d["checklists"]),
+        completed_checklists=int(d["completed_checklists"]) if "completed_checklists" in d else None,
+        incidental_checklists=int(d["incidental_checklists"]) if "incidental_checklists" in d else None,
         locations=int(d["locations"]),
         families=int(d["families"]),
         individuals=int(d["individuals"]),
         days_with_checklist=int(d["days_with_checklist"]),
         birding_hours=float(d["birding_hours"]),
+        distance_km=float(d["distance_km"]) if "distance_km" in d else None,
         longest_streak=int(d["longest_streak"]) if "longest_streak" in d else None,
         countries=int(d["countries"]) if "countries" in d else None,
         shared_checklists=int(d["shared_checklists"]) if "shared_checklists" in d else None,
@@ -415,12 +551,18 @@ def _is_tall(fmt: FormatId, width: int, height: int) -> bool:
     return height > width
 
 
-def _footer_pad(fmt: FormatId, width: int, height: int) -> int:
+def _footer_pad(
+    fmt: FormatId,
+    width: int,
+    height: int,
+) -> int:
+    """Reserve space above the absolute footer (logo + label ≈ 120px)."""
+    del width, height
     if fmt == "story":
         return 140
     if fmt == "portrait_post":
-        return 120
-    return 80
+        return 128
+    return 120
 
 
 def _card_shell(
@@ -451,13 +593,7 @@ def _card_shell(
 def _subtitle_for_period(stats: ShareSummaryStats) -> str:
     if stats.trip_title:
         return stats.trip_title
-    if stats.period_kind == "year":
-        return "Birding year in review"
-    if stats.period_kind == "month":
-        return "Monthly birding summary"
-    if stats.period_kind == "week":
-        return "Weekly birding summary"
-    return "Birding summary"
+    return share_summary_period_subtitle(stats.period_kind)
 
 
 def _headline_for_period(stats: ShareSummaryStats) -> str:
@@ -479,85 +615,160 @@ def _header_block(stats: ShareSummaryStats, *, subtitle: str | None = None) -> s
 </div>"""
 
 
-def _footer_block() -> str:
-    logo = _logo_svg_inline(height_px=40, accent=False)
-    logo_row = logo if logo else ""
+def _footer_block(*, scope_label: str | None = None) -> str:
+    logo = _logo_svg_inline(height_px=46, fill=_colour("muted"))
+    logo_row = (
+        f'<div style="margin:4px 0;line-height:0;">{logo}</div>' if logo else ""
+    )
+    scope_row = ""
+    if scope_label:
+        scope_row = (
+            f'<p style="margin:0 0 7px;font-size:36px;font-weight:600;line-height:1.05;'
+            f'color:{_colour("muted")};letter-spacing:0.04em;">{_esc(scope_label)}</p>'
+        )
     return f"""
-<div style="position:absolute;left:0;right:0;bottom:0;padding:24px 56px 28px;text-align:center;
+<div style="position:absolute;left:0;right:0;bottom:0;padding:22px 56px 26px;text-align:center;
   border-top:1px solid {_colour("border")};background:{_colour("bg_alt")};">
+  {scope_row}
   {logo_row}
-  <p style="margin:8px 0 0;font-size:20px;color:{_colour("muted")};">Personal eBird Explorer</p>
+  <p style="margin:5px 0 0;font-size:18px;color:{_colour("muted")};">Personal eBird Explorer</p>
 </div>"""
 
 
-def _layout_hero(stats: ShareSummaryStats, width: int, height: int, fmt: FormatId) -> str:
-    pairs = card_stat_pairs(stats, max_count=4, layout="hero")
-    cells = []
-    for label, value in pairs:
-        cells.append(f"""
-<div style="flex:1;min-width:40%;padding:28px 24px;border:1px solid {_colour("border")};
-  border-radius:16px;background:{_colour("bg_alt")};text-align:center;">
-  <div style="font-size:64px;font-weight:700;line-height:1.1;">{_esc(value)}</div>
-  <div style="margin-top:12px;font-size:24px;color:{_colour("muted")};">{_esc(label)}</div>
-</div>""")
-    pad_bottom = _footer_pad(fmt, width, height)
-    return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
-  {_header_block(stats)}
-  <div style="display:flex;flex-wrap:wrap;gap:24px;padding:16px 56px {pad_bottom}px;justify-content:center;">
-    {''.join(cells)}
-  </div>
-  {_footer_block()}
-</div>"""
+def _resolve_card_stat_pairs(
+    stats: ShareSummaryStats,
+    *,
+    layout: LayoutId,
+    fmt: FormatId | None = None,
+    card_stat_labels: tuple[str, ...] = (),
+    max_count: int | None = None,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+) -> list[tuple[str, str]]:
+    lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
+    available_count = (
+        len(lookup) if layout == "minimal" and fmt == "story" else None
+    )
+    resolved_max = (
+        max_count
+        if max_count is not None
+        else layout_card_stat_max(layout, fmt, available_stat_count=available_count)
+    )
+    if card_stat_labels:
+        return card_stat_pairs(
+            stats,
+            max_count=resolved_max,
+            selected_labels=card_stat_labels,
+            all_time=all_time,
+            geo_scope=geo_scope,
+        )
+    return card_stat_pairs(
+        stats,
+        max_count=resolved_max,
+        layout=layout,
+        all_time=all_time,
+        geo_scope=geo_scope,
+    )
 
 
-def _layout_subtitle(stats: ShareSummaryStats, layout_default: str) -> str | None:
+def _layout_subtitle(stats: ShareSummaryStats, layout: LayoutId) -> str | None:
     """Layout-specific green subtitle; trip title wins on custom ranges."""
-    if stats.trip_title:
-        return None
-    return layout_default
+    return share_summary_card_subtitle(
+        layout=layout,
+        period_kind=stats.period_kind,
+        trip_title=stats.trip_title,
+    )
 
 
-def _layout_tiles(stats: ShareSummaryStats, width: int, height: int, fmt: FormatId) -> str:
-    pairs = card_stat_pairs(stats, max_count=6, layout="tiles")
+def _layout_tiles(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
+) -> str:
+    pairs = _resolve_card_stat_pairs(
+        stats,
+        layout="tiles",
+        fmt=fmt,
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
+        geo_scope=geo_scope,
+    )
+    if fmt == "story" and len(pairs) > 6:
+        value_px, label_px, cell_pad, grid_gap = "40px", "18px", "20px 12px", "12px"
+    else:
+        value_px, label_px, cell_pad, grid_gap = "52px", "20px", "32px 20px", "20px"
     cells = []
     for label, value in pairs:
         cells.append(f"""
-<div style="flex:1 1 30%;min-width:28%;padding:32px 20px;border-radius:12px;
+<div style="padding:{cell_pad};border-radius:12px;
   background:linear-gradient(145deg,{_colour("bg_alt")},{_colour("bg")});
   border:1px solid {_colour("border")};text-align:center;">
-  <div style="font-size:52px;font-weight:700;">{_esc(value)}</div>
-  <div style="margin-top:8px;font-size:20px;color:{_colour("muted")};">{_esc(label)}</div>
+  <div style="font-size:{value_px};font-weight:700;">{_esc(value)}</div>
+  <div style="margin-top:8px;font-size:{label_px};color:{_colour("muted")};">{_esc(label)}</div>
 </div>""")
     pad_bottom = _footer_pad(fmt, width, height)
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
-  {_header_block(stats, subtitle=_layout_subtitle(stats, "My birding stats"))}
-  <div style="display:flex;flex-wrap:wrap;gap:20px;padding:8px 48px {pad_bottom}px;">
-    {''.join(cells)}
+  {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
+  <div style="padding:8px 48px {pad_bottom}px;">
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:{grid_gap};">
+      {''.join(cells)}
+    </div>
   </div>
-  {_footer_block()}
+  {_footer_block(scope_label=scope_label)}
 </div>"""
 
 
-def _layout_minimal(stats: ShareSummaryStats, width: int, height: int, fmt: FormatId) -> str:
-    pairs = card_stat_pairs(stats, max_count=6, layout="minimal")
+def _layout_minimal(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
+) -> str:
+    pairs = _resolve_card_stat_pairs(
+        stats,
+        layout="minimal",
+        fmt=fmt,
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
+        geo_scope=geo_scope,
+    )
+    if fmt == "story" and len(pairs) > 10:
+        label_px, value_px, row_pad = "22px", "32px", "10px"
+    elif fmt == "story" and len(pairs) > 6:
+        label_px, value_px, row_pad = "24px", "38px", "12px"
+    elif fmt == "square":
+        # Tighter rows so six stats clear the enlarged footer scope label on 1080×1080.
+        label_px, value_px, row_pad = "28px", "40px", "17px"
+    else:
+        label_px, value_px, row_pad = "28px", "44px", "20px"
     rows = []
     for label, value in pairs:
         rows.append(f"""
 <div style="display:flex;justify-content:space-between;align-items:baseline;
-  padding:20px 0;border-bottom:1px solid {_colour("border")};">
-  <span style="font-size:28px;color:{_colour("muted")};">{_esc(label)}</span>
-  <span style="font-size:44px;font-weight:700;">{_esc(value)}</span>
+  padding:{row_pad} 0;border-bottom:1px solid {_colour("border")};">
+  <span style="font-size:{label_px};color:{_colour("muted")};">{_esc(label)}</span>
+  <span style="font-size:{value_px};font-weight:700;">{_esc(value)}</span>
 </div>""")
     pad_bottom = _footer_pad(fmt, width, height)
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
-  {_header_block(stats, subtitle=_layout_subtitle(stats, "Summary"))}
+  {_header_block(stats, subtitle=_layout_subtitle(stats, "minimal"))}
   <div style="padding:24px 72px {pad_bottom}px;">
     {''.join(rows)}
   </div>
-  {_footer_block()}
+  {_footer_block(scope_label=scope_label)}
 </div>"""
 
 
@@ -567,11 +778,19 @@ def _layout_spotlight(
     height: int,
     fmt: FormatId,
     *,
-    spotlight_stat: SpotlightStatId = SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT,
+    spotlight_label: str = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> str:
-    pair = spotlight_value(stats, spotlight_stat)
+    pair = spotlight_pair_for_label(
+        stats,
+        spotlight_label,
+        all_time=all_time,
+        geo_scope=geo_scope,
+    )
     if pair is None:
-        title, value = "Lifers", "—"
+        title, value = spotlight_label, "—"
     else:
         title, value = pair
     pad_bottom = _footer_pad(fmt, width, height)
@@ -584,7 +803,15 @@ def _layout_spotlight(
 <p style="margin:0 0 28px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
   {_esc(stats.period_label)}</p>"""
     else:
-        header_html = f"""
+        subtitle = _layout_subtitle(stats, "spotlight")
+        if subtitle:
+            header_html = f"""
+<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase;
+  color:{_colour('accent')};font-weight:600;">{_esc(subtitle)}</p>
+<p style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
+  {_esc(stats.period_label)}</p>"""
+        else:
+            header_html = f"""
 <p style="margin:0 0 32px;font-size:36px;letter-spacing:0.04em;color:{_colour('accent')};font-weight:600;">
   {_esc(stats.period_label)}</p>"""
     return f"""
@@ -598,78 +825,207 @@ def _layout_spotlight(
     <div style="margin-top:20px;font-size:{label_size};color:{_colour('muted')};font-weight:500;">
       {_esc(title)}</div>
   </div>
-  {_footer_block()}
+  {_footer_block(scope_label=scope_label)}
 </div>"""
 
 
-_LAYOUT_BUILDERS = {
-    "hero": _layout_hero,
-    "tiles": _layout_tiles,
-    "minimal": _layout_minimal,
-}
+
+def _card_inner_html(
+    stats: ShareSummaryStats,
+    *,
+    layout: LayoutId,
+    fmt: FormatId,
+    tiles_presentation: TilesPresentationId = "grid",
+    spotlight_presentation: SpotlightPresentationId = "classic",
+    spotlight_label: str | None = None,
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
+) -> tuple[str, int, int]:
+    """Return (inner HTML, width, height) at export pixel dimensions."""
+    width, height = _FORMAT_PX[fmt]
+    if layout == "spotlight":
+        label = resolve_spotlight_label(spotlight_label)
+        if spotlight_presentation == "circle":
+            from explorer.presentation.share_summary_circles_preview import (
+                layout_spotlight_circle,
+            )
+
+            inner = layout_spotlight_circle(
+                stats,
+                width,
+                height,
+                fmt,
+                spotlight_label=label,
+                all_time=all_time,
+                geo_scope=geo_scope,
+                scope_label=scope_label,
+            )
+        else:
+            inner = _layout_spotlight(
+                stats,
+                width,
+                height,
+                fmt,
+                spotlight_label=label,
+                all_time=all_time,
+                geo_scope=geo_scope,
+                scope_label=scope_label,
+            )
+    elif layout == "tiles" and tiles_presentation == "circles":
+        from explorer.presentation.share_summary_circles_preview import (
+            layout_tiles_circle_cluster,
+        )
+
+        inner = layout_tiles_circle_cluster(
+            stats,
+            width,
+            height,
+            fmt,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
+        )
+    elif layout == "tiles":
+        inner = _layout_tiles(
+            stats,
+            width,
+            height,
+            fmt,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
+        )
+    else:
+        inner = _layout_minimal(
+            stats,
+            width,
+            height,
+            fmt,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
+        )
+    return inner, width, height
+
+
+def render_share_summary_export_html(
+    stats: ShareSummaryStats,
+    *,
+    layout: LayoutId = "tiles",
+    fmt: FormatId = "square",
+    tiles_presentation: TilesPresentationId = "grid",
+    spotlight_presentation: SpotlightPresentationId = "classic",
+    spotlight_label: str | None = None,
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
+    color_scheme_index: int | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
+) -> str:
+    """Full-size HTML document for headless screenshot (Playwright PNG export)."""
+    with _color_scheme_context(color_scheme_index):
+        inner, width, height = _card_inner_html(
+            stats,
+            layout=layout,
+            fmt=fmt,
+            tiles_presentation=tiles_presentation,
+            spotlight_presentation=spotlight_presentation,
+            spotlight_label=spotlight_label,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
+        )
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width={width}, height={height}" />
+<style>
+  *, *::before, *::after {{ box-sizing: border-box; }}
+  html, body {{
+    margin: 0;
+    padding: 0;
+    width: {width}px;
+    height: {height}px;
+    overflow: hidden;
+  }}
+</style>
+</head>
+<body>
+<div style="
+  width:{width}px;height:{height}px;overflow:hidden;
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  background:{_colour('bg')};color:{_colour('text')};">
+  {inner}
+</div>
+</body>
+</html>"""
 
 
 def render_share_summary_preview_html(
     stats: ShareSummaryStats,
     *,
-    layout: LayoutId = "hero",
+    layout: LayoutId = "tiles",
     fmt: FormatId = "square",
+    tiles_presentation: TilesPresentationId = "grid",
     scale: float = 0.38,
-    spotlight_stat: SpotlightStatId = "lifers",
+    spotlight_presentation: SpotlightPresentationId = "classic",
+    spotlight_label: str | None = None,
+    card_stat_labels: tuple[str, ...] = (),
+    all_time: ShareSummaryAllTimeStats | None = None,
+    color_scheme_index: int | None = None,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    scope_label: str | None = None,
 ) -> str:
     """Return scaled HTML preview for one layout + aspect ratio."""
-    width, height = _FORMAT_PX[fmt]
-    if layout == "spotlight":
-        inner = _layout_spotlight(stats, width, height, fmt, spotlight_stat=spotlight_stat)
-    else:
-        builder = _LAYOUT_BUILDERS.get(layout, _layout_hero)
-        inner = builder(stats, width, height, fmt)
-    return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
-
-
-def all_layout_previews_html(
-    stats: ShareSummaryStats,
-    *,
-    fmt: FormatId = "square",
-    scale: float = 0.38,
-    spotlight_stat: SpotlightStatId = "lifers",
-) -> dict[str, str]:
-    """All prototype layouts for side-by-side comparison."""
-    layouts: list[LayoutId] = ["hero", "tiles", "minimal", "spotlight"]
-    return {
-        layout_id: render_share_summary_preview_html(
+    with _color_scheme_context(color_scheme_index):
+        labels = card_stat_labels if layout in ("tiles", "minimal") else ()
+        inner, width, height = _card_inner_html(
             stats,
-            layout=layout_id,
+            layout=layout,
             fmt=fmt,
-            scale=scale,
-            spotlight_stat=spotlight_stat,
+            tiles_presentation=tiles_presentation,
+            spotlight_presentation=spotlight_presentation,
+            spotlight_label=spotlight_label,
+            card_stat_labels=labels,
+            all_time=all_time,
+            geo_scope=geo_scope,
+            scope_label=scope_label,
         )
-        for layout_id in layouts
-    }
+        return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
 
 
 # Re-export period helpers for the design app.
 __all__ = [
     "FormatId",
+    "TilesPresentationId",
+    "SpotlightPresentationId",
     "LayoutId",
-    "SpotlightStatId",
     "ShareSummaryAllTimeStats",
     "ShareSummaryStats",
-    "all_layout_previews_html",
     "compute_share_summary_stats",
     "period_for_custom",
-    "period_for_iso_week",
+    "period_for_lifetime",
     "period_for_week_containing",
     "period_for_month",
     "period_for_year",
+    "render_share_summary_export_html",
     "render_share_summary_preview_html",
     "sample_share_summary_stats",
-    "share_summary_stats_for_year",
-    "spotlight_value",
-    "spotlight_species_label",
-    "spotlight_stat_label",
+    "spotlight_pair_for_label",
+    "resolve_spotlight_label",
+    "stat_card_display_label",
     "stat_pairs",
     "summary_status_metrics",
+    "layout_card_stat_max",
+    "layout_card_stat_storage_max",
+    "default_card_stat_labels",
     "card_stat_pairs",
-    "_FORMAT_LABELS",
+    "FORMAT_LABELS",
 ]
