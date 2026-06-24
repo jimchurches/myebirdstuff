@@ -1202,7 +1202,7 @@ with st.sidebar:
         "Layout",
         options=["tiles", "minimal", "spotlight"],
         format_func=lambda x: {
-            "tiles": "Statistics Grid",
+            "tiles": "Statistics Tiles",
             "minimal": "Statistics List",
             "spotlight": "Spotlight",
         }[x],
@@ -1404,7 +1404,7 @@ _DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"
 
 with tab_circle_layout:
     st.caption(
-        "Dev-only circle tuner — Statistics Grid and Spotlight at all export sizes. "
+        "Dev-only circle tuner — Statistics Tiles and Spotlight at all export sizes. "
         "Copy output into ``share_summary_circles_preview.py``."
     )
     st.iframe(
@@ -1414,7 +1414,7 @@ with tab_circle_layout:
 
 with tab_hex_experiments:
     st.markdown(
-        "Uniform **hexicons** for the Statistics Grid. **Organic hive** samples (bottom half) "
+        "Uniform **hexicons** for Statistics Tiles. **Organic hive** samples (bottom half) "
         "use edge-to-edge tessellation in irregular, jagged clusters — like a natural honeycomb "
         "blob, not balanced rows or a dashboard grid. Legacy overlapping-row samples are kept "
         "for comparison only."

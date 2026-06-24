@@ -17,14 +17,14 @@ from explorer.presentation.share_summary_circles_preview import (
 
 def test_circle_layout_playground_html_includes_all_modes():
     html = render_circle_layout_playground_html()
-    assert "Statistics Grid" in html
+    assert "Statistics Tiles" in html
     assert "Spotlight" in html
     assert '"modes"' in html
     assert "pointerdown" in html
     assert "Copy export" in html
     assert "card_type:" in html
     assert "target_code:" in html
-    assert '"layout_label": "Statistics Grid"' in html
+    assert '"layout_label": "Statistics Tiles"' in html
     assert "Implement this card design" in html
     assert "diameter_px:" in html
     assert '"10": 255' in html

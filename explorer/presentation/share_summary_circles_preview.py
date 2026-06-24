@@ -126,7 +126,7 @@ CIRCLE_VARIANT_SPECS: dict[CircleVariantId, _CircleVariantSpec] = {
         shadow=False,
     ),
     "tiles_cluster": _CircleVariantSpec(
-        "Statistics Grid cluster — count-aware sizing with moderate ring gap",
+        "Statistics Tiles cluster — count-aware sizing with moderate ring gap",
         gap_px=11,
         ring1_angle_offset_rad=math.pi / 10,
         ring_step=1.04,

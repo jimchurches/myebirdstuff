@@ -1,7 +1,7 @@
 """
 Rough drag-and-drop playground for tuning circle card layouts (#275).
 
-Self-contained HTML for ``st.iframe`` in the design studio. Supports Statistics Grid
+Self-contained HTML for ``st.iframe`` in the design studio. Supports Statistics Tiles
 and Spotlight circle presentations at square, portrait, and story sizes.
 """
 
@@ -36,7 +36,7 @@ from explorer.presentation.share_summary_preview import (
 PlaygroundCardType = Literal["tiles", "spotlight"]
 PLAYGROUND_CARD_TYPES: tuple[PlaygroundCardType, ...] = ("tiles", "spotlight")
 PLAYGROUND_CARD_LABELS: dict[PlaygroundCardType, str] = {
-    "tiles": "Statistics Grid",
+    "tiles": "Statistics Tiles",
     "spotlight": "Spotlight",
 }
 PLAYGROUND_FORMATS: tuple[FormatId, ...] = ("square", "portrait_post", "story")
