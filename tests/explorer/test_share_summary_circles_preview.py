@@ -485,7 +485,7 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_seven():
     assert html.count("border-radius:50%") == 7
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert len(sizes) == 7
-    assert int(sizes[0]) == 250
+    assert int(sizes[0]) == 255
     tops = [
         float(match)
         for match in re.findall(
@@ -494,7 +494,7 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_seven():
         )
     ]
     assert len(tops) == 7
-    assert max(tops) + 125 <= 968
+    assert max(tops) + 127.5 <= 968
 
 
 def test_layout_tiles_circle_cluster_portrait_hand_tuned_eight():
@@ -520,7 +520,7 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_eight():
     assert html.count("border-radius:50%") == TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert len(sizes) == TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
-    assert int(sizes[0]) == 240
+    assert int(sizes[0]) == 245
     tops = [
         float(match)
         for match in re.findall(
@@ -529,7 +529,37 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_eight():
         )
     ]
     assert len(tops) == TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
-    assert max(tops) + 120 <= 968
+    assert max(tops) + 122.5 <= 968
+
+
+def test_layout_tiles_circle_cluster_portrait_hand_tuned_one_centred():
+    stats = sample_share_summary_stats()
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1350,
+        "portrait_post",
+        scope_label="World",
+        card_stat_labels=("Total species",),
+    )
+    assert html.count("border-radius:50%") == 1
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == 1
+    assert int(sizes[0]) == 340
+    canvas = re.search(
+        r"position:relative;width:(\d+)px;height:(\d+)px;margin:0 auto;overflow:hidden",
+        html,
+    )
+    assert canvas is not None
+    canvas_w = float(canvas.group(1))
+    canvas_h = float(canvas.group(2))
+    centre = re.search(
+        r"position:absolute;left:([\d.]+)px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",
+        html,
+    )
+    assert centre is not None
+    assert float(centre.group(1)) == pytest.approx(canvas_w / 2, abs=1.0)
+    assert float(centre.group(2)) == pytest.approx(canvas_h / 2, abs=1.0)
 
 
 def test_hand_tuned_template_assigns_stats_in_reading_order():
