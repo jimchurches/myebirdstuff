@@ -14,7 +14,7 @@ Living document for the social media summary feature. Update this file as ideas 
 | 3 | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) | Social Cards tab in main app |
 | 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — stat picker, favourite birds, layout tuning |
 
-**Prototype branch:** `157-social-summary-prototype` → PR for #273 to `beta-next`
+**Prototype / integration branch:** `feat/social-cards` — see [social-cards-workflow.md](social-cards-workflow.md) and [social-cards-integration-checklist.md](social-cards-integration-checklist.md)
 
 **Design app:**
 
@@ -529,7 +529,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 |-------|------------------|-------------|--------|-------|
 | 0 | `157-social-summary-prototype` | Design app + tracker + core modules | **Ready to commit/PR** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
 | 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **In PR** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
-| 2 | `275-share-summary-png-export` | Playwright HTML→PNG; display image; hybrid save UX | **In progress** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) |
+| 2 | `feat/social-cards` | Design studio iteration: PNG export, circle layouts, playground, stat picker | **Integration branch** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) (PNG done; layout work continues on feature branch) |
 | 3 | `157-share-summary-ui` | **Social Cards** main tab (before Settings); tab-aware sidebar; preview + PNG | Not started | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) |
 | 4 | follow-ups | Favourite bird(s), stat picker, themes, layout tuning | Not started | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
 

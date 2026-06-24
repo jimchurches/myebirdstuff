@@ -34,14 +34,15 @@ main
 
 Work through in order. Check off as completed.
 
-- [ ] **1.1** Confirm working tree is clean (`git status`)
-- [ ] **1.2** `git fetch origin`
-- [ ] **1.3** Create `feat/social-cards` from current `beta-next` (`git switch beta-next` → `git pull origin beta-next` → `git switch -c feat/social-cards`)
-- [ ] **1.4** Merge `275-share-summary-png-export` into `feat/social-cards` (merge commit is fine)
-- [ ] **1.5** Run quality gate on `feat/social-cards` (`ruff check explorer/`, `pytest tests/ -q`)
-- [ ] **1.6** Push `feat/social-cards` to `origin` (`git push -u origin feat/social-cards`)
-- [ ] **1.7** Switch local default for this work to `feat/social-cards`
-- [ ] **1.8** Optional: delete local branch `275-share-summary-png-export` after merge (keep remote until comfortable)
+- [x] **1.1** Confirm working tree is clean (`git status`)
+- [x] **1.2** `git fetch origin`
+- [x] **1.3** Create `feat/social-cards` from current `beta-next` (`git switch beta-next` → `git pull origin beta-next` → `git switch -c feat/social-cards`)
+- [x] **1.4** Merge `275-share-summary-png-export` into `feat/social-cards` (merge commit is fine)
+- [x] **1.5** Run quality gate on `feat/social-cards` (`ruff check explorer/`, `pytest tests/ -q`)
+- [x] **1.6** Push `feat/social-cards` to `origin` (`git push -u origin feat/social-cards`)
+- [x] **1.7** Switch local default for this work to `feat/social-cards`
+- [x] **1.8** Optional: delete local branch `275-share-summary-png-export` after merge (keep remote until comfortable)
+- [ ] **1.9** Close [#280](https://github.com/jimchurches/myebirdstuff/pull/280) (was `275-share-summary-png-export` → `beta-next`; superseded by `feat/social-cards` — close manually on GitHub)
 
 **Do not** merge `feat/social-cards` → `beta-next` in this phase.
 
@@ -49,8 +50,8 @@ Work through in order. Check off as completed.
 
 ## Phase 2 — Document the new workflow
 
-- [ ] **2.1** Add [social-cards-workflow.md](social-cards-workflow.md) — short ongoing reference (base branch, PR targets, agent prompt pattern, milestone rules)
-- [ ] **2.2** Update [issue-157-share-summary-tracker.md](issue-157-share-summary-tracker.md) — note `feat/social-cards`, link workflow doc, update prototype branch row
+- [x] **2.1** Add [social-cards-workflow.md](social-cards-workflow.md) — short ongoing reference (base branch, PR targets, agent prompt pattern, milestone rules)
+- [x] **2.2** Update [issue-157-share-summary-tracker.md](issue-157-share-summary-tracker.md) — note `feat/social-cards`, link workflow doc, update prototype branch row
 - [ ] **2.3** Comment on [#275](https://github.com/jimchurches/myebirdstuff/issues/275) — narrow scope to PNG export (largely done); point remaining layout iteration to `feat/social-cards` and child issues
 
 ---
@@ -124,7 +125,7 @@ Create GitHub issues (each branches from **`feat/social-cards`**). Suggested tit
 
 | Phase | Completed | Notes |
 |-------|-----------|-------|
-| 1 | | |
+| 1 | 2026-06-24 | `feat/social-cards` created; merge `b084a6ad`; pushed; local `275` deleted; PR #280 still open — close on GitHub |
 | 2 | | |
 | 3 | | |
 | 4 | | |
