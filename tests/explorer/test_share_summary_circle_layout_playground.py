@@ -9,6 +9,7 @@ from explorer.presentation.share_summary_circle_layout_playground import (
     story_circle_body_bounds_for_playground,
 )
 from explorer.presentation.share_summary_circles_preview import (
+    CIRCLE_CARD_TEMPLATES,
     STORY_CIRCLE_LAYOUTS,
     _tiles_circle_canvas_size,
 )
@@ -50,11 +51,19 @@ def test_circle_layout_playground_portrait_tiles_uses_code_layout():
         initial_card_type="tiles",
         initial_fmt="portrait_post",
     )
-    assert "PORTRAIT_TILES_CIRCLE_LAYOUTS" in html
+    assert "CIRCLE_CARD_TEMPLATES" in html
+    assert "portrait_post" in html
     assert '"6": 255' in html
     assert '"7": 250' in html
     assert '"canvas_h": 968' in html
     assert "0.46" in html
+
+
+def test_circle_card_templates_registry_has_story_and_portrait():
+    assert ("tiles", "story") in CIRCLE_CARD_TEMPLATES
+    assert ("tiles", "portrait_post") in CIRCLE_CARD_TEMPLATES
+    assert CIRCLE_CARD_TEMPLATES[("tiles", "story")].bounds == "story"
+    assert CIRCLE_CARD_TEMPLATES[("tiles", "portrait_post")].bounds == "cluster"
 
 
 def test_story_circle_body_bounds_for_playground_matches_preview():
