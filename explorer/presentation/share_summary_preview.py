@@ -45,8 +45,8 @@ from explorer.core.share_summary_defaults import (
     share_summary_period_subtitle,
 )
 
-TilesStyleId = Literal["grid", "circles"]
-SpotlightStyleId = Literal["classic", "circle"]
+TilesPresentationId = Literal["grid", "circles"]
+SpotlightPresentationId = Literal["classic", "circle"]
 
 LayoutId = Literal["tiles", "minimal", "spotlight"]
 FormatId = Literal["square", "portrait_post", "story"]
@@ -835,8 +835,8 @@ def _card_inner_html(
     *,
     layout: LayoutId,
     fmt: FormatId,
-    tiles_style: TilesStyleId = "grid",
-    spotlight_style: SpotlightStyleId = "classic",
+    tiles_presentation: TilesPresentationId = "grid",
+    spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
@@ -847,7 +847,7 @@ def _card_inner_html(
     width, height = _FORMAT_PX[fmt]
     if layout == "spotlight":
         label = resolve_spotlight_label(spotlight_label)
-        if spotlight_style == "circle":
+        if spotlight_presentation == "circle":
             from explorer.presentation.share_summary_circles_preview import (
                 layout_spotlight_circle,
             )
@@ -873,7 +873,7 @@ def _card_inner_html(
                 geo_scope=geo_scope,
                 scope_label=scope_label,
             )
-    elif layout == "tiles" and tiles_style == "circles":
+    elif layout == "tiles" and tiles_presentation == "circles":
         from explorer.presentation.share_summary_circles_preview import (
             layout_tiles_circle_cluster,
         )
@@ -918,8 +918,8 @@ def render_share_summary_export_html(
     *,
     layout: LayoutId = "tiles",
     fmt: FormatId = "square",
-    tiles_style: TilesStyleId = "grid",
-    spotlight_style: SpotlightStyleId = "classic",
+    tiles_presentation: TilesPresentationId = "grid",
+    spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
@@ -933,8 +933,8 @@ def render_share_summary_export_html(
             stats,
             layout=layout,
             fmt=fmt,
-            tiles_style=tiles_style,
-            spotlight_style=spotlight_style,
+            tiles_presentation=tiles_presentation,
+            spotlight_presentation=spotlight_presentation,
             spotlight_label=spotlight_label,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
@@ -973,9 +973,9 @@ def render_share_summary_preview_html(
     *,
     layout: LayoutId = "tiles",
     fmt: FormatId = "square",
-    tiles_style: TilesStyleId = "grid",
+    tiles_presentation: TilesPresentationId = "grid",
     scale: float = 0.38,
-    spotlight_style: SpotlightStyleId = "classic",
+    spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
@@ -990,8 +990,8 @@ def render_share_summary_preview_html(
             stats,
             layout=layout,
             fmt=fmt,
-            tiles_style=tiles_style,
-            spotlight_style=spotlight_style,
+            tiles_presentation=tiles_presentation,
+            spotlight_presentation=spotlight_presentation,
             spotlight_label=spotlight_label,
             card_stat_labels=labels,
             all_time=all_time,
@@ -1004,8 +1004,8 @@ def render_share_summary_preview_html(
 # Re-export period helpers for the design app.
 __all__ = [
     "FormatId",
-    "TilesStyleId",
-    "SpotlightStyleId",
+    "TilesPresentationId",
+    "SpotlightPresentationId",
     "LayoutId",
     "ShareSummaryAllTimeStats",
     "ShareSummaryStats",

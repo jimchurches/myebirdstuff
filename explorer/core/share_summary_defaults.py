@@ -112,12 +112,27 @@ SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS: tuple[str, ...] = (
     "Total checklists",
     "Unique locations",
 )
-# Story format (1080×1920) — statistics grid may show up to this many stats.
+# Story format (1080×1920) — Statistics Tiles may show up to this many stats.
 SHARE_SUMMARY_STORY_MAX_STATS = 10
 # Statistics List (minimal) on story — cap 18; slot count is min(available, cap).
 SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS = 18
 # Display label on spotlight cards (matches Available statistics / card picker).
 SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"
+
+# User-visible layout and presentation names (design studio; future main app).
+SHARE_SUMMARY_LAYOUT_LABELS: dict[str, str] = {
+    "tiles": "Statistics Tiles",
+    "minimal": "Statistics List",
+    "spotlight": "Spotlight",
+}
+SHARE_SUMMARY_TILES_PRESENTATION_LABELS: dict[str, str] = {
+    "grid": "Statistics Grid",
+    "circles": "Circle cluster",
+}
+SHARE_SUMMARY_SPOTLIGHT_PRESENTATION_LABELS: dict[str, str] = {
+    "classic": "Classic",
+    "circle": "Circle",
+}
 
 # Card green subtitle headings (tunable without editing layout code).
 # Tiles / minimal / spotlight use layout subtitles unless period_kind is ``lifetime``,
@@ -152,6 +167,21 @@ def share_summary_period_subtitle(period_kind: str) -> str:
     if period_kind == "lifetime":
         return SHARE_SUMMARY_LIFETIME_SUBTITLE
     return _PERIOD_SUBTITLE_BY_KIND.get(period_kind, SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM)
+
+
+def share_summary_layout_label(layout_id: str) -> str:
+    """Human label for a share card layout id (``tiles``, ``minimal``, ``spotlight``)."""
+    return SHARE_SUMMARY_LAYOUT_LABELS.get(layout_id, layout_id)
+
+
+def share_summary_tiles_presentation_label(presentation_id: str) -> str:
+    """Human label for Statistics Tiles presentation (``grid`` or ``circles``)."""
+    return SHARE_SUMMARY_TILES_PRESENTATION_LABELS.get(presentation_id, presentation_id)
+
+
+def share_summary_spotlight_presentation_label(presentation_id: str) -> str:
+    """Human label for Spotlight presentation (``classic`` or ``circle``)."""
+    return SHARE_SUMMARY_SPOTLIGHT_PRESENTATION_LABELS.get(presentation_id, presentation_id)
 
 
 def share_summary_card_subtitle(

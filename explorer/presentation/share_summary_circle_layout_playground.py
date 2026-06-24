@@ -11,7 +11,10 @@ import html
 import json
 from typing import Any, Literal
 
-from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+from explorer.core.share_summary_defaults import (
+    SHARE_SUMMARY_COLOR_SCHEMES,
+    SHARE_SUMMARY_LAYOUT_LABELS,
+)
 from explorer.presentation.share_summary_circles_preview import (
     CIRCLE_VARIANT_SPECS,
     TILES_CIRCLE_CLUSTER_VARIANT,
@@ -36,8 +39,8 @@ from explorer.presentation.share_summary_preview import (
 PlaygroundCardType = Literal["tiles", "spotlight"]
 PLAYGROUND_CARD_TYPES: tuple[PlaygroundCardType, ...] = ("tiles", "spotlight")
 PLAYGROUND_CARD_LABELS: dict[PlaygroundCardType, str] = {
-    "tiles": "Statistics Tiles",
-    "spotlight": "Spotlight",
+    card_type: SHARE_SUMMARY_LAYOUT_LABELS[card_type]
+    for card_type in PLAYGROUND_CARD_TYPES
 }
 PLAYGROUND_FORMATS: tuple[FormatId, ...] = ("square", "portrait_post", "story")
 
@@ -224,10 +227,10 @@ def _export_meta(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str, str]
             target = f'CIRCLE_CARD_TEMPLATES[("tiles", "{fmt}")]'
         else:
             target = "tiles circle cluster (algorithm today — add CIRCLE_CARD_TEMPLATES entry)"
-        presentation_key = "tiles_style"
+        presentation_key = "tiles_presentation"
     else:
         target = "_spotlight_circle_diameter (or per-format diameter dict if tuning)"
-        presentation_key = "spotlight_style"
+        presentation_key = "spotlight_presentation"
     return {
         "layout_id": card_type,
         "layout_label": PLAYGROUND_CARD_LABELS[card_type],
@@ -555,7 +558,7 @@ def render_circle_layout_playground_html(
     Copy output into <code>share_summary_circles_preview.py</code> when tuning layouts.
   </p>
   <div class="toolbar">
-    <label>Card type
+    <label>Layout
       <select id="card-type">{card_type_options}</select>
     </label>
     <label>Format

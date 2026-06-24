@@ -44,6 +44,7 @@ from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export f
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS,
+    SHARE_SUMMARY_LAYOUT_LABELS,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
@@ -56,6 +57,9 @@ from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export f
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     share_summary_card_subtitle,
+    share_summary_layout_label,
+    share_summary_spotlight_presentation_label,
+    share_summary_tiles_presentation_label,
 )
 
 # ---------------------------------------------------------------------------

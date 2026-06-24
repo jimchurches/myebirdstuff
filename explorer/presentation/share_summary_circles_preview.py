@@ -1,5 +1,5 @@
 """
-Circular Statistics Grid layouts for share summary cards (#157).
+Circular Statistics Tiles layouts for share summary cards (#157).
 
 Hand-tuned circle layouts live in ``CIRCLE_CARD_TEMPLATES``; the renderer is shared.
 """
@@ -167,7 +167,7 @@ def _tiles_circle_body_insets(
     *,
     scope_label: str | None,
 ) -> tuple[int, int, int, int]:
-    """Absolute top/bottom/left/right insets for the Statistics Grid circle body."""
+    """Absolute top/bottom/left/right insets for the Statistics Tiles circle body."""
     header_reserve, footer_reserve, vertical_pad = _tiles_circle_layout_reserves(
         fmt,
         scope_label=scope_label,
@@ -214,7 +214,7 @@ def _tiles_circle_canvas_size(
     *,
     scope_label: str | None,
 ) -> tuple[int, int]:
-    """Statistics Grid circle body — room for layout subtitle above the period headline."""
+    """Statistics Tiles circle body — room for layout subtitle above the period headline."""
     header_reserve, footer_reserve, vertical_pad = _tiles_circle_layout_reserves(
         fmt,
         scope_label=scope_label,
@@ -509,7 +509,7 @@ def _empty_circle_tile_html(
 
 
 def tiles_circle_cluster_max(fmt: FormatId) -> int:
-    """Maximum Statistics Grid circle slots for *fmt*."""
+    """Maximum Statistics Tiles circle slots for *fmt*."""
     if fmt == "story":
         return TILES_CIRCLE_CLUSTER_STORY_MAX
     return TILES_CIRCLE_CLUSTER_MAX
@@ -554,7 +554,7 @@ def _resolve_story_circle_slot_pairs(
 def _centres_in_grid_reading_order(
     centres: list[tuple[float, float]],
 ) -> list[tuple[float, float]]:
-    """Top-to-bottom, left-to-right — matches Statistics Grid tile order."""
+    """Top-to-bottom, left-to-right — matches Statistics Tiles tile order."""
     return [
         centres[i]
         for i, _ in sorted(
@@ -1252,7 +1252,7 @@ def layout_tiles_circle_cluster(
     geo_scope: ShareSummaryGeoScope | None = None,
     scope_label: str | None = None,
 ) -> str:
-    """Statistics Grid stats in a wide radial circle cluster (production style)."""
+    """Statistics Tiles stats in a wide radial circle cluster (production style)."""
     fmt_max = tiles_circle_cluster_max(fmt)
     if fmt == "story" and card_stat_labels:
         pairs = _resolve_story_circle_slot_pairs(
@@ -1317,7 +1317,7 @@ def layout_tiles_circle_cluster(
 
 
 def _spotlight_circle_diameter(canvas_w: int, canvas_h: int, fmt: FormatId) -> int:
-    """Single spotlight circle — much larger than Statistics Grid cluster circles."""
+    """Single spotlight circle — much larger than Statistics Tiles cluster circles."""
     pad = _SHADOW_PAD_PX + 12
     avail = min(canvas_w, canvas_h) - 2 * pad
     max_fit = min(canvas_w - 2 * pad, canvas_h - 2 * pad)

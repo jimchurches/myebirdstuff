@@ -647,7 +647,7 @@ def test_share_summary_preview_tiles_circle_cluster():
     html = render_share_summary_preview_html(
         stats,
         layout="tiles",
-        tiles_style="circles",
+        tiles_presentation="circles",
         fmt="square",
         scale=1.0,
         scope_label="World",
@@ -682,7 +682,7 @@ def test_share_summary_preview_spotlight_circle():
     html = render_share_summary_preview_html(
         stats,
         layout="spotlight",
-        spotlight_style="circle",
+        spotlight_presentation="circle",
         fmt="square",
         scale=1.0,
         spotlight_label="Lifers",
