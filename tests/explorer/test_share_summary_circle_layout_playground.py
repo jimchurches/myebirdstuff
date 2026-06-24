@@ -59,11 +59,24 @@ def test_circle_layout_playground_portrait_tiles_uses_code_layout():
     assert "0.46" in html
 
 
+def test_circle_layout_playground_square_tiles_uses_code_layout():
+    html = render_circle_layout_playground_html(
+        initial_card_type="tiles",
+        initial_fmt="square",
+    )
+    assert "CIRCLE_CARD_TEMPLATES" in html
+    assert '"6": 250' in html
+    assert '"7": 237' in html
+    assert '"canvas_h": 698' in html
+
+
 def test_circle_card_templates_registry_has_story_and_portrait():
     assert ("tiles", "story") in CIRCLE_CARD_TEMPLATES
     assert ("tiles", "portrait_post") in CIRCLE_CARD_TEMPLATES
+    assert ("tiles", "square") in CIRCLE_CARD_TEMPLATES
     assert CIRCLE_CARD_TEMPLATES[("tiles", "story")].bounds == "story"
     assert CIRCLE_CARD_TEMPLATES[("tiles", "portrait_post")].bounds == "cluster"
+    assert CIRCLE_CARD_TEMPLATES[("tiles", "square")].bounds == "cluster"
 
 
 def test_story_circle_body_bounds_for_playground_matches_preview():

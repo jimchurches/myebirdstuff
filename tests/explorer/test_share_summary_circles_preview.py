@@ -518,6 +518,53 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_seven():
     assert max(tops) + 125 <= 968
 
 
+def test_layout_tiles_circle_cluster_square_hand_tuned_six():
+    stats = sample_share_summary_stats()
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1080,
+        "square",
+        scope_label="World",
+    )
+    assert html.count("border-radius:50%") == 6
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == 6
+    assert int(sizes[0]) == 250
+    canvas = re.search(
+        r"position:relative;width:(\d+)px;height:(\d+)px;margin:0 auto;overflow:hidden",
+        html,
+    )
+    assert canvas is not None
+    assert canvas.group(1) == "984"
+    assert canvas.group(2) == "698"
+
+
+def test_layout_tiles_circle_cluster_square_hand_tuned_seven():
+    stats = sample_share_summary_stats()
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+    )
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1080,
+        "square",
+        scope_label="World",
+        card_stat_labels=labels,
+    )
+    assert html.count("border-radius:50%") == 7
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == 7
+    assert int(sizes[0]) == 237
+
+
 def test_layout_tiles_circle_cluster_portrait_circles_clear_footer():
     stats = sample_share_summary_stats()
     html = layout_tiles_circle_cluster(

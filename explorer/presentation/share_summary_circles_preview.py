@@ -708,6 +708,30 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
         },
         diameters={6: 255, 7: 250},
     ),
+    ("tiles", "square"): _build_circle_card_template(
+        "square",
+        bounds="cluster",
+        layouts={
+            6: (
+                (0.47, 0.17),
+                (0.56, 0.87),
+                (0.96, 0.94),
+                (0.05, 0.89),
+                (0.04, 0.06),
+                (0.91, 0.07),
+            ),
+            7: (
+                (0.39, 0.11),
+                (0.48, 0.94),
+                (0.96, 0.94),
+                (0.04, 0.88),
+                (0.02, 0.02),
+                (0.96, 0.02),
+                (0.70, 0.44),
+            ),
+        },
+        diameters={6: 250, 7: 237},
+    ),
 }
 
 
@@ -857,6 +881,36 @@ def _hand_tuned_template_fits(
     return True
 
 
+def _hand_tuned_template_within_canvas(
+    template: CircleCardTemplate,
+    count: int,
+    *,
+    canvas_w: int,
+    canvas_h: int,
+    diameter: int,
+) -> bool:
+    """True when every circle stays inside the canvas (playground hand-tune tolerance)."""
+    centres = _hand_tuned_template_centres(
+        template,
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+    )
+    if len(centres) != count:
+        return False
+    pad = diameter / 2 + _SHADOW_PAD_PX
+    x_lo, x_hi, y_lo, y_hi = _hand_tuned_edge_limits(
+        template.bounds,
+        canvas_w,
+        canvas_h,
+    )
+    return all(
+        x_lo <= x - pad and x + pad <= x_hi and y_lo <= y - pad and y + pad <= y_hi
+        for x, y in centres
+    )
+
+
 def _hand_tuned_template_diameter(
     template: CircleCardTemplate,
     count: int,
@@ -869,13 +923,22 @@ def _hand_tuned_template_diameter(
     if count <= 0 or count not in template.counts:
         return 96
     fixed = template.counts[count].diameter
-    if fixed is not None and _hand_tuned_template_fits(
-        template,
-        count,
-        canvas_w=canvas_w,
-        canvas_h=canvas_h,
-        diameter=fixed,
-        gap_px=gap_px,
+    if fixed is not None and (
+        _hand_tuned_template_fits(
+            template,
+            count,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter=fixed,
+            gap_px=gap_px,
+        )
+        or _hand_tuned_template_within_canvas(
+            template,
+            count,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter=fixed,
+        )
     ):
         return fixed
     by_width = int(canvas_w * _HAND_TUNED_CIRCLE_WIDTH_FRACTION)
