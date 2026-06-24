@@ -14,7 +14,7 @@ Living document for the social media summary feature. Update this file as ideas 
 | 3 | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) | Social Cards tab in main app |
 | 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — stat picker, favourite birds, layout tuning |
 
-**Prototype / integration branch:** `feat/social-cards` — see [social-cards-workflow.md](social-cards-workflow.md) and [social-cards-integration-checklist.md](social-cards-integration-checklist.md)
+**Prototype / integration branch:** `feat/social-cards` — see [social-cards-workflow.md](social-cards-workflow.md)
 
 **Design app:**
 

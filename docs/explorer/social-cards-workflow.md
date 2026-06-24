@@ -1,10 +1,6 @@
 # Social Cards — development workflow
 
-How to work on [#157 — Social Media Summary Generator](https://github.com/jimchurches/myebirdstuff/issues/157) after the feature integration branch exists.
-
-**Integration checklist (one-time setup):** [social-cards-integration-checklist.md](social-cards-integration-checklist.md)
-
----
+How to work on [#157 — Social Media Summary Generator](https://github.com/jimchurches/myebirdstuff/issues/157) on the **`feat/social-cards`** integration branch.
 
 ## Branches
 
@@ -67,7 +63,7 @@ Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker
 
 ## CI / automations
 
-- **Test Integrity Sentinel** (Cursor automation): currently targets PRs to `beta-next`. Issue-branch PRs merge into **`feat/social-cards`** — extend or duplicate the automation for that base branch (see checklist item 2.4). GitHub Actions unit tests still run on push/PR per `.github/workflows/tests.yml`.
+- **Test Integrity Sentinel** (Cursor automation): targets PRs to `beta-next`. For PRs to **`feat/social-cards`**, duplicate or extend the automation — [#297](https://github.com/jimchurches/myebirdstuff/issues/297). GitHub Actions unit tests still run on push/PR per `.github/workflows/tests.yml`.
 
 ---
 
