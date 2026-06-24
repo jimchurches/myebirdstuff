@@ -5,6 +5,9 @@ from __future__ import annotations
 from explorer.presentation.share_summary_circle_layout_playground import (
     PLAYGROUND_CARD_TYPES,
     PLAYGROUND_FORMATS,
+    PLAYGROUND_TILES_DEFAULT_COUNT,
+    PLAYGROUND_TILES_MAX_COUNT,
+    PLAYGROUND_TILES_MIN_COUNT,
     render_circle_layout_playground_html,
     story_circle_body_bounds_for_playground,
 )
@@ -34,6 +37,25 @@ def test_circle_layout_playground_html_includes_all_modes():
         assert f'"{fmt}"' in html
     for count in STORY_CIRCLE_LAYOUTS:
         assert f'"{count}":' in html
+
+
+def test_circle_layout_playground_tiles_supports_one_through_ten_circles():
+    html = render_circle_layout_playground_html(
+        initial_card_type="tiles",
+        initial_fmt="story",
+    )
+    assert f'"min_count": {PLAYGROUND_TILES_MIN_COUNT}' in html
+    assert f'"max_count": {PLAYGROUND_TILES_MAX_COUNT}' in html
+    assert f'"default_count": {PLAYGROUND_TILES_DEFAULT_COUNT}' in html
+    assert '"1":' in html
+    assert '"5":' in html
+    for fmt in PLAYGROUND_FORMATS:
+        fmt_html = render_circle_layout_playground_html(
+            initial_card_type="tiles",
+            initial_fmt=fmt,
+        )
+        assert f'"min_count": {PLAYGROUND_TILES_MIN_COUNT}' in fmt_html
+        assert f'"max_count": {PLAYGROUND_TILES_MAX_COUNT}' in fmt_html
 
 
 def test_circle_layout_playground_spotlight_is_not_draggable():

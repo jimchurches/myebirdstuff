@@ -67,6 +67,10 @@ _MAX_CLUSTER_DIAMETER = 340
 _MIN_SPOTLIGHT_DIAMETER = 200
 _MAX_SPOTLIGHT_DIAMETER = 520
 
+PLAYGROUND_TILES_MIN_COUNT = 1
+PLAYGROUND_TILES_MAX_COUNT = 10
+PLAYGROUND_TILES_DEFAULT_COUNT = 6
+
 CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX = 1000
 
 
@@ -139,10 +143,6 @@ def _spotlight_center_norm(canvas_w: int, canvas_h: int, *, diameter: int) -> li
     span_y = max(1e-6, canvas_h - 2 * pad)
     return [round((cx - pad) / span_x, 4), round((cy - pad) / span_y, 4)]
 
-
-def _template_layouts_payload(template) -> dict[str, list[list[float]]]:
-    positions = circle_card_template_positions(template)
-    return {str(count): [[x, y] for x, y in coords] for count, coords in positions.items()}
 
 
 def _template_diameters_payload(template) -> dict[str, int]:
@@ -220,6 +220,86 @@ def _playground_body_frame(
     return {}
 
 
+def _tiles_playground_count_range() -> range:
+    return range(PLAYGROUND_TILES_MIN_COUNT, PLAYGROUND_TILES_MAX_COUNT + 1)
+
+
+def _build_tiles_playground_mode(
+    frame: dict[str, int],
+    fmt: FormatId,
+    export_meta: dict[str, str],
+) -> dict[str, Any]:
+    """Playground config for Statistics Tiles circles — counts 1–10, default six."""
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        frame["card_w"],
+        frame["card_h"],
+        fmt,
+        scope_label="World",
+    )
+    counts = _tiles_playground_count_range()
+    variant = TILES_CIRCLE_CLUSTER_VARIANT
+    diameter_start = TILES_CIRCLE_DIAMETER_SEARCH_START
+
+    layouts = _cluster_layouts_for_counts(
+        canvas_w,
+        canvas_h,
+        counts=counts,
+        variant=variant,
+        diameter_start=diameter_start,
+    )
+    auto_diameters = _cluster_auto_diameters(
+        canvas_w,
+        canvas_h,
+        counts=counts,
+        variant=variant,
+        diameter_start=diameter_start,
+    )
+
+    template = circle_card_template("tiles", fmt)
+    bounds = "cluster"
+    diameters: dict[str, int] = {}
+    code_presets = False
+
+    if template is not None:
+        bounds = template.bounds
+        for count, positions in circle_card_template_positions(template).items():
+            layouts[str(count)] = [[x, y] for x, y in positions]
+        diameters = _template_diameters_payload(template)
+        for count_str, diameter in _template_auto_diameters(template, canvas_w, canvas_h).items():
+            auto_diameters[count_str] = diameter
+        for count_str, diameter in diameters.items():
+            auto_diameters[count_str] = diameter
+        code_presets = True
+
+    default_count = PLAYGROUND_TILES_DEFAULT_COUNT
+    mode: dict[str, Any] = {
+        **frame,
+        "canvas_w": canvas_w,
+        "canvas_h": canvas_h,
+        "bounds": bounds,
+        "draggable": True,
+        "min_count": PLAYGROUND_TILES_MIN_COUNT,
+        "max_count": PLAYGROUND_TILES_MAX_COUNT,
+        "default_count": default_count,
+        "min_diameter": _MIN_CLUSTER_DIAMETER,
+        "max_diameter": _MAX_CLUSTER_DIAMETER,
+        "default_diameter": diameters.get(
+            str(default_count),
+            auto_diameters[str(default_count)],
+        ),
+        "layouts": layouts,
+        "diameters": diameters,
+        "auto_diameters": auto_diameters,
+        "code_presets": code_presets,
+        **_playground_body_frame("tiles", fmt),
+        **export_meta,
+    }
+    if bounds == "story":
+        mode["top_clearance"] = _STORY_TOP_CLEARANCE
+        mode["bottom_clearance"] = _STORY_BOTTOM_CLEARANCE
+    return mode
+
+
 def _export_meta(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str, str]:
     if card_type == "tiles":
         template = circle_card_template("tiles", fmt)
@@ -278,97 +358,7 @@ def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str
             **export_meta,
         }
 
-    canvas_w, canvas_h = _tiles_circle_canvas_size(
-        frame["card_w"],
-        frame["card_h"],
-        fmt,
-        scope_label="World",
-    )
-    template = circle_card_template("tiles", fmt)
-    if template is not None:
-        count_keys = sorted(template.counts)
-        counts = range(count_keys[0], count_keys[-1] + 1)
-        variant = TILES_CIRCLE_CLUSTER_VARIANT
-        diameter_start = TILES_CIRCLE_DIAMETER_SEARCH_START
-        if template.bounds == "cluster":
-            layouts = _cluster_layouts_for_counts(
-                canvas_w,
-                canvas_h,
-                counts=counts,
-                variant=variant,
-                diameter_start=diameter_start,
-            )
-            for count, positions in circle_card_template_positions(template).items():
-                layouts[str(count)] = [[x, y] for x, y in positions]
-        else:
-            layouts = _template_layouts_payload(template)
-        diameters = _template_diameters_payload(template)
-        auto_diameters = _template_auto_diameters(template, canvas_w, canvas_h)
-        default_count = max(count_keys) if template.bounds == "story" else min(count_keys)
-        mode: dict[str, Any] = {
-            **frame,
-            "canvas_w": canvas_w,
-            "canvas_h": canvas_h,
-            "bounds": template.bounds,
-            "draggable": True,
-            "min_count": count_keys[0],
-            "max_count": count_keys[-1],
-            "default_count": default_count,
-            "min_diameter": _MIN_CLUSTER_DIAMETER,
-            "max_diameter": _MAX_CLUSTER_DIAMETER,
-            "default_diameter": diameters.get(
-                str(default_count),
-                auto_diameters[str(default_count)],
-            ),
-            "layouts": layouts,
-            "diameters": diameters,
-            "auto_diameters": auto_diameters,
-            "code_presets": True,
-            **_playground_body_frame(card_type, fmt),
-            **export_meta,
-        }
-        if template.bounds == "story":
-            mode["top_clearance"] = _STORY_TOP_CLEARANCE
-            mode["bottom_clearance"] = _STORY_BOTTOM_CLEARANCE
-        return mode
-    counts = range(6, 8)
-    variant = TILES_CIRCLE_CLUSTER_VARIANT
-    diameter_start = TILES_CIRCLE_DIAMETER_SEARCH_START
-
-    layouts = _cluster_layouts_for_counts(
-        canvas_w,
-        canvas_h,
-        counts=counts,
-        variant=variant,
-        diameter_start=diameter_start,
-    )
-    auto_diameters = _cluster_auto_diameters(
-        canvas_w,
-        canvas_h,
-        counts=counts,
-        variant=variant,
-        diameter_start=diameter_start,
-    )
-    default_count = max(counts)
-    return {
-        **frame,
-        "canvas_w": canvas_w,
-        "canvas_h": canvas_h,
-        "bounds": "cluster",
-        "draggable": True,
-        "min_count": min(counts),
-        "max_count": max(counts),
-        "default_count": default_count,
-        "min_diameter": _MIN_CLUSTER_DIAMETER,
-        "max_diameter": _MAX_CLUSTER_DIAMETER,
-        "default_diameter": auto_diameters[str(default_count)],
-        "layouts": layouts,
-        "diameters": {},
-        "auto_diameters": auto_diameters,
-        "code_presets": False,
-        **_playground_body_frame(card_type, fmt),
-        **export_meta,
-    }
+    return _build_tiles_playground_mode(frame, fmt, export_meta)
 
 
 def _modes_payload() -> dict[str, dict[str, dict[str, Any]]]:
@@ -997,6 +987,9 @@ __all__ = [
     "PLAYGROUND_FORMATS",
     "PLAYGROUND_SAMPLE_STATS",
     "SPOTLIGHT_SAMPLE_STAT",
+    "PLAYGROUND_TILES_DEFAULT_COUNT",
+    "PLAYGROUND_TILES_MAX_COUNT",
+    "PLAYGROUND_TILES_MIN_COUNT",
     "render_circle_layout_playground_html",
     "story_circle_body_bounds_for_playground",
 ]
