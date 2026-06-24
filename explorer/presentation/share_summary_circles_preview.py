@@ -580,6 +580,8 @@ _HAND_TUNED_CIRCLE_MIN_EDGE_GAP_PX = 20
 _STORY_CIRCLE_MIN_EDGE_GAP_PX = _HAND_TUNED_CIRCLE_MIN_EDGE_GAP_PX
 _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX = 340
 _STORY_CIRCLE_MAX_DIAMETER_PX = _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX
+_SINGLE_CIRCLE_LAYOUT: tuple[tuple[float, float], ...] = ((0.50, 0.50),)
+_SINGLE_CIRCLE_DIAMETER_PX = _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX
 _HAND_TUNED_CIRCLE_WIDTH_FRACTION = 0.62
 _STORY_CIRCLE_WIDTH_FRACTION = _HAND_TUNED_CIRCLE_WIDTH_FRACTION
 
@@ -610,6 +612,7 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
         "story",
         bounds="story",
         layouts={
+            1: _SINGLE_CIRCLE_LAYOUT,
             6: (
                 (0.10, 0.05),
                 (0.87, 0.18),
@@ -661,15 +664,13 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
                 (0.74, 1.00),
             ),
         },
-        diameters={6: 280, 7: 270, 8: 265, 9: 255, 10: 255},
+        diameters={1: _SINGLE_CIRCLE_DIAMETER_PX, 6: 280, 7: 270, 8: 265, 9: 255, 10: 255},
     ),
     ("tiles", "portrait_post"): _build_circle_card_template(
         "portrait_post",
         bounds="cluster",
         layouts={
-            1: (
-                (0.50, 0.50),
-            ),
+            1: _SINGLE_CIRCLE_LAYOUT,
             2: (
                 (0.15, 0.19),
                 (0.85, 0.73),
@@ -720,12 +721,22 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
                 (0.00, 0.03),
             ),
         },
-        diameters={1: 340, 2: 340, 3: 310, 4: 285, 5: 268, 6: 255, 7: 255, 8: 245},
+        diameters={
+            1: _SINGLE_CIRCLE_DIAMETER_PX,
+            2: 340,
+            3: 310,
+            4: 285,
+            5: 268,
+            6: 255,
+            7: 255,
+            8: 245,
+        },
     ),
     ("tiles", "square"): _build_circle_card_template(
         "square",
         bounds="cluster",
         layouts={
+            1: _SINGLE_CIRCLE_LAYOUT,
             6: (
                 (0.47, 0.17),
                 (0.56, 0.87),
@@ -744,7 +755,7 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
                 (0.70, 0.44),
             ),
         },
-        diameters={6: 250, 7: 237},
+        diameters={1: _SINGLE_CIRCLE_DIAMETER_PX, 6: 250, 7: 237},
     ),
 }
 

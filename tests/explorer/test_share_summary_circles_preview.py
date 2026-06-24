@@ -532,34 +532,48 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_eight():
     assert max(tops) + 122.5 <= 968
 
 
-def test_layout_tiles_circle_cluster_portrait_hand_tuned_one_centred():
+def test_layout_tiles_circle_cluster_single_circle_centred_all_formats():
     stats = sample_share_summary_stats()
-    html = layout_tiles_circle_cluster(
-        stats,
-        1080,
-        1350,
-        "portrait_post",
-        scope_label="World",
-        card_stat_labels=("Total species",),
+    cases = (
+        ("portrait_post", 1080, 1350),
+        ("square", 1080, 1080),
+        ("story", 1080, 1920),
     )
-    assert html.count("border-radius:50%") == 1
-    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
-    assert len(sizes) == 1
-    assert int(sizes[0]) == 340
-    canvas = re.search(
-        r"position:relative;width:(\d+)px;height:(\d+)px;margin:0 auto;overflow:hidden",
-        html,
-    )
-    assert canvas is not None
-    canvas_w = float(canvas.group(1))
-    canvas_h = float(canvas.group(2))
-    centre = re.search(
-        r"position:absolute;left:([\d.]+)px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",
-        html,
-    )
-    assert centre is not None
-    assert float(centre.group(1)) == pytest.approx(canvas_w / 2, abs=1.0)
-    assert float(centre.group(2)) == pytest.approx(canvas_h / 2, abs=1.0)
+    for fmt, card_w, card_h in cases:
+        html = layout_tiles_circle_cluster(
+            stats,
+            card_w,
+            card_h,
+            fmt,
+            scope_label="World",
+            card_stat_labels=("Total species",),
+        )
+        assert html.count("border-radius:50%") == 1
+        sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+        assert len(sizes) == 1
+        assert int(sizes[0]) == 340
+        canvas = re.search(
+            r"position:relative;width:(\d+)px;height:(\d+)px;margin:0 auto;overflow:hidden",
+            html,
+        )
+        assert canvas is not None
+        canvas_w = int(canvas.group(1))
+        canvas_h = int(canvas.group(2))
+        template = CIRCLE_CARD_TEMPLATES[("tiles", fmt)]
+        expected_x, expected_y = _hand_tuned_template_centres(
+            template,
+            1,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter=340,
+        )[0]
+        centre = re.search(
+            r"position:absolute;left:([\d.]+)px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",
+            html,
+        )
+        assert centre is not None
+        assert float(centre.group(1)) == pytest.approx(expected_x, abs=1.0)
+        assert float(centre.group(2)) == pytest.approx(expected_y, abs=1.0)
 
 
 def test_hand_tuned_template_assigns_stats_in_reading_order():
