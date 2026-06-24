@@ -652,10 +652,20 @@ PORTRAIT_TILES_CIRCLE_LAYOUTS: dict[int, tuple[tuple[float, float], ...]] = {
         (0.08, 0.14),
         (0.81, 0.05),
     ),
+    7: (
+        (0.35, 0.58),
+        (0.93, 0.51),
+        (0.76, 0.94),
+        (0.06, 0.93),
+        (0.04, 0.09),
+        (0.47, 0.16),
+        (0.89, 0.07),
+    ),
 }
 
 PORTRAIT_TILES_CIRCLE_LAYOUT_DIAMETERS: dict[int, int] = {
     6: 255,
+    7: 250,
 }
 
 # Formats using hand-tuned Statistics Grid circle templates (non-story).

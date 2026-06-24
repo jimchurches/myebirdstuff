@@ -484,6 +484,40 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_six():
     assert max(tops) + 127.5 <= 968
 
 
+def test_layout_tiles_circle_cluster_portrait_hand_tuned_seven():
+    stats = sample_share_summary_stats()
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+    )
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1350,
+        "portrait_post",
+        scope_label="World",
+        card_stat_labels=labels,
+    )
+    assert html.count("border-radius:50%") == 7
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == 7
+    assert int(sizes[0]) == 250
+    tops = [
+        float(match)
+        for match in re.findall(
+            r"position:absolute;left:[\d.]+px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",
+            html,
+        )
+    ]
+    assert len(tops) == 7
+    assert max(tops) + 125 <= 968
+
+
 def test_layout_tiles_circle_cluster_portrait_circles_clear_footer():
     stats = sample_share_summary_stats()
     html = layout_tiles_circle_cluster(

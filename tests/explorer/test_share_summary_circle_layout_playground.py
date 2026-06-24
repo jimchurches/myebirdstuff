@@ -52,6 +52,7 @@ def test_circle_layout_playground_portrait_tiles_uses_code_layout():
     )
     assert "PORTRAIT_TILES_CIRCLE_LAYOUTS" in html
     assert '"6": 255' in html
+    assert '"7": 250' in html
     assert '"canvas_h": 968' in html
     assert "0.46" in html
 
