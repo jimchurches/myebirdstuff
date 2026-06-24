@@ -43,7 +43,7 @@ from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export
 from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export for Streamlit UI
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
-    SHARE_SUMMARY_HERO_DEFAULT_STATS,
+    SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT,
     SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,

@@ -70,7 +70,6 @@ from explorer.presentation.share_summary_preview import (
     FORMAT_LABELS,
     FORMAT_PIXELS,
     FormatId,
-    HeroStyleId,
     LayoutId,
     SpotlightStyleId,
     TilesStyleId,
@@ -101,7 +100,6 @@ def _cached_share_summary_png(
     scope_label: str | None,
     geo_scope: ShareSummaryGeoScope,
     tiles_style: TilesStyleId = "grid",
-    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
 ) -> bytes:
     return share_summary_to_png_bytes(
@@ -115,7 +113,6 @@ def _cached_share_summary_png(
         scope_label=scope_label,
         geo_scope=geo_scope,
         tiles_style=tiles_style,
-        hero_style=hero_style,
         spotlight_style=spotlight_style,
     )
 
@@ -126,7 +123,6 @@ _CIRCLE_LAYOUT_TAB_LABEL = "Circle layout"
 _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
 _TILES_STYLE_KEY = "design_tiles_style"
-_HERO_STYLE_KEY = "design_hero_style"
 _SPOTLIGHT_STYLE_KEY = "design_spotlight_style"
 _COLOR_THEME_KEY = "design_color_theme"
 _STATISTICS_LABEL = "Card statistics"
@@ -700,7 +696,7 @@ def _card_stat_picker_ui(
     geo_scope: ShareSummaryGeoScope,
     tiles_style: TilesStyleId = "grid",
 ) -> tuple[str, ...]:
-    """Ordered stat picker for hero / tiles / list; hidden for spotlight."""
+    """Ordered stat picker for tiles / list; hidden for spotlight."""
     if layout == "spotlight":
         return ()
 
@@ -1050,7 +1046,6 @@ def _current_card_fragment(
     scope_label: str,
     geo_scope: ShareSummaryGeoScope,
     tiles_style: TilesStyleId = "grid",
-    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
@@ -1078,7 +1073,6 @@ def _current_card_fragment(
             layout=selected_layout,
             fmt=fmt,
             tiles_style=tiles_style,
-            hero_style=hero_style,
             spotlight_style=spotlight_style,
             scale=scale,
             spotlight_label=spotlight_label,
@@ -1104,7 +1098,6 @@ def _current_card_fragment(
             scope_label,
             geo_scope,
             tiles_style,
-            hero_style,
             spotlight_style,
         )
     except RuntimeError as exc:
@@ -1207,24 +1200,14 @@ with st.sidebar:
     st.header(_CURRENT_CARD_LABEL)
     selected_layout: LayoutId = st.selectbox(
         "Layout",
-        options=["hero", "tiles", "minimal", "spotlight"],
+        options=["tiles", "minimal", "spotlight"],
         format_func=lambda x: {
-            "hero": "Hero Grid",
             "tiles": "Statistics Grid",
             "minimal": "Statistics List",
             "spotlight": "Spotlight",
         }[x],
     )
     tiles_style: TilesStyleId = "grid"
-    hero_style: HeroStyleId = "classic"
-    if selected_layout == "hero":
-        hero_style = st.radio(
-            "Hero presentation",
-            options=["classic", "circle"],
-            format_func=lambda x: "Hero Grid" if x == "classic" else "Circle cluster",
-            key=_HERO_STYLE_KEY,
-            horizontal=True,
-        )
     if selected_layout == "tiles":
         tiles_style = st.radio(
             "Statistics presentation",
@@ -1414,7 +1397,6 @@ with tab_social_cards:
         scope_label=scope_label,
         geo_scope=geo_scope,
         tiles_style=tiles_style,
-        hero_style=hero_style,
         spotlight_style=spotlight_style,
     )
 
@@ -1422,8 +1404,8 @@ _DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"
 
 with tab_circle_layout:
     st.caption(
-        "Dev-only circle tuner — Statistics Grid, Hero Grid, and Spotlight at all "
-        "export sizes. Copy output into ``share_summary_circles_preview.py``."
+        "Dev-only circle tuner — Statistics Grid and Spotlight at all export sizes. "
+        "Copy output into ``share_summary_circles_preview.py``."
     )
     st.iframe(
         render_circle_layout_playground_html(),

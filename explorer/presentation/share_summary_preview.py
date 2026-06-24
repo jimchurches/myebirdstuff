@@ -30,26 +30,25 @@ from explorer.core.share_summary_compute import (
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
-    SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS,
-    SHARE_SUMMARY_COUNTRY_LIFETIME_HERO_DEFAULT_STATS,
+    SHARE_SUMMARY_COUNTRY_FOUR_STAT_DEFAULT_STATS,
+    SHARE_SUMMARY_COUNTRY_LIFETIME_FOUR_STAT_DEFAULT_STATS,
     SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS,
-    SHARE_SUMMARY_HERO_DEFAULT_STATS,
-    SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS,
+    SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS,
+    SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
-    SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
     SHARE_SUMMARY_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     share_summary_card_subtitle,
+    share_summary_period_subtitle,
 )
 
 TilesStyleId = Literal["grid", "circles"]
-HeroStyleId = Literal["classic", "circle"]
 SpotlightStyleId = Literal["classic", "circle"]
 
-LayoutId = Literal["hero", "tiles", "minimal", "spotlight"]
+LayoutId = Literal["tiles", "minimal", "spotlight"]
 FormatId = Literal["square", "portrait_post", "story"]
 
 _color_scheme_index: contextvars.ContextVar[int | None] = contextvars.ContextVar(
@@ -314,8 +313,6 @@ def layout_card_stat_max(
     available_stat_count: int | None = None,
 ) -> int:
     """Maximum stat slots on grid/list layouts (spotlight uses a separate control)."""
-    if layout == "hero":
-        return 4
     if layout == "tiles":
         if fmt == "story":
             return SHARE_SUMMARY_STORY_MAX_STATS
@@ -339,30 +336,38 @@ def layout_card_stat_storage_max(layout: LayoutId | None) -> int:
     return layout_card_stat_max(layout)
 
 
+def _four_stat_default_labels(
+    period_kind: PeriodKind,
+    geo_scope: ShareSummaryGeoScope | None = None,
+) -> tuple[str, ...]:
+    """Default four-stat label order when a card shows at most four metrics."""
+    geo_constrained = geo_scope is not None and not geo_scope.is_world
+    if period_kind == "lifetime":
+        return (
+            SHARE_SUMMARY_COUNTRY_LIFETIME_FOUR_STAT_DEFAULT_STATS
+            if geo_constrained
+            else SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS
+        )
+    return (
+        SHARE_SUMMARY_COUNTRY_FOUR_STAT_DEFAULT_STATS
+        if geo_constrained
+        else SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS
+    )
+
+
 def _preferred_default_stats(
     layout: LayoutId,
     period_kind: PeriodKind,
     geo_scope: ShareSummaryGeoScope | None = None,
 ) -> tuple[str, ...]:
     """Default stat label order for *layout*, *period_kind*, and geographic scope."""
+    del layout
     geo_constrained = geo_scope is not None and not geo_scope.is_world
     if period_kind == "lifetime":
-        if layout == "hero":
-            return (
-                SHARE_SUMMARY_COUNTRY_LIFETIME_HERO_DEFAULT_STATS
-                if geo_constrained
-                else SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS
-            )
         return (
             SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS
             if geo_constrained
             else SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS
-        )
-    if layout == "hero":
-        return (
-            SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS
-            if geo_constrained
-            else SHARE_SUMMARY_HERO_DEFAULT_STATS
         )
     return (
         SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS
@@ -417,12 +422,10 @@ def card_stat_pairs(
     all_p = stat_pairs(stats, geo_scope=geo_scope)
     period_kind = stats.period_kind
 
-    if layout == "hero":
-        preferred = _preferred_default_stats("hero", period_kind, geo_scope=geo_scope)
-    elif layout in ("tiles", "minimal"):
-        preferred = _preferred_default_stats("tiles", period_kind, geo_scope=geo_scope)
+    if layout in ("tiles", "minimal"):
+        preferred = _preferred_default_stats(layout, period_kind, geo_scope=geo_scope)
     elif max_count <= 4:
-        preferred = _preferred_default_stats("hero", period_kind, geo_scope=geo_scope)
+        preferred = _four_stat_default_labels(period_kind, geo_scope=geo_scope)
     else:
         preferred = _preferred_default_stats("tiles", period_kind, geo_scope=geo_scope)
 
@@ -590,12 +593,7 @@ def _card_shell(
 def _subtitle_for_period(stats: ShareSummaryStats) -> str:
     if stats.trip_title:
         return stats.trip_title
-    sub = share_summary_card_subtitle(
-        layout="hero",
-        period_kind=stats.period_kind,
-        trip_title=stats.trip_title,
-    )
-    return sub or SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM
+    return share_summary_period_subtitle(stats.period_kind)
 
 
 def _headline_for_period(stats: ShareSummaryStats) -> str:
@@ -671,44 +669,6 @@ def _resolve_card_stat_pairs(
         all_time=all_time,
         geo_scope=geo_scope,
     )
-
-
-def _layout_hero(
-    stats: ShareSummaryStats,
-    width: int,
-    height: int,
-    fmt: FormatId,
-    *,
-    card_stat_labels: tuple[str, ...] = (),
-    all_time: ShareSummaryAllTimeStats | None = None,
-    geo_scope: ShareSummaryGeoScope | None = None,
-    scope_label: str | None = None,
-) -> str:
-    pairs = _resolve_card_stat_pairs(
-        stats,
-        layout="hero",
-        card_stat_labels=card_stat_labels,
-        all_time=all_time,
-        geo_scope=geo_scope,
-    )
-    cells = []
-    for label, value in pairs:
-        cells.append(f"""
-<div style="flex:1;min-width:40%;padding:28px 24px;border:1px solid {_colour("border")};
-  border-radius:16px;background:{_colour("bg_alt")};text-align:center;">
-  <div style="font-size:64px;font-weight:700;line-height:1.1;">{_esc(value)}</div>
-  <div style="margin-top:12px;font-size:24px;color:{_colour("muted")};">{_esc(label)}</div>
-</div>""")
-    pad_bottom = _footer_pad(fmt, width, height)
-    return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
-  {_header_block(stats)}
-  <div style="display:flex;flex-wrap:wrap;gap:24px;padding:16px 56px {pad_bottom}px;
-    justify-content:center;align-content:flex-start;">
-    {''.join(cells)}
-  </div>
-  {_footer_block(scope_label=scope_label)}
-</div>"""
 
 
 def _layout_subtitle(stats: ShareSummaryStats, layout: LayoutId) -> str | None:
@@ -869,12 +829,6 @@ def _layout_spotlight(
 </div>"""
 
 
-_LAYOUT_BUILDERS = {
-    "hero": _layout_hero,
-    "tiles": _layout_tiles,
-    "minimal": _layout_minimal,
-}
-
 
 def _card_inner_html(
     stats: ShareSummaryStats,
@@ -882,7 +836,6 @@ def _card_inner_html(
     layout: LayoutId,
     fmt: FormatId,
     tiles_style: TilesStyleId = "grid",
-    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
     spotlight_label: str | None = None,
     card_stat_labels: tuple[str, ...] = (),
@@ -920,21 +873,6 @@ def _card_inner_html(
                 geo_scope=geo_scope,
                 scope_label=scope_label,
             )
-    elif layout == "hero" and hero_style == "circle":
-        from explorer.presentation.share_summary_circles_preview import (
-            layout_hero_circle,
-        )
-
-        inner = layout_hero_circle(
-            stats,
-            width,
-            height,
-            fmt,
-            card_stat_labels=card_stat_labels,
-            all_time=all_time,
-            geo_scope=geo_scope,
-            scope_label=scope_label,
-        )
     elif layout == "tiles" and tiles_style == "circles":
         from explorer.presentation.share_summary_circles_preview import (
             layout_tiles_circle_cluster,
@@ -950,9 +888,8 @@ def _card_inner_html(
             geo_scope=geo_scope,
             scope_label=scope_label,
         )
-    elif layout in ("hero", "tiles"):
-        builder = _LAYOUT_BUILDERS[layout]
-        inner = builder(
+    elif layout == "tiles":
+        inner = _layout_tiles(
             stats,
             width,
             height,
@@ -963,8 +900,7 @@ def _card_inner_html(
             scope_label=scope_label,
         )
     else:
-        builder = _LAYOUT_BUILDERS.get(layout, _layout_hero)
-        inner = builder(
+        inner = _layout_minimal(
             stats,
             width,
             height,
@@ -980,10 +916,9 @@ def _card_inner_html(
 def render_share_summary_export_html(
     stats: ShareSummaryStats,
     *,
-    layout: LayoutId = "hero",
+    layout: LayoutId = "tiles",
     fmt: FormatId = "square",
     tiles_style: TilesStyleId = "grid",
-    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
     spotlight_label: str | None = None,
     card_stat_labels: tuple[str, ...] = (),
@@ -999,7 +934,6 @@ def render_share_summary_export_html(
             layout=layout,
             fmt=fmt,
             tiles_style=tiles_style,
-            hero_style=hero_style,
             spotlight_style=spotlight_style,
             spotlight_label=spotlight_label,
             card_stat_labels=card_stat_labels,
@@ -1037,10 +971,9 @@ def render_share_summary_export_html(
 def render_share_summary_preview_html(
     stats: ShareSummaryStats,
     *,
-    layout: LayoutId = "hero",
+    layout: LayoutId = "tiles",
     fmt: FormatId = "square",
     tiles_style: TilesStyleId = "grid",
-    hero_style: HeroStyleId = "classic",
     scale: float = 0.38,
     spotlight_style: SpotlightStyleId = "classic",
     spotlight_label: str | None = None,
@@ -1052,13 +985,12 @@ def render_share_summary_preview_html(
 ) -> str:
     """Return scaled HTML preview for one layout + aspect ratio."""
     with _color_scheme_context(color_scheme_index):
-        labels = card_stat_labels if layout in ("hero", "tiles", "minimal") else ()
+        labels = card_stat_labels if layout in ("tiles", "minimal") else ()
         inner, width, height = _card_inner_html(
             stats,
             layout=layout,
             fmt=fmt,
             tiles_style=tiles_style,
-            hero_style=hero_style,
             spotlight_style=spotlight_style,
             spotlight_label=spotlight_label,
             card_stat_labels=labels,
@@ -1073,7 +1005,6 @@ def render_share_summary_preview_html(
 __all__ = [
     "FormatId",
     "TilesStyleId",
-    "HeroStyleId",
     "SpotlightStyleId",
     "LayoutId",
     "ShareSummaryAllTimeStats",

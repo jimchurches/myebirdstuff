@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING
 from explorer.presentation.share_summary_preview import (
     _FORMAT_PX,
     FormatId,
-    HeroStyleId,
     LayoutId,
     SpotlightStyleId,
     TilesStyleId,
@@ -91,7 +90,7 @@ def _launch_chromium():
 def share_summary_to_png_bytes(
     stats: ShareSummaryStats,
     *,
-    layout: LayoutId = "hero",
+    layout: LayoutId = "tiles",
     fmt: FormatId = "square",
     spotlight_label: str | None = None,
     card_stat_labels: tuple[str, ...] = (),
@@ -100,18 +99,16 @@ def share_summary_to_png_bytes(
     scope_label: str | None = None,
     geo_scope: "ShareSummaryGeoScope | None" = None,
     tiles_style: TilesStyleId = "grid",
-    hero_style: HeroStyleId = "classic",
     spotlight_style: SpotlightStyleId = "classic",
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
     width, height = _FORMAT_PX[fmt]
-    labels = card_stat_labels if layout in ("hero", "tiles", "minimal") else ()
+    labels = card_stat_labels if layout in ("tiles", "minimal") else ()
     html = render_share_summary_export_html(
         stats,
         layout=layout,
         fmt=fmt,
         tiles_style=tiles_style,
-        hero_style=hero_style,
         spotlight_style=spotlight_style,
         spotlight_label=spotlight_label,
         card_stat_labels=labels,

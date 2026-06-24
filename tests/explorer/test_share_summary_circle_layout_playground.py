@@ -18,7 +18,6 @@ from explorer.presentation.share_summary_circles_preview import (
 def test_circle_layout_playground_html_includes_all_modes():
     html = render_circle_layout_playground_html()
     assert "Statistics Grid" in html
-    assert "Hero Grid" in html
     assert "Spotlight" in html
     assert '"modes"' in html
     assert "pointerdown" in html

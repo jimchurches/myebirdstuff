@@ -396,7 +396,7 @@ def test_trip_title_renders_on_card():
         trip_title="North Coast NSW Exploration",
         lifers=12,
     )
-    html = render_share_summary_preview_html(stats, layout="hero")
+    html = render_share_summary_preview_html(stats, layout="tiles")
     assert "1 – 7 June 2025" in html
     assert "North Coast NSW Exploration" in html
 

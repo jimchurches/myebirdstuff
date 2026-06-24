@@ -17,7 +17,7 @@ def chromium_available():
     try:
         share_summary_to_png_bytes(
             sample_share_summary_stats(),
-            layout="hero",
+            layout="tiles",
             fmt="square",
         )
     except RuntimeError as exc:
@@ -51,7 +51,7 @@ def test_share_summary_png_filename_trip_title():
 def test_share_summary_to_png_bytes_dimensions(fmt, expected, chromium_available):
     del chromium_available
     stats = sample_share_summary_stats()
-    png = share_summary_to_png_bytes(stats, layout="hero", fmt=fmt)
+    png = share_summary_to_png_bytes(stats, layout="tiles", fmt=fmt)
     assert png_dimensions(png) == expected
 
 

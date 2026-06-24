@@ -56,21 +56,22 @@ SHARE_SUMMARY_COLOR_SCHEME_IDS: tuple[str, ...] = tuple(
     scheme["id"] for scheme in SHARE_SUMMARY_COLOR_SCHEMES
 )
 
-# Default stat labels per layout (user-selectable stats planned for v1 integration).
-SHARE_SUMMARY_HERO_DEFAULT_STATS: tuple[str, ...] = (
+# Default stat label order for share cards (user-selectable stats planned for v1 integration).
+# Four-stat set is the core period picker default; tiles/list extend it to six stats.
+SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS: tuple[str, ...] = (
     "Total species",
     "Lifers",
     "Total checklists",
     "Unique locations",
 )
 # Country/region scope — omits world-only stats such as Countries.
-SHARE_SUMMARY_COUNTRY_HERO_DEFAULT_STATS: tuple[str, ...] = (
+SHARE_SUMMARY_COUNTRY_FOUR_STAT_DEFAULT_STATS: tuple[str, ...] = (
     "Total species",
     "Lifers",
     "Total checklists",
     "Unique locations",
 )
-SHARE_SUMMARY_COUNTRY_LIFETIME_HERO_DEFAULT_STATS: tuple[str, ...] = (
+SHARE_SUMMARY_COUNTRY_LIFETIME_FOUR_STAT_DEFAULT_STATS: tuple[str, ...] = (
     "Total species",
     "Total individuals",
     "Total checklists",
@@ -84,12 +85,12 @@ SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS: tuple[str, ...] = (
     "Total checklists",
     "Unique locations",
 )
-SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = SHARE_SUMMARY_HERO_DEFAULT_STATS + (
+SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS + (
     "Countries",
     "Birding days",
 )
-# Lifetime (all data) — hero omits lifers; tiles/list share the same six-stat order.
-SHARE_SUMMARY_LIFETIME_HERO_DEFAULT_STATS: tuple[str, ...] = (
+# Lifetime (all data) — four-stat fallback omits lifers; tiles/list share the same six-stat order.
+SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS: tuple[str, ...] = (
     "Total species",
     "Countries",
     "Total checklists",
@@ -119,8 +120,8 @@ SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS = 18
 SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"
 
 # Card green subtitle headings (tunable without editing layout code).
-# Hero uses period subtitles below; tiles / minimal / spotlight use layout subtitles unless
-# period_kind is ``lifetime``, when :data:`SHARE_SUMMARY_LIFETIME_SUBTITLE` applies to all layouts.
+# Tiles / minimal / spotlight use layout subtitles unless period_kind is ``lifetime``,
+# when :data:`SHARE_SUMMARY_LIFETIME_SUBTITLE` applies to all layouts.
 SHARE_SUMMARY_PERIOD_SUBTITLE_YEAR = "Birding year in review"
 SHARE_SUMMARY_PERIOD_SUBTITLE_MONTH = "Monthly birding summary"
 SHARE_SUMMARY_PERIOD_SUBTITLE_WEEK = "Weekly birding summary"
@@ -146,6 +147,13 @@ _LAYOUT_SUBTITLE_BY_LAYOUT: dict[str, str] = {
 }
 
 
+def share_summary_period_subtitle(period_kind: str) -> str:
+    """Period-based green subtitle (year in review, monthly summary, etc.)."""
+    if period_kind == "lifetime":
+        return SHARE_SUMMARY_LIFETIME_SUBTITLE
+    return _PERIOD_SUBTITLE_BY_KIND.get(period_kind, SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM)
+
+
 def share_summary_card_subtitle(
     *,
     layout: str,
@@ -157,6 +165,4 @@ def share_summary_card_subtitle(
         return None
     if period_kind == "lifetime":
         return SHARE_SUMMARY_LIFETIME_SUBTITLE
-    if layout == "hero":
-        return _PERIOD_SUBTITLE_BY_KIND.get(period_kind, SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM)
     return _LAYOUT_SUBTITLE_BY_LAYOUT.get(layout, SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM)
