@@ -17,6 +17,7 @@ from explorer.core.share_summary_defaults import (
 )
 from explorer.presentation.share_summary_circles_preview import (
     CIRCLE_VARIANT_SPECS,
+    TILES_CIRCLE_CLUSTER_DEFAULT,
     TILES_CIRCLE_CLUSTER_VARIANT,
     TILES_CIRCLE_DIAMETER_SEARCH_START,
     _circle_canvas_size,
@@ -29,6 +30,7 @@ from explorer.presentation.share_summary_circles_preview import (
     circle_card_template_diameters,
     circle_card_template_positions,
     place_circle_centers,
+    tiles_circle_cluster_max,
 )
 from explorer.presentation.share_summary_preview import (
     FORMAT_LABELS,
@@ -68,8 +70,7 @@ _MIN_SPOTLIGHT_DIAMETER = 200
 _MAX_SPOTLIGHT_DIAMETER = 520
 
 PLAYGROUND_TILES_MIN_COUNT = 1
-PLAYGROUND_TILES_MAX_COUNT = 10
-PLAYGROUND_TILES_DEFAULT_COUNT = 6
+PLAYGROUND_TILES_DEFAULT_COUNT = TILES_CIRCLE_CLUSTER_DEFAULT
 
 CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX = 1000
 
@@ -220,8 +221,12 @@ def _playground_body_frame(
     return {}
 
 
-def _tiles_playground_count_range() -> range:
-    return range(PLAYGROUND_TILES_MIN_COUNT, PLAYGROUND_TILES_MAX_COUNT + 1)
+def _tiles_playground_max_count(fmt: FormatId) -> int:
+    return tiles_circle_cluster_max(fmt)
+
+
+def _tiles_playground_count_range(fmt: FormatId) -> range:
+    return range(PLAYGROUND_TILES_MIN_COUNT, _tiles_playground_max_count(fmt) + 1)
 
 
 def _build_tiles_playground_mode(
@@ -236,7 +241,7 @@ def _build_tiles_playground_mode(
         fmt,
         scope_label="World",
     )
-    counts = _tiles_playground_count_range()
+    counts = _tiles_playground_count_range(fmt)
     variant = TILES_CIRCLE_CLUSTER_VARIANT
     diameter_start = TILES_CIRCLE_DIAMETER_SEARCH_START
 
@@ -262,16 +267,26 @@ def _build_tiles_playground_mode(
 
     if template is not None:
         bounds = template.bounds
+        allowed_counts = set(counts)
         for count, positions in circle_card_template_positions(template).items():
+            if count not in allowed_counts:
+                continue
             layouts[str(count)] = [[x, y] for x, y in positions]
-        diameters = _template_diameters_payload(template)
+        diameters = {
+            count: diameter
+            for count, diameter in _template_diameters_payload(template).items()
+            if int(count) in allowed_counts
+        }
         for count_str, diameter in _template_auto_diameters(template, canvas_w, canvas_h).items():
+            if int(count_str) not in allowed_counts:
+                continue
             auto_diameters[count_str] = diameter
         for count_str, diameter in diameters.items():
             auto_diameters[count_str] = diameter
         code_presets = True
 
     default_count = PLAYGROUND_TILES_DEFAULT_COUNT
+    max_count = _tiles_playground_max_count(fmt)
     mode: dict[str, Any] = {
         **frame,
         "canvas_w": canvas_w,
@@ -279,7 +294,7 @@ def _build_tiles_playground_mode(
         "bounds": bounds,
         "draggable": True,
         "min_count": PLAYGROUND_TILES_MIN_COUNT,
-        "max_count": PLAYGROUND_TILES_MAX_COUNT,
+        "max_count": max_count,
         "default_count": default_count,
         "min_diameter": _MIN_CLUSTER_DIAMETER,
         "max_diameter": _MAX_CLUSTER_DIAMETER,
@@ -993,7 +1008,6 @@ __all__ = [
     "PLAYGROUND_SAMPLE_STATS",
     "SPOTLIGHT_SAMPLE_STAT",
     "PLAYGROUND_TILES_DEFAULT_COUNT",
-    "PLAYGROUND_TILES_MAX_COUNT",
     "PLAYGROUND_TILES_MIN_COUNT",
     "render_circle_layout_playground_html",
     "story_circle_body_bounds_for_playground",

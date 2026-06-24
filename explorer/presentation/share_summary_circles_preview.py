@@ -44,7 +44,10 @@ CircleVariantId = Literal[
 CIRCLE_LAYOUT_MAX_STATS = 9
 CIRCLE_LAYOUT_MIN_STATS = 6
 TILES_CIRCLE_CLUSTER_MIN = 6
-TILES_CIRCLE_CLUSTER_MAX = 7
+TILES_CIRCLE_CLUSTER_DEFAULT = 6
+TILES_CIRCLE_CLUSTER_SQUARE_MAX = 6
+TILES_CIRCLE_CLUSTER_PORTRAIT_MAX = 8
+TILES_CIRCLE_CLUSTER_MAX = TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
 TILES_CIRCLE_CLUSTER_STORY_MAX = SHARE_SUMMARY_STORY_MAX_STATS
 TILES_CIRCLE_CLUSTER_VARIANT: CircleVariantId = "tiles_cluster"
 CLUSTER_DIAMETER_SEARCH_START = 320
@@ -512,6 +515,10 @@ def tiles_circle_cluster_max(fmt: FormatId) -> int:
     """Maximum Statistics Tiles circle slots for *fmt*."""
     if fmt == "story":
         return TILES_CIRCLE_CLUSTER_STORY_MAX
+    if fmt == "portrait_post":
+        return TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
+    if fmt == "square":
+        return TILES_CIRCLE_CLUSTER_SQUARE_MAX
     return TILES_CIRCLE_CLUSTER_MAX
 
 
@@ -677,8 +684,18 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
                 (0.47, 0.16),
                 (0.89, 0.07),
             ),
+            8: (
+                (0.45, 0.71),
+                (0.86, 0.53),
+                (0.81, 0.99),
+                (0.06, 0.92),
+                (0.10, 0.45),
+                (0.45, 0.15),
+                (0.87, 0.03),
+                (0.00, 0.03),
+            ),
         },
-        diameters={6: 255, 7: 250},
+        diameters={6: 255, 7: 250, 8: 240},
     ),
     ("tiles", "square"): _build_circle_card_template(
         "square",
@@ -1559,7 +1576,10 @@ __all__ = [
     "circle_card_template",
     "circle_card_template_diameters",
     "circle_card_template_positions",
+    "TILES_CIRCLE_CLUSTER_DEFAULT",
     "TILES_CIRCLE_CLUSTER_MAX",
+    "TILES_CIRCLE_CLUSTER_PORTRAIT_MAX",
+    "TILES_CIRCLE_CLUSTER_SQUARE_MAX",
     "TILES_CIRCLE_CLUSTER_STORY_MAX",
     "TILES_CIRCLE_CLUSTER_MIN",
     "TILES_CIRCLE_CLUSTER_VARIANT",

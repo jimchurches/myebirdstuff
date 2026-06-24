@@ -10,6 +10,8 @@ from explorer.presentation.share_summary_circles_preview import (
     CIRCLE_VARIANT_SPECS,
     STORY_CIRCLE_LAYOUT_DIAMETERS,
     STORY_CIRCLE_LAYOUTS,
+    TILES_CIRCLE_CLUSTER_PORTRAIT_MAX,
+    TILES_CIRCLE_CLUSTER_SQUARE_MAX,
     TILES_CIRCLE_CLUSTER_VARIANT,
     _centres_in_grid_reading_order,
     _circle_canvas_size,
@@ -495,6 +497,41 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_seven():
     assert max(tops) + 125 <= 968
 
 
+def test_layout_tiles_circle_cluster_portrait_hand_tuned_eight():
+    stats = sample_share_summary_stats()
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+        "Bird families",
+    )
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1350,
+        "portrait_post",
+        scope_label="World",
+        card_stat_labels=labels,
+    )
+    assert html.count("border-radius:50%") == TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
+    assert int(sizes[0]) == 240
+    tops = [
+        float(match)
+        for match in re.findall(
+            r"position:absolute;left:[\d.]+px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",
+            html,
+        )
+    ]
+    assert len(tops) == TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
+    assert max(tops) + 120 <= 968
+
+
 def test_hand_tuned_template_assigns_stats_in_reading_order():
     """Picker slot 1 maps to the top-left circle, not template index 0."""
     template = CIRCLE_CARD_TEMPLATES[("tiles", "square")]
@@ -536,7 +573,7 @@ def test_layout_tiles_circle_cluster_square_hand_tuned_six():
     assert canvas.group(2) == "698"
 
 
-def test_layout_tiles_circle_cluster_square_hand_tuned_seven():
+def test_layout_tiles_circle_cluster_square_clamps_to_six():
     stats = sample_share_summary_stats()
     labels = (
         "Total species",
@@ -555,10 +592,10 @@ def test_layout_tiles_circle_cluster_square_hand_tuned_seven():
         scope_label="World",
         card_stat_labels=labels,
     )
-    assert html.count("border-radius:50%") == 7
+    assert html.count("border-radius:50%") == TILES_CIRCLE_CLUSTER_SQUARE_MAX
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
-    assert len(sizes) == 7
-    assert int(sizes[0]) == 237
+    assert len(sizes) == TILES_CIRCLE_CLUSTER_SQUARE_MAX
+    assert int(sizes[0]) == 250
 
 
 def test_layout_tiles_circle_cluster_portrait_circles_clear_footer():
@@ -613,7 +650,18 @@ def test_layout_tiles_circle_cluster_defaults_to_six_not_seven():
     assert html.count("border-radius:50%") == 6
 
 
-def test_layout_tiles_circle_cluster_supports_seventh_user_stat():
+def test_tiles_circle_cluster_max_is_format_specific():
+    from explorer.presentation.share_summary_circles_preview import (
+        TILES_CIRCLE_CLUSTER_STORY_MAX,
+        tiles_circle_cluster_max,
+    )
+
+    assert tiles_circle_cluster_max("square") == TILES_CIRCLE_CLUSTER_SQUARE_MAX
+    assert tiles_circle_cluster_max("portrait_post") == TILES_CIRCLE_CLUSTER_PORTRAIT_MAX
+    assert tiles_circle_cluster_max("story") == TILES_CIRCLE_CLUSTER_STORY_MAX
+
+
+def test_layout_tiles_circle_cluster_square_clamps_seventh_user_stat():
     stats = sample_share_summary_stats()
     labels = (
         "Total species",
@@ -632,7 +680,7 @@ def test_layout_tiles_circle_cluster_supports_seventh_user_stat():
         scope_label="World",
         card_stat_labels=labels,
     )
-    assert html.count("border-radius:50%") == 7
+    assert html.count("border-radius:50%") == TILES_CIRCLE_CLUSTER_SQUARE_MAX
 
 
 def test_circle_value_font_shrinks_for_long_numbers():

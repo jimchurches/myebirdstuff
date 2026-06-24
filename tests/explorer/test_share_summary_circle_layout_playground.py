@@ -6,7 +6,6 @@ from explorer.presentation.share_summary_circle_layout_playground import (
     PLAYGROUND_CARD_TYPES,
     PLAYGROUND_FORMATS,
     PLAYGROUND_TILES_DEFAULT_COUNT,
-    PLAYGROUND_TILES_MAX_COUNT,
     PLAYGROUND_TILES_MIN_COUNT,
     render_circle_layout_playground_html,
     story_circle_body_bounds_for_playground,
@@ -14,6 +13,9 @@ from explorer.presentation.share_summary_circle_layout_playground import (
 from explorer.presentation.share_summary_circles_preview import (
     CIRCLE_CARD_TEMPLATES,
     STORY_CIRCLE_LAYOUTS,
+    TILES_CIRCLE_CLUSTER_PORTRAIT_MAX,
+    TILES_CIRCLE_CLUSTER_SQUARE_MAX,
+    TILES_CIRCLE_CLUSTER_STORY_MAX,
     _tiles_circle_canvas_size,
 )
 
@@ -39,23 +41,26 @@ def test_circle_layout_playground_html_includes_all_modes():
         assert f'"{count}":' in html
 
 
-def test_circle_layout_playground_tiles_supports_one_through_ten_circles():
+def test_circle_layout_playground_tiles_uses_format_specific_count_limits():
     html = render_circle_layout_playground_html(
         initial_card_type="tiles",
         initial_fmt="story",
     )
     assert f'"min_count": {PLAYGROUND_TILES_MIN_COUNT}' in html
-    assert f'"max_count": {PLAYGROUND_TILES_MAX_COUNT}' in html
+    assert f'"max_count": {TILES_CIRCLE_CLUSTER_STORY_MAX}' in html
     assert f'"default_count": {PLAYGROUND_TILES_DEFAULT_COUNT}' in html
     assert '"1":' in html
     assert '"5":' in html
+    expected_max = {
+        "square": TILES_CIRCLE_CLUSTER_SQUARE_MAX,
+        "portrait_post": TILES_CIRCLE_CLUSTER_PORTRAIT_MAX,
+        "story": TILES_CIRCLE_CLUSTER_STORY_MAX,
+    }
     for fmt in PLAYGROUND_FORMATS:
-        fmt_html = render_circle_layout_playground_html(
-            initial_card_type="tiles",
-            initial_fmt=fmt,
-        )
+        fmt_html = render_circle_layout_playground_html(initial_card_type="tiles", initial_fmt=fmt)
         assert f'"min_count": {PLAYGROUND_TILES_MIN_COUNT}' in fmt_html
-        assert f'"max_count": {PLAYGROUND_TILES_MAX_COUNT}' in fmt_html
+        assert f'"max_count": {expected_max[fmt]}' in fmt_html
+        assert f'"default_count": {PLAYGROUND_TILES_DEFAULT_COUNT}' in fmt_html
 
 
 def test_circle_layout_playground_count_change_loads_full_preset():
@@ -86,6 +91,7 @@ def test_circle_layout_playground_portrait_tiles_uses_code_layout():
     assert "portrait_post" in html
     assert '"6": 255' in html
     assert '"7": 250' in html
+    assert '"8": 240' in html
     assert '"canvas_h": 968' in html
     assert "0.46" in html
 
@@ -97,7 +103,7 @@ def test_circle_layout_playground_square_tiles_uses_code_layout():
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
     assert '"6": 250' in html
-    assert '"7": 237' in html
+    assert '"7": 237' not in html
     assert '"canvas_h": 698' in html
 
 

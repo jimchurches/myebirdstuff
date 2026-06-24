@@ -55,8 +55,7 @@ from explorer.presentation.share_summary_circle_layout_playground import (
     render_circle_layout_playground_html,
 )
 from explorer.presentation.share_summary_circles_preview import (
-    TILES_CIRCLE_CLUSTER_MAX,
-    TILES_CIRCLE_CLUSTER_STORY_MAX,
+    TILES_CIRCLE_CLUSTER_DEFAULT,
     tiles_circle_cluster_max,
 )
 from explorer.presentation.share_summary_hex_preview import (
@@ -436,18 +435,13 @@ def _ensure_card_stat_picks(
     max_slots = _card_stat_max_slots(
         layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
     )
-    storage_max = (
-        TILES_CIRCLE_CLUSTER_STORY_MAX
-        if circle_cluster and fmt == "story"
-        else TILES_CIRCLE_CLUSTER_MAX
-        if circle_cluster
-        else layout_card_stat_storage_max(layout)
-    )
+    storage_max = tiles_circle_cluster_max(fmt) if circle_cluster else layout_card_stat_storage_max(layout)
     available = frozenset(label for label, _ in status_metrics)
     picks_key = _card_stat_picks_key(layout, period_kind)
     count_key = _card_stat_slot_count_key(layout, period_kind)
     scope_key = _card_stat_scope_key(layout, period_kind)
     fixed_rows = _story_format_stat_picker(fmt, layout)
+    fixed_picker_rows = fixed_rows and not circle_cluster
     defaults = list(
         default_card_stat_labels(
             layout,
@@ -464,18 +458,23 @@ def _ensure_card_stat_picks(
         st.session_state.pop(count_key, None)
         _clear_card_stat_selectbox_keys(layout)
 
-    if fixed_rows and picks_key in st.session_state:
+    if fixed_picker_rows and picks_key in st.session_state:
         raw = list(st.session_state[picks_key])
         st.session_state[picks_key] = (raw + [""] * max_slots)[:max_slots]
         st.session_state[count_key] = max_slots
 
     if picks_key not in st.session_state:
-        if fixed_rows:
+        if fixed_picker_rows:
             st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
             st.session_state[count_key] = max_slots
         else:
             st.session_state[picks_key] = defaults
-            st.session_state[count_key] = max(1, len(defaults) if defaults else 1)
+            default_count = (
+                TILES_CIRCLE_CLUSTER_DEFAULT
+                if circle_cluster
+                else max(1, len(defaults) if defaults else 1)
+            )
+            st.session_state[count_key] = min(max_slots, default_count)
 
     sanitized = _sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
@@ -484,12 +483,17 @@ def _ensure_card_stat_picks(
     )
     if not sanitized and defaults:
         _clear_card_stat_selectbox_keys(layout)
-        if fixed_rows:
+        if fixed_picker_rows:
             st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
             st.session_state[count_key] = max_slots
         else:
             st.session_state[picks_key] = defaults
-            st.session_state[count_key] = max(1, len(defaults))
+            default_count = (
+                TILES_CIRCLE_CLUSTER_DEFAULT
+                if circle_cluster
+                else max(1, len(defaults))
+            )
+            st.session_state[count_key] = min(max_slots, default_count)
         sanitized = list(defaults)
 
     sanitized = _sanitize_card_stat_picks(
@@ -507,7 +511,7 @@ def _ensure_card_stat_picks(
     )
 
     raw = list(st.session_state[picks_key])
-    if fixed_rows:
+    if fixed_picker_rows:
         picks = (raw + [""] * ui_rows)[:ui_rows]
     else:
         compact = [p for p in raw if p]
@@ -539,6 +543,10 @@ def _card_can_accept_stat(
         layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
     )
     fixed_rows = _story_format_stat_picker(fmt, layout)
+    fixed_picker_rows = fixed_rows and not _tiles_circle_cluster_picker(
+        layout,
+        tiles_presentation,
+    )
     ui_rows = _card_stat_ui_row_count(
         layout,
         fmt,
@@ -549,7 +557,7 @@ def _card_can_accept_stat(
     active = (picks + [""] * ui_rows)[:ui_rows]
     if any(not label for label in active):
         return True
-    if fixed_rows:
+    if fixed_picker_rows:
         return False
     return ui_rows < max_slots
 
@@ -573,6 +581,10 @@ def _add_stat_to_card(
         available_stat_count=available_stat_count,
     )
     fixed_rows = _story_format_stat_picker(fmt, layout)
+    fixed_picker_rows = fixed_rows and not _tiles_circle_cluster_picker(
+        layout,
+        tiles_presentation,
+    )
     picks = list(st.session_state.get(picks_key, []))
     slot_count = int(st.session_state.get(count_key, 1))
     ui_rows = _card_stat_ui_row_count(
@@ -591,7 +603,7 @@ def _add_stat_to_card(
             _clear_card_stat_selectbox_keys(layout)
             return
 
-    if fixed_rows:
+    if fixed_picker_rows:
         padded = (picks + [""] * max_slots)[:max_slots]
         for i in range(max_slots):
             if not padded[i]:
@@ -707,6 +719,8 @@ def _card_stat_picker_ui(
         layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
     )
     fixed_rows = _story_format_stat_picker(fmt, layout)
+    circle_cluster = _tiles_circle_cluster_picker(layout, tiles_presentation)
+    fixed_picker_rows = fixed_rows and not circle_cluster
     available_labels = [label for label, _ in status_metrics]
     metrics_lookup = _status_metrics_lookup(status_metrics)
     if not available_labels:
@@ -733,10 +747,10 @@ def _card_stat_picker_ui(
     )
 
     if fixed_rows:
-        if _tiles_circle_cluster_picker(layout, tiles_presentation):
+        if circle_cluster:
             st.caption(
                 f"Story format supports up to {max_slots} stats. "
-                "Empty slots show as blank circles on the card."
+                f"The default is {TILES_CIRCLE_CLUSTER_DEFAULT} circles."
             )
         else:
             st.caption(
@@ -756,7 +770,7 @@ def _card_stat_picker_ui(
         picks[i] = current
         can_up = i > 0
         can_down = i < ui_rows - 1
-        can_remove = bool(current) if fixed_rows else (i > 0 or bool(current))
+        can_remove = bool(current) if fixed_picker_rows else (i > 0 or bool(current))
 
         col_num, col_sel, col_val, col_actions = st.columns(
             stat_row_cols,
@@ -810,7 +824,7 @@ def _card_stat_picker_ui(
                     disabled=not can_remove,
                     use_container_width=True,
                 ):
-                    if fixed_rows:
+                    if fixed_picker_rows:
                         picks[i] = ""
                     elif i == 0 and ui_rows == 1:
                         picks[0] = ""
@@ -829,7 +843,7 @@ def _card_stat_picker_ui(
         vertical_alignment="center",
     )
     with col_sel_foot:
-        if not fixed_rows and ui_rows < max_slots and st.button(
+        if not fixed_picker_rows and ui_rows < max_slots and st.button(
             "Add stat",
             key=f"design_card_stat_add_{layout}",
         ):
@@ -854,12 +868,17 @@ def _card_stat_picker_ui(
                     )
                 )
                 _clear_card_stat_selectbox_keys(layout)
-                if fixed_rows:
+                if fixed_picker_rows:
                     st.session_state[picks_key] = defaults + [""] * (max_slots - len(defaults))
                     st.session_state[count_key] = max_slots
                 else:
                     st.session_state[picks_key] = defaults
-                    st.session_state[count_key] = max(1, len(defaults))
+                    default_count = (
+                        TILES_CIRCLE_CLUSTER_DEFAULT
+                        if circle_cluster
+                        else max(1, len(defaults))
+                    )
+                    st.session_state[count_key] = min(max_slots, default_count)
                 st.rerun()
 
     slot_count = int(st.session_state[count_key])
