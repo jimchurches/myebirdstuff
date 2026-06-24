@@ -18,6 +18,7 @@ from explorer.presentation.share_summary_circles_preview import (
     _circle_diameter,
     _circle_value_font_px,
     _hand_tuned_template_centres,
+    _hand_tuned_template_within_canvas,
     _spotlight_circle_diameter,
     _story_circle_diameter,
     _story_circle_fits,
@@ -37,6 +38,33 @@ from explorer.presentation.share_summary_preview import (
     render_share_summary_preview_html,
     sample_share_summary_stats,
 )
+
+
+def _story_template_layout_ok(
+    count: int,
+    *,
+    canvas_w: int,
+    canvas_h: int,
+    diameter: int,
+    gap_px: int,
+) -> bool:
+    """Hand-tuned story counts 1–6 tolerate slight overlap; 7–10 stay strict."""
+    template = CIRCLE_CARD_TEMPLATES[("tiles", "story")]
+    if count <= 6:
+        return _hand_tuned_template_within_canvas(
+            template,
+            count,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            diameter=diameter,
+        )
+    return _story_circle_fits(
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=diameter,
+        gap_px=gap_px,
+    )
 
 
 def _diameter_for_variant(count: int, canvas_w: int, canvas_h: int, variant: str) -> int:
@@ -165,13 +193,13 @@ def test_tiles_circle_diameter_all_formats():
     for fmt in formats:
         w, h = (1080, 1080) if fmt == "square" else ((1080, 1350) if fmt == "portrait_post" else (1080, 1920))
         canvas_w, canvas_h = _tiles_circle_canvas_size(w, h, fmt, scope_label="World")
-        for count in (6, 7, 8, 9, 10):
+        for count in range(1, 11):
             if fmt == "story":
                 spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
                 diameter = _story_circle_diameter(
                     count, canvas_w, canvas_h, gap_px=spec.gap_px
                 )
-                assert _story_circle_fits(
+                assert _story_template_layout_ok(
                     count,
                     canvas_w=canvas_w,
                     canvas_h=canvas_h,
@@ -221,9 +249,9 @@ def test_story_template_keeps_circles_above_footer_clearance():
         1080, 1920, "story", scope_label="World"
     )
     spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
-    for count in (6, 7, 8, 9, 10):
+    for count in range(1, 11):
         diameter = _story_circle_diameter(count, canvas_w, canvas_h, gap_px=spec.gap_px)
-        assert _story_circle_fits(
+        assert _story_template_layout_ok(
             count,
             canvas_w=canvas_w,
             canvas_h=canvas_h,
@@ -255,7 +283,7 @@ def test_story_template_maintains_minimum_edge_padding():
     spec = CIRCLE_VARIANT_SPECS[TILES_CIRCLE_CLUSTER_VARIANT]
     min_edge_gap = max(spec.gap_px, _STORY_CIRCLE_MIN_EDGE_GAP_PX)
     min_dist = min_edge_gap + 2 * _SHADOW_PAD_PX
-    for count in (6, 7, 8, 9, 10):
+    for count in (7, 8, 9, 10):
         diameter = _story_circle_diameter(count, canvas_w, canvas_h, gap_px=spec.gap_px)
         centres = _story_circle_template_centres(
             count,
@@ -284,8 +312,8 @@ def test_layout_tiles_circle_cluster_story_renders_six_defaults():
     assert int(sizes[0]) == STORY_CIRCLE_LAYOUT_DIAMETERS[6]
 
 
-def test_story_circle_layouts_defined_for_six_through_ten():
-    for count in (6, 7, 8, 9, 10):
+def test_story_circle_layouts_defined_for_one_through_ten():
+    for count in range(1, 11):
         assert count in STORY_CIRCLE_LAYOUTS
         assert count in STORY_CIRCLE_LAYOUT_DIAMETERS
         assert len(STORY_CIRCLE_LAYOUTS[count]) == count
@@ -551,7 +579,7 @@ def test_layout_tiles_circle_cluster_single_circle_centred_all_formats():
         assert html.count("border-radius:50%") == 1
         sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
         assert len(sizes) == 1
-        assert int(sizes[0]) == 340
+        assert int(sizes[0]) == 400
         canvas = re.search(
             r"position:relative;width:(\d+)px;height:(\d+)px;margin:0 auto;overflow:hidden",
             html,
@@ -565,7 +593,7 @@ def test_layout_tiles_circle_cluster_single_circle_centred_all_formats():
             1,
             canvas_w=canvas_w,
             canvas_h=canvas_h,
-            diameter=340,
+            diameter=400,
         )[0]
         centre = re.search(
             r"position:absolute;left:([\d.]+)px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",

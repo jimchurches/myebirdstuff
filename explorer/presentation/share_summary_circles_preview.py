@@ -578,10 +578,10 @@ _STORY_CIRCLE_TOP_CLEARANCE = _HAND_TUNED_CIRCLE_TOP_CLEARANCE
 _STORY_CIRCLE_BOTTOM_CLEARANCE = _HAND_TUNED_CIRCLE_BOTTOM_CLEARANCE
 _HAND_TUNED_CIRCLE_MIN_EDGE_GAP_PX = 20
 _STORY_CIRCLE_MIN_EDGE_GAP_PX = _HAND_TUNED_CIRCLE_MIN_EDGE_GAP_PX
-_HAND_TUNED_CIRCLE_MAX_DIAMETER_PX = 340
+_HAND_TUNED_CIRCLE_MAX_DIAMETER_PX = 400
 _STORY_CIRCLE_MAX_DIAMETER_PX = _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX
 _SINGLE_CIRCLE_LAYOUT: tuple[tuple[float, float], ...] = ((0.50, 0.50),)
-_SINGLE_CIRCLE_DIAMETER_PX = _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX
+_SINGLE_CIRCLE_DIAMETER_PX = 400
 _HAND_TUNED_CIRCLE_WIDTH_FRACTION = 0.62
 _STORY_CIRCLE_WIDTH_FRACTION = _HAND_TUNED_CIRCLE_WIDTH_FRACTION
 
@@ -613,11 +613,33 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
         bounds="story",
         layouts={
             1: _SINGLE_CIRCLE_LAYOUT,
+            2: (
+                (0.29, 0.28),
+                (0.72, 0.73),
+            ),
+            3: (
+                (0.82, 0.50),
+                (0.42, 0.97),
+                (0.13, 0.11),
+            ),
+            4: (
+                (0.18, 0.32),
+                (0.81, 0.67),
+                (0.11, 0.92),
+                (0.79, 0.07),
+            ),
+            5: (
+                (0.50, 0.42),
+                (0.80, 0.82),
+                (0.07, 1.00),
+                (0.07, 0.12),
+                (0.82, 0.05),
+            ),
             6: (
-                (0.10, 0.05),
+                (0.10, 0.02),
                 (0.87, 0.18),
                 (0.17, 0.40),
-                (0.65, 0.62),
+                (0.66, 0.62),
                 (0.12, 0.91),
                 (0.86, 0.98),
             ),
@@ -664,7 +686,18 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
                 (0.74, 1.00),
             ),
         },
-        diameters={1: _SINGLE_CIRCLE_DIAMETER_PX, 6: 280, 7: 270, 8: 265, 9: 255, 10: 255},
+        diameters={
+            1: _SINGLE_CIRCLE_DIAMETER_PX,
+            2: 380,
+            3: 360,
+            4: 340,
+            5: 340,
+            6: 340,
+            7: 270,
+            8: 265,
+            9: 255,
+            10: 255,
+        },
     ),
     ("tiles", "portrait_post"): _build_circle_card_template(
         "portrait_post",
