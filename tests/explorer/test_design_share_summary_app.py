@@ -2,6 +2,8 @@
 
 from explorer.app.streamlit.design_share_summary_app import (
     _card_stat_data_scope,
+    _card_stat_ui_row_count,
+    _default_card_stat_slot_count,
     _design_sample_dataset,
     _period_has_checklist_data,
     _resolve_card_stat_selectbox_value,
@@ -12,6 +14,31 @@ from explorer.core.share_summary_compute import (
     geo_country_keys_from_df,
     geo_region_options_for_country,
 )
+
+
+def test_card_stat_ui_row_count_uses_slot_count_not_format_max():
+    assert _card_stat_ui_row_count("tiles", "story", slot_count=4) == 4
+    assert _card_stat_ui_row_count("minimal", "story", slot_count=6) == 6
+    assert _card_stat_ui_row_count("tiles", "story", slot_count=12) == 10
+    assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=3) == 3
+
+
+def test_default_card_stat_slot_count():
+    assert _default_card_stat_slot_count(
+        circle_cluster=True,
+        defaults=["A", "B", "C", "D", "E", "F"],
+        max_slots=10,
+    ) == 6
+    assert _default_card_stat_slot_count(
+        circle_cluster=False,
+        defaults=["A", "B", "C", "D"],
+        max_slots=10,
+    ) == 4
+    assert _default_card_stat_slot_count(
+        circle_cluster=False,
+        defaults=[],
+        max_slots=6,
+    ) == 1
 
 
 def test_card_stat_data_scope_changes_when_source_or_period_changes():
