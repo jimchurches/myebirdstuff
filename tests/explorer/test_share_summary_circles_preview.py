@@ -20,7 +20,9 @@ from explorer.presentation.share_summary_circles_preview import (
     _story_circle_diameter,
     _story_circle_fits,
     _story_circle_template_centres,
+    _tiles_circle_body_insets,
     _tiles_circle_canvas_size,
+    _tiles_circle_layout_reserves,
     circles_layout_non_overlapping,
     circles_within_canvas,
     largest_cluster_diameter,
@@ -165,7 +167,7 @@ def test_tiles_circle_square_six_stats_uses_larger_diameter_than_before():
         1080, 1080, "square", scope_label="World"
     )
     diameter = _placed_diameter(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
-    assert diameter >= 165
+    assert diameter >= 164
 
 
 def test_tiles_circle_diameter_scales_down_with_more_stats_on_square():
@@ -464,6 +466,44 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_six():
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert len(sizes) == 6
     assert int(sizes[0]) == 255
+    canvas = re.search(
+        r"position:relative;width:(\d+)px;height:(\d+)px;margin:0 auto;overflow:hidden",
+        html,
+    )
+    assert canvas is not None
+    assert canvas.group(1) == "984"
+    assert canvas.group(2) == "968"
+    tops = [
+        float(match)
+        for match in re.findall(
+            r"position:absolute;left:[\d.]+px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",
+            html,
+        )
+    ]
+    assert len(tops) == 6
+    assert max(tops) + 127.5 <= 968
+
+
+def test_layout_tiles_circle_cluster_portrait_circles_clear_footer():
+    stats = sample_share_summary_stats()
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1350,
+        "portrait_post",
+        scope_label="World",
+    )
+    _, footer_reserve, _ = _tiles_circle_layout_reserves("portrait_post", scope_label="World")
+    tops = [
+        float(match)
+        for match in re.findall(
+            r"position:absolute;left:[\d.]+px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",
+            html,
+        )
+    ]
+    body_top, _, _, _ = _tiles_circle_body_insets("portrait_post", scope_label="World")
+    max_bottom = body_top + max(tops) + 127.5
+    assert max_bottom <= 1350 - footer_reserve - 8
 
 
 def test_layout_tiles_circle_cluster_renders():
@@ -480,7 +520,7 @@ def test_layout_tiles_circle_cluster_renders():
     assert "Species" in html
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert len(sizes) == 6
-    assert min(int(size) for size in sizes) >= 165
+    assert min(int(size) for size in sizes) >= 164
 
 
 def test_layout_tiles_circle_cluster_defaults_to_six_not_seven():

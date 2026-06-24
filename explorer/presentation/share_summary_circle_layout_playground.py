@@ -26,6 +26,7 @@ from explorer.presentation.share_summary_circles_preview import (
     _spotlight_circle_diameter,
     _story_circle_body_bounds,
     _story_circle_diameter,
+    _tiles_circle_body_insets,
     _tiles_circle_canvas_size,
     place_circle_centers,
 )
@@ -79,7 +80,7 @@ def _card_frame(fmt: FormatId) -> dict[str, int]:
     if fmt == "story":
         header_reserve, footer_reserve = 200, 210
     else:
-        header_reserve, footer_reserve = 180, 160
+        header_reserve, footer_reserve = 192, 178
     return {
         "card_w": card_w,
         "card_h": card_h,
@@ -196,6 +197,21 @@ def _cluster_auto_diameters(
         )
         out[str(count)] = diameter
     return out
+
+
+def _playground_body_frame(
+    card_type: PlaygroundCardType,
+    fmt: FormatId,
+) -> dict[str, int]:
+    if card_type == "tiles" and fmt != "story":
+        top, bottom, left, right = _tiles_circle_body_insets(fmt, scope_label="World")
+        return {
+            "body_top": top,
+            "body_bottom": bottom,
+            "body_left": left,
+            "body_right": right,
+        }
+    return {}
 
 
 def _export_meta(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str, str]:
@@ -341,6 +357,7 @@ def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str
                 "diameters": diameters,
                 "auto_diameters": auto_diameters,
                 "code_presets": bool(PORTRAIT_TILES_CIRCLE_LAYOUTS),
+                **_playground_body_frame(card_type, fmt),
                 **export_meta,
             }
         counts = range(6, 8)
@@ -378,6 +395,7 @@ def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str
         "diameters": {},
         "auto_diameters": auto_diameters,
         "code_presets": False,
+        **_playground_body_frame(card_type, fmt),
         **export_meta,
     }
 
@@ -498,15 +516,23 @@ def render_circle_layout_playground_html(
     border: 1px solid {scheme["border"]};
     box-shadow: 0 10px 28px rgba(0,0,0,0.08);
   }}
-  .card-header {{ padding: 28px 48px 0; text-align: center; }}
+  .card-header {{ padding: 48px 56px 24px; text-align: center; }}
   .card-header .subtitle {{
-    margin: 0; font-size: 22px; letter-spacing: 0.06em;
-    color: {scheme["accent"]}; font-weight: 600;
+    margin: 0 0 8px; font-size: 28px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: {scheme["accent"]}; font-weight: 600;
   }}
   .card-header .title {{
-    margin: 8px 0 0; font-size: 56px; font-weight: 800; line-height: 1.05;
+    margin: 0; font-size: 72px; font-weight: 700; line-height: 1.08;
   }}
   .card-body-wrap {{ padding: 0 48px; display: flex; justify-content: center; }}
+  .card-body-wrap.absolute-body {{
+    position: absolute;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: hidden;
+  }}
   .card-body {{
     position: relative;
     background: repeating-linear-gradient(
@@ -517,12 +543,13 @@ def render_circle_layout_playground_html(
     touch-action: none;
   }}
   .card-footer {{
-    padding: 18px 24px 22px; text-align: center;
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 22px 56px 26px; text-align: center;
     border-top: 1px solid {scheme["border"]};
     background: {scheme["bg_alt"]}; color: {scheme["muted"]};
   }}
-  .card-footer .scope {{ margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; }}
-  .card-footer .brand {{ margin: 6px 0 0; font-size: 14px; }}
+  .card-footer .scope {{ margin: 0 0 7px; font-size: 36px; font-weight: 600; letter-spacing: 0.04em; }}
+  .card-footer .brand {{ margin: 5px 0 0; font-size: 18px; }}
   .circle {{
     position: absolute; transform: translate(-50%, -50%);
     user-select: none; touch-action: none;
@@ -588,7 +615,7 @@ def render_circle_layout_playground_html(
           <p class="subtitle">MY BIRDING STATS</p>
           <p class="title">2026</p>
         </div>
-        <div class="card-body-wrap">
+        <div class="card-body-wrap" id="body-wrap">
           <div class="card-body" id="body"></div>
         </div>
         <div class="card-footer">
@@ -607,6 +634,7 @@ def render_circle_layout_playground_html(
 (() => {{
   const CFG = {config_json};
   const body = document.getElementById("body");
+  const bodyWrap = document.getElementById("body-wrap");
   const card = document.getElementById("card");
   const cardShell = document.getElementById("card-shell");
   const cardTypeSelect = document.getElementById("card-type");
@@ -749,6 +777,19 @@ def render_circle_layout_playground_html(
     cardShell.style.transform = "scale(" + scale + ")";
     cardShell.style.width = (m.card_w * scale) + "px";
     cardShell.style.height = (m.card_h * scale) + "px";
+    if (m.body_top != null) {{
+      bodyWrap.classList.add("absolute-body");
+      bodyWrap.style.top = m.body_top + "px";
+      bodyWrap.style.bottom = m.body_bottom + "px";
+      bodyWrap.style.left = m.body_left + "px";
+      bodyWrap.style.right = m.body_right + "px";
+    }} else {{
+      bodyWrap.classList.remove("absolute-body");
+      bodyWrap.style.top = "";
+      bodyWrap.style.bottom = "";
+      bodyWrap.style.left = "";
+      bodyWrap.style.right = "";
+    }}
     body.style.width = m.canvas_w + "px";
     body.style.height = m.canvas_h + "px";
   }}

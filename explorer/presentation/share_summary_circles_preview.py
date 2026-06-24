@@ -134,6 +134,40 @@ CIRCLE_VARIANT_IDS: tuple[CircleVariantId, ...] = tuple(CIRCLE_VARIANT_SPECS.key
 _CIRCLE_CLUSTER_UP_BIAS = 0.07  # shift cluster up as fraction of canvas height
 
 
+def _tiles_circle_layout_reserves(
+    fmt: FormatId,
+    *,
+    scope_label: str | None,
+) -> tuple[int, int, int]:
+    """Header/footer chrome matching ``_header_block`` / ``_footer_block`` in production cards."""
+    if fmt == "story":
+        return (
+            200,
+            210 if scope_label else 172,
+            20,
+        )
+    return (
+        192,
+        178 if scope_label else 132,
+        12,
+    )
+
+
+def _tiles_circle_body_insets(
+    fmt: FormatId,
+    *,
+    scope_label: str | None,
+) -> tuple[int, int, int, int]:
+    """Absolute top/bottom/left/right insets for the Statistics Grid circle body."""
+    header_reserve, footer_reserve, vertical_pad = _tiles_circle_layout_reserves(
+        fmt,
+        scope_label=scope_label,
+    )
+    top = header_reserve + vertical_pad // 2
+    bottom = footer_reserve + vertical_pad - vertical_pad // 2
+    return top, bottom, 48, 48
+
+
 def _cluster_body_canvas_size(
     width: int,
     height: int,
@@ -189,19 +223,16 @@ def _tiles_circle_canvas_size(
     scope_label: str | None,
 ) -> tuple[int, int]:
     """Statistics Grid circle body — room for layout subtitle above the period headline."""
-    if fmt == "story":
-        return _cluster_body_canvas_size(
-            width,
-            height,
-            header_reserve=200,
-            footer_reserve=210 if scope_label else 172,
-            vertical_pad=20,
-        )
+    header_reserve, footer_reserve, vertical_pad = _tiles_circle_layout_reserves(
+        fmt,
+        scope_label=scope_label,
+    )
     return _cluster_body_canvas_size(
         width,
         height,
-        header_reserve=180,
-        footer_reserve=160 if scope_label else 120,
+        header_reserve=header_reserve,
+        footer_reserve=footer_reserve,
+        vertical_pad=vertical_pad,
     )
 
 
@@ -1061,11 +1092,14 @@ def layout_tiles_circle_cluster(
             all_time=all_time,
             geo_scope=geo_scope,
         )
-    pad_bottom = _footer_pad(fmt, width, height)
     subtitle = _layout_subtitle(stats, "tiles")
     canvas_w, canvas_h = _tiles_circle_canvas_size(
         width,
         height,
+        fmt,
+        scope_label=scope_label,
+    )
+    body_top, body_bottom, body_left, body_right = _tiles_circle_body_insets(
         fmt,
         scope_label=scope_label,
     )
@@ -1097,7 +1131,8 @@ def layout_tiles_circle_cluster(
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
   {_header_block(stats, subtitle=subtitle)}
-  <div style="padding:0 48px {pad_bottom}px;display:flex;justify-content:center;">
+  <div style="position:absolute;left:{body_left}px;right:{body_right}px;top:{body_top}px;
+    bottom:{body_bottom}px;display:flex;justify-content:center;align-items:flex-start;overflow:hidden;">
     {circles_html}
   </div>
   {_footer_block(scope_label=scope_label)}
