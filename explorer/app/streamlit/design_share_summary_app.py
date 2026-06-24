@@ -47,6 +47,10 @@ from explorer.core.share_summary_defaults import (
     share_summary_color_scheme_index,
     share_summary_color_scheme_label,
 )
+from explorer.presentation.share_summary_circle_layout_playground import (
+    CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX,
+    render_circle_layout_playground_html,
+)
 from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_MAX,
     TILES_CIRCLE_CLUSTER_STORY_MAX,
@@ -118,6 +122,7 @@ def _cached_share_summary_png(
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 _HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments"
+_CIRCLE_LAYOUT_TAB_LABEL = "Circle layout"
 _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
 _TILES_STYLE_KEY = "design_tiles_style"
@@ -1368,8 +1373,8 @@ status_metrics = summary_status_metrics(stats, all_time=all_time, geo_scope=geo_
 if _SPOTLIGHT_LABEL_KEY not in st.session_state:
     st.session_state[_SPOTLIGHT_LABEL_KEY] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
-tab_social_cards, tab_hex_experiments = st.tabs(
-    [_SOCIAL_CARDS_TAB_LABEL, _HEX_EXPERIMENTS_TAB_LABEL]
+tab_social_cards, tab_hex_experiments, tab_circle_layout = st.tabs(
+    [_SOCIAL_CARDS_TAB_LABEL, _HEX_EXPERIMENTS_TAB_LABEL, _CIRCLE_LAYOUT_TAB_LABEL]
 )
 
 hex_card_stat_labels = default_card_stat_labels(
@@ -1414,6 +1419,21 @@ with tab_social_cards:
     )
 
 _DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"
+
+with tab_circle_layout:
+    st.caption(
+        "Dev-only drag-and-drop tuner for story circle positions and diameter. "
+        "Copy output into ``share_summary_circles_preview.py``."
+    )
+    if fmt != "story":
+        st.info(
+            "Story format (1080×1920) is the playground canvas. "
+            "Switch **Format** in the sidebar to Story to match the live card."
+        )
+    st.iframe(
+        render_circle_layout_playground_html(fmt="story"),
+        height=CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX,
+    )
 
 with tab_hex_experiments:
     st.markdown(

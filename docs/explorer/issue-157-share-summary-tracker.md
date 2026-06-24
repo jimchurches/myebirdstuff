@@ -42,6 +42,8 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | World bird coverage | **Summary row only** | Available stat; not on card tiles by default |
 | Favourite bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
 | PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
+| Story Statistics Grid circles | **Done (design app)** | Hand-tuned layouts 6–10 in `STORY_CIRCLE_LAYOUTS` + `STORY_CIRCLE_LAYOUT_DIAMETERS` |
+| Circle layout playground | **Done (design app)** | **Circle layout** tab — drag-and-drop tuner (dev-only); square/portrait later |
 | PNG save UX | **Done (design app)** | **Export current card** below preview — PNG regenerated inside `@st.fragment` (Streamlit disallows sidebar inside fragments) |
 | Main app integration | **Design noted** | New **Social Cards** tab before Settings; tab-aware sidebar TBD |
 | Map thumbnail on card | **Dropped (v1)** | v2 |
@@ -221,6 +223,7 @@ Captured from initial prototype review:
 | **Current card** preview | Yes | Yes |
 | **Statistics** panel (unified) | Yes — card slots with inline values + click-to-add chips for stats not on card | Port unified panel from design studio (#276); **do not** ship separate Available statistics + Card statistics expanders |
 | **Export current card** | Yes — below **Current card** preview, inside `@st.fragment` | Yes — **generate on export click** with spinner (#276; see **PNG export UX**) |
+| **Circle layout** tab | Yes — drag-and-drop story circle tuner (dev-only) | No — design studio only |
 
 **#276 port scope (agreed direction):** port the design utility **Social Cards tab + sidebar layout** to the main app tab, wired to the loaded export DataFrame — **without** the sample-data toggle / CSV re-upload. Ship the unified **Statistics** panel as-is.
 

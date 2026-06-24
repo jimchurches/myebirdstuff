@@ -1,7 +1,8 @@
 """
-Circular statistics-grid experiments for share summary cards (#157).
+Circular Statistics Grid layouts for share summary cards (#157).
 
-Prototype-only — radial circle clusters on the card canvas (Statistics Grid stats).
+Story format uses hand-tuned normalised templates (``STORY_CIRCLE_LAYOUTS``).
+Square and portrait use radial cluster placement.
 """
 
 from __future__ import annotations
@@ -540,8 +541,8 @@ def _centres_in_grid_reading_order(
     ]
 
 
-# Hand-tuned story Statistics Grid circle layouts (normalised usable body 0–1).
-# Loose diagonal scatter — each count is a full reflow, not append-one-more.
+# Story Statistics Grid — normalised centre positions (0–1 within usable body).
+# Tuned in the design-studio Circle layout tab; each count is a full layout.
 _STORY_CIRCLE_TOP_CLEARANCE = 20
 _STORY_CIRCLE_BOTTOM_CLEARANCE = 52
 _STORY_CIRCLE_MIN_EDGE_GAP_PX = 20
@@ -549,55 +550,65 @@ _STORY_CIRCLE_MAX_DIAMETER_PX = 340
 _STORY_CIRCLE_WIDTH_FRACTION = 0.62
 STORY_CIRCLE_LAYOUTS: dict[int, tuple[tuple[float, float], ...]] = {
     6: (
-        (0.20, 0.10),
-        (0.80, 0.19),
-        (0.41, 0.36),
-        (0.66, 0.55),
-        (0.27, 0.75),
-        (0.81, 0.88),
+        (0.10, 0.05),
+        (0.87, 0.18),
+        (0.17, 0.40),
+        (0.65, 0.62),
+        (0.12, 0.91),
+        (0.86, 0.98),
     ),
     7: (
-        (0.21, 0.10),
-        (0.79, 0.19),
-        (0.40, 0.32),
-        (0.65, 0.51),
-        (0.25, 0.67),
-        (0.82, 0.74),
-        (0.45, 0.88),
+        (0.18, 0.08),
+        (0.78, 0.15),
+        (0.07, 0.39),
+        (0.89, 0.49),
+        (0.38, 0.66),
+        (0.80, 0.93),
+        (0.11, 0.96),
     ),
     8: (
-        (0.19, 0.10),
-        (0.70, 0.12),
-        (0.40, 0.30),
-        (0.81, 0.38),
-        (0.25, 0.53),
-        (0.60, 0.66),
-        (0.31, 0.84),
-        (0.75, 0.90),
+        (0.08, 0.08),
+        (0.78, 0.12),
+        (0.40, 0.33),
+        (0.90, 0.44),
+        (0.06, 0.58),
+        (0.58, 0.70),
+        (0.18, 0.91),
+        (0.84, 0.99),
     ),
     9: (
-        (0.20, 0.10),
-        (0.60, 0.11),
-        (0.82, 0.28),
-        (0.37, 0.29),
-        (0.62, 0.47),
-        (0.22, 0.54),
-        (0.78, 0.69),
-        (0.40, 0.82),
-        (0.69, 0.90),
+        (0.01, 0.09),
+        (0.76, 0.05),
+        (0.92, 0.34),
+        (0.37, 0.26),
+        (0.55, 0.57),
+        (0.05, 0.58),
+        (0.94, 0.78),
+        (0.10, 0.93),
+        (0.62, 1.00),
     ),
     10: (
-        (0.19, 0.10),
-        (0.57, 0.11),
-        (0.82, 0.24),
-        (0.37, 0.27),
-        (0.66, 0.42),
-        (0.22, 0.50),
-        (0.80, 0.60),
-        (0.46, 0.71),
-        (0.25, 0.86),
-        (0.70, 0.90),
+        (0.09, 0.14),
+        (0.54, 0.06),
+        (0.92, 0.21),
+        (0.41, 0.37),
+        (0.85, 0.49),
+        (0.04, 0.54),
+        (0.94, 0.76),
+        (0.42, 0.70),
+        (0.13, 0.94),
+        (0.74, 1.00),
     ),
+}
+
+# Optional fixed diameters (playground export). When set and the layout fits,
+# overrides the auto-sized search in ``_story_circle_diameter``.
+STORY_CIRCLE_LAYOUT_DIAMETERS: dict[int, int] = {
+    6: 280,
+    7: 270,
+    8: 265,
+    9: 255,
+    10: 255,
 }
 
 
@@ -687,6 +698,15 @@ def _story_circle_diameter(
     """Largest circle size that fits the hand-tuned story template."""
     if count <= 0 or count not in STORY_CIRCLE_LAYOUTS:
         return 96
+    fixed = STORY_CIRCLE_LAYOUT_DIAMETERS.get(count)
+    if fixed is not None and _story_circle_fits(
+        count,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=fixed,
+        gap_px=gap_px,
+    ):
+        return fixed
     by_width = int(canvas_w * _STORY_CIRCLE_WIDTH_FRACTION)
     for try_d in range(min(by_width, _STORY_CIRCLE_MAX_DIAMETER_PX), 95, -1):
         if _story_circle_fits(
@@ -700,21 +720,7 @@ def _story_circle_diameter(
     return 96
 
 
-# Backwards-compatible aliases used by tests and layout entry point.
-_STORY_SCATTER_TOP_CLEARANCE = _STORY_CIRCLE_TOP_CLEARANCE
-_STORY_SCATTER_BOTTOM_CLEARANCE = _STORY_CIRCLE_BOTTOM_CLEARANCE
-_STORY_SCATTER_MIN_EDGE_GAP_PX = _STORY_CIRCLE_MIN_EDGE_GAP_PX
-_STORY_ZIGZAG_TOP_CLEARANCE = _STORY_CIRCLE_TOP_CLEARANCE
-_STORY_ZIGZAG_BOTTOM_CLEARANCE = _STORY_CIRCLE_BOTTOM_CLEARANCE
-_story_scatter_centres = _story_circle_template_centres
-_story_scatter_diameter = _story_circle_diameter
-_story_scatter_fits = _story_circle_fits
-_story_zigzag_diameter = _story_circle_diameter
-_story_zigzag_centres = _story_circle_template_centres
-_story_zigzag_non_overlapping = _story_circle_fits
-
-
-def _story_zigzag_canvas_html(
+def _story_template_canvas_html(
     pairs: list[tuple[str, str]],
     *,
     variant: CircleVariantId,
@@ -724,13 +730,13 @@ def _story_zigzag_canvas_html(
     count = len(pairs)
     spec = CIRCLE_VARIANT_SPECS[variant]
     gap_px = spec.gap_px
-    diameter = _story_zigzag_diameter(
+    diameter = _story_circle_diameter(
         count,
         canvas_w,
         canvas_h,
         gap_px=gap_px,
     )
-    centres = _story_zigzag_centres(
+    centres = _story_circle_template_centres(
         count,
         canvas_w=canvas_w,
         canvas_h=canvas_h,
@@ -873,7 +879,7 @@ def layout_tiles_circle_cluster(
         scope_label=scope_label,
     )
     if fmt == "story":
-        circles_html = _story_zigzag_canvas_html(
+        circles_html = _story_template_canvas_html(
             pairs,
             variant=TILES_CIRCLE_CLUSTER_VARIANT,
             canvas_w=canvas_w,
@@ -1174,6 +1180,8 @@ def circles_within_canvas(
 __all__ = [
     "CIRCLE_LAYOUT_MAX_STATS",
     "CIRCLE_LAYOUT_MIN_STATS",
+    "STORY_CIRCLE_LAYOUTS",
+    "STORY_CIRCLE_LAYOUT_DIAMETERS",
     "TILES_CIRCLE_CLUSTER_MAX",
     "TILES_CIRCLE_CLUSTER_STORY_MAX",
     "TILES_CIRCLE_CLUSTER_MIN",
