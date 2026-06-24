@@ -65,6 +65,10 @@ Only when a **milestone** is agreed, e.g.:
 
 Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker update.
 
+## CI / automations
+
+- **Test Integrity Sentinel** (Cursor automation): currently targets PRs to `beta-next`. Issue-branch PRs merge into **`feat/social-cards`** — extend or duplicate the automation for that base branch (see checklist item 2.4). GitHub Actions unit tests still run on push/PR per `.github/workflows/tests.yml`.
+
 ---
 
 ## Related docs

@@ -42,7 +42,7 @@ Work through in order. Check off as completed.
 - [x] **1.6** Push `feat/social-cards` to `origin` (`git push -u origin feat/social-cards`)
 - [x] **1.7** Switch local default for this work to `feat/social-cards`
 - [x] **1.8** Optional: delete local branch `275-share-summary-png-export` after merge (keep remote until comfortable)
-- [ ] **1.9** Close [#280](https://github.com/jimchurches/myebirdstuff/pull/280) (was `275-share-summary-png-export` → `beta-next`; superseded by `feat/social-cards` — close manually on GitHub)
+- [x] **1.9** Close [#280](https://github.com/jimchurches/myebirdstuff/pull/280) (was `275-share-summary-png-export` → `beta-next`; superseded by `feat/social-cards`)
 
 **Do not** merge `feat/social-cards` → `beta-next` in this phase.
 
@@ -52,13 +52,16 @@ Work through in order. Check off as completed.
 
 - [x] **2.1** Add [social-cards-workflow.md](social-cards-workflow.md) — short ongoing reference (base branch, PR targets, agent prompt pattern, milestone rules)
 - [x] **2.2** Update [issue-157-share-summary-tracker.md](issue-157-share-summary-tracker.md) — note `feat/social-cards`, link workflow doc, update prototype branch row
-- [ ] **2.3** Comment on [#275](https://github.com/jimchurches/myebirdstuff/issues/275) — narrow scope to PNG export (largely done); point remaining layout iteration to `feat/social-cards` and child issues
+- [x] **2.3** Comment on [#275](https://github.com/jimchurches/myebirdstuff/issues/275) — narrow scope to PNG export (largely done); point remaining layout iteration to `feat/social-cards` and child issues
+- [ ] **2.4** **Test Integrity Sentinel** — extend or duplicate Cursor automation so PRs targeting **`feat/social-cards`** (not only `beta-next`) get the same test-integrity review; revisit branch trigger config (may need a second automation if branch filter is single-branch)
 
 ---
 
 ## Phase 3 — File issues for outstanding product work
 
-Create GitHub issues (each branches from **`feat/social-cards`**). Suggested titles and scope:
+Create GitHub issues **one at a time** (review each before filing). Each branches from **`feat/social-cards`**.
+
+Suggested queue:
 
 - [ ] **3.1** **Audit grid stat min/max after circle count changes** — verify Statistics **grid** cards still use tighter min/max than circles; fix if circle work loosened grid limits
 - [ ] **3.2** **Square format circle layouts** — hand-tune via playground (counts 1–6; square max today); export into `CIRCLE_CARD_TEMPLATES`
@@ -125,7 +128,7 @@ Create GitHub issues (each branches from **`feat/social-cards`**). Suggested tit
 
 | Phase | Completed | Notes |
 |-------|-----------|-------|
-| 1 | 2026-06-24 | `feat/social-cards` created; merge `b084a6ad`; pushed; local `275` deleted; PR #280 still open — close on GitHub |
-| 2 | | |
+| 1 | 2026-06-24 | `feat/social-cards` created; merge `b084a6ad`; pushed; PR #280 closed |
+| 2 | 2026-06-24 | Workflow docs; tracker updated; #275 scope comment posted; sentinel automation TBD |
 | 3 | | |
 | 4 | | |
