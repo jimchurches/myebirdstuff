@@ -5,6 +5,7 @@ import re
 import pytest
 
 from explorer.presentation.share_summary_circles_preview import (
+    CIRCLE_CARD_TEMPLATES,
     CIRCLE_VARIANT_IDS,
     CIRCLE_VARIANT_SPECS,
     HERO_CIRCLE_CLUSTER_VARIANT,
@@ -15,6 +16,7 @@ from explorer.presentation.share_summary_circles_preview import (
     _circle_canvas_size,
     _circle_diameter,
     _circle_value_font_px,
+    _hand_tuned_template_centres,
     _hero_circle_canvas_size,
     _spotlight_circle_diameter,
     _story_circle_diameter,
@@ -516,6 +518,25 @@ def test_layout_tiles_circle_cluster_portrait_hand_tuned_seven():
     ]
     assert len(tops) == 7
     assert max(tops) + 125 <= 968
+
+
+def test_hand_tuned_template_assigns_stats_in_reading_order():
+    """Picker slot 1 maps to the top-left circle, not template index 0."""
+    template = CIRCLE_CARD_TEMPLATES[("tiles", "square")]
+    canvas_w, canvas_h = _tiles_circle_canvas_size(
+        1080, 1080, "square", scope_label="World"
+    )
+    centres = _hand_tuned_template_centres(
+        template,
+        6,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        diameter=250,
+    )
+    ordered = _centres_in_grid_reading_order(centres)
+    top_left = min(centres, key=lambda c: (round(c[1], 1), round(c[0], 1)))
+    assert ordered[0] == top_left
+    assert centres[0] != top_left
 
 
 def test_layout_tiles_circle_cluster_square_hand_tuned_six():

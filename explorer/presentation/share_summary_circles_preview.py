@@ -984,6 +984,7 @@ def _hand_tuned_template_canvas_html(
         canvas_h=canvas_h,
         diameter=diameter,
     )
+    centres = _centres_in_grid_reading_order(centres)
     if count >= _hand_tuned_compact_type_threshold(template):
         value_px, label_px = "40px", "16px"
     elif diameter >= 260:
