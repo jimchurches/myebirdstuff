@@ -689,11 +689,11 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
         diameters={
             1: _SINGLE_CIRCLE_DIAMETER_PX,
             2: 380,
-            3: 360,
+            3: 380,
             4: 340,
             5: 340,
             6: 340,
-            7: 270,
+            7: 295,
             8: 265,
             9: 255,
             10: 255,
