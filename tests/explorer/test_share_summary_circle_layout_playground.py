@@ -91,7 +91,9 @@ def test_circle_layout_playground_story_tiles_uses_code_layout():
     assert '"max_diameter": 400' in html
     assert '"1": 400' in html
     assert '"2": 380' in html
+    assert '"3": 380' in html
     assert '"6": 340' in html
+    assert '"7": 295' in html
     assert '"canvas_h": 1490' in html
     assert "0.29" in html
 
