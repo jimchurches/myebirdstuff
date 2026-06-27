@@ -16,6 +16,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_LAYOUT_LABELS,
 )
 from explorer.presentation.share_summary_circles_preview import (
+    _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
     CIRCLE_VARIANT_SPECS,
     TILES_CIRCLE_CLUSTER_DEFAULT,
     TILES_CIRCLE_CLUSTER_VARIANT,
@@ -65,9 +66,7 @@ _STORY_BOTTOM_CLEARANCE = 52
 _SHADOW_PAD = 12
 _CLUSTER_UP_BIAS = 0.07
 _MIN_CLUSTER_DIAMETER = 96
-_MAX_CLUSTER_DIAMETER = 400
 _MIN_SPOTLIGHT_DIAMETER = 200
-_MAX_SPOTLIGHT_DIAMETER = 520
 
 PLAYGROUND_TILES_MIN_COUNT = 1
 PLAYGROUND_TILES_DEFAULT_COUNT = TILES_CIRCLE_CLUSTER_DEFAULT
@@ -297,7 +296,7 @@ def _build_tiles_playground_mode(
         "max_count": max_count,
         "default_count": default_count,
         "min_diameter": _MIN_CLUSTER_DIAMETER,
-        "max_diameter": _MAX_CLUSTER_DIAMETER,
+        "max_diameter": _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
         "default_diameter": diameters.get(
             str(default_count),
             auto_diameters[str(default_count)],
@@ -350,7 +349,7 @@ def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str
         diameter = _spotlight_circle_diameter(canvas_w, canvas_h, fmt)
         center_norm = _spotlight_center_norm(canvas_w, canvas_h, diameter=diameter)
         max_diameter = min(
-            _MAX_SPOTLIGHT_DIAMETER,
+            _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
             min(canvas_w, canvas_h) - 2 * (_SHADOW_PAD + 12),
         )
         return {

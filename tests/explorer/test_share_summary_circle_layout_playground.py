@@ -95,8 +95,8 @@ def test_circle_layout_playground_story_tiles_uses_code_layout():
         initial_fmt="story",
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
-    assert '"max_diameter": 400' in html
-    assert '"1": 400' in html
+    assert '"max_diameter": 560' in html
+    assert '"1": 480' in html
     assert '"2": 380' in html
     assert '"3": 380' in html
     assert '"6": 340' in html
@@ -112,7 +112,7 @@ def test_circle_layout_playground_portrait_tiles_uses_code_layout():
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
     assert "portrait_post" in html
-    assert '"1": 400' in html
+    assert '"1": 480' in html
     assert '"6": 255' in html
     assert '"7": 255' in html
     assert '"8": 245' in html
