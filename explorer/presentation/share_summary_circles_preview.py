@@ -578,10 +578,12 @@ _STORY_CIRCLE_TOP_CLEARANCE = _HAND_TUNED_CIRCLE_TOP_CLEARANCE
 _STORY_CIRCLE_BOTTOM_CLEARANCE = _HAND_TUNED_CIRCLE_BOTTOM_CLEARANCE
 _HAND_TUNED_CIRCLE_MIN_EDGE_GAP_PX = 20
 _STORY_CIRCLE_MIN_EDGE_GAP_PX = _HAND_TUNED_CIRCLE_MIN_EDGE_GAP_PX
-_HAND_TUNED_CIRCLE_MAX_DIAMETER_PX = 400
+_HAND_TUNED_CIRCLE_MAX_DIAMETER_PX = 560
 _STORY_CIRCLE_MAX_DIAMETER_PX = _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX
 _SINGLE_CIRCLE_LAYOUT: tuple[tuple[float, float], ...] = ((0.50, 0.50),)
-_SINGLE_CIRCLE_DIAMETER_PX = 400
+_SINGLE_CIRCLE_DIAMETER_PX = 480
+_SPOTLIGHT_CIRCLE_EDGE_PAD_PX = _SHADOW_PAD_PX + 12
+_SPOTLIGHT_CIRCLE_MIN_DIAMETER_PX = 240
 _HAND_TUNED_CIRCLE_WIDTH_FRACTION = 0.62
 _STORY_CIRCLE_WIDTH_FRACTION = _HAND_TUNED_CIRCLE_WIDTH_FRACTION
 
@@ -1422,19 +1424,19 @@ def layout_tiles_circle_cluster(
 </div>"""
 
 
-def _spotlight_circle_diameter(canvas_w: int, canvas_h: int, fmt: FormatId) -> int:
-    """Single spotlight circle — much larger than Statistics Tiles cluster circles."""
-    pad = _SHADOW_PAD_PX + 12
-    avail = min(canvas_w, canvas_h) - 2 * pad
-    max_fit = min(canvas_w - 2 * pad, canvas_h - 2 * pad)
-    if fmt == "story":
-        cap, ratio = 460, 0.56
-    elif fmt == "portrait_post":
-        cap, ratio = 420, 0.54
-    else:
-        cap, ratio = 380, 0.52
-    base = min(int(avail * ratio), cap)
-    return max(240, min(int(base * 1.5), max_fit))
+def _spotlight_circle_max_fit_diameter(canvas_w: int, canvas_h: int) -> int:
+    """Largest circle diameter that fits the spotlight body canvas."""
+    pad = _SPOTLIGHT_CIRCLE_EDGE_PAD_PX
+    return min(canvas_w - 2 * pad, canvas_h - 2 * pad)
+
+
+def _spotlight_circle_diameter(canvas_w: int, canvas_h: int) -> int:
+    """Single spotlight circle — same diameter as Statistics Tiles count-1 preset."""
+    max_fit = _spotlight_circle_max_fit_diameter(canvas_w, canvas_h)
+    return max(
+        _SPOTLIGHT_CIRCLE_MIN_DIAMETER_PX,
+        min(_SINGLE_CIRCLE_DIAMETER_PX, max_fit),
+    )
 
 
 def _spotlight_circle_value_base_px(
@@ -1480,7 +1482,7 @@ def layout_spotlight_circle(
         fmt,
         scope_label=scope_label,
     )
-    diameter = _spotlight_circle_diameter(canvas_w, canvas_h, fmt)
+    diameter = _spotlight_circle_diameter(canvas_w, canvas_h)
     value_base = _spotlight_circle_value_base_px(
         diameter,
         width=width,

@@ -11,6 +11,8 @@ from explorer.presentation.share_summary_circle_layout_playground import (
     story_circle_body_bounds_for_playground,
 )
 from explorer.presentation.share_summary_circles_preview import (
+    _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
+    _SINGLE_CIRCLE_DIAMETER_PX,
     CIRCLE_CARD_TEMPLATES,
     STORY_CIRCLE_LAYOUTS,
     TILES_CIRCLE_CLUSTER_PORTRAIT_MAX,
@@ -95,8 +97,8 @@ def test_circle_layout_playground_story_tiles_uses_code_layout():
         initial_fmt="story",
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
-    assert '"max_diameter": 400' in html
-    assert '"1": 400' in html
+    assert f'"max_diameter": {_HAND_TUNED_CIRCLE_MAX_DIAMETER_PX}' in html
+    assert f'"1": {_SINGLE_CIRCLE_DIAMETER_PX}' in html
     assert '"2": 380' in html
     assert '"3": 380' in html
     assert '"6": 340' in html
@@ -112,7 +114,7 @@ def test_circle_layout_playground_portrait_tiles_uses_code_layout():
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
     assert "portrait_post" in html
-    assert '"1": 400' in html
+    assert f'"1": {_SINGLE_CIRCLE_DIAMETER_PX}' in html
     assert '"6": 255' in html
     assert '"7": 255' in html
     assert '"8": 245' in html
@@ -126,6 +128,8 @@ def test_circle_layout_playground_square_tiles_uses_code_layout():
         initial_fmt="square",
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
+    assert f'"max_diameter": {_HAND_TUNED_CIRCLE_MAX_DIAMETER_PX}' in html
+    assert f'"1": {_SINGLE_CIRCLE_DIAMETER_PX}' in html
     assert '"2": 360' in html
     assert '"3": 285' in html
     assert '"4": 275' in html
