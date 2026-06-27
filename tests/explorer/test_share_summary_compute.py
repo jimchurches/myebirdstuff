@@ -159,6 +159,46 @@ def test_longest_streak_not_computed_for_custom_trip():
     assert stats.longest_streak is None
 
 
+def test_week_period_omits_longest_streak_and_distance():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-06-01", species="Species a", distance_km=3.0),
+            _row(sid="S2", dt="2025-06-02", species="Species b", distance_km=4.0),
+            _row(sid="S3", dt="2025-06-08", species="Species c", distance_km=5.0),
+        ]
+    )
+    stats = compute_share_summary_stats(df, period_for_week_containing(date(2025, 6, 3)))
+    assert stats is not None
+    assert stats.period_kind == "week"
+    assert stats.checklists == 2
+    assert stats.species == 2
+    assert stats.days_with_checklist == 2
+    assert stats.longest_streak is None
+    assert stats.distance_km is None
+
+
+def test_compute_share_summary_stats_returns_none_for_empty_or_missing_date():
+    assert compute_share_summary_stats(pd.DataFrame(), period_for_year(2025)) is None
+    assert (
+        compute_share_summary_stats(
+            pd.DataFrame([{"Submission ID": "S1", "Common Name": "Species a"}]),
+            period_for_year(2025),
+        )
+        is None
+    )
+
+
+def test_compute_share_summary_stats_empty_period_returns_sparse_stats():
+    df = pd.DataFrame([_row(sid="S1", dt="2025-01-10", species="Species a")])
+    stats = compute_share_summary_stats(df, period_for_year(2026))
+    assert stats is not None
+    assert stats.period_label == "2026"
+    assert stats.period_kind == "year"
+    assert stats.species is None
+    assert stats.checklists is None
+    assert stats.lifers is None
+
+
 def test_period_for_lifetime_uses_full_export_span():
     period = period_for_lifetime(date(2018, 3, 15), date(2025, 11, 2))
     assert period.kind == "lifetime"
@@ -407,6 +447,7 @@ def test_geo_scope_world_leaves_df_unchanged():
     df = pd.DataFrame([_row(sid="S1", dt="2025-01-01", species="Species a")])
     out = filter_df_by_geo_scope(df, ShareSummaryGeoScope())
     assert len(out) == len(df)
+    assert list(out["Submission ID"]) == list(df["Submission ID"])
 
 
 def test_geo_scope_is_country_only():

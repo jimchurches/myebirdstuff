@@ -16,11 +16,38 @@ from explorer.core.share_summary_compute import (
 )
 
 
-def test_card_stat_ui_row_count_uses_slot_count_not_format_max():
+def test_card_stat_ui_row_count_clamps_slot_count_to_layout_limit():
     assert _card_stat_ui_row_count("tiles", "story", slot_count=4) == 4
     assert _card_stat_ui_row_count("minimal", "story", slot_count=6) == 6
     assert _card_stat_ui_row_count("tiles", "story", slot_count=12) == 10
     assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=3) == 3
+    assert (
+        _card_stat_ui_row_count(
+            "tiles",
+            "square",
+            slot_count=8,
+            tiles_presentation="circles",
+        )
+        == 6
+    )
+    assert (
+        _card_stat_ui_row_count(
+            "tiles",
+            "portrait_post",
+            slot_count=12,
+            tiles_presentation="circles",
+        )
+        == 8
+    )
+    assert (
+        _card_stat_ui_row_count(
+            "tiles",
+            "story",
+            slot_count=12,
+            tiles_presentation="circles",
+        )
+        == 10
+    )
 
 
 def test_default_card_stat_slot_count():
@@ -60,8 +87,20 @@ def test_card_stat_data_scope_changes_when_source_or_period_changes():
         period_label="May 2025",
         upload_name="MyEBirdData.csv",
     )
+    assert sample == "sample|month|June 2025|world"
+    assert csv == "MyEBirdData.csv|month|June 2025|world"
+    assert other_month == "MyEBirdData.csv|month|May 2025|world"
     assert sample != csv
     assert csv != other_month
+    assert (
+        _card_stat_data_scope(
+            use_sample=True,
+            period_kind="month",
+            period_label="June 2025",
+            upload_name=None,
+        )
+        == sample
+    )
 
 
 def test_card_stat_data_scope_changes_when_geo_scope_changes():
@@ -79,6 +118,8 @@ def test_card_stat_data_scope_changes_when_geo_scope_changes():
         upload_name="MyEBirdData.csv",
         geo_scope=ShareSummaryGeoScope(country_key="AU-NSW"),
     )
+    assert world == "MyEBirdData.csv|year|2025|world"
+    assert country == "MyEBirdData.csv|year|2025|AU-NSW"
     assert world != country
 
 
@@ -123,8 +164,15 @@ def test_design_sample_dataset_has_checklists_for_current_year():
     df = _design_sample_dataset(year)
     stats = compute_share_summary_stats(df, period_for_year(year))
     assert stats is not None
-    assert stats.checklists is not None and stats.checklists > 0
-    assert stats.species is not None and stats.species > 0
+    assert stats.checklists == 4
+    assert stats.species == 12
+    assert stats.individuals == 24
+    assert stats.completed_checklists == 4
+    assert stats.incidental_checklists == 0
+    assert stats.locations == 4
+    assert stats.countries == 2
+    assert stats.birding_hours == 4.0
+    assert stats.days_with_checklist == 4
 
 
 def test_period_has_checklist_data():
