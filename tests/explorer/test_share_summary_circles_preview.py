@@ -26,6 +26,7 @@ from explorer.presentation.share_summary_circles_preview import (
     _tiles_circle_body_insets,
     _tiles_circle_canvas_size,
     _tiles_circle_layout_reserves,
+    circle_card_template_diameters,
     circles_layout_non_overlapping,
     circles_within_canvas,
     largest_cluster_diameter,
@@ -639,6 +640,71 @@ def test_hand_tuned_template_assigns_stats_in_reading_order():
     top_left = min(centres, key=lambda c: (round(c[1], 1), round(c[0], 1)))
     assert ordered[0] == top_left
     assert centres[0] != top_left
+
+
+def test_square_circle_template_covers_counts_one_through_six():
+    template = CIRCLE_CARD_TEMPLATES[("tiles", "square")]
+    assert set(template.counts) == {1, 2, 3, 4, 5, 6}
+    assert circle_card_template_diameters(template) == {
+        1: 400,
+        2: 360,
+        3: 285,
+        4: 275,
+        5: 265,
+        6: 250,
+    }
+
+
+@pytest.mark.parametrize(
+    ("labels", "expected_count", "expected_diameter"),
+    [
+        (("Total species", "Lifers"), 2, 360),
+        (
+            ("Total species", "Lifers", "Total checklists"),
+            3,
+            285,
+        ),
+        (
+            (
+                "Total species",
+                "Lifers",
+                "Total checklists",
+                "Unique locations",
+            ),
+            4,
+            275,
+        ),
+        (
+            (
+                "Total species",
+                "Lifers",
+                "Total checklists",
+                "Unique locations",
+                "Countries",
+            ),
+            5,
+            265,
+        ),
+    ],
+)
+def test_layout_tiles_circle_cluster_square_hand_tuned_two_to_five(
+    labels,
+    expected_count,
+    expected_diameter,
+):
+    stats = sample_share_summary_stats()
+    html = layout_tiles_circle_cluster(
+        stats,
+        1080,
+        1080,
+        "square",
+        scope_label="World",
+        card_stat_labels=labels,
+    )
+    assert html.count("border-radius:50%") == expected_count
+    sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
+    assert len(sizes) == expected_count
+    assert int(sizes[0]) == expected_diameter
 
 
 def test_layout_tiles_circle_cluster_square_hand_tuned_six():

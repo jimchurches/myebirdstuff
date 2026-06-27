@@ -126,6 +126,10 @@ def test_circle_layout_playground_square_tiles_uses_code_layout():
         initial_fmt="square",
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
+    assert '"2": 360' in html
+    assert '"3": 285' in html
+    assert '"4": 275' in html
+    assert '"5": 265' in html
     assert '"6": 250' in html
     assert '"7": 237' not in html
     assert '"canvas_h": 698' in html
