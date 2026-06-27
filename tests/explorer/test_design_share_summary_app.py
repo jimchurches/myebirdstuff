@@ -92,6 +92,15 @@ def test_card_stat_data_scope_changes_when_source_or_period_changes():
     assert other_month == "MyEBirdData.csv|month|May 2025|world"
     assert sample != csv
     assert csv != other_month
+    assert (
+        _card_stat_data_scope(
+            use_sample=True,
+            period_kind="month",
+            period_label="June 2025",
+            upload_name=None,
+        )
+        == sample
+    )
 
 
 def test_card_stat_data_scope_changes_when_geo_scope_changes():

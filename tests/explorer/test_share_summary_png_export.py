@@ -42,8 +42,11 @@ def test_share_summary_png_filename_trip_title():
 
 
 def test_share_summary_png_filename_empty_label_falls_back():
+    # _slugify("") -> "birding-summary", then filename adds "-birding-summary.png"
     stats = ShareSummaryStats(period_label="", period_kind="custom")
     assert share_summary_png_filename(stats) == "birding-summary-birding-summary.png"
+    stats_whitespace = ShareSummaryStats(period_label="   ", period_kind="custom")
+    assert share_summary_png_filename(stats_whitespace) == "birding-summary-birding-summary.png"
 
 
 def test_png_dimensions_rejects_invalid_bytes():

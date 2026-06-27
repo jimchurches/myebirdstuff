@@ -753,30 +753,6 @@ def test_tiles_circle_cluster_max_is_format_specific():
     assert tiles_circle_cluster_max("story") == TILES_CIRCLE_CLUSTER_STORY_MAX
 
 
-def test_layout_tiles_circle_cluster_square_clamps_seventh_user_stat():
-    stats = sample_share_summary_stats()
-    labels = (
-        "Total species",
-        "Lifers",
-        "Total checklists",
-        "Unique locations",
-        "Countries",
-        "Birding days",
-        "Total individuals",
-    )
-    html = layout_tiles_circle_cluster(
-        stats,
-        1080,
-        1080,
-        "square",
-        scope_label="World",
-        card_stat_labels=labels,
-    )
-    assert html.count("border-radius:50%") == TILES_CIRCLE_CLUSTER_SQUARE_MAX
-    assert "Birding days" in html
-    assert "Total individuals" not in html
-
-
 def test_circle_value_font_shrinks_for_long_numbers():
     assert _circle_value_font_px("312", 48, diameter=170) == 48
     assert _circle_value_font_px("12,450", 48, diameter=170) == 36

@@ -1,10 +1,15 @@
 """Tests for :mod:`explorer.presentation.share_summary_preview`."""
 
-from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryStats
+from explorer.core.share_summary_compute import (
+    ShareSummaryAllTimeStats,
+    ShareSummaryGeoScope,
+    ShareSummaryStats,
+)
 from explorer.presentation.share_summary_preview import (
     render_share_summary_export_html,
     render_share_summary_preview_html,
     sample_share_summary_stats,
+    stat_pairs,
 )
 
 
@@ -514,9 +519,6 @@ def test_card_stat_pairs_selected_labels_includes_all_time():
 
 
 def test_stat_pairs_hide_zero_shared_stats_and_geo_scope_countries():
-    from explorer.core.share_summary_compute import ShareSummaryGeoScope
-    from explorer.presentation.share_summary_preview import stat_pairs
-
     stats = ShareSummaryStats(
         period_label="June 2025",
         period_kind="month",
@@ -632,4 +634,5 @@ def test_year_layouts_render_layout_subtitles_from_defaults():
 
 def test_portrait_post_preview_dimensions():
     html = render_share_summary_preview_html(sample_share_summary_stats(), fmt="portrait_post")
-    assert "1350px" in html
+    assert "width:1080px" in html
+    assert "height:1350px" in html
