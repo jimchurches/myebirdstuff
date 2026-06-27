@@ -63,14 +63,21 @@ def test_circle_layout_playground_tiles_uses_format_specific_count_limits():
         assert f'"default_count": {PLAYGROUND_TILES_DEFAULT_COUNT}' in fmt_html
 
 
-def test_circle_layout_playground_count_change_loads_full_preset():
+def test_circle_layout_playground_count_change_loads_code_defaults_when_untouched():
     html = render_circle_layout_playground_html(
         initial_card_type="tiles",
         initial_fmt="portrait_post",
     )
-    assert 'const preset = m.layouts[String(count)];' in html
-    assert "preset && preset.length === count" in html
-    assert "norms = preset.map((p) => [p[0], p[1]]);" in html
+    assert "const sessionEdits = new Map();" in html
+    assert "function layoutKeyFor(" in html
+    assert "function codeDefaults(n)" in html
+    assert "function applyDiameterWithoutSessionSave(d)" in html
+    assert "function loadLayoutState(n)" in html
+    assert "sessionEdits.get(key)" in html
+    assert "clearSessionEdit(layoutKey());" in html
+    assert "loadLayoutState(count);" in html
+    assert "if (drag.moved) saveSessionEdit();" in html
+    assert "if (!applyingDefaults) saveSessionEdit();" in html
 
 
 def test_circle_layout_playground_spotlight_is_not_draggable():
