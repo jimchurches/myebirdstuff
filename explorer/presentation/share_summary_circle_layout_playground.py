@@ -25,6 +25,7 @@ from explorer.presentation.share_summary_circles_preview import (
     _hand_tuned_body_bounds,
     _hand_tuned_template_diameter,
     _spotlight_circle_diameter,
+    _spotlight_circle_max_fit_diameter,
     _tiles_circle_body_insets,
     _tiles_circle_canvas_size,
     circle_card_template,
@@ -323,7 +324,7 @@ def _export_meta(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str, str]
             target = "tiles circle cluster (algorithm today — add CIRCLE_CARD_TEMPLATES entry)"
         presentation_key = "tiles_presentation"
     else:
-        target = "_spotlight_circle_diameter (or per-format diameter dict if tuning)"
+        target = "_SINGLE_CIRCLE_DIAMETER_PX"
         presentation_key = "spotlight_presentation"
     return {
         "layout_id": card_type,
@@ -346,11 +347,11 @@ def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str
             fmt,
             scope_label="World",
         )
-        diameter = _spotlight_circle_diameter(canvas_w, canvas_h, fmt)
+        diameter = _spotlight_circle_diameter(canvas_w, canvas_h)
         center_norm = _spotlight_center_norm(canvas_w, canvas_h, diameter=diameter)
         max_diameter = min(
             _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
-            min(canvas_w, canvas_h) - 2 * (_SHADOW_PAD + 12),
+            _spotlight_circle_max_fit_diameter(canvas_w, canvas_h),
         )
         return {
             **frame,
