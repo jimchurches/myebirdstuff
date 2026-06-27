@@ -633,6 +633,35 @@ def render_circle_layout_playground_html(
   let diameter = CFG.diameter;
   let norms = [];
   let drag = null;
+  let applyingDefaults = false;
+  const sessionEdits = new Map();
+
+  function layoutKeyFor(ct, format, n) {{
+    const slots = ct === "spotlight" ? 1 : n;
+    return ct + "|" + format + "|" + slots;
+  }}
+
+  function layoutKey() {{
+    return layoutKeyFor(cardType, fmt, count);
+  }}
+
+  function codeDefaults(n) {{
+    return {{
+      norms: layoutForCount(n).map((p) => [p[0], p[1]]),
+      diameter: presetDiameter(n),
+    }};
+  }}
+
+  function saveSessionEdit() {{
+    sessionEdits.set(layoutKey(), {{
+      norms: norms.map((p) => [p[0], p[1]]),
+      diameter,
+    }});
+  }}
+
+  function clearSessionEdit(key) {{
+    sessionEdits.delete(key);
+  }}
 
   function clamp(n, lo, hi) {{ return Math.min(hi, Math.max(lo, n)); }}
 
@@ -847,6 +876,7 @@ def render_circle_layout_playground_html(
     drag.el.classList.remove("dragging");
     drag.el.releasePointerCapture(event.pointerId);
     drag = null;
+    saveSessionEdit();
   }}
 
   function formatExport() {{
@@ -896,24 +926,31 @@ def render_circle_layout_playground_html(
       " y=" + Math.round(b.yMin) + "–" + Math.round(b.yMax);
   }}
 
-  function setCount(n) {{
+  function loadLayoutState(n) {{
     const m = mode();
-    count = clamp(n, m.min_count, m.max_count);
+    const nextCount = clamp(n, m.min_count, m.max_count);
+    const key = layoutKeyFor(cardType, fmt, nextCount);
+    count = nextCount;
     countInput.value = String(count);
-    const preset = m.layouts[String(count)];
-    if (preset && preset.length === count) {{
-      norms = preset.map((p) => [p[0], p[1]]);
+
+    const saved = sessionEdits.get(key);
+    if (saved) {{
+      norms = saved.norms.map((p) => [p[0], p[1]]);
+      applyingDefaults = true;
+      setDiameter(saved.diameter);
+      applyingDefaults = false;
     }} else {{
-      const next = norms.slice(0, count);
-      if (next.length < count) {{
-        const defaults = layoutForCount(count);
-        for (let i = next.length; i < count; i += 1) {{
-          next.push(defaults[i]);
-        }}
-      }}
-      norms = next;
+      const defaults = codeDefaults(nextCount);
+      norms = defaults.norms;
+      applyingDefaults = true;
+      setDiameter(defaults.diameter);
+      applyingDefaults = false;
     }}
     renderCircles();
+  }}
+
+  function setCount(n) {{
+    loadLayoutState(n);
   }}
 
   function setDiameter(d) {{
@@ -927,21 +964,14 @@ def render_circle_layout_playground_html(
   function loadPreset(n) {{
     const preset = mode().layouts[String(n)];
     if (!preset) return;
-    count = n;
-    countInput.value = String(count);
-    norms = preset.map((p) => [p[0], p[1]]);
-    setDiameter(presetDiameter(n));
+    clearSessionEdit(layoutKeyFor(cardType, fmt, n));
+    loadLayoutState(n);
   }}
 
   function activateMode() {{
-    const m = mode();
-    count = m.default_count;
-    diameter = m.default_diameter;
-    norms = layoutForCount(count);
     applyModeUi();
     applyScale();
-    setDiameter(diameter);
-    setCount(count);
+    loadLayoutState(mode().default_count);
   }}
 
   cardTypeSelect.addEventListener("change", () => {{
@@ -953,15 +983,23 @@ def render_circle_layout_playground_html(
     activateMode();
   }});
   countInput.addEventListener("change", () => setCount(Number(countInput.value)));
-  diameterInput.addEventListener("input", () => setDiameter(Number(diameterInput.value)));
+  diameterInput.addEventListener("input", () => {{
+    setDiameter(Number(diameterInput.value));
+    if (!applyingDefaults) saveSessionEdit();
+  }});
   presetSelect.addEventListener("change", () => {{
     const val = presetSelect.value;
     if (val) loadPreset(Number(val));
     presetSelect.value = "";
   }});
   document.getElementById("reset-btn").addEventListener("click", () => {{
-    norms = layoutForCount(count);
-    setDiameter(presetDiameter(count));
+    clearSessionEdit(layoutKey());
+    const defaults = codeDefaults(count);
+    norms = defaults.norms;
+    applyingDefaults = true;
+    setDiameter(defaults.diameter);
+    applyingDefaults = false;
+    renderCircles();
   }});
   document.getElementById("copy-btn").addEventListener("click", async () => {{
     const text = formatExport();
@@ -980,10 +1018,7 @@ def render_circle_layout_playground_html(
   document.addEventListener("pointerup", onPointerUp);
   document.addEventListener("pointercancel", onPointerUp);
 
-  applyModeUi();
-  applyScale();
-  norms = layoutForCount(count);
-  renderCircles();
+  activateMode();
 }})();
 </script>
 </body>
