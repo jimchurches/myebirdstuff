@@ -647,14 +647,24 @@ def render_circle_layout_playground_html(
 
   function codeDefaults(n) {{
     return {{
-      norms: layoutForCount(n).map((p) => [p[0], p[1]]),
+      norms: cloneNorms(layoutForCount(n)),
       diameter: presetDiameter(n),
     }};
   }}
 
+  function cloneNorms(source) {{
+    return source.map((p) => [p[0], p[1]]);
+  }}
+
+  function applyDiameterWithoutSessionSave(d) {{
+    applyingDefaults = true;
+    setDiameter(d);
+    applyingDefaults = false;
+  }}
+
   function saveSessionEdit() {{
     sessionEdits.set(layoutKey(), {{
-      norms: norms.map((p) => [p[0], p[1]]),
+      norms: cloneNorms(norms),
       diameter,
     }});
   }}
@@ -854,6 +864,7 @@ def render_circle_layout_playground_html(
       offsetX: (event.clientX - rect.left) / scale - pos.x,
       offsetY: (event.clientY - rect.top) / scale - pos.y,
       el: target,
+      moved: false,
     }};
     event.preventDefault();
   }}
@@ -866,6 +877,7 @@ def render_circle_layout_playground_html(
     const y = (event.clientY - rect.top) / scale - drag.offsetY;
     const norm = pixelToNorm(x, y);
     norms[drag.index] = [norm.nx, norm.ny];
+    drag.moved = true;
     drag.el.style.left = normToPixel(norm.nx, norm.ny).x + "px";
     drag.el.style.top = normToPixel(norm.nx, norm.ny).y + "px";
     updateExport();
@@ -875,8 +887,8 @@ def render_circle_layout_playground_html(
     if (!drag) return;
     drag.el.classList.remove("dragging");
     drag.el.releasePointerCapture(event.pointerId);
+    if (drag.moved) saveSessionEdit();
     drag = null;
-    saveSessionEdit();
   }}
 
   function formatExport() {{
@@ -935,22 +947,13 @@ def render_circle_layout_playground_html(
 
     const saved = sessionEdits.get(key);
     if (saved) {{
-      norms = saved.norms.map((p) => [p[0], p[1]]);
-      applyingDefaults = true;
-      setDiameter(saved.diameter);
-      applyingDefaults = false;
+      norms = cloneNorms(saved.norms);
+      applyDiameterWithoutSessionSave(saved.diameter);
     }} else {{
       const defaults = codeDefaults(nextCount);
       norms = defaults.norms;
-      applyingDefaults = true;
-      setDiameter(defaults.diameter);
-      applyingDefaults = false;
+      applyDiameterWithoutSessionSave(defaults.diameter);
     }}
-    renderCircles();
-  }}
-
-  function setCount(n) {{
-    loadLayoutState(n);
   }}
 
   function setDiameter(d) {{
@@ -982,7 +985,7 @@ def render_circle_layout_playground_html(
     fmt = formatSelect.value;
     activateMode();
   }});
-  countInput.addEventListener("change", () => setCount(Number(countInput.value)));
+  countInput.addEventListener("change", () => loadLayoutState(Number(countInput.value)));
   diameterInput.addEventListener("input", () => {{
     setDiameter(Number(diameterInput.value));
     if (!applyingDefaults) saveSessionEdit();
@@ -994,12 +997,7 @@ def render_circle_layout_playground_html(
   }});
   document.getElementById("reset-btn").addEventListener("click", () => {{
     clearSessionEdit(layoutKey());
-    const defaults = codeDefaults(count);
-    norms = defaults.norms;
-    applyingDefaults = true;
-    setDiameter(defaults.diameter);
-    applyingDefaults = false;
-    renderCircles();
+    loadLayoutState(count);
   }});
   document.getElementById("copy-btn").addEventListener("click", async () => {{
     const text = formatExport();

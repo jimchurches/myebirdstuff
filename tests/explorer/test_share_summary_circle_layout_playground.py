@@ -71,9 +71,12 @@ def test_circle_layout_playground_count_change_loads_code_defaults_when_untouche
     assert "const sessionEdits = new Map();" in html
     assert "function layoutKeyFor(" in html
     assert "function codeDefaults(n)" in html
+    assert "function applyDiameterWithoutSessionSave(d)" in html
     assert "function loadLayoutState(n)" in html
     assert "sessionEdits.get(key)" in html
     assert "clearSessionEdit(layoutKey());" in html
+    assert "loadLayoutState(count);" in html
+    assert "if (drag.moved) saveSessionEdit();" in html
     assert "if (!applyingDefaults) saveSessionEdit();" in html
 
 
