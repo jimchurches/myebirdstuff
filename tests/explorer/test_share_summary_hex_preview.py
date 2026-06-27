@@ -10,8 +10,21 @@ from explorer.presentation.share_summary_hex_preview import (
 from explorer.presentation.share_summary_preview import sample_share_summary_stats
 
 
-def test_hex_variant_ids_count():
-    assert len(HEX_VARIANT_IDS) == 12
+def test_hex_variant_ids_are_stable_for_design_picker():
+    assert HEX_VARIANT_IDS == (
+        "clip_flat_classic",
+        "clip_flat_compact",
+        "clip_flat_shadow",
+        "clip_pointy",
+        "svg_flat",
+        "clip_flat_gradient",
+        "tessellate_flat",
+        "tessellate_flat_shadow",
+        "tessellate_pointy",
+        "blob_ring",
+        "blob_spiral",
+        "blob_cluster",
+    )
 
 
 def test_render_hex_grid_preview_html_all_variants():

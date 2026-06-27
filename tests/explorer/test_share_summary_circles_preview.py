@@ -92,8 +92,16 @@ def _placed_diameter(
     )
 
 
-def test_circle_variant_ids_count():
-    assert len(CIRCLE_VARIANT_IDS) == 7
+def test_circle_variant_ids_are_stable_for_design_picker():
+    assert CIRCLE_VARIANT_IDS == (
+        "cluster_soft",
+        "cluster_tight",
+        "cluster_stagger_a",
+        "cluster_stagger_b",
+        "cluster_wide",
+        "cluster_compact",
+        "tiles_cluster",
+    )
 
 
 def test_grid_reading_order_does_not_start_with_centre():
@@ -310,6 +318,16 @@ def test_layout_tiles_circle_cluster_story_renders_six_defaults():
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert len(sizes) == 6
     assert int(sizes[0]) == STORY_CIRCLE_LAYOUT_DIAMETERS[6]
+    for label, value in (
+        ("Species", "312"),
+        ("Lifers", "47"),
+        ("Total checklists", "186"),
+        ("Unique locations", "42"),
+        ("Countries", "5"),
+        ("Birding days", "98"),
+    ):
+        assert label in html
+        assert value in html
 
 
 def test_story_circle_layouts_defined_for_one_through_ten():
@@ -668,6 +686,8 @@ def test_layout_tiles_circle_cluster_square_clamps_to_six():
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert len(sizes) == TILES_CIRCLE_CLUSTER_SQUARE_MAX
     assert int(sizes[0]) == 250
+    assert "Birding days" in html
+    assert "Total individuals" not in html
 
 
 def test_layout_tiles_circle_cluster_portrait_circles_clear_footer():
@@ -753,6 +773,8 @@ def test_layout_tiles_circle_cluster_square_clamps_seventh_user_stat():
         card_stat_labels=labels,
     )
     assert html.count("border-radius:50%") == TILES_CIRCLE_CLUSTER_SQUARE_MAX
+    assert "Birding days" in html
+    assert "Total individuals" not in html
 
 
 def test_circle_value_font_shrinks_for_long_numbers():

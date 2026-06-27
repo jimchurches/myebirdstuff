@@ -513,6 +513,34 @@ def test_card_stat_pairs_selected_labels_includes_all_time():
     assert pairs == [("Observed species (%)", "2.9%"), ("Lifers", "47")]
 
 
+def test_stat_pairs_hide_zero_shared_stats_and_geo_scope_countries():
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope
+    from explorer.presentation.share_summary_preview import stat_pairs
+
+    stats = ShareSummaryStats(
+        period_label="June 2025",
+        period_kind="month",
+        species=12,
+        countries=2,
+        shared_checklists=0,
+        days_birding_with_others=0,
+    )
+    world_labels = [label for label, _ in stat_pairs(stats)]
+    assert "Countries" in world_labels
+    assert "Shared checklists" not in world_labels
+    assert "Days birding with others" not in world_labels
+
+    regional_labels = [
+        label
+        for label, _ in stat_pairs(
+            stats,
+            geo_scope=ShareSummaryGeoScope(country_key="AU", region_code="NSW"),
+        )
+    ]
+    assert "Countries" not in regional_labels
+    assert "Total species" in regional_labels
+
+
 def test_trip_title_on_all_layouts():
     from explorer.core.share_summary_defaults import (
         SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
@@ -602,6 +630,6 @@ def test_year_layouts_render_layout_subtitles_from_defaults():
     assert SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL in minimal_html
 
 
-def test_portrait_post_export_dimensions():
+def test_portrait_post_preview_dimensions():
     html = render_share_summary_preview_html(sample_share_summary_stats(), fmt="portrait_post")
     assert "1350px" in html
