@@ -19,8 +19,10 @@ from explorer.core.share_summary_compute import (
 def test_card_stat_ui_row_count_clamps_slot_count_to_layout_limit():
     assert _card_stat_ui_row_count("tiles", "story", slot_count=4) == 4
     assert _card_stat_ui_row_count("minimal", "story", slot_count=6) == 6
-    assert _card_stat_ui_row_count("tiles", "story", slot_count=12) == 10
-    assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=3) == 3
+    assert _card_stat_ui_row_count("tiles", "story", slot_count=12) == 12
+    assert _card_stat_ui_row_count("tiles", "story", slot_count=2) == 4
+    assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=9) == 8
+    assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=3) == 4
     assert (
         _card_stat_ui_row_count(
             "tiles",

@@ -42,13 +42,22 @@ def test_preview_color_scheme_index_changes_palette():
     assert light != dark
 
 
-def test_layout_card_stat_max_story_supports_ten():
-    from explorer.presentation.share_summary_preview import layout_card_stat_max
+def test_layout_card_stat_max_grid_and_minimal_limits():
+    from explorer.presentation.share_summary_preview import (
+        layout_card_stat_max,
+        layout_grid_stat_max,
+        layout_grid_stat_min,
+    )
 
+    assert layout_grid_stat_min("square") == 4
+    assert layout_grid_stat_max("square") == 6
+    assert layout_grid_stat_max("portrait_post") == 8
+    assert layout_grid_stat_max("story") == 12
     assert layout_card_stat_max("minimal", "story") == 18
     assert layout_card_stat_max("minimal", "story", available_stat_count=14) == 14
     assert layout_card_stat_max("minimal", "story", available_stat_count=25) == 18
-    assert layout_card_stat_max("tiles", "story") == 10
+    assert layout_card_stat_max("tiles", "story") == 12
+    assert layout_card_stat_max("tiles", "portrait_post") == 8
     assert layout_card_stat_max("minimal", "square") == 6
     assert layout_card_stat_max("tiles", "square") == 6
 
@@ -73,6 +82,45 @@ def test_minimal_story_renders_extra_selected_stats():
     )
     assert "Total individuals" in html
     assert "Bird families" in html
+
+
+def test_tiles_story_grid_uses_uniform_cell_sizing():
+    stats = sample_share_summary_stats()
+    four = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        fmt="story",
+        card_stat_labels=(
+            "Total species",
+            "Lifers",
+            "Total checklists",
+            "Unique locations",
+        ),
+    )
+    twelve_labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+        "Bird families",
+        "Longest streak (days)",
+        "Completed checklists",
+        "Incidental checklists",
+        "Birding hours",
+    )
+    twelve = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        fmt="story",
+        card_stat_labels=twelve_labels,
+    )
+    assert 'font-size:40px;font-weight:700;">' in four
+    assert 'font-size:40px;font-weight:700;">' in twelve
+    assert "padding:20px 12px" in four
+    assert "padding:20px 12px" in twelve
 
 
 def test_tiles_story_renders_extra_selected_stats():

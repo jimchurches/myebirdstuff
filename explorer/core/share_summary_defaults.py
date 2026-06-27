@@ -112,8 +112,13 @@ SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS: tuple[str, ...] = (
     "Total checklists",
     "Unique locations",
 )
-# Story format (1080×1920) — Statistics Tiles may show up to this many stats.
+# Story format (1080×1920) — Circle cluster may show up to this many stats.
 SHARE_SUMMARY_STORY_MAX_STATS = 10
+# Statistics Grid (tiles + grid presentation) — separate from circle-cluster caps.
+SHARE_SUMMARY_GRID_MIN_STATS = 4
+SHARE_SUMMARY_GRID_SQUARE_MAX_STATS = 6
+SHARE_SUMMARY_GRID_PORTRAIT_MAX_STATS = 8
+SHARE_SUMMARY_GRID_STORY_MAX_STATS = 12
 # Statistics List (minimal) on story — cap 18; slot count is min(available, cap).
 SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS = 18
 # Display label on spotlight cards (matches Available statistics / card picker).

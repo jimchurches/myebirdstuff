@@ -79,6 +79,7 @@ from explorer.presentation.share_summary_preview import (
     default_card_stat_labels,
     layout_card_stat_max,
     layout_card_stat_storage_max,
+    layout_grid_stat_min,
     period_for_custom,
     period_for_lifetime,
     period_for_month,
@@ -346,6 +347,21 @@ def _tiles_circle_cluster_picker(layout: LayoutId, tiles_presentation: TilesPres
     return layout == "tiles" and tiles_presentation == "circles"
 
 
+# Statistics Grid vs circle-cluster slot limits (see also layout_grid_stat_* in preview).
+# Grid: square 4–6, portrait 4–8, story 4–12. Circle cluster: square max 6, portrait max 8, story max 10.
+
+
+def _card_stat_min_slots(
+    layout: LayoutId,
+    fmt: FormatId,
+    *,
+    tiles_presentation: TilesPresentationId = "grid",
+) -> int:
+    if layout == "tiles" and not _tiles_circle_cluster_picker(layout, tiles_presentation):
+        return layout_grid_stat_min(fmt)
+    return 1
+
+
 def _default_card_stat_slot_count(
     *,
     circle_cluster: bool,
@@ -389,7 +405,8 @@ def _card_stat_ui_row_count(
         status_metrics=status_metrics,
         available_stat_count=available_stat_count,
     )
-    return min(max(1, slot_count), max_slots)
+    min_slots = _card_stat_min_slots(layout, fmt, tiles_presentation=tiles_presentation)
+    return min(max(min_slots, slot_count), max_slots)
 
 
 def _effective_card_stat_labels(
@@ -711,6 +728,13 @@ def _card_stat_picker_ui(
             f"Supports up to {max_slots} stats. "
             f"The default is {TILES_CIRCLE_CLUSTER_DEFAULT} circles."
         )
+    elif layout == "tiles":
+        min_slots = _card_stat_min_slots(layout, fmt, tiles_presentation=tiles_presentation)
+        st.caption(
+            f"Statistics Grid: {min_slots}–{max_slots} stats "
+            f"(square 4–6, portrait 4–8, story 4–12). "
+            "Use Add stat or the chips below to add more."
+        )
     else:
         st.caption(
             f"Supports up to {max_slots} stats. "
@@ -718,6 +742,7 @@ def _card_stat_picker_ui(
         )
 
     stat_row_cols = [0.5, 6, 1.8, 2.2]
+    min_slots = _card_stat_min_slots(layout, fmt, tiles_presentation=tiles_presentation)
 
     for i in range(ui_rows):
         current = picks[i] if i < len(picks) else ""
@@ -729,7 +754,7 @@ def _card_stat_picker_ui(
         picks[i] = current
         can_up = i > 0
         can_down = i < ui_rows - 1
-        can_remove = i > 0 or bool(current)
+        can_remove = ui_rows > min_slots and (i > 0 or bool(current))
 
         col_num, col_sel, col_val, col_actions = st.columns(
             stat_row_cols,

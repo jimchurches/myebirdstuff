@@ -35,11 +35,14 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COUNTRY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS,
+    SHARE_SUMMARY_GRID_MIN_STATS,
+    SHARE_SUMMARY_GRID_PORTRAIT_MAX_STATS,
+    SHARE_SUMMARY_GRID_SQUARE_MAX_STATS,
+    SHARE_SUMMARY_GRID_STORY_MAX_STATS,
     SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
-    SHARE_SUMMARY_STORY_MAX_STATS,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     share_summary_card_subtitle,
     share_summary_period_subtitle,
@@ -306,6 +309,21 @@ def summary_status_metrics(
     return ordered
 
 
+def layout_grid_stat_min(fmt: FormatId | None = None) -> int:
+    """Minimum stat slots on Statistics Grid (all formats)."""
+    del fmt
+    return SHARE_SUMMARY_GRID_MIN_STATS
+
+
+def layout_grid_stat_max(fmt: FormatId | None = None) -> int:
+    """Maximum stat slots on Statistics Grid — not circle-cluster caps."""
+    if fmt == "story":
+        return SHARE_SUMMARY_GRID_STORY_MAX_STATS
+    if fmt == "portrait_post":
+        return SHARE_SUMMARY_GRID_PORTRAIT_MAX_STATS
+    return SHARE_SUMMARY_GRID_SQUARE_MAX_STATS
+
+
 def layout_card_stat_max(
     layout: LayoutId | None,
     fmt: FormatId | None = None,
@@ -314,9 +332,7 @@ def layout_card_stat_max(
 ) -> int:
     """Maximum stat slots on grid/list layouts (spotlight uses a separate control)."""
     if layout == "tiles":
-        if fmt == "story":
-            return SHARE_SUMMARY_STORY_MAX_STATS
-        return 6
+        return layout_grid_stat_max(fmt)
     if layout == "minimal":
         if fmt == "story":
             cap = SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
@@ -332,7 +348,7 @@ def layout_card_stat_storage_max(layout: LayoutId | None) -> int:
     if layout == "minimal":
         return SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS
     if layout == "tiles":
-        return SHARE_SUMMARY_STORY_MAX_STATS
+        return SHARE_SUMMARY_GRID_STORY_MAX_STATS
     return layout_card_stat_max(layout)
 
 
@@ -699,7 +715,7 @@ def _layout_tiles(
         all_time=all_time,
         geo_scope=geo_scope,
     )
-    if fmt == "story" and len(pairs) > 6:
+    if fmt == "story":
         value_px, label_px, cell_pad, grid_gap = "40px", "18px", "20px 12px", "12px"
     else:
         value_px, label_px, cell_pad, grid_gap = "52px", "20px", "32px 20px", "20px"
@@ -1025,6 +1041,8 @@ __all__ = [
     "summary_status_metrics",
     "layout_card_stat_max",
     "layout_card_stat_storage_max",
+    "layout_grid_stat_max",
+    "layout_grid_stat_min",
     "default_card_stat_labels",
     "card_stat_pairs",
     "FORMAT_LABELS",
