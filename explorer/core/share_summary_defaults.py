@@ -11,6 +11,8 @@ from __future__ import annotations
 SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT = 0
 
 # Each scheme: ``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``.
+# Optional ``tile_bg``, ``tile_bg_alt``, ``tile_border`` lift Statistics Grid / circle tiles
+# above the card surface (dark theme uses medium lift — #308).
 # Add entries here to trial themes; flip ``SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT`` to test.
 SHARE_SUMMARY_COLOR_SCHEMES: tuple[dict[str, str], ...] = (
     {
@@ -32,6 +34,8 @@ SHARE_SUMMARY_COLOR_SCHEMES: tuple[dict[str, str], ...] = (
         "muted": "#8fa79a",
         "border": "#263329",
         "accent": "#74c69d",
+        "tile_bg_alt": "#1e2a24",
+        "tile_bg": "#243229",
     },
 )
 
@@ -50,6 +54,14 @@ def share_summary_color_scheme_label(scheme_id: str) -> str:
         if scheme["id"] == scheme_id:
             return scheme.get("name") or scheme_id
     return scheme_id
+
+
+def share_summary_color_scheme_fingerprint(index: int) -> tuple[tuple[str, str], ...]:
+    """Hashable snapshot of scheme values — invalidates PNG cache when palette edits land."""
+    if not 0 <= index < len(SHARE_SUMMARY_COLOR_SCHEMES):
+        index = SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT
+    scheme = SHARE_SUMMARY_COLOR_SCHEMES[index]
+    return tuple(sorted(scheme.items()))
 
 
 SHARE_SUMMARY_COLOR_SCHEME_IDS: tuple[str, ...] = tuple(

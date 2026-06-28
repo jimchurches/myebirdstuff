@@ -44,6 +44,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_IDS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
     SHARE_SUMMARY_STORY_MAX_STATS,
+    share_summary_color_scheme_fingerprint,
     share_summary_color_scheme_index,
     share_summary_color_scheme_label,
     share_summary_layout_label,
@@ -103,11 +104,13 @@ def _cached_share_summary_png(
     spotlight_label: str,
     all_time: ShareSummaryAllTimeStats | None,
     color_scheme_index: int,
+    color_scheme_fingerprint: tuple[tuple[str, str], ...],
     scope_label: str | None,
     geo_scope: ShareSummaryGeoScope,
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
 ) -> bytes:
+    del color_scheme_fingerprint  # cache key only — render reads live scheme by index
     return share_summary_to_png_bytes(
         stats,
         layout=layout,
@@ -1113,6 +1116,7 @@ def _current_card_fragment(
             spotlight_label,
             all_time,
             color_scheme_index,
+            share_summary_color_scheme_fingerprint(color_scheme_index),
             scope_label,
             geo_scope,
             tiles_presentation,

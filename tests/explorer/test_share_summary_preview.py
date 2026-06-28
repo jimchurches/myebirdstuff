@@ -1,5 +1,8 @@
 """Tests for :mod:`explorer.presentation.share_summary_preview`."""
 
+import ast
+from pathlib import Path
+
 from explorer.core.share_summary_compute import (
     ShareSummaryAllTimeStats,
     ShareSummaryGeoScope,
@@ -39,7 +42,27 @@ def test_preview_color_scheme_index_changes_palette():
     dark = render_share_summary_preview_html(stats, layout="tiles", color_scheme_index=1)
     assert SHARE_SUMMARY_COLOR_SCHEMES[0]["bg"] in light
     assert SHARE_SUMMARY_COLOR_SCHEMES[1]["bg"] in dark
+    assert SHARE_SUMMARY_COLOR_SCHEMES[1]["tile_bg"] in dark
     assert light != dark
+
+
+def test_dark_scheme_tile_lift_in_grid_and_circle_previews():
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+
+    stats = sample_share_summary_stats()
+    dark_scheme = SHARE_SUMMARY_COLOR_SCHEMES[1]
+    grid = render_share_summary_preview_html(
+        stats, layout="tiles", tiles_presentation="grid", color_scheme_index=1
+    )
+    circles = render_share_summary_preview_html(
+        stats, layout="tiles", tiles_presentation="circles", color_scheme_index=1
+    )
+    assert dark_scheme["tile_bg"] in grid
+    assert dark_scheme["tile_bg_alt"] in grid
+    assert dark_scheme["border"] in grid
+    assert dark_scheme["tile_bg"] in circles
+    assert dark_scheme["tile_bg_alt"] in circles
+    assert dark_scheme["border"] in circles
 
 
 def test_layout_card_stat_max_grid_and_minimal_limits():
@@ -219,7 +242,9 @@ def test_spotlight_pair_for_label_by_period():
 
 def test_spotlight_layout_accepts_all_time_label():
     from explorer.core.share_summary_compute import ShareSummaryAllTimeStats
-    from explorer.presentation.share_summary_preview import render_share_summary_preview_html
+    from explorer.presentation.share_summary_preview import (
+        render_share_summary_preview_html,
+    )
 
     stats = sample_share_summary_stats()
     all_time = ShareSummaryAllTimeStats(total_species_taxa=10_800)
@@ -483,7 +508,10 @@ def test_card_stat_pairs_tiles_includes_countries_and_birding_days():
 
 
 def test_summary_status_metrics_includes_region_lifers_when_geo_scoped():
-    from explorer.core.share_summary_compute import ShareSummaryGeoScope, geo_region_lifer_stat_label
+    from explorer.core.share_summary_compute import (
+        ShareSummaryGeoScope,
+        geo_region_lifer_stat_label,
+    )
     from explorer.presentation.share_summary_preview import summary_status_metrics
 
     scope = ShareSummaryGeoScope(country_key="AU", region_code="NSW")
@@ -531,7 +559,10 @@ def test_render_preview_html_includes_region_lifer_label():
 
 
 def test_summary_status_metrics_hides_world_only_stats_when_not_world():
-    from explorer.core.share_summary_compute import ShareSummaryAllTimeStats, ShareSummaryGeoScope
+    from explorer.core.share_summary_compute import (
+        ShareSummaryAllTimeStats,
+        ShareSummaryGeoScope,
+    )
     from explorer.presentation.share_summary_preview import (
         LABEL_OBSERVED_SPECIES_PCT,
         LABEL_SPECIES_IN_TAXONOMY,
@@ -711,3 +742,141 @@ def test_portrait_post_preview_dimensions():
     html = render_share_summary_preview_html(sample_share_summary_stats(), fmt="portrait_post")
     assert "width:1080px" in html
     assert "height:1350px" in html
+
+
+def test_colour_or_uses_tile_keys_and_falls_back_to_base_palette():
+    from explorer.presentation.share_summary_preview import (
+        _colour_or,
+        share_summary_scheme_override,
+    )
+
+    scheme = {
+        "id": "test",
+        "name": "Test",
+        "bg": "#010203",
+        "bg_alt": "#040506",
+        "text": "#070809",
+        "muted": "#0a0b0c",
+        "border": "#0d0e0f",
+        "accent": "#101112",
+    }
+    with share_summary_scheme_override(scheme):
+        assert _colour_or("tile_bg", "bg") == "#010203"
+        assert _colour_or("tile_bg_alt", "bg_alt") == "#040506"
+        assert _colour_or("tile_border", "border") == "#0d0e0f"
+
+    with share_summary_scheme_override(
+        {
+            **scheme,
+            "tile_bg": "#112233",
+            "tile_bg_alt": "#223344",
+            "tile_border": "#334455",
+        }
+    ):
+        assert _colour_or("tile_bg", "bg") == "#112233"
+        assert _colour_or("tile_bg_alt", "bg_alt") == "#223344"
+        assert _colour_or("tile_border", "border") == "#334455"
+
+
+def test_share_summary_scheme_override_tile_keys_render_grid_and_circles():
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+    from explorer.presentation.share_summary_preview import (
+        share_summary_scheme_override,
+    )
+
+    scheme = {
+        **SHARE_SUMMARY_COLOR_SCHEMES[1],
+        "tile_bg": "#112233",
+        "tile_bg_alt": "#223344",
+        "tile_border": "#334455",
+    }
+    with share_summary_scheme_override(scheme):
+        grid = render_share_summary_preview_html(
+            sample_share_summary_stats(),
+            layout="tiles",
+            tiles_presentation="grid",
+            color_scheme_index=1,
+        )
+        circles = render_share_summary_preview_html(
+            sample_share_summary_stats(),
+            layout="tiles",
+            tiles_presentation="circles",
+            color_scheme_index=1,
+        )
+    for html in (grid, circles):
+        assert "#112233" in html
+        assert "#223344" in html
+        assert "#334455" in html
+
+
+def test_share_summary_scheme_override_resets_after_context():
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+    from explorer.presentation.share_summary_preview import (
+        share_summary_scheme_override,
+    )
+
+    scheme = {
+        **SHARE_SUMMARY_COLOR_SCHEMES[1],
+        "tile_bg": "#112233",
+    }
+    with share_summary_scheme_override(scheme):
+        html = render_share_summary_preview_html(
+            sample_share_summary_stats(),
+            layout="tiles",
+            color_scheme_index=1,
+        )
+    reset_html = render_share_summary_preview_html(
+        sample_share_summary_stats(),
+        layout="tiles",
+        color_scheme_index=1,
+    )
+    assert "#112233" in html
+    assert "#112233" not in reset_html
+
+
+def test_share_summary_color_scheme_fingerprint_changes_with_tile_palette(monkeypatch):
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_COLOR_SCHEMES,
+        share_summary_color_scheme_fingerprint,
+    )
+
+    fp = share_summary_color_scheme_fingerprint(1)
+    assert ("tile_bg", SHARE_SUMMARY_COLOR_SCHEMES[1]["tile_bg"]) in fp
+    assert ("tile_bg_alt", SHARE_SUMMARY_COLOR_SCHEMES[1]["tile_bg_alt"]) in fp
+    assert share_summary_color_scheme_fingerprint(0) != fp
+    monkeypatch.setitem(SHARE_SUMMARY_COLOR_SCHEMES[1], "tile_border", "#abcdef")
+    assert share_summary_color_scheme_fingerprint(1) != fp
+    assert ("tile_border", "#abcdef") in share_summary_color_scheme_fingerprint(1)
+
+
+def test_design_app_png_cache_key_includes_scheme_fingerprint():
+    app_path = (
+        Path(__file__).resolve().parents[2]
+        / "explorer"
+        / "app"
+        / "streamlit"
+        / "design_share_summary_app.py"
+    )
+    tree = ast.parse(app_path.read_text(encoding="utf-8"))
+    cached_func = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "_cached_share_summary_png"
+    )
+    assert "color_scheme_fingerprint" in [arg.arg for arg in cached_func.args.args]
+
+    cache_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_cached_share_summary_png"
+    ]
+    assert cache_calls
+    assert any(
+        isinstance(arg, ast.Call)
+        and isinstance(arg.func, ast.Name)
+        and arg.func.id == "share_summary_color_scheme_fingerprint"
+        for call in cache_calls
+        for arg in call.args
+    )
