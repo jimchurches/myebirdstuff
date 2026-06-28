@@ -56,6 +56,14 @@ def share_summary_color_scheme_label(scheme_id: str) -> str:
     return scheme_id
 
 
+def share_summary_color_scheme_fingerprint(index: int) -> tuple[tuple[str, str], ...]:
+    """Hashable snapshot of scheme values — invalidates PNG cache when palette edits land."""
+    if not 0 <= index < len(SHARE_SUMMARY_COLOR_SCHEMES):
+        index = SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT
+    scheme = SHARE_SUMMARY_COLOR_SCHEMES[index]
+    return tuple(sorted(scheme.items()))
+
+
 SHARE_SUMMARY_COLOR_SCHEME_IDS: tuple[str, ...] = tuple(
     scheme["id"] for scheme in SHARE_SUMMARY_COLOR_SCHEMES
 )

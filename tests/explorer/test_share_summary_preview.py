@@ -776,6 +776,17 @@ def test_share_summary_scheme_override_tile_keys():
     assert "#1e2a24" in html
 
 
+def test_share_summary_color_scheme_fingerprint_changes_with_tile_palette():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_COLOR_SCHEMES,
+        share_summary_color_scheme_fingerprint,
+    )
+
+    fp = share_summary_color_scheme_fingerprint(1)
+    assert ("tile_bg", SHARE_SUMMARY_COLOR_SCHEMES[1]["tile_bg"]) in fp
+    assert share_summary_color_scheme_fingerprint(0) != fp
+
+
 def test_dark_tile_mockup_circle_cluster_uses_tile_palette():
     from explorer.presentation.share_summary_dark_tile_mockup import (
         render_dark_tile_mockup_preview_html,
