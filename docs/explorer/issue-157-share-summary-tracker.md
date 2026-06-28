@@ -13,6 +13,7 @@ Living document for the social media summary feature. Update this file as ideas 
 | 2 | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) | Playwright PNG export |
 | 3 | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) | Social Cards tab in main app |
 | 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — stat picker, favourite birds, layout tuning |
+| — | [#308](https://github.com/jimchurches/myebirdstuff/issues/308) | Dark theme tile contrast (medium lift on Statistics Grid + circle cluster) — merged via `feat/social-cards` |
 
 **Prototype / integration branch:** `feat/social-cards` — see [social-cards-workflow.md](social-cards-workflow.md)
 
@@ -53,8 +54,8 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | Media uploads | **Dropped** | Not in eBird observation CSV |
 | User picks stats on card | **Agreed (v1)** | Defaults per layout; picker UI TBD |
 | Current vs previous period | **Done (design app)** | Radio for year/month/week; default via `suggest_period_anchor()` |
-| Colour schemes | **Config in defaults.py** | Index tunable; no UI yet |
-| Multiple themes (light/dark) | **Config only** | Add entries to colour scheme array |
+| Colour schemes | **Done (design app)** | Light + dark in ``SHARE_SUMMARY_COLOR_SCHEMES``; theme picker in design studio |
+| Multiple themes (light/dark) | **Done (design app)** | Dark uses **medium lift** tile palette (#308): optional ``tile_bg`` / ``tile_bg_alt`` on grid + circle tiles |
 | User picks layout in app | **Agreed (v1)** | Hero grid, Stat tiles, Minimal list, **Spotlight** |
 
 ---
@@ -154,10 +155,11 @@ All should appear in the summary row (with values) so users can pick interesting
 ### Colours
 
 - Current palette looks good for v1.
-- Schemes live in ``explorer/core/share_summary_defaults.py`` → ``SHARE_SUMMARY_COLOR_SCHEMES`` (array of dicts: ``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``).
+- Schemes live in ``explorer/core/share_summary_defaults.py`` → ``SHARE_SUMMARY_COLOR_SCHEMES`` (``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``; dark also sets optional ``tile_bg`` / ``tile_bg_alt`` / ``tile_border`` for Statistics Grid and circle-cluster tiles).
 - Active scheme: ``SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT`` (flip index to test new schemes without code changes).
-- **No UI control** for colour schemes yet.
-- **Dark theme:** add a second entry to the array when a good palette exists; otherwise mark v2 with colour-scheme work.
+- **Design app:** sidebar **Theme** picker (light / dark).
+- **Dark theme (#308):** **medium lift** — tile gradient ``#1e2a24`` → ``#243229`` on grid rectangles and circle fills; card shell and footer unchanged. Circle cluster was originally out of scope for #308 but included so both tile presentations match.
+- **Main app (#276):** theme UI still v2; inherits schemes from defaults when Social Cards ships.
 
 ### Period selection — current vs previous
 
@@ -603,3 +605,4 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-11 | **Total distance (km)** — year and lifetime periods only; same column as Yearly Summary |
 | 2026-06-11 | Roadmap notes: **Best day** card stat (value-only, no link); **geographic scope** (country/state filter) |
 | 2026-06-18 | **Geographic scope (design app):** Scope country/region controls, multi-region sample data, world-only stat hiding, footer scope debug label |
+| 2026-06-28 | **#308 dark tile contrast:** medium-lift dark palette on Statistics Grid + circle cluster; PNG export cache busts on scheme edits; design-studio mockup tab removed after sign-off |
