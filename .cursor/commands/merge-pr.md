@@ -7,6 +7,7 @@ You are merging the current completed feature/bug branch into its target integra
 - Default target branch: `beta-next`
 - Only use another target branch if explicitly instructed
 - After merge, switch to the updated target branch
+- Label finalised linked issues `pending-merge` after a clean merge (context-aware; see Step 8)
 - Delete the merged feature branch only if the merge succeeds cleanly
 
 ---
@@ -138,7 +139,43 @@ If push fails:
 
 ---
 
-## Step 8 — Delete merged feature branch
+## Step 8 — Label finalised issues as `pending-merge`
+
+After a successful merge and push, add the `pending-merge` label to each linked issue that this merge **finalises**.
+
+**Meaning of the label:** the issue's work is complete and merged into the integration/feature branch (`beta-next`, or a feature branch such as `feat/social-cards`) and is awaiting production release. The issue is **fully closed only when the change reaches `main`**, not here.
+
+### Decide which issues to label
+
+1. Identify linked issues from the branch name (e.g. `310-...` → #310), the merge commit `Refs:` line, and the PR body / commits.
+2. **Default:** apply the label to issues this PR **finalises** — typically those referenced with `Fixes #`, `Closes #`, or `Resolves #`, or otherwise described as completed by this work.
+3. **Skip (context-aware) when:**
+   - the user said the issue is **not finalised** / still has follow-up work
+   - the work is a **sub-issue** or only partially addresses a parent issue (often referenced as `Refs #` rather than `Fixes #`)
+   - the PR does not close or finalise any issue (pure chore / engineering tweak)
+4. If it is unclear whether an issue is finalised, **ask** before labelling rather than guessing.
+
+### Apply the label
+
+For each issue to label (network required; ask for permission if needed):
+
+```bash
+gh issue edit <issue-number> --add-label "pending-merge"
+```
+
+If the label does not exist yet, create it once, then retry:
+
+```bash
+gh label create "pending-merge" --description "Complete and merged to beta-next/feature; awaiting production release on main" --color FBCA04
+```
+
+Labelling is **non-fatal**: if it fails (e.g. permissions or a missing label that cannot be created), report it clearly but keep the successful merge. Do not undo the merge over a label problem.
+
+> Naming: `pending-merge` is the current label. If a clearer name is adopted later (e.g. `pending-release`), update it in this one place.
+
+---
+
+## Step 9 — Delete merged feature branch
 
 Only if all of the following are true:
 
@@ -158,7 +195,7 @@ If branch deletion fails, report it but keep the successful merge.
 
 ---
 
-## Step 9 — Final state
+## Step 10 — Final state
 
 When complete:
 
@@ -167,6 +204,7 @@ When complete:
    - merged branch
    - target branch
    - merge commit message
+   - which issues were labelled `pending-merge` (or why labelling was skipped)
    - whether local branch was deleted
    - whether remote branch was deleted
    - whether anything needs manual follow-up
@@ -180,6 +218,8 @@ When complete:
 - Do not force push
 - Do not rewrite history
 - Do not delete the branch if merge, tests, or push failed
+- Do not label an issue `pending-merge` when it is not finalised (follow-up remains, sub-issue, or only `Refs #`) — ask if unsure
+- Do not fully close issues here; `pending-merge` tracks them until the change reaches `main`
 - Do not continue past any uncertainty without asking
 
 ---
