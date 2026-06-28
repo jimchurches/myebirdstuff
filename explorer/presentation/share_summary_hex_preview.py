@@ -1,8 +1,13 @@
 """
 Hexagonal statistics-grid experiments for share summary cards (#157).
 
-Prototype-only — compares uniform-size honeycomb layouts using the same
-color schemes as :mod:`explorer.presentation.share_summary_preview`.
+**Experimental — design studio only.** Not intended for port to the main app
+Social Cards tab in the current release; may be revisited in a future release.
+The supported Statistics Tiles styles for users are rectangular **Statistics Grid**
+and **Circle cluster** on the Social Cards tab.
+
+Compares uniform-size honeycomb layouts using the same color schemes as
+:mod:`explorer.presentation.share_summary_preview`.
 """
 
 from __future__ import annotations
@@ -28,6 +33,13 @@ from explorer.presentation.share_summary_preview import (
     _header_block,
     _layout_subtitle,
     _resolve_card_stat_pairs,
+)
+
+HEX_GRID_EXPERIMENTAL_NOTICE = (
+    "**Experimental — design studio only.** Hex grid layouts are not planned for "
+    "the main app Social Cards tab in this release. Users get **Statistics Grid** "
+    "and **Circle cluster** as the supported tile styles. We may revisit hex "
+    "layouts in a future release."
 )
 
 HexVariantId = Literal[
@@ -621,6 +633,7 @@ def organic_cluster_connected(coords: list[tuple[int, int]]) -> bool:
 
 
 __all__ = [
+    "HEX_GRID_EXPERIMENTAL_NOTICE",
     "HEX_VARIANT_IDS",
     "HEX_VARIANT_LABELS",
     "HexVariantId",

@@ -59,6 +59,7 @@ from explorer.presentation.share_summary_circles_preview import (
     tiles_circle_cluster_max,
 )
 from explorer.presentation.share_summary_hex_preview import (
+    HEX_GRID_EXPERIMENTAL_NOTICE,
     HEX_VARIANT_IDS,
     HEX_VARIANT_LABELS,
     HexVariantId,
@@ -123,7 +124,7 @@ def _cached_share_summary_png(
 
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
-_HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments"
+_HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments (experimental)"
 _CIRCLE_LAYOUT_TAB_LABEL = "Circle layout"
 _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
@@ -1428,6 +1429,7 @@ with tab_circle_layout:
     )
 
 with tab_hex_experiments:
+    st.info(HEX_GRID_EXPERIMENTAL_NOTICE)
     st.markdown(
         "Uniform **hexicons** for Statistics Tiles. **Organic hive** samples (bottom half) "
         "use edge-to-edge tessellation in irregular, jagged clusters — like a natural honeycomb "
