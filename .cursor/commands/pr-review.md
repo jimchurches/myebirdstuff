@@ -2,7 +2,7 @@
 
 **When to use:** Pre-merge review of a **single** linked issue and its PR — e.g. a focused bug fix or small feature. For larger or multi-area changes, use `/code-review` instead.
 
-Every `/pr-review` run includes a **Test Integrity Sentinel** phase. The parent agent resolves the PR context and local checks, then delegates a focused test-integrity review to a pinned GPT-5.5 subagent so tests are reviewed by a different model from the authoring flow.
+Every `/pr-review` run includes a **Test Integrity Sentinel** triage. The parent agent resolves the PR context and local checks, then — when the diff has a test or behaviour surface (see Step 4) — delegates a focused test-integrity review to a pinned reviewer subagent so tests are reviewed by a different model from the authoring flow. The reviewer model is defined once in the Step 4 invocation block.
 
 ## Relationship to `/code-review`
 
@@ -67,7 +67,25 @@ Prefer a **narrower** pytest path when the diff is clearly isolated (e.g. `tests
 
 ## Step 4 — Test Integrity Sentinel
 
-Run this phase for **every** `/pr-review`, even when the diff appears to have no test changes. If there are no changed tests or behaviour-changing production files, the Sentinel subagent should still return a concise `No test-integrity concerns found` verdict with a short scope note.
+Every `/pr-review` runs this **triage**. Whether the pinned subagent is launched depends on what the diff touches — do not spawn a subagent when there is genuinely nothing for it to review.
+
+### Triage — decide whether to launch the subagent
+
+Classify the PR diff (vs the base from Step 2) into these surfaces:
+
+- **Test surface** — files under `tests/`, `conftest.py`, fixtures, snapshots, golden/expected outputs, test helpers, committed test assets, or UI.Vision macros.
+- **Behaviour surface** — production/runtime code whose behaviour tests are meant to protect: Python under `explorer/`, GPS scripts, frontend map source, and similar runtime code.
+- **Neither** — documentation, Cursor command/rule files, CI/workflow config, or dependency manifests with no runtime-behaviour change.
+
+Decide using the **first** matching rule:
+
+1. **Test surface changed → always launch.** Tests were edited; verify they still honestly validate behaviour.
+2. **No test surface, but behaviour surface changed → launch.** Changed behaviour should have matching tests; focus on missing or weak coverage, especially for bug fixes.
+3. **Neither changed → skip.** Do not spawn a subagent for pure docs/command/config changes. Record `Sentinel: not applicable — documentation/config-only diff` (or the specific reason) in the Step 7 report.
+
+If you are unsure whether a changed file affects behaviour, treat it as the behaviour surface and **launch** (fail safe toward review).
+
+When triage selects **skip**, go straight to Step 5. The remainder of Step 4 applies only when launching.
 
 ### Parent preparation
 
@@ -88,7 +106,7 @@ Treat these as test-integrity signals:
 
 ### Subagent invocation
 
-Launch exactly one subagent for this phase. The parent should wait for its result before completing `/pr-review`; use background execution only if the current Cursor session requires it.
+When triage selects launch, start exactly one subagent for this phase. The parent should wait for its result before completing `/pr-review`; use background execution only if the current Cursor session requires it.
 
 ```text
 description: Test Integrity Sentinel
@@ -260,7 +278,8 @@ Use concrete file/line references where helpful.
 
 ### Test Integrity Sentinel
 
-- Verdict from the Sentinel subagent
+- Triage decision: **launched** (test surface / behaviour surface) or **skipped** (with the reason)
+- Verdict from the Sentinel subagent (omit if skipped)
 - Fixes it applied, or “None”
 - Remaining test-integrity concerns, or “None”
 - Any tests/checks it ran directly
@@ -285,7 +304,8 @@ Use concrete file/line references where helpful.
 - Treat this as a full-project or architecture review — use `/code-review` for that
 - Rewrite large areas without author agreement
 - Block on nits that you could safely fix under Step 6
-- Skip the Sentinel phase because it seems inconvenient; return a concise no-concern verdict when it has no meaningful work
+- Self-review test integrity on the parent model when Step 4 triage says to launch the subagent — launch it instead
+- Spawn the Sentinel subagent for a diff with no test or behaviour surface (e.g. docs/command/config-only) — record it as not applicable per Step 4 triage
 - Substitute for CI or required human reviewers when policy applies
 
 Provide constructive, actionable feedback scoped to the linked issue and PR.
