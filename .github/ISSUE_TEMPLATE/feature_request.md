@@ -8,13 +8,13 @@ assignees: ''
 
 ## Base branch
 
-`beta-next` | `feat/social-cards` | other (name it)
+`beta-next` (default) | `feat/social-cards` (Social Cards feature line)
 
-Default is **`beta-next`** when this section is left unchanged.
+Only these two integration branches are long-lived; create issue branches from one of them.
 
 ## PR target
 
-Usually the same as base branch. For feature-line work (e.g. Social Cards), both are often `feat/social-cards`.
+Same as base branch unless stated otherwise.
 
 ---
 
