@@ -85,7 +85,25 @@ def test_minimal_story_renders_extra_selected_stats():
 
 
 def test_tiles_grid_uses_uniform_cell_sizing_across_formats():
-    stats = sample_share_summary_stats()
+    stats = ShareSummaryStats(
+        period_label="2025",
+        period_kind="year",
+        species=312,
+        lifers=47,
+        checklists=186,
+        completed_checklists=172,
+        incidental_checklists=14,
+        locations=42,
+        families=89,
+        individuals=12_450,
+        days_with_checklist=98,
+        countries=5,
+        longest_streak=14,
+        birding_hours=214.5,
+        distance_km=1_842.5,
+        shared_checklists=8,
+        days_birding_with_others=6,
+    )
     labels_six = (
         "Total species",
         "Lifers",
@@ -126,6 +144,8 @@ def test_tiles_grid_uses_uniform_cell_sizing_across_formats():
         assert "font-size:20px;color:" in html
         assert "padding:32px 20px" in html
         assert "gap:20px" in html
+    assert story_fourteen.count('font-size:52px;font-weight:700;">') == 14
+    assert "Shared checklists" in story_fourteen
     assert 'font-size:40px;font-weight:700;">' not in story_six
     assert 'font-size:40px;font-weight:700;">' not in story_twelve
 
