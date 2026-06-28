@@ -19,7 +19,8 @@ from explorer.core.share_summary_compute import (
 def test_card_stat_ui_row_count_clamps_slot_count_to_layout_limit():
     assert _card_stat_ui_row_count("tiles", "story", slot_count=4) == 4
     assert _card_stat_ui_row_count("minimal", "story", slot_count=6) == 6
-    assert _card_stat_ui_row_count("tiles", "story", slot_count=12) == 12
+    assert _card_stat_ui_row_count("tiles", "story", slot_count=14) == 14
+    assert _card_stat_ui_row_count("tiles", "story", slot_count=16) == 14
     assert _card_stat_ui_row_count("tiles", "story", slot_count=2) == 4
     assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=9) == 8
     assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=3) == 4
@@ -52,21 +53,61 @@ def test_card_stat_ui_row_count_clamps_slot_count_to_layout_limit():
     )
 
 
+def test_layout_grid_stat_default_count():
+    from explorer.presentation.share_summary_preview import (
+        layout_grid_stat_default_count,
+    )
+
+    assert layout_grid_stat_default_count("square") == 4
+    assert layout_grid_stat_default_count("portrait_post") == 6
+    assert layout_grid_stat_default_count("story") == 6
+
+
 def test_default_card_stat_slot_count():
     assert _default_card_stat_slot_count(
         circle_cluster=True,
         defaults=["A", "B", "C", "D", "E", "F"],
         max_slots=10,
+        layout="tiles",
+        fmt="story",
+    ) == 6
+    assert _default_card_stat_slot_count(
+        circle_cluster=False,
+        defaults=["A", "B", "C", "D", "E", "F"],
+        max_slots=10,
+        layout="tiles",
+        fmt="square",
+        tiles_presentation="grid",
+    ) == 4
+    assert _default_card_stat_slot_count(
+        circle_cluster=False,
+        defaults=["A", "B", "C", "D", "E", "F"],
+        max_slots=10,
+        layout="tiles",
+        fmt="portrait_post",
+        tiles_presentation="grid",
+    ) == 6
+    assert _default_card_stat_slot_count(
+        circle_cluster=False,
+        defaults=["A", "B", "C", "D", "E", "F"],
+        max_slots=10,
+        layout="tiles",
+        fmt="story",
+        tiles_presentation="grid",
     ) == 6
     assert _default_card_stat_slot_count(
         circle_cluster=False,
         defaults=["A", "B", "C", "D"],
         max_slots=10,
+        layout="minimal",
+        fmt="story",
     ) == 4
     assert _default_card_stat_slot_count(
         circle_cluster=False,
         defaults=[],
         max_slots=6,
+        layout="minimal",
+        fmt="square",
     ) == 1
 
 
@@ -89,9 +130,9 @@ def test_card_stat_data_scope_changes_when_source_or_period_changes():
         period_label="May 2025",
         upload_name="MyEBirdData.csv",
     )
-    assert sample == "sample|month|June 2025|world"
-    assert csv == "MyEBirdData.csv|month|June 2025|world"
-    assert other_month == "MyEBirdData.csv|month|May 2025|world"
+    assert sample == "sample|month|June 2025|world|square|grid"
+    assert csv == "MyEBirdData.csv|month|June 2025|world|square|grid"
+    assert other_month == "MyEBirdData.csv|month|May 2025|world|square|grid"
     assert sample != csv
     assert csv != other_month
     assert (
@@ -120,9 +161,36 @@ def test_card_stat_data_scope_changes_when_geo_scope_changes():
         upload_name="MyEBirdData.csv",
         geo_scope=ShareSummaryGeoScope(country_key="AU-NSW"),
     )
-    assert world == "MyEBirdData.csv|year|2025|world"
-    assert country == "MyEBirdData.csv|year|2025|AU-NSW"
+    assert world == "MyEBirdData.csv|year|2025|world|square|grid"
+    assert country == "MyEBirdData.csv|year|2025|AU-NSW|square|grid"
     assert world != country
+
+
+def test_card_stat_data_scope_changes_when_format_or_presentation_changes():
+    square = _card_stat_data_scope(
+        use_sample=True,
+        period_kind="year",
+        period_label="2025",
+        upload_name=None,
+        fmt="square",
+    )
+    story = _card_stat_data_scope(
+        use_sample=True,
+        period_kind="year",
+        period_label="2025",
+        upload_name=None,
+        fmt="story",
+    )
+    circles = _card_stat_data_scope(
+        use_sample=True,
+        period_kind="year",
+        period_label="2025",
+        upload_name=None,
+        fmt="story",
+        tiles_presentation="circles",
+    )
+    assert square != story
+    assert story != circles
 
 
 def test_resolve_card_stat_selectbox_value_prefers_widget_over_stale_pick():

@@ -36,8 +36,11 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS,
     SHARE_SUMMARY_GRID_MIN_STATS,
+    SHARE_SUMMARY_GRID_PORTRAIT_DEFAULT_STATS,
     SHARE_SUMMARY_GRID_PORTRAIT_MAX_STATS,
+    SHARE_SUMMARY_GRID_SQUARE_DEFAULT_STATS,
     SHARE_SUMMARY_GRID_SQUARE_MAX_STATS,
+    SHARE_SUMMARY_GRID_STORY_DEFAULT_STATS,
     SHARE_SUMMARY_GRID_STORY_MAX_STATS,
     SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
@@ -50,6 +53,14 @@ from explorer.core.share_summary_defaults import (
 
 TilesPresentationId = Literal["grid", "circles"]
 SpotlightPresentationId = Literal["classic", "circle"]
+
+# Statistics Grid rectangular tiles — uniform across square, portrait, and story.
+# At max grid counts (square 6, portrait 8, story 14) this fits 1080×1080 / ×1350 / ×1920;
+# very long stat labels may wrap and add row height on story at high tile counts.
+_GRID_TILE_VALUE_PX = "52px"
+_GRID_TILE_LABEL_PX = "20px"
+_GRID_TILE_CELL_PAD = "32px 20px"
+_GRID_TILE_GAP = "20px"
 
 LayoutId = Literal["tiles", "minimal", "spotlight"]
 FormatId = Literal["square", "portrait_post", "story"]
@@ -322,6 +333,15 @@ def layout_grid_stat_max(fmt: FormatId | None = None) -> int:
     if fmt == "portrait_post":
         return SHARE_SUMMARY_GRID_PORTRAIT_MAX_STATS
     return SHARE_SUMMARY_GRID_SQUARE_MAX_STATS
+
+
+def layout_grid_stat_default_count(fmt: FormatId | None = None) -> int:
+    """Default visible stat slots on Statistics Grid (non-circle)."""
+    if fmt == "story":
+        return SHARE_SUMMARY_GRID_STORY_DEFAULT_STATS
+    if fmt == "portrait_post":
+        return SHARE_SUMMARY_GRID_PORTRAIT_DEFAULT_STATS
+    return SHARE_SUMMARY_GRID_SQUARE_DEFAULT_STATS
 
 
 def layout_card_stat_max(
@@ -715,10 +735,12 @@ def _layout_tiles(
         all_time=all_time,
         geo_scope=geo_scope,
     )
-    if fmt == "story":
-        value_px, label_px, cell_pad, grid_gap = "40px", "18px", "20px 12px", "12px"
-    else:
-        value_px, label_px, cell_pad, grid_gap = "52px", "20px", "32px 20px", "20px"
+    value_px, label_px, cell_pad, grid_gap = (
+        _GRID_TILE_VALUE_PX,
+        _GRID_TILE_LABEL_PX,
+        _GRID_TILE_CELL_PAD,
+        _GRID_TILE_GAP,
+    )
     cells = []
     for label, value in pairs:
         cells.append(f"""
@@ -1041,6 +1063,7 @@ __all__ = [
     "summary_status_metrics",
     "layout_card_stat_max",
     "layout_card_stat_storage_max",
+    "layout_grid_stat_default_count",
     "layout_grid_stat_max",
     "layout_grid_stat_min",
     "default_card_stat_labels",

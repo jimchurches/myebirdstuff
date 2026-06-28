@@ -79,6 +79,7 @@ from explorer.presentation.share_summary_preview import (
     default_card_stat_labels,
     layout_card_stat_max,
     layout_card_stat_storage_max,
+    layout_grid_stat_default_count,
     layout_grid_stat_min,
     period_for_custom,
     period_for_lifetime,
@@ -288,11 +289,13 @@ def _card_stat_data_scope(
     period_label: str,
     upload_name: str | None,
     geo_scope: ShareSummaryGeoScope | None = None,
+    fmt: FormatId = "square",
+    tiles_presentation: TilesPresentationId = "grid",
 ) -> str:
     """Session scope token — when this changes, card-stat picks re-initialize."""
     source = "sample" if use_sample else (upload_name or "csv")
     geo_token = (geo_scope or ShareSummaryGeoScope()).scope_token()
-    return f"{source}|{period_kind}|{period_label}|{geo_token}"
+    return f"{source}|{period_kind}|{period_label}|{geo_token}|{fmt}|{tiles_presentation}"
 
 
 def _period_has_checklist_data(stats: ShareSummaryStats) -> bool:
@@ -348,7 +351,7 @@ def _tiles_circle_cluster_picker(layout: LayoutId, tiles_presentation: TilesPres
 
 
 # Statistics Grid vs circle-cluster slot limits (see also layout_grid_stat_* in preview).
-# Grid: square 4–6, portrait 4–8, story 4–12. Circle cluster: square max 6, portrait max 8, story max 10.
+# Grid: square 4–6, portrait 4–8, story 4–14. Circle cluster: square max 6, portrait max 8, story max 10.
 
 
 def _card_stat_min_slots(
@@ -367,9 +370,15 @@ def _default_card_stat_slot_count(
     circle_cluster: bool,
     defaults: list[str],
     max_slots: int,
+    layout: LayoutId,
+    fmt: FormatId,
+    tiles_presentation: TilesPresentationId = "grid",
 ) -> int:
     if circle_cluster:
         return min(max_slots, TILES_CIRCLE_CLUSTER_DEFAULT)
+    if layout == "tiles" and tiles_presentation == "grid":
+        target = layout_grid_stat_default_count(fmt)
+        return min(max_slots, max(layout_grid_stat_min(fmt), target))
     return min(max_slots, max(1, len(defaults) if defaults else 1))
 
 
@@ -483,6 +492,9 @@ def _ensure_card_stat_picks(
             circle_cluster=circle_cluster,
             defaults=defaults,
             max_slots=max_slots,
+            layout=layout,
+            fmt=fmt,
+            tiles_presentation=tiles_presentation,
         )
 
     sanitized = _sanitize_card_stat_picks(
@@ -497,6 +509,9 @@ def _ensure_card_stat_picks(
             circle_cluster=circle_cluster,
             defaults=defaults,
             max_slots=max_slots,
+            layout=layout,
+            fmt=fmt,
+            tiles_presentation=tiles_presentation,
         )
         sanitized = list(defaults)
 
@@ -732,7 +747,7 @@ def _card_stat_picker_ui(
         min_slots = _card_stat_min_slots(layout, fmt, tiles_presentation=tiles_presentation)
         st.caption(
             f"Statistics Grid: {min_slots}–{max_slots} stats "
-            f"(square 4–6, portrait 4–8, story 4–12). "
+            f"(square 4–6, portrait 4–8, story 4–14). "
             "Use Add stat or the chips below to add more."
         )
     else:
@@ -855,6 +870,9 @@ def _card_stat_picker_ui(
                     circle_cluster=circle_cluster,
                     defaults=defaults,
                     max_slots=max_slots,
+                    layout=layout,
+                    fmt=fmt,
+                    tiles_presentation=tiles_presentation,
                 )
                 st.rerun()
 
@@ -1343,6 +1361,8 @@ card_stat_data_scope = _card_stat_data_scope(
     period_label=stats.period_label,
     upload_name=upload_name,
     geo_scope=geo_scope,
+    fmt=fmt,
+    tiles_presentation=tiles_presentation,
 )
 scope_label = geo_scope_display_label(geo_scope)
 
