@@ -9,9 +9,9 @@ concurrency:
 
 on:
   push:
-    branches: [main, beta-next]
+    branches: [main, beta-next, feat/social-cards]
   pull_request:
-    branches: [main, beta-next]
+    branches: [main, beta-next, feat/social-cards]
   workflow_dispatch:
     inputs:
       run_e2e:

@@ -63,7 +63,8 @@ Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker
 
 ## CI / automations
 
-- **Test Integrity Sentinel** (Cursor automation): targets PRs to `beta-next`. For PRs to **`feat/social-cards`**, duplicate or extend the automation — [#297](https://github.com/jimchurches/myebirdstuff/issues/297). GitHub Actions unit tests still run on push/PR per `.github/workflows/tests.yml`.
+- **GitHub Actions** (`.github/workflows/tests.yml`): unit tests on push/PR to `main`, `beta-next`, and **`feat/social-cards`**.
+- **Test Integrity Sentinel** (Cursor automation): test-integrity PR comments for targets to `beta-next`. For **`feat/social-cards`** PRs, duplicate or extend — [#297](https://github.com/jimchurches/myebirdstuff/issues/297).
 
 ---
 
