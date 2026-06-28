@@ -52,11 +52,11 @@ def test_layout_card_stat_max_grid_and_minimal_limits():
     assert layout_grid_stat_min("square") == 4
     assert layout_grid_stat_max("square") == 6
     assert layout_grid_stat_max("portrait_post") == 8
-    assert layout_grid_stat_max("story") == 12
+    assert layout_grid_stat_max("story") == 14
     assert layout_card_stat_max("minimal", "story") == 18
     assert layout_card_stat_max("minimal", "story", available_stat_count=14) == 14
     assert layout_card_stat_max("minimal", "story", available_stat_count=25) == 18
-    assert layout_card_stat_max("tiles", "story") == 12
+    assert layout_card_stat_max("tiles", "story") == 14
     assert layout_card_stat_max("tiles", "portrait_post") == 8
     assert layout_card_stat_max("minimal", "square") == 6
     assert layout_card_stat_max("tiles", "square") == 6
@@ -84,26 +84,35 @@ def test_minimal_story_renders_extra_selected_stats():
     assert "Bird families" in html
 
 
-def test_tiles_story_grid_uses_uniform_cell_sizing():
-    stats = sample_share_summary_stats()
-    four = render_share_summary_preview_html(
-        stats,
-        layout="tiles",
-        fmt="story",
-        card_stat_labels=(
-            "Total species",
-            "Lifers",
-            "Total checklists",
-            "Unique locations",
-        ),
+def test_tiles_grid_uses_uniform_cell_sizing_across_formats():
+    stats = ShareSummaryStats(
+        period_label="2025",
+        period_kind="year",
+        species=312,
+        lifers=47,
+        checklists=186,
+        completed_checklists=172,
+        incidental_checklists=14,
+        locations=42,
+        families=89,
+        individuals=12_450,
+        days_with_checklist=98,
+        countries=5,
+        longest_streak=14,
+        birding_hours=214.5,
+        distance_km=1_842.5,
+        shared_checklists=8,
+        days_birding_with_others=6,
     )
-    twelve_labels = (
+    labels_six = (
         "Total species",
         "Lifers",
         "Total checklists",
         "Unique locations",
         "Countries",
         "Birding days",
+    )
+    labels_twelve = labels_six + (
         "Total individuals",
         "Bird families",
         "Longest streak (days)",
@@ -111,16 +120,34 @@ def test_tiles_story_grid_uses_uniform_cell_sizing():
         "Incidental checklists",
         "Birding hours",
     )
-    twelve = render_share_summary_preview_html(
-        stats,
-        layout="tiles",
-        fmt="story",
-        card_stat_labels=twelve_labels,
+    labels_fourteen = labels_twelve + (
+        "Total distance (km)",
+        "Shared checklists",
     )
-    assert 'font-size:40px;font-weight:700;">' in four
-    assert 'font-size:40px;font-weight:700;">' in twelve
-    assert "padding:20px 12px" in four
-    assert "padding:20px 12px" in twelve
+    square = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="square", card_stat_labels=labels_six
+    )
+    portrait = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="portrait_post", card_stat_labels=labels_six
+    )
+    story_six = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="story", card_stat_labels=labels_six
+    )
+    story_twelve = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="story", card_stat_labels=labels_twelve
+    )
+    story_fourteen = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="story", card_stat_labels=labels_fourteen
+    )
+    for html in (square, portrait, story_six, story_twelve, story_fourteen):
+        assert 'font-size:52px;font-weight:700;">' in html
+        assert "font-size:20px;color:" in html
+        assert "padding:32px 20px" in html
+        assert "gap:20px" in html
+    assert story_fourteen.count('font-size:52px;font-weight:700;">') == 14
+    assert "Shared checklists" in story_fourteen
+    assert 'font-size:40px;font-weight:700;">' not in story_six
+    assert 'font-size:40px;font-weight:700;">' not in story_twelve
 
 
 def test_tiles_story_renders_extra_selected_stats():

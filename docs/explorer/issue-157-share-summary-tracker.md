@@ -44,6 +44,7 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 | PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
 | Story Statistics Grid circles | **Done (design app)** | Hand-tuned layouts 6–10 in `STORY_CIRCLE_LAYOUTS` + `STORY_CIRCLE_LAYOUT_DIAMETERS` |
 | Circle layout playground | **Done (design app)** | **Circle layout** tab — drag-and-drop tuner for Statistics Grid, Hero Grid, and Spotlight at square/portrait/story (dev-only) |
+| Hex grid experiments | **Experimental (design app only)** | **Hex grid experiments** tab — not for main app v1; Statistics Grid + Circle cluster are the supported tile styles; revisit in a future release |
 | PNG save UX | **Done (design app)** | **Export current card** below preview — PNG regenerated inside `@st.fragment` (Streamlit disallows sidebar inside fragments) |
 | Main app integration | **Design noted** | New **Social Cards** tab before Settings; tab-aware sidebar TBD |
 | Map thumbnail on card | **Dropped (v1)** | v2 |
