@@ -59,15 +59,6 @@ from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_DEFAULT,
     tiles_circle_cluster_max,
 )
-from explorer.presentation.share_summary_dark_tile_mockup import (
-    DARK_TILE_MOCKUP_DEFAULT_VARIANT,
-    DARK_TILE_VARIANT_IDS,
-    DARK_TILE_VARIANT_LABELS,
-    DARK_TILE_VARIANT_SPECS,
-    DarkTileVariantId,
-    render_dark_tile_mockup_preview_html,
-    render_dark_tile_mockup_scheme_reference_html,
-)
 from explorer.presentation.share_summary_hex_preview import (
     HEX_GRID_EXPERIMENTAL_NOTICE,
     HEX_VARIANT_IDS,
@@ -137,7 +128,6 @@ def _cached_share_summary_png(
 _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 _HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments (experimental)"
-_DARK_TILE_MOCKUP_TAB_LABEL = "Dark tile contrast (#308)"
 _CIRCLE_LAYOUT_TAB_LABEL = "Circle layout"
 _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
@@ -1386,13 +1376,8 @@ status_metrics = summary_status_metrics(stats, all_time=all_time, geo_scope=geo_
 if _SPOTLIGHT_LABEL_KEY not in st.session_state:
     st.session_state[_SPOTLIGHT_LABEL_KEY] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
 
-tab_social_cards, tab_dark_tile_mockup, tab_hex_experiments, tab_circle_layout = st.tabs(
-    [
-        _SOCIAL_CARDS_TAB_LABEL,
-        _DARK_TILE_MOCKUP_TAB_LABEL,
-        _HEX_EXPERIMENTS_TAB_LABEL,
-        _CIRCLE_LAYOUT_TAB_LABEL,
-    ]
+tab_social_cards, tab_hex_experiments, tab_circle_layout = st.tabs(
+    [_SOCIAL_CARDS_TAB_LABEL, _HEX_EXPERIMENTS_TAB_LABEL, _CIRCLE_LAYOUT_TAB_LABEL]
 )
 
 hex_card_stat_labels = default_card_stat_labels(
@@ -1434,99 +1419,6 @@ with tab_social_cards:
         tiles_presentation=tiles_presentation,
         spotlight_presentation=spotlight_presentation,
     )
-
-_DESIGN_DARK_TILE_SELECTED_KEY = "design_dark_tile_selected_variant"
-_dark_tile_mockup_scale = min(scale, 0.34)
-_dark_tile_card_stat_labels = default_card_stat_labels(
-    "tiles",
-    status_metrics,
-    period_kind=stats.period_kind,
-    geo_scope=geo_scope,
-    fmt=fmt,
-)
-
-with tab_dark_tile_mockup:
-    st.caption(
-        "Compare dark-theme **Statistics Grid** tile contrast against the current production "
-        "palette. Variant **1** is today’s dark theme; **6 · Strong lift** is the working "
-        "default in the enlarged preview below. Light theme is out of scope."
-    )
-    if _DESIGN_DARK_TILE_SELECTED_KEY not in st.session_state:
-        st.session_state[_DESIGN_DARK_TILE_SELECTED_KEY] = DARK_TILE_MOCKUP_DEFAULT_VARIANT
-    selected_dark_tile: DarkTileVariantId = st.selectbox(
-        "Enlarged preview",
-        options=DARK_TILE_VARIANT_IDS,
-        format_func=lambda v: DARK_TILE_VARIANT_LABELS[v],
-        key=_DESIGN_DARK_TILE_SELECTED_KEY,
-    )
-    mockup_cols = st.columns(2)
-    for i, variant in enumerate(DARK_TILE_VARIANT_IDS):
-        with mockup_cols[i % 2]:
-            spec_label = DARK_TILE_VARIANT_LABELS[variant]
-            if variant == selected_dark_tile:
-                spec_label = f"{spec_label} · selected"
-            st.markdown(f"**{spec_label}**")
-            st.caption(DARK_TILE_VARIANT_SPECS[variant].description)
-            st.markdown(
-                render_dark_tile_mockup_preview_html(
-                    stats,
-                    variant=variant,
-                    fmt=fmt,
-                    scale=_dark_tile_mockup_scale,
-                    card_stat_labels=_dark_tile_card_stat_labels,
-                    all_time=all_time,
-                    geo_scope=geo_scope,
-                    scope_label=scope_label,
-                ),
-                unsafe_allow_html=True,
-            )
-
-    st.divider()
-    st.subheader("Selected preview (larger)")
-    st.caption(
-        f"{DARK_TILE_VARIANT_LABELS[selected_dark_tile]} — **Statistics Grid** and "
-        f"**Circle cluster** with the same palette. Sidebar **Preview scale** applies "
-        f"here (currently {scale:.0%} of export size)."
-    )
-    st.markdown(
-        render_dark_tile_mockup_scheme_reference_html(selected_dark_tile),
-        unsafe_allow_html=True,
-    )
-    enlarged_grid_col, enlarged_circle_col = st.columns(2)
-    with enlarged_grid_col:
-        st.markdown("**Statistics Grid**")
-        st.markdown(
-            render_dark_tile_mockup_preview_html(
-                stats,
-                variant=selected_dark_tile,
-                fmt=fmt,
-                scale=scale,
-                tiles_presentation="grid",
-                card_stat_labels=_dark_tile_card_stat_labels,
-                all_time=all_time,
-                geo_scope=geo_scope,
-                scope_label=scope_label,
-                show_scheme_reference=False,
-            ),
-            unsafe_allow_html=True,
-        )
-    with enlarged_circle_col:
-        st.markdown("**Circle cluster**")
-        st.markdown(
-            render_dark_tile_mockup_preview_html(
-                stats,
-                variant=selected_dark_tile,
-                fmt=fmt,
-                scale=scale,
-                tiles_presentation="circles",
-                card_stat_labels=_dark_tile_card_stat_labels,
-                all_time=all_time,
-                geo_scope=geo_scope,
-                scope_label=scope_label,
-                show_scheme_reference=False,
-            ),
-            unsafe_allow_html=True,
-        )
 
 _DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"
 

@@ -105,7 +105,7 @@ def _color_scheme_context(index: int | None):
 
 @contextlib.contextmanager
 def share_summary_scheme_override(scheme: dict[str, str]):
-    """Temporarily replace the active palette (design mockups, tile A/B trials)."""
+    """Temporarily replace the active palette (e.g. theme trials in tests)."""
     token = _custom_color_scheme.set(scheme)
     try:
         yield

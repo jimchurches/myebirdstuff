@@ -12,7 +12,7 @@ SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT = 0
 
 # Each scheme: ``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``.
 # Optional ``tile_bg``, ``tile_bg_alt``, ``tile_border`` lift Statistics Grid / circle tiles
-# above the card surface (dark theme — #308 medium lift).
+# above the card surface (dark theme uses medium lift — #308).
 # Add entries here to trial themes; flip ``SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT`` to test.
 SHARE_SUMMARY_COLOR_SCHEMES: tuple[dict[str, str], ...] = (
     {
