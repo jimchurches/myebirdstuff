@@ -22,6 +22,7 @@ from explorer.presentation.share_summary_preview import (
     _card_shell,
     _color_scheme_context,
     _colour,
+    _colour_or,
     _esc,
     _footer_block,
     _footer_pad,
@@ -483,8 +484,11 @@ def _circle_tile_html(
     label_px: str,
     shadow: bool = False,
 ) -> str:
-    bg = f"linear-gradient(145deg,{_colour('bg_alt')},{_colour('bg')})"
-    border = f"2px solid {_colour('border')}"
+    tile_bg_alt = _colour_or("tile_bg_alt", "bg_alt")
+    tile_bg = _colour_or("tile_bg", "bg")
+    tile_border = _colour_or("tile_border", "border")
+    bg = f"linear-gradient(145deg,{tile_bg_alt},{tile_bg})"
+    border = f"2px solid {tile_border}"
     base_value_px = int(value_px.replace("px", ""))
     fitted_value_px = _circle_value_font_px(value, base_value_px, diameter=diameter)
     shadow_css = "box-shadow:0 8px 18px rgba(0,0,0,0.12);" if shadow else ""

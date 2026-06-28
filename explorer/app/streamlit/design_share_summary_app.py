@@ -65,6 +65,7 @@ from explorer.presentation.share_summary_dark_tile_mockup import (
     DARK_TILE_VARIANT_SPECS,
     DarkTileVariantId,
     render_dark_tile_mockup_preview_html,
+    render_dark_tile_mockup_scheme_reference_html,
 )
 from explorer.presentation.share_summary_hex_preview import (
     HEX_GRID_EXPERIMENTAL_NOTICE,
@@ -1479,22 +1480,49 @@ with tab_dark_tile_mockup:
     st.divider()
     st.subheader("Selected preview (larger)")
     st.caption(
-        f"{DARK_TILE_VARIANT_LABELS[selected_dark_tile]} — sidebar **Preview scale** "
-        f"applies here (currently {scale:.0%} of export size)."
+        f"{DARK_TILE_VARIANT_LABELS[selected_dark_tile]} — **Statistics Grid** and "
+        f"**Circle cluster** with the same palette. Sidebar **Preview scale** applies "
+        f"here (currently {scale:.0%} of export size)."
     )
     st.markdown(
-        render_dark_tile_mockup_preview_html(
-            stats,
-            variant=selected_dark_tile,
-            fmt=fmt,
-            scale=scale,
-            card_stat_labels=_dark_tile_card_stat_labels,
-            all_time=all_time,
-            geo_scope=geo_scope,
-            scope_label=scope_label,
-        ),
+        render_dark_tile_mockup_scheme_reference_html(selected_dark_tile),
         unsafe_allow_html=True,
     )
+    enlarged_grid_col, enlarged_circle_col = st.columns(2)
+    with enlarged_grid_col:
+        st.markdown("**Statistics Grid**")
+        st.markdown(
+            render_dark_tile_mockup_preview_html(
+                stats,
+                variant=selected_dark_tile,
+                fmt=fmt,
+                scale=scale,
+                tiles_presentation="grid",
+                card_stat_labels=_dark_tile_card_stat_labels,
+                all_time=all_time,
+                geo_scope=geo_scope,
+                scope_label=scope_label,
+                show_scheme_reference=False,
+            ),
+            unsafe_allow_html=True,
+        )
+    with enlarged_circle_col:
+        st.markdown("**Circle cluster**")
+        st.markdown(
+            render_dark_tile_mockup_preview_html(
+                stats,
+                variant=selected_dark_tile,
+                fmt=fmt,
+                scale=scale,
+                tiles_presentation="circles",
+                card_stat_labels=_dark_tile_card_stat_labels,
+                all_time=all_time,
+                geo_scope=geo_scope,
+                scope_label=scope_label,
+                show_scheme_reference=False,
+            ),
+            unsafe_allow_html=True,
+        )
 
 _DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"
 

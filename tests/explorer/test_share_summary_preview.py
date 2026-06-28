@@ -756,3 +756,19 @@ def test_share_summary_scheme_override_tile_keys():
         )
     assert "#243229" in html
     assert "#1e2a24" in html
+
+
+def test_dark_tile_mockup_circle_cluster_uses_tile_palette():
+    from explorer.presentation.share_summary_dark_tile_mockup import (
+        render_dark_tile_mockup_preview_html,
+    )
+
+    stats = sample_share_summary_stats()
+    html = render_dark_tile_mockup_preview_html(
+        stats,
+        variant="lift_strong",
+        tiles_presentation="circles",
+        show_scheme_reference=False,
+    )
+    assert "#2d3d35" in html
+    assert "#25332c" in html

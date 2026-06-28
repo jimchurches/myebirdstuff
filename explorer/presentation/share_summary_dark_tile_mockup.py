@@ -18,6 +18,7 @@ from explorer.core.share_summary_compute import (
 from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
 from explorer.presentation.share_summary_preview import (
     FormatId,
+    TilesPresentationId,
     render_share_summary_preview_html,
     share_summary_scheme_override,
 )
@@ -183,26 +184,32 @@ def _scheme_reference_html(scheme: dict[str, str]) -> str:
     )
 
 
+def render_dark_tile_mockup_scheme_reference_html(variant: DarkTileVariantId) -> str:
+    """Scheme swatches for one mockup variant (shared above paired previews)."""
+    return _scheme_reference_html(dark_tile_variant_scheme(variant))
+
+
 def render_dark_tile_mockup_preview_html(
     stats: ShareSummaryStats,
     *,
     variant: DarkTileVariantId = "current",
     fmt: FormatId = "square",
     scale: float = 0.32,
+    tiles_presentation: TilesPresentationId = "grid",
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     geo_scope: ShareSummaryGeoScope | None = None,
     scope_label: str | None = None,
     show_scheme_reference: bool = True,
 ) -> str:
-    """Scaled Statistics Grid preview; optional scheme swatches for mockup chrome."""
+    """Scaled Statistics Grid or circle-cluster preview; optional scheme swatches."""
     scheme = dark_tile_variant_scheme(variant)
     with share_summary_scheme_override(scheme):
         card_html = render_share_summary_preview_html(
             stats,
             layout="tiles",
             fmt=fmt,
-            tiles_presentation="grid",
+            tiles_presentation=tiles_presentation,
             scale=scale,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
@@ -222,4 +229,5 @@ __all__ = [
     "DarkTileVariantId",
     "dark_tile_variant_scheme",
     "render_dark_tile_mockup_preview_html",
+    "render_dark_tile_mockup_scheme_reference_html",
 ]
