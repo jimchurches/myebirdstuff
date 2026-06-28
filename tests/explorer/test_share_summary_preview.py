@@ -711,3 +711,48 @@ def test_portrait_post_preview_dimensions():
     html = render_share_summary_preview_html(sample_share_summary_stats(), fmt="portrait_post")
     assert "width:1080px" in html
     assert "height:1350px" in html
+
+
+def test_dark_tile_mockup_has_thirteen_variants_starting_with_current():
+    from explorer.presentation.share_summary_dark_tile_mockup import (
+        DARK_TILE_VARIANT_IDS,
+        dark_tile_variant_scheme,
+    )
+
+    assert len(DARK_TILE_VARIANT_IDS) == 13
+    assert DARK_TILE_VARIANT_IDS[0] == "current"
+    current = dark_tile_variant_scheme("current")
+    assert "tile_bg" not in current
+
+
+def test_dark_tile_mockup_lift_injects_tile_colours_into_grid_html():
+    from explorer.presentation.share_summary_dark_tile_mockup import (
+        render_dark_tile_mockup_preview_html,
+    )
+
+    stats = sample_share_summary_stats()
+    html = render_dark_tile_mockup_preview_html(stats, variant="lift_medium")
+    assert "#1e2a24" in html
+    assert "#243229" in html
+    assert "tile_bg" in html
+
+
+def test_share_summary_scheme_override_tile_keys():
+    from explorer.presentation.share_summary_preview import (
+        share_summary_scheme_override,
+    )
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+
+    scheme = {
+        **SHARE_SUMMARY_COLOR_SCHEMES[1],
+        "tile_bg": "#243229",
+        "tile_bg_alt": "#1e2a24",
+    }
+    with share_summary_scheme_override(scheme):
+        html = render_share_summary_preview_html(
+            sample_share_summary_stats(),
+            layout="tiles",
+            color_scheme_index=1,
+        )
+    assert "#243229" in html
+    assert "#1e2a24" in html

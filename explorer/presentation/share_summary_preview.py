@@ -69,6 +69,10 @@ _color_scheme_index: contextvars.ContextVar[int | None] = contextvars.ContextVar
     "share_summary_color_scheme_index",
     default=None,
 )
+_custom_color_scheme: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
+    "share_summary_custom_color_scheme",
+    default=None,
+)
 
 
 def _active_color_scheme_index() -> int:
@@ -76,6 +80,15 @@ def _active_color_scheme_index() -> int:
     if override is not None:
         return override
     return SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT
+
+
+def _active_color_scheme() -> dict[str, str]:
+    custom = _custom_color_scheme.get()
+    if custom is not None:
+        return custom
+    schemes = SHARE_SUMMARY_COLOR_SCHEMES
+    idx = _active_color_scheme_index()
+    return schemes[idx] if 0 <= idx < len(schemes) else schemes[0]
 
 
 @contextlib.contextmanager
@@ -90,11 +103,23 @@ def _color_scheme_context(index: int | None):
             _color_scheme_index.reset(token)
 
 
+@contextlib.contextmanager
+def share_summary_scheme_override(scheme: dict[str, str]):
+    """Temporarily replace the active palette (design mockups, tile A/B trials)."""
+    token = _custom_color_scheme.set(scheme)
+    try:
+        yield
+    finally:
+        _custom_color_scheme.reset(token)
+
+
 def _colour(key: str) -> str:
-    schemes = SHARE_SUMMARY_COLOR_SCHEMES
-    idx = _active_color_scheme_index()
-    scheme = schemes[idx] if 0 <= idx < len(schemes) else schemes[0]
-    return scheme[key]
+    return _active_color_scheme()[key]
+
+
+def _colour_or(key: str, fallback_key: str) -> str:
+    scheme = _active_color_scheme()
+    return scheme.get(key, scheme[fallback_key])
 
 
 _FORMAT_PX: dict[FormatId, tuple[int, int]] = {
@@ -752,11 +777,14 @@ def _layout_tiles(
         _GRID_TILE_GAP,
     )
     cells = []
+    tile_bg_alt = _colour_or("tile_bg_alt", "bg_alt")
+    tile_bg = _colour_or("tile_bg", "bg")
+    tile_border = _colour_or("tile_border", "border")
     for label, value in pairs:
         cells.append(f"""
 <div style="padding:{cell_pad};border-radius:12px;
-  background:linear-gradient(145deg,{_colour("bg_alt")},{_colour("bg")});
-  border:1px solid {_colour("border")};text-align:center;">
+  background:linear-gradient(145deg,{tile_bg_alt},{tile_bg});
+  border:1px solid {tile_border};text-align:center;">
   <div style="font-size:{value_px};font-weight:700;">{_esc(value)}</div>
   <div style="margin-top:8px;font-size:{label_px};color:{_colour("muted")};">{_esc(label)}</div>
 </div>""")
@@ -1066,6 +1094,7 @@ __all__ = [
     "render_share_summary_export_html",
     "render_share_summary_preview_html",
     "sample_share_summary_stats",
+    "share_summary_scheme_override",
     "spotlight_pair_for_label",
     "resolve_spotlight_label",
     "stat_card_display_label",
