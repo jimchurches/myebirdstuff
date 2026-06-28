@@ -39,7 +39,25 @@ def test_preview_color_scheme_index_changes_palette():
     dark = render_share_summary_preview_html(stats, layout="tiles", color_scheme_index=1)
     assert SHARE_SUMMARY_COLOR_SCHEMES[0]["bg"] in light
     assert SHARE_SUMMARY_COLOR_SCHEMES[1]["bg"] in dark
+    assert SHARE_SUMMARY_COLOR_SCHEMES[1]["tile_bg"] in dark
     assert light != dark
+
+
+def test_dark_scheme_tile_lift_in_grid_and_circle_previews():
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+
+    stats = sample_share_summary_stats()
+    dark_scheme = SHARE_SUMMARY_COLOR_SCHEMES[1]
+    grid = render_share_summary_preview_html(
+        stats, layout="tiles", tiles_presentation="grid", color_scheme_index=1
+    )
+    circles = render_share_summary_preview_html(
+        stats, layout="tiles", tiles_presentation="circles", color_scheme_index=1
+    )
+    assert dark_scheme["tile_bg"] in grid
+    assert dark_scheme["tile_bg_alt"] in grid
+    assert dark_scheme["tile_bg"] in circles
+    assert dark_scheme["tile_bg_alt"] in circles
 
 
 def test_layout_card_stat_max_grid_and_minimal_limits():

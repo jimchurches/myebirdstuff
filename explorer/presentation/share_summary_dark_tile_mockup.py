@@ -42,7 +42,10 @@ DarkTileVariantId = Literal[
 _SCHEME_KEYS = ("bg", "bg_alt", "text", "muted", "border", "accent")
 _TILE_KEYS = ("tile_bg", "tile_bg_alt", "tile_border")
 
-_DARK_BASE = SHARE_SUMMARY_COLOR_SCHEMES[1]
+# Card shell only — mockup variant 1 keeps pre-#308 tiles (bg / bg_alt gradient).
+_DARK_BASE: dict[str, str] = {
+    k: v for k, v in SHARE_SUMMARY_COLOR_SCHEMES[1].items() if k not in _TILE_KEYS
+}
 
 
 @dataclass(frozen=True)
@@ -59,7 +62,7 @@ def _scheme_for_variant(overrides: dict[str, str]) -> dict[str, str]:
 DARK_TILE_VARIANT_SPECS: dict[DarkTileVariantId, _DarkTileVariant] = {
     "current": _DarkTileVariant(
         "1 · Current dark (baseline)",
-        "Production dark theme — tiles use card bg / bg_alt gradient today.",
+        "Pre-#308 dark theme — tiles use card bg / bg_alt gradient (no tile lift).",
         {},
     ),
     "lift_subtle_a": _DarkTileVariant(
