@@ -79,6 +79,7 @@ from explorer.presentation.share_summary_preview import (
     default_card_stat_labels,
     layout_card_stat_max,
     layout_card_stat_storage_max,
+    layout_grid_slot_limits_caption,
     layout_grid_stat_default_count,
     layout_grid_stat_min,
     period_for_custom,
@@ -350,8 +351,7 @@ def _tiles_circle_cluster_picker(layout: LayoutId, tiles_presentation: TilesPres
     return layout == "tiles" and tiles_presentation == "circles"
 
 
-# Statistics Grid vs circle-cluster slot limits (see also layout_grid_stat_* in preview).
-# Grid: square 4–6, portrait 4–8, story 4–14. Circle cluster: square max 6, portrait max 8, story max 10.
+# Statistics Grid vs circle-cluster slot limits (see layout_grid_* in preview).
 
 
 def _card_stat_min_slots(
@@ -747,7 +747,7 @@ def _card_stat_picker_ui(
         min_slots = _card_stat_min_slots(layout, fmt, tiles_presentation=tiles_presentation)
         st.caption(
             f"Statistics Grid: {min_slots}–{max_slots} stats "
-            f"(square 4–6, portrait 4–8, story 4–14). "
+            f"({layout_grid_slot_limits_caption()}). "
             "Use Add stat or the chips below to add more."
         )
     else:

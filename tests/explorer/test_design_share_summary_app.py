@@ -53,6 +53,12 @@ def test_card_stat_ui_row_count_clamps_slot_count_to_layout_limit():
     )
 
 
+def test_layout_grid_slot_limits_caption():
+    from explorer.presentation.share_summary_preview import layout_grid_slot_limits_caption
+
+    assert layout_grid_slot_limits_caption() == "square 4–6, portrait 4–8, story 4–14"
+
+
 def test_layout_grid_stat_default_count():
     from explorer.presentation.share_summary_preview import (
         layout_grid_stat_default_count,
