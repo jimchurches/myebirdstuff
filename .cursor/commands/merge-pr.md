@@ -143,7 +143,9 @@ If push fails:
 
 After a successful merge and push, add the `pending-merge` label to each linked issue that this merge **finalises**.
 
-**Meaning of the label:** the issue's work is complete and merged into the integration/feature branch (`beta-next`, or a feature branch such as `feat/social-cards`) and is awaiting production release. The issue is **fully closed only when the change reaches `main`**, not here.
+**Meaning of the label:** the issue's work is complete and merged, and is awaiting production release on `main`. Use **`pending-merge`** for every finalising merge — whether the target is `beta-next` or a long-lived feature branch (e.g. `feat/social-cards`). The label does not mean "pending merge to beta-next"; it means **done in development, pending release to production**. The issue is **fully closed only when the change reaches `main`**, not here.
+
+> **Label hygiene:** use **`pending-merge` only**. Do not create or use `pending-next` — that was an obsolete mistaken label (confused with `beta-next`). If you see `pending-next` on an issue, remove it and use `pending-merge` when appropriate.
 
 ### Decide which issues to label
 
@@ -166,12 +168,12 @@ gh issue edit <issue-number> --add-label "pending-merge"
 If the label does not exist yet, create it once, then retry:
 
 ```bash
-gh label create "pending-merge" --description "Complete and merged to beta-next/feature; awaiting production release on main" --color FBCA04
+gh label create "pending-merge" --description "Work complete and merged; awaiting production release on main" --color FBCA04
 ```
 
 Labelling is **non-fatal**: if it fails (e.g. permissions or a missing label that cannot be created), report it clearly but keep the successful merge. Do not undo the merge over a label problem.
 
-> Naming: `pending-merge` is the current label. If a clearer name is adopted later (e.g. `pending-release`), update it in this one place.
+> If the label description is empty or outdated on GitHub, update it once: `gh label edit pending-merge --description "Work complete and merged; awaiting production release on main"`
 
 ---
 
