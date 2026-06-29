@@ -74,9 +74,9 @@ def test_compute_spotlight_facts_species_individuals_selected():
     facts = compute_spotlight_facts(df, period, species_common="Lewin's Rail")
     selected = spotlight_fact_by_id(facts, "species_individuals")
     assert selected is not None
+    assert selected.label == "Species count"
     assert selected.primary_text == "Lewin's Rail"
     assert selected.metric_value == 66
-    assert "Lewin's Rail" in selected.label
 
 
 def test_species_common_names_in_period_sorted():

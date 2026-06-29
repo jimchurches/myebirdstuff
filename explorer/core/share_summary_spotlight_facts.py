@@ -37,6 +37,8 @@ SPOTLIGHT_FACT_PICKER_LABELS: dict[SpotlightFactId, str] = {
 }
 
 SPOTLIGHT_FACTS_REQUIRING_SPECIES: frozenset[SpotlightFactId] = frozenset({"species_individuals"})
+# Card heading when the species name is the hero line (picker label stays descriptive).
+SPOTLIGHT_SPECIES_INDIVIDUALS_CARD_LABEL = "Species count"
 
 
 @dataclass(frozen=True)
@@ -189,7 +191,7 @@ def _species_individuals_fact(obs: pd.DataFrame, species_common: str) -> ShareSu
     total = int(matched["Count"].apply(safe_count).sum())
     return ShareSummarySpotlightFact(
         fact_id="species_individuals",
-        label=f"Number of {display_name} seen",
+        label=SPOTLIGHT_SPECIES_INDIVIDUALS_CARD_LABEL,
         primary_text=str(display_name),
         metric_value=total,
         metric_unit="individuals",
