@@ -607,6 +607,7 @@ _SINGLE_CIRCLE_TYPOGRAPHY_BY_FORMAT: dict[FormatId, tuple[int, int]] = {
 }
 _SPOTLIGHT_CIRCLE_EDGE_PAD_PX = _SHADOW_PAD_PX + 12
 _SPOTLIGHT_CIRCLE_MIN_DIAMETER_PX = 240
+SPOTLIGHT_CIRCLE_LABEL_PX = 26
 _HAND_TUNED_CIRCLE_WIDTH_FRACTION = 0.62
 _STORY_CIRCLE_WIDTH_FRACTION = _HAND_TUNED_CIRCLE_WIDTH_FRACTION
 
@@ -1554,7 +1555,7 @@ def layout_spotlight_circle(
         value,
         diameter=diameter,
         value_px=f"{value_base}px",
-        label_px="24px",
+        label_px=f"{SPOTLIGHT_CIRCLE_LABEL_PX}px",
         shadow=True,
     )
     return f"""

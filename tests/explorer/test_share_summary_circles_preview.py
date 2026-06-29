@@ -7,6 +7,7 @@ import pytest
 from explorer.presentation.share_summary_circles_preview import (
     _SINGLE_CIRCLE_DIAMETER_PX,
     CIRCLE_CARD_TEMPLATES,
+    SPOTLIGHT_CIRCLE_LABEL_PX,
     CIRCLE_VARIANT_IDS,
     CIRCLE_VARIANT_SPECS,
     STORY_CIRCLE_LAYOUT_DIAMETERS,
@@ -962,5 +963,6 @@ def test_layout_spotlight_circle_renders():
     )
     assert "border-radius:50%" in html
     assert "47" in html
+    assert f'font-size:{SPOTLIGHT_CIRCLE_LABEL_PX}px;color:' in html
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert sizes == [str(_SINGLE_CIRCLE_DIAMETER_PX)]

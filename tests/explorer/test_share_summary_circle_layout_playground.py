@@ -14,6 +14,7 @@ from explorer.presentation.share_summary_circles_preview import (
     _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
     _SINGLE_CIRCLE_DIAMETER_PX,
     CIRCLE_CARD_TEMPLATES,
+    SPOTLIGHT_CIRCLE_LABEL_PX,
     STORY_CIRCLE_LAYOUTS,
     TILES_CIRCLE_CLUSTER_PORTRAIT_MAX,
     TILES_CIRCLE_CLUSTER_SQUARE_MAX,
@@ -162,7 +163,7 @@ def test_circle_layout_playground_tiles_includes_circle_font_sliders():
     assert 'id="value-font"' in html
     assert 'id="label-font"' in html
     assert "value_font_px:" in html
-    assert "usesTilesCircleFontSliders()" in html
+    assert "usesCircleFontSliders()" in html
 
 
 def test_circle_layout_playground_story_single_circle_typography_defaults():
@@ -191,14 +192,26 @@ def test_circle_layout_playground_square_two_circle_typography_defaults():
     assert '"2": {"value_font_px": 75, "label_font_px": 22}' in html
 
 
-def test_circle_layout_playground_spotlight_omits_circle_font_sliders():
+def test_circle_layout_playground_spotlight_includes_circle_font_sliders():
     html = render_circle_layout_playground_html(
         initial_card_type="spotlight",
         initial_fmt="square",
     )
-    spotlight_section = html.split('"spotlight"')[1].split('"tiles"')[0]
-    assert "circle_typography" not in spotlight_section
-    assert "typography_defaults" not in spotlight_section
+    assert "circle_typography" in html
+    assert f'"1": {{"value_font_px": 160, "label_font_px": {SPOTLIGHT_CIRCLE_LABEL_PX}}}' in html
+    assert 'id="value-font"' in html
+    assert 'id="label-font"' in html
+    assert "usesCircleFontSliders()" in html
+    assert 'cardType === "tiles" || cardType === "spotlight"' in html
+
+
+def test_circle_layout_playground_spotlight_story_value_font_default():
+    html = render_circle_layout_playground_html(
+        initial_card_type="spotlight",
+        initial_fmt="story",
+    )
+    assert f'"label_font_px": {SPOTLIGHT_CIRCLE_LABEL_PX}' in html
+    assert '"1": {"value_font_px": 200, "label_font_px": 26}' in html
 
 
 def test_story_circle_body_bounds_for_playground_matches_preview():

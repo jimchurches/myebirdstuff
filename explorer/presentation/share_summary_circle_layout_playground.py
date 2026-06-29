@@ -18,6 +18,7 @@ from explorer.core.share_summary_defaults import (
 from explorer.presentation.share_summary_circles_preview import (
     _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
     CIRCLE_VARIANT_SPECS,
+    SPOTLIGHT_CIRCLE_LABEL_PX,
     TILES_CIRCLE_CLUSTER_DEFAULT,
     TILES_CIRCLE_CLUSTER_VARIANT,
     TILES_CIRCLE_DIAMETER_SEARCH_START,
@@ -235,13 +236,22 @@ def _tiles_playground_count_range(fmt: FormatId) -> range:
 
 
 def _tiles_circle_typography_config() -> dict[str, int]:
-    """Slider ranges for Statistics Tiles circle typography tuning."""
+    """Slider ranges for circle typography tuning in the playground."""
     return {
         "min_value_font_px": _TILES_CIRCLE_VALUE_FONT_MIN,
         "max_value_font_px": _TILES_CIRCLE_VALUE_FONT_MAX,
         "min_label_font_px": _TILES_CIRCLE_LABEL_FONT_MIN,
         "max_label_font_px": _TILES_CIRCLE_LABEL_FONT_MAX,
     }
+
+
+def _spotlight_playground_value_font_px(fmt: FormatId, diameter: int) -> int:
+    """Match production spotlight circle value sizing."""
+    card_w, card_h = FORMAT_PIXELS[fmt]
+    classic = 200 if card_h > card_w else 160
+    inner_w = max(68, diameter - 44)
+    max_by_width = int(inner_w / 0.58)
+    return min(classic, max_by_width)
 
 
 def _typography_defaults_for_count(
@@ -419,6 +429,13 @@ def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str
             "auto_diameters": {"1": diameter},
             "center_norm": center_norm,
             "code_presets": False,
+            "circle_typography": _tiles_circle_typography_config(),
+            "typography_defaults": {
+                "1": {
+                    "value_font_px": _spotlight_playground_value_font_px(fmt, diameter),
+                    "label_font_px": SPOTLIGHT_CIRCLE_LABEL_PX,
+                }
+            },
             **export_meta,
         }
 
@@ -609,7 +626,7 @@ def render_circle_layout_playground_html(
 <body>
   <p class="hint">
     Dev tuner for circle presentations. Drag to reposition (except Spotlight — centred).
-    For Statistics Tiles, use the value/label font sliders to tune typography per circle count
+    For Statistics Tiles and Spotlight, use the value/label font sliders to tune typography
     before copying sizes into <code>share_summary_circles_preview.py</code>.
   </p>
   <div class="toolbar">
@@ -706,8 +723,8 @@ def render_circle_layout_playground_html(
     return mode().circle_typography || null;
   }}
 
-  function usesTilesCircleFontSliders() {{
-    return cardType === "tiles" && circleTypography() !== null;
+  function usesCircleFontSliders() {{
+    return (cardType === "tiles" || cardType === "spotlight") && circleTypography() !== null;
   }}
 
   function defaultTypographyForCount(n) {{
@@ -757,7 +774,7 @@ def render_circle_layout_playground_html(
       norms: cloneNorms(layoutForCount(n)),
       diameter: presetDiameter(n),
     }};
-    if (cardType === "tiles") {{
+    if (cardType === "tiles" || cardType === "spotlight") {{
       const typography = defaultTypographyForCount(n);
       defaults.valueFontPx = typography.valueFontPx;
       defaults.labelFontPx = typography.labelFontPx;
@@ -780,7 +797,7 @@ def render_circle_layout_playground_html(
       norms: cloneNorms(norms),
       diameter,
     }};
-    if (usesTilesCircleFontSliders()) {{
+    if (usesCircleFontSliders()) {{
       edit.valueFontPx = valueFontBasePx;
       edit.labelFontPx = labelFontPxNum;
     }}
@@ -841,14 +858,12 @@ def render_circle_layout_playground_html(
   }}
 
   function labelFontPx() {{
-    if (usesTilesCircleFontSliders()) return labelFontPxNum + "px";
-    if (cardType === "spotlight") return "24px";
+    if (usesCircleFontSliders()) return labelFontPxNum + "px";
     return count > 6 ? "16px" : "18px";
   }}
 
   function valueFontBase() {{
-    if (usesTilesCircleFontSliders()) return valueFontBasePx;
-    if (cardType === "spotlight") return diameter >= 360 ? 160 : 140;
+    if (usesCircleFontSliders()) return valueFontBasePx;
     if (count > 9) return 40;
     if (diameter >= 260) return 52;
     if (diameter >= 240) return 46;
@@ -901,7 +916,7 @@ def render_circle_layout_playground_html(
     diameterInput.max = String(m.max_diameter);
     countWrap.classList.toggle("hidden", cardType === "spotlight");
     presetWrap.classList.toggle("hidden", !m.code_presets);
-    const showTypography = usesTilesCircleFontSliders();
+    const showTypography = usesCircleFontSliders();
     valueFontWrap.classList.toggle("hidden", !showTypography);
     labelFontWrap.classList.toggle("hidden", !showTypography);
     refreshPresetOptions();
@@ -1037,6 +1052,8 @@ def render_circle_layout_playground_html(
     ];
     if (cardType === "spotlight") {{
       lines.push("diameter_px: " + diameter + ",");
+      lines.push("value_font_px: " + valueFontBasePx + ",");
+      lines.push("label_font_px: " + labelFontPxNum + ",");
     }} else {{
       const posLines = norms.slice(0, count).map((p) =>
         "        (" + p[0].toFixed(2) + ", " + p[1].toFixed(2) + "),"
@@ -1059,7 +1076,7 @@ def render_circle_layout_playground_html(
       CARD_LABELS[cardType] + " · " + FORMAT_LABELS[fmt] + " · " +
       "canvas " + m.canvas_w + "×" + m.canvas_h + "px · " +
       "card " + m.card_w + "×" + m.card_h + " · diameter " + diameter + "px · " +
-      (usesTilesCircleFontSliders()
+      (usesCircleFontSliders()
         ? "value " + valueFontBasePx + "px · label " + labelFontPxNum + "px · "
         : "") +
       "body x=" + Math.round(b.xMin) + "–" + Math.round(b.xMax) +
@@ -1077,7 +1094,7 @@ def render_circle_layout_playground_html(
     if (saved) {{
       norms = cloneNorms(saved.norms);
       applyDiameterWithoutSessionSave(saved.diameter);
-      if (cardType === "tiles" && saved.valueFontPx != null) {{
+      if (usesCircleFontSliders() && saved.valueFontPx != null) {{
         applyCircleTypographyWithoutSessionSave(
           saved.valueFontPx,
           saved.labelFontPx ?? defaultTypographyForCount(nextCount).labelFontPx,
@@ -1087,7 +1104,7 @@ def render_circle_layout_playground_html(
       const defaults = codeDefaults(nextCount);
       norms = defaults.norms;
       applyDiameterWithoutSessionSave(defaults.diameter);
-      if (cardType === "tiles") {{
+      if (usesCircleFontSliders()) {{
         applyCircleTypographyWithoutSessionSave(
           defaults.valueFontPx,
           defaults.labelFontPx,
