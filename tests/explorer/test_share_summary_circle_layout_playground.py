@@ -14,11 +14,13 @@ from explorer.presentation.share_summary_circles_preview import (
     _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
     _SINGLE_CIRCLE_DIAMETER_PX,
     CIRCLE_CARD_TEMPLATES,
+    SPOTLIGHT_CIRCLE_LABEL_PX,
     STORY_CIRCLE_LAYOUTS,
     TILES_CIRCLE_CLUSTER_PORTRAIT_MAX,
     TILES_CIRCLE_CLUSTER_SQUARE_MAX,
     TILES_CIRCLE_CLUSTER_STORY_MAX,
     _tiles_circle_canvas_size,
+    single_circle_diameter_px,
 )
 
 
@@ -98,13 +100,13 @@ def test_circle_layout_playground_story_tiles_uses_code_layout():
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
     assert f'"max_diameter": {_HAND_TUNED_CIRCLE_MAX_DIAMETER_PX}' in html
-    assert f'"1": {_SINGLE_CIRCLE_DIAMETER_PX}' in html
-    assert '"2": 380' in html
+    assert f'"1": {single_circle_diameter_px("story")}' in html
+    assert '"2": 465' in html
     assert '"3": 380' in html
     assert '"6": 340' in html
     assert '"7": 295' in html
     assert '"canvas_h": 1490' in html
-    assert "0.29" in html
+    assert "0.21" in html
 
 
 def test_circle_layout_playground_portrait_tiles_uses_code_layout():
@@ -114,7 +116,8 @@ def test_circle_layout_playground_portrait_tiles_uses_code_layout():
     )
     assert "CIRCLE_CARD_TEMPLATES" in html
     assert "portrait_post" in html
-    assert f'"1": {_SINGLE_CIRCLE_DIAMETER_PX}' in html
+    assert f'"1": {single_circle_diameter_px("portrait_post")}' in html
+    assert '"2": 400' in html
     assert '"6": 255' in html
     assert '"7": 255' in html
     assert '"8": 245' in html
@@ -130,7 +133,7 @@ def test_circle_layout_playground_square_tiles_uses_code_layout():
     assert "CIRCLE_CARD_TEMPLATES" in html
     assert f'"max_diameter": {_HAND_TUNED_CIRCLE_MAX_DIAMETER_PX}' in html
     assert f'"1": {_SINGLE_CIRCLE_DIAMETER_PX}' in html
-    assert '"2": 360' in html
+    assert '"2": 365' in html
     assert '"3": 285' in html
     assert '"4": 275' in html
     assert '"5": 265' in html
@@ -146,6 +149,69 @@ def test_circle_card_templates_registry_has_story_and_portrait():
     assert CIRCLE_CARD_TEMPLATES[("tiles", "story")].bounds == "story"
     assert CIRCLE_CARD_TEMPLATES[("tiles", "portrait_post")].bounds == "cluster"
     assert CIRCLE_CARD_TEMPLATES[("tiles", "square")].bounds == "cluster"
+
+
+def test_circle_layout_playground_tiles_includes_circle_font_sliders():
+    html = render_circle_layout_playground_html(
+        initial_card_type="tiles",
+        initial_fmt="square",
+    )
+    assert "circle_typography" in html
+    assert "typography_defaults" in html
+    assert '"1": {"value_font_px": 110, "label_font_px": 30}' in html
+    assert '"6": {"value_font_px": 46, "label_font_px": 17}' in html
+    assert 'id="value-font"' in html
+    assert 'id="label-font"' in html
+    assert "value_font_px:" in html
+    assert "usesCircleFontSliders()" in html
+
+
+def test_circle_layout_playground_story_single_circle_typography_defaults():
+    html = render_circle_layout_playground_html(
+        initial_card_type="tiles",
+        initial_fmt="story",
+    )
+    assert '"1": {"value_font_px": 110, "label_font_px": 30}' in html
+    assert f'"1": {single_circle_diameter_px("story")}' in html
+
+
+def test_circle_layout_playground_square_single_circle_typography_defaults():
+    html = render_circle_layout_playground_html(
+        initial_card_type="tiles",
+        initial_fmt="square",
+    )
+    assert '"1": {"value_font_px": 110, "label_font_px": 30}' in html
+    assert f'"1": {single_circle_diameter_px("square")}' in html
+
+
+def test_circle_layout_playground_square_two_circle_typography_defaults():
+    html = render_circle_layout_playground_html(
+        initial_card_type="tiles",
+        initial_fmt="square",
+    )
+    assert '"2": {"value_font_px": 75, "label_font_px": 22}' in html
+
+
+def test_circle_layout_playground_spotlight_includes_circle_font_sliders():
+    html = render_circle_layout_playground_html(
+        initial_card_type="spotlight",
+        initial_fmt="square",
+    )
+    assert "circle_typography" in html
+    assert f'"1": {{"value_font_px": 160, "label_font_px": {SPOTLIGHT_CIRCLE_LABEL_PX}}}' in html
+    assert 'id="value-font"' in html
+    assert 'id="label-font"' in html
+    assert "usesCircleFontSliders()" in html
+    assert 'cardType === "tiles" || cardType === "spotlight"' in html
+
+
+def test_circle_layout_playground_spotlight_story_value_font_default():
+    html = render_circle_layout_playground_html(
+        initial_card_type="spotlight",
+        initial_fmt="story",
+    )
+    assert f'"label_font_px": {SPOTLIGHT_CIRCLE_LABEL_PX}' in html
+    assert '"1": {"value_font_px": 200, "label_font_px": 26}' in html
 
 
 def test_story_circle_body_bounds_for_playground_matches_preview():

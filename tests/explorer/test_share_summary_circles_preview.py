@@ -7,6 +7,7 @@ import pytest
 from explorer.presentation.share_summary_circles_preview import (
     _SINGLE_CIRCLE_DIAMETER_PX,
     CIRCLE_CARD_TEMPLATES,
+    SPOTLIGHT_CIRCLE_LABEL_PX,
     CIRCLE_VARIANT_IDS,
     CIRCLE_VARIANT_SPECS,
     STORY_CIRCLE_LAYOUT_DIAMETERS,
@@ -35,6 +36,7 @@ from explorer.presentation.share_summary_circles_preview import (
     layout_spotlight_circle,
     layout_tiles_circle_cluster,
     place_circle_centers,
+    single_circle_diameter_px,
 )
 from explorer.presentation.share_summary_preview import (
     FormatId,
@@ -589,6 +591,7 @@ def test_layout_tiles_circle_cluster_single_circle_centred_all_formats():
         ("story", 1080, 1920),
     )
     for fmt, card_w, card_h in cases:
+        expected_diameter = single_circle_diameter_px(fmt)
         html = layout_tiles_circle_cluster(
             stats,
             card_w,
@@ -600,7 +603,7 @@ def test_layout_tiles_circle_cluster_single_circle_centred_all_formats():
         assert html.count("border-radius:50%") == 1
         sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
         assert len(sizes) == 1
-        assert int(sizes[0]) == _SINGLE_CIRCLE_DIAMETER_PX
+        assert int(sizes[0]) == expected_diameter
         canvas = re.search(
             r"position:relative;width:(\d+)px;height:(\d+)px;margin:0 auto;overflow:hidden",
             html,
@@ -614,7 +617,7 @@ def test_layout_tiles_circle_cluster_single_circle_centred_all_formats():
             1,
             canvas_w=canvas_w,
             canvas_h=canvas_h,
-            diameter=_SINGLE_CIRCLE_DIAMETER_PX,
+            diameter=expected_diameter,
         )[0]
         centre = re.search(
             r"position:absolute;left:([\d.]+)px;top:([\d.]+)px;\s*transform:translate\(-50%,-50%\)",
@@ -623,6 +626,60 @@ def test_layout_tiles_circle_cluster_single_circle_centred_all_formats():
         assert centre is not None
         assert float(centre.group(1)) == pytest.approx(expected_x, abs=1.0)
         assert float(centre.group(2)) == pytest.approx(expected_y, abs=1.0)
+
+
+@pytest.mark.parametrize(
+    "fmt",
+    ["square", "story", "portrait_post"],
+)
+def test_layout_tiles_circle_cluster_single_circle_typography(fmt):
+    stats = sample_share_summary_stats()
+    card_sizes = {
+        "square": (1080, 1080),
+        "story": (1080, 1920),
+        "portrait_post": (1080, 1350),
+    }
+    card_w, card_h = card_sizes[fmt]
+    html = layout_tiles_circle_cluster(
+        stats,
+        card_w,
+        card_h,
+        fmt,
+        scope_label="World",
+        card_stat_labels=("Total species",),
+    )
+    assert 'font-size:110px;font-weight:700' in html
+    assert 'font-size:30px;color:' in html
+    assert 'font-size:52px;font-weight:700' not in html
+
+
+@pytest.mark.parametrize(
+    ("fmt", "value_px", "label_px"),
+    [
+        ("square", 75, 22),
+        ("portrait_post", 80, 24),
+        ("story", 90, 26),
+    ],
+)
+def test_layout_tiles_circle_cluster_two_circle_typography(fmt, value_px, label_px):
+    stats = sample_share_summary_stats()
+    card_sizes = {
+        "square": (1080, 1080),
+        "portrait_post": (1080, 1350),
+        "story": (1080, 1920),
+    }
+    card_w, card_h = card_sizes[fmt]
+    html = layout_tiles_circle_cluster(
+        stats,
+        card_w,
+        card_h,
+        fmt,
+        scope_label="World",
+        card_stat_labels=("Total species", "Lifers"),
+    )
+    assert html.count("border-radius:50%") == 2
+    assert f"font-size:{value_px}px;font-weight:700" in html
+    assert f"font-size:{label_px}px;color:" in html
 
 
 def test_hand_tuned_template_assigns_stats_in_reading_order():
@@ -649,7 +706,7 @@ def test_square_circle_template_covers_counts_one_through_six():
     assert set(template.counts) == {1, 2, 3, 4, 5, 6}
     assert circle_card_template_diameters(template) == {
         1: _SINGLE_CIRCLE_DIAMETER_PX,
-        2: 360,
+        2: 365,
         3: 285,
         4: 275,
         5: 265,
@@ -660,7 +717,7 @@ def test_square_circle_template_covers_counts_one_through_six():
 @pytest.mark.parametrize(
     ("labels", "expected_count", "expected_diameter"),
     [
-        (("Total species", "Lifers"), 2, 360),
+        (("Total species", "Lifers"), 2, 365),
         (
             ("Total species", "Lifers", "Total checklists"),
             3,
@@ -855,19 +912,21 @@ def test_spotlight_circle_matches_single_tiles_circle_diameter_all_formats():
             fmt,
             scope_label="World",
         )
-        assert _spotlight_circle_diameter(canvas_w, canvas_h) == _SINGLE_CIRCLE_DIAMETER_PX
+        assert _spotlight_circle_diameter(canvas_w, canvas_h, fmt=fmt) == (
+            single_circle_diameter_px(fmt)
+        )
 
 
 def test_spotlight_circle_is_larger_than_six_stat_tiles_cluster():
     canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
     tiles_d = _placed_diameter(6, canvas_w, canvas_h, TILES_CIRCLE_CLUSTER_VARIANT)
-    spotlight_d = _spotlight_circle_diameter(canvas_w, canvas_h)
+    spotlight_d = _spotlight_circle_diameter(canvas_w, canvas_h, fmt="square")
     assert spotlight_d > tiles_d * 1.5
 
 
 def test_spotlight_circle_value_font_matches_classic_for_short_numbers():
     canvas_w, canvas_h = _circle_canvas_size(1080, 1080, "square", scope_label="World")
-    diameter = _spotlight_circle_diameter(canvas_w, canvas_h)
+    diameter = _spotlight_circle_diameter(canvas_w, canvas_h, fmt="square")
     base = _spotlight_circle_value_base_px(diameter, width=1080, height=1080)
     assert base == 160
     assert _circle_value_font_px("47", base, diameter=diameter) == 160
@@ -904,5 +963,6 @@ def test_layout_spotlight_circle_renders():
     )
     assert "border-radius:50%" in html
     assert "47" in html
+    assert f'font-size:{SPOTLIGHT_CIRCLE_LABEL_PX}px;color:' in html
     sizes = re.findall(r"width:(\d+)px;height:\1px;border-radius:50%", html)
     assert sizes == [str(_SINGLE_CIRCLE_DIAMETER_PX)]
