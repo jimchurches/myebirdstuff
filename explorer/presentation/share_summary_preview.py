@@ -888,9 +888,9 @@ def _layout_spotlight_rich(
     """Rich Spotlight — label, species/text focus, optional metric."""
     pad_bottom = _footer_pad(fmt, width, height)
     is_tall = _is_tall(fmt, width, height)
-    label_size = "30px" if is_tall else "26px"
-    primary_size = "88px" if is_tall else "72px"
     metric_size = "52px" if is_tall else "44px"
+    label_size = metric_size
+    primary_size = "88px" if is_tall else "72px"
     metric = format_spotlight_fact_metric(spotlight_fact)
     metric_line = ""
     if metric:
