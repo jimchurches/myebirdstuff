@@ -31,6 +31,7 @@ from explorer.presentation.share_summary_circles_preview import (
     circle_card_template,
     circle_card_template_diameters,
     circle_card_template_positions,
+    hand_tuned_circle_typography_px,
     place_circle_centers,
     tiles_circle_cluster_max,
 )
@@ -68,6 +69,10 @@ _SHADOW_PAD = 12
 _CLUSTER_UP_BIAS = 0.07
 _MIN_CLUSTER_DIAMETER = 96
 _MIN_SPOTLIGHT_DIAMETER = 200
+_TILES_CIRCLE_VALUE_FONT_MIN = 32
+_TILES_CIRCLE_VALUE_FONT_MAX = 200
+_TILES_CIRCLE_LABEL_FONT_MIN = 14
+_TILES_CIRCLE_LABEL_FONT_MAX = 36
 
 PLAYGROUND_TILES_MIN_COUNT = 1
 PLAYGROUND_TILES_DEFAULT_COUNT = TILES_CIRCLE_CLUSTER_DEFAULT
@@ -229,6 +234,40 @@ def _tiles_playground_count_range(fmt: FormatId) -> range:
     return range(PLAYGROUND_TILES_MIN_COUNT, _tiles_playground_max_count(fmt) + 1)
 
 
+def _tiles_circle_typography_config() -> dict[str, int]:
+    """Slider ranges for Statistics Tiles circle typography tuning."""
+    return {
+        "min_value_font_px": _TILES_CIRCLE_VALUE_FONT_MIN,
+        "max_value_font_px": _TILES_CIRCLE_VALUE_FONT_MAX,
+        "min_label_font_px": _TILES_CIRCLE_LABEL_FONT_MIN,
+        "max_label_font_px": _TILES_CIRCLE_LABEL_FONT_MAX,
+    }
+
+
+def _typography_defaults_for_count(
+    count: int,
+    diameter: int,
+    *,
+    bounds: str,
+    fmt: FormatId,
+) -> dict[str, int]:
+    """Match production tier defaults in share_summary_circles_preview."""
+    tuned = hand_tuned_circle_typography_px(fmt, count)
+    if tuned is not None:
+        value_px, label_px = tuned
+        return {"value_font_px": value_px, "label_font_px": label_px}
+    compact_threshold = 10 if bounds == "story" else 7
+    if count >= compact_threshold:
+        value_px, label_px = 40, 16
+    elif diameter >= 260:
+        value_px, label_px = 52, 19
+    elif diameter >= 240:
+        value_px, label_px = 46, 17
+    else:
+        value_px, label_px = 48, 18
+    return {"value_font_px": value_px, "label_font_px": label_px}
+
+
 def _build_tiles_playground_mode(
     frame: dict[str, int],
     fmt: FormatId,
@@ -306,6 +345,16 @@ def _build_tiles_playground_mode(
         "diameters": diameters,
         "auto_diameters": auto_diameters,
         "code_presets": code_presets,
+        "circle_typography": _tiles_circle_typography_config(),
+        "typography_defaults": {
+            str(count): _typography_defaults_for_count(
+                count,
+                diameters.get(str(count), auto_diameters[str(count)]),
+                bounds=bounds,
+                fmt=fmt,
+            )
+            for count in counts
+        },
         **_playground_body_frame("tiles", fmt),
         **export_meta,
     }
@@ -347,7 +396,7 @@ def _build_mode_config(card_type: PlaygroundCardType, fmt: FormatId) -> dict[str
             fmt,
             scope_label="World",
         )
-        diameter = _spotlight_circle_diameter(canvas_w, canvas_h)
+        diameter = _spotlight_circle_diameter(canvas_w, canvas_h, fmt=fmt)
         center_norm = _spotlight_center_norm(canvas_w, canvas_h, diameter=diameter)
         max_diameter = min(
             _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX,
@@ -560,7 +609,8 @@ def render_circle_layout_playground_html(
 <body>
   <p class="hint">
     Dev tuner for circle presentations. Drag to reposition (except Spotlight — centred).
-    Copy output into <code>share_summary_circles_preview.py</code> when tuning layouts.
+    For Statistics Tiles, use the value/label font sliders to tune typography per circle count
+    before copying sizes into <code>share_summary_circles_preview.py</code>.
   </p>
   <div class="toolbar">
     <label>Layout
@@ -580,6 +630,14 @@ def render_circle_layout_playground_html(
       <select id="preset">
         <option value="">Load code preset…</option>
       </select>
+    </label>
+    <label id="value-font-wrap" class="hidden">Value font <span id="value-font-val">48</span>px
+      <input type="range" id="value-font" min="{_TILES_CIRCLE_VALUE_FONT_MIN}"
+        max="{_TILES_CIRCLE_VALUE_FONT_MAX}" value="48"/>
+    </label>
+    <label id="label-font-wrap" class="hidden">Label font <span id="label-font-val">18</span>px
+      <input type="range" id="label-font" min="{_TILES_CIRCLE_LABEL_FONT_MIN}"
+        max="{_TILES_CIRCLE_LABEL_FONT_MAX}" value="18"/>
     </label>
     <button type="button" id="reset-btn">Reset layout</button>
     <button type="button" id="copy-btn">Copy export</button>
@@ -621,6 +679,12 @@ def render_circle_layout_playground_html(
   const diameterVal = document.getElementById("diameter-val");
   const presetWrap = document.getElementById("preset-wrap");
   const presetSelect = document.getElementById("preset");
+  const valueFontWrap = document.getElementById("value-font-wrap");
+  const valueFontInput = document.getElementById("value-font");
+  const valueFontVal = document.getElementById("value-font-val");
+  const labelFontWrap = document.getElementById("label-font-wrap");
+  const labelFontInput = document.getElementById("label-font");
+  const labelFontVal = document.getElementById("label-font-val");
   const exportText = document.getElementById("export-text");
   const metaText = document.getElementById("meta-text");
 
@@ -631,10 +695,53 @@ def render_circle_layout_playground_html(
   let fmt = CFG.fmt;
   let count = CFG.count;
   let diameter = CFG.diameter;
+  let valueFontBasePx = 48;
+  let labelFontPxNum = 18;
   let norms = [];
   let drag = null;
   let applyingDefaults = false;
   const sessionEdits = new Map();
+
+  function circleTypography() {{
+    return mode().circle_typography || null;
+  }}
+
+  function usesTilesCircleFontSliders() {{
+    return cardType === "tiles" && circleTypography() !== null;
+  }}
+
+  function defaultTypographyForCount(n) {{
+    const defaults = mode().typography_defaults[String(n)];
+    if (defaults) {{
+      return {{
+        valueFontPx: defaults.value_font_px,
+        labelFontPx: defaults.label_font_px,
+      }};
+    }}
+    return {{ valueFontPx: 48, labelFontPx: 18 }};
+  }}
+
+  function applyCircleTypographyWithoutSessionSave(valuePx, labelPx) {{
+    applyingDefaults = true;
+    setCircleTypography(valuePx, labelPx);
+    applyingDefaults = false;
+  }}
+
+  function setCircleTypography(valuePx, labelPx) {{
+    const t = circleTypography();
+    if (!t) return;
+    valueFontBasePx = clamp(valuePx, t.min_value_font_px, t.max_value_font_px);
+    labelFontPxNum = clamp(labelPx, t.min_label_font_px, t.max_label_font_px);
+    valueFontInput.min = String(t.min_value_font_px);
+    valueFontInput.max = String(t.max_value_font_px);
+    valueFontInput.value = String(valueFontBasePx);
+    valueFontVal.textContent = String(valueFontBasePx);
+    labelFontInput.min = String(t.min_label_font_px);
+    labelFontInput.max = String(t.max_label_font_px);
+    labelFontInput.value = String(labelFontPxNum);
+    labelFontVal.textContent = String(labelFontPxNum);
+    renderCircles();
+  }}
 
   function layoutKeyFor(ct, format, n) {{
     const slots = ct === "spotlight" ? 1 : n;
@@ -646,10 +753,16 @@ def render_circle_layout_playground_html(
   }}
 
   function codeDefaults(n) {{
-    return {{
+    const defaults = {{
       norms: cloneNorms(layoutForCount(n)),
       diameter: presetDiameter(n),
     }};
+    if (cardType === "tiles") {{
+      const typography = defaultTypographyForCount(n);
+      defaults.valueFontPx = typography.valueFontPx;
+      defaults.labelFontPx = typography.labelFontPx;
+    }}
+    return defaults;
   }}
 
   function cloneNorms(source) {{
@@ -663,10 +776,15 @@ def render_circle_layout_playground_html(
   }}
 
   function saveSessionEdit() {{
-    sessionEdits.set(layoutKey(), {{
+    const edit = {{
       norms: cloneNorms(norms),
       diameter,
-    }});
+    }};
+    if (usesTilesCircleFontSliders()) {{
+      edit.valueFontPx = valueFontBasePx;
+      edit.labelFontPx = labelFontPxNum;
+    }}
+    sessionEdits.set(layoutKey(), edit);
   }}
 
   function clearSessionEdit(key) {{
@@ -723,11 +841,13 @@ def render_circle_layout_playground_html(
   }}
 
   function labelFontPx() {{
+    if (usesTilesCircleFontSliders()) return labelFontPxNum + "px";
     if (cardType === "spotlight") return "24px";
     return count > 6 ? "16px" : "18px";
   }}
 
   function valueFontBase() {{
+    if (usesTilesCircleFontSliders()) return valueFontBasePx;
     if (cardType === "spotlight") return diameter >= 360 ? 160 : 140;
     if (count > 9) return 40;
     if (diameter >= 260) return 52;
@@ -781,6 +901,9 @@ def render_circle_layout_playground_html(
     diameterInput.max = String(m.max_diameter);
     countWrap.classList.toggle("hidden", cardType === "spotlight");
     presetWrap.classList.toggle("hidden", !m.code_presets);
+    const showTypography = usesTilesCircleFontSliders();
+    valueFontWrap.classList.toggle("hidden", !showTypography);
+    labelFontWrap.classList.toggle("hidden", !showTypography);
     refreshPresetOptions();
   }}
 
@@ -922,6 +1045,8 @@ def render_circle_layout_playground_html(
       lines.push(...posLines);
       lines.push("    ),");
       lines.push("diameter_px: " + diameter + ",");
+      lines.push("value_font_px: " + valueFontBasePx + ",");
+      lines.push("label_font_px: " + labelFontPxNum + ",");
     }}
     return lines.join("\\n");
   }}
@@ -934,6 +1059,9 @@ def render_circle_layout_playground_html(
       CARD_LABELS[cardType] + " · " + FORMAT_LABELS[fmt] + " · " +
       "canvas " + m.canvas_w + "×" + m.canvas_h + "px · " +
       "card " + m.card_w + "×" + m.card_h + " · diameter " + diameter + "px · " +
+      (usesTilesCircleFontSliders()
+        ? "value " + valueFontBasePx + "px · label " + labelFontPxNum + "px · "
+        : "") +
       "body x=" + Math.round(b.xMin) + "–" + Math.round(b.xMax) +
       " y=" + Math.round(b.yMin) + "–" + Math.round(b.yMax);
   }}
@@ -949,11 +1077,24 @@ def render_circle_layout_playground_html(
     if (saved) {{
       norms = cloneNorms(saved.norms);
       applyDiameterWithoutSessionSave(saved.diameter);
+      if (cardType === "tiles" && saved.valueFontPx != null) {{
+        applyCircleTypographyWithoutSessionSave(
+          saved.valueFontPx,
+          saved.labelFontPx ?? defaultTypographyForCount(nextCount).labelFontPx,
+        );
+      }}
     }} else {{
       const defaults = codeDefaults(nextCount);
       norms = defaults.norms;
       applyDiameterWithoutSessionSave(defaults.diameter);
+      if (cardType === "tiles") {{
+        applyCircleTypographyWithoutSessionSave(
+          defaults.valueFontPx,
+          defaults.labelFontPx,
+        );
+      }}
     }}
+    applyModeUi();
   }}
 
   function setDiameter(d) {{
@@ -988,6 +1129,14 @@ def render_circle_layout_playground_html(
   countInput.addEventListener("change", () => loadLayoutState(Number(countInput.value)));
   diameterInput.addEventListener("input", () => {{
     setDiameter(Number(diameterInput.value));
+    if (!applyingDefaults) saveSessionEdit();
+  }});
+  valueFontInput.addEventListener("input", () => {{
+    setCircleTypography(Number(valueFontInput.value), labelFontPxNum);
+    if (!applyingDefaults) saveSessionEdit();
+  }});
+  labelFontInput.addEventListener("input", () => {{
+    setCircleTypography(valueFontBasePx, Number(labelFontInput.value));
     if (!applyingDefaults) saveSessionEdit();
   }});
   presetSelect.addEventListener("change", () => {{

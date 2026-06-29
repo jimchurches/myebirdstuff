@@ -586,11 +586,66 @@ _STORY_CIRCLE_MIN_EDGE_GAP_PX = _HAND_TUNED_CIRCLE_MIN_EDGE_GAP_PX
 _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX = 560
 _STORY_CIRCLE_MAX_DIAMETER_PX = _HAND_TUNED_CIRCLE_MAX_DIAMETER_PX
 _SINGLE_CIRCLE_LAYOUT: tuple[tuple[float, float], ...] = ((0.50, 0.50),)
-_SINGLE_CIRCLE_DIAMETER_PX = 480
+_SINGLE_CIRCLE_DIAMETER_BY_FORMAT: dict[FormatId, int] = {
+    "square": 560,
+    "portrait_post": 560,
+    "story": 560,
+}
+_SINGLE_CIRCLE_DIAMETER_PX = _SINGLE_CIRCLE_DIAMETER_BY_FORMAT["square"]
+_HAND_TUNED_CIRCLE_TYPOGRAPHY: dict[tuple[FormatId, int], tuple[int, int]] = {
+    ("square", 1): (110, 30),
+    ("square", 2): (75, 22),
+    ("portrait_post", 1): (110, 30),
+    ("portrait_post", 2): (80, 24),
+    ("story", 1): (110, 30),
+    ("story", 2): (90, 26),
+}
+_SINGLE_CIRCLE_TYPOGRAPHY_BY_FORMAT: dict[FormatId, tuple[int, int]] = {
+    fmt: typography
+    for (fmt, count), typography in _HAND_TUNED_CIRCLE_TYPOGRAPHY.items()
+    if count == 1
+}
 _SPOTLIGHT_CIRCLE_EDGE_PAD_PX = _SHADOW_PAD_PX + 12
 _SPOTLIGHT_CIRCLE_MIN_DIAMETER_PX = 240
 _HAND_TUNED_CIRCLE_WIDTH_FRACTION = 0.62
 _STORY_CIRCLE_WIDTH_FRACTION = _HAND_TUNED_CIRCLE_WIDTH_FRACTION
+
+
+def single_circle_diameter_px(fmt: FormatId) -> int:
+    """Hand-tuned count-1 circle diameter for Statistics Tiles."""
+    return _SINGLE_CIRCLE_DIAMETER_BY_FORMAT.get(fmt, _SINGLE_CIRCLE_DIAMETER_PX)
+
+
+def single_circle_typography_px(fmt: FormatId) -> tuple[int, int] | None:
+    """Hand-tuned count-1 value/label font sizes when set for *fmt*."""
+    return hand_tuned_circle_typography_px(fmt, 1)
+
+
+def hand_tuned_circle_typography_px(
+    fmt: FormatId,
+    count: int,
+) -> tuple[int, int] | None:
+    """Hand-tuned value/label font sizes for one format and circle count."""
+    return _HAND_TUNED_CIRCLE_TYPOGRAPHY.get((fmt, count))
+
+
+def _hand_tuned_circle_typography(
+    template: CircleCardTemplate,
+    count: int,
+    diameter: int,
+) -> tuple[str, str]:
+    """Value and label font sizes for one hand-tuned circle cluster."""
+    tuned = hand_tuned_circle_typography_px(template.fmt, count)
+    if tuned is not None:
+        value_px, label_px = tuned
+        return f"{value_px}px", f"{label_px}px"
+    if count >= _hand_tuned_compact_type_threshold(template):
+        return "40px", "16px"
+    if diameter >= 260:
+        return "52px", "19px"
+    if diameter >= 240:
+        return "46px", "17px"
+    return "48px", "18px"
 
 
 def _build_circle_card_template(
@@ -621,8 +676,8 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
         layouts={
             1: _SINGLE_CIRCLE_LAYOUT,
             2: (
-                (0.29, 0.28),
-                (0.72, 0.73),
+                (0.21, 0.21),
+                (0.77, 0.77),
             ),
             3: (
                 (0.82, 0.50),
@@ -694,8 +749,8 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
             ),
         },
         diameters={
-            1: _SINGLE_CIRCLE_DIAMETER_PX,
-            2: 380,
+            1: single_circle_diameter_px("story"),
+            2: 465,
             3: 380,
             4: 340,
             5: 340,
@@ -713,7 +768,7 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
             1: _SINGLE_CIRCLE_LAYOUT,
             2: (
                 (0.15, 0.19),
-                (0.85, 0.73),
+                (0.86, 0.79),
             ),
             3: (
                 (0.73, 0.24),
@@ -762,8 +817,8 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
             ),
         },
         diameters={
-            1: _SINGLE_CIRCLE_DIAMETER_PX,
-            2: 340,
+            1: single_circle_diameter_px("portrait_post"),
+            2: 400,
             3: 310,
             4: 285,
             5: 268,
@@ -778,8 +833,8 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
         layouts={
             1: _SINGLE_CIRCLE_LAYOUT,
             2: (
-                (0.14, 0.38),
-                (0.89, 0.62),
+                (0.12, 0.22),
+                (0.89, 0.75),
             ),
             3: (
                 (0.59, 0.28),
@@ -809,8 +864,8 @@ CIRCLE_CARD_TEMPLATES: dict[tuple[TilesCircleCardType, FormatId], CircleCardTemp
             ),
         },
         diameters={
-            1: _SINGLE_CIRCLE_DIAMETER_PX,
-            2: 360,
+            1: single_circle_diameter_px("square"),
+            2: 365,
             3: 285,
             4: 275,
             5: 265,
@@ -1070,14 +1125,7 @@ def _hand_tuned_template_canvas_html(
         diameter=diameter,
     )
     centres = _centres_in_grid_reading_order(centres)
-    if count >= _hand_tuned_compact_type_threshold(template):
-        value_px, label_px = "40px", "16px"
-    elif diameter >= 260:
-        value_px, label_px = "52px", "19px"
-    elif diameter >= 240:
-        value_px, label_px = "46px", "17px"
-    else:
-        value_px, label_px = "48px", "18px"
+    value_px, label_px = _hand_tuned_circle_typography(template, count, diameter)
     shadow = spec.shadow
     tiles = []
     for (label, value), (x, y) in zip(pairs, centres, strict=False):
@@ -1435,12 +1483,18 @@ def _spotlight_circle_max_fit_diameter(canvas_w: int, canvas_h: int) -> int:
     return min(canvas_w - 2 * pad, canvas_h - 2 * pad)
 
 
-def _spotlight_circle_diameter(canvas_w: int, canvas_h: int) -> int:
+def _spotlight_circle_diameter(
+    canvas_w: int,
+    canvas_h: int,
+    *,
+    fmt: FormatId,
+) -> int:
     """Single spotlight circle — same diameter as Statistics Tiles count-1 preset."""
     max_fit = _spotlight_circle_max_fit_diameter(canvas_w, canvas_h)
+    target = single_circle_diameter_px(fmt)
     return max(
         _SPOTLIGHT_CIRCLE_MIN_DIAMETER_PX,
-        min(_SINGLE_CIRCLE_DIAMETER_PX, max_fit),
+        min(target, max_fit),
     )
 
 
@@ -1487,7 +1541,7 @@ def layout_spotlight_circle(
         fmt,
         scope_label=scope_label,
     )
-    diameter = _spotlight_circle_diameter(canvas_w, canvas_h)
+    diameter = _spotlight_circle_diameter(canvas_w, canvas_h, fmt=fmt)
     value_base = _spotlight_circle_value_base_px(
         diameter,
         width=width,
