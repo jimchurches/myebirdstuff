@@ -92,6 +92,7 @@ def test_species_common_names_in_period_sorted():
 
 def test_spotlight_rich_layout_renders():
     from explorer.core.share_summary_compute import ShareSummaryStats
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES
 
     stats = ShareSummaryStats(period_label="2025", period_kind="year")
     fact = ShareSummarySpotlightFact(
@@ -106,12 +107,44 @@ def test_spotlight_rich_layout_renders():
         layout="spotlight",
         spotlight_mode="rich",
         spotlight_fact=fact,
+        fmt="story",
     )
+    assert SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES in html
+    assert "<h1" in html
     assert "Most common checklist species" in html
     assert "Australian Magpie" in html
     assert "3,999 checklists" in html
     assert "<pre>" not in html.lower()
     assert "&lt;div" not in html
+
+
+def test_spotlight_rich_story_header_matches_tiles():
+    from explorer.core.share_summary_compute import ShareSummaryStats
+
+    stats = ShareSummaryStats(period_label="2026", period_kind="year")
+    fact = ShareSummarySpotlightFact(
+        fact_id="biggest_checklist_count",
+        label="Biggest single-checklist count",
+        primary_text="Wedge-tailed Shearwater",
+        metric_value=4200,
+        metric_unit="on one checklist",
+    )
+    rich = render_share_summary_preview_html(
+        stats,
+        layout="spotlight",
+        spotlight_mode="rich",
+        spotlight_fact=fact,
+        fmt="story",
+    )
+    tiles = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        fmt="story",
+        card_stat_labels=("Total species", "Lifers", "Total checklists", "Unique locations"),
+    )
+    rich_header_end = rich.index("</h1>") + len("</h1>")
+    tiles_header_end = tiles.index("</h1>") + len("</h1>")
+    assert rich[:rich_header_end] == tiles[:tiles_header_end]
 
 
 def test_resolve_spotlight_fact_falls_back_to_default():

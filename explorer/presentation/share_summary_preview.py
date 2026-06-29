@@ -891,7 +891,6 @@ def _layout_spotlight_rich(
     label_size = "30px" if is_tall else "26px"
     primary_size = "88px" if is_tall else "72px"
     metric_size = "52px" if is_tall else "44px"
-    header_html = _layout_spotlight_header_html(stats)
     metric = format_spotlight_fact_metric(spotlight_fact)
     metric_line = ""
     if metric:
@@ -902,11 +901,10 @@ def _layout_spotlight_rich(
             f'line-height:1.1;color:{_colour("text")};">{_esc(metric)}</div>'
         )
     return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
-  <div style="position:absolute;left:0;right:0;top:0;bottom:{pad_bottom}px;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:64px 56px 32px;text-align:center;box-sizing:border-box;">
-    {header_html}
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
+  {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
+  <div style="padding:8px 48px {pad_bottom}px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;box-sizing:border-box;">
     <div style="max-width:920px;font-size:{label_size};color:{_colour('muted')};font-weight:500;
       line-height:1.25;margin-bottom:20px;">{_esc(spotlight_fact.label)}</div>
     <div style="max-width:920px;font-size:{primary_size};font-weight:800;line-height:1.08;
