@@ -33,16 +33,24 @@ from explorer.core.share_summary_compute import (
     ShareSummaryGeoScope,
     ShareSummaryStats,
     compute_share_summary_all_time_stats,
+    compute_share_summary_stats,
     filter_df_by_geo_scope,
     geo_country_keys_from_df,
     geo_region_options_for_country,
     geo_scope_display_label,
+    period_for_custom,
+    period_for_lifetime,
+    period_for_month,
+    period_for_week_containing,
+    period_for_year,
     resolve_period,
     suggest_period_anchor,
 )
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_IDS,
+    SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    SHARE_SUMMARY_SPOTLIGHT_MODE_DEFAULT,
     SHARE_SUMMARY_STORY_MAX_STATS,
     share_summary_color_scheme_fingerprint,
     share_summary_color_scheme_index,
@@ -50,6 +58,14 @@ from explorer.core.share_summary_defaults import (
     share_summary_layout_label,
     share_summary_spotlight_presentation_label,
     share_summary_tiles_presentation_label,
+)
+from explorer.core.share_summary_spotlight_facts import (
+    SPOTLIGHT_FACT_PICKER_LABELS,
+    ShareSummarySpotlightFact,
+    SpotlightFactId,
+    compute_spotlight_facts,
+    species_common_names_in_period,
+    spotlight_fact_requires_species,
 )
 from explorer.presentation.share_summary_circle_layout_playground import (
     CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX,
@@ -75,21 +91,17 @@ from explorer.presentation.share_summary_preview import (
     FORMAT_PIXELS,
     FormatId,
     LayoutId,
+    SpotlightModeId,
     SpotlightPresentationId,
     TilesPresentationId,
-    compute_share_summary_stats,
     default_card_stat_labels,
     layout_card_stat_max,
     layout_card_stat_storage_max,
     layout_grid_slot_limits_caption,
     layout_grid_stat_default_count,
     layout_grid_stat_min,
-    period_for_custom,
-    period_for_lifetime,
-    period_for_month,
-    period_for_week_containing,
-    period_for_year,
     render_share_summary_preview_html,
+    resolve_spotlight_fact,
     sample_share_summary_stats,
     summary_status_metrics,
 )
@@ -109,6 +121,8 @@ def _cached_share_summary_png(
     geo_scope: ShareSummaryGeoScope,
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
+    spotlight_mode: SpotlightModeId = "stat",
+    spotlight_fact: ShareSummarySpotlightFact | None = None,
 ) -> bytes:
     del color_scheme_fingerprint  # cache key only — render reads live scheme by index
     return share_summary_to_png_bytes(
@@ -116,6 +130,8 @@ def _cached_share_summary_png(
         layout=layout,
         fmt=fmt,
         spotlight_label=spotlight_label,
+        spotlight_mode=spotlight_mode,
+        spotlight_fact=spotlight_fact,
         card_stat_labels=card_stat_labels,
         all_time=all_time,
         color_scheme_index=color_scheme_index,
@@ -133,6 +149,9 @@ _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
 _TILES_PRESENTATION_KEY = "design_tiles_presentation"
 _SPOTLIGHT_PRESENTATION_KEY = "design_spotlight_presentation"
+_SPOTLIGHT_MODE_KEY = "design_spotlight_mode"
+_SPOTLIGHT_FACT_KEY = "design_spotlight_fact"
+_SPOTLIGHT_SPECIES_KEY = "design_spotlight_species"
 _COLOR_THEME_KEY = "design_color_theme"
 _STATISTICS_LABEL = "Card statistics"
 _CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
@@ -1002,6 +1021,95 @@ def _spotlight_stat_picker(status_metrics: list[tuple[str, str]]) -> None:
     )
 
 
+def _spotlight_mode_from_session() -> SpotlightModeId:
+    raw = st.session_state.get(_SPOTLIGHT_MODE_KEY, SHARE_SUMMARY_SPOTLIGHT_MODE_DEFAULT)
+    return "rich" if raw == "rich" else "stat"
+
+
+def _spotlight_fact_options(
+    facts: list[ShareSummarySpotlightFact],
+    *,
+    species_options: tuple[str, ...] = (),
+) -> list[tuple[SpotlightFactId, str]]:
+    auto_ids: tuple[SpotlightFactId, ...] = (
+        "most_common_checklist_species",
+        "most_individuals_species",
+        "biggest_checklist_count",
+    )
+    options: list[tuple[SpotlightFactId, str]] = []
+    for fact_id in auto_ids:
+        if any(f.fact_id == fact_id for f in facts):
+            options.append((fact_id, SPOTLIGHT_FACT_PICKER_LABELS[fact_id]))
+    if species_options:
+        options.append(("species_individuals", SPOTLIGHT_FACT_PICKER_LABELS["species_individuals"]))
+    return options
+
+
+def _spotlight_fact_id_from_session(options: list[tuple[SpotlightFactId, str]]) -> SpotlightFactId:
+    valid = {fact_id for fact_id, _ in options}
+    raw = st.session_state.get(_SPOTLIGHT_FACT_KEY, SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT)
+    if raw in valid:
+        return raw  # type: ignore[return-value]
+    if SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT in valid:
+        return SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT
+    return options[0][0] if options else SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT
+
+
+def _spotlight_species_from_session(species_options: tuple[str, ...]) -> str:
+    raw = st.session_state.get(_SPOTLIGHT_SPECIES_KEY)
+    if isinstance(raw, str) and raw in species_options:
+        return raw
+    return species_options[0] if species_options else ""
+
+
+def _spotlight_fact_picker_ui(
+    facts: list[ShareSummarySpotlightFact],
+    species_options: tuple[str, ...],
+    *,
+    df: pd.DataFrame,
+    period,
+) -> ShareSummarySpotlightFact | None:
+    """Rich-fact picker; returns the resolved fact for preview/export."""
+    options = _spotlight_fact_options(facts, species_options=species_options)
+    if not options:
+        st.caption("No rich facts available for this period.")
+        return None
+
+    fact_ids = [fact_id for fact_id, _ in options]
+    current_id = _spotlight_fact_id_from_session(options)
+    st.selectbox(
+        "Rich fact",
+        options=fact_ids,
+        format_func=lambda fid: SPOTLIGHT_FACT_PICKER_LABELS[fid],
+        index=fact_ids.index(current_id) if current_id in fact_ids else 0,
+        key=_SPOTLIGHT_FACT_KEY,
+        help="Species- and checklist-derived highlights for Spotlight cards.",
+    )
+    selected_id = _spotlight_fact_id_from_session(options)
+
+    species_common = ""
+    if spotlight_fact_requires_species(selected_id):
+        if not species_options:
+            st.caption("No species in this period for a selected-species fact.")
+            return None
+        species_common = _spotlight_species_from_session(species_options)
+        st.selectbox(
+            "Species",
+            options=list(species_options),
+            index=list(species_options).index(species_common) if species_common else 0,
+            key=_SPOTLIGHT_SPECIES_KEY,
+        )
+        species_common = _spotlight_species_from_session(species_options)
+        refreshed = compute_spotlight_facts(
+            df,
+            period,
+            species_common=species_common,
+        )
+        return resolve_spotlight_fact(refreshed, selected_id)
+
+    return resolve_spotlight_fact(facts, selected_id)
+
+
 def _preview_scale_caption(fmt: FormatId, scale: float) -> str | None:
     """Hint when preview is at or near export pixel size."""
     if scale < _PREVIEW_SCALE_FULL - 0.005:
@@ -1068,12 +1176,30 @@ def _current_card_fragment(
     geo_scope: ShareSummaryGeoScope,
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
+    spotlight_mode: SpotlightModeId = "stat",
+    spotlight_facts: list[ShareSummarySpotlightFact],
+    spotlight_species_options: tuple[str, ...],
+    df_scoped: pd.DataFrame,
+    resolved_period,
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     card_stat_labels: tuple[str, ...] = ()
+    resolved_fact: ShareSummarySpotlightFact | None = None
     with st.expander(_STATISTICS_LABEL, expanded=False):
         if selected_layout == "spotlight":
-            _spotlight_stat_picker(status_metrics)
+            if spotlight_mode == "rich":
+                st.caption(
+                    "Rich facts use a text-first Spotlight layout (classic presentation). "
+                    "Circle presentation applies to statistic mode only."
+                )
+                resolved_fact = _spotlight_fact_picker_ui(
+                    spotlight_facts,
+                    spotlight_species_options,
+                    df=df_scoped,
+                    period=resolved_period,
+                )
+            else:
+                _spotlight_stat_picker(status_metrics)
         else:
             card_stat_labels = _card_stat_picker_ui(
                 selected_layout,
@@ -1097,6 +1223,8 @@ def _current_card_fragment(
             spotlight_presentation=spotlight_presentation,
             scale=scale,
             spotlight_label=spotlight_label,
+            spotlight_mode=spotlight_mode,
+            spotlight_fact=resolved_fact,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
             color_scheme_index=color_scheme_index,
@@ -1121,6 +1249,8 @@ def _current_card_fragment(
             geo_scope,
             tiles_presentation,
             spotlight_presentation,
+            spotlight_mode,
+            resolved_fact,
         )
     except RuntimeError as exc:
         st.warning(str(exc))
@@ -1236,13 +1366,27 @@ with st.sidebar:
         )
     spotlight_presentation: SpotlightPresentationId = "classic"
     if selected_layout == "spotlight":
-        spotlight_presentation = st.radio(
-            "Spotlight presentation",
-            options=["classic", "circle"],
-            format_func=share_summary_spotlight_presentation_label,
-            key=_SPOTLIGHT_PRESENTATION_KEY,
+        st.radio(
+            "Spotlight content",
+            options=["stat", "rich"],
+            format_func=lambda x: "Statistic" if x == "stat" else "Rich fact",
+            key=_SPOTLIGHT_MODE_KEY,
             horizontal=True,
+            help="Statistics use the large-number layout; rich facts highlight species or checklist insights.",
         )
+        spotlight_mode = _spotlight_mode_from_session()
+        if spotlight_mode == "stat":
+            spotlight_presentation = st.radio(
+                "Spotlight presentation",
+                options=["classic", "circle"],
+                format_func=share_summary_spotlight_presentation_label,
+                key=_SPOTLIGHT_PRESENTATION_KEY,
+                horizontal=True,
+            )
+        else:
+            spotlight_presentation = "classic"
+    else:
+        spotlight_mode = "stat"
     fmt: FormatId = st.selectbox(
         "Aspect ratio",
         options=["square", "portrait_post", "story"],
@@ -1375,6 +1519,18 @@ status_metrics = summary_status_metrics(stats, all_time=all_time, geo_scope=geo_
 
 if _SPOTLIGHT_LABEL_KEY not in st.session_state:
     st.session_state[_SPOTLIGHT_LABEL_KEY] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
+if _SPOTLIGHT_MODE_KEY not in st.session_state:
+    st.session_state[_SPOTLIGHT_MODE_KEY] = SHARE_SUMMARY_SPOTLIGHT_MODE_DEFAULT
+if _SPOTLIGHT_FACT_KEY not in st.session_state:
+    st.session_state[_SPOTLIGHT_FACT_KEY] = SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT
+
+spotlight_facts: list[ShareSummarySpotlightFact] = []
+spotlight_species_options: tuple[str, ...] = ()
+if df is not None and resolved_period is not None:
+    spotlight_facts = compute_spotlight_facts(df_scoped, resolved_period)
+    spotlight_species_options = species_common_names_in_period(df_scoped, resolved_period)
+    if spotlight_species_options and _SPOTLIGHT_SPECIES_KEY not in st.session_state:
+        st.session_state[_SPOTLIGHT_SPECIES_KEY] = spotlight_species_options[0]
 
 tab_social_cards, tab_hex_experiments, tab_circle_layout = st.tabs(
     [_SOCIAL_CARDS_TAB_LABEL, _HEX_EXPERIMENTS_TAB_LABEL, _CIRCLE_LAYOUT_TAB_LABEL]
@@ -1418,6 +1574,11 @@ with tab_social_cards:
         geo_scope=geo_scope,
         tiles_presentation=tiles_presentation,
         spotlight_presentation=spotlight_presentation,
+        spotlight_mode=spotlight_mode,
+        spotlight_facts=spotlight_facts,
+        spotlight_species_options=spotlight_species_options,
+        df_scoped=df_scoped,
+        resolved_period=resolved_period,
     )
 
 _DESIGN_HEX_SELECTED_KEY = "design_hex_selected_variant"

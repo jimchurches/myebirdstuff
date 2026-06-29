@@ -45,14 +45,22 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
+    SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     share_summary_card_subtitle,
     share_summary_period_subtitle,
 )
+from explorer.core.share_summary_spotlight_facts import (
+    ShareSummarySpotlightFact,
+    SpotlightFactId,
+    format_spotlight_fact_metric,
+    spotlight_fact_by_id,
+)
 
 TilesPresentationId = Literal["grid", "circles"]
 SpotlightPresentationId = Literal["classic", "circle"]
+SpotlightModeId = Literal["stat", "rich"]
 
 # Statistics Grid rectangular tiles — uniform across square, portrait, and story.
 # At max grid counts (square 6, portrait 8, story 14) this fits 1080×1080 / ×1350 / ×1920;
@@ -848,6 +856,82 @@ def _layout_minimal(
 </div>"""
 
 
+def _layout_spotlight_header_html(stats: ShareSummaryStats) -> str:
+    """Shared period / trip header for classic and rich Spotlight layouts."""
+    if stats.trip_title:
+        return f"""
+<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.06em;text-transform:uppercase;
+  color:{_colour('accent')};font-weight:600;">{_esc(stats.trip_title)}</p>
+<p style="margin:0 0 28px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
+  {_esc(stats.period_label)}</p>"""
+    subtitle = _layout_subtitle(stats, "spotlight")
+    if subtitle:
+        return f"""
+<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase;
+  color:{_colour('accent')};font-weight:600;">{_esc(subtitle)}</p>
+<p style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
+  {_esc(stats.period_label)}</p>"""
+    return f"""
+<p style="margin:0 0 32px;font-size:36px;letter-spacing:0.04em;color:{_colour('accent')};font-weight:600;">
+  {_esc(stats.period_label)}</p>"""
+
+
+def _layout_spotlight_rich(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    spotlight_fact: ShareSummarySpotlightFact,
+    scope_label: str | None = None,
+) -> str:
+    """Rich Spotlight — label, species/text focus, optional metric."""
+    pad_bottom = _footer_pad(fmt, width, height)
+    is_tall = _is_tall(fmt, width, height)
+    label_size = "30px" if is_tall else "26px"
+    primary_size = "88px" if is_tall else "72px"
+    metric_size = "52px" if is_tall else "44px"
+    header_html = _layout_spotlight_header_html(stats)
+    metric = format_spotlight_fact_metric(spotlight_fact)
+    metric_line = ""
+    if metric:
+        # Single-line sibling — indented ``<div>`` after a blank line is parsed as a
+        # Markdown code block by Streamlit and shows raw HTML in the preview.
+        metric_line = (
+            f'<div style="margin-top:16px;font-size:{metric_size};font-weight:700;'
+            f'line-height:1.1;color:{_colour("text")};">{_esc(metric)}</div>'
+        )
+    return f"""
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+  <div style="position:absolute;left:0;right:0;top:0;bottom:{pad_bottom}px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:64px 56px 32px;text-align:center;box-sizing:border-box;">
+    {header_html}
+    <div style="max-width:920px;font-size:{label_size};color:{_colour('muted')};font-weight:500;
+      line-height:1.25;margin-bottom:20px;">{_esc(spotlight_fact.label)}</div>
+    <div style="max-width:920px;font-size:{primary_size};font-weight:800;line-height:1.08;
+      color:{_colour('text')};word-wrap:break-word;">{_esc(spotlight_fact.primary_text)}</div>{metric_line}
+  </div>
+  {_footer_block(scope_label=scope_label)}
+</div>"""
+
+
+def resolve_spotlight_fact(
+    facts: list[ShareSummarySpotlightFact],
+    fact_id: SpotlightFactId | str | None,
+) -> ShareSummarySpotlightFact | None:
+    """Pick a rich fact by id, falling back to the default or first available."""
+    if not facts:
+        return None
+    cleaned = (fact_id or "").strip()
+    if cleaned:
+        found = spotlight_fact_by_id(facts, cleaned)  # type: ignore[arg-type]
+        if found is not None:
+            return found
+    default = spotlight_fact_by_id(facts, SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT)
+    return default or facts[0]
+
+
 def _layout_spotlight(
     stats: ShareSummaryStats,
     width: int,
@@ -872,24 +956,7 @@ def _layout_spotlight(
     pad_bottom = _footer_pad(fmt, width, height)
     num_size = "200px" if _is_tall(fmt, width, height) else "160px"
     label_size = "40px" if _is_tall(fmt, width, height) else "36px"
-    if stats.trip_title:
-        header_html = f"""
-<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.06em;text-transform:uppercase;
-  color:{_colour('accent')};font-weight:600;">{_esc(stats.trip_title)}</p>
-<p style="margin:0 0 28px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
-  {_esc(stats.period_label)}</p>"""
-    else:
-        subtitle = _layout_subtitle(stats, "spotlight")
-        if subtitle:
-            header_html = f"""
-<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase;
-  color:{_colour('accent')};font-weight:600;">{_esc(subtitle)}</p>
-<p style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
-  {_esc(stats.period_label)}</p>"""
-        else:
-            header_html = f"""
-<p style="margin:0 0 32px;font-size:36px;letter-spacing:0.04em;color:{_colour('accent')};font-weight:600;">
-  {_esc(stats.period_label)}</p>"""
+    header_html = _layout_spotlight_header_html(stats)
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
   <div style="position:absolute;left:0;right:0;top:0;bottom:{pad_bottom}px;
@@ -914,6 +981,8 @@ def _card_inner_html(
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
+    spotlight_mode: SpotlightModeId = "stat",
+    spotlight_fact: ShareSummarySpotlightFact | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     geo_scope: ShareSummaryGeoScope | None = None,
@@ -922,33 +991,43 @@ def _card_inner_html(
     """Return (inner HTML, width, height) at export pixel dimensions."""
     width, height = _FORMAT_PX[fmt]
     if layout == "spotlight":
-        label = resolve_spotlight_label(spotlight_label)
-        if spotlight_presentation == "circle":
-            from explorer.presentation.share_summary_circles_preview import (
-                layout_spotlight_circle,
-            )
-
-            inner = layout_spotlight_circle(
+        if spotlight_mode == "rich" and spotlight_fact is not None:
+            inner = _layout_spotlight_rich(
                 stats,
                 width,
                 height,
                 fmt,
-                spotlight_label=label,
-                all_time=all_time,
-                geo_scope=geo_scope,
+                spotlight_fact=spotlight_fact,
                 scope_label=scope_label,
             )
         else:
-            inner = _layout_spotlight(
-                stats,
-                width,
-                height,
-                fmt,
-                spotlight_label=label,
-                all_time=all_time,
-                geo_scope=geo_scope,
-                scope_label=scope_label,
-            )
+            label = resolve_spotlight_label(spotlight_label)
+            if spotlight_presentation == "circle":
+                from explorer.presentation.share_summary_circles_preview import (
+                    layout_spotlight_circle,
+                )
+
+                inner = layout_spotlight_circle(
+                    stats,
+                    width,
+                    height,
+                    fmt,
+                    spotlight_label=label,
+                    all_time=all_time,
+                    geo_scope=geo_scope,
+                    scope_label=scope_label,
+                )
+            else:
+                inner = _layout_spotlight(
+                    stats,
+                    width,
+                    height,
+                    fmt,
+                    spotlight_label=label,
+                    all_time=all_time,
+                    geo_scope=geo_scope,
+                    scope_label=scope_label,
+                )
     elif layout == "tiles" and tiles_presentation == "circles":
         from explorer.presentation.share_summary_circles_preview import (
             layout_tiles_circle_cluster,
@@ -997,6 +1076,8 @@ def render_share_summary_export_html(
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
+    spotlight_mode: SpotlightModeId = "stat",
+    spotlight_fact: ShareSummarySpotlightFact | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
@@ -1012,6 +1093,8 @@ def render_share_summary_export_html(
             tiles_presentation=tiles_presentation,
             spotlight_presentation=spotlight_presentation,
             spotlight_label=spotlight_label,
+            spotlight_mode=spotlight_mode,
+            spotlight_fact=spotlight_fact,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
             geo_scope=geo_scope,
@@ -1053,6 +1136,8 @@ def render_share_summary_preview_html(
     scale: float = 0.38,
     spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
+    spotlight_mode: SpotlightModeId = "stat",
+    spotlight_fact: ShareSummarySpotlightFact | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
@@ -1069,6 +1154,8 @@ def render_share_summary_preview_html(
             tiles_presentation=tiles_presentation,
             spotlight_presentation=spotlight_presentation,
             spotlight_label=spotlight_label,
+            spotlight_mode=spotlight_mode,
+            spotlight_fact=spotlight_fact,
             card_stat_labels=labels,
             all_time=all_time,
             geo_scope=geo_scope,
@@ -1097,6 +1184,8 @@ __all__ = [
     "share_summary_scheme_override",
     "spotlight_pair_for_label",
     "resolve_spotlight_label",
+    "resolve_spotlight_fact",
+    "SpotlightModeId",
     "stat_card_display_label",
     "stat_pairs",
     "summary_status_metrics",
