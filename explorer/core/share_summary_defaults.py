@@ -139,7 +139,7 @@ SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS = 18
 # Display label on spotlight cards (matches Available statistics / card picker).
 SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"
 # Interesting Insights cards (#285): default fact id.
-SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT = "most_common_checklist_species"
+SHARE_SUMMARY_INSIGHT_FACT_DEFAULT = "most_common_checklist_species"
 
 # User-visible layout and presentation names (design studio; future main app).
 SHARE_SUMMARY_LAYOUT_LABELS: dict[str, str] = {

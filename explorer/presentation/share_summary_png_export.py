@@ -12,7 +12,7 @@ import re
 import struct
 from typing import TYPE_CHECKING
 
-from explorer.core.share_summary_spotlight_facts import ShareSummarySpotlightFact
+from explorer.core.share_summary_insight_facts import ShareSummaryInsightFact
 from explorer.presentation.share_summary_preview import (
     _FORMAT_PX,
     FormatId,
@@ -101,7 +101,7 @@ def share_summary_to_png_bytes(
     geo_scope: "ShareSummaryGeoScope | None" = None,
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
-    spotlight_fact: ShareSummarySpotlightFact | None = None,
+    insight_fact: ShareSummaryInsightFact | None = None,
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
     width, height = _FORMAT_PX[fmt]
@@ -113,7 +113,7 @@ def share_summary_to_png_bytes(
         tiles_presentation=tiles_presentation,
         spotlight_presentation=spotlight_presentation,
         spotlight_label=spotlight_label,
-        spotlight_fact=spotlight_fact,
+        insight_fact=insight_fact,
         card_stat_labels=labels,
         all_time=all_time,
         color_scheme_index=color_scheme_index,

@@ -2,7 +2,7 @@
 Interesting Insights card facts for share-summary cards (#285).
 
 Framework-neutral compute: species- and checklist-derived highlights beyond simple
-stat + number pairs. Presentation reads :class:`ShareSummarySpotlightFact` via
+stat + number pairs. Presentation reads :class:`ShareSummaryInsightFact` via
 ``explorer.presentation.share_summary_preview``.
 """
 
@@ -22,37 +22,37 @@ from explorer.core.stats import (
     safe_count,
 )
 
-SpotlightFactId = Literal[
+InsightFactId = Literal[
     "most_common_checklist_species",
     "most_individuals_species",
     "biggest_checklist_count",
     "species_individuals",
 ]
 
-SPOTLIGHT_FACT_PICKER_LABELS: dict[SpotlightFactId, str] = {
+INSIGHT_FACT_PICKER_LABELS: dict[InsightFactId, str] = {
     "most_common_checklist_species": "Most common checklist species",
     "most_individuals_species": "Most individuals of a single species",
     "biggest_checklist_count": "Biggest single-checklist count",
     "species_individuals": "Individuals of selected species",
 }
 
-SPOTLIGHT_FACTS_REQUIRING_SPECIES: frozenset[SpotlightFactId] = frozenset({"species_individuals"})
+INSIGHT_FACTS_REQUIRING_SPECIES: frozenset[InsightFactId] = frozenset({"species_individuals"})
 # Card heading when the species name is the hero line (picker label stays descriptive).
-SPOTLIGHT_SPECIES_INDIVIDUALS_CARD_LABEL = "Species count"
+INSIGHT_SPECIES_INDIVIDUALS_CARD_LABEL = "Species count"
 
 
 @dataclass(frozen=True)
-class ShareSummarySpotlightFact:
+class ShareSummaryInsightFact:
     """One Interesting Insights highlight for a period."""
 
-    fact_id: SpotlightFactId
+    fact_id: InsightFactId
     label: str
     primary_text: str
     metric_value: int | None = None
     metric_unit: str | None = None
 
 
-def format_spotlight_fact_metric(fact: ShareSummarySpotlightFact) -> str | None:
+def format_insight_fact_metric(fact: ShareSummaryInsightFact) -> str | None:
     """Formatted optional number line, e.g. ``3,999 checklists``."""
     if fact.metric_value is None:
         return None
@@ -62,8 +62,8 @@ def format_spotlight_fact_metric(fact: ShareSummarySpotlightFact) -> str | None:
     return formatted
 
 
-def spotlight_fact_requires_species(fact_id: SpotlightFactId) -> bool:
-    return fact_id in SPOTLIGHT_FACTS_REQUIRING_SPECIES
+def insight_fact_requires_species(fact_id: InsightFactId) -> bool:
+    return fact_id in INSIGHT_FACTS_REQUIRING_SPECIES
 
 
 def species_common_names_in_period(df: pd.DataFrame, period: ShareSummaryPeriod) -> tuple[str, ...]:
@@ -83,24 +83,24 @@ def species_common_names_in_period(df: pd.DataFrame, period: ShareSummaryPeriod)
     return tuple(sorted(names, key=str.lower))
 
 
-def compute_spotlight_facts(
+def compute_insight_facts(
     df: pd.DataFrame,
     period: ShareSummaryPeriod,
     *,
     species_common: str | None = None,
-) -> list[ShareSummarySpotlightFact]:
+) -> list[ShareSummaryInsightFact]:
     """Compute auto insight facts for *period*; optional species fact when *species_common* set."""
     obs = _observations_in_period(df, period)
-    facts: list[ShareSummarySpotlightFact] = []
+    facts: list[ShareSummaryInsightFact] = []
 
     checklist_rows = rankings_by_checklists(obs, limit=1)
     if checklist_rows:
         name, _, count_str = checklist_rows[0]
         count = _parse_int(count_str)
         facts.append(
-            ShareSummarySpotlightFact(
+            ShareSummaryInsightFact(
                 fact_id="most_common_checklist_species",
-                label=SPOTLIGHT_FACT_PICKER_LABELS["most_common_checklist_species"],
+                label=INSIGHT_FACT_PICKER_LABELS["most_common_checklist_species"],
                 primary_text=name,
                 metric_value=count,
                 metric_unit="checklists",
@@ -112,9 +112,9 @@ def compute_spotlight_facts(
         name, _, count_str = individual_rows[0]
         count = _parse_int(count_str)
         facts.append(
-            ShareSummarySpotlightFact(
+            ShareSummaryInsightFact(
                 fact_id="most_individuals_species",
-                label=SPOTLIGHT_FACT_PICKER_LABELS["most_individuals_species"],
+                label=INSIGHT_FACT_PICKER_LABELS["most_individuals_species"],
                 primary_text=name,
                 metric_value=count,
                 metric_unit="individuals",
@@ -126,9 +126,9 @@ def compute_spotlight_facts(
         name, *_rest, count_str = high_count_rows[0]
         count = _parse_int(count_str)
         facts.append(
-            ShareSummarySpotlightFact(
+            ShareSummaryInsightFact(
                 fact_id="biggest_checklist_count",
-                label=SPOTLIGHT_FACT_PICKER_LABELS["biggest_checklist_count"],
+                label=INSIGHT_FACT_PICKER_LABELS["biggest_checklist_count"],
                 primary_text=name,
                 metric_value=count,
                 metric_unit="on one checklist",
@@ -144,10 +144,10 @@ def compute_spotlight_facts(
     return facts
 
 
-def spotlight_fact_by_id(
-    facts: list[ShareSummarySpotlightFact],
-    fact_id: SpotlightFactId,
-) -> ShareSummarySpotlightFact | None:
+def insight_fact_by_id(
+    facts: list[ShareSummaryInsightFact],
+    fact_id: InsightFactId,
+) -> ShareSummaryInsightFact | None:
     for fact in facts:
         if fact.fact_id == fact_id:
             return fact
@@ -172,7 +172,7 @@ def _parse_int(text: str) -> int | None:
         return None
 
 
-def _species_individuals_fact(obs: pd.DataFrame, species_common: str) -> ShareSummarySpotlightFact | None:
+def _species_individuals_fact(obs: pd.DataFrame, species_common: str) -> ShareSummaryInsightFact | None:
     if obs.empty:
         return None
     target = species_common.casefold()
@@ -189,9 +189,9 @@ def _species_individuals_fact(obs: pd.DataFrame, species_common: str) -> ShareSu
         matched["Common Name"].dropna().astype(str).str.strip().value_counts().index[0]
     )
     total = int(matched["Count"].apply(safe_count).sum())
-    return ShareSummarySpotlightFact(
+    return ShareSummaryInsightFact(
         fact_id="species_individuals",
-        label=SPOTLIGHT_SPECIES_INDIVIDUALS_CARD_LABEL,
+        label=INSIGHT_SPECIES_INDIVIDUALS_CARD_LABEL,
         primary_text=str(display_name),
         metric_value=total,
         metric_unit="individuals",

@@ -223,9 +223,9 @@ def test_spotlight_layout_renders():
     assert "Lifers" in html
 
 
-def test_insight_layout_requires_spotlight_fact():
+def test_insight_layout_requires_insight_fact():
     stats = ShareSummaryStats(period_label="2025", period_kind="year")
-    with pytest.raises(ValueError, match="spotlight_fact is required"):
+    with pytest.raises(ValueError, match="insight_fact is required"):
         render_share_summary_preview_html(stats, layout="insight")
 
 

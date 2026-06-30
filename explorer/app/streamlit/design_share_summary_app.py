@@ -48,7 +48,7 @@ from explorer.core.share_summary_compute import (
 )
 from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_COLOR_SCHEME_IDS,
-    SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT,
+    SHARE_SUMMARY_INSIGHT_FACT_DEFAULT,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
     SHARE_SUMMARY_STORY_MAX_STATS,
     share_summary_color_scheme_fingerprint,
@@ -58,13 +58,13 @@ from explorer.core.share_summary_defaults import (
     share_summary_spotlight_presentation_label,
     share_summary_tiles_presentation_label,
 )
-from explorer.core.share_summary_spotlight_facts import (
-    SPOTLIGHT_FACT_PICKER_LABELS,
-    ShareSummarySpotlightFact,
-    SpotlightFactId,
-    compute_spotlight_facts,
+from explorer.core.share_summary_insight_facts import (
+    INSIGHT_FACT_PICKER_LABELS,
+    InsightFactId,
+    ShareSummaryInsightFact,
+    compute_insight_facts,
+    insight_fact_requires_species,
     species_common_names_in_period,
-    spotlight_fact_requires_species,
 )
 from explorer.presentation.share_summary_circle_layout_playground import (
     CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX,
@@ -99,7 +99,7 @@ from explorer.presentation.share_summary_preview import (
     layout_grid_stat_default_count,
     layout_grid_stat_min,
     render_share_summary_preview_html,
-    resolve_spotlight_fact,
+    resolve_insight_fact,
     sample_share_summary_stats,
     summary_status_metrics,
 )
@@ -119,7 +119,7 @@ def _cached_share_summary_png(
     geo_scope: ShareSummaryGeoScope,
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
-    spotlight_fact: ShareSummarySpotlightFact | None = None,
+    insight_fact: ShareSummaryInsightFact | None = None,
 ) -> bytes:
     del color_scheme_fingerprint  # cache key only — render reads live scheme by index
     return share_summary_to_png_bytes(
@@ -127,7 +127,7 @@ def _cached_share_summary_png(
         layout=layout,
         fmt=fmt,
         spotlight_label=spotlight_label,
-        spotlight_fact=spotlight_fact,
+        insight_fact=insight_fact,
         card_stat_labels=card_stat_labels,
         all_time=all_time,
         color_scheme_index=color_scheme_index,
@@ -145,8 +145,8 @@ _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
 _TILES_PRESENTATION_KEY = "design_tiles_presentation"
 _SPOTLIGHT_PRESENTATION_KEY = "design_spotlight_presentation"
-_SPOTLIGHT_FACT_KEY = "design_spotlight_fact"
-_SPOTLIGHT_SPECIES_KEY = "design_spotlight_species"
+_INSIGHT_FACT_KEY = "design_insight_fact"
+_INSIGHT_SPECIES_KEY = "design_insight_species"
 _COLOR_THEME_KEY = "design_color_theme"
 _STATISTICS_LABEL = "Card statistics"
 _CARD_STATS_SLOT_COUNT_PREFIX = "design_card_stat_slot_count_"
@@ -1016,88 +1016,88 @@ def _spotlight_stat_picker(status_metrics: list[tuple[str, str]]) -> None:
     )
 
 
-def _spotlight_fact_options(
-    facts: list[ShareSummarySpotlightFact],
+def _insight_fact_options(
+    facts: list[ShareSummaryInsightFact],
     *,
     species_options: tuple[str, ...] = (),
-) -> list[tuple[SpotlightFactId, str]]:
-    auto_ids: tuple[SpotlightFactId, ...] = (
+) -> list[tuple[InsightFactId, str]]:
+    auto_ids: tuple[InsightFactId, ...] = (
         "most_common_checklist_species",
         "most_individuals_species",
         "biggest_checklist_count",
     )
-    options: list[tuple[SpotlightFactId, str]] = []
+    options: list[tuple[InsightFactId, str]] = []
     for fact_id in auto_ids:
         if any(f.fact_id == fact_id for f in facts):
-            options.append((fact_id, SPOTLIGHT_FACT_PICKER_LABELS[fact_id]))
+            options.append((fact_id, INSIGHT_FACT_PICKER_LABELS[fact_id]))
     if species_options:
-        options.append(("species_individuals", SPOTLIGHT_FACT_PICKER_LABELS["species_individuals"]))
+        options.append(("species_individuals", INSIGHT_FACT_PICKER_LABELS["species_individuals"]))
     return options
 
 
-def _spotlight_fact_id_from_session(options: list[tuple[SpotlightFactId, str]]) -> SpotlightFactId:
+def _insight_fact_id_from_session(options: list[tuple[InsightFactId, str]]) -> InsightFactId:
     valid = {fact_id for fact_id, _ in options}
-    raw = st.session_state.get(_SPOTLIGHT_FACT_KEY, SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT)
+    raw = st.session_state.get(_INSIGHT_FACT_KEY, SHARE_SUMMARY_INSIGHT_FACT_DEFAULT)
     if raw in valid:
         return raw  # type: ignore[return-value]
-    if SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT in valid:
-        return SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT
-    return options[0][0] if options else SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT
+    if SHARE_SUMMARY_INSIGHT_FACT_DEFAULT in valid:
+        return SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
+    return options[0][0] if options else SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
 
 
-def _spotlight_species_from_session(species_options: tuple[str, ...]) -> str:
-    raw = st.session_state.get(_SPOTLIGHT_SPECIES_KEY)
+def _insight_species_from_session(species_options: tuple[str, ...]) -> str:
+    raw = st.session_state.get(_INSIGHT_SPECIES_KEY)
     if isinstance(raw, str) and raw in species_options:
         return raw
     return species_options[0] if species_options else ""
 
 
-def _spotlight_fact_picker_ui(
-    facts: list[ShareSummarySpotlightFact],
+def _insight_fact_picker_ui(
+    facts: list[ShareSummaryInsightFact],
     species_options: tuple[str, ...],
     *,
     df: pd.DataFrame,
     period,
-) -> ShareSummarySpotlightFact | None:
+) -> ShareSummaryInsightFact | None:
     """Insights fact picker; returns the resolved fact for preview/export."""
-    options = _spotlight_fact_options(facts, species_options=species_options)
+    options = _insight_fact_options(facts, species_options=species_options)
     if not options:
         st.caption("No insights available for this period.")
         return None
 
     fact_ids = [fact_id for fact_id, _ in options]
-    current_id = _spotlight_fact_id_from_session(options)
+    current_id = _insight_fact_id_from_session(options)
     st.selectbox(
         "Insights",
         options=fact_ids,
-        format_func=lambda fid: SPOTLIGHT_FACT_PICKER_LABELS[fid],
+        format_func=lambda fid: INSIGHT_FACT_PICKER_LABELS[fid],
         index=fact_ids.index(current_id) if current_id in fact_ids else 0,
-        key=_SPOTLIGHT_FACT_KEY,
+        key=_INSIGHT_FACT_KEY,
         help="Species- and checklist-derived highlights for Interesting Insights cards.",
     )
-    selected_id = _spotlight_fact_id_from_session(options)
+    selected_id = _insight_fact_id_from_session(options)
 
     species_common = ""
-    if spotlight_fact_requires_species(selected_id):
+    if insight_fact_requires_species(selected_id):
         if not species_options:
             st.caption("No species in this period for a selected-species fact.")
             return None
-        species_common = _spotlight_species_from_session(species_options)
+        species_common = _insight_species_from_session(species_options)
         st.selectbox(
             "Species",
             options=list(species_options),
             index=list(species_options).index(species_common) if species_common else 0,
-            key=_SPOTLIGHT_SPECIES_KEY,
+            key=_INSIGHT_SPECIES_KEY,
         )
-        species_common = _spotlight_species_from_session(species_options)
-        refreshed = compute_spotlight_facts(
+        species_common = _insight_species_from_session(species_options)
+        refreshed = compute_insight_facts(
             df,
             period,
             species_common=species_common,
         )
-        return resolve_spotlight_fact(refreshed, selected_id)
+        return resolve_insight_fact(refreshed, selected_id)
 
-    return resolve_spotlight_fact(facts, selected_id)
+    return resolve_insight_fact(facts, selected_id)
 
 
 def _preview_scale_caption(fmt: FormatId, scale: float) -> str | None:
@@ -1166,21 +1166,21 @@ def _current_card_fragment(
     geo_scope: ShareSummaryGeoScope,
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
-    spotlight_facts: list[ShareSummarySpotlightFact],
-    spotlight_species_options: tuple[str, ...],
+    insight_facts: list[ShareSummaryInsightFact],
+    insight_species_options: tuple[str, ...],
     df_scoped: pd.DataFrame,
     resolved_period,
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     card_stat_labels: tuple[str, ...] = ()
-    resolved_fact: ShareSummarySpotlightFact | None = None
+    resolved_fact: ShareSummaryInsightFact | None = None
     with st.expander(_STATISTICS_LABEL, expanded=False):
         if selected_layout == "spotlight":
             _spotlight_stat_picker(status_metrics)
         elif selected_layout == "insight":
-            resolved_fact = _spotlight_fact_picker_ui(
-                spotlight_facts,
-                spotlight_species_options,
+            resolved_fact = _insight_fact_picker_ui(
+                insight_facts,
+                insight_species_options,
                 df=df_scoped,
                 period=resolved_period,
             )
@@ -1207,7 +1207,7 @@ def _current_card_fragment(
             spotlight_presentation=spotlight_presentation,
             scale=scale,
             spotlight_label=spotlight_label,
-            spotlight_fact=resolved_fact,
+            insight_fact=resolved_fact,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
             color_scheme_index=color_scheme_index,
@@ -1487,16 +1487,16 @@ status_metrics = summary_status_metrics(stats, all_time=all_time, geo_scope=geo_
 
 if _SPOTLIGHT_LABEL_KEY not in st.session_state:
     st.session_state[_SPOTLIGHT_LABEL_KEY] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
-if _SPOTLIGHT_FACT_KEY not in st.session_state:
-    st.session_state[_SPOTLIGHT_FACT_KEY] = SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT
+if _INSIGHT_FACT_KEY not in st.session_state:
+    st.session_state[_INSIGHT_FACT_KEY] = SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
 
-spotlight_facts: list[ShareSummarySpotlightFact] = []
-spotlight_species_options: tuple[str, ...] = ()
+insight_facts: list[ShareSummaryInsightFact] = []
+insight_species_options: tuple[str, ...] = ()
 if df is not None and resolved_period is not None:
-    spotlight_facts = compute_spotlight_facts(df_scoped, resolved_period)
-    spotlight_species_options = species_common_names_in_period(df_scoped, resolved_period)
-    if spotlight_species_options and _SPOTLIGHT_SPECIES_KEY not in st.session_state:
-        st.session_state[_SPOTLIGHT_SPECIES_KEY] = spotlight_species_options[0]
+    insight_facts = compute_insight_facts(df_scoped, resolved_period)
+    insight_species_options = species_common_names_in_period(df_scoped, resolved_period)
+    if insight_species_options and _INSIGHT_SPECIES_KEY not in st.session_state:
+        st.session_state[_INSIGHT_SPECIES_KEY] = insight_species_options[0]
 
 tab_social_cards, tab_hex_experiments, tab_circle_layout = st.tabs(
     [
@@ -1544,8 +1544,8 @@ with tab_social_cards:
         geo_scope=geo_scope,
         tiles_presentation=tiles_presentation,
         spotlight_presentation=spotlight_presentation,
-        spotlight_facts=spotlight_facts,
-        spotlight_species_options=spotlight_species_options,
+        insight_facts=insight_facts,
+        insight_species_options=insight_species_options,
         df_scoped=df_scoped,
         resolved_period=resolved_period,
     )
