@@ -16,8 +16,8 @@ def test_rich_fact_layout_spec_shared_typography():
 
 
 def test_rich_fact_layout_spec_block_offset_by_format():
-    assert rich_fact_layout_spec("square").block_offset_y_px == -20
-    assert rich_fact_layout_spec("portrait_post").block_offset_y_px == -50
+    assert rich_fact_layout_spec("square").block_offset_y_px == -110
+    assert rich_fact_layout_spec("portrait_post").block_offset_y_px == -160
     assert rich_fact_layout_spec("story").block_offset_y_px == -220
 
 

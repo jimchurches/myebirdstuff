@@ -80,7 +80,7 @@ def _portrait_spec() -> RichFactLayoutSpec:
         label=label,
         primary=primary,
         metric=metric,
-        block_offset_y_px=-50,
+        block_offset_y_px=-160,
     )
 
 
@@ -90,7 +90,7 @@ def _square_spec() -> RichFactLayoutSpec:
         label=label,
         primary=primary,
         metric=metric,
-        block_offset_y_px=-20,
+        block_offset_y_px=-110,
     )
 
 
