@@ -5,20 +5,23 @@ You are creating a new local development branch for **myebirdstuff**, following 
 ## Branching model (important)
 
 - `main` = stable / current beta (live)
-- `beta-next` = integration branch for the upcoming release
-- New feature/fix work should branch from **`beta-next`** unless the user explicitly names another base (e.g. a hotfix from `main`)
+- `beta-next` = default integration branch for the upcoming release
+- **Feature integration lines** (e.g. `feat/social-cards`) are valid bases when an issue or workflow says so
+- New feature/fix work branches from the **resolved base** — see **[base branch resolution](base-branch-resolution.md)**
 
-This matches **Commit work**, **Open PR**, and **Merge PR** in this repo.
+This matches **Start issue work**, **Open PR**, **Merge PR**, and **Finish issue work** in this repo.
 
 ---
 
 ## Step 1 — Confirm inputs
 
-From the user (or infer only when obvious, e.g. from an open issue in context):
+From the user (or infer from an open issue in context):
 
 1. **GitHub issue number** (optional)
 2. **Short description** — slug-style: lowercase words separated by hyphens
-3. **Base branch** (optional) — default **`beta-next`**
+3. **Base branch** — resolve using **[base branch resolution](base-branch-resolution.md)** when an issue number is known; default **`beta-next`** only when no issue and no override
+
+If `/start-issue-work` (or the user) already resolved the base, **use that value** — do not reset to `beta-next`.
 
 If there is no issue number, omit it from the branch name (do not invent a number).
 

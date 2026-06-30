@@ -5,8 +5,8 @@ You are creating a git commit for **myebirdstuff** following this repo’s workf
 ## Branching model (important)
 
 - `main` = stable / current beta (live)
-- `beta-next` = integration branch for upcoming release
-- Feature/bug branches are normally created from `beta-next`
+- `beta-next` = default integration branch for upcoming release
+- Feature/bug branches are normally created from `beta-next`; other bases (e.g. feature lines) — see **[base branch resolution](base-branch-resolution.md)**
 - Most work should be committed on an issue/feature branch, not directly on `main` or `beta-next`
 
 If the current branch is `main` or `beta-next`, stop and ask before committing unless the user explicitly says this is intentional.
