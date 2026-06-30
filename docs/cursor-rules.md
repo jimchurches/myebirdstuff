@@ -19,6 +19,7 @@ Design principle: rules are a **thin routing layer**. Detailed guidance stays in
 | `streamlit-ui-thin.mdc` | `explorer/app/**/*.py` | UI layer only; **`defaults.py` for tunables**; constants locations; tests in core not Streamlit |
 | `map-and-cache.mdc` | Map component, GeoJSON, prep, map presentation, Leaflet export | Static dataframe, LRU cache, committed frontend build, no Folium |
 | `tests.mdc` | `tests/**/*.py` | Behaviour-focused tests; markers; venv/CI parity |
+| `share-summary.mdc` | `**/share_summary*.py`, `design_share_summary_app.py` | Layout slot limits, defaults routing, design-app workflow — **Social Cards / feature-line** (on `feat/social-cards`, not part of the minimal `beta-next` v1 set) |
 
 ---
 
@@ -40,11 +41,13 @@ Markdown body — keep short; link to docs.
 
 ## When to add more rules
 
-Add a new rule when the **same agent mistake happens twice**, or when a feature area needs repeated “read doc X first” routing (e.g. share-summary slot limits on the Social Cards line).
+Add a new rule when the **same agent mistake happens twice**, or when a feature area needs repeated “read doc X first” routing.
+
+**`share-summary.mdc`** is the example: added on `feat/social-cards` for active Social Cards work; merge to `beta-next` when that line lands if the rule should persist repo-wide.
 
 Prefer **`globs`** over **`alwaysApply`** — always-on rules consume context budget. Reserve `alwaysApply: true` for universal guardrails (currently only `project-context.mdc`).
 
-**Social Cards / feature lines:** base branch and PR target are resolved by `/start-issue-work` and [base-branch-resolution.md](../.cursor/commands/base-branch-resolution.md), not by rules (rules cannot read git branch). File-scoped rules for share-summary paths may be added on `feat/social-cards` when that work is active.
+**Social Cards / feature lines:** base branch and PR target are resolved by `/start-issue-work` and [base-branch-resolution.md](../.cursor/commands/base-branch-resolution.md), not by rules (rules cannot read git branch). File-scoped rules such as `share-summary.mdc` live on the feature line until Social Cards merges to `beta-next`.
 
 ---
 
