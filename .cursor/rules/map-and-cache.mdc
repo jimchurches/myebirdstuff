@@ -1,6 +1,6 @@
 ---
 description: Map stack and caching — Leaflet component, GeoJSON builders, static dataframe assumptions
-globs: explorer/components/all_locations_map/**,explorer/core/*_locations_geojson.py,explorer/core/map_*.py,explorer/app/streamlit/app_prep_map*.py,explorer/presentation/leaflet*.py
+globs: explorer/components/all_locations_map/**,explorer/core/*_locations_geojson.py,explorer/core/map_*.py,explorer/app/streamlit/app_prep_map*.py,explorer/presentation/map_*.py,explorer/presentation/leaflet*.py
 alwaysApply: false
 ---
 

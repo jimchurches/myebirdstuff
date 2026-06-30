@@ -17,7 +17,7 @@ Design principle: rules are a **thin routing layer**. Detailed guidance stays in
 | `project-context.mdc` | **Always** (`alwaysApply: true`) | Read `AI_CONTEXT` before architectural changes; one-issue scope; no drive-by fixes; rules vs commands |
 | `python-style.mdc` | `explorer/**/*.py` | Link to `docs/python-style-guide.md`; touch-only style improvements |
 | `streamlit-ui-thin.mdc` | `explorer/app/**/*.py` | UI layer only; **`defaults.py` for tunables**; constants locations; tests in core not Streamlit |
-| `map-and-cache.mdc` | Map component, GeoJSON, prep, Leaflet export | Static dataframe, LRU cache, committed frontend build, no Folium |
+| `map-and-cache.mdc` | Map component, GeoJSON, prep, map presentation, Leaflet export | Static dataframe, LRU cache, committed frontend build, no Folium |
 | `tests.mdc` | `tests/**/*.py` | Behaviour-focused tests; markers; venv/CI parity |
 
 ---
