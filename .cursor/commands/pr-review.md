@@ -8,7 +8,7 @@ Every `/pr-review` run includes a **Test Integrity Sentinel** triage. The parent
 
 | | `/pr-review` | `/code-review` |
 |---|---|---|
-| **Scope** | One issue + one PR diff vs `beta-next` | Whole change set; architecture and cross-cutting concerns |
+| **Scope** | One issue + one PR diff vs **merge target** (often `beta-next`; may be a feature line) | Whole change set; architecture and cross-cutting concerns |
 | **When** | Small fixes, pre-merge sanity check | Before opening/updating a large PR, or multi-file behaviour changes |
 | **Fixes during review** | Apply minor, low-risk nits without asking; allow Sentinel to strengthen in-scope tests | Default to listing gaps; only trivial fixes if the author wants them in-session |
 
@@ -32,19 +32,38 @@ For **myebirdstuff**, skim `docs/AI_CONTEXT.md` for repo guardrails (Streamlit v
 
 ---
 
-## Step 2 — Establish the diff (vs `beta-next`)
+## Step 2 — Establish the diff (vs merge target)
 
-Review **only** what the PR changes relative to the merge target.
+Review **only** what the PR changes relative to its **merge target** — not always `beta-next`. On feature-line work (e.g. Social Cards), the target is often `feat/social-cards`; diffing against `beta-next` would include unrelated feature-line history.
+
+### Resolve merge target
+
+1. **PR exists:** read `baseRefName` from `gh pr view <pr-number> --json baseRefName,headRefName,title`.
+2. **No PR yet:** apply **[base branch resolution](base-branch-resolution.md)** from the linked issue (PR target = merge target for review).
+3. **Default:** `beta-next` when nothing else applies.
+
+State the resolved merge target in the review output.
+
+### Get the diff
+
+**Prefer** `gh pr diff` when a PR number is known — it always matches the PR’s base:
 
 ```bash
 git fetch origin
-git diff origin/beta-next...HEAD
-# or, when reviewing a remote PR without checkout:
 gh pr diff <pr-number>
 ```
 
+When there is no PR, or you need a local three-dot diff:
+
+```bash
+git fetch origin
+git diff origin/<merge-target>...HEAD
+```
+
+Replace `<merge-target>` with the resolved base (e.g. `beta-next`, `feat/social-cards`).
+
 - Do **not** expand scope to unrelated files or prior commits on the branch unless they are part of this PR’s diff.
-- If the PR targets a base other than `beta-next`, use that base instead and say so in the output.
+- Do **not** default to `origin/beta-next...HEAD` when the PR targets another base.
 
 ---
 
