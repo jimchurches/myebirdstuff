@@ -922,18 +922,19 @@ def _layout_spotlight_rich(
             f"background:linear-gradient(145deg,{tile_bg_alt},{tile_bg});"
             f"border:1px solid {tile_border};text-align:center;"
         )
-    inner_block = f"""
-      <div class="rich-label" style="{label_css}">{_esc(spotlight_fact.label)}</div>
-      <div class="rich-primary" style="{primary_css};word-wrap:break-word;">{_esc(spotlight_fact.primary_text)}</div>{metric_line}"""
+    inner_block = (
+        f'<div class="rich-label" style="{label_css}">{_esc(spotlight_fact.label)}</div>'
+        f'<div class="rich-primary" style="{primary_css};word-wrap:break-word;">'
+        f"{_esc(spotlight_fact.primary_text)}</div>{metric_line}"
+    )
     if tile_css:
         inner_block = f'<div style="{tile_css}">{inner_block}</div>'
     return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;display:flex;flex-direction:column;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
-  <div style="padding:8px 48px {pad_bottom}px;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;text-align:center;box-sizing:border-box;">
-    <div style="max-width:{spec.max_width_px}px;width:100%;{transform}">{inner_block}
-    </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:8px 48px {pad_bottom}px;text-align:center;box-sizing:border-box;min-height:0;">
+    <div style="max-width:{spec.max_width_px}px;width:100%;{transform}">{inner_block}</div>
   </div>
   {_footer_block(scope_label=scope_label)}
 </div>"""

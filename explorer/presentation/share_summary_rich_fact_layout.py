@@ -1,7 +1,7 @@
 """
 Typography and vertical placement for rich Spotlight fact cards (#285).
 
-Tunable via ``share_summary_rich_fact_layout_playground.py`` in the design studio.
+Tunable layout specs for rich Spotlight fact cards (#285).
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ def _story_spec() -> RichFactLayoutSpec:
         label=label,
         primary=primary,
         metric=metric,
-        block_offset_y_px=0,
+        block_offset_y_px=-220,
     )
 
 
@@ -80,7 +80,7 @@ def _portrait_spec() -> RichFactLayoutSpec:
         label=label,
         primary=primary,
         metric=metric,
-        block_offset_y_px=0,
+        block_offset_y_px=-50,
     )
 
 
@@ -90,7 +90,7 @@ def _square_spec() -> RichFactLayoutSpec:
         label=label,
         primary=primary,
         metric=metric,
-        block_offset_y_px=-280,
+        block_offset_y_px=-20,
     )
 
 

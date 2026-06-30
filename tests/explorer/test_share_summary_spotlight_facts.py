@@ -145,7 +145,10 @@ def test_spotlight_rich_story_header_matches_tiles():
     )
     rich_header_end = rich.index("</h1>") + len("</h1>")
     tiles_header_end = tiles.index("</h1>") + len("</h1>")
-    assert rich[:rich_header_end] == tiles[:tiles_header_end]
+    header_marker = '<div style="padding:48px 56px 24px;text-align:center;">'
+    rich_header = rich[rich.index(header_marker) : rich_header_end]
+    tiles_header = tiles[tiles.index(header_marker) : tiles_header_end]
+    assert rich_header == tiles_header
 
 
 def test_resolve_spotlight_fact_falls_back_to_default():
