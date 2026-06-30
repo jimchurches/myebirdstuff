@@ -23,6 +23,12 @@ Slash commands in `.cursor/commands/` automate git and GitHub workflow. Key comm
 
 **Base branch resolution:** Commands share logic in [`.cursor/commands/base-branch-resolution.md`](../.cursor/commands/base-branch-resolution.md). When a GitHub issue includes `## Base branch` / `## PR target`, commands read the issue via `gh issue view` instead of defaulting to `beta-next`. Feature-line work (e.g. Social Cards on `feat/social-cards`) is documented in `docs/explorer/social-cards-workflow.md` when present on that branch.
 
+## Cursor project rules
+
+**Rules** in [`.cursor/rules/`](../.cursor/rules/) are persistent instructions injected automatically into Agent/Chat (by file `globs` or `alwaysApply`). They complement commands above: rules = instincts, commands = workflows.
+
+See **[cursor-rules.md](cursor-rules.md)** for the v1 rule set, format, and when to add more.
+
 ---
 
 # Overview
