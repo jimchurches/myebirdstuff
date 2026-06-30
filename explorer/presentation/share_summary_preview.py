@@ -888,7 +888,7 @@ def _layout_insight(
     spotlight_fact: ShareSummarySpotlightFact,
     scope_label: str | None = None,
 ) -> str:
-    """Interesting Insight — label, species/text focus, optional metric."""
+    """Interesting Insights — label, species/text focus, optional metric."""
     pad_bottom = _footer_pad(fmt, width, height)
     spec = rich_fact_layout_spec(fmt)
     metric = format_spotlight_fact_metric(spotlight_fact)

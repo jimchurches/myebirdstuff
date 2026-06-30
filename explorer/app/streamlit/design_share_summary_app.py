@@ -1059,7 +1059,7 @@ def _spotlight_fact_picker_ui(
     df: pd.DataFrame,
     period,
 ) -> ShareSummarySpotlightFact | None:
-    """Insight fact picker; returns the resolved fact for preview/export."""
+    """Insights fact picker; returns the resolved fact for preview/export."""
     options = _spotlight_fact_options(facts, species_options=species_options)
     if not options:
         st.caption("No rich facts available for this period.")
@@ -1068,12 +1068,12 @@ def _spotlight_fact_picker_ui(
     fact_ids = [fact_id for fact_id, _ in options]
     current_id = _spotlight_fact_id_from_session(options)
     st.selectbox(
-        "Insight",
+        "Insights",
         options=fact_ids,
         format_func=lambda fid: SPOTLIGHT_FACT_PICKER_LABELS[fid],
         index=fact_ids.index(current_id) if current_id in fact_ids else 0,
         key=_SPOTLIGHT_FACT_KEY,
-        help="Species- and checklist-derived highlights for Interesting Insight cards.",
+        help="Species- and checklist-derived highlights for Interesting Insights cards.",
     )
     selected_id = _spotlight_fact_id_from_session(options)
 

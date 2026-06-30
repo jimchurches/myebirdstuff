@@ -138,7 +138,7 @@ SHARE_SUMMARY_GRID_STORY_DEFAULT_SLOT_COUNT = 6
 SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS = 18
 # Display label on spotlight cards (matches Available statistics / card picker).
 SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT = "Lifers"
-# Interesting Insight cards (#285): default fact id.
+# Interesting Insights cards (#285): default fact id.
 SHARE_SUMMARY_SPOTLIGHT_FACT_DEFAULT = "most_common_checklist_species"
 
 # User-visible layout and presentation names (design studio; future main app).
@@ -146,7 +146,7 @@ SHARE_SUMMARY_LAYOUT_LABELS: dict[str, str] = {
     "tiles": "Statistics Tiles",
     "minimal": "Statistics List",
     "spotlight": "Spotlight",
-    "insight": "Interesting Insight",
+    "insight": "Interesting Insights",
 }
 SHARE_SUMMARY_TILES_PRESENTATION_LABELS: dict[str, str] = {
     "grid": "Statistics Grid",
