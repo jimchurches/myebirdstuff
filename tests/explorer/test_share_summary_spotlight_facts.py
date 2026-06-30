@@ -114,6 +114,7 @@ def test_spotlight_rich_layout_renders():
     assert "Most common checklist species" in html
     assert "Australian Magpie" in html
     assert "3,999 checklists" in html
+    assert "linear-gradient(145deg" in html
     assert "<pre>" not in html.lower()
     assert "&lt;div" not in html
 

@@ -35,6 +35,7 @@ class RichFactLayoutSpec:
     metric: RichFactLineStyle
     block_offset_y_px: int = 0
     max_width_px: int = 920
+    tile_frame: bool = True
 
 
 def _shared_rich_fact_line_styles() -> tuple[RichFactLineStyle, RichFactLineStyle, RichFactLineStyle]:

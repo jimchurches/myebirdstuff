@@ -92,6 +92,7 @@ def _spec_to_playground_dict(fmt: FormatId) -> dict[str, object]:
         },
         "blockOffsetY": spec.block_offset_y_px,
         "maxWidth": spec.max_width_px,
+        "tileFrame": spec.tile_frame,
     }
 
 
@@ -412,7 +413,7 @@ const BOOT = {bootstrap};
   const formatIds = Object.keys(formats);
   let fmt = "story";
   let sampleKey = "most_common";
-  let tileFrame = false;
+  let tileFrame = formats[fmt].defaults.tileFrame !== false;
   let state = cloneState(formats[fmt].defaults);
 
   const els = {{
@@ -615,6 +616,7 @@ const BOOT = {bootstrap};
       "        margin_top_px=" + (state.metric.marginTop || 0) + ",",
       "    ),",
       "    block_offset_y_px=" + state.blockOffsetY + ",",
+      "    tile_frame=True,",
       ")",
       "",
       "# " + mode.label + " · " + sampleKey,

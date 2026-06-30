@@ -25,6 +25,11 @@ def test_rich_fact_layout_spec_block_offset_by_format():
     assert rich_fact_layout_spec("story").block_offset_y_px == 0
 
 
+def test_rich_fact_layout_spec_tile_frame_enabled():
+    for fmt in ("square", "portrait_post", "story"):
+        assert rich_fact_layout_spec(fmt).tile_frame is True
+
+
 def test_offset_range_story_exceeds_legacy_cap():
     low, high = _offset_range_for_format("story")
     assert low <= -360
