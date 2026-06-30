@@ -4,8 +4,8 @@ You are merging the current completed feature/bug branch into its target integra
 
 ## Default workflow
 
-- Default target branch: `beta-next`
-- Only use another target branch if explicitly instructed
+- Default target branch: **`beta-next`**
+- Use another target when the issue, PR, or user specifies it (e.g. merge into **`feat/social-cards`** for Social Cards issue branches) — see **[base branch resolution](base-branch-resolution.md)**
 - After merge, switch to the updated target branch
 - Label finalised linked issues `pending-merge` after a clean merge (context-aware; see Step 8)
 - Delete the merged feature branch only if the merge succeeds cleanly
@@ -17,8 +17,7 @@ You are merging the current completed feature/bug branch into its target integra
 Before doing anything:
 
 1. Confirm the current branch name
-2. Confirm the target branch
-   - default to `beta-next`
+2. Confirm the **target branch** — default `beta-next`; resolve from linked issue / open PR / user when not standard (see [base-branch-resolution.md](base-branch-resolution.md))
 3. Confirm there are no uncommitted changes on the current branch
    - if there are, stop and ask what to do
 
