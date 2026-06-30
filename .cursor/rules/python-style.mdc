@@ -1,0 +1,21 @@
+---
+description: Python style for explorer/ — naming, comments, docstrings; link to style guide SSOT
+globs: explorer/**/*.py
+alwaysApply: false
+---
+
+# Python style (explorer/)
+
+Follow [`docs/python-style-guide.md`](docs/python-style-guide.md) — **read it before writing or reviewing Python** in this repo. It is the SSOT for naming, comments, docstrings, constants placement, and review expectations.
+
+## When editing
+
+- Prefer **clear names** over abbreviations; constants in `UPPER_SNAKE_CASE` in the right defaults/constants module.
+- **Docstrings** on public functions and modules; comments explain *why*, not *what*.
+- **Do not wholesale-rewrite** pre-existing code for style — improve only touched lines when safe.
+- Lint: `python3 -m ruff check explorer/` (see `ruff.toml`).
+
+## Layering
+
+- Prefer explicit submodule imports in new code (e.g. `from explorer.core.stats import …`).
+- `explorer.core` is a compatibility barrel with lazy imports — import from the defining module when jump-to-definition matters.
