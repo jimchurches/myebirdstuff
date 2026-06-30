@@ -1062,7 +1062,7 @@ def _spotlight_fact_picker_ui(
     """Insights fact picker; returns the resolved fact for preview/export."""
     options = _spotlight_fact_options(facts, species_options=species_options)
     if not options:
-        st.caption("No rich facts available for this period.")
+        st.caption("No insights available for this period.")
         return None
 
     fact_ids = [fact_id for fact_id, _ in options]

@@ -3,6 +3,8 @@
 import ast
 from pathlib import Path
 
+import pytest
+
 from explorer.core.share_summary_compute import (
     ShareSummaryAllTimeStats,
     ShareSummaryGeoScope,
@@ -219,6 +221,12 @@ def test_spotlight_layout_renders():
     html = render_share_summary_preview_html(stats, layout="spotlight", spotlight_label="Lifers")
     assert "47" in html
     assert "Lifers" in html
+
+
+def test_insight_layout_requires_spotlight_fact():
+    stats = ShareSummaryStats(period_label="2025", period_kind="year")
+    with pytest.raises(ValueError, match="spotlight_fact is required"):
+        render_share_summary_preview_html(stats, layout="insight")
 
 
 def test_spotlight_pair_for_label_by_period():

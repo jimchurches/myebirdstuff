@@ -1,7 +1,5 @@
 """
-Typography and vertical placement for rich Spotlight fact cards (#285).
-
-Tunable layout specs for rich Spotlight fact cards (#285).
+Typography and vertical placement for Interesting Insights cards (#285).
 """
 
 from __future__ import annotations
@@ -39,7 +37,7 @@ class RichFactLayoutSpec:
 
 
 def _shared_rich_fact_line_styles() -> tuple[RichFactLineStyle, RichFactLineStyle, RichFactLineStyle]:
-    """Typography tuned in rich-fact layout playground (story · biggest_checklist)."""
+    """Shared Interesting Insights line typography (label, primary, metric)."""
     return (
         RichFactLineStyle(
             font_size_px=52,
@@ -102,7 +100,7 @@ RICH_FACT_LAYOUT_SPECS: dict[FormatId, RichFactLayoutSpec] = {
 
 
 def rich_fact_layout_spec(fmt: FormatId) -> RichFactLayoutSpec:
-    """Layout spec for rich Spotlight cards at export size."""
+    """Layout spec for Interesting Insights cards at export size."""
     return RICH_FACT_LAYOUT_SPECS.get(fmt, RICH_FACT_LAYOUT_SPECS["story"])
 
 

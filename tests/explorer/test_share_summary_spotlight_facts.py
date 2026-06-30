@@ -1,5 +1,4 @@
-"""Tests for rich Spotlight facts (#285)."""
-
+"""Tests for Interesting Insights facts (#285)."""
 
 import pandas as pd
 
@@ -17,11 +16,18 @@ from explorer.presentation.share_summary_preview import (
 )
 
 
-def _row(*, sid: str, dt: str, common: str, count: int = 1) -> dict:
+def _row(
+    *,
+    sid: str,
+    dt: str,
+    common: str,
+    count: int | str = 1,
+    scientific: str | None = None,
+) -> dict:
     return {
         "Submission ID": sid,
         "Date": dt,
-        "Scientific Name": common,
+        "Scientific Name": scientific or common,
         "Common Name": common,
         "Count": count,
         "Location ID": "L1",
@@ -47,6 +53,38 @@ def test_compute_spotlight_facts_most_common_checklist_species():
     assert format_spotlight_fact_metric(top) == "2 checklists"
 
 
+def test_compute_spotlight_facts_filters_period_and_non_countable_taxa():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-01-01", common="Australian Magpie", count=2),
+            _row(sid="S2", dt="2025-02-01", common="Australian Magpie", count=3),
+            _row(sid="S3", dt="2024-03-01", common="Zebra Finch", count=999),
+            _row(
+                sid="S4",
+                dt="2025-04-01",
+                common="Mallard (Domestic type)",
+                scientific="Anas platyrhynchos",
+                count=500,
+            ),
+            _row(
+                sid="S5",
+                dt="2025-05-01",
+                common="duck sp.",
+                scientific="Anas sp.",
+                count=600,
+            ),
+        ]
+    )
+    facts = compute_spotlight_facts(df, period_for_year(2025))
+    by_id = {fact.fact_id: fact for fact in facts}
+    assert by_id["most_common_checklist_species"].primary_text == "Australian Magpie"
+    assert by_id["most_common_checklist_species"].metric_value == 2
+    assert by_id["most_individuals_species"].primary_text == "Australian Magpie"
+    assert by_id["most_individuals_species"].metric_value == 5
+    assert by_id["biggest_checklist_count"].primary_text == "Australian Magpie"
+    assert by_id["biggest_checklist_count"].metric_value == 3
+
+
 def test_compute_spotlight_facts_most_individuals():
     df = pd.DataFrame(
         [
@@ -67,11 +105,12 @@ def test_compute_spotlight_facts_species_individuals_selected():
         [
             _row(sid="S1", dt="2025-01-01", common="Lewin's Rail", count=40),
             _row(sid="S2", dt="2025-02-01", common="Lewin's Rail", count=26),
+            _row(sid="S3", dt="2025-02-02", common="Lewin's Rail", count="X"),
             _row(sid="S3", dt="2025-03-01", common="Other Bird", count=1),
         ]
     )
     period = period_for_year(2025)
-    facts = compute_spotlight_facts(df, period, species_common="Lewin's Rail")
+    facts = compute_spotlight_facts(df, period, species_common=" lewin's rail ")
     selected = spotlight_fact_by_id(facts, "species_individuals")
     assert selected is not None
     assert selected.label == "Species count"
@@ -92,7 +131,9 @@ def test_species_common_names_in_period_sorted():
 
 def test_insight_layout_renders():
     from explorer.core.share_summary_compute import ShareSummaryStats
-    from explorer.core.share_summary_defaults import SHARE_SUMMARY_LAYOUT_SUBTITLE_INSIGHT
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_INSIGHT,
+    )
 
     stats = ShareSummaryStats(period_label="2025", period_kind="year")
     fact = ShareSummarySpotlightFact(
@@ -118,6 +159,28 @@ def test_insight_layout_renders():
     assert "&lt;div" not in html
 
 
+def test_insight_layout_escapes_rich_fact_text():
+    from explorer.core.share_summary_compute import ShareSummaryStats
+
+    stats = ShareSummaryStats(period_label="2025", period_kind="year")
+    fact = ShareSummarySpotlightFact(
+        fact_id="most_common_checklist_species",
+        label='Most <common> "checklist"',
+        primary_text="<script>alert('magpie')</script>",
+        metric_value=12,
+        metric_unit="checklists",
+    )
+    html = render_share_summary_preview_html(
+        stats,
+        layout="insight",
+        spotlight_fact=fact,
+        fmt="story",
+    )
+    assert 'Most &lt;common&gt; "checklist"' in html
+    assert "&lt;script&gt;alert('magpie')&lt;/script&gt;" in html
+    assert "<script>alert" not in html
+
+
 def test_insight_story_header_matches_tiles():
     from explorer.core.share_summary_compute import ShareSummaryStats
 
@@ -129,7 +192,7 @@ def test_insight_story_header_matches_tiles():
         metric_value=4200,
         metric_unit="on one checklist",
     )
-    rich = render_share_summary_preview_html(
+    insight_html = render_share_summary_preview_html(
         stats,
         layout="insight",
         spotlight_fact=fact,
@@ -141,15 +204,15 @@ def test_insight_story_header_matches_tiles():
         fmt="story",
         card_stat_labels=("Total species", "Lifers", "Total checklists", "Unique locations"),
     )
-    rich_header_end = rich.index("</h1>") + len("</h1>")
+    insight_header_end = insight_html.index("</h1>") + len("</h1>")
     tiles_header_end = tiles.index("</h1>") + len("</h1>")
     header_marker = '<div style="padding:48px 56px 24px;text-align:center;">'
-    rich_header = rich[rich.index(header_marker) : rich_header_end]
+    insight_header = insight_html[insight_html.index(header_marker) : insight_header_end]
     tiles_header = tiles[tiles.index(header_marker) : tiles_header_end]
-    assert rich_header == tiles_header
+    assert insight_header == tiles_header
 
 
-def test_resolve_spotlight_fact_falls_back_to_default():
+def test_resolve_spotlight_fact_uses_requested_id():
     facts = [
         ShareSummarySpotlightFact(
             fact_id="most_common_checklist_species",
@@ -169,3 +232,23 @@ def test_resolve_spotlight_fact_falls_back_to_default():
     resolved = resolve_spotlight_fact(facts, "most_individuals_species")
     assert resolved is not None
     assert resolved.fact_id == "most_individuals_species"
+
+
+def test_resolve_spotlight_fact_falls_back_to_default_then_first():
+    default = ShareSummarySpotlightFact(
+        fact_id="most_common_checklist_species",
+        label="Most common checklist species",
+        primary_text="Magpie",
+        metric_value=1,
+        metric_unit="checklists",
+    )
+    first_without_default = ShareSummarySpotlightFact(
+        fact_id="biggest_checklist_count",
+        label="Biggest single-checklist count",
+        primary_text="Shearwater",
+        metric_value=100,
+        metric_unit="on one checklist",
+    )
+    assert resolve_spotlight_fact([first_without_default, default], "missing") == default
+    assert resolve_spotlight_fact([first_without_default], "missing") == first_without_default
+    assert resolve_spotlight_fact([], "missing") is None

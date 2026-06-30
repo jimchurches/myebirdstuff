@@ -1,5 +1,5 @@
 """
-Rich Spotlight card facts for share-summary cards (#285).
+Interesting Insights card facts for share-summary cards (#285).
 
 Framework-neutral compute: species- and checklist-derived highlights beyond simple
 stat + number pairs. Presentation reads :class:`ShareSummarySpotlightFact` via
@@ -43,7 +43,7 @@ SPOTLIGHT_SPECIES_INDIVIDUALS_CARD_LABEL = "Species count"
 
 @dataclass(frozen=True)
 class ShareSummarySpotlightFact:
-    """One rich Spotlight highlight for a period."""
+    """One Interesting Insights highlight for a period."""
 
     fact_id: SpotlightFactId
     label: str
@@ -67,7 +67,7 @@ def spotlight_fact_requires_species(fact_id: SpotlightFactId) -> bool:
 
 
 def species_common_names_in_period(df: pd.DataFrame, period: ShareSummaryPeriod) -> tuple[str, ...]:
-    """Distinct common names for countable species seen in *period*, sorted."""
+    """Distinct common names with observations in *period*, sorted."""
     obs = _observations_in_period(df, period)
     if obs.empty or "Common Name" not in obs.columns:
         return ()
@@ -89,7 +89,7 @@ def compute_spotlight_facts(
     *,
     species_common: str | None = None,
 ) -> list[ShareSummarySpotlightFact]:
-    """Compute auto rich facts for *period*; optional species fact when *species_common* set."""
+    """Compute auto insight facts for *period*; optional species fact when *species_common* set."""
     obs = _observations_in_period(df, period)
     facts: list[ShareSummarySpotlightFact] = []
 

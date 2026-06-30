@@ -860,7 +860,7 @@ def _layout_minimal(
 
 
 def _layout_spotlight_header_html(stats: ShareSummaryStats) -> str:
-    """Shared period / trip header for classic and rich Spotlight layouts."""
+    """Shared period / trip header for classic Spotlight layout."""
     if stats.trip_title:
         return f"""
 <p style="margin:0 0 8px;font-size:28px;letter-spacing:0.06em;text-transform:uppercase;
@@ -943,7 +943,7 @@ def resolve_spotlight_fact(
     facts: list[ShareSummarySpotlightFact],
     fact_id: SpotlightFactId | str | None,
 ) -> ShareSummarySpotlightFact | None:
-    """Pick a rich fact by id, falling back to the default or first available."""
+    """Pick an insight fact by id, falling back to the default or first available."""
     if not facts:
         return None
     cleaned = (fact_id or "").strip()
