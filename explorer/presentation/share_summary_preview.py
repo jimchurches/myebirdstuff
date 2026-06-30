@@ -42,6 +42,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_GRID_SQUARE_MAX_STATS,
     SHARE_SUMMARY_GRID_STORY_DEFAULT_SLOT_COUNT,
     SHARE_SUMMARY_GRID_STORY_MAX_STATS,
+    SHARE_SUMMARY_INSIGHT_FACT_DEFAULT,
     SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS,
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
@@ -50,9 +51,20 @@ from explorer.core.share_summary_defaults import (
     share_summary_card_subtitle,
     share_summary_period_subtitle,
 )
+from explorer.core.share_summary_insight_facts import (
+    InsightFactId,
+    ShareSummaryInsightFact,
+    format_insight_fact_metric,
+    insight_fact_by_id,
+)
+from explorer.presentation.share_summary_rich_fact_layout import (
+    rich_fact_layout_spec,
+    rich_fact_line_style_css,
+)
 
 TilesPresentationId = Literal["grid", "circles"]
 SpotlightPresentationId = Literal["classic", "circle"]
+LayoutId = Literal["tiles", "minimal", "spotlight", "insight"]
 
 # Statistics Grid rectangular tiles — uniform across square, portrait, and story.
 # At max grid counts (square 6, portrait 8, story 14) this fits 1080×1080 / ×1350 / ×1920;
@@ -62,7 +74,6 @@ _GRID_TILE_LABEL_PX = "20px"
 _GRID_TILE_CELL_PAD = "32px 20px"
 _GRID_TILE_GAP = "20px"
 
-LayoutId = Literal["tiles", "minimal", "spotlight"]
 FormatId = Literal["square", "portrait_post", "story"]
 
 _color_scheme_index: contextvars.ContextVar[int | None] = contextvars.ContextVar(
@@ -385,7 +396,7 @@ def layout_card_stat_max(
     *,
     available_stat_count: int | None = None,
 ) -> int:
-    """Maximum stat slots on grid/list layouts (spotlight uses a separate control)."""
+    """Maximum stat slots on grid/list layouts (spotlight and insight use separate controls)."""
     if layout == "tiles":
         return layout_grid_stat_max(fmt)
     if layout == "minimal":
@@ -848,6 +859,102 @@ def _layout_minimal(
 </div>"""
 
 
+def _layout_spotlight_header_html(stats: ShareSummaryStats) -> str:
+    """Shared period / trip header for classic Spotlight layout."""
+    if stats.trip_title:
+        return f"""
+<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.06em;text-transform:uppercase;
+  color:{_colour('accent')};font-weight:600;">{_esc(stats.trip_title)}</p>
+<p style="margin:0 0 28px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
+  {_esc(stats.period_label)}</p>"""
+    subtitle = _layout_subtitle(stats, "spotlight")
+    if subtitle:
+        return f"""
+<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase;
+  color:{_colour('accent')};font-weight:600;">{_esc(subtitle)}</p>
+<p style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
+  {_esc(stats.period_label)}</p>"""
+    return f"""
+<p style="margin:0 0 32px;font-size:36px;letter-spacing:0.04em;color:{_colour('accent')};font-weight:600;">
+  {_esc(stats.period_label)}</p>"""
+
+
+def _layout_insight(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    insight_fact: ShareSummaryInsightFact,
+    scope_label: str | None = None,
+) -> str:
+    """Interesting Insights — label, species/text focus, optional metric."""
+    pad_bottom = _footer_pad(fmt, width, height)
+    spec = rich_fact_layout_spec(fmt)
+    metric = format_insight_fact_metric(insight_fact)
+    label_css = rich_fact_line_style_css(
+        spec.label,
+        colour=_colour(spec.label.color_role),
+    )
+    primary_css = rich_fact_line_style_css(
+        spec.primary,
+        colour=_colour(spec.primary.color_role),
+    )
+    metric_line = ""
+    if metric:
+        metric_css = rich_fact_line_style_css(
+            spec.metric,
+            colour=_colour(spec.metric.color_role),
+        )
+        metric_line = (
+            f'<div class="rich-metric" style="{metric_css}">{_esc(metric)}</div>'
+        )
+    offset = spec.block_offset_y_px
+    transform = f"transform:translateY({offset}px);" if offset else ""
+    tile_css = ""
+    if spec.tile_frame:
+        tile_bg_alt = _colour_or("tile_bg_alt", "bg_alt")
+        tile_bg = _colour_or("tile_bg", "bg")
+        tile_border = _colour_or("tile_border", "border")
+        tile_css = (
+            f"padding:{_GRID_TILE_CELL_PAD};border-radius:12px;box-sizing:border-box;"
+            f"background:linear-gradient(145deg,{tile_bg_alt},{tile_bg});"
+            f"border:1px solid {tile_border};text-align:center;"
+        )
+    inner_block = (
+        f'<div class="rich-label" style="{label_css}">{_esc(insight_fact.label)}</div>'
+        f'<div class="rich-primary" style="{primary_css};word-wrap:break-word;">'
+        f"{_esc(insight_fact.primary_text)}</div>{metric_line}"
+    )
+    if tile_css:
+        inner_block = f'<div style="{tile_css}">{inner_block}</div>'
+    return f"""
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;display:flex;flex-direction:column;">
+  {_header_block(stats, subtitle=_layout_subtitle(stats, "insight"))}
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:8px 48px {pad_bottom}px;text-align:center;box-sizing:border-box;min-height:0;">
+    <div style="max-width:{spec.max_width_px}px;width:100%;{transform}">{inner_block}</div>
+  </div>
+  {_footer_block(scope_label=scope_label)}
+</div>"""
+
+
+def resolve_insight_fact(
+    facts: list[ShareSummaryInsightFact],
+    fact_id: InsightFactId | str | None,
+) -> ShareSummaryInsightFact | None:
+    """Pick an insight fact by id, falling back to the default or first available."""
+    if not facts:
+        return None
+    cleaned = (fact_id or "").strip()
+    if cleaned:
+        found = insight_fact_by_id(facts, cleaned)  # type: ignore[arg-type]
+        if found is not None:
+            return found
+    default = insight_fact_by_id(facts, SHARE_SUMMARY_INSIGHT_FACT_DEFAULT)
+    return default or facts[0]
+
+
 def _layout_spotlight(
     stats: ShareSummaryStats,
     width: int,
@@ -872,24 +979,7 @@ def _layout_spotlight(
     pad_bottom = _footer_pad(fmt, width, height)
     num_size = "200px" if _is_tall(fmt, width, height) else "160px"
     label_size = "40px" if _is_tall(fmt, width, height) else "36px"
-    if stats.trip_title:
-        header_html = f"""
-<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.06em;text-transform:uppercase;
-  color:{_colour('accent')};font-weight:600;">{_esc(stats.trip_title)}</p>
-<p style="margin:0 0 28px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
-  {_esc(stats.period_label)}</p>"""
-    else:
-        subtitle = _layout_subtitle(stats, "spotlight")
-        if subtitle:
-            header_html = f"""
-<p style="margin:0 0 8px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase;
-  color:{_colour('accent')};font-weight:600;">{_esc(subtitle)}</p>
-<p style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
-  {_esc(stats.period_label)}</p>"""
-        else:
-            header_html = f"""
-<p style="margin:0 0 32px;font-size:36px;letter-spacing:0.04em;color:{_colour('accent')};font-weight:600;">
-  {_esc(stats.period_label)}</p>"""
+    header_html = _layout_spotlight_header_html(stats)
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
   <div style="position:absolute;left:0;right:0;top:0;bottom:{pad_bottom}px;
@@ -914,6 +1004,7 @@ def _card_inner_html(
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
+    insight_fact: ShareSummaryInsightFact | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     geo_scope: ShareSummaryGeoScope | None = None,
@@ -921,7 +1012,18 @@ def _card_inner_html(
 ) -> tuple[str, int, int]:
     """Return (inner HTML, width, height) at export pixel dimensions."""
     width, height = _FORMAT_PX[fmt]
-    if layout == "spotlight":
+    if layout == "insight":
+        if insight_fact is None:
+            raise ValueError("insight_fact is required for layout='insight'")
+        inner = _layout_insight(
+            stats,
+            width,
+            height,
+            fmt,
+            insight_fact=insight_fact,
+            scope_label=scope_label,
+        )
+    elif layout == "spotlight":
         label = resolve_spotlight_label(spotlight_label)
         if spotlight_presentation == "circle":
             from explorer.presentation.share_summary_circles_preview import (
@@ -997,6 +1099,7 @@ def render_share_summary_export_html(
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
+    insight_fact: ShareSummaryInsightFact | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
@@ -1012,6 +1115,7 @@ def render_share_summary_export_html(
             tiles_presentation=tiles_presentation,
             spotlight_presentation=spotlight_presentation,
             spotlight_label=spotlight_label,
+            insight_fact=insight_fact,
             card_stat_labels=card_stat_labels,
             all_time=all_time,
             geo_scope=geo_scope,
@@ -1053,6 +1157,7 @@ def render_share_summary_preview_html(
     scale: float = 0.38,
     spotlight_presentation: SpotlightPresentationId = "classic",
     spotlight_label: str | None = None,
+    insight_fact: ShareSummaryInsightFact | None = None,
     card_stat_labels: tuple[str, ...] = (),
     all_time: ShareSummaryAllTimeStats | None = None,
     color_scheme_index: int | None = None,
@@ -1069,6 +1174,7 @@ def render_share_summary_preview_html(
             tiles_presentation=tiles_presentation,
             spotlight_presentation=spotlight_presentation,
             spotlight_label=spotlight_label,
+            insight_fact=insight_fact,
             card_stat_labels=labels,
             all_time=all_time,
             geo_scope=geo_scope,
@@ -1097,6 +1203,7 @@ __all__ = [
     "share_summary_scheme_override",
     "spotlight_pair_for_label",
     "resolve_spotlight_label",
+    "resolve_insight_fact",
     "stat_card_display_label",
     "stat_pairs",
     "summary_status_metrics",
