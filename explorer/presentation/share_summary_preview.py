@@ -57,6 +57,10 @@ from explorer.core.share_summary_spotlight_facts import (
     format_spotlight_fact_metric,
     spotlight_fact_by_id,
 )
+from explorer.presentation.share_summary_rich_fact_layout import (
+    rich_fact_layout_spec,
+    rich_fact_line_style_css,
+)
 
 TilesPresentationId = Literal["grid", "circles"]
 SpotlightPresentationId = Literal["classic", "circle"]
@@ -887,28 +891,36 @@ def _layout_spotlight_rich(
 ) -> str:
     """Rich Spotlight — label, species/text focus, optional metric."""
     pad_bottom = _footer_pad(fmt, width, height)
-    is_tall = _is_tall(fmt, width, height)
-    metric_size = "52px" if is_tall else "44px"
-    label_size = metric_size
-    primary_size = "88px" if is_tall else "72px"
+    spec = rich_fact_layout_spec(fmt)
     metric = format_spotlight_fact_metric(spotlight_fact)
+    label_css = rich_fact_line_style_css(
+        spec.label,
+        colour=_colour(spec.label.color_role),
+    )
+    primary_css = rich_fact_line_style_css(
+        spec.primary,
+        colour=_colour(spec.primary.color_role),
+    )
     metric_line = ""
     if metric:
-        # Single-line sibling — indented ``<div>`` after a blank line is parsed as a
-        # Markdown code block by Streamlit and shows raw HTML in the preview.
-        metric_line = (
-            f'<div style="margin-top:16px;font-size:{metric_size};font-weight:700;'
-            f'line-height:1.1;color:{_colour("text")};">{_esc(metric)}</div>'
+        metric_css = rich_fact_line_style_css(
+            spec.metric,
+            colour=_colour(spec.metric.color_role),
         )
+        metric_line = (
+            f'<div class="rich-metric" style="{metric_css}">{_esc(metric)}</div>'
+        )
+    offset = spec.block_offset_y_px
+    transform = f"transform:translateY({offset}px);" if offset else ""
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
   <div style="padding:8px 48px {pad_bottom}px;display:flex;flex-direction:column;
     align-items:center;justify-content:center;text-align:center;box-sizing:border-box;">
-    <div style="max-width:920px;font-size:{label_size};color:{_colour('muted')};font-weight:500;
-      line-height:1.25;margin-bottom:20px;">{_esc(spotlight_fact.label)}</div>
-    <div style="max-width:920px;font-size:{primary_size};font-weight:800;line-height:1.08;
-      color:{_colour('text')};word-wrap:break-word;">{_esc(spotlight_fact.primary_text)}</div>{metric_line}
+    <div style="max-width:{spec.max_width_px}px;width:100%;{transform}">
+      <div class="rich-label" style="{label_css}">{_esc(spotlight_fact.label)}</div>
+      <div class="rich-primary" style="{primary_css};word-wrap:break-word;">{_esc(spotlight_fact.primary_text)}</div>{metric_line}
+    </div>
   </div>
   {_footer_block(scope_label=scope_label)}
 </div>"""

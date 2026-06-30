@@ -105,6 +105,10 @@ from explorer.presentation.share_summary_preview import (
     sample_share_summary_stats,
     summary_status_metrics,
 )
+from explorer.presentation.share_summary_rich_fact_layout_playground import (
+    RICH_FACT_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX,
+    render_rich_fact_layout_playground_html,
+)
 
 
 @st.cache_data(show_spinner="Generating PNG…")
@@ -145,6 +149,7 @@ _DESIGN_STUDIO_TITLE = "Social sharing design studio"
 _SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 _HEX_EXPERIMENTS_TAB_LABEL = "Hex grid experiments (experimental)"
 _CIRCLE_LAYOUT_TAB_LABEL = "Circle layout"
+_RICH_FACT_LAYOUT_TAB_LABEL = "Rich fact layout"
 _PREVIEW_SCALE_DEFAULT = 0.42
 _PREVIEW_SCALE_FULL = 1.0
 _TILES_PRESENTATION_KEY = "design_tiles_presentation"
@@ -1532,8 +1537,13 @@ if df is not None and resolved_period is not None:
     if spotlight_species_options and _SPOTLIGHT_SPECIES_KEY not in st.session_state:
         st.session_state[_SPOTLIGHT_SPECIES_KEY] = spotlight_species_options[0]
 
-tab_social_cards, tab_hex_experiments, tab_circle_layout = st.tabs(
-    [_SOCIAL_CARDS_TAB_LABEL, _HEX_EXPERIMENTS_TAB_LABEL, _CIRCLE_LAYOUT_TAB_LABEL]
+tab_social_cards, tab_hex_experiments, tab_circle_layout, tab_rich_fact_layout = st.tabs(
+    [
+        _SOCIAL_CARDS_TAB_LABEL,
+        _HEX_EXPERIMENTS_TAB_LABEL,
+        _CIRCLE_LAYOUT_TAB_LABEL,
+        _RICH_FACT_LAYOUT_TAB_LABEL,
+    ]
 )
 
 hex_card_stat_labels = default_card_stat_labels(
@@ -1591,6 +1601,16 @@ with tab_circle_layout:
     st.iframe(
         render_circle_layout_playground_html(),
         height=CIRCLE_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX,
+    )
+
+with tab_rich_fact_layout:
+    st.caption(
+        "Dev-only tuner for rich Spotlight fact typography and vertical block position. "
+        "Copy export into ``share_summary_rich_fact_layout.py``."
+    )
+    st.iframe(
+        render_rich_fact_layout_playground_html(),
+        height=RICH_FACT_LAYOUT_PLAYGROUND_IFRAME_HEIGHT_PX,
     )
 
 with tab_hex_experiments:
