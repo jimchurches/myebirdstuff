@@ -34,7 +34,7 @@ Manual, command-driven pre-merge polish ([#299](https://github.com/jimchurches/m
 |-------|------|
 | **CI** | Authoritative pass/fail gate (`tests.yml`, ruff, hygiene) |
 | **Test Integrity Sentinel** (`/pr-review` Step 4) | Test honesty on changed tests and behaviour |
-| **Nit-Fixer** (`/nit-fixer`, `/pr-review` Step 4b, `/code-review` Step 6) | See-it-fix-it mechanical and readability fixes in PR-touched files; leaves changes unstaged for `/commit-work`; never edits test files |
+| **Nit-Fixer** (`/nit-fixer`, `/pr-review` Step 4b, `/code-review` final step) | See-it-fix-it mechanical and readability fixes in PR-touched files; leaves changes unstaged for `/commit-work`; never edits test files |
 
 Full guardrails: [`.cursor/commands/nit-fixer.md`](../.cursor/commands/nit-fixer.md).
 

@@ -1,6 +1,6 @@
 # Nit-Fixer (myebirdstuff)
 
-**When to use:** Pre-merge polish on a PR or local branch — aggressive **see it, fix it** for mechanical and readability nits in **PR-touched files**. Also invoked automatically from `/pr-review` (Step 4b) and `/code-review` (final step).
+**When to use:** Pre-merge polish on a PR or local branch — aggressive **see it, fix it** for mechanical and readability nits in **PR-touched files**. Also invoked from `/pr-review` (Step 4b) and `/code-review` (final step after the checklist). Refs [#299](https://github.com/jimchurches/myebirdstuff/issues/299).
 
 **When not to use alone:** Full architecture review — use `/code-review`. Test honesty / assertion quality — use Test Integrity Sentinel in `/pr-review` (Step 4), not Nit-Fixer.
 
