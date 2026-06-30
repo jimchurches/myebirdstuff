@@ -11,13 +11,16 @@ The user will provide a GitHub issue number, for example:
 
 If no issue number is provided, ask for it before continuing.
 
+The user may also specify a **base branch override** (e.g. “branch from `beta-next` even though I’m on `feat/social-cards`”). Honour explicit overrides over inference.
+
 ---
 
 ## Repository workflow
 
 - `main` is the stable/release branch
-- `beta-next` is the integration branch
-- Development work must happen on a new issue branch created from `beta-next`
+- `beta-next` is the default integration branch for most work
+- **Feature integration lines** (e.g. `feat/social-cards`) are the base for issues that say so in the issue body
+- Development happens on a new **issue branch** — not directly on `main`, `beta-next`, or a feature integration branch
 - Do not work directly on `main` or `beta-next`
 
 ---
@@ -25,9 +28,8 @@ If no issue number is provided, ask for it before continuing.
 ## Step 1 — Confirm starting state
 
 1. Confirm the current branch.
-2. If currently on `beta-next`, continue.
-3. If on another branch, check whether there are uncommitted changes.
-4. If there are uncommitted changes, stop and ask what to do.
+2. Check whether there are uncommitted changes.
+3. If there are uncommitted changes, stop and ask what to do (commit, stash, or abort).
 
 ---
 
@@ -35,34 +37,37 @@ If no issue number is provided, ask for it before continuing.
 
 Before coding:
 
-1. Read the GitHub issue.
-2. Explore the repository enough to understand the relevant area.
-3. Focus especially on the `explorer` app.
-4. Read relevant technical documentation, including repo guidance files and docs under `docs/explorer/`.
+1. Read the GitHub issue (`gh issue view`).
+2. Apply **[base branch resolution](base-branch-resolution.md)** — resolve **development base** and **PR target** before creating a branch.
+3. Explore the repository enough to understand the relevant area.
+4. Read relevant technical documentation (`docs/AI_CONTEXT.md`, `docs/explorer/`, issue-linked docs).
 
 Summarise briefly:
 
 - what the issue is asking for
+- **resolved base branch** and **PR target**
 - likely files or areas involved
 - any assumptions or risks
+
+When base is `feat/social-cards`, mention `docs/explorer/social-cards-workflow.md` if present on that base.
 
 ---
 
 ## Step 3 — Create development branch
 
-Use the existing `/create-dev-branch` command for the issue.
+Use the existing `/create-dev-branch` command (or equivalent steps manually).
+
+Pass the **resolved base** from Step 2 — do not hardcode `beta-next` when the issue or user specified another base.
 
 The branch should:
 
-- be based on `beta-next`
+- be based on the **resolved base branch**
 - include the issue number as a prefix
 - use a short descriptive slug
 
 Example:
 
 `254-add-basemap-options`
-
-If `/create-dev-branch` cannot be invoked directly from this command, perform the same steps manually.
 
 ---
 
@@ -85,6 +90,7 @@ Do not:
 Only stop to ask questions if:
 
 - the issue is ambiguous
+- base branch resolution is uncertain (see [base-branch-resolution.md](base-branch-resolution.md))
 - the implementation has meaningful design choices
 - the requested change conflicts with existing behaviour
 - there is risk of unintended regression
@@ -97,10 +103,11 @@ Otherwise, make reasonable, conservative choices and continue.
 
 Provide a summary of:
 
-- branch created
+- branch created (name + base)
+- resolved PR target
 - files changed
 - behaviour implemented
 - tests run
 - any follow-up concerns
 
-If tests were not run, say so clearly.
+If tests were not run, say so clearly. When implementation is complete, the user can run `/finish-issue-work` to push and open a PR.

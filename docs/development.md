@@ -8,6 +8,23 @@ For AI-assisted coding, see **[AI_CONTEXT.md](AI_CONTEXT.md)** and follow those 
 
 ---
 
+# Cursor workflow commands
+
+Slash commands in `.cursor/commands/` automate git and GitHub workflow. Key commands:
+
+| Command | Purpose |
+|---------|---------|
+| `/start-issue-work` | Read issue, resolve base branch, create dev branch |
+| `/create-dev-branch` | Create issue branch from resolved base (default `beta-next`) |
+| `/commit-work` | Stage, lint, commit with repo message format |
+| `/finish-issue-work` | Post-implementation: quality gate → push → open PR |
+| `/open-pr` | Push and open PR with correct **PR target** |
+| `/merge-pr` | Merge feature branch into target integration branch |
+
+**Base branch resolution:** Commands share logic in [`.cursor/commands/base-branch-resolution.md`](../.cursor/commands/base-branch-resolution.md). When a GitHub issue includes `## Base branch` / `## PR target`, commands read the issue via `gh issue view` instead of defaulting to `beta-next`. Feature-line work (e.g. Social Cards on `feat/social-cards`) is documented in `docs/explorer/social-cards-workflow.md` when present on that branch.
+
+---
+
 # Overview
 
 This repository contains:
