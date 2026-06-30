@@ -60,4 +60,4 @@ When resolved base is **`feat/social-cards`** (or the issue/body references Soci
 
 ## User override
 
-A explicit override in the same chat session always wins (e.g. “branch from beta-next not from the feature branch currently in focus”).
+An explicit override in the same chat session always wins (e.g. “branch from beta-next not from the feature branch currently in focus”).
