@@ -705,6 +705,7 @@ def test_lifetime_layouts_render_subtitle_from_defaults():
 
 def test_non_lifetime_layout_subtitles_read_from_defaults():
     from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_INSIGHT,
         SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL,
         SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT,
         SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
@@ -722,6 +723,9 @@ def test_non_lifetime_layout_subtitles_read_from_defaults():
     )
     assert share_summary_card_subtitle(layout="spotlight", period_kind="year") == (
         SHARE_SUMMARY_LAYOUT_SUBTITLE_SPOTLIGHT
+    )
+    assert share_summary_card_subtitle(layout="insight", period_kind="year") == (
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_INSIGHT
     )
 
 

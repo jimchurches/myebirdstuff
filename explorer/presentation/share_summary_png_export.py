@@ -17,7 +17,6 @@ from explorer.presentation.share_summary_preview import (
     _FORMAT_PX,
     FormatId,
     LayoutId,
-    SpotlightModeId,
     SpotlightPresentationId,
     TilesPresentationId,
     render_share_summary_export_html,
@@ -102,7 +101,6 @@ def share_summary_to_png_bytes(
     geo_scope: "ShareSummaryGeoScope | None" = None,
     tiles_presentation: TilesPresentationId = "grid",
     spotlight_presentation: SpotlightPresentationId = "classic",
-    spotlight_mode: SpotlightModeId = "stat",
     spotlight_fact: ShareSummarySpotlightFact | None = None,
 ) -> bytes:
     """Render a share card to PNG bytes at the layout's target pixel size."""
@@ -115,7 +113,6 @@ def share_summary_to_png_bytes(
         tiles_presentation=tiles_presentation,
         spotlight_presentation=spotlight_presentation,
         spotlight_label=spotlight_label,
-        spotlight_mode=spotlight_mode,
         spotlight_fact=spotlight_fact,
         card_stat_labels=labels,
         all_time=all_time,

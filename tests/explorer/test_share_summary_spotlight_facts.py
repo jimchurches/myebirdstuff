@@ -90,9 +90,9 @@ def test_species_common_names_in_period_sorted():
     assert names == ("Australian Magpie", "Zebra Finch")
 
 
-def test_spotlight_rich_layout_renders():
+def test_insight_layout_renders():
     from explorer.core.share_summary_compute import ShareSummaryStats
-    from explorer.core.share_summary_defaults import SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_LAYOUT_SUBTITLE_INSIGHT
 
     stats = ShareSummaryStats(period_label="2025", period_kind="year")
     fact = ShareSummarySpotlightFact(
@@ -104,12 +104,11 @@ def test_spotlight_rich_layout_renders():
     )
     html = render_share_summary_preview_html(
         stats,
-        layout="spotlight",
-        spotlight_mode="rich",
+        layout="insight",
         spotlight_fact=fact,
         fmt="story",
     )
-    assert SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES in html
+    assert SHARE_SUMMARY_LAYOUT_SUBTITLE_INSIGHT in html
     assert "<h1" in html
     assert "Most common checklist species" in html
     assert "Australian Magpie" in html
@@ -119,7 +118,7 @@ def test_spotlight_rich_layout_renders():
     assert "&lt;div" not in html
 
 
-def test_spotlight_rich_story_header_matches_tiles():
+def test_insight_story_header_matches_tiles():
     from explorer.core.share_summary_compute import ShareSummaryStats
 
     stats = ShareSummaryStats(period_label="2026", period_kind="year")
@@ -132,8 +131,7 @@ def test_spotlight_rich_story_header_matches_tiles():
     )
     rich = render_share_summary_preview_html(
         stats,
-        layout="spotlight",
-        spotlight_mode="rich",
+        layout="insight",
         spotlight_fact=fact,
         fmt="story",
     )
