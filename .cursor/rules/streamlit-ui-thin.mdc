@@ -1,0 +1,34 @@
+---
+description: Streamlit app layer — UI only; logic in core/presentation; design apps are playgrounds
+globs: explorer/app/**/*.py
+alwaysApply: false
+---
+
+# Streamlit UI layer
+
+Streamlit under `explorer/app/` is **UI only**. Business logic belongs in `explorer/core/`, `explorer/presentation/`, and helpers — not in Streamlit callbacks or render paths.
+
+## Before adding behaviour
+
+1. Can it live in **core** or **presentation** with a thin Streamlit wrapper? If yes, do that.
+2. Add or update **tests** under `tests/explorer/` for the logic — not Streamlit wiring snapshots.
+3. Read [`explorer/app/streamlit/README.md`](explorer/app/streamlit/README.md) for UI patterns and [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md) § Keep logic out of the UI.
+
+## Constants and tweakables
+
+**Before adding a literal number, colour, size, bound, or layout knob** in Streamlit or map UI code, ask: would a developer or technical end user want to tune this without reading implementation? If yes → put it in **`explorer/app/streamlit/defaults.py`** (named `UPPER_SNAKE_CASE` constant), then import it.
+
+There is no rigid taxonomy — use judgement. Typical `defaults.py` contents: map pin geometry, colours, opacities, cluster options, legend sizes, zoom/slider bounds, layout widths, debug toggles, active colour-scheme index. Feature-specific card/layout tunables may live in a `explorer/core/*_defaults.py` module (re-exported from `defaults.py` when Streamlit needs them).
+
+| Kind | Location |
+|------|----------|
+| **Developer / technical-user tweakables** | `explorer/app/streamlit/defaults.py` |
+| Fixed product copy, tab labels, URLs | `explorer/app/streamlit/streamlit_ui_constants.py` |
+| Persisted settings schema (YAML-backed) | `explorer/core/settings_schema_defaults.py` |
+| Feature tunables (e.g. share summary) | `explorer/core/*_defaults.py` → often re-exported via `defaults.py` |
+
+Do not scatter magic numbers in `explorer/app/` — centralise tunables in `defaults.py` (or the matching `*_defaults.py`). See [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md) § Configuration and [`docs/python-style-guide.md`](docs/python-style-guide.md) § Constants.
+
+## Design / playground apps
+
+Files like `design_map_app.py` and `design_share_summary_app.py` are **developer playgrounds**. Visual tuning flows: playground → export → constants → tests (see area docs when working on Social Cards / share summary).

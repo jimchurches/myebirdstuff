@@ -1,0 +1,25 @@
+---
+description: Universal guardrails — read AI_CONTEXT before architectural changes; one issue scope
+alwaysApply: true
+---
+
+# Project context
+
+Before **architectural, cross-cutting, or behavioural** changes, read [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md).
+
+## Instincts
+
+- **One issue per session** when possible — do not expand scope beyond what the issue or user asked for.
+- **Small, incremental diffs** — preserve existing behaviour unless the issue requires otherwise.
+- **No drive-by fixes** — do not reformat or ruff-fix unrelated files; improve only lines you touch when safe.
+- **Git discipline** — do not commit or push unless the user explicitly asks (see AI_CONTEXT § Git discipline).
+
+## Workflow vs rules
+
+- **Rules** (this folder) = standing instincts injected automatically.
+- **Commands** (`.cursor/commands/`) = repeatable workflows you invoke with `/…` (commit, PR, start issue).
+- For issue work, prefer `/start-issue-work` — it resolves **base branch** and **PR target** via the issue body and [base-branch-resolution.md](../commands/base-branch-resolution.md).
+
+## Docs are SSOT
+
+Rules are a thin routing layer. Detailed guidance stays in `docs/` — link paths; do not duplicate long sections here.
