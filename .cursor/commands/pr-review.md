@@ -10,7 +10,7 @@ Every `/pr-review` run includes **Test Integrity Sentinel** triage (Step 4) and 
 |---|---|---|
 | **Scope** | One issue + one PR diff vs **merge target** (often `beta-next`; may be a feature line) | Whole change set; architecture and cross-cutting concerns |
 | **When** | Small fixes, pre-merge sanity check | Before opening/updating a large PR, or multi-file behaviour changes |
-| **Fixes during review** | Sentinel strengthens in-scope tests; Nit-Fixer fixes mechanical/readability nits in touched files (see Step 4b) | Architecture review first; **always** runs Nit-Fixer at the end for in-scope nits |
+| **Fixes during review** | Sentinel strengthens in-scope tests; Nit-Fixer fixes mechanical/readability nits in touched files (Step 4b) | Architecture review first; **always** runs Nit-Fixer last (see [code-review.md](code-review.md)) |
 
 This command **does not replace or rewrite** `/code-review`. It reuses the same quality bar and checklist items, but constrains scope and workflow for targeted PR reviews.
 
@@ -222,7 +222,7 @@ Every `/pr-review` runs **Nit-Fixer triage** after Step 4 (whether Sentinel laun
 ### Sentinel vs Nit-Fixer
 
 | | Sentinel (Step 4) | Nit-Fixer (Step 4b) |
-|---|---|---|
+| --- | --- | --- |
 | **Focus** | Test honesty, assertions, mocks, fixtures | Imports, lint, format, typos, readability |
 | **Edits tests?** | Yes, when justified | **Never** |
 | **Model** | `gpt-5.5-medium` | `composer-2.5-fast` |
