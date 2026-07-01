@@ -638,13 +638,19 @@ def _footer_pad(
     width: int,
     height: int,
 ) -> int:
-    """Reserve space above the absolute footer (logo + label ≈ 120px)."""
-    del width, height
-    if fmt == "story":
-        return 140
-    if fmt == "portrait_post":
-        return 128
-    return 120
+    """Small gap between card body and footer (footer is in normal document flow)."""
+    del fmt, width, height
+    return 16
+
+
+def _footer_scope_colour() -> str:
+    """Geographic scope line in the card footer (e.g. World)."""
+    return _colour("text")
+
+
+def _footer_brand_colour() -> str:
+    """App name and logo in the card footer."""
+    return _colour("accent")
 
 
 def _card_shell(
@@ -698,7 +704,8 @@ def _header_block(stats: ShareSummaryStats, *, subtitle: str | None = None) -> s
 
 
 def _footer_block(*, scope_label: str | None = None) -> str:
-    logo = _logo_svg_inline(height_px=46, fill=_colour("muted"))
+    brand_colour = _footer_brand_colour()
+    logo = _logo_svg_inline(height_px=46, fill=brand_colour)
     logo_row = (
         f'<div style="margin:4px 0;line-height:0;">{logo}</div>' if logo else ""
     )
@@ -706,14 +713,14 @@ def _footer_block(*, scope_label: str | None = None) -> str:
     if scope_label:
         scope_row = (
             f'<p style="margin:0 0 7px;font-size:36px;font-weight:600;line-height:1.05;'
-            f'color:{_colour("muted")};letter-spacing:0.04em;">{_esc(scope_label)}</p>'
+            f'color:{_footer_scope_colour()};letter-spacing:0.04em;">{_esc(scope_label)}</p>'
         )
     return f"""
-<div style="position:absolute;left:0;right:0;bottom:0;padding:22px 56px 26px;text-align:center;
+<div style="padding:22px 56px 26px;text-align:center;
   border-top:1px solid {_colour("border")};background:{_colour("bg_alt")};">
   {scope_row}
   {logo_row}
-  <p style="margin:5px 0 0;font-size:18px;color:{_colour("muted")};">Personal eBird Explorer</p>
+  <p style="margin:5px 0 0;font-size:18px;color:{brand_colour};">Personal eBird Explorer</p>
 </div>"""
 
 
@@ -801,7 +808,7 @@ def _layout_tiles(
 </div>""")
     pad_bottom = _footer_pad(fmt, width, height)
     return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
+<div style="display:flex;flex-direction:column;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
   <div style="padding:8px 48px {pad_bottom}px;">
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:{grid_gap};">
@@ -850,7 +857,7 @@ def _layout_minimal(
 </div>""")
     pad_bottom = _footer_pad(fmt, width, height)
     return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
+<div style="display:flex;flex-direction:column;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "minimal"))}
   <div style="padding:24px 72px {pad_bottom}px;">
     {''.join(rows)}
@@ -981,10 +988,9 @@ def _layout_spotlight(
     label_size = "40px" if _is_tall(fmt, width, height) else "36px"
     header_html = _layout_spotlight_header_html(stats)
     return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
-  <div style="position:absolute;left:0;right:0;top:0;bottom:{pad_bottom}px;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:64px 56px 32px;text-align:center;box-sizing:border-box;">
+<div style="display:flex;flex-direction:column;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:64px 56px {pad_bottom}px;text-align:center;box-sizing:border-box;min-height:0;">
     {header_html}
     <div style="font-size:{num_size};font-weight:800;line-height:1.05;color:{_colour('text')};">
       {_esc(value)}</div>

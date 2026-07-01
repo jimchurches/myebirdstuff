@@ -576,7 +576,7 @@ def _layout_tiles_hex(
     pad_bottom = _footer_pad(fmt, width, height)
     subtitle = _layout_subtitle(stats, "tiles")
     return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
+<div style="display:flex;flex-direction:column;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=subtitle)}
   <div style="padding:8px 48px {pad_bottom}px;display:flex;flex-direction:column;align-items:center;">
     {_hex_grid_html(pairs, variant=variant, fmt=fmt)}

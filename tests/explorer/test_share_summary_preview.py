@@ -617,6 +617,42 @@ def test_render_preview_html_includes_scope_label_in_footer():
     assert "Australia · New South Wales" in html
 
 
+def test_footer_scope_uses_text_colour_and_brand_uses_accent():
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+
+    stats = sample_share_summary_stats()
+    dark = SHARE_SUMMARY_COLOR_SCHEMES[1]
+    preview = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        color_scheme_index=1,
+        scope_label="World",
+    )
+    export = render_share_summary_export_html(
+        stats,
+        layout="tiles",
+        color_scheme_index=1,
+        scope_label="World",
+    )
+    for html in (preview, export):
+        assert f'color:{dark["text"]}' in html
+        assert f'color:{dark["accent"]}' in html
+        assert f'color:{dark["muted"]};">World</p>' not in html
+        assert "position:absolute;left:0;right:0;bottom:0" not in html
+
+
+def test_preview_and_export_share_footer_content_gap_for_tiles():
+    stats = sample_share_summary_stats()
+    preview = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="story", color_scheme_index=1
+    )
+    export = render_share_summary_export_html(
+        stats, layout="tiles", fmt="story", color_scheme_index=1
+    )
+    assert "padding:8px 48px 16px" in preview
+    assert "padding:8px 48px 16px" in export
+
+
 def test_card_stat_pairs_selected_labels_includes_all_time():
     from explorer.core.share_summary_compute import ShareSummaryAllTimeStats
     from explorer.presentation.share_summary_preview import card_stat_pairs
