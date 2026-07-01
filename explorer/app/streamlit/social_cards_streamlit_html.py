@@ -1,7 +1,8 @@
 """
 **Social Cards** (Streamlit main tab): period-scoped stats wired from the session export.
 
-Card preview, stat picker, and PNG export are batch 4 (:mod:`explorer.app.streamlit.social_cards_streamlit_ui`).
+Card preview, stat picker, and lazy PNG export live in
+:mod:`explorer.app.streamlit.social_cards_streamlit_ui`.
 All-time taxonomy denominators reuse the rankings/families prep bundle — not
 :func:`~explorer.core.share_summary_compute.compute_share_summary_all_time_stats`.
 """
@@ -17,33 +18,34 @@ from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_K
 from explorer.app.streamlit.app_social_cards_sidebar_ui import (
     SOCIAL_CARDS_DF_SCOPED_SESSION_KEY,
     SOCIAL_CARDS_GEO_SCOPE_SESSION_KEY,
+    SOCIAL_CARDS_SIDEBAR_SELECTION_KEY,
     resolve_social_cards_period_from_session,
 )
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
+from explorer.app.streamlit.social_cards_session_keys import APP_SOCIAL_CARDS_KEYS
+from explorer.app.streamlit.social_cards_sidebar_ui import SocialCardsSidebarSelection
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
+    card_stat_data_scope_from_session_export,
     period_has_checklist_data,
 )
-from explorer.app.streamlit.streamlit_ui_constants import SOCIAL_CARDS_TAB_LABEL
+from explorer.app.streamlit.social_cards_streamlit_ui import (
+    render_current_card_fragment,
+)
 from explorer.core.share_summary_compute import (
     ShareSummaryGeoScope,
     geo_scope_display_label,
     resolve_social_cards_stats,
     world_taxonomy_bundle_status,
 )
+from explorer.core.share_summary_defaults import (
+    SHARE_SUMMARY_INSIGHT_FACT_DEFAULT,
+    SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+)
+from explorer.core.share_summary_insight_facts import (
+    compute_insight_facts,
+    species_common_names_in_period,
+)
 from explorer.presentation.share_summary_preview import summary_status_metrics
-
-
-def render_social_cards_status_metrics(
-    status_metrics: list[tuple[str, str]],
-) -> None:
-    """Compact read-only metrics grid (batch 3 wiring; replaced by card preview in batch 4)."""
-    if not status_metrics:
-        st.caption("No statistics available for this period.")
-        return
-    cols = st.columns(min(4, len(status_metrics)))
-    for index, (label, value) in enumerate(status_metrics):
-        with cols[index % len(cols)]:
-            st.metric(label, value)
 
 
 def render_social_cards_tab_content(
@@ -53,9 +55,7 @@ def render_social_cards_tab_content(
     geo_scope: ShareSummaryGeoScope,
     rankings_bundle: dict[str, Any] | None,
 ) -> None:
-    """Social Cards main column — period stats and empty-period handling."""
-    st.subheader(SOCIAL_CARDS_TAB_LABEL)
-
+    """Social Cards main column — card preview, stat pickers, and lazy PNG export."""
     period = resolve_social_cards_period_from_session(df_scoped)
     if period is None:
         st.caption("No dated checklists in this export.")
@@ -71,6 +71,12 @@ def render_social_cards_tab_content(
     if stats is None:
         st.warning("Could not compute stats for this period.")
         return
+
+    sidebar_raw = st.session_state.get(SOCIAL_CARDS_SIDEBAR_SELECTION_KEY)
+    if not isinstance(sidebar_raw, SocialCardsSidebarSelection):
+        st.caption("Use the sidebar to configure layout, format, and theme.")
+        return
+    sidebar_selection = sidebar_raw
 
     scope_label = geo_scope_display_label(geo_scope)
     st.caption(f"**{stats.period_label}** · {scope_label}")
@@ -93,15 +99,47 @@ def render_social_cards_tab_content(
                 "Taxonomy reference stats unavailable (taxonomy data may not be loaded)."
             )
 
+    keys = APP_SOCIAL_CARDS_KEYS
+    if keys.spotlight_label not in st.session_state:
+        st.session_state[keys.spotlight_label] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
+    if keys.insight_fact not in st.session_state:
+        st.session_state[keys.insight_fact] = SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
+
+    insight_facts = compute_insight_facts(df_scoped, period)
+    insight_species_options = species_common_names_in_period(df_scoped, period)
+    if insight_species_options and keys.insight_species not in st.session_state:
+        st.session_state[keys.insight_species] = insight_species_options[0]
+
+    card_stat_data_scope = card_stat_data_scope_from_session_export(
+        period_kind=stats.period_kind,
+        period_label=stats.period_label,
+        geo_scope=geo_scope,
+        fmt=sidebar_selection.fmt,
+        tiles_presentation=sidebar_selection.tiles_presentation,
+    )
     status_metrics = summary_status_metrics(
         stats, all_time=all_time, geo_scope=geo_scope
     )
-    with st.expander("Computed statistics", expanded=True):
-        render_social_cards_status_metrics(status_metrics)
 
-    st.caption(
-        "Card preview and export are wired in batch 4. "
-        "Use the sidebar to configure period, layout, and theme."
+    render_current_card_fragment(
+        stats=stats,
+        all_time=all_time,
+        selected_layout=sidebar_selection.layout,
+        fmt=sidebar_selection.fmt,
+        scale=sidebar_selection.scale,
+        status_metrics=status_metrics,
+        color_scheme_index=sidebar_selection.color_scheme_index,
+        card_stat_data_scope=card_stat_data_scope,
+        scope_label=scope_label,
+        geo_scope=geo_scope,
+        keys=keys,
+        tiles_presentation=sidebar_selection.tiles_presentation,
+        spotlight_presentation=sidebar_selection.spotlight_presentation,
+        insight_facts=insight_facts,
+        insight_species_options=insight_species_options,
+        df_scoped=df_scoped,
+        resolved_period=period,
+        lazy_png_export=True,
     )
 
 
