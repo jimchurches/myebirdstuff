@@ -2,7 +2,7 @@
 
 **When to use:** Pre-merge review of a **single** linked issue and its PR — e.g. a focused bug fix or small feature. For larger or multi-area changes, use `/code-review` instead.
 
-Every `/pr-review` run includes a **Test Integrity Sentinel** triage. The parent agent resolves the PR context and local checks, then — when the diff has a test or behaviour surface (see Step 4) — delegates a focused test-integrity review to a pinned reviewer subagent so tests are reviewed by a different model from the authoring flow. The reviewer model is defined once in the Step 4 invocation block.
+Every `/pr-review` run includes **Test Integrity Sentinel** triage (Step 4) and **Nit-Fixer** triage (Step 4b). The parent agent resolves PR context and local checks, then delegates to pinned subagents when triage selects launch: Sentinel for test honesty (`gpt-5.5-medium`), Nit-Fixer for mechanical and readability nits in touched files (`composer-2.5-fast`). See **[nit-fixer.md](nit-fixer.md)** for Nit-Fixer guardrails and prompt.
 
 ## Relationship to `/code-review`
 
@@ -10,7 +10,7 @@ Every `/pr-review` run includes a **Test Integrity Sentinel** triage. The parent
 |---|---|---|
 | **Scope** | One issue + one PR diff vs **merge target** (often `beta-next`; may be a feature line) | Whole change set; architecture and cross-cutting concerns |
 | **When** | Small fixes, pre-merge sanity check | Before opening/updating a large PR, or multi-file behaviour changes |
-| **Fixes during review** | Apply minor, low-risk nits without asking; allow Sentinel to strengthen in-scope tests | Default to listing gaps; only trivial fixes if the author wants them in-session |
+| **Fixes during review** | Sentinel strengthens in-scope tests; Nit-Fixer fixes mechanical/readability nits in touched files (Step 4b) | Architecture review first; **always** runs Nit-Fixer last (see [code-review.md](code-review.md)) |
 
 This command **does not replace or rewrite** `/code-review`. It reuses the same quality bar and checklist items, but constrains scope and workflow for targeted PR reviews.
 
@@ -78,7 +78,7 @@ python3 -m ruff check explorer/
 python3 -m pytest tests/ -q -m "not e2e"
 ```
 
-Prefer a **narrower** pytest path when the diff is clearly isolated (e.g. `tests/path/to/test_module.py`). Fold failures into the review; fix trivial ones under Step 6.
+Prefer a **narrower** pytest path when the diff is clearly isolated (e.g. `tests/path/to/test_module.py`). Fold failures into the review; Nit-Fixer addresses mechanical failures in Step 4b.
 
 **Docs / config only:** skip pytest unless the change affects runtime behaviour.
 
@@ -104,7 +104,7 @@ Decide using the **first** matching rule:
 
 If you are unsure whether a changed file affects behaviour, treat it as the behaviour surface and **launch** (fail safe toward review).
 
-When triage selects **skip**, go straight to Step 5. The remainder of Step 4 applies only when launching.
+When triage selects **skip**, go straight to Step 4b. The remainder of Step 4 applies only when launching.
 
 ### Parent preparation
 
@@ -215,6 +215,55 @@ After the subagent returns:
 
 ---
 
+## Step 4b — Nit-Fixer
+
+Every `/pr-review` runs **Nit-Fixer triage** after Step 4 (whether Sentinel launched or skipped). Nit-Fixer fixes mechanical and readability nits in **PR-touched files** (whole-file scope). It does **not** edit test files — Sentinel owns test integrity.
+
+### Sentinel vs Nit-Fixer
+
+| Aspect | Sentinel (Step 4) | Nit-Fixer (Step 4b) |
+| --- | --- | --- |
+| **Focus** | Test honesty, assertions, mocks, fixtures | Imports, lint, format, typos, readability |
+| **Edits tests?** | Yes, when justified | **Never** |
+| **Model** | `gpt-5.5-medium` | `composer-2.5-fast` |
+| **Philosophy** | Strengthen confidence in tests | See it, fix it in touched files |
+
+### Triage — decide whether to launch Nit-Fixer
+
+Use the **touched file list** from Step 2 (`gh pr diff --name-only` or `git diff --name-only origin/<base>...HEAD`).
+
+**Run Nit-Fixer** when any touched file is on the **Nit-Fixer surface**: `explorer/`, scripts, Cursor commands/rules, docs, or map frontend source under `explorer/components/all_locations_map/frontend/src/`.
+
+**Skip Nit-Fixer** when the diff touches **only** Sentinel-only paths (`tests/**`, fixtures, snapshots, etc.) or CI/workflow-only paths with no Nit-Fixer surface files. Record `Nit-Fixer: not applicable — [reason]` in the Step 7 report.
+
+When triage selects **skip**, go to Step 5.
+
+### Subagent invocation
+
+When triage selects **run**, follow **[nit-fixer.md](nit-fixer.md)** Steps 3–4: run the proportionate quality gate, then launch exactly one Nit-Fixer subagent.
+
+Pass the Sentinel summary (if Step 4 ran) in the subagent prompt so Nit-Fixer does not conflict with test edits.
+
+```text
+description: Nit-Fixer
+subagent_type: generalPurpose
+model: composer-2.5-fast
+readonly: false
+run_in_background: false
+```
+
+Use the task prompt and guardrails from **nit-fixer.md** (caps: ~10 files / ~150 lines; no commits).
+
+### Parent follow-up
+
+After the subagent returns:
+
+- Inspect edits; re-run Step 3 checks if production or frontend source changed.
+- Do **not** commit — author runs `/commit-work`.
+- Fold Nit-Fixer verdict, fixes, and rerun checks into the Step 7 report.
+
+---
+
 ## Step 5 — Scoped review checklist
 
 Apply the checklist **only to files in the PR diff**. Do not audit the rest of the repo.
@@ -246,26 +295,30 @@ Apply the checklist **only to files in the PR diff**. Do not audit the rest of t
 
 ---
 
-## Step 6 — In-review fixes
+## Step 6 — Fix policy (orchestration only)
 
-There are two fix policies in this command:
+The parent **does not** apply nits directly during `/pr-review`. Fixing is delegated:
 
-- **Parent review fixes:** minor only, as described below.
-- **Sentinel test-integrity fixes:** more assertive within tests and fixtures, but only under Step 4's scope and guardrails.
+| Actor | Fixes |
+|-------|--------|
+| **Sentinel (Step 4)** | Test integrity — assertions, fixtures, mocks, missing regression tests |
+| **Nit-Fixer (Step 4b)** | Mechanical and readability nits in touched production/docs/command/frontend source |
+| **Parent** | Blockers requiring author decision; verdict and report only |
 
-**Do fix without asking** when all of these hold:
+**Parent may fix without asking** only when:
 
-- Clearly within the PR diff (or directly required to make the diff correct)
-- Low risk (typos, lint, tiny readability, missing import, obvious test gap for the same behaviour)
-- No behaviour change beyond what the issue/PR already intends
+- Nit-Fixer or Sentinel failed to run (tooling error) **and** the fix is a single trivial typo clearly blocking the review report
+- The fix is required to complete the review workflow itself (not general code polish)
 
 **Do not fix without asking** when:
 
-- The fix changes behaviour, API, or architecture
+- The fix changes behaviour, API, or architecture beyond Nit-Fixer guardrails
 - It expands scope beyond the linked issue
-- It would be better as a follow-up issue
+- Nit-Fixer reported the item as out of scope or cap-exceeded — list it for author decision instead
 
-After fixes: re-run the relevant checks from Step 3 and note what changed in the output.
+Prefer **Ready to merge** over **Ready with nits** when Nit-Fixer fixed all in-scope items. Do not list nits Nit-Fixer could have fixed within caps.
+
+All fixes stay **unstaged** — author runs `/commit-work`.
 
 ---
 
@@ -303,14 +356,23 @@ Use concrete file/line references where helpful.
 - Remaining test-integrity concerns, or “None”
 - Any tests/checks it ran directly
 
+### Nit-Fixer
+
+- Triage decision: **launched** or **skipped** (with the reason)
+- Verdict from the Nit-Fixer subagent (omit if skipped)
+- Fixes it applied, or “None”
+- Remaining out-of-scope nits, or “None”
+- Approx files/lines touched
+- Reminder: fixes unstaged — author runs `/commit-work`
+
 ### Fixes applied during review
 
-- Bullet list of parent review fixes and Sentinel fixes made in-repo, or “None”
+- Bullet list of Sentinel and Nit-Fixer fixes made in-repo, or “None” (parent fixes, if any)
 
 ### Checks run
 
 - Commands executed and pass/fail (e.g. `ruff`, `pytest …`)
-- Include parent quality-gate commands, Sentinel-run commands, and any reruns after fixes
+- Include parent quality-gate commands, Sentinel-run commands, Nit-Fixer reruns, and any reruns after fixes
 
 ### Follow-ups (optional)
 
@@ -322,9 +384,12 @@ Use concrete file/line references where helpful.
 
 - Treat this as a full-project or architecture review — use `/code-review` for that
 - Rewrite large areas without author agreement
-- Block on nits that you could safely fix under Step 6
+- Block on nits that Nit-Fixer could safely fix in scope — launch Nit-Fixer instead of listing them
+- Apply mechanical/readability nits directly on the parent when Step 4b triage says to launch Nit-Fixer — launch the subagent instead
+- Let Nit-Fixer edit test files — Sentinel owns tests
 - Self-review test integrity on the parent model when Step 4 triage says to launch the subagent — launch it instead
 - Spawn the Sentinel subagent for a diff with no test or behaviour surface (e.g. docs/command/config-only) — record it as not applicable per Step 4 triage
+- Commit Nit-Fixer or Sentinel fixes during `/pr-review`
 - Substitute for CI or required human reviewers when policy applies
 
 Provide constructive, actionable feedback scoped to the linked issue and PR.

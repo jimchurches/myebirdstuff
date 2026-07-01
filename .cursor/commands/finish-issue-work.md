@@ -80,7 +80,8 @@ Use `/open-pr` logic or `gh pr create` directly:
 
 After the PR exists, offer (user confirms each):
 
-- `/pr-review` on the new PR
+- `/pr-review` on the new PR (includes Sentinel + Nit-Fixer)
+- `/nit-fixer` for a standalone nit pass without full review
 - **Future:** `/test-integrity-review` when [#310](https://github.com/jimchurches/myebirdstuff/issues/310) is implemented and test files changed
 
 ---

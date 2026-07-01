@@ -20,7 +20,7 @@ For **myebirdstuff**, read **`docs/AI_CONTEXT.md`** for repo guardrails (Streaml
     - Identify the scope of files and features impacted
     - Note any assumptions or questions to clarify with the author
 2. **Validate functionality**
-    - Confirm the code delivers the intended behavior
+    - Confirm the code delivers the intended behaviour
     - Exercise edge cases or guard conditions mentally or by running locally
     - Check error handling paths and logging for clarity
 3. **Assess quality**
@@ -34,14 +34,14 @@ For **myebirdstuff**, read **`docs/AI_CONTEXT.md`** for repo guardrails (Streaml
     - Evaluate performance or scalability impacts of the change
 5. **Identify in-scope TODO and other unfinished work**
     - Look for unfinished work (`TODO`, `FIXME`, commented-out code paths, missing tests for new behaviour)
-    - **Review-first:** default to listing gaps and suggested follow-ups; only apply trivial fixes in-repo if the author clearly wants that in the same session
+    - **Review-first:** list gaps and suggested follow-ups for architecture and behaviour concerns
     - If the unfinished work is not minor or is deliberately left for later, ask how to proceed and suggest a GitHub issue so it is not lost
 
 ## Review Checklist
 
 ### Functionality
 
-- [ ] Intended behavior works and matches requirements
+- [ ] Intended behaviour works and matches requirements
 - [ ] Edge cases handled gracefully
 - [ ] Error handling is appropriate and informative
 
@@ -57,8 +57,24 @@ For **myebirdstuff**, read **`docs/AI_CONTEXT.md`** for repo guardrails (Streaml
 ### Security & Safety
 
 - [ ] No obvious security vulnerabilities introduced
-- [ ] Inputs validated and outputs sanitized
+- [ ] Inputs validated and outputs sanitised
 - [ ] Sensitive data handled correctly
+
+## Nit-Fixer (always — final step)
+
+After steps 0–5 and the Review Checklist above, **always** run **[Nit-Fixer](nit-fixer.md)** on the change set vs merge target:
+
+- Nit-Fixer fixes mechanical and readability nits in touched files (see it, fix it within caps)
+- Architecture findings and design recommendations stay in the review output — Nit-Fixer does **not** implement them
+- Nit-Fixer does **not** edit test files; note missing tests in the review, do not ask Nit-Fixer to add them
+- Fixes stay unstaged; author runs `/commit-work`
+
+Include in your review summary:
+
+- Verdict and fixes applied (or skipped reason)
+- Remaining out-of-scope nits
+- Checks rerun after Nit-Fixer
+- Reminder: review `git diff`, then `/commit-work`
 
 ## Additional Review Notes
 
@@ -73,6 +89,7 @@ For **myebirdstuff**, read **`docs/AI_CONTEXT.md`** for repo guardrails (Streaml
 
 - Not a substitute for CI or human reviewers when policy requires them
 - Not an instruction to rewrite large areas unless the review explicitly recommends it and the author agrees
+- Not a replacement for Test Integrity Sentinel — use `/pr-review` Step 4 when test honesty is the primary concern
 
 Provide constructive feedback with concrete examples and actionable guidance for
 the author.
