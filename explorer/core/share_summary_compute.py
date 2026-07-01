@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Literal
+from typing import Any, Literal
 
 import pandas as pd
 
@@ -628,3 +628,89 @@ def compute_share_summary_all_time_stats(
         observed_families=observed_families,
         world_bird_coverage_pct=pct,
     )
+
+
+# Rankings + Bird Families prep bundle keys (``attach_group_coverage_to_bundle``).
+GROUP_COVERAGE_SUMMARY_KEY = "group_coverage_summary"
+WORLD_SPECIES_COVERAGE_METRICS_KEY = "world_species_coverage_metrics"
+
+WorldTaxonomyBundleStatus = Literal["ready", "pending", "unavailable"]
+
+
+def all_time_stats_from_rankings_bundle(
+    bundle: dict[str, Any] | None,
+) -> ShareSummaryAllTimeStats | None:
+    """Build taxonomy denominators from the rankings/families prep bundle (no re-merge)."""
+    if not bundle:
+        return None
+
+    observed: int | None = None
+    total_sp: int | None = None
+    pct: float | None = None
+    world = bundle.get(WORLD_SPECIES_COVERAGE_METRICS_KEY)
+    if isinstance(world, tuple) and len(world) == 3:
+        observed, total_sp, pct = world
+
+    total_families: int | None = None
+    observed_families: int | None = None
+    summary = bundle.get(GROUP_COVERAGE_SUMMARY_KEY)
+    if isinstance(summary, pd.DataFrame) and not summary.empty:
+        total_families = int(summary["group_name"].nunique())
+        if "seen_species" in summary.columns:
+            seen = pd.to_numeric(summary["seen_species"], errors="coerce").fillna(0)
+            observed_families = int((seen > 0).sum())
+
+    if all(
+        value is None
+        for value in (
+            observed,
+            total_sp,
+            pct,
+            total_families,
+            observed_families,
+        )
+    ):
+        return None
+
+    return ShareSummaryAllTimeStats(
+        total_species_taxa=total_sp,
+        total_families_taxa=total_families,
+        observed_species_taxa=observed,
+        observed_families=observed_families,
+        world_bird_coverage_pct=pct,
+    )
+
+
+def world_taxonomy_bundle_status(
+    bundle: dict[str, Any] | None,
+) -> WorldTaxonomyBundleStatus:
+    """Whether world-scope taxonomy reference rows can be read from the prep bundle."""
+    if bundle is None:
+        return "pending"
+    if all_time_stats_from_rankings_bundle(bundle) is not None:
+        return "ready"
+    return "unavailable"
+
+
+def resolve_social_cards_stats(
+    *,
+    df_full: pd.DataFrame,
+    df_scoped: pd.DataFrame,
+    period: ShareSummaryPeriod,
+    geo_scope: ShareSummaryGeoScope,
+    rankings_bundle: dict[str, Any] | None,
+) -> tuple[ShareSummaryStats | None, ShareSummaryAllTimeStats | None]:
+    """Period stats from scoped export; all-time taxonomy rows from the shared prep bundle."""
+    lifer_ref = df_full if not geo_scope.is_world else None
+    stats = compute_share_summary_stats(
+        df_scoped,
+        period,
+        lifer_reference_df=lifer_ref,
+        geo_scope=geo_scope,
+    )
+    all_time = (
+        all_time_stats_from_rankings_bundle(rankings_bundle)
+        if geo_scope.is_world
+        else None
+    )
+    return stats, all_time

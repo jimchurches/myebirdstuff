@@ -190,6 +190,7 @@ def resolve_card_stat_selectbox_value(
 
 
 def status_metrics_lookup(status_metrics: list[tuple[str, str]]) -> dict[str, str]:
+    """Map stat label to display value from status_metrics rows."""
     return dict(status_metrics)
 
 

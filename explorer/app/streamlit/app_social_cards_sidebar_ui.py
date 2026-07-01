@@ -127,16 +127,15 @@ def render_social_cards_main_sidebar(df_full: Any) -> None:
         selection = render_sidebar_card_controls(keys)
         st.session_state[SOCIAL_CARDS_SIDEBAR_SELECTION_KEY] = selection
 
-        # Batch 3 will resolve period + stats from session keys and scoped export.
         scoped = filter_df_by_geo_scope(df_full, geo_scope)
         st.session_state[SOCIAL_CARDS_DF_SCOPED_SESSION_KEY] = scoped
 
 
 def resolve_social_cards_period_from_session(
-    df_scoped: pd.DataFrame,
+    df_scoped: pd.DataFrame | None,
     keys: SocialCardsSessionKeys = APP_SOCIAL_CARDS_KEYS,
 ) -> ShareSummaryPeriod | None:
-    """Resolve the selected period object from sidebar session keys (for batch 3 wiring)."""
+    """Resolve the selected period object from sidebar session keys."""
     if df_scoped is None or df_scoped.empty:
         return None
     dates = pd.to_datetime(df_scoped["Date"], errors="coerce").dropna()
@@ -151,12 +150,9 @@ def resolve_social_cards_period_from_session(
     if period_mode == "year":
         selected_year = int(st.session_state.get(keys.period_year, date.today().year))
         return period_for_year(selected_year)
-    if period_mode == "month":
+    if period_mode in ("month", "week"):
         anchor: PeriodAnchor = st.session_state.get(keys.period_anchor, "current")
-        return resolve_period("month", anchor=anchor, reference=reference)
-    if period_mode == "week":
-        anchor: PeriodAnchor = st.session_state.get(keys.period_anchor, "current")
-        return resolve_period("week", anchor=anchor, reference=reference)
+        return resolve_period(period_mode, anchor=anchor, reference=reference)
     if period_mode == "lifetime":
         return period_for_lifetime(min_d, max_d)
     if period_mode == "custom":
@@ -164,7 +160,11 @@ def resolve_social_cards_period_from_session(
         end = st.session_state.get(keys.custom_end, max_d)
         if end < start:
             start, end = end, start
-        heading = _card_heading_or_none(st.session_state.get(keys.custom_card_heading, ""))
+        heading = _card_heading_or_none(
+            st.session_state.get(keys.custom_card_heading, "")
+        )
         return period_for_custom(start, end, trip_title=heading)
 
-    return period_for_year(int(st.session_state.get(keys.period_year, date.today().year)))
+    return period_for_year(
+        int(st.session_state.get(keys.period_year, date.today().year))
+    )
