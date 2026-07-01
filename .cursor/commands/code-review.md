@@ -57,7 +57,7 @@ For **myebirdstuff**, read **`docs/AI_CONTEXT.md`** for repo guardrails (Streaml
 ### Security & Safety
 
 - [ ] No obvious security vulnerabilities introduced
-- [ ] Inputs validated and outputs sanitized
+- [ ] Inputs validated and outputs sanitised
 - [ ] Sensitive data handled correctly
 
 ## Nit-Fixer (always — final step)
