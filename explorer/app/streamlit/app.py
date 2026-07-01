@@ -18,7 +18,7 @@ and tab fragments. Orchestration phases are documented in
 :mod:`explorer.app.streamlit.app_orchestration`.
 
 **Main tabs:** Map, Checklist Statistics, Ranking & Lists, Bird Families, Yearly Summary,
-Country, Maintenance, Settings. Map prep runs first in a sidebar bottom ``st.spinner`` (see
+Country, Social Cards, Maintenance, Settings. Map prep runs first in a sidebar bottom ``st.spinner`` (see
 :mod:`explorer.app.streamlit.app_prep_map_ui`). Data tabs use ``@st.fragment`` where possible so
 control changes avoid rerunning the full map pipeline.
 

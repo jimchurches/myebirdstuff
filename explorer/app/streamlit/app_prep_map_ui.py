@@ -18,10 +18,12 @@ from explorer.app.streamlit.app_constants import (
     LEAFLET_EXPORT_BUILT_CACHE_KEY,
     LEAFLET_EXPORT_RECIPE_KEY,
 )
+from explorer.app.streamlit.app_main_tab_ui import is_social_cards_main_tab
 from explorer.app.streamlit.app_map_ui import (
     place_spinner_emoji_strip,
     sidebar_bottom_slot_end,
     sidebar_bottom_slot_start,
+    sidebar_footer_links,
 )
 from explorer.app.streamlit.app_prep_map_blank_viewport import (
     seed_blank_map_default_viewport_recipe,
@@ -167,5 +169,8 @@ def render_prep_spinner_and_map_tab(
         )
 
         _spinner_emoji_placeholder.empty()
-        render_prep_sidebar_after_map(map_height)
+        if is_social_cards_main_tab():
+            sidebar_footer_links(leading_divider=True)
+        else:
+            render_prep_sidebar_after_map(map_height)
         sidebar_bottom_slot_end()

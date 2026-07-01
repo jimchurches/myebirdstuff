@@ -55,6 +55,8 @@ MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION = (
 # Main tab strip (``st.tabs`` order)
 # ---------------------------------------------------------------------------
 
+SOCIAL_CARDS_TAB_LABEL = "Social Cards"
+
 NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Map",
     "Checklist Statistics",
@@ -62,6 +64,7 @@ NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Bird Families",
     "Yearly Summary",
     "Country",
+    SOCIAL_CARDS_TAB_LABEL,
     "Maintenance",
     "Settings",
 )

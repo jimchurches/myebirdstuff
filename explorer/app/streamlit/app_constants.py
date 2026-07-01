@@ -108,6 +108,9 @@ EXPLORER_MAP_HTML_BYTES_KEY = "_explorer_map_html_bytes"
 EBIRD_LANDING_MAIN_CONTAINER_KEY = "ebird_landing_main"
 EBIRD_LANDING_CSV_UPLOADER_KEY = "ebird_landing_csv_uploader"
 
+# Main tab strip (``st.tabs`` widget key — active label in session state when ``on_change="rerun"``).
+STREAMLIT_MAIN_TAB_KEY = "streamlit_main_tab"
+
 # Map view widget keys.
 STREAMLIT_MAP_VIEW_LABEL_KEY = "streamlit_map_view_label"
 STREAMLIT_MAP_DATE_FILTER_KEY = "streamlit_map_date_filter"
