@@ -867,13 +867,13 @@ def test_design_app_png_cache_key_includes_scheme_fingerprint():
         / "explorer"
         / "app"
         / "streamlit"
-        / "design_share_summary_app.py"
+        / "social_cards_streamlit_ui.py"
     )
     tree = ast.parse(app_path.read_text(encoding="utf-8"))
     cached_func = next(
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name == "_cached_share_summary_png"
+        if isinstance(node, ast.FunctionDef) and node.name == "cached_share_summary_png"
     )
     assert "color_scheme_fingerprint" in [arg.arg for arg in cached_func.args.args]
 
@@ -882,7 +882,7 @@ def test_design_app_png_cache_key_includes_scheme_fingerprint():
         for node in ast.walk(tree)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
-        and node.func.id == "_cached_share_summary_png"
+        and node.func.id == "cached_share_summary_png"
     ]
     assert cache_calls
     assert any(

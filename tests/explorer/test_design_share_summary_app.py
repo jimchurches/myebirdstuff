@@ -1,31 +1,35 @@
-"""Tests for design share summary app helpers."""
+"""Tests for Social Cards Streamlit helpers and design-app sample data."""
 
-from explorer.app.streamlit.design_share_summary_app import (
-    _card_stat_data_scope,
-    _card_stat_ui_row_count,
-    _default_card_stat_slot_count,
-    _design_sample_dataset,
-    _period_has_checklist_data,
-    _resolve_card_stat_selectbox_value,
+from datetime import date
+
+from explorer.app.streamlit.design_share_summary_app import _design_sample_dataset
+from explorer.app.streamlit.social_cards_streamlit_helpers import (
+    card_stat_data_scope_from_design_source,
+    card_stat_ui_row_count,
+    default_card_stat_slot_count,
+    period_has_checklist_data,
+    resolve_card_stat_selectbox_value,
 )
 from explorer.core.share_summary_compute import (
     ShareSummaryGeoScope,
     ShareSummaryStats,
+    compute_share_summary_stats,
     geo_country_keys_from_df,
     geo_region_options_for_country,
+    period_for_year,
 )
 
 
 def test_card_stat_ui_row_count_clamps_slot_count_to_layout_limit():
-    assert _card_stat_ui_row_count("tiles", "story", slot_count=4) == 4
-    assert _card_stat_ui_row_count("minimal", "story", slot_count=6) == 6
-    assert _card_stat_ui_row_count("tiles", "story", slot_count=14) == 14
-    assert _card_stat_ui_row_count("tiles", "story", slot_count=16) == 14
-    assert _card_stat_ui_row_count("tiles", "story", slot_count=2) == 4
-    assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=9) == 8
-    assert _card_stat_ui_row_count("tiles", "portrait_post", slot_count=3) == 4
+    assert card_stat_ui_row_count("tiles", "story", slot_count=4) == 4
+    assert card_stat_ui_row_count("minimal", "story", slot_count=6) == 6
+    assert card_stat_ui_row_count("tiles", "story", slot_count=14) == 14
+    assert card_stat_ui_row_count("tiles", "story", slot_count=16) == 14
+    assert card_stat_ui_row_count("tiles", "story", slot_count=2) == 4
+    assert card_stat_ui_row_count("tiles", "portrait_post", slot_count=9) == 8
+    assert card_stat_ui_row_count("tiles", "portrait_post", slot_count=3) == 4
     assert (
-        _card_stat_ui_row_count(
+        card_stat_ui_row_count(
             "tiles",
             "square",
             slot_count=8,
@@ -34,7 +38,7 @@ def test_card_stat_ui_row_count_clamps_slot_count_to_layout_limit():
         == 6
     )
     assert (
-        _card_stat_ui_row_count(
+        card_stat_ui_row_count(
             "tiles",
             "portrait_post",
             slot_count=12,
@@ -43,7 +47,7 @@ def test_card_stat_ui_row_count_clamps_slot_count_to_layout_limit():
         == 8
     )
     assert (
-        _card_stat_ui_row_count(
+        card_stat_ui_row_count(
             "tiles",
             "story",
             slot_count=12,
@@ -70,14 +74,14 @@ def test_layout_grid_stat_default_count():
 
 
 def test_default_card_stat_slot_count():
-    assert _default_card_stat_slot_count(
+    assert default_card_stat_slot_count(
         circle_cluster=True,
         defaults=["A", "B", "C", "D", "E", "F"],
         max_slots=10,
         layout="tiles",
         fmt="story",
     ) == 6
-    assert _default_card_stat_slot_count(
+    assert default_card_stat_slot_count(
         circle_cluster=False,
         defaults=["A", "B", "C", "D", "E", "F"],
         max_slots=10,
@@ -85,7 +89,7 @@ def test_default_card_stat_slot_count():
         fmt="square",
         tiles_presentation="grid",
     ) == 4
-    assert _default_card_stat_slot_count(
+    assert default_card_stat_slot_count(
         circle_cluster=False,
         defaults=["A", "B", "C", "D", "E", "F"],
         max_slots=10,
@@ -93,7 +97,7 @@ def test_default_card_stat_slot_count():
         fmt="portrait_post",
         tiles_presentation="grid",
     ) == 6
-    assert _default_card_stat_slot_count(
+    assert default_card_stat_slot_count(
         circle_cluster=False,
         defaults=["A", "B", "C", "D", "E", "F"],
         max_slots=10,
@@ -101,14 +105,14 @@ def test_default_card_stat_slot_count():
         fmt="story",
         tiles_presentation="grid",
     ) == 6
-    assert _default_card_stat_slot_count(
+    assert default_card_stat_slot_count(
         circle_cluster=False,
         defaults=["A", "B", "C", "D"],
         max_slots=10,
         layout="minimal",
         fmt="story",
     ) == 4
-    assert _default_card_stat_slot_count(
+    assert default_card_stat_slot_count(
         circle_cluster=False,
         defaults=[],
         max_slots=6,
@@ -118,19 +122,19 @@ def test_default_card_stat_slot_count():
 
 
 def test_card_stat_data_scope_changes_when_source_or_period_changes():
-    sample = _card_stat_data_scope(
+    sample = card_stat_data_scope_from_design_source(
         use_sample=True,
         period_kind="month",
         period_label="June 2025",
         upload_name=None,
     )
-    csv = _card_stat_data_scope(
+    csv = card_stat_data_scope_from_design_source(
         use_sample=False,
         period_kind="month",
         period_label="June 2025",
         upload_name="MyEBirdData.csv",
     )
-    other_month = _card_stat_data_scope(
+    other_month = card_stat_data_scope_from_design_source(
         use_sample=False,
         period_kind="month",
         period_label="May 2025",
@@ -142,7 +146,7 @@ def test_card_stat_data_scope_changes_when_source_or_period_changes():
     assert sample != csv
     assert csv != other_month
     assert (
-        _card_stat_data_scope(
+        card_stat_data_scope_from_design_source(
             use_sample=True,
             period_kind="month",
             period_label="June 2025",
@@ -153,14 +157,14 @@ def test_card_stat_data_scope_changes_when_source_or_period_changes():
 
 
 def test_card_stat_data_scope_changes_when_geo_scope_changes():
-    world = _card_stat_data_scope(
+    world = card_stat_data_scope_from_design_source(
         use_sample=False,
         period_kind="year",
         period_label="2025",
         upload_name="MyEBirdData.csv",
         geo_scope=ShareSummaryGeoScope(),
     )
-    country = _card_stat_data_scope(
+    country = card_stat_data_scope_from_design_source(
         use_sample=False,
         period_kind="year",
         period_label="2025",
@@ -173,21 +177,21 @@ def test_card_stat_data_scope_changes_when_geo_scope_changes():
 
 
 def test_card_stat_data_scope_changes_when_format_or_presentation_changes():
-    square = _card_stat_data_scope(
+    square = card_stat_data_scope_from_design_source(
         use_sample=True,
         period_kind="year",
         period_label="2025",
         upload_name=None,
         fmt="square",
     )
-    story = _card_stat_data_scope(
+    story = card_stat_data_scope_from_design_source(
         use_sample=True,
         period_kind="year",
         period_label="2025",
         upload_name=None,
         fmt="story",
     )
-    circles = _card_stat_data_scope(
+    circles = card_stat_data_scope_from_design_source(
         use_sample=True,
         period_kind="year",
         period_label="2025",
@@ -202,7 +206,7 @@ def test_card_stat_data_scope_changes_when_format_or_presentation_changes():
 def test_resolve_card_stat_selectbox_value_prefers_widget_over_stale_pick():
     options = ["", "Lifers", "Australia Lifers", "Total species"]
     assert (
-        _resolve_card_stat_selectbox_value(
+        resolve_card_stat_selectbox_value(
             session_value="Australia Lifers",
             desired="Lifers",
             options=options,
@@ -210,7 +214,7 @@ def test_resolve_card_stat_selectbox_value_prefers_widget_over_stale_pick():
         == "Australia Lifers"
     )
     assert (
-        _resolve_card_stat_selectbox_value(
+        resolve_card_stat_selectbox_value(
             session_value="Countries",
             desired="Lifers",
             options=options,
@@ -220,8 +224,6 @@ def test_resolve_card_stat_selectbox_value_prefers_widget_over_stale_pick():
 
 
 def test_design_sample_dataset_has_expected_geo_options():
-    from datetime import date
-
     df = _design_sample_dataset(date.today().year)
     countries = geo_country_keys_from_df(df)
     assert countries == ["AU", "IN"]
@@ -232,10 +234,6 @@ def test_design_sample_dataset_has_expected_geo_options():
 
 
 def test_design_sample_dataset_has_checklists_for_current_year():
-    from datetime import date
-
-    from explorer.core.share_summary_compute import compute_share_summary_stats, period_for_year
-
     year = date.today().year
     df = _design_sample_dataset(year)
     stats = compute_share_summary_stats(df, period_for_year(year))
@@ -252,12 +250,12 @@ def test_design_sample_dataset_has_checklists_for_current_year():
 
 
 def test_period_has_checklist_data():
-    assert _period_has_checklist_data(
+    assert period_has_checklist_data(
         ShareSummaryStats(period_label="June 2025", period_kind="month", checklists=3)
     )
-    assert not _period_has_checklist_data(
+    assert not period_has_checklist_data(
         ShareSummaryStats(period_label="June 2026", period_kind="month")
     )
-    assert not _period_has_checklist_data(
+    assert not period_has_checklist_data(
         ShareSummaryStats(period_label="June 2026", period_kind="month", checklists=0)
     )
