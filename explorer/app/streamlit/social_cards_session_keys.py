@@ -50,6 +50,30 @@ class SocialCardsSessionKeys:
     def preview_scale(self) -> str:
         return f"{self.prefix}_preview_scale"
 
+    @property
+    def period_mode(self) -> str:
+        return f"{self.prefix}_period_mode"
+
+    @property
+    def period_year(self) -> str:
+        return f"{self.prefix}_period_year"
+
+    @property
+    def period_anchor(self) -> str:
+        return f"{self.prefix}_period_anchor"
+
+    @property
+    def custom_start(self) -> str:
+        return f"{self.prefix}_custom_start"
+
+    @property
+    def custom_end(self) -> str:
+        return f"{self.prefix}_custom_end"
+
+    @property
+    def custom_card_heading(self) -> str:
+        return f"{self.prefix}_custom_card_heading"
+
     def card_stat_picks(self, layout: LayoutId, period_kind: PeriodKind) -> str:
         return f"{self.prefix}_card_stat_picks_{layout}_{period_kind}"
 
@@ -87,3 +111,5 @@ class SocialCardsSessionKeys:
 
 
 DESIGN_SOCIAL_CARDS_KEYS = SocialCardsSessionKeys(prefix="design")
+
+APP_SOCIAL_CARDS_KEYS = SocialCardsSessionKeys(prefix="social_cards")
