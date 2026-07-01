@@ -1445,6 +1445,10 @@ def layout_tiles_circle_cluster(
         fmt,
         scope_label=scope_label,
     )
+    body_top, body_bottom, body_left, body_right = _tiles_circle_body_insets(
+        fmt,
+        scope_label=scope_label,
+    )
     template = circle_card_template("tiles", fmt)
     if template is not None and len(pairs) in template.counts:
         circles_html = _hand_tuned_template_canvas_html(
@@ -1464,10 +1468,10 @@ def layout_tiles_circle_cluster(
             diameter_start=TILES_CIRCLE_DIAMETER_SEARCH_START,
         )
     return f"""
-<div style="display:flex;flex-direction:column;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
   {_header_block(stats, subtitle=subtitle)}
-  <div style="flex:1;display:flex;justify-content:center;align-items:flex-start;
-    padding:0 48px 16px;min-height:0;overflow:hidden;">
+  <div style="position:absolute;left:{body_left}px;right:{body_right}px;top:{body_top}px;
+    bottom:{body_bottom}px;display:flex;justify-content:center;align-items:flex-start;overflow:hidden;">
     {circles_html}
   </div>
   {_footer_block(scope_label=scope_label)}
@@ -1555,7 +1559,7 @@ def layout_spotlight_circle(
         shadow=True,
     )
     return f"""
-<div style="display:flex;flex-direction:column;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
   {_header_block(stats, subtitle=subtitle)}
   <div style="padding:0 48px {pad_bottom}px;display:flex;justify-content:center;">
     <div style="position:relative;width:{canvas_w}px;height:{canvas_h}px;margin:0 auto;overflow:hidden;">
@@ -1607,7 +1611,7 @@ def _layout_tiles_circles(
         scope_label=scope_label,
     )
     return f"""
-<div style="display:flex;flex-direction:column;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
   {_header_block(stats, subtitle=subtitle)}
   <div style="padding:0 48px {pad_bottom}px;display:flex;justify-content:center;">
     {_circles_canvas_html(

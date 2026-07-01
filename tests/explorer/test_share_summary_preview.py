@@ -637,19 +637,20 @@ def test_footer_scope_and_brand_use_muted_in_preview_and_export():
     for html in (preview, export):
         assert f'color:{dark["muted"]};letter-spacing:0.04em;">World</p>' in html
         assert f'color:{dark["muted"]};">Personal eBird Explorer</p>' in html
-        assert "position:absolute;left:0;right:0;bottom:0" not in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
 
 
-def test_preview_and_export_share_footer_content_gap_for_tiles():
+def test_preview_and_export_share_reserved_footer_padding_story_tiles():
     stats = sample_share_summary_stats()
     preview = render_share_summary_preview_html(
-        stats, layout="tiles", fmt="story", color_scheme_index=1
+        stats, layout="tiles", fmt="story", color_scheme_index=1, scope_label="World"
     )
     export = render_share_summary_export_html(
-        stats, layout="tiles", fmt="story", color_scheme_index=1
+        stats, layout="tiles", fmt="story", color_scheme_index=1, scope_label="World"
     )
-    assert "padding:8px 48px 16px" in preview
-    assert "padding:8px 48px 16px" in export
+    for html in (preview, export):
+        assert "padding:8px 48px 140px" in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
 
 
 def test_card_stat_pairs_selected_labels_includes_all_time():
