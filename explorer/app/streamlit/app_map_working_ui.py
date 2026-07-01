@@ -149,6 +149,7 @@ class MapWorkingContext:
 
 
 def _effective_map_style() -> str:
+    """Basemap key from session, falling back to saved/default when invalid."""
     saved_basemap = st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_OPTIONS[0])
     if saved_basemap not in MAP_BASEMAP_OPTIONS:
         saved_basemap = MAP_BASEMAP_OPTIONS[0]
@@ -159,6 +160,7 @@ def _effective_map_style() -> str:
 
 
 def _map_view_from_session() -> tuple[str, str, bool, bool]:
+    """Map view label/mode and lifer/family flags from session (legacy label migration)."""
     map_view_label = st.session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY, MAP_VIEW_LABELS[0])
     if map_view_label == "Selected species":
         map_view_label = "Species locations"
@@ -174,6 +176,7 @@ def _date_filter_from_session(
     is_lifer_view: bool,
     is_family_view: bool,
 ) -> tuple[bool, tuple | None]:
+    """Date-filter toggle and clamped range from session; disabled for lifer/family views."""
     if is_lifer_view or is_family_view:
         return False, None
     if STREAMLIT_MAP_DATE_FILTER_KEY not in st.session_state:
@@ -217,6 +220,7 @@ def render_map_sidebar(df_full: Any, *, work_df: Any) -> None:
                 key=STREAMLIT_LIFER_SHOW_SUBSPECIES_KEY,
             )
         elif is_family_view:
+            # Family map view (v1): ignore date filter controls in the sidebar.
             pass
         else:
             if STREAMLIT_MAP_DATE_FILTER_KEY not in st.session_state:

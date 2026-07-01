@@ -19,6 +19,7 @@ from explorer.app.streamlit.social_cards_sidebar_ui import (
 from explorer.core.share_summary_compute import (
     PeriodAnchor,
     ShareSummaryGeoScope,
+    ShareSummaryPeriod,
     filter_df_by_geo_scope,
     period_for_custom,
     period_for_lifetime,
@@ -27,6 +28,7 @@ from explorer.core.share_summary_compute import (
     suggest_period_anchor,
 )
 
+SOCIAL_CARDS_DF_SCOPED_SESSION_KEY = "_social_cards_df_scoped"
 SOCIAL_CARDS_GEO_SCOPE_SESSION_KEY = "_social_cards_geo_scope"
 SOCIAL_CARDS_SIDEBAR_SELECTION_KEY = "_social_cards_sidebar_selection"
 
@@ -127,13 +129,13 @@ def render_social_cards_main_sidebar(df_full: Any) -> None:
 
         # Batch 3 will resolve period + stats from session keys and scoped export.
         scoped = filter_df_by_geo_scope(df_full, geo_scope)
-        st.session_state["_social_cards_df_scoped"] = scoped
+        st.session_state[SOCIAL_CARDS_DF_SCOPED_SESSION_KEY] = scoped
 
 
 def resolve_social_cards_period_from_session(
     df_scoped: pd.DataFrame,
     keys: SocialCardsSessionKeys = APP_SOCIAL_CARDS_KEYS,
-) -> Any | None:
+) -> ShareSummaryPeriod | None:
     """Resolve the selected period object from sidebar session keys (for batch 3 wiring)."""
     if df_scoped is None or df_scoped.empty:
         return None
@@ -153,7 +155,7 @@ def resolve_social_cards_period_from_session(
         anchor: PeriodAnchor = st.session_state.get(keys.period_anchor, "current")
         return resolve_period("month", anchor=anchor, reference=reference)
     if period_mode == "week":
-        anchor = st.session_state.get(keys.period_anchor, "current")
+        anchor: PeriodAnchor = st.session_state.get(keys.period_anchor, "current")
         return resolve_period("week", anchor=anchor, reference=reference)
     if period_mode == "lifetime":
         return period_for_lifetime(min_d, max_d)

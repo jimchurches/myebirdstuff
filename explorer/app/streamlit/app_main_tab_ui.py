@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import streamlit as st
 
 from explorer.app.streamlit.app_constants import STREAMLIT_MAIN_TAB_KEY
@@ -27,7 +29,7 @@ def is_social_cards_main_tab() -> bool:
 def notebook_main_tabs(
     *,
     on_change: str = "rerun",
-) -> tuple:
+) -> tuple[Any, ...]:
     """Keyed main tab row; active label stored in ``STREAMLIT_MAIN_TAB_KEY``."""
     return st.tabs(
         list(NOTEBOOK_MAIN_TAB_LABELS),
