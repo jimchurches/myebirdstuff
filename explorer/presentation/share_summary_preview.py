@@ -647,14 +647,25 @@ def _footer_pad(
     return 120
 
 
-def _footer_scope_colour() -> str:
-    """Geographic scope line in the card footer (e.g. World)."""
-    return _colour("muted")
+def _tiles_grid_is_dense(fmt: FormatId, pair_count: int) -> bool:
+    """Dense rectangular grids use a bottom-aligned body band (same chrome as circle tiles)."""
+    rows = (pair_count + 1) // 2
+    return rows >= 5 or (fmt == "story" and pair_count >= 8)
 
 
-def _footer_brand_colour() -> str:
-    """App name and logo in the card footer."""
-    return _colour("muted")
+def _tiles_grid_body_insets(
+    fmt: FormatId,
+    *,
+    scope_label: str | None,
+) -> tuple[int, int, int, int]:
+    """Absolute top/bottom/side insets for dense Statistics Grid body bands."""
+    if fmt == "story":
+        header_reserve, footer_reserve, vertical_pad = 200, (210 if scope_label else 172), 20
+    else:
+        header_reserve, footer_reserve, vertical_pad = 192, (178 if scope_label else 132), 12
+    top = header_reserve + vertical_pad // 2
+    bottom = footer_reserve + vertical_pad - vertical_pad // 2
+    return top, bottom, 48, 48
 
 
 def _card_shell(
@@ -708,23 +719,24 @@ def _header_block(stats: ShareSummaryStats, *, subtitle: str | None = None) -> s
 
 
 def _footer_block(*, scope_label: str | None = None) -> str:
-    brand_colour = _footer_brand_colour()
-    logo = _logo_svg_inline(height_px=46, fill=brand_colour)
+    """Card footer chrome. ``<div>`` copy (not ``<p>``) so Streamlit preview keeps muted colour."""
+    footer_muted = _colour("muted")
+    logo = _logo_svg_inline(height_px=46, fill=footer_muted)
     logo_row = (
         f'<div style="margin:4px 0;line-height:0;">{logo}</div>' if logo else ""
     )
     scope_row = ""
     if scope_label:
         scope_row = (
-            f'<p style="margin:0 0 7px;font-size:36px;font-weight:600;line-height:1.05;'
-            f'color:{_footer_scope_colour()};letter-spacing:0.04em;">{_esc(scope_label)}</p>'
+            f'<div style="margin:0 0 7px;font-size:36px;font-weight:600;line-height:1.05;'
+            f'letter-spacing:0.04em;">{_esc(scope_label)}</div>'
         )
     return f"""
 <div style="position:absolute;left:0;right:0;bottom:0;padding:22px 56px 26px;text-align:center;
-  border-top:1px solid {_colour("border")};background:{_colour("bg_alt")};">
+  color:{footer_muted};border-top:1px solid {_colour("border")};background:{_colour("bg_alt")};">
   {scope_row}
   {logo_row}
-  <p style="margin:5px 0 0;font-size:18px;color:{brand_colour};">Personal eBird Explorer</p>
+  <div style="margin:5px 0 0;font-size:18px;">Personal eBird Explorer</div>
 </div>"""
 
 
@@ -810,14 +822,32 @@ def _layout_tiles(
   <div style="font-size:{value_px};font-weight:700;">{_esc(value)}</div>
   <div style="margin-top:8px;font-size:{label_px};color:{_colour("muted")};">{_esc(label)}</div>
 </div>""")
+    cells_html = "".join(cells)
+    grid_html = (
+        f'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));'
+        f'gap:{grid_gap};">{cells_html}</div>'
+    )
+    if _tiles_grid_is_dense(fmt, len(pairs)):
+        body_top, body_bottom, body_left, body_right = _tiles_grid_body_insets(
+            fmt,
+            scope_label=scope_label,
+        )
+        return f"""
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+  {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
+  <div style="position:absolute;left:{body_left}px;right:{body_right}px;top:{body_top}px;
+    bottom:{body_bottom}px;display:flex;align-items:flex-end;overflow:hidden;
+    padding-bottom:8px;box-sizing:border-box;">
+    <div style="width:100%;">{grid_html}</div>
+  </div>
+  {_footer_block(scope_label=scope_label)}
+</div>"""
     pad_bottom = _footer_pad(fmt, width, height)
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
   <div style="padding:8px 48px {pad_bottom}px;">
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:{grid_gap};">
-      {''.join(cells)}
-    </div>
+    {grid_html}
   </div>
   {_footer_block(scope_label=scope_label)}
 </div>"""
