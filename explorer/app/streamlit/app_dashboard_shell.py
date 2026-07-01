@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import streamlit as st
-
 from explorer.app.streamlit.app_bootstrap import TaxonomyPopupAssets
 from explorer.app.streamlit.app_landing_ui import title_with_logo
 from explorer.app.streamlit.app_main_tab_ui import notebook_main_tabs
@@ -26,8 +24,10 @@ from explorer.app.streamlit.maintenance_streamlit_html import (
 from explorer.app.streamlit.rankings_streamlit_html import (
     run_rankings_streamlit_tab_fragment,
 )
+from explorer.app.streamlit.social_cards_streamlit_html import (
+    run_social_cards_streamlit_tab_fragment,
+)
 from explorer.app.streamlit.streamlit_theme import inject_main_tab_panel_top_compact_css
-from explorer.app.streamlit.streamlit_ui_constants import SOCIAL_CARDS_TAB_LABEL
 from explorer.app.streamlit.yearly_summary_streamlit_html import (
     run_yearly_summary_streamlit_fragment,
 )
@@ -126,11 +126,7 @@ def render_dashboard_shell(
 
     with tab_social_cards:
         if tab_social_cards.open:
-            st.subheader(SOCIAL_CARDS_TAB_LABEL)
-            st.caption(
-                "Card preview and export are wired in a follow-up batch. "
-                "Use the sidebar to configure period, layout, and theme."
-            )
+            run_social_cards_streamlit_tab_fragment(df_full)
 
     with tab_settings:
         render_settings_tab(

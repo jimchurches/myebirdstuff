@@ -127,7 +127,6 @@ def render_social_cards_main_sidebar(df_full: Any) -> None:
         selection = render_sidebar_card_controls(keys)
         st.session_state[SOCIAL_CARDS_SIDEBAR_SELECTION_KEY] = selection
 
-        # Batch 3 will resolve period + stats from session keys and scoped export.
         scoped = filter_df_by_geo_scope(df_full, geo_scope)
         st.session_state[SOCIAL_CARDS_DF_SCOPED_SESSION_KEY] = scoped
 
