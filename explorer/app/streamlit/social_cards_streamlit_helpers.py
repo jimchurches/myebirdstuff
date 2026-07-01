@@ -2,21 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
-
-import pandas as pd
-
-from explorer.app.streamlit.bird_families_streamlit_html import (
-    GROUP_COVERAGE_SUMMARY_KEY,
-    WORLD_SPECIES_COVERAGE_METRICS_KEY,
-)
 from explorer.core.share_summary_compute import (
     PeriodKind,
-    ShareSummaryAllTimeStats,
     ShareSummaryGeoScope,
-    ShareSummaryPeriod,
     ShareSummaryStats,
-    compute_share_summary_stats,
 )
 from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_DEFAULT,
@@ -71,74 +60,6 @@ def card_stat_data_scope_from_design_source(
 def period_has_checklist_data(stats: ShareSummaryStats) -> bool:
     """False when the selected period has no checklists in the loaded export."""
     return stats.checklists is not None and stats.checklists > 0
-
-
-def all_time_stats_from_rankings_bundle(
-    bundle: dict[str, Any] | None,
-) -> ShareSummaryAllTimeStats | None:
-    """Build taxonomy denominators from the rankings/families prep bundle (no re-merge)."""
-    if not bundle:
-        return None
-
-    observed: int | None = None
-    total_sp: int | None = None
-    pct: float | None = None
-    world = bundle.get(WORLD_SPECIES_COVERAGE_METRICS_KEY)
-    if isinstance(world, tuple) and len(world) == 3:
-        observed, total_sp, pct = world
-
-    total_families: int | None = None
-    observed_families: int | None = None
-    summary = bundle.get(GROUP_COVERAGE_SUMMARY_KEY)
-    if isinstance(summary, pd.DataFrame) and not summary.empty:
-        total_families = int(summary["group_name"].nunique())
-        if "seen_species" in summary.columns:
-            seen = pd.to_numeric(summary["seen_species"], errors="coerce").fillna(0)
-            observed_families = int((seen > 0).sum())
-
-    if all(
-        value is None
-        for value in (
-            observed,
-            total_sp,
-            pct,
-            total_families,
-            observed_families,
-        )
-    ):
-        return None
-
-    return ShareSummaryAllTimeStats(
-        total_species_taxa=total_sp,
-        total_families_taxa=total_families,
-        observed_species_taxa=observed,
-        observed_families=observed_families,
-        world_bird_coverage_pct=pct,
-    )
-
-
-def resolve_social_cards_stats(
-    *,
-    df_full: pd.DataFrame,
-    df_scoped: pd.DataFrame,
-    period: ShareSummaryPeriod,
-    geo_scope: ShareSummaryGeoScope,
-    rankings_bundle: dict[str, Any] | None,
-) -> tuple[ShareSummaryStats | None, ShareSummaryAllTimeStats | None]:
-    """Period stats from scoped export; all-time taxonomy rows from the shared prep bundle."""
-    lifer_ref = df_full if not geo_scope.is_world else None
-    stats = compute_share_summary_stats(
-        df_scoped,
-        period,
-        lifer_reference_df=lifer_ref,
-        geo_scope=geo_scope,
-    )
-    all_time = (
-        all_time_stats_from_rankings_bundle(rankings_bundle)
-        if geo_scope.is_world
-        else None
-    )
-    return stats, all_time
 
 
 def tiles_circle_cluster_picker(
@@ -269,6 +190,7 @@ def resolve_card_stat_selectbox_value(
 
 
 def status_metrics_lookup(status_metrics: list[tuple[str, str]]) -> dict[str, str]:
+    """Map stat label to display value from status_metrics rows."""
     return dict(status_metrics)
 
 

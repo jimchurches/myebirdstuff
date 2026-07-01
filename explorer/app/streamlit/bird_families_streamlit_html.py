@@ -26,6 +26,10 @@ from explorer.app.streamlit.defaults import (
 )
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
+from explorer.core.share_summary_compute import (
+    GROUP_COVERAGE_SUMMARY_KEY,
+    WORLD_SPECIES_COVERAGE_METRICS_KEY,
+)
 from explorer.core.species_family import (
     assign_group_for_taxon_order,
     load_taxonomy_groups,
@@ -42,10 +46,8 @@ logger = logging.getLogger(__name__)
 _STREAMLIT_TABLE_SCOPE = "streamlit-checklist-html-ab"
 _RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"
 
-GROUP_COVERAGE_SUMMARY_KEY = "group_coverage_summary"
 GROUP_COVERAGE_DETAIL_KEY = "group_coverage_detail"
 GROUP_COVERAGE_ERROR_KEY = "group_coverage_error"
-WORLD_SPECIES_COVERAGE_METRICS_KEY = "world_species_coverage_metrics"
 WORLD_SPECIES_COVERAGE_SECTION_KEY = "world_species_coverage_section"
 _STREAMLIT_GROUP_COVERAGE_SELECTED_KEY = "streamlit_group_coverage_selected_group"
 _STREAMLIT_GROUP_COVERAGE_TABLE_KEY = "streamlit_group_coverage_summary_table"

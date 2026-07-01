@@ -22,12 +22,13 @@ from explorer.app.streamlit.app_social_cards_sidebar_ui import (
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     period_has_checklist_data,
-    resolve_social_cards_stats,
 )
 from explorer.app.streamlit.streamlit_ui_constants import SOCIAL_CARDS_TAB_LABEL
 from explorer.core.share_summary_compute import (
     ShareSummaryGeoScope,
     geo_scope_display_label,
+    resolve_social_cards_stats,
+    world_taxonomy_bundle_status,
 )
 from explorer.presentation.share_summary_preview import summary_status_metrics
 
@@ -80,7 +81,21 @@ def render_social_cards_tab_content(
             "Try **Previous month** (or another range) in the sidebar, or pick a period that includes your data."
         )
 
-    status_metrics = summary_status_metrics(stats, all_time=all_time, geo_scope=geo_scope)
+    if geo_scope.is_world:
+        tax_status = world_taxonomy_bundle_status(rankings_bundle)
+        if tax_status == "pending":
+            st.caption(
+                "Taxonomy reference stats are still loading — wait for checklist and "
+                "rankings prep to finish, then try again."
+            )
+        elif tax_status == "unavailable":
+            st.caption(
+                "Taxonomy reference stats unavailable (taxonomy data may not be loaded)."
+            )
+
+    status_metrics = summary_status_metrics(
+        stats, all_time=all_time, geo_scope=geo_scope
+    )
     with st.expander("Computed statistics", expanded=True):
         render_social_cards_status_metrics(status_metrics)
 
@@ -99,7 +114,11 @@ def run_social_cards_streamlit_tab_fragment(df_full: Any) -> None:
             return
 
         df_scoped = st.session_state.get(SOCIAL_CARDS_DF_SCOPED_SESSION_KEY)
-        if df_scoped is None or not isinstance(df_scoped, pd.DataFrame) or df_scoped.empty:
+        if (
+            df_scoped is None
+            or not isinstance(df_scoped, pd.DataFrame)
+            or df_scoped.empty
+        ):
             st.info("Load checklist data to use Social Cards.")
             return
 

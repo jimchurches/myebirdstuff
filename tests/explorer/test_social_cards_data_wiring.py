@@ -5,13 +5,14 @@ from __future__ import annotations
 import pandas as pd
 
 from explorer.app.streamlit import bird_families_streamlit_html as bf
-from explorer.app.streamlit.social_cards_streamlit_helpers import (
-    all_time_stats_from_rankings_bundle,
-    resolve_social_cards_stats,
-)
 from explorer.core.share_summary_compute import (
+    GROUP_COVERAGE_SUMMARY_KEY,
+    WORLD_SPECIES_COVERAGE_METRICS_KEY,
     ShareSummaryGeoScope,
+    all_time_stats_from_rankings_bundle,
     period_for_year,
+    resolve_social_cards_stats,
+    world_taxonomy_bundle_status,
 )
 
 
@@ -25,8 +26,8 @@ def test_all_time_stats_from_rankings_bundle_reads_world_and_family_keys():
         }
     )
     bundle = {
-        bf.WORLD_SPECIES_COVERAGE_METRICS_KEY: (42, 10_800, 0.39),
-        bf.GROUP_COVERAGE_SUMMARY_KEY: summary,
+        WORLD_SPECIES_COVERAGE_METRICS_KEY: (42, 10_800, 0.39),
+        GROUP_COVERAGE_SUMMARY_KEY: summary,
     }
 
     all_time = all_time_stats_from_rankings_bundle(bundle)
@@ -44,8 +45,10 @@ def test_all_time_stats_from_rankings_bundle_empty_returns_none():
     assert all_time_stats_from_rankings_bundle({}) is None
 
 
-def test_resolve_social_cards_stats_uses_bundle_not_recompute(monkeypatch):
-    df = pd.DataFrame(
+def test_resolve_social_cards_stats_uses_scoped_export_and_bundle_not_recompute(
+    monkeypatch,
+):
+    df_full = pd.DataFrame(
         {
             "Date": ["2025-06-01", "2025-06-02"],
             "Submission ID": ["s1", "s2"],
@@ -54,21 +57,27 @@ def test_resolve_social_cards_stats_uses_bundle_not_recompute(monkeypatch):
             "Scientific Name": ["Anas gracilis", "Cacatua galerita"],
         }
     )
+    df_scoped = df_full.iloc[[0]].copy()
     calls: list[str] = []
 
-    def _forbidden(*_args, **_kwargs):
-        calls.append("recompute")
+    def _forbidden(label: str):
+        calls.append(label)
         raise AssertionError("must not re-run taxonomy merge")
 
     monkeypatch.setattr(
         "explorer.core.share_summary_compute.compute_share_summary_all_time_stats",
-        _forbidden,
+        lambda *_args, **_kwargs: _forbidden("compute_share_summary_all_time_stats"),
+    )
+    monkeypatch.setattr(
+        bf,
+        "build_group_coverage_tables",
+        lambda *_args, **_kwargs: _forbidden("build_group_coverage_tables"),
     )
 
-    bundle = {bf.WORLD_SPECIES_COVERAGE_METRICS_KEY: (1, 100, 1.0)}
+    bundle = {WORLD_SPECIES_COVERAGE_METRICS_KEY: (1, 100, 1.0)}
     stats, all_time = resolve_social_cards_stats(
-        df_full=df,
-        df_scoped=df,
+        df_full=df_full,
+        df_scoped=df_scoped,
         period=period_for_year(2025),
         geo_scope=ShareSummaryGeoScope(),
         rankings_bundle=bundle,
@@ -76,7 +85,8 @@ def test_resolve_social_cards_stats_uses_bundle_not_recompute(monkeypatch):
 
     assert calls == []
     assert stats is not None
-    assert stats.checklists == 2
+    assert stats.checklists == 1
+    assert stats.species == 1
     assert all_time is not None
     assert all_time.total_species_taxa == 100
 
@@ -93,7 +103,7 @@ def test_resolve_social_cards_stats_skips_all_time_when_geo_scoped():
             "Scientific Name": ["Anas gracilis"],
         }
     )
-    bundle = {bf.WORLD_SPECIES_COVERAGE_METRICS_KEY: (1, 100, 1.0)}
+    bundle = {WORLD_SPECIES_COVERAGE_METRICS_KEY: (1, 100, 1.0)}
     scope = ShareSummaryGeoScope(country_key="AU", region_code="NSW")
 
     stats, all_time = resolve_social_cards_stats(
@@ -106,3 +116,16 @@ def test_resolve_social_cards_stats_skips_all_time_when_geo_scoped():
 
     assert stats is not None
     assert all_time is None
+
+
+def test_world_taxonomy_bundle_status_pending_when_bundle_missing():
+    assert world_taxonomy_bundle_status(None) == "pending"
+
+
+def test_world_taxonomy_bundle_status_ready_when_metrics_present():
+    bundle = {WORLD_SPECIES_COVERAGE_METRICS_KEY: (1, 100, 1.0)}
+    assert world_taxonomy_bundle_status(bundle) == "ready"
+
+
+def test_world_taxonomy_bundle_status_unavailable_when_bundle_empty():
+    assert world_taxonomy_bundle_status({}) == "unavailable"
