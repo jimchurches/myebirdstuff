@@ -125,6 +125,8 @@ def render_dashboard_shell(
     )
 
     with tab_social_cards:
+        # Lazy-mount: period stats run only when this tab is selected (other data tabs
+        # always enter their ``@st.fragment`` blocks on every full rerun).
         if tab_social_cards.open:
             run_social_cards_streamlit_tab_fragment(df_full)
 

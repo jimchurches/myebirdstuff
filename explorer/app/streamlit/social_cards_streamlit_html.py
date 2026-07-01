@@ -100,7 +100,7 @@ def render_social_cards_tab_content(
         render_social_cards_status_metrics(status_metrics)
 
     st.caption(
-        "Card preview and export are wired in the next batch. "
+        "Card preview and export are wired in batch 4. "
         "Use the sidebar to configure period, layout, and theme."
     )
 
@@ -113,18 +113,24 @@ def run_social_cards_streamlit_tab_fragment(df_full: Any) -> None:
             st.info("Load checklist data to use Social Cards.")
             return
 
-        df_scoped = st.session_state.get(SOCIAL_CARDS_DF_SCOPED_SESSION_KEY)
-        if (
-            df_scoped is None
-            or not isinstance(df_scoped, pd.DataFrame)
-            or df_scoped.empty
-        ):
-            st.info("Load checklist data to use Social Cards.")
-            return
-
         geo_scope = st.session_state.get(SOCIAL_CARDS_GEO_SCOPE_SESSION_KEY)
         if not isinstance(geo_scope, ShareSummaryGeoScope):
             geo_scope = ShareSummaryGeoScope()
+
+        df_scoped = st.session_state.get(SOCIAL_CARDS_DF_SCOPED_SESSION_KEY)
+        if df_scoped is None or not isinstance(df_scoped, pd.DataFrame):
+            st.info("Load checklist data to use Social Cards.")
+            return
+        if df_scoped.empty:
+            if not geo_scope.is_world:
+                scope_label = geo_scope_display_label(geo_scope)
+                st.info(
+                    f"No checklists in this export match **{scope_label}**. "
+                    "Try **World** or a different country/region in the sidebar."
+                )
+                return
+            st.info("Load checklist data to use Social Cards.")
+            return
 
         bundle = st.session_state.get(RANKING_LISTS_FAMILIES_BUNDLE_KEY)
         rankings_bundle = bundle if isinstance(bundle, dict) else None
