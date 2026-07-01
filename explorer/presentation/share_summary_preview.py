@@ -647,27 +647,6 @@ def _footer_pad(
     return 120
 
 
-def _tiles_grid_is_dense(fmt: FormatId, pair_count: int) -> bool:
-    """Dense rectangular grids use a bottom-aligned body band (same chrome as circle tiles)."""
-    rows = (pair_count + 1) // 2
-    return rows >= 5 or (fmt == "story" and pair_count >= 8)
-
-
-def _tiles_grid_body_insets(
-    fmt: FormatId,
-    *,
-    scope_label: str | None,
-) -> tuple[int, int, int, int]:
-    """Absolute top/bottom/side insets for dense Statistics Grid body bands."""
-    if fmt == "story":
-        header_reserve, footer_reserve, vertical_pad = 200, (210 if scope_label else 172), 20
-    else:
-        header_reserve, footer_reserve, vertical_pad = 192, (178 if scope_label else 132), 12
-    top = header_reserve + vertical_pad // 2
-    bottom = footer_reserve + vertical_pad - vertical_pad // 2
-    return top, bottom, 48, 48
-
-
 def _card_shell(
     *,
     width: int,
@@ -713,7 +692,7 @@ def _header_block(stats: ShareSummaryStats, *, subtitle: str | None = None) -> s
     )
     return f"""
 <div style="padding:48px 56px 24px;text-align:center;">
-  <p style="{sub_style}">{_esc(sub)}</p>
+  <div style="{sub_style}">{_esc(sub)}</div>
   <h1 style="margin:0;font-size:{title_size};font-weight:700;line-height:1.08;">{_esc(headline)}</h1>
 </div>"""
 
@@ -827,21 +806,6 @@ def _layout_tiles(
         f'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));'
         f'gap:{grid_gap};">{cells_html}</div>'
     )
-    if _tiles_grid_is_dense(fmt, len(pairs)):
-        body_top, body_bottom, body_left, body_right = _tiles_grid_body_insets(
-            fmt,
-            scope_label=scope_label,
-        )
-        return f"""
-<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
-  {_header_block(stats, subtitle=_layout_subtitle(stats, "tiles"))}
-  <div style="position:absolute;left:{body_left}px;right:{body_right}px;top:{body_top}px;
-    bottom:{body_bottom}px;display:flex;align-items:flex-end;overflow:hidden;
-    padding-bottom:8px;box-sizing:border-box;">
-    <div style="width:100%;">{grid_html}</div>
-  </div>
-  {_footer_block(scope_label=scope_label)}
-</div>"""
     pad_bottom = _footer_pad(fmt, width, height)
     return f"""
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">

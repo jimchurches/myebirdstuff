@@ -641,7 +641,7 @@ def test_footer_scope_and_brand_use_muted_in_preview_and_export():
         assert "position:absolute;left:0;right:0;bottom:0" in html
 
 
-def test_preview_and_export_share_dense_story_tiles_body_band():
+def test_preview_and_export_share_dense_story_tiles_use_flow_layout():
     stats = sample_share_summary_stats()
     preview = render_share_summary_preview_html(
         stats, layout="tiles", fmt="story", color_scheme_index=1, scope_label="World"
@@ -650,10 +650,51 @@ def test_preview_and_export_share_dense_story_tiles_body_band():
         stats, layout="tiles", fmt="story", color_scheme_index=1, scope_label="World"
     )
     for html in (preview, export):
-        assert "align-items:flex-end" in html
-        assert "bottom:220px" in html
+        assert "padding:8px 48px 140px" in html
+        assert "align-items:flex-end" not in html
         assert "position:absolute;left:0;right:0;bottom:0" in html
-        assert "padding:8px 48px 140px" not in html
+
+
+def test_preview_and_export_share_full_portrait_tiles_use_flow_layout():
+    stats = ShareSummaryStats(
+        period_label="2025",
+        period_kind="year",
+        species=312,
+        lifers=47,
+        checklists=186,
+        completed_checklists=172,
+        incidental_checklists=14,
+        locations=42,
+        families=89,
+        individuals=12_450,
+        days_with_checklist=98,
+        countries=5,
+        longest_streak=14,
+        birding_hours=214.5,
+        distance_km=1_842.5,
+        shared_checklists=8,
+        days_birding_with_others=6,
+    )
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+        "Bird families",
+    )
+    preview = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="portrait_post", card_stat_labels=labels, scope_label="World"
+    )
+    export = render_share_summary_export_html(
+        stats, layout="tiles", fmt="portrait_post", card_stat_labels=labels, scope_label="World"
+    )
+    for html in (preview, export):
+        assert "padding:8px 48px 128px" in html
+        assert "align-items:flex-end" not in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
 
 
 def test_preview_and_export_share_sparse_square_tiles_use_flow_padding():
@@ -677,6 +718,69 @@ def test_preview_and_export_share_sparse_square_tiles_use_flow_padding():
         assert "padding:8px 48px 120px" in html
         assert "align-items:flex-end" not in html
         assert "position:absolute;left:0;right:0;bottom:0" in html
+
+
+def test_preview_and_export_share_full_square_tiles_use_flow_layout():
+    stats = ShareSummaryStats(
+        period_label="2025",
+        period_kind="year",
+        species=312,
+        lifers=47,
+        checklists=186,
+        completed_checklists=172,
+        incidental_checklists=14,
+        locations=42,
+        families=89,
+        individuals=12_450,
+        days_with_checklist=98,
+        countries=5,
+        longest_streak=14,
+        birding_hours=214.5,
+        distance_km=1_842.5,
+        shared_checklists=8,
+        days_birding_with_others=6,
+    )
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+    )
+    preview = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="square", card_stat_labels=labels, scope_label="World"
+    )
+    export = render_share_summary_export_html(
+        stats, layout="tiles", fmt="square", card_stat_labels=labels, scope_label="World"
+    )
+    for html in (preview, export):
+        assert "padding:8px 48px 120px" in html
+        assert "align-items:flex-end" not in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
+
+
+def test_header_subtitle_uses_div_for_accent_in_preview_and_export():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_COLOR_SCHEMES,
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
+    )
+
+    dark = SHARE_SUMMARY_COLOR_SCHEMES[1]
+    stats = sample_share_summary_stats()
+    preview = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="square", color_scheme_index=1
+    )
+    export = render_share_summary_export_html(
+        stats, layout="tiles", fmt="square", color_scheme_index=1
+    )
+    marker = (
+        f'color:{dark["accent"]};font-weight:600;">'
+        f"{SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES}</div>"
+    )
+    for html in (preview, export):
+        assert marker in html
+        assert f"{SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES}</p>" not in html
 
 
 def test_card_stat_pairs_selected_labels_includes_all_time():
