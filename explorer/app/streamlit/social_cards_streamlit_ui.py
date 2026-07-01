@@ -776,6 +776,15 @@ def _clear_stale_png_export(fingerprint: tuple[object, ...]) -> None:
     st.session_state.pop(SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY, None)
 
 
+def _lazy_png_export_ready(fingerprint: tuple[object, ...]) -> bytes | None:
+    if st.session_state.get(SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY) != fingerprint:
+        return None
+    raw = st.session_state.get(SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY)
+    if isinstance(raw, (bytes, bytearray)):
+        return bytes(raw)
+    return None
+
+
 def _generate_share_summary_png_bytes(
     *,
     stats: ShareSummaryStats,
@@ -791,20 +800,20 @@ def _generate_share_summary_png_bytes(
     spotlight_presentation: SpotlightPresentationId,
     resolved_fact: ShareSummaryInsightFact | None,
 ) -> bytes:
-    return cached_share_summary_png(
+    """Build PNG on demand — bypasses ``cached_share_summary_png`` spinner/cache."""
+    return share_summary_to_png_bytes(
         stats,
-        layout,
-        fmt,
-        card_stat_labels,
-        spotlight_label,
-        all_time,
-        color_scheme_index,
-        share_summary_color_scheme_fingerprint(color_scheme_index),
-        scope_label,
-        geo_scope,
-        tiles_presentation,
-        spotlight_presentation,
-        resolved_fact,
+        layout=layout,
+        fmt=fmt,
+        spotlight_label=spotlight_label,
+        insight_fact=resolved_fact,
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
+        color_scheme_index=color_scheme_index,
+        scope_label=scope_label,
+        geo_scope=geo_scope,
+        tiles_presentation=tiles_presentation,
+        spotlight_presentation=spotlight_presentation,
     )
 
 
@@ -825,7 +834,7 @@ def render_lazy_png_export_controls(
     export_button_label: str,
     png_filename: str,
 ) -> None:
-    """Generate PNG on export click (main app) — not on every preview rerun."""
+    """One user click: build PNG (spinner), rerun, auto-fire Streamlit download."""
     fingerprint = png_export_fingerprint(
         stats=stats,
         layout=layout,
@@ -847,13 +856,14 @@ def render_lazy_png_export_controls(
         st.warning(str(err))
 
     if st.session_state.pop(SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY, False):
-        png_bytes = st.session_state.get(SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY)
-        if not isinstance(png_bytes, (bytes, bytearray)):
+        ready_png = _lazy_png_export_ready(fingerprint)
+        if ready_png is None:
             st.warning("PNG export was prepared but bytes are missing. Try Export again.")
             return
+        st.caption("Starting download…")
         centered_card_download_button(
             label=export_button_label,
-            data=bytes(png_bytes),
+            data=ready_png,
             file_name=png_filename,
             mime="image/png",
             help_text="PNG of the current card above.",
@@ -872,21 +882,23 @@ def render_lazy_png_export_controls(
         ):
             st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY, None)
             try:
-                with st.spinner("Generating PNG…"):
-                    png_bytes = _generate_share_summary_png_bytes(
-                        stats=stats,
-                        layout=layout,
-                        fmt=fmt,
-                        card_stat_labels=card_stat_labels,
-                        spotlight_label=spotlight_label,
-                        all_time=all_time,
-                        color_scheme_index=color_scheme_index,
-                        scope_label=scope_label,
-                        geo_scope=geo_scope,
-                        tiles_presentation=tiles_presentation,
-                        spotlight_presentation=spotlight_presentation,
-                        resolved_fact=resolved_fact,
-                    )
+                png_bytes = _lazy_png_export_ready(fingerprint)
+                if png_bytes is None:
+                    with st.spinner("Generating PNG…"):
+                        png_bytes = _generate_share_summary_png_bytes(
+                            stats=stats,
+                            layout=layout,
+                            fmt=fmt,
+                            card_stat_labels=card_stat_labels,
+                            spotlight_label=spotlight_label,
+                            all_time=all_time,
+                            color_scheme_index=color_scheme_index,
+                            scope_label=scope_label,
+                            geo_scope=geo_scope,
+                            tiles_presentation=tiles_presentation,
+                            spotlight_presentation=spotlight_presentation,
+                            resolved_fact=resolved_fact,
+                        )
             except RuntimeError as exc:
                 st.session_state[SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY] = str(exc)
                 st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY, None)

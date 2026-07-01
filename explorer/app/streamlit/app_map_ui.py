@@ -242,7 +242,7 @@ def inject_auto_click_streamlit_download_js(*, button_label: str) -> None:
   }}
 }})();
 </script>""",
-        height=0,
+        height=1,
     )
 
 

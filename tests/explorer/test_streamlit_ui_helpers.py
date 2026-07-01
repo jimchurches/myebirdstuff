@@ -624,7 +624,7 @@ def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_pare
     assert label in payload
     assert "window.parent.document" in payload
     assert 'data-testid="stDownloadButton"' in payload
-    assert streamlit_stub.iframe_calls[0]["height"] == 0
+    assert streamlit_stub.iframe_calls[0]["height"] == 1
 
 
 def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stub) -> None:
