@@ -39,6 +39,7 @@ from explorer.core.share_summary_insight_facts import (
 )
 from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_DEFAULT,
+    tiles_circle_cluster_max,
 )
 from explorer.presentation.share_summary_png_export import (
     share_summary_png_filename,
@@ -131,10 +132,6 @@ def _ensure_card_stat_picks(
     keys: SocialCardsSessionKeys,
 ) -> list[str]:
     """Initialize or sanitize session picks for *layout*; returns UI row values."""
-    from explorer.presentation.share_summary_circles_preview import (
-        tiles_circle_cluster_max,
-    )
-
     circle_cluster = tiles_circle_cluster_picker(layout, tiles_presentation)
     max_slots = card_stat_max_slots(
         layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
@@ -171,12 +168,11 @@ def _ensure_card_stat_picks(
             tiles_presentation=tiles_presentation,
         )
 
-    sanitized = sanitize_card_stat_picks(
+    if not sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
         available=available,
         max_slots=storage_max,
-    )
-    if not sanitized and defaults:
+    ) and defaults:
         _clear_card_stat_selectbox_keys(layout, keys)
         st.session_state[picks_key] = defaults
         st.session_state[count_key] = default_card_stat_slot_count(
@@ -187,7 +183,6 @@ def _ensure_card_stat_picks(
             fmt=fmt,
             tiles_presentation=tiles_presentation,
         )
-        sanitized = list(defaults)
 
     sanitized = sanitize_card_stat_picks(
         list(st.session_state[picks_key]),
@@ -492,7 +487,7 @@ def render_card_stat_picker_ui(
             st.session_state[count_key] = ui_rows + 1
             st.rerun()
     with col_actions_foot:
-        foot_up, foot_down, foot_rm = st.columns(3, gap="small")
+        _, foot_down, _ = st.columns(3, gap="small")
         with foot_down:
             if st.button(
                 "Reset",
@@ -601,9 +596,8 @@ def _spotlight_alternate_chip_strip(
     st.caption(
         f"{count} other stat{'s' if count != 1 else ''} available — click to spotlight."
     )
-    cols_per_row = 3
-    for row_start in range(0, len(others), cols_per_row):
-        row_items = others[row_start : row_start + cols_per_row]
+    for row_start in range(0, len(others), _CHIP_STRIP_COLS_PER_ROW):
+        row_items = others[row_start : row_start + _CHIP_STRIP_COLS_PER_ROW]
         cols = st.columns(len(row_items))
         for col_index, (stat_label, value) in enumerate(row_items):
             with cols[col_index]:

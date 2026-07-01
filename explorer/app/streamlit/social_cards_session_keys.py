@@ -62,7 +62,9 @@ class SocialCardsSessionKeys:
     def card_stat_selectbox(self, layout: LayoutId, index: int) -> str:
         return f"{self.prefix}_card_stat_sel_{layout}_{index}"
 
-    def stat_chip(self, layout: LayoutId, period_kind: PeriodKind, chip_index: int) -> str:
+    def stat_chip(
+        self, layout: LayoutId, period_kind: PeriodKind, chip_index: int
+    ) -> str:
         return f"{self.prefix}_stat_chip_{layout}_{period_kind}_{chip_index}"
 
     def card_stat_up(self, layout: LayoutId, index: int) -> str:

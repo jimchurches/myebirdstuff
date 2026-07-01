@@ -62,7 +62,10 @@ def period_has_checklist_data(stats: ShareSummaryStats) -> bool:
     return stats.checklists is not None and stats.checklists > 0
 
 
-def tiles_circle_cluster_picker(layout: LayoutId, tiles_presentation: TilesPresentationId) -> bool:
+def tiles_circle_cluster_picker(
+    layout: LayoutId, tiles_presentation: TilesPresentationId
+) -> bool:
+    """True when the tiles layout uses circle-cluster presentation."""
     return layout == "tiles" and tiles_presentation == "circles"
 
 
@@ -72,7 +75,9 @@ def card_stat_min_slots(
     *,
     tiles_presentation: TilesPresentationId = "grid",
 ) -> int:
-    if layout == "tiles" and not tiles_circle_cluster_picker(layout, tiles_presentation):
+    if layout == "tiles" and not tiles_circle_cluster_picker(
+        layout, tiles_presentation
+    ):
         return layout_grid_stat_min(fmt)
     return 1
 
@@ -139,7 +144,10 @@ def effective_card_stat_labels(
     status_metrics: list[tuple[str, str]] | None = None,
 ) -> tuple[str, ...]:
     max_slots = card_stat_max_slots(
-        layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
+        layout,
+        fmt,
+        tiles_presentation=tiles_presentation,
+        status_metrics=status_metrics,
     )
     return tuple(label for label in picks if label)[:max_slots]
 
@@ -170,7 +178,11 @@ def resolve_card_stat_selectbox_value(
 ) -> str:
     """Pick a valid selectbox value, preferring the widget over stale session picks."""
     if session_value is not None:
-        value = session_value.strip() if isinstance(session_value, str) else str(session_value).strip()
+        value = (
+            session_value.strip()
+            if isinstance(session_value, str)
+            else str(session_value).strip()
+        )
         if value in options:
             return value
     fallback = desired.strip() if isinstance(desired, str) else str(desired).strip()
@@ -182,6 +194,7 @@ def status_metrics_lookup(status_metrics: list[tuple[str, str]]) -> dict[str, st
 
 
 def stats_on_card(picks: list[str]) -> set[str]:
+    """Non-empty stat labels currently assigned to card slots."""
     return {label for label in picks if label}
 
 
@@ -195,7 +208,10 @@ def card_can_accept_stat(
     status_metrics: list[tuple[str, str]] | None = None,
 ) -> bool:
     max_slots = card_stat_max_slots(
-        layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
+        layout,
+        fmt,
+        tiles_presentation=tiles_presentation,
+        status_metrics=status_metrics,
     )
     ui_rows = card_stat_ui_row_count(
         layout,

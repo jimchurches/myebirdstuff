@@ -16,7 +16,9 @@ import os
 import sys
 from datetime import date
 
-_REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+_REPO_ROOT = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+)
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
@@ -193,7 +195,9 @@ geo_scope = ShareSummaryGeoScope()
 with st.sidebar:
     st.header("Data")
     use_sample = st.toggle("Use sample data", value=True)
-    uploaded = None if use_sample else st.file_uploader("eBird CSV export", type=["csv"])
+    uploaded = (
+        None if use_sample else st.file_uploader("eBird CSV export", type=["csv"])
+    )
     if use_sample:
         df = _design_sample_dataset(date.today().year)
     elif uploaded is not None:
@@ -302,20 +306,28 @@ if df is not None:
         if period_anchor is not None:
             period = resolve_period("month", anchor=period_anchor, reference=reference)
         else:
-            month_options = sorted({(int(r.year), int(r.month)) for r in dates.dt.to_pydatetime()})
+            month_options = sorted(
+                {(int(r.year), int(r.month)) for r in dates.dt.to_pydatetime()}
+            )
             labels = [date(y, m, 1).strftime("%B %Y") for y, m in month_options]
-            pick = st.sidebar.selectbox("Month", options=range(len(labels)), format_func=lambda i: labels[i])
+            pick = st.sidebar.selectbox(
+                "Month", options=range(len(labels)), format_func=lambda i: labels[i]
+            )
             y, m = month_options[pick]
             period = period_for_month(y, m)
     elif period_mode == "week":
         if period_anchor is not None:
             period = resolve_period("week", anchor=period_anchor, reference=reference)
         else:
-            week_starts = sorted({period_for_week_containing(d).start for d in dates.dt.date})
-            week_labels = [
-                period_for_week_containing(ws).label for ws in week_starts
-            ]
-            pick = st.sidebar.selectbox("Week", options=range(len(week_labels)), format_func=lambda i: week_labels[i])
+            week_starts = sorted(
+                {period_for_week_containing(d).start for d in dates.dt.date}
+            )
+            week_labels = [period_for_week_containing(ws).label for ws in week_starts]
+            pick = st.sidebar.selectbox(
+                "Week",
+                options=range(len(week_labels)),
+                format_func=lambda i: week_labels[i],
+            )
             period = period_for_week_containing(week_starts[pick])
     elif period_mode == "lifetime":
         period = period_for_lifetime(min_d, max_d)
@@ -353,7 +365,9 @@ if df is not None:
                 placeholder=_CARD_HEADING_PLACEHOLDER,
                 key="design_csv_card_heading",
             )
-            period = period_for_custom(start, end, trip_title=_card_heading_or_none(card_heading))
+            period = period_for_custom(
+                start, end, trip_title=_card_heading_or_none(card_heading)
+            )
 
     resolved_period = period
     lifer_ref = df if not geo_scope.is_world else None
@@ -365,7 +379,9 @@ if df is not None:
         st.stop()
     stats = computed
     all_time = (
-        compute_share_summary_all_time_stats(df_scoped, taxonomy_locale=TAXONOMY_LOCALE_DEFAULT)
+        compute_share_summary_all_time_stats(
+            df_scoped, taxonomy_locale=TAXONOMY_LOCALE_DEFAULT
+        )
         if geo_scope.is_world
         else None
     )
@@ -411,7 +427,10 @@ hex_card_stat_labels = default_card_stat_labels(
     period_kind=stats.period_kind,
     geo_scope=geo_scope,
 )
-if sidebar_selection.fmt == "story" and len(hex_card_stat_labels) < SHARE_SUMMARY_STORY_MAX_STATS:
+if (
+    sidebar_selection.fmt == "story"
+    and len(hex_card_stat_labels) < SHARE_SUMMARY_STORY_MAX_STATS
+):
     picked = set(hex_card_stat_labels)
     extra: list[str] = []
     for label, _ in status_metrics:
