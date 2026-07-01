@@ -10,9 +10,10 @@ Living document for the social media summary feature. Update this file as ideas 
 |-------|-------|--------|
 | 0 | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) | Foundation — compute, layouts, tests, design app |
 | 1 | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) | Period stats hardening |
-| 2 | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) | Playwright PNG export |
-| 3 | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) | Social Cards tab in main app |
-| 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — stat picker, favourite birds, layout tuning |
+| 2 | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) | Playwright PNG export — **closed** (design studio) |
+| 3 | [#323](https://github.com/jimchurches/myebirdstuff/issues/323) | **Main app port** — epic (supersedes [#276](https://github.com/jimchurches/myebirdstuff/issues/276)) |
+| 3a–3e | [#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328) | Port batches: shared UI → sidebar → wiring → card UI → hardening |
+| 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — partial in design studio; remainder in [#328](https://github.com/jimchurches/myebirdstuff/issues/328) |
 | — | [#308](https://github.com/jimchurches/myebirdstuff/issues/308) | Dark theme tile contrast (medium lift on Statistics Grid + circle cluster) — merged via `feat/social-cards` |
 | — | [#285](https://github.com/jimchurches/myebirdstuff/issues/285) | Interesting Insights layout — species/checklist facts; Spotlight restored to stat-only — merged via `feat/social-cards` |
 
@@ -132,7 +133,7 @@ All should appear in the summary row (with values) so users can pick interesting
 - **World-only stats** (hidden when scope is not World): Countries, Species in eBird taxonomy, Families in eBird taxonomy, Observed species (%).
 - **Footer debug line** above the logo shows the active scope label (e.g. `Australia · New South Wales`); polish for production cards later.
 - **Lifers under regional scope** — semantics TBD (country lifers vs world lifers).
-- Main app (#276) integration not started on this branch.
+- Main app ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)) integration not started on this branch.
 
 ### Countries
 
@@ -161,7 +162,7 @@ All should appear in the summary row (with values) so users can pick interesting
 - Active scheme: ``SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT`` (flip index to test new schemes without code changes).
 - **Design app:** sidebar **Theme** picker (light / dark).
 - **Dark theme (#308):** **medium lift** — tile gradient ``#1e2a24`` → ``#243229`` on grid rectangles and circle fills; card shell and footer unchanged. Circle cluster was originally out of scope for #308 but included so both tile presentations match.
-- **Main app (#276):** theme UI still v2; inherits schemes from defaults when Social Cards ships.
+- **Main app ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)):** theme UI ships with port; inherits schemes from defaults.
 
 ### Period selection — current vs previous
 
@@ -219,31 +220,31 @@ Captured from initial prototype review:
   - Proposed strip: Map → Checklist Statistics → Ranking & Lists → Bird Families → Yearly Summary → Country → Maintenance → **Social Cards** → Settings
   - Code touchpoint: `NOTEBOOK_MAIN_TAB_LABELS` in `explorer/app/streamlit/streamlit_ui_constants.py`
 - **Tab content:** Like the design mockup — period, layout, aspect ratio, spotlight stat, trip title, **current card** preview, and PNG export. Users change layout via sidebar controls.
-- **Design utility** (`design_share_summary_app.py`) — kept for iteration without touching the main app; **UI should mirror the main app Social Cards tab** (sidebar + current card). Align fully when shipping #276.
+- **Design utility** (`design_share_summary_app.py`) — kept for iteration without touching the main app; **UI should mirror the main app Social Cards tab** (sidebar + current card). Align fully when shipping [#323](https://github.com/jimchurches/myebirdstuff/issues/323).
 
-### Design utility vs main app (#276)
+### Design utility vs main app (#323)
 
 | Feature | Design studio (`design_share_summary_app.py`) | Main app **Social Cards** tab |
 |---------|--------------------------------------------------|-------------------------------|
 | **Current card** preview | Yes | Yes |
-| **Statistics** panel (unified) | Yes — card slots with inline values + click-to-add chips for stats not on card | Port unified panel from design studio (#276); **do not** ship separate Available statistics + Card statistics expanders |
-| **Export current card** | Yes — below **Current card** preview, inside `@st.fragment` | Yes — **generate on export click** with spinner (#276; see **PNG export UX**) |
+| **Statistics** panel (unified) | Yes — card slots with inline values + click-to-add chips for stats not on card | Port unified panel from design studio ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)); **do not** ship separate Available statistics + Card statistics expanders |
+| **Export current card** | Yes — below **Current card** preview, inside `@st.fragment` | Yes — **generate on export click** with spinner ([#323](https://github.com/jimchurches/myebirdstuff/issues/323) / [#327](https://github.com/jimchurches/myebirdstuff/issues/327); see **PNG export UX**) |
 | **Circle layout** tab | Yes — drag-and-drop story circle tuner (dev-only) | No — design studio only |
 
-**#276 port scope (agreed direction):** port the design utility **Social Cards tab + sidebar layout** to the main app tab, wired to the loaded export DataFrame — **without** the sample-data toggle / CSV re-upload. Ship the unified **Statistics** panel as-is.
+**#323 port scope (agreed direction):** port the design utility **Social Cards tab + sidebar layout** to the main app tab, wired to the loaded export DataFrame — **without** the sample-data toggle / CSV re-upload. Ship the unified **Statistics** panel as-is.
 
 Both use one **current card** preview; users cycle layout via sidebar **Layout** control.
 
-### PNG export UX (#275 / #276)
+### PNG export UX (#275 / #323)
 
 **Problem:** Card statistics and spotlight use `@st.fragment` so the HTML preview can rerun quickly. PNG generation **outside** the fragment did not rerun on fragment-only updates, so the download could lag behind the preview unless the user triggered a full app rerun.
 
 | Context | Approach | Rationale |
 |---------|----------|-----------|
 | **Design studio** | **Export inside the fragment** — `_cached_share_summary_png` + `st.download_button` below the **Current card** preview (not sidebar: Streamlit forbids `st.sidebar` inside `@st.fragment`) | Card stat / spotlight edits rerun the fragment and refresh the PNG. Sidebar changes (period, layout, format, favourites) still cause a full rerun. `@st.cache_data` avoids repeat Playwright work for the same inputs. |
-| **Main app Social Cards (#276)** | **Generate on export click** — one **Export current card** control; show a short spinner (“Generating PNG…”), run Playwright, then offer download | End users expect a single action. Playwright takes a few seconds — acceptable when they explicitly export. Avoids background PNG generation on every control change. **Do not** copy the design-studio pre-generation pattern unless the main tab uses the same fragment + stale-export constraint. |
+| **Main app Social Cards ([#323](https://github.com/jimchurches/myebirdstuff/issues/323))** | **Generate on export click** — one **Export current card** control; show a short spinner (“Generating PNG…”), run Playwright, then offer download | End users expect a single action. Playwright takes a few seconds — acceptable when they explicitly export. Avoids background PNG generation on every control change. **Do not** copy the design-studio pre-generation pattern unless the main tab uses the same fragment + stale-export constraint. |
 
-**Agreed 2026-06-11** — implement lazy export in #276; design studio uses in-fragment export.
+**Agreed 2026-06-11** — implement lazy export in main app ([#327](https://github.com/jimchurches/myebirdstuff/issues/327)); design studio uses in-fragment export.
 
 ---
 
@@ -333,7 +334,7 @@ When the user selects the **Social Cards** tab:
   - Spotlight stat (when Spotlight layout)
   - Optional: preview scale (maybe main panel only)
 - Main panel: **current card** preview only (+ PNG export). Same pattern as the design studio.
-- **PNG export (#276):** generate on **Export current card** click with spinner — not pre-generated on every control change (see **PNG export UX**).
+- **PNG export ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)):** generate on **Export current card** click with spinner — not pre-generated on every control change (see **PNG export UX**).
 
 When the user leaves **Social Cards** (any other main tab):
 
@@ -364,7 +365,7 @@ Other data tabs (Checklist, Yearly, …) — **no change for v1**; map sidebar c
 
 ### UX reference
 
-Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Social Cards tab **controls + current card preview** (#276).
+Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Social Cards tab **controls + current card preview** ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)).
 
 ---
 
@@ -518,7 +519,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling + export HTML |
 | `explorer/presentation/share_summary_png_export.py` | Playwright PNG pipeline + filename helper |
 | `explorer/app/streamlit/defaults.py` | Re-exports share-summary defaults for Streamlit tuning |
-| `explorer/app/streamlit/design_share_summary_app.py` | Design studio — sidebar controls + current card preview (mirror for #276) |
+| `explorer/app/streamlit/design_share_summary_app.py` | Design studio — sidebar controls + current card preview (mirror for [#323](https://github.com/jimchurches/myebirdstuff/issues/323)) |
 | `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Social Cards** before Settings |
 | `explorer/app/streamlit/app_map_working_ui.py` | Map sidebar today — refactor target for tab-aware sidebar |
 | `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Social Cards fragment |
@@ -534,9 +535,9 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 |-------|------------------|-------------|--------|-------|
 | 0 | `157-social-summary-prototype` | Design app + tracker + core modules | **Ready to commit/PR** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
 | 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **In PR** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
-| 2 | `feat/social-cards` | Design studio iteration: PNG export, circle layouts, playground, stat picker | **Integration branch** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) (PNG done; layout work continues on feature branch) |
-| 3 | `157-share-summary-ui` | **Social Cards** main tab (before Settings); tab-aware sidebar; preview + PNG | Not started | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) |
-| 4 | follow-ups | Favourite bird(s), stat picker, themes, layout tuning | Not started | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
+| 2 | `feat/social-cards` | Design studio iteration: PNG export, circle layouts, playground, stat picker | **Done on branch** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) (closed) |
+| 3 | `feat/social-cards` | **Social Cards** main tab port (batched) | **In progress** | [#323](https://github.com/jimchurches/myebirdstuff/issues/323) ([#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328)) |
+| 4 | follow-ups | Stat picker/themes in studio; polish on main app | Partial / [#328](https://github.com/jimchurches/myebirdstuff/issues/328) | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
 
 ---
 
@@ -608,4 +609,5 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-11 | Roadmap notes: **Best day** card stat (value-only, no link); **geographic scope** (country/state filter) |
 | 2026-06-18 | **Geographic scope (design app):** Scope country/region controls, multi-region sample data, world-only stat hiding, footer scope debug label |
 | 2026-06-28 | **#308 dark tile contrast:** medium-lift dark palette on Statistics Grid + circle cluster; PNG export cache busts on scheme edits; design-studio mockup tab removed after sign-off |
-| 2026-06-29 | **#285 Interesting Insights:** separate layout for species/checklist facts; Spotlight restored to stat-only (Classic/Circle); design studio insights + species pickers; countable species picker deferred to #276 |
+| 2026-06-29 | **#285 Interesting Insights:** separate layout for species/checklist facts; Spotlight restored to stat-only (Classic/Circle); design studio insights + species pickers; countable species picker deferred to main-app port ([#328](https://github.com/jimchurches/myebirdstuff/issues/328)) |
+| 2026-07-01 | **#275 closed** (PNG export design studio); **#276 closed** — superseded by [#323](https://github.com/jimchurches/myebirdstuff/issues/323) epic + port batches [#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328) |
