@@ -617,7 +617,7 @@ def test_render_preview_html_includes_scope_label_in_footer():
     assert "Australia · New South Wales" in html
 
 
-def test_footer_scope_uses_text_colour_and_brand_uses_accent():
+def test_footer_scope_and_brand_use_muted_in_preview_and_export():
     from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
 
     stats = sample_share_summary_stats()
@@ -635,9 +635,8 @@ def test_footer_scope_uses_text_colour_and_brand_uses_accent():
         scope_label="World",
     )
     for html in (preview, export):
-        assert f'color:{dark["text"]}' in html
-        assert f'color:{dark["accent"]}' in html
-        assert f'color:{dark["muted"]};">World</p>' not in html
+        assert f'color:{dark["muted"]};letter-spacing:0.04em;">World</p>' in html
+        assert f'color:{dark["muted"]};">Personal eBird Explorer</p>' in html
         assert "position:absolute;left:0;right:0;bottom:0" not in html
 
 

@@ -645,12 +645,12 @@ def _footer_pad(
 
 def _footer_scope_colour() -> str:
     """Geographic scope line in the card footer (e.g. World)."""
-    return _colour("text")
+    return _colour("muted")
 
 
 def _footer_brand_colour() -> str:
     """App name and logo in the card footer."""
-    return _colour("accent")
+    return _colour("muted")
 
 
 def _card_shell(
