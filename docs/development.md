@@ -22,7 +22,7 @@ Slash commands in `.cursor/commands/` automate git and GitHub workflow. Key comm
 | `/merge-pr` | Merge feature branch into target integration branch |
 | `/pr-review` | Pre-merge review: Sentinel (when needed) + Nit-Fixer + verdict |
 | `/nit-fixer` | Standalone aggressive nit pass on PR-touched files |
-| `/code-review` | Large-change review; always runs Nit-Fixer at the end |
+| `/code-review` | Large-change review; Nit-Fixer as final step after checklist |
 
 **Base branch resolution:** Commands share logic in [`.cursor/commands/base-branch-resolution.md`](../.cursor/commands/base-branch-resolution.md). When a GitHub issue includes `## Base branch` / `## PR target`, commands read the issue via `gh issue view` instead of defaulting to `beta-next`. Feature-line work (e.g. Social Cards on `feat/social-cards`) is documented in `docs/explorer/social-cards-workflow.md` when present on that branch.
 

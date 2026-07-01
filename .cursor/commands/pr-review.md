@@ -2,7 +2,7 @@
 
 **When to use:** Pre-merge review of a **single** linked issue and its PR — e.g. a focused bug fix or small feature. For larger or multi-area changes, use `/code-review` instead.
 
-Every `/pr-review` run includes **Test Integrity Sentinel** triage (Step 4) and **Nit-Fixer** (Step 4b). The parent agent resolves PR context and local checks, then — when the diff warrants it — delegates to pinned subagents: Sentinel for test honesty (`gpt-5.5-medium`), Nit-Fixer for mechanical and readability nits in touched files (`composer-2.5-fast`). See **[nit-fixer.md](nit-fixer.md)** for Nit-Fixer guardrails and prompt.
+Every `/pr-review` run includes **Test Integrity Sentinel** triage (Step 4) and **Nit-Fixer** triage (Step 4b). The parent agent resolves PR context and local checks, then delegates to pinned subagents when triage selects launch: Sentinel for test honesty (`gpt-5.5-medium`), Nit-Fixer for mechanical and readability nits in touched files (`composer-2.5-fast`). See **[nit-fixer.md](nit-fixer.md)** for Nit-Fixer guardrails and prompt.
 
 ## Relationship to `/code-review`
 
@@ -221,7 +221,7 @@ Every `/pr-review` runs **Nit-Fixer triage** after Step 4 (whether Sentinel laun
 
 ### Sentinel vs Nit-Fixer
 
-| | Sentinel (Step 4) | Nit-Fixer (Step 4b) |
+| Aspect | Sentinel (Step 4) | Nit-Fixer (Step 4b) |
 | --- | --- | --- |
 | **Focus** | Test honesty, assertions, mocks, fixtures | Imports, lint, format, typos, readability |
 | **Edits tests?** | Yes, when justified | **Never** |

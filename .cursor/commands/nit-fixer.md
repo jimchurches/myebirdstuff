@@ -13,7 +13,7 @@ For **myebirdstuff**, skim `docs/AI_CONTEXT.md` when touching production code un
 ## Relationship to CI, Sentinel, and `/pr-review`
 
 | Actor | Role |
-|-------|------|
+| --- | --- |
 | **CI** (`tests.yml`, ruff, hygiene) | Authoritative pass/fail gate — Nit-Fixer does not replace it |
 | **Test Integrity Sentinel** (`/pr-review` Step 4) | Test *honesty* — assertions, mocks, fixtures, missing regression tests |
 | **Nit-Fixer (this command)** | Mechanical + readability fixes in touched production/docs/command/frontend source; **never** edits test files |
