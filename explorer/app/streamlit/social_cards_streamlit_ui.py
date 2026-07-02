@@ -104,7 +104,9 @@ def cached_share_summary_png(
     )
 
 
-def _clear_card_stat_selectbox_keys(layout: LayoutId, keys: SocialCardsSessionKeys) -> None:
+def _clear_card_stat_selectbox_keys(
+    layout: LayoutId, keys: SocialCardsSessionKeys
+) -> None:
     """Drop stale selectbox widget state so Reset / session picks take effect."""
     for i in range(layout_card_stat_storage_max(layout)):
         st.session_state.pop(keys.card_stat_selectbox(layout, i), None)
@@ -143,9 +145,16 @@ def _ensure_card_stat_picks(
     """Initialize or sanitize session picks for *layout*; returns UI row values."""
     circle_cluster = tiles_circle_cluster_picker(layout, tiles_presentation)
     max_slots = card_stat_max_slots(
-        layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
+        layout,
+        fmt,
+        tiles_presentation=tiles_presentation,
+        status_metrics=status_metrics,
     )
-    storage_max = tiles_circle_cluster_max(fmt) if circle_cluster else layout_card_stat_storage_max(layout)
+    storage_max = (
+        tiles_circle_cluster_max(fmt)
+        if circle_cluster
+        else layout_card_stat_storage_max(layout)
+    )
     available = frozenset(label for label, _ in status_metrics)
     picks_key = keys.card_stat_picks(layout, period_kind)
     count_key = keys.card_stat_slot_count(layout, period_kind)
@@ -177,11 +186,14 @@ def _ensure_card_stat_picks(
             tiles_presentation=tiles_presentation,
         )
 
-    if not sanitize_card_stat_picks(
-        list(st.session_state[picks_key]),
-        available=available,
-        max_slots=storage_max,
-    ) and defaults:
+    if (
+        not sanitize_card_stat_picks(
+            list(st.session_state[picks_key]),
+            available=available,
+            max_slots=storage_max,
+        )
+        and defaults
+    ):
         _clear_card_stat_selectbox_keys(layout, keys)
         st.session_state[picks_key] = defaults
         st.session_state[count_key] = default_card_stat_slot_count(
@@ -358,7 +370,10 @@ def render_card_stat_picker_ui(
         return ()
 
     max_slots = card_stat_max_slots(
-        layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
+        layout,
+        fmt,
+        tiles_presentation=tiles_presentation,
+        status_metrics=status_metrics,
     )
     circle_cluster = tiles_circle_cluster_picker(layout, tiles_presentation)
     available_labels = [label for label, _ in status_metrics]
@@ -393,7 +408,9 @@ def render_card_stat_picker_ui(
             f"The default is {TILES_CIRCLE_CLUSTER_DEFAULT} circles."
         )
     elif layout == "tiles":
-        min_slots = card_stat_min_slots(layout, fmt, tiles_presentation=tiles_presentation)
+        min_slots = card_stat_min_slots(
+            layout, fmt, tiles_presentation=tiles_presentation
+        )
         st.caption(
             f"Statistics Grid: {min_slots}–{max_slots} stats "
             f"({layout_grid_slot_limits_caption()}). "
@@ -535,7 +552,9 @@ def render_card_stat_picker_ui(
         status_metrics=status_metrics,
     )
     stats_not_on_card = [
-        label for label in available_labels if label not in stats_on_card(picks[:ui_rows])
+        label
+        for label in available_labels
+        if label not in stats_on_card(picks[:ui_rows])
     ]
     if stats_not_on_card and not can_add_more:
         st.info("Card is full.")
@@ -668,7 +687,9 @@ def _insight_fact_options(
         if any(f.fact_id == fact_id for f in facts):
             options.append((fact_id, INSIGHT_FACT_PICKER_LABELS[fact_id]))
     if species_options:
-        options.append(("species_individuals", INSIGHT_FACT_PICKER_LABELS["species_individuals"]))
+        options.append(
+            ("species_individuals", INSIGHT_FACT_PICKER_LABELS["species_individuals"])
+        )
     return options
 
 
@@ -858,7 +879,9 @@ def render_lazy_png_export_controls(
     if st.session_state.pop(SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY, False):
         ready_png = _lazy_png_export_ready(fingerprint)
         if ready_png is None:
-            st.warning("PNG export was prepared but bytes are missing. Try Export again.")
+            st.warning(
+                "PNG export was prepared but bytes are missing. Try Export again."
+            )
             return
         st.caption("Starting download…")
         centered_card_download_button(

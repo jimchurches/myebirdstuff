@@ -247,6 +247,7 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
         "explorer.app.streamlit.app_landing_ui",
         "explorer.app.streamlit.explorer_update_notice",
         "explorer.app.streamlit.explorer_build_version",
+        "explorer.app.streamlit.social_cards_streamlit_ui",
     ]:
         _drop_submodule(name)
     return sys.modules["streamlit"]
@@ -625,6 +626,26 @@ def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_pare
     assert "window.parent.document" in payload
     assert 'data-testid="stDownloadButton"' in payload
     assert streamlit_stub.iframe_calls[0]["height"] == 1
+
+
+def test_lazy_png_export_cache_clears_stale_bytes(streamlit_stub) -> None:
+    ui = importlib.import_module("explorer.app.streamlit.social_cards_streamlit_ui")
+    st = streamlit_stub
+    old_fingerprint = ("old",)
+    new_fingerprint = ("new",)
+
+    st.session_state[ui.SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY] = b"png"
+    st.session_state[ui.SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY] = old_fingerprint
+    st.session_state[ui.SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY] = True
+
+    assert ui._lazy_png_export_ready(old_fingerprint) == b"png"
+    assert ui._lazy_png_export_ready(new_fingerprint) is None
+
+    ui._clear_stale_png_export(new_fingerprint)
+
+    assert ui.SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY not in st.session_state
+    assert ui.SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY not in st.session_state
+    assert ui.SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY not in st.session_state
 
 
 def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stub) -> None:

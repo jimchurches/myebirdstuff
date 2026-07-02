@@ -8,6 +8,7 @@ from explorer.core.share_summary_compute import (
     ShareSummaryGeoScope,
     ShareSummaryStats,
 )
+from explorer.core.share_summary_defaults import share_summary_color_scheme_fingerprint
 from explorer.core.share_summary_insight_facts import ShareSummaryInsightFact
 from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_DEFAULT,
@@ -237,6 +238,27 @@ def png_export_fingerprint(
     insight_fact: ShareSummaryInsightFact | None,
 ) -> tuple[object, ...]:
     """Stable cache key for lazy PNG export — invalidates when card inputs change."""
+    stats_token = (
+        stats.period_kind,
+        stats.period_label,
+        stats.trip_title,
+        stats.species,
+        stats.families,
+        stats.individuals,
+        stats.checklists,
+        stats.completed_checklists,
+        stats.incidental_checklists,
+        stats.locations,
+        stats.lifers,
+        stats.region_lifers,
+        stats.birding_hours,
+        stats.distance_km,
+        stats.days_with_checklist,
+        stats.longest_streak,
+        stats.countries,
+        stats.shared_checklists,
+        stats.days_birding_with_others,
+    )
     all_time_token: tuple[object, ...] = ()
     if all_time is not None:
         all_time_token = (
@@ -256,17 +278,14 @@ def png_export_fingerprint(
             insight_fact.metric_unit,
         )
     return (
-        stats.period_kind,
-        stats.period_label,
-        stats.checklists,
-        stats.species,
-        stats.individuals,
+        stats_token,
         layout,
         fmt,
         card_stat_labels,
         spotlight_label,
         all_time_token,
         color_scheme_index,
+        share_summary_color_scheme_fingerprint(color_scheme_index),
         scope_label,
         geo_scope.scope_token(),
         tiles_presentation,

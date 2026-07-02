@@ -1,7 +1,7 @@
 """
 HTML layout prototypes for social-media-style birding summaries (#157).
 
-Standalone design utility — not wired into the main explorer app yet.
+Shared by the Social Cards tab, design playground, and PNG export.
 """
 
 from __future__ import annotations
@@ -80,9 +80,11 @@ _color_scheme_index: contextvars.ContextVar[int | None] = contextvars.ContextVar
     "share_summary_color_scheme_index",
     default=None,
 )
-_custom_color_scheme: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
-    "share_summary_custom_color_scheme",
-    default=None,
+_custom_color_scheme: contextvars.ContextVar[dict[str, str] | None] = (
+    contextvars.ContextVar(
+        "share_summary_custom_color_scheme",
+        default=None,
+    )
 )
 
 
@@ -156,6 +158,7 @@ LABEL_OBSERVED_SPECIES_PCT = "Observed species (%)"
 def _geo_scope_is_world(geo_scope: ShareSummaryGeoScope | None) -> bool:
     return geo_scope is None or geo_scope.is_world
 
+
 @dataclass(frozen=True)
 class _StatSpec:
     """One headline stat: which :class:`ShareSummaryStats` field, its card label, and formatting.
@@ -191,7 +194,9 @@ _STAT_SPECS: tuple[_StatSpec, ...] = (
     _StatSpec("birding_hours", "Birding hours", decimals=1),
     _StatSpec("distance_km", "Total distance (km)", decimals=1),
     _StatSpec("shared_checklists", "Shared checklists", hide_if_zero=True),
-    _StatSpec("days_birding_with_others", "Days birding with others", hide_if_zero=True),
+    _StatSpec(
+        "days_birding_with_others", "Days birding with others", hide_if_zero=True
+    ),
 )
 
 _CARD_LABEL_BY_PICKER: dict[str, str] = {
@@ -206,6 +211,7 @@ def stat_card_display_label(picker_label: str) -> str:
 
 def _card_stat_pair(picker_label: str, value: str) -> tuple[str, str]:
     return stat_card_display_label(picker_label), value
+
 
 def resolve_spotlight_label(spotlight_label: str | None) -> str:
     """Normalize the chosen spotlight label, falling back to the default."""
@@ -227,7 +233,14 @@ def spotlight_pair_for_label(
         return None
     return _card_stat_pair(cleaned, lookup[cleaned])
 
-_LOGO_PATH = Path(__file__).resolve().parents[2] / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
+
+_LOGO_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "docs"
+    / "explorer"
+    / "assets"
+    / "personal-ebird-explorer-logo.svg"
+)
 
 
 @lru_cache(maxsize=16)
@@ -314,7 +327,9 @@ def _metrics_lookup(
     lookup: dict[str, str] = dict(stat_pairs(stats, geo_scope=geo_scope))
     if geo_scope is not None and not _geo_scope_is_world(geo_scope):
         if stats.region_lifers is not None:
-            lookup[geo_region_lifer_stat_label(geo_scope)] = f"{int(stats.region_lifers):,}"
+            lookup[geo_region_lifer_stat_label(geo_scope)] = (
+                f"{int(stats.region_lifers):,}"
+            )
     if not _geo_scope_is_world(geo_scope) or all_time is None:
         return lookup
     if all_time.total_species_taxa is not None:
@@ -473,7 +488,9 @@ def default_card_stat_labels(
     max_count = layout_card_stat_max(
         layout,
         fmt,
-        available_stat_count=len(available_list) if layout == "minimal" and fmt == "story" else None,
+        available_stat_count=len(available_list)
+        if layout == "minimal" and fmt == "story"
+        else None,
     )
     return tuple(lab for lab in preferred if lab in available)[:max_count]
 
@@ -610,8 +627,12 @@ def sample_share_summary_stats(
         species=int(d["species"]),
         lifers=int(d["lifers"]) if "lifers" in d else None,
         checklists=int(d["checklists"]),
-        completed_checklists=int(d["completed_checklists"]) if "completed_checklists" in d else None,
-        incidental_checklists=int(d["incidental_checklists"]) if "incidental_checklists" in d else None,
+        completed_checklists=int(d["completed_checklists"])
+        if "completed_checklists" in d
+        else None,
+        incidental_checklists=int(d["incidental_checklists"])
+        if "incidental_checklists" in d
+        else None,
         locations=int(d["locations"]),
         families=int(d["families"]),
         individuals=int(d["individuals"]),
@@ -620,8 +641,12 @@ def sample_share_summary_stats(
         distance_km=float(d["distance_km"]) if "distance_km" in d else None,
         longest_streak=int(d["longest_streak"]) if "longest_streak" in d else None,
         countries=int(d["countries"]) if "countries" in d else None,
-        shared_checklists=int(d["shared_checklists"]) if "shared_checklists" in d else None,
-        days_birding_with_others=int(d["days_birding_with_others"]) if "days_birding_with_others" in d else None,
+        shared_checklists=int(d["shared_checklists"])
+        if "shared_checklists" in d
+        else None,
+        days_birding_with_others=int(d["days_birding_with_others"])
+        if "days_birding_with_others" in d
+        else None,
     )
 
 
@@ -685,7 +710,9 @@ def _headline_for_period(stats: ShareSummaryStats) -> str:
 def _header_block(stats: ShareSummaryStats, *, subtitle: str | None = None) -> str:
     sub = subtitle if subtitle is not None else _subtitle_for_period(stats)
     headline = _headline_for_period(stats)
-    title_size = "96px" if len(headline) <= 5 else ("64px" if len(headline) > 28 else "72px")
+    title_size = (
+        "96px" if len(headline) <= 5 else ("64px" if len(headline) > 28 else "72px")
+    )
     sub_style = (
         f"margin:0 0 8px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase;"
         f"color:{_colour('accent')};font-weight:600;"
@@ -701,9 +728,7 @@ def _footer_block(*, scope_label: str | None = None) -> str:
     """Card footer chrome. ``<div>`` copy (not ``<p>``) so Streamlit preview keeps muted colour."""
     footer_muted = _colour("muted")
     logo = _logo_svg_inline(height_px=46, fill=footer_muted)
-    logo_row = (
-        f'<div style="margin:4px 0;line-height:0;">{logo}</div>' if logo else ""
-    )
+    logo_row = f'<div style="margin:4px 0;line-height:0;">{logo}</div>' if logo else ""
     scope_row = ""
     if scope_label:
         scope_row = (
@@ -730,9 +755,7 @@ def _resolve_card_stat_pairs(
     geo_scope: ShareSummaryGeoScope | None = None,
 ) -> list[tuple[str, str]]:
     lookup = _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
-    available_count = (
-        len(lookup) if layout == "minimal" and fmt == "story" else None
-    )
+    available_count = len(lookup) if layout == "minimal" and fmt == "story" else None
     resolved_max = (
         max_count
         if max_count is not None
@@ -858,7 +881,7 @@ def _layout_minimal(
 <div style="position:relative;width:100%;height:100%;box-sizing:border-box;">
   {_header_block(stats, subtitle=_layout_subtitle(stats, "minimal"))}
   <div style="padding:24px 72px {pad_bottom}px;">
-    {''.join(rows)}
+    {"".join(rows)}
   </div>
   {_footer_block(scope_label=scope_label)}
 </div>"""
@@ -869,18 +892,18 @@ def _layout_spotlight_header_html(stats: ShareSummaryStats) -> str:
     if stats.trip_title:
         return f"""
 <p style="margin:0 0 8px;font-size:28px;letter-spacing:0.06em;text-transform:uppercase;
-  color:{_colour('accent')};font-weight:600;">{_esc(stats.trip_title)}</p>
-<p style="margin:0 0 28px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
+  color:{_colour("accent")};font-weight:600;">{_esc(stats.trip_title)}</p>
+<p style="margin:0 0 28px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour("text")};">
   {_esc(stats.period_label)}</p>"""
     subtitle = _layout_subtitle(stats, "spotlight")
     if subtitle:
         return f"""
 <p style="margin:0 0 8px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase;
-  color:{_colour('accent')};font-weight:600;">{_esc(subtitle)}</p>
-<p style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour('text')};">
+  color:{_colour("accent")};font-weight:600;">{_esc(subtitle)}</p>
+<p style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.1;color:{_colour("text")};">
   {_esc(stats.period_label)}</p>"""
     return f"""
-<p style="margin:0 0 32px;font-size:36px;letter-spacing:0.04em;color:{_colour('accent')};font-weight:600;">
+<p style="margin:0 0 32px;font-size:36px;letter-spacing:0.04em;color:{_colour("accent")};font-weight:600;">
   {_esc(stats.period_label)}</p>"""
 
 
@@ -991,14 +1014,13 @@ def _layout_spotlight(
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:64px 56px 32px;text-align:center;box-sizing:border-box;">
     {header_html}
-    <div style="font-size:{num_size};font-weight:800;line-height:1.05;color:{_colour('text')};">
+    <div style="font-size:{num_size};font-weight:800;line-height:1.05;color:{_colour("text")};">
       {_esc(value)}</div>
-    <div style="margin-top:20px;font-size:{label_size};color:{_colour('muted')};font-weight:500;">
+    <div style="margin-top:20px;font-size:{label_size};color:{_colour("muted")};font-weight:500;">
       {_esc(title)}</div>
   </div>
   {_footer_block(scope_label=scope_label)}
 </div>"""
-
 
 
 def _card_inner_html(
@@ -1146,7 +1168,7 @@ def render_share_summary_export_html(
 <div style="
   width:{width}px;height:{height}px;overflow:hidden;
   font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  background:{_colour('bg')};color:{_colour('text')};">
+  background:{_colour("bg")};color:{_colour("text")};">
   {inner}
 </div>
 </body>

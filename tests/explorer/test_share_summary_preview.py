@@ -1,8 +1,5 @@
 """Tests for :mod:`explorer.presentation.share_summary_preview`."""
 
-import ast
-from pathlib import Path
-
 import pytest
 
 from explorer.core.share_summary_compute import (
@@ -1025,36 +1022,3 @@ def test_share_summary_color_scheme_fingerprint_changes_with_tile_palette(monkey
     monkeypatch.setitem(SHARE_SUMMARY_COLOR_SCHEMES[1], "tile_border", "#abcdef")
     assert share_summary_color_scheme_fingerprint(1) != fp
     assert ("tile_border", "#abcdef") in share_summary_color_scheme_fingerprint(1)
-
-
-def test_design_app_png_cache_key_includes_scheme_fingerprint():
-    app_path = (
-        Path(__file__).resolve().parents[2]
-        / "explorer"
-        / "app"
-        / "streamlit"
-        / "social_cards_streamlit_ui.py"
-    )
-    tree = ast.parse(app_path.read_text(encoding="utf-8"))
-    cached_func = next(
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name == "cached_share_summary_png"
-    )
-    assert "color_scheme_fingerprint" in [arg.arg for arg in cached_func.args.args]
-
-    cache_calls = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "cached_share_summary_png"
-    ]
-    assert cache_calls
-    assert any(
-        isinstance(arg, ast.Call)
-        and isinstance(arg.func, ast.Name)
-        and arg.func.id == "share_summary_color_scheme_fingerprint"
-        for call in cache_calls
-        for arg in call.args
-    )
