@@ -39,12 +39,13 @@ def _card_heading_or_none(text: str) -> str | None:
 
 
 SOCIAL_CARDS_DEFAULT_PERIOD_MODE = "lifetime"
+# Longest → shortest fixed period; custom trip range last.
 SOCIAL_CARDS_PERIOD_MODE_OPTIONS: tuple[str, ...] = (
+    "lifetime",
     "year",
     "month",
     "week",
     "custom",
-    "lifetime",
 )
 
 
