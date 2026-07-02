@@ -67,12 +67,17 @@ def insight_fact_requires_species(fact_id: InsightFactId) -> bool:
 
 
 def species_common_names_in_period(df: pd.DataFrame, period: ShareSummaryPeriod) -> tuple[str, ...]:
-    """Distinct common names with observations in *period*, sorted."""
+    """Distinct countable-species common names with observations in *period*, sorted."""
     obs = _observations_in_period(df, period)
     if obs.empty or "Common Name" not in obs.columns:
         return ()
+    frame = obs.copy()
+    frame["_base"] = countable_species_vectorized(frame)
+    countable = frame.dropna(subset=["_base"])
+    if countable.empty:
+        return ()
     names = (
-        obs["Common Name"]
+        countable["Common Name"]
         .dropna()
         .astype(str)
         .str.strip()

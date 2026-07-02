@@ -48,9 +48,10 @@ def run_tab_prep_spinner_and_sync(
     work_df: Any,
     df_full: Any,
     tax_locale_effective: str,
+    tab_prep_spinner_text: str = TAB_PREP_SPINNER_TEXT,
 ) -> None:
     """Second sidebar spinner: checklist/rankings caches and tab session sync."""
-    with st.spinner(TAB_PREP_SPINNER_TEXT):
+    with st.spinner(tab_prep_spinner_text):
         with perf_span("prep.cache_checklist_stats.working"):
             checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
         top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))

@@ -21,7 +21,7 @@ from explorer.app.streamlit.app_social_cards_sidebar_ui import (
     SOCIAL_CARDS_SIDEBAR_SELECTION_KEY,
     resolve_social_cards_period_from_session,
 )
-from explorer.app.streamlit.perf_instrumentation import perf_fragment
+from explorer.app.streamlit.perf_instrumentation import perf_fragment, perf_span
 from explorer.app.streamlit.social_cards_session_keys import APP_SOCIAL_CARDS_KEYS
 from explorer.app.streamlit.social_cards_sidebar_ui import SocialCardsSidebarSelection
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
@@ -61,13 +61,14 @@ def render_social_cards_tab_content(
         st.caption("No dated checklists in this export.")
         return
 
-    stats, all_time = resolve_social_cards_stats(
-        df_full=df_full,
-        df_scoped=df_scoped,
-        period=period,
-        geo_scope=geo_scope,
-        rankings_bundle=rankings_bundle,
-    )
+    with perf_span("social_cards.resolve_stats"):
+        stats, all_time = resolve_social_cards_stats(
+            df_full=df_full,
+            df_scoped=df_scoped,
+            period=period,
+            geo_scope=geo_scope,
+            rankings_bundle=rankings_bundle,
+        )
     if stats is None:
         st.warning("Could not compute stats for this period.")
         return
@@ -105,8 +106,9 @@ def render_social_cards_tab_content(
     if keys.insight_fact not in st.session_state:
         st.session_state[keys.insight_fact] = SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
 
-    insight_facts = compute_insight_facts(df_scoped, period)
-    insight_species_options = species_common_names_in_period(df_scoped, period)
+    with perf_span("social_cards.compute_insight_facts"):
+        insight_facts = compute_insight_facts(df_scoped, period)
+        insight_species_options = species_common_names_in_period(df_scoped, period)
     if insight_species_options and keys.insight_species not in st.session_state:
         st.session_state[keys.insight_species] = insight_species_options[0]
 
@@ -121,26 +123,27 @@ def render_social_cards_tab_content(
         stats, all_time=all_time, geo_scope=geo_scope
     )
 
-    render_current_card_fragment(
-        stats=stats,
-        all_time=all_time,
-        selected_layout=sidebar_selection.layout,
-        fmt=sidebar_selection.fmt,
-        scale=sidebar_selection.scale,
-        status_metrics=status_metrics,
-        color_scheme_index=sidebar_selection.color_scheme_index,
-        card_stat_data_scope=card_stat_data_scope,
-        scope_label=scope_label,
-        geo_scope=geo_scope,
-        keys=keys,
-        tiles_presentation=sidebar_selection.tiles_presentation,
-        spotlight_presentation=sidebar_selection.spotlight_presentation,
-        insight_facts=insight_facts,
-        insight_species_options=insight_species_options,
-        df_scoped=df_scoped,
-        resolved_period=period,
-        lazy_png_export=True,
-    )
+    with perf_span("social_cards.render_preview"):
+        render_current_card_fragment(
+            stats=stats,
+            all_time=all_time,
+            selected_layout=sidebar_selection.layout,
+            fmt=sidebar_selection.fmt,
+            scale=sidebar_selection.scale,
+            status_metrics=status_metrics,
+            color_scheme_index=sidebar_selection.color_scheme_index,
+            card_stat_data_scope=card_stat_data_scope,
+            scope_label=scope_label,
+            geo_scope=geo_scope,
+            keys=keys,
+            tiles_presentation=sidebar_selection.tiles_presentation,
+            spotlight_presentation=sidebar_selection.spotlight_presentation,
+            insight_facts=insight_facts,
+            insight_species_options=insight_species_options,
+            df_scoped=df_scoped,
+            resolved_period=period,
+            lazy_png_export=True,
+        )
 
 
 @st.fragment

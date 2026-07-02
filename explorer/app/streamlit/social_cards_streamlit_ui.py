@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
+from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.app.streamlit.social_cards_session_keys import SocialCardsSessionKeys
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_can_accept_stat,
@@ -822,20 +823,21 @@ def _generate_share_summary_png_bytes(
     resolved_fact: ShareSummaryInsightFact | None,
 ) -> bytes:
     """Build PNG on demand — bypasses ``cached_share_summary_png`` spinner/cache."""
-    return share_summary_to_png_bytes(
-        stats,
-        layout=layout,
-        fmt=fmt,
-        spotlight_label=spotlight_label,
-        insight_fact=resolved_fact,
-        card_stat_labels=card_stat_labels,
-        all_time=all_time,
-        color_scheme_index=color_scheme_index,
-        scope_label=scope_label,
-        geo_scope=geo_scope,
-        tiles_presentation=tiles_presentation,
-        spotlight_presentation=spotlight_presentation,
-    )
+    with perf_span("social_cards.png_export"):
+        return share_summary_to_png_bytes(
+            stats,
+            layout=layout,
+            fmt=fmt,
+            spotlight_label=spotlight_label,
+            insight_fact=resolved_fact,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+            color_scheme_index=color_scheme_index,
+            scope_label=scope_label,
+            geo_scope=geo_scope,
+            tiles_presentation=tiles_presentation,
+            spotlight_presentation=spotlight_presentation,
+        )
 
 
 def render_lazy_png_export_controls(

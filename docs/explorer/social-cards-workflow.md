@@ -73,3 +73,20 @@ Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker
 - [issue-157-share-summary-tracker.md](issue-157-share-summary-tracker.md) — feature status
 - [issue-157-social-summary-prototype.md](issue-157-social-summary-prototype.md) — prototype notes
 - Design app: `streamlit run explorer/app/streamlit/design_share_summary_app.py`
+
+## Performance and lazy tab mount (#328)
+
+Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboard_shell.py`. Period stats, insight facts, and card preview run only when the tab is selected; other data tabs always enter their `@st.fragment` blocks on every full rerun. Map prep and `prep.cache_rankings_bundle` still run on tab switch (~100 ms) — improving that needs a broader shell refactor.
+
+**Instrumentation** (`EXPLORER_PERF=1`): coarse `fragment.social_cards` plus sub-stages:
+
+| Stage | Where |
+|-------|--------|
+| `social_cards.resolve_stats` | `social_cards_streamlit_html.py` |
+| `social_cards.compute_insight_facts` | `social_cards_streamlit_html.py` |
+| `social_cards.render_preview` | `social_cards_streamlit_html.py` |
+| `social_cards.png_export` | `social_cards_streamlit_ui.py` |
+
+See `docs/development.md` § Performance Instrumentation Guardrails for stable stage names.
+
+**PNG on Streamlit Cloud:** headless Chromium availability is not yet verified on a live deploy — see tracker § Streamlit Cloud verification (#275). Graceful `RuntimeError` if Chromium is missing.

@@ -43,7 +43,12 @@ from explorer.app.streamlit.app_prep_map_map_tab import (
 from explorer.app.streamlit.app_prep_map_tab_prep import run_tab_prep_spinner_and_sync
 from explorer.app.streamlit.app_prep_map_types import LeafletMapPrepBundle
 from explorer.app.streamlit.perf_instrumentation import perf_span
-from explorer.app.streamlit.streamlit_ui_constants import MAP_PREP_SPINNER_TEXT
+from explorer.app.streamlit.streamlit_ui_constants import (
+    MAP_PREP_SPINNER_TEXT,
+    SOCIAL_CARDS_PREP_SPINNER_TEXT,
+    SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT,
+    TAB_PREP_SPINNER_TEXT,
+)
 from explorer.components.all_locations_map import (
     render_all_locations_map_component,  # noqa: F401 — re-export for integration tests
 )
@@ -83,9 +88,14 @@ def render_prep_spinner_and_map_tab(
     species_url_fn: Callable[..., str],
 ) -> None:
     """Run map prep first (spinner), then heavy tab caches + session sync (second spinner)."""
+    map_spinner_text = (
+        SOCIAL_CARDS_PREP_SPINNER_TEXT
+        if is_social_cards_main_tab()
+        else MAP_PREP_SPINNER_TEXT
+    )
     with st.sidebar:
         sidebar_bottom_slot_start()
-        with st.spinner(MAP_PREP_SPINNER_TEXT):
+        with st.spinner(map_spinner_text):
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
             with perf_span("prep.data_signature"):
                 apply_dataset_signature_for_map_caches(
@@ -166,6 +176,11 @@ def render_prep_spinner_and_map_tab(
             work_df=work_df,
             df_full=df_full,
             tax_locale_effective=tax_locale_effective,
+            tab_prep_spinner_text=(
+                SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT
+                if is_social_cards_main_tab()
+                else TAB_PREP_SPINNER_TEXT
+            ),
         )
 
         _spinner_emoji_placeholder.empty()

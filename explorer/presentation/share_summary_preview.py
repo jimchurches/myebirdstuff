@@ -47,6 +47,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_LIFETIME_TILES_DEFAULT_STATS,
     SHARE_SUMMARY_MINIMAL_STORY_MAX_STATS,
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
+    SHARE_SUMMARY_SPOTLIGHT_SPECIES_LABEL_BY_PERIOD,
     SHARE_SUMMARY_TILES_DEFAULT_STATS,
     share_summary_card_subtitle,
     share_summary_period_subtitle,
@@ -209,6 +210,15 @@ def stat_card_display_label(picker_label: str) -> str:
     return _CARD_LABEL_BY_PICKER.get(picker_label, picker_label)
 
 
+def spotlight_stat_display_label(picker_label: str, *, period_kind: PeriodKind) -> str:
+    """Spotlight card title — period-aware species wording; tiles keep ``stat_card_display_label``."""
+    if picker_label == "Total species":
+        return SHARE_SUMMARY_SPOTLIGHT_SPECIES_LABEL_BY_PERIOD.get(
+            period_kind, stat_card_display_label(picker_label)
+        )
+    return stat_card_display_label(picker_label)
+
+
 def _card_stat_pair(picker_label: str, value: str) -> tuple[str, str]:
     return stat_card_display_label(picker_label), value
 
@@ -231,7 +241,8 @@ def spotlight_pair_for_label(
     cleaned = (label or "").strip()
     if not cleaned or cleaned not in lookup:
         return None
-    return _card_stat_pair(cleaned, lookup[cleaned])
+    title = spotlight_stat_display_label(cleaned, period_kind=stats.period_kind)
+    return title, lookup[cleaned]
 
 
 _LOGO_PATH = (
@@ -744,6 +755,38 @@ def _footer_block(*, scope_label: str | None = None) -> str:
 </div>"""
 
 
+def _is_empty_period(stats: ShareSummaryStats) -> bool:
+    """True when stats were computed for a period with zero checklists."""
+    return stats.checklists is not None and stats.checklists == 0
+
+
+def _layout_empty_period(
+    stats: ShareSummaryStats,
+    width: int,
+    height: int,
+    fmt: FormatId,
+    *,
+    scope_label: str | None = None,
+) -> str:
+    """Dedicated no-data card when the period has zero checklists."""
+    pad_bottom = _footer_pad(fmt, width, height)
+    message_size = "40px" if _is_tall(fmt, width, height) else "36px"
+    hint_size = "28px" if _is_tall(fmt, width, height) else "24px"
+    return f"""
+<div style="position:relative;width:100%;height:100%;box-sizing:border-box;overflow:hidden;">
+  {_header_block(stats)}
+  <div style="position:absolute;left:0;right:0;top:0;bottom:{pad_bottom}px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:64px 56px 32px;text-align:center;box-sizing:border-box;">
+    <div style="font-size:{message_size};font-weight:700;line-height:1.2;color:{_colour("text")};">
+      No checklists in this period</div>
+    <div style="margin-top:20px;font-size:{hint_size};color:{_colour("muted")};font-weight:500;max-width:80%;">
+      Try a different date range in the sidebar.</div>
+  </div>
+  {_footer_block(scope_label=scope_label)}
+</div>"""
+
+
 def _resolve_card_stat_pairs(
     stats: ShareSummaryStats,
     *,
@@ -1039,6 +1082,12 @@ def _card_inner_html(
 ) -> tuple[str, int, int]:
     """Return (inner HTML, width, height) at export pixel dimensions."""
     width, height = _FORMAT_PX[fmt]
+    if _is_empty_period(stats):
+        return (
+            _layout_empty_period(stats, width, height, fmt, scope_label=scope_label),
+            width,
+            height,
+        )
     if layout == "insight":
         if insight_fact is None:
             raise ValueError("insight_fact is required for layout='insight'")
@@ -1229,6 +1278,7 @@ __all__ = [
     "sample_share_summary_stats",
     "share_summary_scheme_override",
     "spotlight_pair_for_label",
+    "spotlight_stat_display_label",
     "resolve_spotlight_label",
     "resolve_insight_fact",
     "stat_card_display_label",

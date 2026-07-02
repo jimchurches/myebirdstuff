@@ -38,6 +38,16 @@ def _card_heading_or_none(text: str) -> str | None:
     return stripped or None
 
 
+SOCIAL_CARDS_DEFAULT_PERIOD_MODE = "lifetime"
+SOCIAL_CARDS_PERIOD_MODE_OPTIONS: tuple[str, ...] = (
+    "year",
+    "month",
+    "week",
+    "custom",
+    "lifetime",
+)
+
+
 def _render_period_controls(
     df: pd.DataFrame,
     keys: SocialCardsSessionKeys,
@@ -54,7 +64,8 @@ def _render_period_controls(
 
     period_mode = st.selectbox(
         "Range",
-        options=["year", "month", "week", "custom", "lifetime"],
+        options=list(SOCIAL_CARDS_PERIOD_MODE_OPTIONS),
+        index=SOCIAL_CARDS_PERIOD_MODE_OPTIONS.index(SOCIAL_CARDS_DEFAULT_PERIOD_MODE),
         format_func=lambda x: {
             "year": "Yearly",
             "month": "Monthly",
@@ -145,7 +156,7 @@ def resolve_social_cards_period_from_session(
     min_d = dates.min().date()
     max_d = dates.max().date()
     reference = date.today()
-    period_mode = st.session_state.get(keys.period_mode, "year")
+    period_mode = st.session_state.get(keys.period_mode, SOCIAL_CARDS_DEFAULT_PERIOD_MODE)
 
     if period_mode == "year":
         selected_year = int(st.session_state.get(keys.period_year, date.today().year))
