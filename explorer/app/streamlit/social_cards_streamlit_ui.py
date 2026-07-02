@@ -988,7 +988,8 @@ def render_current_card_fragment(
 
     spotlight_label = spotlight_label_from_session(status_metrics, keys)
 
-    st.subheader(current_card_label)
+    if (current_card_label or "").strip():
+        st.subheader(current_card_label)
     st.markdown(
         render_share_summary_preview_html(
             stats,

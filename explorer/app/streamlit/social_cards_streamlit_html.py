@@ -141,6 +141,7 @@ def render_social_cards_tab_content(
             insight_species_options=insight_species_options,
             df_scoped=df_scoped,
             resolved_period=period,
+            current_card_label="",
             lazy_png_export=True,
         )
 
