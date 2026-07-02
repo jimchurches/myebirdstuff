@@ -80,7 +80,6 @@ def render_social_cards_tab_content(
     sidebar_selection = sidebar_raw
 
     scope_label = geo_scope_display_label(geo_scope)
-    st.caption(f"**{stats.period_label}** · {scope_label}")
 
     if not period_has_checklist_data(stats):
         st.warning(
