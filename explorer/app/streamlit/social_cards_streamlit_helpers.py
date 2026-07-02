@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from explorer.core.share_summary_compute import (
     PeriodKind,
+    ShareSummaryAllTimeStats,
     ShareSummaryGeoScope,
     ShareSummaryStats,
 )
+from explorer.core.share_summary_defaults import share_summary_color_scheme_fingerprint
+from explorer.core.share_summary_insight_facts import ShareSummaryInsightFact
 from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_DEFAULT,
     tiles_circle_cluster_max,
@@ -14,6 +17,7 @@ from explorer.presentation.share_summary_circles_preview import (
 from explorer.presentation.share_summary_preview import (
     FormatId,
     LayoutId,
+    SpotlightPresentationId,
     TilesPresentationId,
     layout_card_stat_max,
     layout_grid_stat_default_count,
@@ -33,6 +37,25 @@ def card_stat_data_scope(
     """Session scope token — when this changes, card-stat picks re-initialize."""
     geo_token = (geo_scope or ShareSummaryGeoScope()).scope_token()
     return f"{data_source}|{period_kind}|{period_label}|{geo_token}|{fmt}|{tiles_presentation}"
+
+
+def card_stat_data_scope_from_session_export(
+    *,
+    period_kind: PeriodKind,
+    period_label: str,
+    geo_scope: ShareSummaryGeoScope | None = None,
+    fmt: FormatId = "square",
+    tiles_presentation: TilesPresentationId = "grid",
+) -> str:
+    """Main-app wrapper — session export is the data source."""
+    return card_stat_data_scope(
+        data_source="export",
+        period_kind=period_kind,
+        period_label=period_label,
+        geo_scope=geo_scope,
+        fmt=fmt,
+        tiles_presentation=tiles_presentation,
+    )
 
 
 def card_stat_data_scope_from_design_source(
@@ -197,6 +220,78 @@ def status_metrics_lookup(status_metrics: list[tuple[str, str]]) -> dict[str, st
 def stats_on_card(picks: list[str]) -> set[str]:
     """Non-empty stat labels currently assigned to card slots."""
     return {label for label in picks if label}
+
+
+def png_export_fingerprint(
+    *,
+    stats: ShareSummaryStats,
+    layout: LayoutId,
+    fmt: FormatId,
+    card_stat_labels: tuple[str, ...],
+    spotlight_label: str,
+    all_time: ShareSummaryAllTimeStats | None,
+    color_scheme_index: int,
+    scope_label: str,
+    geo_scope: ShareSummaryGeoScope,
+    tiles_presentation: TilesPresentationId,
+    spotlight_presentation: SpotlightPresentationId,
+    insight_fact: ShareSummaryInsightFact | None,
+) -> tuple[object, ...]:
+    """Stable cache key for lazy PNG export — invalidates when card inputs change."""
+    stats_token = (
+        stats.period_kind,
+        stats.period_label,
+        stats.trip_title,
+        stats.species,
+        stats.families,
+        stats.individuals,
+        stats.checklists,
+        stats.completed_checklists,
+        stats.incidental_checklists,
+        stats.locations,
+        stats.lifers,
+        stats.region_lifers,
+        stats.birding_hours,
+        stats.distance_km,
+        stats.days_with_checklist,
+        stats.longest_streak,
+        stats.countries,
+        stats.shared_checklists,
+        stats.days_birding_with_others,
+    )
+    all_time_token: tuple[object, ...] = ()
+    if all_time is not None:
+        all_time_token = (
+            all_time.observed_species_taxa,
+            all_time.total_species_taxa,
+            all_time.world_bird_coverage_pct,
+            all_time.observed_families,
+            all_time.total_families_taxa,
+        )
+    insight_token: tuple[object, ...] = ()
+    if insight_fact is not None:
+        insight_token = (
+            insight_fact.fact_id,
+            insight_fact.label,
+            insight_fact.primary_text,
+            insight_fact.metric_value,
+            insight_fact.metric_unit,
+        )
+    return (
+        stats_token,
+        layout,
+        fmt,
+        card_stat_labels,
+        spotlight_label,
+        all_time_token,
+        color_scheme_index,
+        share_summary_color_scheme_fingerprint(color_scheme_index),
+        scope_label,
+        geo_scope.scope_token(),
+        tiles_presentation,
+        spotlight_presentation,
+        insight_token,
+    )
 
 
 def card_can_accept_stat(

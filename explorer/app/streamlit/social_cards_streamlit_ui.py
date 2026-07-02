@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
 from explorer.app.streamlit.social_cards_session_keys import SocialCardsSessionKeys
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_can_accept_stat,
@@ -13,6 +14,7 @@ from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_stat_ui_row_count,
     default_card_stat_slot_count,
     effective_card_stat_labels,
+    png_export_fingerprint,
     resolve_card_stat_selectbox_value,
     sanitize_card_stat_picks,
     stats_on_card,
@@ -61,6 +63,13 @@ SOCIAL_CARDS_STATISTICS_LABEL = "Card statistics"
 SOCIAL_CARDS_CURRENT_CARD_LABEL = "Current card"
 _CHIP_STRIP_COLS_PER_ROW = 3
 
+SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY = "_social_cards_png_export_bytes"
+SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY = "_social_cards_png_export_fingerprint"
+SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY = "_social_cards_png_export_error"
+SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY = "_social_cards_png_auto_download"
+SOCIAL_CARDS_PNG_EXPORT_BTN_KEY = "social_cards_export_png_btn"
+SOCIAL_CARDS_PNG_DOWNLOAD_BTN_KEY = "social_cards_export_png_download_btn"
+
 
 @st.cache_data(show_spinner="Generating PNG…")
 def cached_share_summary_png(
@@ -95,7 +104,9 @@ def cached_share_summary_png(
     )
 
 
-def _clear_card_stat_selectbox_keys(layout: LayoutId, keys: SocialCardsSessionKeys) -> None:
+def _clear_card_stat_selectbox_keys(
+    layout: LayoutId, keys: SocialCardsSessionKeys
+) -> None:
     """Drop stale selectbox widget state so Reset / session picks take effect."""
     for i in range(layout_card_stat_storage_max(layout)):
         st.session_state.pop(keys.card_stat_selectbox(layout, i), None)
@@ -134,9 +145,16 @@ def _ensure_card_stat_picks(
     """Initialize or sanitize session picks for *layout*; returns UI row values."""
     circle_cluster = tiles_circle_cluster_picker(layout, tiles_presentation)
     max_slots = card_stat_max_slots(
-        layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
+        layout,
+        fmt,
+        tiles_presentation=tiles_presentation,
+        status_metrics=status_metrics,
     )
-    storage_max = tiles_circle_cluster_max(fmt) if circle_cluster else layout_card_stat_storage_max(layout)
+    storage_max = (
+        tiles_circle_cluster_max(fmt)
+        if circle_cluster
+        else layout_card_stat_storage_max(layout)
+    )
     available = frozenset(label for label, _ in status_metrics)
     picks_key = keys.card_stat_picks(layout, period_kind)
     count_key = keys.card_stat_slot_count(layout, period_kind)
@@ -168,11 +186,14 @@ def _ensure_card_stat_picks(
             tiles_presentation=tiles_presentation,
         )
 
-    if not sanitize_card_stat_picks(
-        list(st.session_state[picks_key]),
-        available=available,
-        max_slots=storage_max,
-    ) and defaults:
+    if (
+        not sanitize_card_stat_picks(
+            list(st.session_state[picks_key]),
+            available=available,
+            max_slots=storage_max,
+        )
+        and defaults
+    ):
         _clear_card_stat_selectbox_keys(layout, keys)
         st.session_state[picks_key] = defaults
         st.session_state[count_key] = default_card_stat_slot_count(
@@ -349,7 +370,10 @@ def render_card_stat_picker_ui(
         return ()
 
     max_slots = card_stat_max_slots(
-        layout, fmt, tiles_presentation=tiles_presentation, status_metrics=status_metrics
+        layout,
+        fmt,
+        tiles_presentation=tiles_presentation,
+        status_metrics=status_metrics,
     )
     circle_cluster = tiles_circle_cluster_picker(layout, tiles_presentation)
     available_labels = [label for label, _ in status_metrics]
@@ -384,7 +408,9 @@ def render_card_stat_picker_ui(
             f"The default is {TILES_CIRCLE_CLUSTER_DEFAULT} circles."
         )
     elif layout == "tiles":
-        min_slots = card_stat_min_slots(layout, fmt, tiles_presentation=tiles_presentation)
+        min_slots = card_stat_min_slots(
+            layout, fmt, tiles_presentation=tiles_presentation
+        )
         st.caption(
             f"Statistics Grid: {min_slots}–{max_slots} stats "
             f"({layout_grid_slot_limits_caption()}). "
@@ -526,7 +552,9 @@ def render_card_stat_picker_ui(
         status_metrics=status_metrics,
     )
     stats_not_on_card = [
-        label for label in available_labels if label not in stats_on_card(picks[:ui_rows])
+        label
+        for label in available_labels
+        if label not in stats_on_card(picks[:ui_rows])
     ]
     if stats_not_on_card and not can_add_more:
         st.info("Card is full.")
@@ -659,7 +687,9 @@ def _insight_fact_options(
         if any(f.fact_id == fact_id for f in facts):
             options.append((fact_id, INSIGHT_FACT_PICKER_LABELS[fact_id]))
     if species_options:
-        options.append(("species_individuals", INSIGHT_FACT_PICKER_LABELS["species_individuals"]))
+        options.append(
+            ("species_individuals", INSIGHT_FACT_PICKER_LABELS["species_individuals"])
+        )
     return options
 
 
@@ -742,6 +772,7 @@ def centered_card_download_button(
     file_name: str,
     mime: str,
     help_text: str,
+    button_key: str | None = None,
 ) -> None:
     """Download control centred under the scaled card preview."""
     _, btn_col, _ = st.columns([1, 1, 1])
@@ -753,7 +784,153 @@ def centered_card_download_button(
             mime=mime,
             use_container_width=True,
             help=help_text,
+            key=button_key,
         )
+
+
+def _clear_stale_png_export(fingerprint: tuple[object, ...]) -> None:
+    cached_fp = st.session_state.get(SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY)
+    if cached_fp == fingerprint:
+        return
+    st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY, None)
+    st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY, None)
+    st.session_state.pop(SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY, None)
+
+
+def _lazy_png_export_ready(fingerprint: tuple[object, ...]) -> bytes | None:
+    if st.session_state.get(SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY) != fingerprint:
+        return None
+    raw = st.session_state.get(SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY)
+    if isinstance(raw, (bytes, bytearray)):
+        return bytes(raw)
+    return None
+
+
+def _generate_share_summary_png_bytes(
+    *,
+    stats: ShareSummaryStats,
+    layout: LayoutId,
+    fmt: FormatId,
+    card_stat_labels: tuple[str, ...],
+    spotlight_label: str,
+    all_time: ShareSummaryAllTimeStats | None,
+    color_scheme_index: int,
+    scope_label: str,
+    geo_scope: ShareSummaryGeoScope,
+    tiles_presentation: TilesPresentationId,
+    spotlight_presentation: SpotlightPresentationId,
+    resolved_fact: ShareSummaryInsightFact | None,
+) -> bytes:
+    """Build PNG on demand — bypasses ``cached_share_summary_png`` spinner/cache."""
+    return share_summary_to_png_bytes(
+        stats,
+        layout=layout,
+        fmt=fmt,
+        spotlight_label=spotlight_label,
+        insight_fact=resolved_fact,
+        card_stat_labels=card_stat_labels,
+        all_time=all_time,
+        color_scheme_index=color_scheme_index,
+        scope_label=scope_label,
+        geo_scope=geo_scope,
+        tiles_presentation=tiles_presentation,
+        spotlight_presentation=spotlight_presentation,
+    )
+
+
+def render_lazy_png_export_controls(
+    *,
+    stats: ShareSummaryStats,
+    layout: LayoutId,
+    fmt: FormatId,
+    card_stat_labels: tuple[str, ...],
+    spotlight_label: str,
+    all_time: ShareSummaryAllTimeStats | None,
+    color_scheme_index: int,
+    scope_label: str,
+    geo_scope: ShareSummaryGeoScope,
+    tiles_presentation: TilesPresentationId,
+    spotlight_presentation: SpotlightPresentationId,
+    resolved_fact: ShareSummaryInsightFact | None,
+    export_button_label: str,
+    png_filename: str,
+) -> None:
+    """One user click: build PNG (spinner), rerun, auto-fire Streamlit download."""
+    fingerprint = png_export_fingerprint(
+        stats=stats,
+        layout=layout,
+        fmt=fmt,
+        card_stat_labels=card_stat_labels,
+        spotlight_label=spotlight_label,
+        all_time=all_time,
+        color_scheme_index=color_scheme_index,
+        scope_label=scope_label,
+        geo_scope=geo_scope,
+        tiles_presentation=tiles_presentation,
+        spotlight_presentation=spotlight_presentation,
+        insight_fact=resolved_fact,
+    )
+    _clear_stale_png_export(fingerprint)
+
+    err = st.session_state.get(SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY)
+    if err:
+        st.warning(str(err))
+
+    if st.session_state.pop(SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY, False):
+        ready_png = _lazy_png_export_ready(fingerprint)
+        if ready_png is None:
+            st.warning(
+                "PNG export was prepared but bytes are missing. Try Export again."
+            )
+            return
+        st.caption("Starting download…")
+        centered_card_download_button(
+            label=export_button_label,
+            data=ready_png,
+            file_name=png_filename,
+            mime="image/png",
+            help_text="PNG of the current card above.",
+            button_key=SOCIAL_CARDS_PNG_DOWNLOAD_BTN_KEY,
+        )
+        inject_auto_click_streamlit_download_js(button_label=export_button_label)
+        return
+
+    _, btn_col, _ = st.columns([1, 1, 1])
+    with btn_col:
+        if st.button(
+            export_button_label,
+            key=SOCIAL_CARDS_PNG_EXPORT_BTN_KEY,
+            use_container_width=True,
+            help="Generate a PNG of the current card.",
+        ):
+            st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY, None)
+            try:
+                png_bytes = _lazy_png_export_ready(fingerprint)
+                if png_bytes is None:
+                    with st.spinner("Generating PNG…"):
+                        png_bytes = _generate_share_summary_png_bytes(
+                            stats=stats,
+                            layout=layout,
+                            fmt=fmt,
+                            card_stat_labels=card_stat_labels,
+                            spotlight_label=spotlight_label,
+                            all_time=all_time,
+                            color_scheme_index=color_scheme_index,
+                            scope_label=scope_label,
+                            geo_scope=geo_scope,
+                            tiles_presentation=tiles_presentation,
+                            spotlight_presentation=spotlight_presentation,
+                            resolved_fact=resolved_fact,
+                        )
+            except RuntimeError as exc:
+                st.session_state[SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY] = str(exc)
+                st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY, None)
+                st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY, None)
+                return
+            st.session_state[SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY] = png_bytes
+            st.session_state[SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY] = fingerprint
+            st.session_state[SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY] = True
+            st.rerun()
 
 
 @st.fragment
@@ -779,6 +956,7 @@ def render_current_card_fragment(
     statistics_label: str = SOCIAL_CARDS_STATISTICS_LABEL,
     current_card_label: str = SOCIAL_CARDS_CURRENT_CARD_LABEL,
     export_button_label: str = "Export card",
+    lazy_png_export: bool = False,
 ) -> None:
     """Card statistics controls, live preview, and PNG export."""
     card_stat_labels: tuple[str, ...] = ()
@@ -829,6 +1007,25 @@ def render_current_card_fragment(
     )
 
     png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
+    if lazy_png_export:
+        render_lazy_png_export_controls(
+            stats=stats,
+            layout=selected_layout,
+            fmt=fmt,
+            card_stat_labels=card_stat_labels,
+            spotlight_label=spotlight_label,
+            all_time=all_time,
+            color_scheme_index=color_scheme_index,
+            scope_label=scope_label,
+            geo_scope=geo_scope,
+            tiles_presentation=tiles_presentation,
+            spotlight_presentation=spotlight_presentation,
+            resolved_fact=resolved_fact,
+            export_button_label=export_button_label,
+            png_filename=png_filename,
+        )
+        return
+
     try:
         png_bytes = cached_share_summary_png(
             stats,

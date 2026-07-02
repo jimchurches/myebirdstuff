@@ -1,8 +1,5 @@
 """Tests for :mod:`explorer.presentation.share_summary_preview`."""
 
-import ast
-from pathlib import Path
-
 import pytest
 
 from explorer.core.share_summary_compute import (
@@ -617,6 +614,172 @@ def test_render_preview_html_includes_scope_label_in_footer():
     assert "Australia · New South Wales" in html
 
 
+def test_footer_scope_and_brand_use_muted_in_preview_and_export():
+    from explorer.core.share_summary_defaults import SHARE_SUMMARY_COLOR_SCHEMES
+
+    stats = sample_share_summary_stats()
+    dark = SHARE_SUMMARY_COLOR_SCHEMES[1]
+    preview = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        color_scheme_index=1,
+        scope_label="World",
+    )
+    export = render_share_summary_export_html(
+        stats,
+        layout="tiles",
+        color_scheme_index=1,
+        scope_label="World",
+    )
+    for html in (preview, export):
+        assert f'color:{dark["muted"]};' in html
+        assert 'letter-spacing:0.04em;">World</div>' in html
+        assert "Personal eBird Explorer</div>" in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
+
+
+def test_preview_and_export_share_dense_story_tiles_use_flow_layout():
+    stats = sample_share_summary_stats()
+    preview = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="story", color_scheme_index=1, scope_label="World"
+    )
+    export = render_share_summary_export_html(
+        stats, layout="tiles", fmt="story", color_scheme_index=1, scope_label="World"
+    )
+    for html in (preview, export):
+        assert "padding:8px 48px 140px" in html
+        assert "align-items:flex-end" not in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
+
+
+def test_preview_and_export_share_full_portrait_tiles_use_flow_layout():
+    stats = ShareSummaryStats(
+        period_label="2025",
+        period_kind="year",
+        species=312,
+        lifers=47,
+        checklists=186,
+        completed_checklists=172,
+        incidental_checklists=14,
+        locations=42,
+        families=89,
+        individuals=12_450,
+        days_with_checklist=98,
+        countries=5,
+        longest_streak=14,
+        birding_hours=214.5,
+        distance_km=1_842.5,
+        shared_checklists=8,
+        days_birding_with_others=6,
+    )
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+        "Total individuals",
+        "Bird families",
+    )
+    preview = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="portrait_post", card_stat_labels=labels, scope_label="World"
+    )
+    export = render_share_summary_export_html(
+        stats, layout="tiles", fmt="portrait_post", card_stat_labels=labels, scope_label="World"
+    )
+    for html in (preview, export):
+        assert "padding:8px 48px 128px" in html
+        assert "align-items:flex-end" not in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
+
+
+def test_preview_and_export_share_sparse_square_tiles_use_flow_padding():
+    stats = sample_share_summary_stats()
+    labels = ("Total species", "Lifers", "Total checklists", "Unique locations")
+    preview = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        fmt="square",
+        card_stat_labels=labels,
+        scope_label="World",
+    )
+    export = render_share_summary_export_html(
+        stats,
+        layout="tiles",
+        fmt="square",
+        card_stat_labels=labels,
+        scope_label="World",
+    )
+    for html in (preview, export):
+        assert "padding:8px 48px 120px" in html
+        assert "align-items:flex-end" not in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
+
+
+def test_preview_and_export_share_full_square_tiles_use_flow_layout():
+    stats = ShareSummaryStats(
+        period_label="2025",
+        period_kind="year",
+        species=312,
+        lifers=47,
+        checklists=186,
+        completed_checklists=172,
+        incidental_checklists=14,
+        locations=42,
+        families=89,
+        individuals=12_450,
+        days_with_checklist=98,
+        countries=5,
+        longest_streak=14,
+        birding_hours=214.5,
+        distance_km=1_842.5,
+        shared_checklists=8,
+        days_birding_with_others=6,
+    )
+    labels = (
+        "Total species",
+        "Lifers",
+        "Total checklists",
+        "Unique locations",
+        "Countries",
+        "Birding days",
+    )
+    preview = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="square", card_stat_labels=labels, scope_label="World"
+    )
+    export = render_share_summary_export_html(
+        stats, layout="tiles", fmt="square", card_stat_labels=labels, scope_label="World"
+    )
+    for html in (preview, export):
+        assert "padding:8px 48px 120px" in html
+        assert "align-items:flex-end" not in html
+        assert "position:absolute;left:0;right:0;bottom:0" in html
+
+
+def test_header_subtitle_uses_div_for_accent_in_preview_and_export():
+    from explorer.core.share_summary_defaults import (
+        SHARE_SUMMARY_COLOR_SCHEMES,
+        SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES,
+    )
+
+    dark = SHARE_SUMMARY_COLOR_SCHEMES[1]
+    stats = sample_share_summary_stats()
+    preview = render_share_summary_preview_html(
+        stats, layout="tiles", fmt="square", color_scheme_index=1
+    )
+    export = render_share_summary_export_html(
+        stats, layout="tiles", fmt="square", color_scheme_index=1
+    )
+    marker = (
+        f'color:{dark["accent"]};font-weight:600;">'
+        f"{SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES}</div>"
+    )
+    for html in (preview, export):
+        assert marker in html
+        assert f"{SHARE_SUMMARY_LAYOUT_SUBTITLE_TILES}</p>" not in html
+
+
 def test_card_stat_pairs_selected_labels_includes_all_time():
     from explorer.core.share_summary_compute import ShareSummaryAllTimeStats
     from explorer.presentation.share_summary_preview import card_stat_pairs
@@ -859,36 +1022,3 @@ def test_share_summary_color_scheme_fingerprint_changes_with_tile_palette(monkey
     monkeypatch.setitem(SHARE_SUMMARY_COLOR_SCHEMES[1], "tile_border", "#abcdef")
     assert share_summary_color_scheme_fingerprint(1) != fp
     assert ("tile_border", "#abcdef") in share_summary_color_scheme_fingerprint(1)
-
-
-def test_design_app_png_cache_key_includes_scheme_fingerprint():
-    app_path = (
-        Path(__file__).resolve().parents[2]
-        / "explorer"
-        / "app"
-        / "streamlit"
-        / "social_cards_streamlit_ui.py"
-    )
-    tree = ast.parse(app_path.read_text(encoding="utf-8"))
-    cached_func = next(
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name == "cached_share_summary_png"
-    )
-    assert "color_scheme_fingerprint" in [arg.arg for arg in cached_func.args.args]
-
-    cache_calls = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "cached_share_summary_png"
-    ]
-    assert cache_calls
-    assert any(
-        isinstance(arg, ast.Call)
-        and isinstance(arg.func, ast.Name)
-        and arg.func.id == "share_summary_color_scheme_fingerprint"
-        for call in cache_calls
-        for arg in call.args
-    )
