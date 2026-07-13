@@ -434,7 +434,7 @@ THEME_MAIN_TAB_HOVER_HEX = "#156248"
 THEME_APP_HEADER_TITLE_HEX = "#1f3d2b"
 THEME_SECONDARY_BG_HEX = "#EEF4F0"
 
-SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v18"
+SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v19"
 
 # ---------------------------------------------------------------------------
 # Ranking & Lists HTML (``rankings_streamlit_html``)

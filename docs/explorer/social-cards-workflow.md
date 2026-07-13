@@ -73,3 +73,36 @@ Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker
 - [issue-157-share-summary-tracker.md](issue-157-share-summary-tracker.md) — feature status
 - [issue-157-social-summary-prototype.md](issue-157-social-summary-prototype.md) — prototype notes
 - Design app: `streamlit run explorer/app/streamlit/design_share_summary_app.py`
+
+## Performance and lazy tab mount (#328)
+
+Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboard_shell.py`. Period stats, insight facts, and card preview run only when the tab is selected; other data tabs always enter their `@st.fragment` blocks on every full rerun. **Map prep is skipped** while Social Cards is active (rankings/taxonomy caches still warm on full reruns under a **single** sidebar spinner — classic “Doing interesting things…” copy, not nested map/tab spinners). The bird-emoji strip uses a **keyed** sidebar container so Map ↔ Social Cards switches replace one strip instead of stacking two. Period / geo / layout / format / theme stay in the **main-script sidebar** so the chrome matches other explorer tabs. Those sidebar widgets still trigger a full app rerun today; Streamlit 1.59+ allows fragment→sidebar writes if we move that block into the Social Cards fragment later.
+
+**Instrumentation** (`EXPLORER_PERF=1`): coarse `fragment.social_cards` plus sub-stages:
+
+| Stage | Where |
+|-------|--------|
+| `social_cards.resolve_stats` | `social_cards_streamlit_html.py` |
+| `social_cards.compute_insight_facts` | `social_cards_streamlit_html.py` (Interesting Insights layout only) |
+| `social_cards.render_preview` | `social_cards_streamlit_html.py` |
+| `social_cards.png_export` | `social_cards_streamlit_ui.py` |
+
+### `fragment.social_cards` timing (~47k-row export, #328)
+
+Manual `EXPLORER_PERF=1` had shown **~133 ms** for `fragment.social_cards` vs **~1,010 ms** cold `prep.cache_rankings_bundle` (no double taxonomy merge — #326). Offline re-measure on `tests/fixtures/MyEBirdData.csv` (**46,178** rows, Lifetime / World, default tiles path):
+
+| Piece | Typical time | Notes |
+|-------|-------------|--------|
+| `social_cards.resolve_stats` (`compute_share_summary_stats`) | **~115–130 ms** warm; ~160 ms cold | Dominates the fragment |
+| `summary_status_metrics` | **≪1 ms** | Negligible |
+| Card HTML preview (`render_share_summary_preview_html`) | **≪1 ms** | Negligible vs stats |
+| Residual (Streamlit widgets / fragment chrome) | small | Fits the ~133 ms total |
+| `social_cards.compute_insight_facts` | **~1.5 s** | Insight layout only — already skipped for tiles / list / spotlight |
+
+**Verdict:** ~133 ms on a full personal export is **acceptable** for interactive use. No Social Cards–specific optimize pass needed; further wins would be cross-cutting (e.g. vectorizing row-wise `Count`/`safe_count` used across core stats), not fragment chrome. Insight layout remains the expensive path and stays gated.
+
+Stat picker ↑/↓/✕/Add/Reset and lazy PNG export use fragment-scoped updates so they do **not** re-run map prep (~5s full reruns observed on a ~47k-row export before these fixes). Sidebar layout/format/period changes still full-rerun the app (with map prep skipped).
+
+See `docs/development.md` § Performance Instrumentation Guardrails for stable stage names.
+
+**PNG on Streamlit Cloud:** headless Chromium availability is not yet verified on a live deploy — see tracker § Streamlit Cloud verification (#275). Graceful `RuntimeError` if Chromium is missing.

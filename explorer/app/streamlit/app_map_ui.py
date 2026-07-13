@@ -15,6 +15,7 @@ from explorer.app.streamlit.app_constants import (
     LEAFLET_MAP_MOUNT_NONCE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
+    PREP_SPINNER_EMOJI_CONTAINER_KEY,
     REPO_ROOT,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
@@ -148,12 +149,15 @@ letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
 
 
 def place_spinner_emoji_strip() -> Any:
-    """Show the animated bird-emoji strip for the current ``st.spinner``.
+    """Show the animated bird-emoji strip near the current ``st.spinner``.
 
-    Uses ``st.empty()`` + ``container()`` + :func:`inject_spinner_emoji_animation`. Returns the
-    placeholder; call ``.empty()`` on it when the spinner phase ends so the iframe is dropped.
+    Uses a keyed ``st.container`` so Map ↔ Social Cards tab switches replace the same sidebar
+    element instead of briefly stacking two emoji iframes (stale DOM + new strip). Fill via
+    ``st.empty()`` + :func:`inject_spinner_emoji_animation`. Returns the placeholder; call
+    ``.empty()`` on it when prep ends.
     """
-    placeholder = st.empty()
+    host = st.container(key=PREP_SPINNER_EMOJI_CONTAINER_KEY)
+    placeholder = host.empty()
     with placeholder.container():
         inject_spinner_emoji_animation()
     return placeholder

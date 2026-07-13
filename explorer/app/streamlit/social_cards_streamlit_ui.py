@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
+from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.app.streamlit.social_cards_session_keys import SocialCardsSessionKeys
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_can_accept_stat,
@@ -25,6 +26,7 @@ from explorer.core.share_summary_compute import (
     PeriodKind,
     ShareSummaryAllTimeStats,
     ShareSummaryGeoScope,
+    ShareSummaryPeriod,
     ShareSummaryStats,
 )
 from explorer.core.share_summary_defaults import (
@@ -62,6 +64,12 @@ from explorer.presentation.share_summary_preview import (
 SOCIAL_CARDS_STATISTICS_LABEL = "Card statistics"
 SOCIAL_CARDS_CURRENT_CARD_LABEL = "Current card"
 _CHIP_STRIP_COLS_PER_ROW = 3
+
+
+def _rerun_social_cards_fragment() -> None:
+    """Rerun only the card fragment — avoids map prep and insight recompute (#328)."""
+    st.rerun(scope="fragment")
+
 
 SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY = "_social_cards_png_export_bytes"
 SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY = "_social_cards_png_export_fingerprint"
@@ -468,7 +476,7 @@ def render_card_stat_picker_ui(
                     picks[i - 1], picks[i] = picks[i], picks[i - 1]
                     st.session_state[picks_key] = picks[:ui_rows]
                     _clear_card_stat_selectbox_keys(layout, keys)
-                    st.rerun()
+                    _rerun_social_cards_fragment()
             with btn_down:
                 if st.button(
                     "↓",
@@ -480,7 +488,7 @@ def render_card_stat_picker_ui(
                     picks[i + 1], picks[i] = picks[i], picks[i + 1]
                     st.session_state[picks_key] = picks[:ui_rows]
                     _clear_card_stat_selectbox_keys(layout, keys)
-                    st.rerun()
+                    _rerun_social_cards_fragment()
             with btn_rm:
                 if st.button(
                     "✕",
@@ -499,7 +507,7 @@ def render_card_stat_picker_ui(
                         st.session_state[count_key] = ui_rows - 1
                     st.session_state[picks_key] = picks[:ui_rows]
                     _clear_card_stat_selectbox_keys(layout, keys)
-                    st.rerun()
+                    _rerun_social_cards_fragment()
 
     col_num_foot, col_sel_foot, col_val_foot, col_actions_foot = st.columns(
         stat_row_cols,
@@ -511,7 +519,7 @@ def render_card_stat_picker_ui(
             key=keys.card_stat_add(layout),
         ):
             st.session_state[count_key] = ui_rows + 1
-            st.rerun()
+            _rerun_social_cards_fragment()
     with col_actions_foot:
         _, foot_down, _ = st.columns(3, gap="small")
         with foot_down:
@@ -540,7 +548,7 @@ def render_card_stat_picker_ui(
                     fmt=fmt,
                     tiles_presentation=tiles_presentation,
                 )
-                st.rerun()
+                _rerun_social_cards_fragment()
 
     slot_count = int(st.session_state[count_key])
     can_add_more = card_can_accept_stat(
@@ -721,7 +729,7 @@ def render_insight_fact_picker_ui(
     species_options: tuple[str, ...],
     *,
     df: pd.DataFrame,
-    period,
+    period: ShareSummaryPeriod,
     keys: SocialCardsSessionKeys,
 ) -> ShareSummaryInsightFact | None:
     """Insights fact picker; returns the resolved fact for preview/export."""
@@ -822,20 +830,21 @@ def _generate_share_summary_png_bytes(
     resolved_fact: ShareSummaryInsightFact | None,
 ) -> bytes:
     """Build PNG on demand — bypasses ``cached_share_summary_png`` spinner/cache."""
-    return share_summary_to_png_bytes(
-        stats,
-        layout=layout,
-        fmt=fmt,
-        spotlight_label=spotlight_label,
-        insight_fact=resolved_fact,
-        card_stat_labels=card_stat_labels,
-        all_time=all_time,
-        color_scheme_index=color_scheme_index,
-        scope_label=scope_label,
-        geo_scope=geo_scope,
-        tiles_presentation=tiles_presentation,
-        spotlight_presentation=spotlight_presentation,
-    )
+    with perf_span("social_cards.png_export"):
+        return share_summary_to_png_bytes(
+            stats,
+            layout=layout,
+            fmt=fmt,
+            spotlight_label=spotlight_label,
+            insight_fact=resolved_fact,
+            card_stat_labels=card_stat_labels,
+            all_time=all_time,
+            color_scheme_index=color_scheme_index,
+            scope_label=scope_label,
+            geo_scope=geo_scope,
+            tiles_presentation=tiles_presentation,
+            spotlight_presentation=spotlight_presentation,
+        )
 
 
 def render_lazy_png_export_controls(
@@ -930,7 +939,7 @@ def render_lazy_png_export_controls(
             st.session_state[SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY] = png_bytes
             st.session_state[SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY] = fingerprint
             st.session_state[SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY] = True
-            st.rerun()
+            _rerun_social_cards_fragment()
 
 
 @st.fragment
@@ -986,7 +995,8 @@ def render_current_card_fragment(
 
     spotlight_label = spotlight_label_from_session(status_metrics, keys)
 
-    st.subheader(current_card_label)
+    if (current_card_label or "").strip():
+        st.subheader(current_card_label)
     st.markdown(
         render_share_summary_preview_html(
             stats,

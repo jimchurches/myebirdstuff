@@ -226,19 +226,27 @@ def test_insight_layout_requires_insight_fact():
         render_share_summary_preview_html(stats, layout="insight")
 
 
+@pytest.mark.parametrize("layout", ["tiles", "minimal", "spotlight", "insight"])
+def test_empty_period_renders_dedicated_card_for_every_layout(layout):
+    stats = ShareSummaryStats(period_label="2025", period_kind="year", checklists=0, species=0)
+    html = render_share_summary_preview_html(stats, layout=layout, fmt="square")
+    assert "No checklists in this period" in html
+    assert "Try a different date range" in html
+
+
 def test_spotlight_pair_for_label_by_period():
     from explorer.presentation.share_summary_preview import spotlight_pair_for_label
 
     year = ShareSummaryStats(period_label="2025", period_kind="year", species=312)
-    assert spotlight_pair_for_label(year, "Total species") == ("Species", "312")
+    assert spotlight_pair_for_label(year, "Total species") == ("Year birds", "312")
 
     month = ShareSummaryStats(period_label="June 2025", period_kind="month", species=89)
-    assert spotlight_pair_for_label(month, "Total species") == ("Species", "89")
+    assert spotlight_pair_for_label(month, "Total species") == ("Month birds", "89")
 
     week = ShareSummaryStats(
         period_label="May 31, 2025 - June 6, 2025", period_kind="week", species=34
     )
-    assert spotlight_pair_for_label(week, "Total species") == ("Species", "34")
+    assert spotlight_pair_for_label(week, "Total species") == ("Week birds", "34")
 
     custom = ShareSummaryStats(period_label="1 – 7 June 2025", period_kind="custom", species=56)
     assert spotlight_pair_for_label(custom, "Total species") == ("Species", "56")

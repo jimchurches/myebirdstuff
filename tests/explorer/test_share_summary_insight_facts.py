@@ -129,6 +129,23 @@ def test_species_common_names_in_period_sorted():
     assert names == ("Australian Magpie", "Zebra Finch")
 
 
+def test_species_common_names_in_period_excludes_non_countable():
+    df = pd.DataFrame(
+        [
+            _row(sid="S1", dt="2025-01-01", common="Australian Magpie"),
+            _row(
+                sid="S2",
+                dt="2025-02-01",
+                common="Mallard (Domestic type)",
+                scientific="Anas platyrhynchos",
+            ),
+            _row(sid="S3", dt="2025-03-01", common="duck sp.", scientific="Anas sp."),
+        ]
+    )
+    names = species_common_names_in_period(df, period_for_year(2025))
+    assert names == ("Australian Magpie",)
+
+
 def test_insight_layout_renders():
     from explorer.core.share_summary_compute import ShareSummaryStats
     from explorer.core.share_summary_defaults import (

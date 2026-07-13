@@ -74,7 +74,7 @@ def test_social_cards_tab_is_before_maintenance_and_settings():
     assert labels[-1] == "Settings"
 
 
-def test_social_cards_tab_renders_social_sidebar_without_losing_map_working_set(monkeypatch):
+def test_social_cards_tab_renders_scope_sidebar_without_losing_map_working_set(monkeypatch):
     state = _SessionState(
         {
             STREAMLIT_MAIN_TAB_KEY: SOCIAL_CARDS_TAB_LABEL,
@@ -98,6 +98,9 @@ def test_social_cards_tab_renders_social_sidebar_without_losing_map_working_set(
     monkeypatch.setattr(app_map_working_ui, "apply_pending_map_height_override", lambda _state: None)
     monkeypatch.setattr(app_map_working_ui, "apply_pending_map_marker_colour_scheme", lambda _state: None)
     monkeypatch.setattr(
+        app_map_working_ui, "inject_spinner_theme_css", lambda: calls.append("spinner_css")
+    )
+    monkeypatch.setattr(
         app_map_working_ui,
         "render_social_cards_main_sidebar",
         lambda _df: calls.append("social_sidebar"),
@@ -118,7 +121,7 @@ def test_social_cards_tab_renders_social_sidebar_without_losing_map_working_set(
 
     context = app_map_working_ui.render_map_sidebar_and_working_set(work_df)
 
-    assert calls == ["social_sidebar"]
+    assert calls == ["spinner_css", "social_sidebar"]
     assert context.work_df is work_df
     assert context.map_view_mode == "all"
     assert context.map_height == 777
@@ -222,6 +225,19 @@ def test_resolve_social_cards_period_from_app_session_lifetime(monkeypatch):
     state = _SessionState({APP_SOCIAL_CARDS_KEYS.period_mode: "lifetime"})
     _install_session_state(monkeypatch, state)
     df = pd.DataFrame({"Date": ["2023-03-15", "not a date", "2025-07-20"]})
+
+    period = resolve_social_cards_period_from_session(df)
+
+    assert period is not None
+    assert period.kind == "lifetime"
+    assert period.start == date(2023, 3, 15)
+    assert period.end == date(2025, 7, 20)
+
+
+def test_resolve_social_cards_period_defaults_to_lifetime(monkeypatch):
+    state = _SessionState()
+    _install_session_state(monkeypatch, state)
+    df = pd.DataFrame({"Date": ["2023-03-15", "2025-07-20"]})
 
     period = resolve_social_cards_period_from_session(df)
 

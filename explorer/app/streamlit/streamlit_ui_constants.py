@@ -43,9 +43,7 @@ MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION = (
     "Only locations with checklists in this date range are shown on the map."
 )
 # **Species locations** only (two lines).
-MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION = (
-    "Only sightings in this date range are shown on the map and in species search results."
-)
+MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION = "Only sightings in this date range are shown on the map and in species search results."
 MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION = (
     "Lifer and last-seen markers use your all-time first and last records. "
     "These markers appear only when the relevant checklist falls within the selected date range."
@@ -78,6 +76,8 @@ CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
 # Map-first prep: Leaflet embed before heavy checklist/rankings caches so the map can paint sooner.
 MAP_PREP_SPINNER_TEXT = "Building map…"
 TAB_PREP_SPINNER_TEXT = "Preparing checklist, rankings, and other tabs…"
+# Social Cards skips map prep; classic sidebar copy (one spinner for taxonomy/stats warm-up).
+SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT = CHECKLIST_STATS_SPINNER_TEXT
 
 CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
     "🐣",
@@ -128,6 +128,8 @@ def explorer_readme_github_url() -> str:
     from explorer.core.repo_git import explorer_readme_github_page_url
 
     return explorer_readme_github_page_url(GITHUB_REPO_URL)
+
+
 INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
 
 # Optional “Support this project” (Buy Me a Coffee). Override or hide with env ``STREAMLIT_BUYMEACOFFEE_URL``

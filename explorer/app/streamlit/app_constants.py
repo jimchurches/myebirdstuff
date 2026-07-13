@@ -110,6 +110,8 @@ EBIRD_LANDING_CSV_UPLOADER_KEY = "ebird_landing_csv_uploader"
 
 # Main tab strip (``st.tabs`` widget key — active label in session state when ``on_change="rerun"``).
 STREAMLIT_MAIN_TAB_KEY = "streamlit_main_tab"
+# Keyed emoji strip under prep spinners — stable across Map ↔ Social Cards sidebar trees.
+PREP_SPINNER_EMOJI_CONTAINER_KEY = "ebird_prep_spinner_emoji_strip"
 
 # Map view widget keys.
 STREAMLIT_MAP_VIEW_LABEL_KEY = "streamlit_map_view_label"
@@ -326,6 +328,13 @@ div[data-testid="stSpinner"] div[class*="Spinner"] {{
   margin: 0.1rem auto 0.4rem auto !important;
   border: none !important;
   max-width: 100%;
+}}
+/* Map ↔ Social Cards sidebar trees differ; a stale emoji iframe can briefly coexist — keep last. */
+[data-testid="stSidebar"] iframe[height="{CHECKLIST_STATS_SPINNER_EMOJI_IFRAME_HEIGHT_PX}"]:not(:last-of-type) {{
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
 }}
 [data-testid="stSidebar"] div[data-testid="stSpinner"],
 [data-testid="stSidebar"] div[data-testid="stSpinner"].stSpinner {{
