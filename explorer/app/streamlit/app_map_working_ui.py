@@ -433,11 +433,12 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     apply_pending_map_height_override(st.session_state)
     apply_pending_map_marker_colour_scheme(st.session_state)
 
+    # Every rerun (including Social Cards): omit the ``<style>`` and spinner chrome reverts.
+    inject_spinner_theme_css()
+
     social_cards_tab = is_social_cards_main_tab()
     if social_cards_tab:
         render_social_cards_main_sidebar(df_full)
-    else:
-        inject_spinner_theme_css()
 
     map_style = _effective_map_style()
     _map_view_label, map_view_mode, is_lifer_view, is_family_view = _map_view_from_session()

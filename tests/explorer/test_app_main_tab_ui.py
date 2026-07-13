@@ -98,6 +98,9 @@ def test_social_cards_tab_renders_scope_sidebar_without_losing_map_working_set(m
     monkeypatch.setattr(app_map_working_ui, "apply_pending_map_height_override", lambda _state: None)
     monkeypatch.setattr(app_map_working_ui, "apply_pending_map_marker_colour_scheme", lambda _state: None)
     monkeypatch.setattr(
+        app_map_working_ui, "inject_spinner_theme_css", lambda: calls.append("spinner_css")
+    )
+    monkeypatch.setattr(
         app_map_working_ui,
         "render_social_cards_main_sidebar",
         lambda _df: calls.append("social_sidebar"),
@@ -118,7 +121,7 @@ def test_social_cards_tab_renders_scope_sidebar_without_losing_map_working_set(m
 
     context = app_map_working_ui.render_map_sidebar_and_working_set(work_df)
 
-    assert calls == ["social_sidebar"]
+    assert calls == ["spinner_css", "social_sidebar"]
     assert context.work_df is work_df
     assert context.map_view_mode == "all"
     assert context.map_height == 777

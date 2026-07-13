@@ -94,10 +94,11 @@ def render_prep_spinner_and_map_tab(
     """
     if is_social_cards_main_tab():
         # Single spinner only — do not nest ``run_tab_prep_spinner_and_sync``'s spinner.
+        # Emoji strip sits outside the spinner so Map ↔ Social switches share one keyed slot.
         with st.sidebar:
             sidebar_bottom_slot_start()
+            _spinner_emoji_placeholder = place_spinner_emoji_strip()
             with st.spinner(SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT):
-                _spinner_emoji_placeholder = place_spinner_emoji_strip()
                 with perf_span("prep.data_signature"):
                     apply_dataset_signature_for_map_caches(
                         df_full, provenance, data_abs_path=data_abs_path
@@ -116,8 +117,9 @@ def render_prep_spinner_and_map_tab(
 
     with st.sidebar:
         sidebar_bottom_slot_start()
+        # Emoji outside both sequential spinners so map→tab-prep does not remount a second strip.
+        _spinner_emoji_placeholder = place_spinner_emoji_strip()
         with st.spinner(MAP_PREP_SPINNER_TEXT):
-            _spinner_emoji_placeholder = place_spinner_emoji_strip()
             with perf_span("prep.data_signature"):
                 apply_dataset_signature_for_map_caches(
                     df_full, provenance, data_abs_path=data_abs_path
