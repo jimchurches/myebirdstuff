@@ -79,6 +79,45 @@ Patch releases within the same minor line (for example 3.12.3 vs 3.12.7) are fin
 
 ---
 
+## Dependabot auto-approve
+
+Low-risk Dependabot PRs are approved (and auto-merged when enabled) by GitHub Actions — not by Cursor or other AI tools. Workflow: [`.github/workflows/dependabot-auto-approve.yml`](../.github/workflows/dependabot-auto-approve.yml). Dependabot config: [`.github/dependabot.yml`](../.github/dependabot.yml).
+
+### What is auto-approved
+
+All of the following must hold:
+
+1. **Author** is `dependabot[bot]`.
+2. **Update type** is patch or minor (`version-update:semver-patch` or `version-update:semver-minor` via `dependabot/fetch-metadata`). Grouped PRs use the highest semver change in the group.
+3. **Changed files** are only dependency-related paths:
+   - `requirements.txt` / `requirements-*.txt`
+   - `pyproject.toml`, `uv.lock`, `poetry.lock`
+   - `package.json` / `package-lock.json` (any directory)
+   - `.github/workflows/*.yml` / `.yaml` (GitHub Actions version pins)
+4. **Python CI** (`.github/workflows/tests.yml`) has completed **successfully** for the PR head SHA.
+
+When eligible, the workflow approves as `github-actions[bot]` and enables **squash auto-merge** (merge still waits on branch protection / required checks).
+
+### What stays manual
+
+- Major version updates
+- Any PR that touches files outside the allowlist (including application code)
+- Failed or incomplete Python CI
+- Non-Dependabot pull requests
+- Anything that needs new secrets or broad new permissions (out of scope for this gate)
+
+**Note:** AI summarisation of non-auto-approved Dependabot PRs is a possible later enhancement; it is **not** part of the approval decision path.
+
+### Permissions and safety notes
+
+- The workflow uses `pull_request_target` so it can write reviews / enable auto-merge (Dependabot-triggered `pull_request` workflows get a read-only `GITHUB_TOKEN`).
+- Explicit permissions: `contents: write`, `pull-requests: write`, `actions: read`.
+- It never checks out or executes code from the PR head; it only inspects metadata, the PR file list, and Python CI status.
+- Repository **Settings → General → Pull Requests → Allow auto-merge** must be enabled for the auto-merge step to succeed. Approval still applies if auto-merge cannot be enabled.
+- If branch protection requires reviews from specific users/teams (or "approval of the most recent reviewable push"), a `GITHUB_TOKEN` approval may not satisfy those rules — use a fine-grained PAT or GitHub App token only if you deliberately change the workflow for that.
+
+---
+
 ## Leaflet map component (npm)
 
 Explorer’s Map tab uses a Streamlit custom component with **committed** compiled assets under `explorer/components/all_locations_map/frontend/build/` (so runtime does not require Node). After editing TypeScript/CSS in `frontend/src/`:
