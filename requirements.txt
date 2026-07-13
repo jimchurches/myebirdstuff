@@ -13,7 +13,7 @@ pycountry>=26.2.16
 PyYAML>=6.0.3,<7
 
 # Streamlit app deps
-streamlit>=1.59.1
+streamlit>=1.59.2
 watchdog>=6.0.0,<7  # efficient file watching on reload (Streamlit falls back to polling without it)
 streamlit-searchbox>=0.1.24
 pydantic>=2.13.4,<3
