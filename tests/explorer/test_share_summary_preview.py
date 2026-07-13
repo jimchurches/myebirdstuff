@@ -226,9 +226,10 @@ def test_insight_layout_requires_insight_fact():
         render_share_summary_preview_html(stats, layout="insight")
 
 
-def test_empty_period_renders_dedicated_card():
+@pytest.mark.parametrize("layout", ["tiles", "minimal", "spotlight", "insight"])
+def test_empty_period_renders_dedicated_card_for_every_layout(layout):
     stats = ShareSummaryStats(period_label="2025", period_kind="year", checklists=0, species=0)
-    html = render_share_summary_preview_html(stats, layout="tiles", fmt="square")
+    html = render_share_summary_preview_html(stats, layout=layout, fmt="square")
     assert "No checklists in this period" in html
     assert "Try a different date range" in html
 

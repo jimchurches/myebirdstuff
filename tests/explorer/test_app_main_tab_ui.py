@@ -232,3 +232,16 @@ def test_resolve_social_cards_period_from_app_session_lifetime(monkeypatch):
     assert period.kind == "lifetime"
     assert period.start == date(2023, 3, 15)
     assert period.end == date(2025, 7, 20)
+
+
+def test_resolve_social_cards_period_defaults_to_lifetime(monkeypatch):
+    state = _SessionState()
+    _install_session_state(monkeypatch, state)
+    df = pd.DataFrame({"Date": ["2023-03-15", "2025-07-20"]})
+
+    period = resolve_social_cards_period_from_session(df)
+
+    assert period is not None
+    assert period.kind == "lifetime"
+    assert period.start == date(2023, 3, 15)
+    assert period.end == date(2025, 7, 20)

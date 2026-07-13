@@ -97,9 +97,12 @@ SHARE_SUMMARY_COUNTRY_TILES_DEFAULT_STATS: tuple[str, ...] = (
     "Total checklists",
     "Unique locations",
 )
-SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS + (
-    "Countries",
-    "Birding days",
+SHARE_SUMMARY_TILES_DEFAULT_STATS: tuple[str, ...] = (
+    SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS
+    + (
+        "Countries",
+        "Birding days",
+    )
 )
 # Lifetime (all data) — four-stat fallback omits lifers; tiles/list share the same six-stat order.
 SHARE_SUMMARY_LIFETIME_FOUR_STAT_DEFAULT_STATS: tuple[str, ...] = (
@@ -199,7 +202,9 @@ def share_summary_period_subtitle(period_kind: str) -> str:
     """Period-based green subtitle (year in review, monthly summary, etc.)."""
     if period_kind == "lifetime":
         return SHARE_SUMMARY_LIFETIME_SUBTITLE
-    return _PERIOD_SUBTITLE_BY_KIND.get(period_kind, SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM)
+    return _PERIOD_SUBTITLE_BY_KIND.get(
+        period_kind, SHARE_SUMMARY_PERIOD_SUBTITLE_CUSTOM
+    )
 
 
 def share_summary_layout_label(layout_id: str) -> str:
@@ -214,7 +219,9 @@ def share_summary_tiles_presentation_label(presentation_id: str) -> str:
 
 def share_summary_spotlight_presentation_label(presentation_id: str) -> str:
     """Human label for Spotlight presentation (``classic`` or ``circle``)."""
-    return SHARE_SUMMARY_SPOTLIGHT_PRESENTATION_LABELS.get(presentation_id, presentation_id)
+    return SHARE_SUMMARY_SPOTLIGHT_PRESENTATION_LABELS.get(
+        presentation_id, presentation_id
+    )
 
 
 def share_summary_card_subtitle(

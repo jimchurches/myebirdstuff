@@ -43,9 +43,7 @@ MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION = (
     "Only locations with checklists in this date range are shown on the map."
 )
 # **Species locations** only (two lines).
-MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION = (
-    "Only sightings in this date range are shown on the map and in species search results."
-)
+MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION = "Only sightings in this date range are shown on the map and in species search results."
 MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION = (
     "Lifer and last-seen markers use your all-time first and last records. "
     "These markers appear only when the relevant checklist falls within the selected date range."
@@ -130,6 +128,8 @@ def explorer_readme_github_url() -> str:
     from explorer.core.repo_git import explorer_readme_github_page_url
 
     return explorer_readme_github_page_url(GITHUB_REPO_URL)
+
+
 INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
 
 # Optional “Support this project” (Buy Me a Coffee). Override or hide with env ``STREAMLIT_BUYMEACOFFEE_URL``

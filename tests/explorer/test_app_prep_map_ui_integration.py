@@ -343,6 +343,11 @@ def test_social_cards_prep_uses_single_interesting_spinner(
     st = streamlit_stub
     _seed_prep_session_defaults(st)
     monkeypatch.setattr(app_prep_map_ui, "is_social_cards_main_tab", lambda: True)
+    monkeypatch.setattr(
+        app_prep_map_ui,
+        "prepare_all_locations_map_context",
+        lambda *_args, **_kwargs: pytest.fail("Social Cards must skip Leaflet map prep"),
+    )
 
     import explorer.app.streamlit.app_prep_map_tab_prep as app_prep_map_tab_prep
 

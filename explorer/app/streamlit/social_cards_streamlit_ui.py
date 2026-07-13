@@ -26,6 +26,7 @@ from explorer.core.share_summary_compute import (
     PeriodKind,
     ShareSummaryAllTimeStats,
     ShareSummaryGeoScope,
+    ShareSummaryPeriod,
     ShareSummaryStats,
 )
 from explorer.core.share_summary_defaults import (
@@ -68,6 +69,7 @@ _CHIP_STRIP_COLS_PER_ROW = 3
 def _rerun_social_cards_fragment() -> None:
     """Rerun only the card fragment — avoids map prep and insight recompute (#328)."""
     st.rerun(scope="fragment")
+
 
 SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY = "_social_cards_png_export_bytes"
 SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY = "_social_cards_png_export_fingerprint"
@@ -727,7 +729,7 @@ def render_insight_fact_picker_ui(
     species_options: tuple[str, ...],
     *,
     df: pd.DataFrame,
-    period,
+    period: ShareSummaryPeriod,
     keys: SocialCardsSessionKeys,
 ) -> ShareSummaryInsightFact | None:
     """Insights fact picker; returns the resolved fact for preview/export."""

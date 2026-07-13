@@ -36,7 +36,9 @@ INSIGHT_FACT_PICKER_LABELS: dict[InsightFactId, str] = {
     "species_individuals": "Individuals of selected species",
 }
 
-INSIGHT_FACTS_REQUIRING_SPECIES: frozenset[InsightFactId] = frozenset({"species_individuals"})
+INSIGHT_FACTS_REQUIRING_SPECIES: frozenset[InsightFactId] = frozenset(
+    {"species_individuals"}
+)
 # Card heading when the species name is the hero line (picker label stays descriptive).
 INSIGHT_SPECIES_INDIVIDUALS_CARD_LABEL = "Species count"
 
@@ -63,10 +65,13 @@ def format_insight_fact_metric(fact: ShareSummaryInsightFact) -> str | None:
 
 
 def insight_fact_requires_species(fact_id: InsightFactId) -> bool:
+    """True when the picker must show a species selectbox (``species_individuals``)."""
     return fact_id in INSIGHT_FACTS_REQUIRING_SPECIES
 
 
-def species_common_names_in_period(df: pd.DataFrame, period: ShareSummaryPeriod) -> tuple[str, ...]:
+def species_common_names_in_period(
+    df: pd.DataFrame, period: ShareSummaryPeriod
+) -> tuple[str, ...]:
     """Distinct countable-species common names with observations in *period*, sorted."""
     obs = _observations_in_period(df, period)
     if obs.empty or "Common Name" not in obs.columns:
@@ -159,7 +164,9 @@ def insight_fact_by_id(
     return None
 
 
-def _observations_in_period(df: pd.DataFrame, period: ShareSummaryPeriod) -> pd.DataFrame:
+def _observations_in_period(
+    df: pd.DataFrame, period: ShareSummaryPeriod
+) -> pd.DataFrame:
     if df.empty or "Date" not in df.columns:
         return df.iloc[0:0].copy()
     frame = df.copy()
@@ -177,7 +184,9 @@ def _parse_int(text: str) -> int | None:
         return None
 
 
-def _species_individuals_fact(obs: pd.DataFrame, species_common: str) -> ShareSummaryInsightFact | None:
+def _species_individuals_fact(
+    obs: pd.DataFrame, species_common: str
+) -> ShareSummaryInsightFact | None:
     if obs.empty:
         return None
     target = species_common.casefold()
@@ -186,7 +195,9 @@ def _species_individuals_fact(obs: pd.DataFrame, species_common: str) -> ShareSu
     frame = frame.dropna(subset=["_base"])
     if frame.empty or "Common Name" not in frame.columns:
         return None
-    frame["_common_key"] = frame["Common Name"].fillna("").astype(str).str.strip().str.casefold()
+    frame["_common_key"] = (
+        frame["Common Name"].fillna("").astype(str).str.strip().str.casefold()
+    )
     matched = frame[frame["_common_key"] == target]
     if matched.empty:
         return None
