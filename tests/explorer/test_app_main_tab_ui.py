@@ -74,7 +74,7 @@ def test_social_cards_tab_is_before_maintenance_and_settings():
     assert labels[-1] == "Settings"
 
 
-def test_social_cards_tab_preserves_map_working_set_without_early_sidebar(monkeypatch):
+def test_social_cards_tab_renders_scope_sidebar_without_losing_map_working_set(monkeypatch):
     state = _SessionState(
         {
             STREAMLIT_MAIN_TAB_KEY: SOCIAL_CARDS_TAB_LABEL,
@@ -99,6 +99,11 @@ def test_social_cards_tab_preserves_map_working_set_without_early_sidebar(monkey
     monkeypatch.setattr(app_map_working_ui, "apply_pending_map_marker_colour_scheme", lambda _state: None)
     monkeypatch.setattr(
         app_map_working_ui,
+        "render_social_cards_main_sidebar",
+        lambda _df: calls.append("social_sidebar"),
+    )
+    monkeypatch.setattr(
+        app_map_working_ui,
         "render_map_sidebar",
         lambda _df, *, work_df: calls.append("map_sidebar"),
     )
@@ -113,8 +118,7 @@ def test_social_cards_tab_preserves_map_working_set_without_early_sidebar(monkey
 
     context = app_map_working_ui.render_map_sidebar_and_working_set(work_df)
 
-    # Social Cards sidebar is owned by the Social Cards tab fragment (#328).
-    assert calls == []
+    assert calls == ["social_sidebar"]
     assert context.work_df is work_df
     assert context.map_view_mode == "all"
     assert context.map_height == 777
@@ -146,6 +150,11 @@ def test_map_tab_renders_map_sidebar(monkeypatch):
     monkeypatch.setattr(app_map_working_ui, "apply_pending_map_marker_colour_scheme", lambda _state: None)
     monkeypatch.setattr(
         app_map_working_ui, "inject_spinner_theme_css", lambda: calls.append("spinner_css")
+    )
+    monkeypatch.setattr(
+        app_map_working_ui,
+        "render_social_cards_main_sidebar",
+        lambda _df: calls.append("social_sidebar"),
     )
     monkeypatch.setattr(
         app_map_working_ui,
