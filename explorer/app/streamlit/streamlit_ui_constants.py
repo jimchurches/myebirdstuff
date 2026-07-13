@@ -78,8 +78,8 @@ CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
 # Map-first prep: Leaflet embed before heavy checklist/rankings caches so the map can paint sooner.
 MAP_PREP_SPINNER_TEXT = "Building map…"
 TAB_PREP_SPINNER_TEXT = "Preparing checklist, rankings, and other tabs…"
-# Social Cards tab skips map prep; only rankings/taxonomy warm-up spinner.
-SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT = "Preparing taxonomy and stats…"
+# Social Cards skips map prep; classic sidebar copy (one spinner for taxonomy/stats warm-up).
+SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT = CHECKLIST_STATS_SPINNER_TEXT
 
 CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
     "🐣",

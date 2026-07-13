@@ -49,9 +49,15 @@ def run_tab_prep_spinner_and_sync(
     df_full: Any,
     tax_locale_effective: str,
     tab_prep_spinner_text: str = TAB_PREP_SPINNER_TEXT,
+    show_spinner: bool = True,
 ) -> None:
-    """Second sidebar spinner: checklist/rankings caches and tab session sync."""
-    with st.spinner(tab_prep_spinner_text):
+    """Warm checklist/rankings caches and sync tab session inputs.
+
+    By default opens a sidebar ``st.spinner``. Pass ``show_spinner=False`` when the
+    caller already owns an outer spinner (Social Cards single-spinner path).
+    """
+
+    def _run() -> None:
         with perf_span("prep.cache_checklist_stats.working"):
             checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
         top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))
@@ -92,3 +98,9 @@ def run_tab_prep_spinner_and_sync(
             )
             sync_yearly_summary_session_inputs(checklist_payload)
             sync_country_tab_session_inputs(checklist_payload)
+
+    if show_spinner:
+        with st.spinner(tab_prep_spinner_text):
+            _run()
+    else:
+        _run()

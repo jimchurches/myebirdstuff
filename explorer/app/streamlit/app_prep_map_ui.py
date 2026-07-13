@@ -93,6 +93,7 @@ def render_prep_spinner_and_map_tab(
     map work (those widgets still full-rerun the app on current Streamlit).
     """
     if is_social_cards_main_tab():
+        # Single spinner only — do not nest ``run_tab_prep_spinner_and_sync``'s spinner.
         with st.sidebar:
             sidebar_bottom_slot_start()
             with st.spinner(SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT):
@@ -106,6 +107,7 @@ def render_prep_spinner_and_map_tab(
                     df_full=df_full,
                     tax_locale_effective=tax_locale_effective,
                     tab_prep_spinner_text=SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT,
+                    show_spinner=False,
                 )
             _spinner_emoji_placeholder.empty()
             sidebar_footer_links(leading_divider=True)

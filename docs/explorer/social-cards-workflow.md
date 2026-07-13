@@ -76,7 +76,7 @@ Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker
 
 ## Performance and lazy tab mount (#328)
 
-Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboard_shell.py`. Period stats, insight facts, and card preview run only when the tab is selected; other data tabs always enter their `@st.fragment` blocks on every full rerun. **Map prep is skipped** while Social Cards is active (rankings/taxonomy caches still warm on full reruns). Period / geo / layout / format / theme stay in the **main-script sidebar** so the chrome matches other explorer tabs. Those sidebar widgets still trigger a full app rerun today; Streamlit 1.59+ allows fragment→sidebar writes if we move that block into the Social Cards fragment later.
+Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboard_shell.py`. Period stats, insight facts, and card preview run only when the tab is selected; other data tabs always enter their `@st.fragment` blocks on every full rerun. **Map prep is skipped** while Social Cards is active (rankings/taxonomy caches still warm on full reruns under a **single** sidebar spinner — classic “Doing interesting things…” copy, not nested map/tab spinners). Period / geo / layout / format / theme stay in the **main-script sidebar** so the chrome matches other explorer tabs. Those sidebar widgets still trigger a full app rerun today; Streamlit 1.59+ allows fragment→sidebar writes if we move that block into the Social Cards fragment later.
 
 **Instrumentation** (`EXPLORER_PERF=1`): coarse `fragment.social_cards` plus sub-stages:
 
