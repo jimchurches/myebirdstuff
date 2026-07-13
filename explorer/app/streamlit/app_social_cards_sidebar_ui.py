@@ -13,6 +13,7 @@ from explorer.app.streamlit.social_cards_session_keys import (
     SocialCardsSessionKeys,
 )
 from explorer.app.streamlit.social_cards_sidebar_ui import (
+    render_sidebar_card_controls,
     render_sidebar_geo_scope_controls,
 )
 from explorer.core.share_summary_compute import (
@@ -122,12 +123,7 @@ def _render_period_controls(
 
 
 def render_social_cards_main_sidebar(df_full: Any) -> None:
-    """Social Cards sidebar — period and geo scope (data filters).
-
-    Layout / format / theme live in the Social Cards tab fragment main column so
-    those widgets can fragment-rerun. Streamlit forbids ``st.sidebar`` writes from
-    inside ``@st.fragment`` (#328).
-    """
+    """Social Cards sidebar block — period, geo scope, layout/format/theme."""
     with st.sidebar:
         keys = APP_SOCIAL_CARDS_KEYS
         st.header("Social Cards")
@@ -139,6 +135,9 @@ def render_social_cards_main_sidebar(df_full: Any) -> None:
         if df_full is not None and not df_full.empty:
             geo_scope = render_sidebar_geo_scope_controls(df_full, keys)
         st.session_state[SOCIAL_CARDS_GEO_SCOPE_SESSION_KEY] = geo_scope
+
+        selection = render_sidebar_card_controls(keys)
+        st.session_state[SOCIAL_CARDS_SIDEBAR_SELECTION_KEY] = selection
 
         scoped = filter_df_by_geo_scope(df_full, geo_scope)
         st.session_state[SOCIAL_CARDS_DF_SCOPED_SESSION_KEY] = scoped

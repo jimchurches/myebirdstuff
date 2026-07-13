@@ -76,7 +76,7 @@ Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker
 
 ## Performance and lazy tab mount (#328)
 
-Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboard_shell.py`. Period stats, insight facts, and card preview run only when the tab is selected; other data tabs always enter their `@st.fragment` blocks on every full rerun. **Map prep is skipped** while Social Cards is active (rankings/taxonomy caches still warm on full reruns). Period/geo stay in the main-script sidebar; **layout / format / theme** live in the Social Cards fragment main column (Streamlit forbids `st.sidebar` writes from inside `@st.fragment`).
+Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboard_shell.py`. Period stats, insight facts, and card preview run only when the tab is selected; other data tabs always enter their `@st.fragment` blocks on every full rerun. **Map prep is skipped** while Social Cards is active (rankings/taxonomy caches still warm on full reruns). Period / geo / layout / format / theme stay in the **main-script sidebar** so the chrome matches other explorer tabs. Those sidebar widgets still trigger a full app rerun today; Streamlit 1.59+ allows fragment→sidebar writes if we move that block into the Social Cards fragment later.
 
 **Instrumentation** (`EXPLORER_PERF=1`): coarse `fragment.social_cards` plus sub-stages:
 
@@ -87,7 +87,7 @@ Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboa
 | `social_cards.render_preview` | `social_cards_streamlit_html.py` |
 | `social_cards.png_export` | `social_cards_streamlit_ui.py` |
 
-Stat picker ↑/↓/✕/Add/Reset, lazy PNG export, and main-column layout/format/theme use fragment-scoped updates so they do **not** re-run map prep (~5s full reruns observed on a ~47k-row export before these fixes).
+Stat picker ↑/↓/✕/Add/Reset and lazy PNG export use fragment-scoped updates so they do **not** re-run map prep (~5s full reruns observed on a ~47k-row export before these fixes). Sidebar layout/format/period changes still full-rerun the app (with map prep skipped).
 
 See `docs/development.md` § Performance Instrumentation Guardrails for stable stage names.
 

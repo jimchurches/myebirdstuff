@@ -23,7 +23,7 @@ from explorer.app.streamlit.app_social_cards_sidebar_ui import (
 )
 from explorer.app.streamlit.perf_instrumentation import perf_fragment, perf_span
 from explorer.app.streamlit.social_cards_session_keys import APP_SOCIAL_CARDS_KEYS
-from explorer.app.streamlit.social_cards_sidebar_ui import render_sidebar_card_controls
+from explorer.app.streamlit.social_cards_sidebar_ui import SocialCardsSidebarSelection
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_stat_data_scope_from_session_export,
     period_has_checklist_data,
@@ -56,13 +56,7 @@ def render_social_cards_tab_content(
     geo_scope: ShareSummaryGeoScope,
     rankings_bundle: dict[str, Any] | None,
 ) -> None:
-    """Social Cards main column — appearance, card preview, pickers, and PNG export."""
-    keys = APP_SOCIAL_CARDS_KEYS
-    # Presentation controls live here (not sidebar) so layout/format changes stay inside
-    # this fragment — Streamlit disallows ``st.sidebar`` writes from ``@st.fragment``.
-    sidebar_selection = render_sidebar_card_controls(keys, section_header="Card")
-    st.session_state[SOCIAL_CARDS_SIDEBAR_SELECTION_KEY] = sidebar_selection
-
+    """Social Cards main column — card preview, stat pickers, and lazy PNG export."""
     period = resolve_social_cards_period_from_session(df_scoped)
     if period is None:
         st.caption("No dated checklists in this export.")
@@ -79,6 +73,12 @@ def render_social_cards_tab_content(
     if stats is None:
         st.warning("Could not compute stats for this period.")
         return
+
+    sidebar_raw = st.session_state.get(SOCIAL_CARDS_SIDEBAR_SELECTION_KEY)
+    if not isinstance(sidebar_raw, SocialCardsSidebarSelection):
+        st.caption("Use the sidebar to configure layout, format, and theme.")
+        return
+    sidebar_selection = sidebar_raw
 
     scope_label = geo_scope_display_label(geo_scope)
 
@@ -100,6 +100,7 @@ def render_social_cards_tab_content(
                 "Taxonomy reference stats unavailable (taxonomy data may not be loaded)."
             )
 
+    keys = APP_SOCIAL_CARDS_KEYS
     if keys.spotlight_label not in st.session_state:
         st.session_state[keys.spotlight_label] = SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT
     if keys.insight_fact not in st.session_state:
@@ -153,10 +154,11 @@ def render_social_cards_tab_content(
 
 @st.fragment
 def run_social_cards_streamlit_tab_fragment(df_full: Any) -> None:
-    """Partial reruns when Social Cards card controls change.
+    """Partial reruns for in-tab Social Cards controls (stat picker, PNG export).
 
-    Period/geo stay in the main-script sidebar (Streamlit forbids sidebar writes from
-    fragments). Layout/format/theme are in this fragment's main column (#328).
+    Period / geo / layout / format / theme stay in the main-script sidebar so the
+    chrome matches other explorer tabs. On current Streamlit, sidebar widgets still
+    trigger a full app rerun; map prep is skipped while this tab is active (#328).
     """
     with perf_fragment("social_cards"):
         if df_full is None or not isinstance(df_full, pd.DataFrame) or df_full.empty:

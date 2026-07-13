@@ -89,7 +89,8 @@ def render_prep_spinner_and_map_tab(
     """Run map prep first (spinner), then heavy tab caches + session sync (second spinner).
 
     On the Social Cards tab, skip Leaflet map prep (map is not visible) and only warm
-    checklist/rankings caches — layout/format/period changes then avoid ~1s+ of map work.
+    checklist/rankings caches — sidebar layout/format/period changes then avoid ~1s+ of
+    map work (those widgets still full-rerun the app on current Streamlit).
     """
     if is_social_cards_main_tab():
         with st.sidebar:
