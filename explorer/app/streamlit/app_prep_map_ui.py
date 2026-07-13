@@ -45,7 +45,6 @@ from explorer.app.streamlit.app_prep_map_types import LeafletMapPrepBundle
 from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.app.streamlit.streamlit_ui_constants import (
     MAP_PREP_SPINNER_TEXT,
-    SOCIAL_CARDS_PREP_SPINNER_TEXT,
     SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT,
     TAB_PREP_SPINNER_TEXT,
 )
@@ -87,15 +86,34 @@ def render_prep_spinner_and_map_tab(
     mark_last_seen: bool,
     species_url_fn: Callable[..., str],
 ) -> None:
-    """Run map prep first (spinner), then heavy tab caches + session sync (second spinner)."""
-    map_spinner_text = (
-        SOCIAL_CARDS_PREP_SPINNER_TEXT
-        if is_social_cards_main_tab()
-        else MAP_PREP_SPINNER_TEXT
-    )
+    """Run map prep first (spinner), then heavy tab caches + session sync (second spinner).
+
+    On the Social Cards tab, skip Leaflet map prep (map is not visible) and only warm
+    checklist/rankings caches — layout/format/period changes then avoid ~1s+ of map work.
+    """
+    if is_social_cards_main_tab():
+        with st.sidebar:
+            sidebar_bottom_slot_start()
+            with st.spinner(SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT):
+                _spinner_emoji_placeholder = place_spinner_emoji_strip()
+                with perf_span("prep.data_signature"):
+                    apply_dataset_signature_for_map_caches(
+                        df_full, provenance, data_abs_path=data_abs_path
+                    )
+                run_tab_prep_spinner_and_sync(
+                    work_df=work_df,
+                    df_full=df_full,
+                    tax_locale_effective=tax_locale_effective,
+                    tab_prep_spinner_text=SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT,
+                )
+            _spinner_emoji_placeholder.empty()
+            sidebar_footer_links(leading_divider=True)
+            sidebar_bottom_slot_end()
+        return
+
     with st.sidebar:
         sidebar_bottom_slot_start()
-        with st.spinner(map_spinner_text):
+        with st.spinner(MAP_PREP_SPINNER_TEXT):
             _spinner_emoji_placeholder = place_spinner_emoji_strip()
             with perf_span("prep.data_signature"):
                 apply_dataset_signature_for_map_caches(
@@ -176,16 +194,9 @@ def render_prep_spinner_and_map_tab(
             work_df=work_df,
             df_full=df_full,
             tax_locale_effective=tax_locale_effective,
-            tab_prep_spinner_text=(
-                SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT
-                if is_social_cards_main_tab()
-                else TAB_PREP_SPINNER_TEXT
-            ),
+            tab_prep_spinner_text=TAB_PREP_SPINNER_TEXT,
         )
 
         _spinner_emoji_placeholder.empty()
-        if is_social_cards_main_tab():
-            sidebar_footer_links(leading_divider=True)
-        else:
-            render_prep_sidebar_after_map(map_height)
+        render_prep_sidebar_after_map(map_height)
         sidebar_bottom_slot_end()

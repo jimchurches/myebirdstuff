@@ -127,9 +127,9 @@ def render_dashboard_shell(
     with tab_social_cards:
         # Lazy-mount (#328): Social Cards is the only main tab gated on ``tab.open``.
         # Period stats, insight facts, and card preview run only when this tab is selected.
-        # Other data tabs always enter their ``@st.fragment`` blocks on every full rerun
-        # (cheaper fragments; map prep + rankings bundle still warm on tab switch ~100ms).
-        # Aligning all tabs would need a shell refactor — trade-off documented in #328.
+        # Social Cards sidebar widgets live in this fragment so layout/format/period changes
+        # do not re-run map prep. Map prep is skipped while this tab is active (see
+        # ``app_prep_map_ui``); rankings/taxonomy caches still warm on full reruns.
         if tab_social_cards.open:
             run_social_cards_streamlit_tab_fragment(df_full)
 

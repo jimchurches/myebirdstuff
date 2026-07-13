@@ -19,6 +19,7 @@ from explorer.app.streamlit.app_social_cards_sidebar_ui import (
     SOCIAL_CARDS_DF_SCOPED_SESSION_KEY,
     SOCIAL_CARDS_GEO_SCOPE_SESSION_KEY,
     SOCIAL_CARDS_SIDEBAR_SELECTION_KEY,
+    render_social_cards_main_sidebar,
     resolve_social_cards_period_from_session,
 )
 from explorer.app.streamlit.perf_instrumentation import perf_fragment, perf_span
@@ -154,8 +155,14 @@ def render_social_cards_tab_content(
 
 @st.fragment
 def run_social_cards_streamlit_tab_fragment(df_full: Any) -> None:
-    """Partial reruns when Social Cards sidebar controls change."""
+    """Partial reruns when Social Cards sidebar or card controls change.
+
+    Sidebar (period, geo, layout, format, theme) is rendered here so those widgets
+    trigger a fragment rerun instead of a full app + map prep cycle (#328).
+    """
     with perf_fragment("social_cards"):
+        render_social_cards_main_sidebar(df_full)
+
         if df_full is None or not isinstance(df_full, pd.DataFrame) or df_full.empty:
             st.info("Load checklist data to use Social Cards.")
             return

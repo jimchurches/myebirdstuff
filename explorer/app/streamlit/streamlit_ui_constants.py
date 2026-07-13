@@ -78,8 +78,7 @@ CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
 # Map-first prep: Leaflet embed before heavy checklist/rankings caches so the map can paint sooner.
 MAP_PREP_SPINNER_TEXT = "Building map…"
 TAB_PREP_SPINNER_TEXT = "Preparing checklist, rankings, and other tabs…"
-# Social Cards tab: map prep still runs (rankings bundle) but spinner copy omits map wording.
-SOCIAL_CARDS_PREP_SPINNER_TEXT = "Preparing your eBird data…"
+# Social Cards tab skips map prep; only rankings/taxonomy warm-up spinner.
 SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT = "Preparing taxonomy and stats…"
 
 CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (

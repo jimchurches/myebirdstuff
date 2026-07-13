@@ -59,9 +59,6 @@ from explorer.app.streamlit.app_settings_state import (
     apply_pending_map_height_override,
     apply_pending_map_marker_colour_scheme,
 )
-from explorer.app.streamlit.app_social_cards_sidebar_ui import (
-    render_social_cards_main_sidebar,
-)
 from explorer.app.streamlit.defaults import (
     MAP_BASEMAP_LABELS,
     MAP_BASEMAP_OPTIONS,
@@ -434,9 +431,7 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     apply_pending_map_marker_colour_scheme(st.session_state)
 
     social_cards_tab = is_social_cards_main_tab()
-    if social_cards_tab:
-        render_social_cards_main_sidebar(df_full)
-    else:
+    if not social_cards_tab:
         inject_spinner_theme_css()
 
     map_style = _effective_map_style()

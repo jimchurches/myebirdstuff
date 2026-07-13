@@ -76,7 +76,7 @@ Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker
 
 ## Performance and lazy tab mount (#328)
 
-Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboard_shell.py`. Period stats, insight facts, and card preview run only when the tab is selected; other data tabs always enter their `@st.fragment` blocks on every full rerun. Map prep and `prep.cache_rankings_bundle` still run on tab switch (~100 ms) — improving that needs a broader shell refactor.
+Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboard_shell.py`. Period stats, insight facts, and card preview run only when the tab is selected; other data tabs always enter their `@st.fragment` blocks on every full rerun. **Map prep is skipped** while Social Cards is active (rankings/taxonomy caches still warm). Layout, format, period, and other Social Cards sidebar widgets live **inside** the Social Cards fragment so changing them does not re-run map prep.
 
 **Instrumentation** (`EXPLORER_PERF=1`): coarse `fragment.social_cards` plus sub-stages:
 
@@ -87,7 +87,7 @@ Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboa
 | `social_cards.render_preview` | `social_cards_streamlit_html.py` |
 | `social_cards.png_export` | `social_cards_streamlit_ui.py` |
 
-Stat picker ↑/↓/✕/Add/Reset and lazy PNG export use `st.rerun(scope="fragment")` so they do **not** re-run map prep or period stats (~5s full reruns observed on a ~47k-row export).
+Stat picker ↑/↓/✕/Add/Reset and lazy PNG export use `st.rerun(scope="fragment")` so they do **not** re-run map prep or period stats (~5s full reruns observed on a ~47k-row export). Sidebar layout/format/period changes also stay inside `fragment.social_cards`.
 
 See `docs/development.md` § Performance Instrumentation Guardrails for stable stage names.
 
