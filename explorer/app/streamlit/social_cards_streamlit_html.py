@@ -107,7 +107,7 @@ def render_social_cards_tab_content(
         st.session_state[keys.insight_fact] = SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
 
     # Insight facts are only used by the Interesting Insights layout — skip on tiles /
-    # list / spotlight (~1.7s on a ~47k-row lifetime export per #328 perf capture).
+    # list / spotlight (~1.5s on a ~46k-row lifetime export; see #328 timing notes).
     insight_facts: list[ShareSummaryInsightFact] = []
     insight_species_options: tuple[str, ...] = ()
     if sidebar_selection.layout == "insight":

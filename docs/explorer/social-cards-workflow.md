@@ -87,6 +87,20 @@ Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboa
 | `social_cards.render_preview` | `social_cards_streamlit_html.py` |
 | `social_cards.png_export` | `social_cards_streamlit_ui.py` |
 
+### `fragment.social_cards` timing (~47k-row export, #328)
+
+Manual `EXPLORER_PERF=1` had shown **~133 ms** for `fragment.social_cards` vs **~1,010 ms** cold `prep.cache_rankings_bundle` (no double taxonomy merge — #326). Offline re-measure on `tests/fixtures/MyEBirdData.csv` (**46,178** rows, Lifetime / World, default tiles path):
+
+| Piece | Typical time | Notes |
+|-------|-------------|--------|
+| `social_cards.resolve_stats` (`compute_share_summary_stats`) | **~115–130 ms** warm; ~160 ms cold | Dominates the fragment |
+| `summary_status_metrics` | **≪1 ms** | Negligible |
+| Card HTML preview (`render_share_summary_preview_html`) | **≪1 ms** | Negligible vs stats |
+| Residual (Streamlit widgets / fragment chrome) | small | Fits the ~133 ms total |
+| `social_cards.compute_insight_facts` | **~1.5 s** | Insight layout only — already skipped for tiles / list / spotlight |
+
+**Verdict:** ~133 ms on a full personal export is **acceptable** for interactive use. No Social Cards–specific optimize pass needed; further wins would be cross-cutting (e.g. vectorizing row-wise `Count`/`safe_count` used across core stats), not fragment chrome. Insight layout remains the expensive path and stays gated.
+
 Stat picker ↑/↓/✕/Add/Reset and lazy PNG export use fragment-scoped updates so they do **not** re-run map prep (~5s full reruns observed on a ~47k-row export before these fixes). Sidebar layout/format/period changes still full-rerun the app (with map prep skipped).
 
 See `docs/development.md` § Performance Instrumentation Guardrails for stable stage names.
