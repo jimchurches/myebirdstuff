@@ -64,6 +64,11 @@ SOCIAL_CARDS_STATISTICS_LABEL = "Card statistics"
 SOCIAL_CARDS_CURRENT_CARD_LABEL = "Current card"
 _CHIP_STRIP_COLS_PER_ROW = 3
 
+
+def _rerun_social_cards_fragment() -> None:
+    """Rerun only the card fragment — avoids map prep and insight recompute (#328)."""
+    st.rerun(scope="fragment")
+
 SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY = "_social_cards_png_export_bytes"
 SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY = "_social_cards_png_export_fingerprint"
 SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY = "_social_cards_png_export_error"
@@ -469,7 +474,7 @@ def render_card_stat_picker_ui(
                     picks[i - 1], picks[i] = picks[i], picks[i - 1]
                     st.session_state[picks_key] = picks[:ui_rows]
                     _clear_card_stat_selectbox_keys(layout, keys)
-                    st.rerun()
+                    _rerun_social_cards_fragment()
             with btn_down:
                 if st.button(
                     "↓",
@@ -481,7 +486,7 @@ def render_card_stat_picker_ui(
                     picks[i + 1], picks[i] = picks[i], picks[i + 1]
                     st.session_state[picks_key] = picks[:ui_rows]
                     _clear_card_stat_selectbox_keys(layout, keys)
-                    st.rerun()
+                    _rerun_social_cards_fragment()
             with btn_rm:
                 if st.button(
                     "✕",
@@ -500,7 +505,7 @@ def render_card_stat_picker_ui(
                         st.session_state[count_key] = ui_rows - 1
                     st.session_state[picks_key] = picks[:ui_rows]
                     _clear_card_stat_selectbox_keys(layout, keys)
-                    st.rerun()
+                    _rerun_social_cards_fragment()
 
     col_num_foot, col_sel_foot, col_val_foot, col_actions_foot = st.columns(
         stat_row_cols,
@@ -512,7 +517,7 @@ def render_card_stat_picker_ui(
             key=keys.card_stat_add(layout),
         ):
             st.session_state[count_key] = ui_rows + 1
-            st.rerun()
+            _rerun_social_cards_fragment()
     with col_actions_foot:
         _, foot_down, _ = st.columns(3, gap="small")
         with foot_down:
@@ -541,7 +546,7 @@ def render_card_stat_picker_ui(
                     fmt=fmt,
                     tiles_presentation=tiles_presentation,
                 )
-                st.rerun()
+                _rerun_social_cards_fragment()
 
     slot_count = int(st.session_state[count_key])
     can_add_more = card_can_accept_stat(
@@ -932,7 +937,7 @@ def render_lazy_png_export_controls(
             st.session_state[SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY] = png_bytes
             st.session_state[SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY] = fingerprint
             st.session_state[SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY] = True
-            st.rerun()
+            _rerun_social_cards_fragment()
 
 
 @st.fragment

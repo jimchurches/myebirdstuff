@@ -83,9 +83,11 @@ Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboa
 | Stage | Where |
 |-------|--------|
 | `social_cards.resolve_stats` | `social_cards_streamlit_html.py` |
-| `social_cards.compute_insight_facts` | `social_cards_streamlit_html.py` |
+| `social_cards.compute_insight_facts` | `social_cards_streamlit_html.py` (Interesting Insights layout only) |
 | `social_cards.render_preview` | `social_cards_streamlit_html.py` |
 | `social_cards.png_export` | `social_cards_streamlit_ui.py` |
+
+Stat picker ↑/↓/✕/Add/Reset and lazy PNG export use `st.rerun(scope="fragment")` so they do **not** re-run map prep or period stats (~5s full reruns observed on a ~47k-row export).
 
 See `docs/development.md` § Performance Instrumentation Guardrails for stable stage names.
 

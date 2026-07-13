@@ -42,6 +42,7 @@ from explorer.core.share_summary_defaults import (
     SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT,
 )
 from explorer.core.share_summary_insight_facts import (
+    ShareSummaryInsightFact,
     compute_insight_facts,
     species_common_names_in_period,
 )
@@ -105,11 +106,16 @@ def render_social_cards_tab_content(
     if keys.insight_fact not in st.session_state:
         st.session_state[keys.insight_fact] = SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
 
-    with perf_span("social_cards.compute_insight_facts"):
-        insight_facts = compute_insight_facts(df_scoped, period)
-        insight_species_options = species_common_names_in_period(df_scoped, period)
-    if insight_species_options and keys.insight_species not in st.session_state:
-        st.session_state[keys.insight_species] = insight_species_options[0]
+    # Insight facts are only used by the Interesting Insights layout — skip on tiles /
+    # list / spotlight (~1.7s on a ~47k-row lifetime export per #328 perf capture).
+    insight_facts: list[ShareSummaryInsightFact] = []
+    insight_species_options: tuple[str, ...] = ()
+    if sidebar_selection.layout == "insight":
+        with perf_span("social_cards.compute_insight_facts"):
+            insight_facts = compute_insight_facts(df_scoped, period)
+            insight_species_options = species_common_names_in_period(df_scoped, period)
+        if insight_species_options and keys.insight_species not in st.session_state:
+            st.session_state[keys.insight_species] = insight_species_options[0]
 
     card_stat_data_scope = card_stat_data_scope_from_session_export(
         period_kind=stats.period_kind,

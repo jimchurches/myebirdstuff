@@ -407,7 +407,11 @@ if keys.insight_fact not in st.session_state:
 
 insight_facts: list[ShareSummaryInsightFact] = []
 insight_species_options: tuple[str, ...] = ()
-if df is not None and resolved_period is not None:
+if (
+    df is not None
+    and resolved_period is not None
+    and sidebar_selection.layout == "insight"
+):
     insight_facts = compute_insight_facts(df_scoped, resolved_period)
     insight_species_options = species_common_names_in_period(df_scoped, resolved_period)
     if insight_species_options and keys.insight_species not in st.session_state:
