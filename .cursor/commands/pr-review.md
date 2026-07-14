@@ -2,7 +2,7 @@
 
 **When to use:** Pre-merge review of a **single** linked issue and its PR — e.g. a focused bug fix or small feature. For larger or multi-area changes, use `/code-review` instead.
 
-Every `/pr-review` run includes **Test Integrity Sentinel** triage (Step 4) and **Nit-Fixer** triage (Step 4b). The parent agent resolves PR context and local checks, then delegates to pinned subagents when triage selects launch: Sentinel for test honesty (`gpt-5.5-medium`), Nit-Fixer for mechanical and readability nits in touched files (`composer-2.5-fast`). See **[nit-fixer.md](nit-fixer.md)** for Nit-Fixer guardrails and prompt.
+Every `/pr-review` run includes **Test Integrity Sentinel** triage (Step 4) and **Nit-Fixer** triage (Step 4b). The parent agent resolves PR context and local checks, then delegates to pinned subagents when triage selects launch: Sentinel for test honesty (`gpt-5.6-sol-medium`), Nit-Fixer for mechanical and readability nits in touched files (`composer-2.5-fast`). See **[nit-fixer.md](nit-fixer.md)** for Nit-Fixer guardrails and prompt.
 
 ## Relationship to `/code-review`
 
@@ -78,9 +78,9 @@ python3 -m ruff check explorer/
 python3 -m pytest tests/ -q -m "not e2e"
 ```
 
-Prefer a **narrower** pytest path when the diff is clearly isolated (e.g. `tests/path/to/test_module.py`). Fold failures into the review; Nit-Fixer addresses mechanical failures in Step 4b.
+Prefer a **narrower** pytest path when the diff is clearly isolated (e.g. `tests/path/to/test_module.py`). Fold quality-gate failures into the review; Nit-Fixer addresses mechanical nits and lint in Step 4b.
 
-**Docs / config only:** skip pytest unless the change affects runtime behaviour.
+**Docs / commands only:** skip pytest unless the change affects runtime behaviour.
 
 ---
 
@@ -130,7 +130,7 @@ When triage selects launch, start exactly one subagent for this phase. The paren
 ```text
 description: Test Integrity Sentinel
 subagent_type: generalPurpose
-model: gpt-5.5-medium
+model: gpt-5.6-sol-medium
 readonly: false
 run_in_background: false
 ```
@@ -225,7 +225,7 @@ Every `/pr-review` runs **Nit-Fixer triage** after Step 4 (whether Sentinel laun
 | --- | --- | --- |
 | **Focus** | Test honesty, assertions, mocks, fixtures | Imports, lint, format, typos, readability |
 | **Edits tests?** | Yes, when justified | **Never** |
-| **Model** | `gpt-5.5-medium` | `composer-2.5-fast` |
+| **Model** | `gpt-5.6-sol-medium` | `composer-2.5-fast` |
 | **Philosophy** | Strengthen confidence in tests | See it, fix it in touched files |
 
 ### Triage — decide whether to launch Nit-Fixer
