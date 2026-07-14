@@ -386,6 +386,8 @@ def test_peak_year_facts_lifetime_only():
     assert year_individuals is not None
     assert year_individuals.primary_text == "2024"
     assert year_individuals.metric_value == 11
+    assert year_individuals.label == "Best year for individual birds"
+    assert format_insight_fact_metric(year_individuals) == "11 individual birds"
 
     yearly = compute_insight_facts(df, period_for_year(2024))
     assert insight_fact_by_id(yearly, "year_most_checklists") is None

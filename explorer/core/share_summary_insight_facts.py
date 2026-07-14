@@ -57,15 +57,15 @@ INSIGHT_FACT_PICKER_LABELS: dict[InsightFactId, str] = {
     "year_most_checklists": "Year with most checklists",
     "year_most_completed_checklists": "Year with most completed checklists",
     "year_most_species": "Year with most species",
-    "year_most_individuals": "Year with most individuals",
+    "year_most_individuals": "Year with most individual birds",
     "month_most_checklists": "Month with most checklists",
     "month_most_completed_checklists": "Month with most completed checklists",
     "month_most_species": "Month with most species",
-    "month_most_individuals": "Month with most individuals",
+    "month_most_individuals": "Month with most individual birds",
     "day_most_checklists": "Day with most checklists",
     "day_most_completed_checklists": "Day with most completed checklists",
     "day_most_species": "Day with most species",
-    "day_most_individuals": "Day with most individuals",
+    "day_most_individuals": "Day with most individual birds",
 }
 
 # Card heading for peak facts (layout A: calendar unit as hero). Picker labels stay descriptive.
@@ -73,15 +73,15 @@ INSIGHT_FACT_CARD_LABELS: dict[InsightFactId, str] = {
     "year_most_checklists": "Best year for checklists",
     "year_most_completed_checklists": "Best year for completed checklists",
     "year_most_species": "Best year for species",
-    "year_most_individuals": "Best year for individuals",
+    "year_most_individuals": "Best year for individual birds",
     "month_most_checklists": "Best month for checklists",
     "month_most_completed_checklists": "Best month for completed checklists",
     "month_most_species": "Best month for species",
-    "month_most_individuals": "Best month for individuals",
+    "month_most_individuals": "Best month for individual birds",
     "day_most_checklists": "Best day for checklists",
     "day_most_completed_checklists": "Best day for completed checklists",
     "day_most_species": "Best day for species",
-    "day_most_individuals": "Best day for individuals",
+    "day_most_individuals": "Best day for individual birds",
 }
 
 INSIGHT_FACTS_REQUIRING_SPECIES: frozenset[InsightFactId] = frozenset(
@@ -403,7 +403,7 @@ def _build_peak_fact(
         return _peak_from_series(
             fact_id,
             _individual_counts_by_unit(species_obs, unit),
-            metric_unit="individuals",
+            metric_unit="individual birds",
             format_key=fmt,
         )
     if fact_id.endswith("_species"):
