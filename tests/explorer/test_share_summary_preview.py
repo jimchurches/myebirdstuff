@@ -855,6 +855,29 @@ def test_trip_title_on_all_layouts():
     assert SHARE_SUMMARY_LAYOUT_SUBTITLE_MINIMAL not in minimal_html
 
 
+def test_trip_title_and_scope_label_escape_html():
+    """Card heading / footer scope must not introduce raw markup into preview HTML."""
+    stats = ShareSummaryStats(
+        period_label="1 – 7 June 2025",
+        period_kind="custom",
+        trip_title="<script>alert('trip')</script> & <b>Coast</b>",
+        species=12,
+        lifers=1,
+        checklists=3,
+        locations=2,
+    )
+    html = render_share_summary_preview_html(
+        stats,
+        layout="tiles",
+        scope_label='Australia <img src=x onerror="alert(1)">',
+    )
+    assert "&lt;script&gt;alert('trip')&lt;/script&gt; &amp; &lt;b&gt;Coast&lt;/b&gt;" in html
+    assert "Australia &lt;img src=x onerror=\"alert(1)\"&gt;" in html
+    assert "<script>alert('trip')" not in html
+    assert "<b>Coast</b>" not in html
+    assert "<img src=x" not in html
+
+
 def test_lifetime_card_subtitles_read_from_defaults():
     from explorer.core.share_summary_defaults import (
         SHARE_SUMMARY_LIFETIME_SUBTITLE,
