@@ -37,6 +37,21 @@ def test_explorer_perf_enabled_true_from_env(mock_st: MagicMock, monkeypatch: py
     assert p.explorer_perf_enabled() is True
 
 
+def test_perf_span_disabled_does_not_create_session_events(
+    mock_st: MagicMock, monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.delenv("EXPLORER_PERF", raising=False)
+    log_path = tmp_path / "disabled.jsonl"
+    monkeypatch.setenv("EXPLORER_PERF_LOG_FILE", str(log_path))
+    from explorer.app.streamlit import perf_instrumentation as p
+
+    with p.perf_span("unit.disabled"):
+        pass
+
+    assert EXPLORER_PERF_EVENTS_KEY not in mock_st.session_state
+    assert not log_path.exists()
+
+
 def test_perf_span_records_when_enabled(mock_st: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EXPLORER_PERF", "1")
     from explorer.app.streamlit import perf_instrumentation as p
@@ -74,11 +89,12 @@ def test_perf_log_file_appends_jsonl(
     with p.perf_span("unit.file_probe"):
         pass
 
-    text = log_path.read_text(encoding="utf-8").strip()
-    assert text
-    record = json.loads(text.splitlines()[0])
+    lines = log_path.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
     assert record["stage"] == "unit.file_probe"
     assert record["dataset_sig"] == "sig-file"
+    assert record["run_kind"] == "full_run"
 
 
 def test_perf_fragment_records(mock_st: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
