@@ -7,6 +7,7 @@ from explorer.core.share_summary_insight_facts import (
     ShareSummaryInsightFact,
     compute_insight_facts,
     format_insight_fact_metric,
+    format_insight_peak_tie_note,
     insight_fact_by_id,
     species_common_names_in_period,
 )
@@ -534,4 +535,79 @@ def test_peak_checklists_all_vs_completed_and_tie_earliest():
     assert completed.primary_text == "2023"
     assert completed.metric_value == 2
     assert completed.peak_tied is True
+    assert completed.peak_tie_count == 2
     assert format_insight_fact_metric(completed) == "2 checklists"
+    assert format_insight_peak_tie_note(completed) == "Tied with 1 other year"
+    assert format_insight_peak_tie_note(all_cl) is None
+
+
+def test_format_insight_peak_tie_note_unit_and_plural():
+    day_one = ShareSummaryInsightFact(
+        fact_id="day_most_checklists",
+        label="Best day for checklists",
+        primary_text="13 May 2024",
+        metric_value=43,
+        metric_unit="checklists",
+        peak_tied=True,
+        peak_tie_count=2,
+    )
+    day_many = ShareSummaryInsightFact(
+        fact_id="day_most_completed_checklists",
+        label="Best day for completed checklists",
+        primary_text="13 May 2024",
+        metric_value=43,
+        metric_unit="checklists",
+        peak_tied=True,
+        peak_tie_count=3,
+    )
+    month = ShareSummaryInsightFact(
+        fact_id="month_most_species",
+        label="Best month for species",
+        primary_text="Mar 2025",
+        metric_value=10,
+        metric_unit="species",
+        peak_tied=True,
+        peak_tie_count=4,
+    )
+    assert format_insight_peak_tie_note(day_one) == "Tied with 1 other day"
+    assert format_insight_peak_tie_note(day_many) == "Tied with 2 other days"
+    assert format_insight_peak_tie_note(month) == "Tied with 3 other months"
+
+
+def test_insight_layout_renders_peak_tie_soft_note():
+    from explorer.core.share_summary_compute import ShareSummaryStats
+
+    stats = ShareSummaryStats(period_label="Lifetime", period_kind="lifetime")
+    fact = ShareSummaryInsightFact(
+        fact_id="day_most_completed_checklists",
+        label="Best day for completed checklists",
+        primary_text="13 May 2024",
+        metric_value=43,
+        metric_unit="checklists",
+        peak_tied=True,
+        peak_tie_count=3,
+    )
+    html = render_share_summary_preview_html(
+        stats,
+        layout="insight",
+        insight_fact=fact,
+        fmt="story",
+    )
+    assert "Tied with 2 other days" in html
+    assert 'class="rich-note"' in html
+
+    untied = ShareSummaryInsightFact(
+        fact_id="day_most_completed_checklists",
+        label="Best day for completed checklists",
+        primary_text="13 May 2024",
+        metric_value=43,
+        metric_unit="checklists",
+    )
+    html_clean = render_share_summary_preview_html(
+        stats,
+        layout="insight",
+        insight_fact=untied,
+        fmt="story",
+    )
+    assert "Tied with" not in html_clean
+    assert 'class="rich-note"' not in html_clean

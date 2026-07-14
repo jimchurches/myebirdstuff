@@ -55,11 +55,6 @@ MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION = (
 
 SOCIAL_CARDS_TAB_LABEL = "Social Cards"
 
-# Interesting Insights peak facts (#334) — shown under the card when the peak is tied.
-INSIGHT_PEAK_TIE_INFO = (
-    "More than one period tied for this peak. Showing the earliest."
-)
-
 NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Map",
     "Checklist Statistics",

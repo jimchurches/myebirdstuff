@@ -25,7 +25,6 @@ from explorer.app.streamlit.social_cards_stat_picker_ui import (
     render_spotlight_stat_picker,
     spotlight_label_from_session,
 )
-from explorer.app.streamlit.streamlit_ui_constants import INSIGHT_PEAK_TIE_INFO
 from explorer.core.share_summary_compute import (
     ShareSummaryAllTimeStats,
     ShareSummaryGeoScope,
@@ -128,8 +127,6 @@ def render_current_card_fragment(
         ),
         unsafe_allow_html=True,
     )
-    if selected_layout == "insight" and resolved_fact is not None and resolved_fact.peak_tied:
-        st.info(INSIGHT_PEAK_TIE_INFO)
 
     png_filename = share_summary_png_filename(stats, layout=selected_layout, fmt=fmt)
     if lazy_png_export:

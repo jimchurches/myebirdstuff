@@ -156,6 +156,8 @@ class ShareSummaryInsightFact:
     metric_value: int | None = None
     metric_unit: str | None = None
     peak_tied: bool = False
+    # Total calendar units sharing the peak (including the shown earliest). Soft note uses N-1.
+    peak_tie_count: int = 0
 
 
 def format_insight_fact_metric(fact: ShareSummaryInsightFact) -> str | None:
@@ -166,6 +168,23 @@ def format_insight_fact_metric(fact: ShareSummaryInsightFact) -> str | None:
     if fact.metric_unit:
         return f"{formatted} {fact.metric_unit}"
     return formatted
+
+
+def format_insight_peak_tie_note(fact: ShareSummaryInsightFact) -> str | None:
+    """Soft note when a peak unit ties, e.g. ``Tied with 2 other days``."""
+    if not fact.peak_tied or fact.peak_tie_count < 2:
+        return None
+    if fact.fact_id not in INSIGHT_PEAK_FACT_IDS:
+        return None
+    others = fact.peak_tie_count - 1
+    unit = _peak_unit_for_fact(fact.fact_id)
+    if unit == "year":
+        noun = "year" if others == 1 else "years"
+    elif unit == "month":
+        noun = "month" if others == 1 else "months"
+    else:
+        noun = "day" if others == 1 else "days"
+    return f"Tied with {others} other {noun}"
 
 
 def insight_fact_requires_species(fact_id: InsightFactId) -> bool:
@@ -529,11 +548,13 @@ def _peak_from_series(
         return None
     winners = counts[counts == max_val].sort_index()
     winner_key = winners.index[0]
+    tie_count = len(winners)
     return ShareSummaryInsightFact(
         fact_id=fact_id,
         label=INSIGHT_FACT_CARD_LABELS[fact_id],
         primary_text=format_key(winner_key),
         metric_value=max_val,
         metric_unit=metric_unit,
-        peak_tied=len(winners) > 1,
+        peak_tied=tie_count > 1,
+        peak_tie_count=tie_count,
     )
