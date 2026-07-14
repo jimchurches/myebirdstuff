@@ -34,13 +34,11 @@ See ``docs/AI_CONTEXT.md`` § Defaults. Prefer sectioning and comments over larg
 
 from __future__ import annotations
 
+# isort: off
 # ---------------------------------------------------------------------------
-# Re-export façade — owned elsewhere; imported here for a single Streamlit surface.
-# Do not add new literals in this block; edit the defining module instead.
+# Scheme model imports — construction deps for owned MAP_MARKER_COLOUR_SCHEME_* below.
+# Field shapes live in map_marker_scheme_model; preset hex/literals stay in this file.
 # ---------------------------------------------------------------------------
-from explorer.core.basemap_manifest import (
-    MAP_BASEMAP_LABELS,  # noqa: F401 — re-export; owned by basemap_manifest / basemaps.yaml
-)
 from explorer.core.map_marker_scheme_model import (
     MapMarkerAllLocationsStyle,
     MapMarkerClusterStyle,
@@ -50,6 +48,14 @@ from explorer.core.map_marker_scheme_model import (
     MapMarkerLiferLocationsStyle,
     MapMarkerSpeciesLocationsStyle,
     MapMarkerSpeciesMapBackgroundStyle,
+)
+
+# ---------------------------------------------------------------------------
+# Re-export façade — owned elsewhere; imported here for a single Streamlit surface.
+# Do not add new literals in this block; edit the defining module instead.
+# ---------------------------------------------------------------------------
+from explorer.core.basemap_manifest import (
+    MAP_BASEMAP_LABELS,  # noqa: F401 — re-export; owned by basemap_manifest / basemaps.yaml
 )
 from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export; owned by settings schema
     MAP_BASEMAP_DEFAULT,
@@ -79,6 +85,7 @@ from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export; 
     share_summary_spotlight_presentation_label,
     share_summary_tiles_presentation_label,
 )
+# isort: on
 
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster)
