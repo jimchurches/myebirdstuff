@@ -65,6 +65,19 @@ def is_countable(sci_name, common_name):
 # Higher-level functions
 # ---------------------------------------------------------------------------
 
+def parent_common_name(common_name: object) -> str:
+    """Return species-level common name by stripping a trailing parenthetical qualifier.
+
+    Matches Bird Families / rankings subspecies grouping: e.g.
+    ``Australian Boobook (Australian)`` → ``Australian Boobook``.
+    """
+    s = (str(common_name) if not pd.isna(common_name) else "").strip()
+    if not s:
+        return ""
+    idx = s.find(" (")
+    return s[:idx] if idx != -1 else s
+
+
 def base_species_for_lifer(sci_name):
     """Extract base species (genus + species, lowercased) from a scientific name.
 

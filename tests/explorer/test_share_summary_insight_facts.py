@@ -146,6 +146,29 @@ def test_species_common_names_in_period_excludes_non_countable():
     assert names == ("Australian Magpie",)
 
 
+def test_species_common_names_in_period_rolls_up_subspecies():
+    df = pd.DataFrame(
+        [
+            _row(
+                sid="S1",
+                dt="2025-01-01",
+                common="Australian Boobook",
+                scientific="Ninox boobook",
+                count=100,
+            ),
+            _row(
+                sid="S2",
+                dt="2025-02-01",
+                common="Australian Boobook (Australian)",
+                scientific="Ninox boobook boobook",
+                count=67,
+            ),
+        ]
+    )
+    names = species_common_names_in_period(df, period_for_year(2025))
+    assert names == ("Australian Boobook",)
+
+
 def test_insight_layout_renders():
     from explorer.core.share_summary_compute import ShareSummaryStats
     from explorer.core.share_summary_defaults import (
@@ -306,6 +329,37 @@ def test_species_individuals_insight_fact_isolates_one_species():
         species_individuals_insight_fact(df, period_for_year(2024), "Australian Magpie")
         is None
     )
+
+
+def test_species_individuals_insight_fact_rolls_up_subspecies():
+    from explorer.core.share_summary_compute import period_for_year
+    from explorer.core.share_summary_insight_facts import (
+        species_individuals_insight_fact,
+    )
+
+    df = pd.DataFrame(
+        {
+            "Date": ["2025-01-01", "2025-01-02", "2025-01-03"],
+            "Submission ID": ["s1", "s2", "s3"],
+            "Count": [100, 67, 1],
+            "Common Name": [
+                "Australian Boobook",
+                "Australian Boobook (Australian)",
+                "Superb Fairywren",
+            ],
+            "Scientific Name": [
+                "Ninox boobook",
+                "Ninox boobook boobook",
+                "Malurus cyaneus",
+            ],
+        }
+    )
+    fact = species_individuals_insight_fact(
+        df, period_for_year(2025), "Australian Boobook"
+    )
+    assert fact is not None
+    assert fact.primary_text == "Australian Boobook"
+    assert fact.metric_value == 167
 
 
 def _peak_row(

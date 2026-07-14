@@ -7,6 +7,7 @@ from explorer.core.species_logic import (
     is_countable,
     countable_species_vectorized,
     base_species_for_lifer,
+    parent_common_name,
 )
 
 
@@ -20,6 +21,12 @@ def test_base_species_name_normal():
 
 def test_base_species_name_subspecies():
     assert base_species_name("Anas gracilis rogersi") == "anas gracilis"
+
+
+def test_parent_common_name_strips_subspecies_qualifier():
+    assert parent_common_name("Australian Boobook (Australian)") == "Australian Boobook"
+    assert parent_common_name("Australian Boobook") == "Australian Boobook"
+    assert parent_common_name("") == ""
 
 
 def test_base_species_name_none():

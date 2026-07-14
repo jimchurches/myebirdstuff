@@ -22,7 +22,7 @@ from explorer.core.share_summary_compute import (
     _fmt_short_date,
     _mask_in_period,
 )
-from explorer.core.species_logic import countable_species_vectorized
+from explorer.core.species_logic import countable_species_vectorized, parent_common_name
 from explorer.core.stats import (
     rankings_by_checklists,
     rankings_by_individuals,
@@ -181,7 +181,10 @@ def peak_fact_ids_for_period_kind(period_kind: PeriodKind) -> frozenset[InsightF
 def species_common_names_in_period(
     df: pd.DataFrame, period: ShareSummaryPeriod
 ) -> tuple[str, ...]:
-    """Distinct countable-species common names with observations in *period*, sorted."""
+    """Distinct parent-species common names with observations in *period*, sorted.
+
+    Subspecies rows roll up to the parent name (same rule as Bird Families tab).
+    """
     obs = _observations_in_period(df, period)
     if obs.empty or "Common Name" not in obs.columns:
         return ()
@@ -190,8 +193,11 @@ def species_common_names_in_period(
     countable = frame.dropna(subset=["_base"])
     if countable.empty:
         return ()
+    countable = countable.copy()
+    countable["_parent_common"] = countable["Common Name"].map(parent_common_name)
     names = (
-        countable["Common Name"]
+        countable.groupby("_base", sort=False)["_parent_common"]
+        .agg(lambda s: s.value_counts().index[0] if len(s) > 0 else "")
         .dropna()
         .astype(str)
         .str.strip()
@@ -312,21 +318,24 @@ def _species_individuals_fact(
 ) -> ShareSummaryInsightFact | None:
     if obs.empty:
         return None
-    target = species_common.casefold()
+    target = parent_common_name(species_common).casefold()
+    if not target:
+        return None
     frame = obs.copy()
     frame["_base"] = countable_species_vectorized(frame)
     frame = frame.dropna(subset=["_base"])
     if frame.empty or "Common Name" not in frame.columns:
         return None
-    frame["_common_key"] = (
-        frame["Common Name"].fillna("").astype(str).str.strip().str.casefold()
+    frame["_parent_common"] = (
+        frame["Common Name"].map(parent_common_name).str.casefold()
     )
-    matched = frame[frame["_common_key"] == target]
+    matched = frame[frame["_parent_common"] == target]
     if matched.empty:
         return None
-    display_name = (
+    canonical_common = (
         matched["Common Name"].dropna().astype(str).str.strip().value_counts().index[0]
     )
+    display_name = parent_common_name(canonical_common)
     total = int(matched["Count"].apply(safe_count).sum())
     return ShareSummaryInsightFact(
         fact_id="species_individuals",
