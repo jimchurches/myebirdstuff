@@ -121,6 +121,17 @@ def test_social_cards_dataframe_signature_prefers_session_sig():
     assert social_cards_dataframe_signature(None) == ("empty", 0)
 
 
+def test_social_cards_dataframe_signature_fallback_tracks_identity_and_row_count():
+    import pandas as pd
+
+    first = pd.DataFrame({"Submission ID": ["s1", "s2"]})
+    second = first.copy()
+
+    assert social_cards_dataframe_signature(first) == ("id", id(first), 2)
+    assert social_cards_dataframe_signature(second) == ("id", id(second), 2)
+    assert social_cards_dataframe_signature(first) != social_cards_dataframe_signature(second)
+
+
 def _base_png_fingerprint_kwargs() -> dict:
     return {
         "stats": ShareSummaryStats(
@@ -156,8 +167,7 @@ def test_card_stat_data_scope_from_session_export_uses_export_source():
         fmt="portrait",
         tiles_presentation="circles",
     )
-    assert scope.startswith("export|")
-    assert "AU" in scope or "au" in scope.lower() or "|" in scope
+    assert scope == "export|year|2025|AU|portrait|circles"
 
 
 def test_png_export_fingerprint_changes_when_stat_picks_change():
