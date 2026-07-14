@@ -52373,5 +52373,377 @@
       ],
       "status": "OK"
     }
-  }                                     
+  },
+  {
+    "name": "Paddys River near Coree border",
+    "country": "Australia",
+    "lat": "-35.339578",
+    "lng": "148.923133",
+    "expected": "Paddys River",
+    "v2result": "Coree",
+    "notes": "Issue #272. Dry Creek Road area south of Uriarra Village. OSM and Google 'What's here' agree this is Paddys River, but Google Maps often labels the plus_code as Uriarra Village and returns overlapping Coree neighborhood bounds plus postcode 2611 locality Coree. Edge case: adjacent ACT rural districts with overlapping approximate bounds and a misleading postcode locality. Geocode JSON synthesized from existing Coree/Paddys River fixture geometry plus a Uriarra Village-labelled plus_code at these coords; refresh with --export-test when a live API key is available.",
+    "json_extracted": "20260713",
+    "geocode_json": {
+      "plus_code": {
+        "compound_code": "MVGF+5FQ Uriarra Village ACT, Australia",
+        "global_code": "4RPCMVGF+5FQ"
+      },
+      "results": [
+        {
+          "address_components": [
+            {
+              "long_name": "MVGF+5F",
+              "short_name": "MVGF+5F",
+              "types": [
+                "plus_code"
+              ]
+            },
+            {
+              "long_name": "Uriarra Village",
+              "short_name": "Uriarra Village",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2611",
+              "short_name": "2611",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "MVGF+5F Uriarra Village ACT, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.3395,
+                "lng": 148.92325
+              },
+              "southwest": {
+                "lat": -35.339625,
+                "lng": 148.923125
+              }
+            },
+            "location": {
+              "lat": -35.339578,
+              "lng": 148.923133
+            },
+            "location_type": "GEOMETRIC_CENTER",
+            "viewport": {
+              "northeast": {
+                "lat": -35.3382290197085,
+                "lng": 148.9244819802915
+              },
+              "southwest": {
+                "lat": -35.3409269802915,
+                "lng": 148.9217840197085
+              }
+            }
+          },
+          "place_id": "synthetic-plus-272-paddys-river",
+          "types": [
+            "plus_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Coree",
+              "short_name": "Coree",
+              "types": [
+                "neighborhood",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2611",
+              "short_name": "2611",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Coree, ACT 2611, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.2186386,
+                "lng": 148.9758116
+              },
+              "southwest": {
+                "lat": -35.3431112,
+                "lng": 148.8101335
+              }
+            },
+            "location": {
+              "lat": -35.2917466,
+              "lng": 148.9245629
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.2186386,
+                "lng": 148.9758116
+              },
+              "southwest": {
+                "lat": -35.3431112,
+                "lng": 148.8101335
+              }
+            }
+          },
+          "place_id": "ChIJUQ900lW3F2sREF1pp27qAAU",
+          "types": [
+            "neighborhood",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Paddys River",
+              "short_name": "Paddys River",
+              "types": [
+                "neighborhood",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            },
+            {
+              "long_name": "2620",
+              "short_name": "2620",
+              "types": [
+                "postal_code"
+              ]
+            }
+          ],
+          "formatted_address": "Paddys River, ACT 2620, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.3195077,
+                "lng": 149.0762151
+              },
+              "southwest": {
+                "lat": -35.5354139,
+                "lng": 148.8676703
+              }
+            },
+            "location": {
+              "lat": -35.4038838,
+              "lng": 148.9835673
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.3195077,
+                "lng": 149.0762151
+              },
+              "southwest": {
+                "lat": -35.5354139,
+                "lng": 148.8676703
+              }
+            }
+          },
+          "place_id": "ChIJGYKSJBHJF2sR8Fxpp27qAAU",
+          "types": [
+            "neighborhood",
+            "political"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "2611",
+              "short_name": "2611",
+              "types": [
+                "postal_code"
+              ]
+            },
+            {
+              "long_name": "Coree",
+              "short_name": "Coree",
+              "types": [
+                "locality",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Coree ACT 2611, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1683239,
+                "lng": 149.0883095
+              },
+              "southwest": {
+                "lat": -35.7366479,
+                "lng": 148.4975241
+              }
+            },
+            "location": {
+              "lat": -35.4477412,
+              "lng": 148.7831534
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1683239,
+                "lng": 149.0883095
+              },
+              "southwest": {
+                "lat": -35.7366479,
+                "lng": 148.4975241
+              }
+            }
+          },
+          "place_id": "ChIJz3mYy7TIF2sREPuLx3HqABw",
+          "postcode_localities": [
+            "Bimberi",
+            "Brindabella",
+            "Chapman",
+            "Cooleman",
+            "Coombs",
+            "Coree",
+            "Cotter River",
+            "Denman Prospect",
+            "Duffy",
+            "Fisher",
+            "Holder",
+            "Molonglo",
+            "Molonglo Valley",
+            "Rivett",
+            "Stirling",
+            "Stromlo",
+            "Uriarra",
+            "Uriarra Village",
+            "Waramanga",
+            "Weston",
+            "Wright"
+          ],
+          "types": [
+            "postal_code"
+          ]
+        },
+        {
+          "address_components": [
+            {
+              "long_name": "Australian Capital Territory",
+              "short_name": "ACT",
+              "types": [
+                "administrative_area_level_1",
+                "political"
+              ]
+            },
+            {
+              "long_name": "Australia",
+              "short_name": "AU",
+              "types": [
+                "country",
+                "political"
+              ]
+            }
+          ],
+          "formatted_address": "Australian Capital Territory, Australia",
+          "geometry": {
+            "bounds": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+              },
+              "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+              }
+            },
+            "location": {
+              "lat": -35.4734679,
+              "lng": 149.0123679
+            },
+            "location_type": "APPROXIMATE",
+            "viewport": {
+              "northeast": {
+                "lat": -35.1244158,
+                "lng": 149.3992871
+              },
+              "southwest": {
+                "lat": -35.9205301,
+                "lng": 148.7627901
+              }
+            }
+          },
+          "place_id": "ChIJSxCboN9MFmsRA3huXDhEWOc",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ]
+        }
+      ],
+      "status": "OK"
+    }
+  }
 ]
