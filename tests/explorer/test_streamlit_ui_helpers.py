@@ -263,6 +263,8 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
         "explorer.app.streamlit.explorer_update_notice",
         "explorer.app.streamlit.explorer_build_version",
         "explorer.app.streamlit.social_cards_streamlit_ui",
+        "explorer.app.streamlit.social_cards_png_export_ui",
+        "explorer.app.streamlit.social_cards_stat_picker_ui",
     ]:
         _drop_submodule(name)
     return sys.modules["streamlit"]
