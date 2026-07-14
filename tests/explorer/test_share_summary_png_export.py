@@ -1,8 +1,8 @@
 """Tests for :mod:`explorer.presentation.share_summary_png_export`."""
 
-from contextlib import contextmanager
 import sys
 import types
+from contextlib import contextmanager
 
 import pytest
 
@@ -113,6 +113,35 @@ def test_share_summary_to_png_bytes_builds_full_size_screenshot(monkeypatch):
         "type": "png",
         "clip": {"x": 0, "y": 0, "width": 1080, "height": 1350},
     }
+
+
+def test_install_chromium_runs_playwright_module(monkeypatch):
+    calls: list[tuple[list[str], dict[str, object]]] = []
+
+    def _fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(share_summary_png_export.subprocess, "run", _fake_run)
+
+    share_summary_png_export._install_chromium()
+
+    assert calls == [
+        (
+            [
+                sys.executable,
+                "-m",
+                "playwright",
+                "install",
+                "chromium",
+            ],
+            {
+                "capture_output": True,
+                "text": True,
+                "check": False,
+            },
+        )
+    ]
 
 
 def test_launch_chromium_installs_when_executable_missing(monkeypatch):

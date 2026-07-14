@@ -120,8 +120,8 @@ def _chromium_missing_message() -> str:
     return (
         "Playwright Chromium is not available for PNG export. "
         "Locally run: python -m playwright install chromium. "
-        "On Streamlit Cloud, confirm packages.txt system libraries are "
-        "installed and redeploy after merging Cloud PNG support (#345)."
+        "On Streamlit Cloud, confirm packages.txt is at the repo root "
+        "and redeploy the app if PNG export was recently enabled."
     )
 
 
@@ -135,8 +135,8 @@ def _raise_launch_failure(exc: BaseException) -> None:
     if _system_deps_missing(exc):
         raise RuntimeError(
             "PNG export needs system libraries for Chromium. "
-            "On Streamlit Cloud, ensure packages.txt is present at the "
-            "repo root and redeploy (#345)."
+            "On Streamlit Cloud, ensure packages.txt is at the repo root "
+            "and redeploy the app after updating system dependencies."
         ) from exc
     if _chromium_executable_missing(exc):
         raise RuntimeError(_chromium_missing_message()) from exc

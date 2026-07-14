@@ -405,7 +405,7 @@ Reasons:
 - Pillow export for **one fixed layout** only (more maintenance); or
 - Client-side export (browser canvas) — possible but awkward in Streamlit.
 
-**Decision:** ☑ Playwright  ☐ Pillow  ☐ Hybrid  ☐ Defer until Cloud checked *(Cloud verification still open)*
+**Decision:** ☑ Playwright  ☐ Pillow  ☐ Hybrid  ☐ Defer until Cloud checked *(Cloud verified — [#345](https://github.com/jimchurches/myebirdstuff/issues/345))*
 
 ---
 
@@ -564,7 +564,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 - **Weekly stats** use **Sun–Sat** calendar weeks (not ISO Mon–Sun).
 - **Empty periods** return zeroed stats object; cards may look sparse — may need “no data” state in UI.
 - Logo SVG is embedded via data URI; PNG export must bundle or inline the same asset.
-- **Playwright on Streamlit Cloud** — must verify headless Chromium in production; blocks Cloud PNG if unsupported — tracked in [#345](https://github.com/jimchurches/myebirdstuff/issues/345).
+- **Playwright on Streamlit Cloud** — verified on Community Cloud ([#345](https://github.com/jimchurches/myebirdstuff/issues/345)); `packages.txt` + lazy Chromium install. Re-test if Playwright or the Cloud Debian image changes.
 - **Chromium reuse across PNG exports** — each export launches a fresh browser today; warm/reuse is a perf follow-up — [#344](https://github.com/jimchurches/myebirdstuff/issues/344).
 - **Phone save behaviour** — long-press / share sheet varies by browser; design app ships secondary download button as fallback.
 
@@ -578,8 +578,8 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 |-------|----------|--------|
 | `pip install playwright` during app deploy | Succeeds (listed in `requirements.txt`) | Assumed OK |
 | System libraries for Chromium | Repo-root `packages.txt` (apt via Community Cloud; **package names only** — Cloud does not treat `#` lines as comments) | **Shipped** |
-| Chromium browser binaries | Lazy `python -m playwright install chromium` on first export when executable missing (`share_summary_png_export.py`) | **Shipped** — confirm on live Cloud after deploy |
-| PNG on Social Cards / design app | Download succeeds, or clear warning if still blocked | Error path now fragment-reruns so first click surfaces the message |
+| Chromium browser binaries | Lazy `python -m playwright install chromium` on first export when executable missing (`share_summary_png_export.py`) | **Verified** on live Cloud (author, #345) |
+| PNG on Social Cards / design app | Download succeeds, or clear warning if still blocked | **Verified** on live Cloud; error path fragment-reruns so first click surfaces the message |
 | iOS / Android save/share | Spot-check once Cloud PNG works | **Open** |
 
 **If Cloud still blocks Chromium** (e.g. newer Playwright needs apt packages unavailable on Community Cloud’s Debian image): show HTML preview only and document “PNG export requires local run” until a Pillow fallback or pinned Playwright version is added. Re-test save flow on iOS/Android once a Cloud deploy succeeds.
@@ -617,5 +617,6 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-07-01 | **#275 closed** (PNG export design studio); **#276 closed** — superseded by [#323](https://github.com/jimchurches/myebirdstuff/issues/323) epic + port batches [#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328) |
 | 2026-07-14 | PNG Cloud verify + Chromium reuse follow-ups filed: [#345](https://github.com/jimchurches/myebirdstuff/issues/345), [#344](https://github.com/jimchurches/myebirdstuff/issues/344) (PR #343 review) |
 | 2026-07-14 | [#345](https://github.com/jimchurches/myebirdstuff/issues/345): `packages.txt` + lazy Chromium install on first PNG export; fix first-click export error UX |
+| 2026-07-14 | [#345](https://github.com/jimchurches/myebirdstuff/issues/345): Streamlit Cloud PNG export verified on live deploy (author) |
 | 2026-07-14 | Archived `social-cards-workflow.md` to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021); module map kept in this tracker |
 | 2026-07-14 | Archived early prototype notes to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964295174); removed stale `issue-157-social-summary-prototype.md` |

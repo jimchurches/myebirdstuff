@@ -719,6 +719,55 @@ def test_lazy_png_export_cache_clears_stale_bytes(streamlit_stub) -> None:
     assert ui.SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY not in st.session_state
 
 
+def test_lazy_png_export_failure_reruns_to_show_warning(
+    streamlit_stub,
+    monkeypatch,
+) -> None:
+    ui = importlib.import_module("explorer.app.streamlit.social_cards_png_export_ui")
+    fingerprint = ("current-card",)
+    rerun_calls: list[None] = []
+
+    def _raise_export_error(**_kwargs) -> None:
+        raise RuntimeError("Chromium unavailable")
+
+    monkeypatch.setattr(ui, "png_export_fingerprint", lambda **_kwargs: fingerprint)
+    monkeypatch.setattr(streamlit_stub, "button", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        ui,
+        "_generate_share_summary_png_bytes",
+        _raise_export_error,
+    )
+    monkeypatch.setattr(
+        ui,
+        "_rerun_social_cards_fragment",
+        lambda: rerun_calls.append(None),
+    )
+
+    ui.render_lazy_png_export_controls(
+        stats=object(),
+        layout="tiles",
+        fmt="square",
+        card_stat_labels=(),
+        spotlight_label="Lifers",
+        all_time=None,
+        color_scheme_index=0,
+        scope_label="All records",
+        geo_scope=object(),
+        tiles_presentation="grid",
+        spotlight_presentation="classic",
+        resolved_fact=None,
+        export_button_label="Export PNG",
+        png_filename="summary.png",
+    )
+
+    assert streamlit_stub.session_state[ui.SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY] == (
+        "Chromium unavailable"
+    )
+    assert rerun_calls == [None]
+    assert ui.SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY not in streamlit_stub.session_state
+    assert ui.SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY not in streamlit_stub.session_state
+
+
 def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stub) -> None:
     from explorer.app.streamlit import streamlit_theme
     from explorer.presentation.checklist_stats_display import CHECKLIST_STATS_TABLE_CSS
