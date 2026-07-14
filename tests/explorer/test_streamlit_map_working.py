@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -31,19 +32,19 @@ def _fixture_csv_path() -> Path:
 @pytest.fixture
 def df() -> pd.DataFrame:
     path = _fixture_csv_path()
-    if not path.exists():
-        pytest.skip(f"Fixture not found: {path}")
+    assert path.is_file(), f"required integration fixture is missing: {path}"
     return load_dataset(path)
 
 
 def test_date_bounds_from_df(df: pd.DataFrame) -> None:
     lo, hi = date_bounds_from_df(df)
-    assert lo <= hi
+    assert (lo, hi) == (date(2022, 1, 16), date(2026, 2, 25))
 
 
 def test_date_inception_to_today_default(df: pd.DataFrame) -> None:
     a, b = date_inception_to_today_default(df)
-    assert a <= b
+    assert a == date(2022, 1, 16)
+    assert b == date.today()
 
 
 def test_streamlit_lifer_status(df: pd.DataFrame) -> None:
@@ -54,7 +55,8 @@ def test_streamlit_lifer_status(df: pd.DataFrame) -> None:
         date_range=None,
     )
     assert ws is not None
-    assert "Lifer" in status
+    assert len(ws.df) == len(df)
+    assert status == "Lifer view uses all-time data"
 
 
 def test_streamlit_date_filter_on(df: pd.DataFrame) -> None:
@@ -66,7 +68,8 @@ def test_streamlit_date_filter_on(df: pd.DataFrame) -> None:
         date_range=(lo, hi),
     )
     assert ws is not None
-    assert "Date filter:" in status
+    assert len(ws.df) == len(df)
+    assert status == f"Date filter: {lo.isoformat()} to {hi.isoformat()}"
 
 
 def test_streamlit_species_view_uses_same_date_filter_as_all(df: pd.DataFrame) -> None:
@@ -84,6 +87,6 @@ def test_streamlit_species_view_uses_same_date_filter_as_all(df: pd.DataFrame) -
         date_range=(lo, hi),
     )
     assert ws_all is not None and ws_sp is not None
-    assert len(ws_all.df) == len(ws_sp.df)
+    assert ws_all.df["Submission ID"].tolist() == ws_sp.df["Submission ID"].tolist()
     assert st_all == st_sp
 

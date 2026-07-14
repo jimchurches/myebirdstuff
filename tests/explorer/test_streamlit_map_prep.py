@@ -37,9 +37,9 @@ def _tiny_df():
 def test_prepare_all_locations_map_context_has_location_totals():
     df = _tiny_df()
     ctx = prepare_all_locations_map_context(df)
-    assert ctx["effective_totals"][0] == 1
-    assert "records_by_loc" in ctx
-    assert "L1" in ctx["records_by_loc"]
+    assert ctx["effective_totals"] == (1, 1, 1, 3)
+    assert set(ctx["records_by_loc"]) == {"L1"}
+    pd.testing.assert_frame_equal(ctx["records_by_loc"]["L1"].reset_index(drop=True), df)
 
 
 def test_prepare_empty_raises():
@@ -73,9 +73,7 @@ def test_mean_center_from_location_data():
     df = _tiny_df()
     ctx = prepare_all_locations_map_context(df)
     c = mean_center_from_location_data(ctx["effective_location_data"])
-    assert c is not None
-    assert c[0] == pytest.approx(-35.0)
-    assert c[1] == pytest.approx(149.0)
+    assert c == pytest.approx((-35.0, 149.0))
 
 
 def test_mean_center_from_location_data_empty_returns_none():
