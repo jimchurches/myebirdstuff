@@ -67,7 +67,7 @@ INSIGHT_FACT_CARD_LABELS: dict[InsightFactId, str] = {
 
 INSIGHT_FACT_PICKER_LABELS: dict[InsightFactId, str] = {
     "most_common_checklist_species": "Most common checklist species",
-    "most_individuals_species": "Most individuals of a single species",
+    "most_individuals_species": "Most-recorded species",
     "biggest_checklist_count": "Biggest single-checklist count",
     "species_individuals": "Individuals of selected species",
     **INSIGHT_FACT_CARD_LABELS,

@@ -264,7 +264,7 @@ def test_resolve_insight_fact_uses_requested_id():
         ),
         ShareSummaryInsightFact(
             fact_id="most_individuals_species",
-            label="Most individuals of a single species",
+            label="Most-recorded species",
             primary_text="Shearwater",
             metric_value=100,
             metric_unit="individuals",
