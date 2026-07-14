@@ -230,6 +230,9 @@ def render_lazy_png_export_controls(
                 st.session_state[SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY] = str(exc)
                 st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY, None)
                 st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY, None)
+                # Fragment must rerun so the warning at the top is painted; without
+                # this, a failed first click looks like a no-op (#345).
+                _rerun_social_cards_fragment()
                 return
             st.session_state[SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY] = png_bytes
             st.session_state[SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY] = fingerprint
