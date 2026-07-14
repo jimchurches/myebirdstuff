@@ -48,9 +48,16 @@ def run_tab_prep_spinner_and_sync(
     work_df: Any,
     df_full: Any,
     tax_locale_effective: str,
+    tab_prep_spinner_text: str = TAB_PREP_SPINNER_TEXT,
+    show_spinner: bool = True,
 ) -> None:
-    """Second sidebar spinner: checklist/rankings caches and tab session sync."""
-    with st.spinner(TAB_PREP_SPINNER_TEXT):
+    """Warm checklist/rankings caches and sync tab session inputs.
+
+    By default opens a sidebar ``st.spinner``. Pass ``show_spinner=False`` when the
+    caller already owns an outer spinner (Social Cards single-spinner path).
+    """
+
+    def _run() -> None:
         with perf_span("prep.cache_checklist_stats.working"):
             checklist_payload = cached_checklist_stats_payload(work_df, tax_locale_effective)
         top_n = int(st.session_state.get(STREAMLIT_RANKINGS_TOP_N_KEY))
@@ -70,17 +77,19 @@ def run_tab_prep_spinner_and_sync(
                     high_count_tie_break=hc_tb,
                 )
             with perf_span("prep.cache_sex_notation_by_year"):
-                sex_notation_by_year: dict = cached_sex_notation_by_year(df_full)
+                sex_notation_by_year: dict[str, Any] = cached_sex_notation_by_year(
+                    df_full
+                )
         else:
             maint_full_payload = None
             ranking_lists_families_bundle = {}
-            sex_notation_by_year = {}
+            sex_notation_by_year: dict[str, Any] = {}
 
         with perf_span("prep.tab_session_sync"):
             sync_checklist_stats_tab_session_inputs(checklist_payload)
             sync_ranking_lists_families_bundle(ranking_lists_families_bundle)
             loc_maint = full_location_data_for_maintenance(df_full)
-            incomplete_maint: dict = {}
+            incomplete_maint: dict[str, Any] = {}
             if maint_full_payload is not None:
                 incomplete_maint = maint_full_payload.incomplete_by_year or {}
             sync_maintenance_tab_session_inputs(
@@ -91,3 +100,9 @@ def run_tab_prep_spinner_and_sync(
             )
             sync_yearly_summary_session_inputs(checklist_payload)
             sync_country_tab_session_inputs(checklist_payload)
+
+    if show_spinner:
+        with st.spinner(tab_prep_spinner_text):
+            _run()
+    else:
+        _run()

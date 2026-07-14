@@ -105,6 +105,21 @@ def _install_streamlit_stub(monkeypatch: pytest.MonkeyPatch) -> None:
 
     stub.empty = empty
 
+    class _ContainerStub:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> bool:
+            return False
+
+        def empty(self):
+            return _PlaceholderStub()
+
+    def container(**_kwargs):
+        return _ContainerStub()
+
+    stub.container = container
+
     stub.html_calls: list[str] = []
 
     def html(x: str) -> None:
@@ -247,6 +262,9 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
         "explorer.app.streamlit.app_landing_ui",
         "explorer.app.streamlit.explorer_update_notice",
         "explorer.app.streamlit.explorer_build_version",
+        "explorer.app.streamlit.social_cards_streamlit_ui",
+        "explorer.app.streamlit.social_cards_png_export_ui",
+        "explorer.app.streamlit.social_cards_stat_picker_ui",
     ]:
         _drop_submodule(name)
     return sys.modules["streamlit"]
@@ -254,7 +272,9 @@ def streamlit_stub(monkeypatch: pytest.MonkeyPatch):
 
 def test_yearly_recent_column_count_clamps(streamlit_stub) -> None:
     yearly = importlib.import_module("explorer.app.streamlit.yearly_summary_streamlit_html")
-    from explorer.app.streamlit.app_constants import STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY
+    from explorer.app.streamlit.app_constants import (
+        STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY,
+    )
 
     st = streamlit_stub
     st.session_state[STREAMLIT_YEARLY_RECENT_COLUMN_COUNT_KEY] = 2
@@ -269,7 +289,9 @@ def test_yearly_recent_column_count_clamps(streamlit_stub) -> None:
 
 def test_sync_yearly_summary_session_inputs_sets_payload(streamlit_stub) -> None:
     yearly = importlib.import_module("explorer.app.streamlit.yearly_summary_streamlit_html")
-    from explorer.app.streamlit.app_constants import YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY
+    from explorer.app.streamlit.app_constants import (
+        YEARLY_SUMMARY_TAB_CHECKLIST_PAYLOAD_KEY,
+    )
 
     sentinel = object()
     yearly.sync_yearly_summary_session_inputs(sentinel)
@@ -291,7 +313,9 @@ def test_sync_country_tab_session_inputs_sets_payload(streamlit_stub) -> None:
 
 def test_sync_checklist_stats_tab_session_inputs_sets_payload(streamlit_stub) -> None:
     checklist = importlib.import_module("explorer.app.streamlit.checklist_stats_streamlit_html")
-    from explorer.app.streamlit.app_constants import CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY
+    from explorer.app.streamlit.app_constants import (
+        CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY,
+    )
 
     sentinel = object()
     checklist.sync_checklist_stats_tab_session_inputs(sentinel)
@@ -337,7 +361,9 @@ def test_run_families_fragment_delegates_when_bundle_present(streamlit_stub, mon
         lambda bundle: render_calls.append(bundle),
     )
     from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
-    from explorer.app.streamlit.bird_families_streamlit_html import GROUP_COVERAGE_SUMMARY_KEY
+    from explorer.app.streamlit.bird_families_streamlit_html import (
+        GROUP_COVERAGE_SUMMARY_KEY,
+    )
 
     bundle = {
         "rankings_sections_top_n": [],
@@ -352,7 +378,9 @@ def test_run_families_fragment_delegates_when_bundle_present(streamlit_stub, mon
 
 def test_render_families_empty_summary_shows_taxonomy_unavailable(streamlit_stub) -> None:
     bird = importlib.import_module("explorer.app.streamlit.bird_families_streamlit_html")
-    from explorer.app.streamlit.bird_families_streamlit_html import GROUP_COVERAGE_SUMMARY_KEY
+    from explorer.app.streamlit.bird_families_streamlit_html import (
+        GROUP_COVERAGE_SUMMARY_KEY,
+    )
 
     st = streamlit_stub
     st.info_calls.clear()
@@ -566,8 +594,13 @@ def test_load_dataframe_upload_cache_error_surfaces_st_error(
 
 
 def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_stub) -> None:
-    from explorer.app.streamlit.app_map_ui import ensure_streamlit_map_basemap_height_keys
-    from explorer.app.streamlit.defaults import MAP_BASEMAP_DEFAULT, MAP_HEIGHT_PX_DEFAULT
+    from explorer.app.streamlit.app_map_ui import (
+        ensure_streamlit_map_basemap_height_keys,
+    )
+    from explorer.app.streamlit.defaults import (
+        MAP_BASEMAP_DEFAULT,
+        MAP_HEIGHT_PX_DEFAULT,
+    )
 
     st = streamlit_stub
     st.session_state.clear()
@@ -590,6 +623,7 @@ def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
     st.html_calls.clear()
     inject_spinner_theme_css()
     assert len(st.html_calls) == 1
+    assert "not(:last-of-type)" in SPINNER_THEME_CSS
     assert st.html_calls[0] == SPINNER_THEME_CSS.strip()
     st.html_calls.clear()
     inject_spinner_theme_css()
@@ -600,7 +634,9 @@ def test_inject_spinner_theme_css_emits_every_run(streamlit_stub) -> None:
 def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit_stub) -> None:
     from explorer.app.streamlit.app_map_ui import inject_spinner_emoji_animation
     from explorer.app.streamlit.defaults import THEME_PRIMARY_HEX
-    from explorer.app.streamlit.streamlit_ui_constants import CHECKLIST_STATS_SPINNER_EMOJIS
+    from explorer.app.streamlit.streamlit_ui_constants import (
+        CHECKLIST_STATS_SPINNER_EMOJIS,
+    )
 
     inject_spinner_emoji_animation()
     assert len(streamlit_stub.iframe_calls) == 1
@@ -611,10 +647,35 @@ def test_inject_spinner_emoji_animation_html_includes_theme_and_emojis(streamlit
     assert streamlit_stub.iframe_calls[0]["height"] == 52
 
 
+def test_place_spinner_emoji_strip_uses_keyed_container(streamlit_stub, monkeypatch) -> None:
+    from explorer.app.streamlit import app_map_ui
+    from explorer.app.streamlit.app_constants import PREP_SPINNER_EMOJI_CONTAINER_KEY
+
+    seen: list[str | None] = []
+
+    class _Host:
+        def empty(self):
+            return streamlit_stub.empty()
+
+    def _container(*, key=None, **_kwargs):
+        seen.append(key)
+        return _Host()
+
+    monkeypatch.setattr(streamlit_stub, "container", _container)
+    monkeypatch.setattr(app_map_ui, "inject_spinner_emoji_animation", lambda: None)
+
+    placeholder = app_map_ui.place_spinner_emoji_strip()
+    assert seen == [PREP_SPINNER_EMOJI_CONTAINER_KEY]
+    assert placeholder is not None
+    placeholder.empty()
+
+
 def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_parent_click(
     streamlit_stub,
 ) -> None:
-    from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
+    from explorer.app.streamlit.app_map_ui import (
+        inject_auto_click_streamlit_download_js,
+    )
 
     label = "Export map HTML"
     streamlit_stub.iframe_calls.clear()
@@ -624,13 +685,32 @@ def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_pare
     assert label in payload
     assert "window.parent.document" in payload
     assert 'data-testid="stDownloadButton"' in payload
-    assert streamlit_stub.iframe_calls[0]["height"] == 0
+    assert streamlit_stub.iframe_calls[0]["height"] == 1
+
+
+def test_lazy_png_export_cache_clears_stale_bytes(streamlit_stub) -> None:
+    ui = importlib.import_module("explorer.app.streamlit.social_cards_png_export_ui")
+    st = streamlit_stub
+    old_fingerprint = ("old",)
+    new_fingerprint = ("new",)
+
+    st.session_state[ui.SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY] = b"png"
+    st.session_state[ui.SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY] = old_fingerprint
+    st.session_state[ui.SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY] = True
+
+    assert ui._lazy_png_export_ready(old_fingerprint) == b"png"
+    assert ui._lazy_png_export_ready(new_fingerprint) is None
+
+    ui._clear_stale_png_export(new_fingerprint)
+
+    assert ui.SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY not in st.session_state
+    assert ui.SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY not in st.session_state
+    assert ui.SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY not in st.session_state
 
 
 def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stub) -> None:
-    from explorer.presentation.checklist_stats_display import CHECKLIST_STATS_TABLE_CSS
-
     from explorer.app.streamlit import streamlit_theme
+    from explorer.presentation.checklist_stats_display import CHECKLIST_STATS_TABLE_CSS
 
     streamlit_stub.html_calls.clear()
     streamlit_theme.inject_streamlit_checklist_css()
@@ -641,11 +721,15 @@ def test_inject_streamlit_checklist_css_composes_table_and_surface(streamlit_stu
     assert streamlit_theme.CHECKLIST_STATS_HTML_TAB_SURFACE_CSS in style_blob
 
     if streamlit_theme.USE_EBIRD_BLUE_HTML_TAB_THEME:
-        from explorer.presentation.checklist_stats_display import CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE
+        from explorer.presentation.checklist_stats_display import (
+            CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE,
+        )
 
         assert streamlit_theme.CHECKLIST_STATS_HTML_TAB_SURFACE_CSS == CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS_BLUE
     else:
-        from explorer.presentation.checklist_stats_display import CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS
+        from explorer.presentation.checklist_stats_display import (
+            CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS,
+        )
 
         assert streamlit_theme.CHECKLIST_STATS_HTML_TAB_SURFACE_CSS == CHECKLIST_STATS_STREAMLIT_HTML_TAB_CSS
 

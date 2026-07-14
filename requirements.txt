@@ -18,6 +18,9 @@ watchdog>=6.0.0,<7  # efficient file watching on reload (Streamlit falls back to
 streamlit-searchbox>=0.1.24
 pydantic>=2.13.4,<3
 
+# Share-summary PNG export (headless Chromium screenshot)
+playwright>=1.58.0,<2
+
 # Testing
 pytest
 pytest-cov>=7.1.0,<8

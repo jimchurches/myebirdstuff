@@ -15,6 +15,7 @@ from explorer.app.streamlit.app_constants import (
     LEAFLET_MAP_MOUNT_NONCE_KEY,
     PERSIST_SPECIES_COMMON_KEY,
     PERSIST_SPECIES_SCI_KEY,
+    PREP_SPINNER_EMOJI_CONTAINER_KEY,
     REPO_ROOT,
     SESSION_SPECIES_IX_KEY,
     SESSION_SPECIES_PICK_KEY,
@@ -114,7 +115,10 @@ def inject_spinner_emoji_animation() -> None:
     """
     emojis = list(CHECKLIST_STATS_SPINNER_EMOJIS)
     batch = max(1, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_SIZE))
-    ms = max(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS_MIN, int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS))
+    ms = max(
+        CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS_MIN,
+        int(CHECKLIST_STATS_SPINNER_EMOJI_BATCH_MS),
+    )
     emojis_js = json.dumps(emojis, ensure_ascii=False)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 html,body{{margin:0;padding:0;overflow:hidden;background:transparent;font-family:system-ui,sans-serif;}}
@@ -145,12 +149,15 @@ letter-spacing:0.02em;color:{THEME_PRIMARY_HEX};}}
 
 
 def place_spinner_emoji_strip() -> Any:
-    """Show the animated bird-emoji strip for the current ``st.spinner``.
+    """Show the animated bird-emoji strip near the current ``st.spinner``.
 
-    Uses ``st.empty()`` + ``container()`` + :func:`inject_spinner_emoji_animation`. Returns the
-    placeholder; call ``.empty()`` on it when the spinner phase ends so the iframe is dropped.
+    Uses a keyed ``st.container`` so Map ↔ Social Cards tab switches replace the same sidebar
+    element instead of briefly stacking two emoji iframes (stale DOM + new strip). Fill via
+    ``st.empty()`` + :func:`inject_spinner_emoji_animation`. Returns the placeholder; call
+    ``.empty()`` on it when prep ends.
     """
-    placeholder = st.empty()
+    host = st.container(key=PREP_SPINNER_EMOJI_CONTAINER_KEY)
+    placeholder = host.empty()
     with placeholder.container():
         inject_spinner_emoji_animation()
     return placeholder
@@ -215,8 +222,6 @@ def inject_auto_click_streamlit_download_js(*, button_label: str) -> None:
     reach the user's filesystem. After export HTML is built, we render a real download_button in
     the sidebar and programmatically click it in ``window.parent.document``.
     """
-    import json
-
     label_js = json.dumps(button_label)
     st.iframe(
         f"""<script>
@@ -242,7 +247,7 @@ def inject_auto_click_streamlit_download_js(*, button_label: str) -> None:
   }}
 }})();
 </script>""",
-        height=0,
+        height=1,
     )
 
 
@@ -267,7 +272,7 @@ def _support_buy_me_a_coffee_outline_html(url: str, *, outline_hex: str) -> str:
         '<div style="text-align:center;margin-top:0.45rem;">'
         f'<a href="{esc}" target="_blank" rel="noopener noreferrer" '
         f'style="display:inline-block;padding:0.26rem 0.6rem;background:transparent;'
-        f'color:{outline_hex};border:1px solid {outline_hex};border-radius:6px;'
+        f"color:{outline_hex};border:1px solid {outline_hex};border-radius:6px;"
         f'font-size:0.78rem;text-decoration:none;font-weight:500;" '
         'title="Optional — helps with hosting">Buy me a coffee</a></div>'
     )
@@ -277,7 +282,9 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
     """Seed basemap and map height session keys for sidebar widgets."""
     if STREAMLIT_MAP_BASEMAP_SAVED_KEY not in st.session_state:
         st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
-    elif st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY) not in MAP_BASEMAP_OPTIONS:
+    elif (
+        st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY) not in MAP_BASEMAP_OPTIONS
+    ):
         st.session_state[STREAMLIT_MAP_BASEMAP_SAVED_KEY] = MAP_BASEMAP_DEFAULT
 
     # Session sidebar basemap: concrete key only (same list as Settings). Seed from saved default.
@@ -294,7 +301,10 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
     else:
         st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY] = max(
             MAP_HEIGHT_PX_MIN,
-            min(MAP_HEIGHT_PX_MAX, int(st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY])),
+            min(
+                MAP_HEIGHT_PX_MAX,
+                int(st.session_state[STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY]),
+            ),
         )
     if STREAMLIT_MAP_HEIGHT_PX_KEY not in st.session_state:
         st.session_state[STREAMLIT_MAP_HEIGHT_PX_KEY] = int(
@@ -305,7 +315,9 @@ def ensure_streamlit_map_basemap_height_keys() -> None:
 def ensure_streamlit_map_marker_colour_scheme_keys() -> None:
     """Seed persisted and sidebar map-marker palette index (``1``…``3``)."""
     if STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY not in st.session_state:
-        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+        st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = (
+            MAP_MARKER_COLOUR_SCHEME_DEFAULT
+        )
     else:
         try:
             _v = int(st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY])
@@ -313,7 +325,9 @@ def ensure_streamlit_map_marker_colour_scheme_keys() -> None:
                 MAP_MARKER_COLOUR_SCHEME_MIN, min(MAP_MARKER_COLOUR_SCHEME_MAX, _v)
             )
         except (TypeError, ValueError):
-            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = MAP_MARKER_COLOUR_SCHEME_DEFAULT
+            st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY] = (
+                MAP_MARKER_COLOUR_SCHEME_DEFAULT
+            )
     if STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY not in st.session_state:
         st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY] = int(
             st.session_state[STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY]
@@ -362,7 +376,9 @@ def sidebar_footer_links(
     support_url = _support_project_url()
     if support_url:
         st.sidebar.markdown(
-            _support_buy_me_a_coffee_outline_html(support_url, outline_hex=SIDEBAR_FOOTER_LINK_HEX),
+            _support_buy_me_a_coffee_outline_html(
+                support_url, outline_hex=SIDEBAR_FOOTER_LINK_HEX
+            ),
             unsafe_allow_html=True,
         )
 
@@ -391,7 +407,9 @@ def species_searchbox_fragment() -> None:
     _last_main = int(st.session_state.get(SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY, -1))
     _just_ran_full_script = _main_id != _last_main
     st.session_state[SESSION_SPECIES_SEARCH_LAST_MAIN_RUN_KEY] = _main_id
-    _editing = bool(st.session_state.get(SESSION_SPECIES_SEARCH_USER_EDITING_KEY, False))
+    _editing = bool(
+        st.session_state.get(SESSION_SPECIES_SEARCH_USER_EDITING_KEY, False)
+    )
     _pick_s = (st.session_state.get(SESSION_SPECIES_PICK_KEY) or "").strip()
     _persist_s = (persisted or "").strip()
     # Full script run: refill bar after tab / map-view changes. Same run may execute this fragment
@@ -439,13 +457,13 @@ def species_searchbox_fragment() -> None:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
         st.session_state.pop(PERSIST_SPECIES_COMMON_KEY, None)
         st.session_state.pop(PERSIST_SPECIES_SCI_KEY, None)
-        st.session_state[SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY] = int(
-            st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)
-        ) + 1
+        st.session_state[SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY] = (
+            int(st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)) + 1
+        )
         # Remount Leaflet component + drop cached export HTML for a clean all-locations view.
-        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
-        ) + 1
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = (
+            int(st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)) + 1
+        )
         st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
         st.rerun()
 

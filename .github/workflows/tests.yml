@@ -9,9 +9,9 @@ concurrency:
 
 on:
   push:
-    branches: [main, beta-next]
+    branches: [main, beta-next, feat/social-cards]
   pull_request:
-    branches: [main, beta-next]
+    branches: [main, beta-next, feat/social-cards]
   workflow_dispatch:
     inputs:
       run_e2e:
@@ -198,6 +198,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-gps-script.txt
+
+      - name: Install Playwright Chromium (share-summary PNG export)
+        run: python -m playwright install chromium
 
       - name: Run pytest with coverage baseline (fail under 65%)
         run: |

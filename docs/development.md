@@ -24,7 +24,21 @@ Slash commands in `.cursor/commands/` automate git and GitHub workflow. Key comm
 | `/nit-fixer` | Standalone aggressive nit pass on PR-touched files |
 | `/code-review` | Large-change review; Nit-Fixer as final step after checklist |
 
-**Base branch resolution:** Commands share logic in [`.cursor/commands/base-branch-resolution.md`](../.cursor/commands/base-branch-resolution.md). When a GitHub issue includes `## Base branch` / `## PR target`, commands read the issue via `gh issue view` instead of defaulting to `beta-next`. Feature-line work (e.g. Social Cards on `feat/social-cards`) is documented in `docs/explorer/social-cards-workflow.md` when present on that branch.
+**Base branch resolution:** Commands share logic in [`.cursor/commands/base-branch-resolution.md`](../.cursor/commands/base-branch-resolution.md). When a GitHub issue includes `## Base branch` / `## PR target`, commands read the issue via `gh issue view` instead of defaulting to `beta-next`. Historical Social Cards feature-line workflow (base `feat/social-cards`) is archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021).
+
+### Nit-Fixer vs CI vs Sentinel
+
+Manual, command-driven pre-merge polish ([#299](https://github.com/jimchurches/myebirdstuff/issues/299)) — not a PR-triggered bot.
+
+| Actor | Role |
+|-------|------|
+| **CI** | Authoritative pass/fail gate (`tests.yml`, ruff, hygiene) |
+| **Test Integrity Sentinel** (`/pr-review` Step 4) | Test honesty on changed tests and behaviour |
+| **Nit-Fixer** (`/nit-fixer`, `/pr-review` Step 4b, `/code-review` final step) | See-it-fix-it mechanical and readability fixes in PR-touched files; leaves changes unstaged for `/commit-work`; never edits test files |
+
+Full guardrails: [`.cursor/commands/nit-fixer.md`](../.cursor/commands/nit-fixer.md).
+
+**Trial after merge:** run `/nit-fixer` or `/pr-review` on 2–3 real PRs; tune prompt caps if needed ([#299](https://github.com/jimchurches/myebirdstuff/issues/299)).
 
 ### Nit-Fixer vs CI vs Sentinel
 

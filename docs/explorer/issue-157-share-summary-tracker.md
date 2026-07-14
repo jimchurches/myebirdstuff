@@ -10,11 +10,14 @@ Living document for the social media summary feature. Update this file as ideas 
 |-------|-------|--------|
 | 0 | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) | Foundation — compute, layouts, tests, design app |
 | 1 | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) | Period stats hardening |
-| 2 | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) | Playwright PNG export |
-| 3 | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) | Socials tab in main app |
-| 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — stat picker, best birds, layout tuning |
+| 2 | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) | Playwright PNG export — **closed** (design studio) |
+| 3 | [#323](https://github.com/jimchurches/myebirdstuff/issues/323) | **Main app port** — epic (supersedes [#276](https://github.com/jimchurches/myebirdstuff/issues/276)) |
+| 3a–3e | [#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328) | Port batches: shared UI → sidebar → wiring → card UI → hardening |
+| 4 | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) | v1 polish — partial in design studio; remainder in [#328](https://github.com/jimchurches/myebirdstuff/issues/328) |
+| — | [#308](https://github.com/jimchurches/myebirdstuff/issues/308) | Dark theme tile contrast (medium lift on Statistics Grid + circle cluster) — merged via `feat/social-cards` |
+| — | [#285](https://github.com/jimchurches/myebirdstuff/issues/285) | Interesting Insights layout — species/checklist facts; Spotlight restored to stat-only — merged via `feat/social-cards` |
 
-**Prototype branch:** `157-social-summary-prototype` → PR for #273 to `beta-next`
+**Integration branch:** `feat/social-cards` → `beta-next` via [PR #343](https://github.com/jimchurches/myebirdstuff/pull/343). Feature-line workflow archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021). Early prototype notes archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964295174).
 
 **Design app:**
 
@@ -28,30 +31,35 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Layout mockups (HTML) | **Done (prototype)** | Hero, tiles, minimal, spotlight |
-| Aspect ratios | **Done (prototype)** | Square post, portrait post, story |
-| App logo on card | **Done (prototype)** | Footer banner only (no top-right corner) |
-| Period: yearly | **Done (prototype)** | From CSV or sample data |
-| Period: monthly | **Done (prototype)** | `compute_share_summary_stats` |
-| Period: weekly | **Done (prototype)** | Sun–Sat weeks; title `May 31, 2026 - June 6, 2026` |
-| Period: custom / trip | **Done (prototype)** | Date range + trip title as green subtitle |
+| Layout mockups (HTML) | **Done** | Tiles, minimal list, spotlight, Interesting Insights |
+| Aspect ratios | **Done** | Square post, portrait post, story |
+| App logo on card | **Done** | Footer banner only (no top-right corner) |
+| Period: yearly | **Done** | From CSV or sample data |
+| Period: monthly | **Done** | `compute_share_summary_stats` |
+| Period: weekly | **Done** | Sun–Sat weeks; title `May 31, 2026 - June 6, 2026` |
+| Period: custom / trip | **Done** | Date range + trip title as green subtitle |
 | Longest streak (year/month) | **Agreed** | Summary row when applicable; not week/custom v1 |
 | Birding days | **Done (prototype)** | Unique checklist days; label “Birding days” |
-| Countries | **Done (prototype)** | All period types; default on tiles/minimal |
+| Countries | **Done (prototype)** | All period types; default on tiles/minimal; **hidden when geographic scope ≠ World** |
+| Geographic scope (country / region) | **Done (design app)** | Scope sidebar; sample AU NSW/QLD + India Goa; filters all stats; footer debug label |
 | World bird coverage | **Summary row only** | Available stat; not on card tiles by default |
-| Best bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
-| PNG generation | **Agreed — Playwright** | Implementation not started; verify Streamlit Cloud |
-| PNG save UX | **Deferred** | Button vs right-click vs hybrid — decide when implementing |
-| Main app integration | **Design noted** | New **Socials** tab before Settings; tab-aware sidebar TBD |
+| Favourite bird(s) | **Roadmap** | Pure user pick (up to 3); choices from period species list |
+| PNG generation | **Done (design app)** | `share_summary_png_export.py` — Playwright HTML→PNG at 1080px formats |
+| Story Statistics Grid circles | **Done (design app)** | Hand-tuned layouts 6–10 in `STORY_CIRCLE_LAYOUTS` + `STORY_CIRCLE_LAYOUT_DIAMETERS` |
+| Circle layout playground | **Done (design app)** | **Circle layout** tab — drag-and-drop tuner for Statistics Grid, Hero Grid, and Spotlight at square/portrait/story (dev-only) |
+| Hex grid experiments | **Experimental (design app only)** | **Hex grid experiments** tab — not for main app v1; Statistics Grid + Circle cluster are the supported tile styles; revisit in a future release |
+| PNG save UX | **Done (design app)** | **Export current card** below preview — PNG regenerated inside `@st.fragment` (Streamlit disallows sidebar inside fragments) |
+| Main app integration | **Design noted** | New **Social Cards** tab before Settings; tab-aware sidebar TBD |
 | Map thumbnail on card | **Dropped (v1)** | v2 |
 | Compare to last year | **Dropped (v1)** | v2 |
 | Custom @handle watermark | **Dropped (v1)** | v2 |
 | Media uploads | **Dropped** | Not in eBird observation CSV |
 | User picks stats on card | **Agreed (v1)** | Defaults per layout; picker UI TBD |
 | Current vs previous period | **Done (design app)** | Radio for year/month/week; default via `suggest_period_anchor()` |
-| Colour schemes | **Config in defaults.py** | Index tunable; no UI yet |
-| Multiple themes (light/dark) | **Config only** | Add entries to colour scheme array |
-| User picks layout in app | **Agreed (v1)** | Hero grid, Stat tiles, Minimal list, **Spotlight** |
+| Colour schemes | **Done (design app)** | Light + dark in ``SHARE_SUMMARY_COLOR_SCHEMES``; theme picker in design studio |
+| Multiple themes (light/dark) | **Done (design app)** | Dark uses **medium lift** tile palette (#308): optional ``tile_bg`` / ``tile_bg_alt`` on grid + circle tiles |
+| User picks layout in app | **Agreed (v1)** | Hero grid, Stat tiles, Minimal list, **Spotlight**, **Interesting Insights** |
+| Interesting Insights layout | **Done (design app)** | Species/checklist facts (#285); separate from stat-only Spotlight; v1 catalog: four fact types |
 
 ---
 
@@ -66,7 +74,7 @@ Captured after second prototype review — closes most open layout/stat question
 - **Compare to last year** — v2.
 - **Custom watermark / @handle** — v2.
 - **Colour scheme UI** — v2 (config-only for now; see Colours).
-- **App-wide mobile UX** — out of scope; Socials tab should still be phone-friendly.
+- **App-wide mobile UX** — out of scope; Social Cards tab should still be phone-friendly.
 
 ### Default stats per layout
 
@@ -77,7 +85,7 @@ Configured in ``explorer/core/share_summary_defaults.py`` (re-exported from ``de
 | **Hero** (4 tiles) | Total species, Lifers, Total checklists, Unique locations |
 | **Stat tiles** (6) | Above + Countries, Birding days |
 | **Minimal list** (6) | Same as stat tiles |
-| **Spotlight** | **Lifers** (``SHARE_SUMMARY_SPOTLIGHT_STAT_DEFAULT``) |
+| **Spotlight** | **Lifers** (``SHARE_SUMMARY_SPOTLIGHT_LABEL_DEFAULT``) |
 
 Users will eventually pick stats from the full catalogue; defaults above are the starting point.
 
@@ -98,23 +106,38 @@ All should appear in the summary row (with values) so users can pick interesting
 | Total individuals | Period | Yes | No |
 | Total bird families | Period (taxonomy map) | Yes | No |
 | Birding hours | Period | Yes | **Summary only** |
-| Longest streak (days) | Period (year/month only) | Yes | No |
+| Total distance (km) | Period (**year** and **lifetime** only) | Yes | No |
+| Longest streak (days) | Period (year/month/lifetime) | Yes | No |
 | Shared checklists | Period | Yes | No |
 | Days birding with others | Period | Yes | No |
 | World bird coverage | All-time (taxonomy) | Yes (summary row) | No |
 | Total species (from taxa) | All-time | Yes (summary row) | No |
 | Observed species (from taxa) | All-time | Yes (summary row) | No |
 | Total families (from taxa) | All-time | Yes (summary row) | No |
-| Best bird(s) | User pick (≤3) | Roadmap | No |
+| Favourite bird(s) | User pick (≤3) | Roadmap | No |
 | Trip title | User text (custom range) | Yes | Replaces green subtitle |
 
 **Note:** “Total bird families” (period) and “Total families (from taxa)” (all-time list) are **different metrics** — both may be offered; labels must distinguish them.
 
 **Also discussed, not in list above:** spotlight single-stat cards (“Year birds”, etc.) — layout choice, not a separate metric. **Label fine-tuning:** custom/trip species spotlight uses **Species** (not “Birds”) to match other layouts; year/month/week still use “Year birds” / “Month birds” / “Week birds” — revisit during tuning.
 
+### Roadmap ideas (not scheduled)
+
+**Best day / best checklist (card stat)** — Rankings in the main app link to the checklist or date on eBird; that context is valuable. As a card highlight without links, a possible pattern: tile title **Best day**, value only (e.g. `97 species` or `2,506 individuals`) — no date, no URL. Deferred until card UX is clearer.
+
+### Geographic scope (country / region) — design app
+
+- **Scope** sidebar section: time range + **Country** (World default) + **Region** when a country is selected.
+- Filters all period stats before card compute (`filter_df_by_geo_scope` in `share_summary_compute.py`).
+- **Sample data:** synthetic checklists in AU-NSW, AU-QLD, and IN-GA (Goa) so controls work without a CSV upload.
+- **World-only stats** (hidden when scope is not World): Countries, Species in eBird taxonomy, Families in eBird taxonomy, Observed species (%).
+- **Footer debug line** above the logo shows the active scope label (e.g. `Australia · New South Wales`); polish for production cards later.
+- **Lifers under regional scope** — semantics TBD (country lifers vs world lifers).
+- Main app ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)) integration not started on this branch.
+
 ### Countries
 
-- **Default** on stat tiles and minimal list for **all period types** (year, month, week, custom).
+- **Default** on stat tiles and minimal list for **all period types** (year, month, week, custom) when geographic scope is **World**.
 - May revisit after user testing (previously year-only).
 
 ### Longest streak
@@ -135,14 +158,15 @@ All should appear in the summary row (with values) so users can pick interesting
 ### Colours
 
 - Current palette looks good for v1.
-- Schemes live in ``explorer/core/share_summary_defaults.py`` → ``SHARE_SUMMARY_COLOR_SCHEMES`` (array of dicts: ``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``).
+- Schemes live in ``explorer/core/share_summary_defaults.py`` → ``SHARE_SUMMARY_COLOR_SCHEMES`` (``bg``, ``bg_alt``, ``text``, ``muted``, ``border``, ``accent``; dark also sets optional ``tile_bg`` / ``tile_bg_alt`` / ``tile_border`` for Statistics Grid and circle-cluster tiles).
 - Active scheme: ``SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT`` (flip index to test new schemes without code changes).
-- **No UI control** for colour schemes yet.
-- **Dark theme:** add a second entry to the array when a good palette exists; otherwise mark v2 with colour-scheme work.
+- **Design app:** sidebar **Theme** picker (light / dark).
+- **Dark theme (#308):** **medium lift** — tile gradient ``#1e2a24`` → ``#243229`` on grid rectangles and circle fills; card shell and footer unchanged. Circle cluster was originally out of scope for #308 but included so both tile presentations match.
+- **Main app ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)):** theme UI ships with port; inherits schemes from defaults.
 
 ### Period selection — current vs previous
 
-Control for **current period** vs **previous period** (radio in design app; Socials tab wording TBD).
+Control for **current period** vs **previous period** (radio in design app; Social Cards tab wording TBD).
 
 Example: on Saturday afternoon finishing the birding month → “current month”; on 2 June posting May results → “previous month”. Same for year/week.
 
@@ -153,13 +177,13 @@ Period resolved via `resolve_period()` relative to reference date (design app us
 ### Card layout iteration (still open)
 
 - Hero 4-tile grid may need **sizing** to reduce blank space (same for 6-tile stat card).
-- Square layout might fit **9 tiles** (room for best-bird slot later); portrait/story differ.
+- Square layout might fit **9 tiles** (room for favourite-bird slot later); portrait/story differ.
 - Per-layout iteration expected during user testing.
 
 ### Controls & sidebar (still open)
 
 - Exact control layout (sidebar vs in-tab vs hybrid) TBD.
-- If sidebar: show **Socials controls only on Socials tab**; restore map controls elsewhere; preserve session state when switching (see Tab-aware sidebar section).
+- If sidebar: show **Social Cards controls only on Social Cards tab**; restore map controls elsewhere; preserve session state when switching (see Tab-aware sidebar section).
 
 ---
 
@@ -191,12 +215,36 @@ Captured from initial prototype review:
 
 ### Main app placement (2025-06-09 — design notes)
 
-- **Tab name (WIP):** **Socials** — working title for the share-summary generator tab; rename later if needed.
+- **Tab name:** **Social Cards** — matches design studio tab label; Title Case like other main tabs. Retired working title: ~~Socials~~.
 - **Tab order:** last data tab, **immediately before Settings** (after Maintenance).
-  - Proposed strip: Map → Checklist Statistics → Ranking & Lists → Bird Families → Yearly Summary → Country → Maintenance → **Socials** → Settings
+  - Proposed strip: Map → Checklist Statistics → Ranking & Lists → Bird Families → Yearly Summary → Country → Maintenance → **Social Cards** → Settings
   - Code touchpoint: `NOTEBOOK_MAIN_TAB_LABELS` in `explorer/app/streamlit/streamlit_ui_constants.py`
-- **Tab content:** Like the design mockup — user can choose period, layout, aspect ratio, spotlight stat, trip title, etc., and see a live preview (then PNG via Playwright when built).
-- **Not the standalone design app** long term — embed into main explorer once phases 1–2 are ready; keep `design_share_summary_app.py` as a dev utility until then.
+- **Tab content:** Like the design mockup — period, layout, aspect ratio, spotlight stat, trip title, **current card** preview, and PNG export. Users change layout via sidebar controls.
+- **Design utility** (`design_share_summary_app.py`) — kept for iteration without touching the main app; **UI should mirror the main app Social Cards tab** (sidebar + current card). Align fully when shipping [#323](https://github.com/jimchurches/myebirdstuff/issues/323).
+
+### Design utility vs main app (#323)
+
+| Feature | Design studio (`design_share_summary_app.py`) | Main app **Social Cards** tab |
+|---------|--------------------------------------------------|-------------------------------|
+| **Current card** preview | Yes | Yes |
+| **Statistics** panel (unified) | Yes — card slots with inline values + click-to-add chips for stats not on card | Port unified panel from design studio ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)); **do not** ship separate Available statistics + Card statistics expanders |
+| **Export current card** | Yes — below **Current card** preview, inside `@st.fragment` | Yes — **generate on export click** with spinner ([#323](https://github.com/jimchurches/myebirdstuff/issues/323) / [#327](https://github.com/jimchurches/myebirdstuff/issues/327); see **PNG export UX**) |
+| **Circle layout** tab | Yes — drag-and-drop story circle tuner (dev-only) | No — design studio only |
+
+**#323 port scope (agreed direction):** port the design utility **Social Cards tab + sidebar layout** to the main app tab, wired to the loaded export DataFrame — **without** the sample-data toggle / CSV re-upload. Ship the unified **Statistics** panel as-is.
+
+Both use one **current card** preview; users cycle layout via sidebar **Layout** control.
+
+### PNG export UX (#275 / #323)
+
+**Problem:** Card statistics and spotlight use `@st.fragment` so the HTML preview can rerun quickly. PNG generation **outside** the fragment did not rerun on fragment-only updates, so the download could lag behind the preview unless the user triggered a full app rerun.
+
+| Context | Approach | Rationale |
+|---------|----------|-----------|
+| **Design studio** | **Export inside the fragment** — `_cached_share_summary_png` + `st.download_button` below the **Current card** preview (not sidebar: Streamlit forbids `st.sidebar` inside `@st.fragment`) | Card stat / spotlight edits rerun the fragment and refresh the PNG. Sidebar changes (period, layout, format, favourites) still cause a full rerun. `@st.cache_data` avoids repeat Playwright work for the same inputs. |
+| **Main app Social Cards ([#323](https://github.com/jimchurches/myebirdstuff/issues/323))** | **Generate on export click** — one **Export current card** control; show a short spinner (“Generating PNG…”), run Playwright, then offer download | End users expect a single action. Playwright takes a few seconds — acceptable when they explicitly export. Avoids background PNG generation on every control change. **Do not** copy the design-studio pre-generation pattern unless the main tab uses the same fragment + stale-export constraint. |
+
+**Agreed 2026-06-11** — implement lazy export in main app ([#327](https://github.com/jimchurches/myebirdstuff/issues/327)); design studio uses in-fragment export.
 
 ---
 
@@ -218,7 +266,7 @@ Most items below were **resolved 2026-06-09** — see **Decisions (2026-06-09)**
 7. ~~Countries~~ — **Agreed:** all period types on tiles/minimal defaults.
 8. ~~Birding hours on card~~ — **Summary row only**, not default on cards.
 9. ~~Trip title placement~~ — **Agreed:** green subtitle; dates as large headline.
-10. **Best bird(s)** — roadmap.
+10. **Favourite bird(s)** — roadmap.
 11. **World bird coverage** — summary row; card placement when user picks stat.
 12. **Shared checklists / days birding with others** — wire into period compute (phase 1).
 13. **Total species/families (from taxa)** — wire from Bird Families bundle when stat picker lands.
@@ -248,17 +296,17 @@ Most items below were **resolved 2026-06-09** — see **Decisions (2026-06-09)**
 - **Summary row:** included so users can add it via stat picker later.
 - **Not** on default card tiles.
 
-### Best bird(s) (roadmap — not implemented)
+### Favourite bird(s) (roadmap — not implemented)
 
 Optional highlight of one or more memorable species on a share card (year summary, trip report, etc.).
 
-- **Pure user choice — not calculated.** No algorithmic “best bird” (no auto-pick by lifer, count, rarity, etc.). The user decides what counts as their best bird(s) for that card.
+- **Pure user choice — not calculated.** No algorithmic “favourite bird” (no auto-pick by lifer, count, rarity, etc.). The user decides what counts as their favourite bird(s) for that card.
 - **Picker, not free text:** up to **3 species** chosen from birds **recorded in the selected period** (same export, filtered by date range). Type-ahead / searchable list from that set — avoids spelling errors and invalid species.
 - **Display TBD:** dedicated layout slot, footer strip, or extra panel on existing layouts (Hero / tiles / story may need more room).
 - **Data:** common + scientific names from export for selected species; static PNG only (no eBird links on image).
 - **Open questions when implementing:**
   - Required for trip cards vs optional on all period types?
-  - One shared “best birds” list per card or separate picks per layout/format?
+  - One shared “favourite birds” list per card or separate picks per layout/format?
   - How to render 1 vs 2 vs 3 species (stacked names, mini list, icons)?
   - Sort order of picks — user-defined drag order?
 
@@ -275,19 +323,20 @@ Optional highlight of one or more memorable species on a share card (year summar
 - Widgets **do** change when switching **map view** (All locations ↔ Species ↔ Lifers ↔ Families) — that logic already lives in the map sidebar.
 - Sidebar does **not** change when switching **main tabs** (Checklist Statistics, Yearly Summary, etc.) — map controls stay visible even on non-map tabs.
 
-### Desired behaviour for Socials
+### Desired behaviour for Social Cards
 
-When the user selects the **Socials** tab:
+When the user selects the **Social Cards** tab:
 
-- Sidebar should show **Socials controls** (mirroring the design app sidebar):
+- Sidebar should show **Social Cards controls** (mirroring the design app sidebar):
   - Period: year / month / week / custom (+ trip title when custom)
   - Aspect ratio: square / portrait post / story
   - Layout: Hero grid / Stat tiles / Minimal list / Spotlight
   - Spotlight stat (when Spotlight layout)
   - Optional: preview scale (maybe main panel only)
-- Main panel: card preview (+ PNG when Playwright lands).
+- Main panel: **current card** preview only (+ PNG export). Same pattern as the design studio.
+- **PNG export ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)):** generate on **Export current card** click with spinner — not pre-generated on every control change (see **PNG export UX**).
 
-When the user leaves **Socials** (any other main tab):
+When the user leaves **Social Cards** (any other main tab):
 
 - Sidebar should **restore map controls** for the **currently selected map view** (preserve existing map session state — basemap, species pick, date filter, etc.).
 
@@ -301,22 +350,22 @@ Other data tabs (Checklist, Yearly, …) — **no change for v1**; map sidebar c
 
 | Approach | Pros | Cons |
 |----------|------|------|
-| **A. Conditional sidebar + session tab key** | Clean swap Map ↔ Socials | Need a reliable way to set tab key (see below) |
-| **B. Socials controls in main panel only** | Simple; no tab detection | Sidebar still map-heavy on Socials tab |
+| **A. Conditional sidebar + session tab key** | Clean swap Map ↔ Social Cards | Need a reliable way to set tab key (see below) |
+| **B. Social Cards controls in main panel only** | Simple; no tab detection | Sidebar still map-heavy on Social Cards tab |
 | **C. Replace top tabs with nav that sets session state** | Sidebar always knows context | Larger UX change |
-| **D. `@st.fragment` Socials tab + sidebar section** | Partial reruns for preview | Sidebar still global; still need conditional render at top level |
+| **D. `@st.fragment` Social Cards tab + sidebar section** | Partial reruns for preview | Sidebar still global; still need conditional render at top level |
 
 **Likely path:** **A** — refactor sidebar into `render_map_sidebar(...)` and `render_socials_sidebar(...)`, gated by `st.session_state[STREAMLIT_MAIN_TAB_KEY]`. Set that key via one of:
 
 - Streamlit version/feature that reports tab selection (if available when we implement)
 - Lightweight sync widget (acceptable if minimal)
-- Socials-specific entry that sets key when its fragment mounts (evaluate against Streamlit behaviour)
+- Social Cards-specific entry that sets key when its fragment mounts (evaluate against Streamlit behaviour)
 
-**Map state preservation:** When switching away from Socials, only sidebar **widgets** swap; do not clear map working-set keys (`STREAMLIT_MAP_VIEW_LABEL_KEY`, species search, export recipe, etc.).
+**Map state preservation:** When switching away from Social Cards, only sidebar **widgets** swap; do not clear map working-set keys (`STREAMLIT_MAP_VIEW_LABEL_KEY`, species search, export recipe, etc.).
 
 ### UX reference
 
-Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Socials tab layout + control set.
+Standalone prototype: `streamlit run explorer/app/streamlit/design_share_summary_app.py` — use as the template for Social Cards tab **controls + current card preview** ([#323](https://github.com/jimchurches/myebirdstuff/issues/323)).
 
 ---
 
@@ -467,13 +516,17 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 |------|------|
 | `explorer/core/share_summary_compute.py` | Period definitions + stat computation |
 | `explorer/core/share_summary_defaults.py` | Colour schemes + default stat lists for share cards |
-| `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling |
+| `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling + export HTML |
+| `explorer/presentation/share_summary_theme.py` / `_metrics.py` / `_layouts.py` | Card HTML (facade: `share_summary_preview.py`) |
+| `explorer/presentation/share_summary_circles_preview.py` / `_hex_preview.py` / `_png_export.py` | Circles, hex experiments, Playwright PNG |
+| `explorer/app/streamlit/social_cards_stat_picker_ui.py` / `_png_export_ui.py` / `_streamlit_ui.py` / `_streamlit_html.py` | Main-tab Social Cards UI (fragment + helpers) |
 | `explorer/app/streamlit/defaults.py` | Re-exports share-summary defaults for Streamlit tuning |
-| `explorer/app/streamlit/design_share_summary_app.py` | Standalone design utility (dev / tuning) |
-| `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Socials** before Settings |
+| `explorer/app/streamlit/design_share_summary_app.py` | Design studio — sidebar controls + current card preview (mirror for [#323](https://github.com/jimchurches/myebirdstuff/issues/323)) |
+| `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Social Cards** before Settings |
 | `explorer/app/streamlit/app_map_working_ui.py` | Map sidebar today — refactor target for tab-aware sidebar |
-| `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Socials fragment |
+| `explorer/app/streamlit/app_dashboard_shell.py` | Main tab shell — wire Social Cards fragment |
 | `tests/explorer/test_share_summary_preview.py` | Preview / extraction tests |
+| `tests/explorer/test_share_summary_png_export.py` | PNG dimensions + filename (Playwright) |
 | `tests/explorer/test_share_summary_compute.py` | Period stats + date-range tests |
 
 ---
@@ -482,21 +535,21 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 
 | Phase | Branch (example) | Deliverable | Status | Issue |
 |-------|------------------|-------------|--------|-------|
-| 0 | `157-social-summary-prototype` | Design app + tracker + core modules | **Ready to commit/PR** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
-| 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **In PR** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
-| 2 | `157-share-summary-png-export` | Playwright HTML→PNG; display image; save UX TBD | Not started | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) |
-| 3 | `157-share-summary-ui` | **Socials** main tab (before Settings); tab-aware sidebar; preview + PNG | Not started | [#276](https://github.com/jimchurches/myebirdstuff/issues/276) |
-| 4 | follow-ups | Best bird(s), stat picker, themes, layout tuning | Not started | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
+| 0 | early prototype | Design app + tracker + core modules | **Done** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
+| 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **Done** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
+| 2 | `feat/social-cards` | Design studio iteration: PNG export, circle layouts, playground, stat picker | **Done** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) (closed) |
+| 3 | `feat/social-cards` | **Social Cards** main tab port (batched) | **Done — merge via [#343](https://github.com/jimchurches/myebirdstuff/pull/343)** | [#323](https://github.com/jimchurches/myebirdstuff/issues/323) ([#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328)) |
+| 4 | follow-ups | Stat picker/themes in studio; polish on main app | **Done on feature line** / Cloud PNG [#345](https://github.com/jimchurches/myebirdstuff/issues/345), Chromium reuse [#344](https://github.com/jimchurches/myebirdstuff/issues/344) | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
 
 ---
 
 ## Ideas backlog
 
 - **World bird coverage** — reuse `compute_world_species_coverage`; status metrics row in mockup; card placement TBD.
-- **Best bird(s)** — **pure user choice** (not algorithmic); up to **3 species** from a period-scoped picker (type-ahead over birds in range — no free-text spelling).
+- **Favourite bird(s)** — **pure user choice** (not algorithmic); up to **3 species** from a period-scoped picker (type-ahead over birds in range — no free-text spelling).
 - **Trip title on custom range** — optional user label alongside formatted dates (see User feedback).
 - **“Year birds”** spotlight card — species count with birding-friendly wording.
-- **Lifer highlight card** — big lifer count on spotlight card (separate from best-bird user picks).
+- **Lifer highlight card** — big lifer count on spotlight card (separate from favourite-bird user picks).
 - **Carousel / multiple PNGs** — one download per stat for Instagram carousel posts.
 - **Map mini-preview** — dropped v1.
 - **Compare to last year** — dropped v1.
@@ -511,8 +564,24 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 - **Weekly stats** use **Sun–Sat** calendar weeks (not ISO Mon–Sun).
 - **Empty periods** return zeroed stats object; cards may look sparse — may need “no data” state in UI.
 - Logo SVG is embedded via data URI; PNG export must bundle or inline the same asset.
-- **Playwright on Streamlit Cloud** — must verify headless Chromium in production; blocks Cloud PNG if unsupported.
-- **Phone save behaviour** — long-press / share sheet varies by browser; may force download button despite minimal UI preference.
+- **Playwright on Streamlit Cloud** — must verify headless Chromium in production; blocks Cloud PNG if unsupported — tracked in [#345](https://github.com/jimchurches/myebirdstuff/issues/345).
+- **Chromium reuse across PNG exports** — each export launches a fresh browser today; warm/reuse is a perf follow-up — [#344](https://github.com/jimchurches/myebirdstuff/issues/344).
+- **Phone save behaviour** — long-press / share sheet varies by browser; design app ships secondary download button as fallback.
+
+### Streamlit Cloud verification ([#345](https://github.com/jimchurches/myebirdstuff/issues/345); was under #275)
+
+**Local / CI:** `playwright` is a runtime dependency in `requirements.txt`. After `pip install -r requirements.txt`, run `python -m playwright install chromium`. Unit tests in `test_share_summary_png_export.py` assert PNG width/height; CI installs Chromium in the `unit-tests` job.
+
+**Streamlit Cloud (not yet verified on a live deploy) — open checklist lives on [#345](https://github.com/jimchurches/myebirdstuff/issues/345):**
+
+| Check | Expected | Status |
+|-------|----------|--------|
+| `pip install playwright` during app deploy | Succeeds (listed in `requirements.txt`) | Assumed OK |
+| `playwright install chromium` on Cloud builder | May **not** run automatically — Cloud only runs `pip install` from requirements | **Open — [#345](https://github.com/jimchurches/myebirdstuff/issues/345)** |
+| Headless Chromium launch at runtime | Needs browser binaries on the container filesystem (~100MB+) | **Open — [#345](https://github.com/jimchurches/myebirdstuff/issues/345)** |
+| PNG on Social Cards / design app | Download succeeds, or warning if Chromium missing | Graceful `RuntimeError` message implemented |
+
+**If Cloud blocks Chromium:** show HTML preview only on Cloud (current behaviour for scaled mockup) and document “PNG export requires local run” until a Pillow fallback or custom Cloud build step is added. Re-test save flow on iOS/Android once a Cloud deploy exists.
 
 ---
 
@@ -529,9 +598,22 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2025-06-09 | Layout choice: Hero / Stat tiles / Minimal list / Spotlight for v1; period-aware spotlight labels |
 | 2025-06-09 | Main app: **Socials** tab (WIP name) before Settings; tab-aware sidebar design notes |
 | 2025-06-09 | Stats: **Birding days** + **Countries** (year); period context for when to show TBD |
-| 2025-06-09 | Roadmap: **Best bird(s)** — user picks up to 3 highlight species (not implemented) |
-| 2025-06-09 | Best bird(s) clarified: **user-only** choice; picker from period species (not calculated) |
+| 2025-06-09 | Roadmap: **Favourite bird(s)** — user picks up to 3 highlight species (not implemented) |
+| 2025-06-09 | Favourite bird(s) clarified: **user-only** choice; picker from period species (not calculated) |
 | 2025-06-09 | **World bird coverage** on roadmap; mockup status row only (6.8% sample / live from taxonomy) |
 | 2026-06-09 | **Decisions batch:** default stats per layout, footer-only logo, trip title → green subtitle, Sun–Sat weekly titles, countries all periods, colour schemes in defaults.py, dropped media/map/compare/watermark v1 |
 | 2026-06-09 | GitHub sub-issues created: #273–#277; plan comment on #157 |
 | 2026-06-11 | #274: period stats hardening — shared stats, all-time taxonomy row, current/previous period + `suggest_period_anchor` heuristics documented |
+| 2026-06-11 | #275: Playwright PNG export — `share_summary_png_export.py`, design app `st.image` + download button; Cloud verification documented as open |
+| 2026-06-11 | Main app tab name decided: **Social Cards** (design studio + #276); retired ~~Socials~~ working title |
+| 2026-06-11 | Removed **All layouts** comparison grid from design studio; UI aligns with main app (current card + layout picker) |
+| 2026-06-11 | **PNG export UX:** design studio — export inside `@st.fragment`; main app (#276) — generate on export click with spinner |
+| 2026-06-11 | **Total distance (km)** — year and lifetime periods only; same column as Yearly Summary |
+| 2026-06-11 | Roadmap notes: **Best day** card stat (value-only, no link); **geographic scope** (country/state filter) |
+| 2026-06-18 | **Geographic scope (design app):** Scope country/region controls, multi-region sample data, world-only stat hiding, footer scope debug label |
+| 2026-06-28 | **#308 dark tile contrast:** medium-lift dark palette on Statistics Grid + circle cluster; PNG export cache busts on scheme edits; design-studio mockup tab removed after sign-off |
+| 2026-06-29 | **#285 Interesting Insights:** separate layout for species/checklist facts; Spotlight restored to stat-only (Classic/Circle); design studio insights + species pickers; countable species picker deferred to main-app port ([#328](https://github.com/jimchurches/myebirdstuff/issues/328)) |
+| 2026-07-01 | **#275 closed** (PNG export design studio); **#276 closed** — superseded by [#323](https://github.com/jimchurches/myebirdstuff/issues/323) epic + port batches [#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328) |
+| 2026-07-14 | PNG Cloud verify + Chromium reuse follow-ups filed: [#345](https://github.com/jimchurches/myebirdstuff/issues/345), [#344](https://github.com/jimchurches/myebirdstuff/issues/344) (PR #343 review) |
+| 2026-07-14 | Archived `social-cards-workflow.md` to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021); module map kept in this tracker |
+| 2026-07-14 | Archived early prototype notes to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964295174); removed stale `issue-157-social-summary-prototype.md` |

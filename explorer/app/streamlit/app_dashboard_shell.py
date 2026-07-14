@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import streamlit as st
-
 from explorer.app.streamlit.app_bootstrap import TaxonomyPopupAssets
 from explorer.app.streamlit.app_landing_ui import title_with_logo
+from explorer.app.streamlit.app_main_tab_ui import notebook_main_tabs
 from explorer.app.streamlit.app_prep_map_ui import render_prep_spinner_and_map_tab
 from explorer.app.streamlit.app_settings_ui import render_settings_tab
 from explorer.app.streamlit.bird_families_streamlit_html import (
@@ -25,8 +24,10 @@ from explorer.app.streamlit.maintenance_streamlit_html import (
 from explorer.app.streamlit.rankings_streamlit_html import (
     run_rankings_streamlit_tab_fragment,
 )
+from explorer.app.streamlit.social_cards_streamlit_html import (
+    run_social_cards_streamlit_tab_fragment,
+)
 from explorer.app.streamlit.streamlit_theme import inject_main_tab_panel_top_compact_css
-from explorer.app.streamlit.streamlit_ui_constants import NOTEBOOK_MAIN_TAB_LABELS
 from explorer.app.streamlit.yearly_summary_streamlit_html import (
     run_yearly_summary_streamlit_fragment,
 )
@@ -82,9 +83,10 @@ def render_dashboard_shell(
         tab_families,
         tab_yearly,
         tab_country,
+        tab_social_cards,
         tab_maint,
         tab_settings,
-    ) = st.tabs(NOTEBOOK_MAIN_TAB_LABELS)
+    ) = notebook_main_tabs()
 
     inject_main_tab_panel_top_compact_css()
 
@@ -121,6 +123,13 @@ def render_dashboard_shell(
         tab_country,
         tab_maint,
     )
+
+    with tab_social_cards:
+        # Lazy-mount (#328): Social Cards is the only main tab gated on ``tab.open``.
+        # Period/geo/layout/format/theme stay in the main-script sidebar (app chrome).
+        # Map prep is skipped while this tab is active (see ``app_prep_map_ui``).
+        if tab_social_cards.open:
+            run_social_cards_streamlit_tab_fragment(df_full)
 
     with tab_settings:
         render_settings_tab(
