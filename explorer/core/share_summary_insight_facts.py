@@ -389,7 +389,7 @@ def _build_peak_fact(
         return _peak_from_series(
             fact_id,
             _checklist_counts_by_unit(checklists, unit, completed_only=True),
-            metric_unit="completed checklists",
+            metric_unit="checklists",
             format_key=fmt,
         )
     if fact_id.endswith("_checklists"):

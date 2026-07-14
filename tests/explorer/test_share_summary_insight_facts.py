@@ -480,4 +480,4 @@ def test_peak_checklists_all_vs_completed_and_tie_earliest():
     assert completed.primary_text == "2023"
     assert completed.metric_value == 2
     assert completed.peak_tied is True
-    assert format_insight_fact_metric(completed) == "2 completed checklists"
+    assert format_insight_fact_metric(completed) == "2 checklists"
