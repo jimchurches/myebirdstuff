@@ -364,6 +364,7 @@ def png_export_fingerprint(
             insight_fact.primary_text,
             insight_fact.metric_value,
             insight_fact.metric_unit,
+            insight_fact.peak_tied,
         )
     return (
         stats_token,

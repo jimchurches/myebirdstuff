@@ -30,6 +30,8 @@ from explorer.core.share_summary_defaults import (
 )
 from explorer.core.share_summary_insight_facts import (
     INSIGHT_FACT_PICKER_LABELS,
+    INSIGHT_LEGACY_AUTO_FACT_IDS,
+    INSIGHT_PEAK_FACT_IDS,
     InsightFactId,
     ShareSummaryInsightFact,
     insight_fact_requires_species,
@@ -630,19 +632,19 @@ def _insight_fact_options(
     *,
     species_options: tuple[str, ...] = (),
 ) -> list[tuple[InsightFactId, str]]:
-    auto_ids: tuple[InsightFactId, ...] = (
-        "most_common_checklist_species",
-        "most_individuals_species",
-        "biggest_checklist_count",
-    )
+    """Legacy auto facts and selected-species first; peak period facts below (#334)."""
+    present = {f.fact_id for f in facts}
     options: list[tuple[InsightFactId, str]] = []
-    for fact_id in auto_ids:
-        if any(f.fact_id == fact_id for f in facts):
+    for fact_id in INSIGHT_LEGACY_AUTO_FACT_IDS:
+        if fact_id in present:
             options.append((fact_id, INSIGHT_FACT_PICKER_LABELS[fact_id]))
     if species_options:
         options.append(
             ("species_individuals", INSIGHT_FACT_PICKER_LABELS["species_individuals"])
         )
+    for fact_id in INSIGHT_PEAK_FACT_IDS:
+        if fact_id in present:
+            options.append((fact_id, INSIGHT_FACT_PICKER_LABELS[fact_id]))
     return options
 
 

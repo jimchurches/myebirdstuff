@@ -306,3 +306,176 @@ def test_species_individuals_insight_fact_isolates_one_species():
         species_individuals_insight_fact(df, period_for_year(2024), "Australian Magpie")
         is None
     )
+
+
+def _peak_row(
+    *,
+    sid: str,
+    dt: str,
+    common: str,
+    count: int = 1,
+    all_obs: str | int = 1,
+    scientific: str | None = None,
+) -> dict:
+    return {
+        "Submission ID": sid,
+        "Date": dt,
+        "Scientific Name": scientific or common,
+        "Common Name": common,
+        "Count": count,
+        "All Obs Reported": all_obs,
+        "Location ID": "L1",
+        "Location": "Test location",
+        "Country": "AU",
+    }
+
+
+def test_peak_year_facts_lifetime_only():
+    from datetime import date
+
+    from explorer.core.share_summary_compute import (
+        period_for_lifetime,
+        period_for_year,
+    )
+    from explorer.core.share_summary_insight_facts import peak_fact_ids_for_period_kind
+
+    df = pd.DataFrame(
+        [
+            _peak_row(
+                sid="S1",
+                dt="2023-01-01",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+                count=1,
+            ),
+            _peak_row(
+                sid="S2",
+                dt="2024-01-01",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+                count=1,
+            ),
+            _peak_row(
+                sid="S3",
+                dt="2024-06-01",
+                common="Willie Wagtail",
+                scientific="Rhipidura leucophrys",
+                count=10,
+            ),
+            _peak_row(
+                sid="S4",
+                dt="2025-01-01",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+                count=1,
+            ),
+        ]
+    )
+    lifetime = period_for_lifetime(date(2023, 1, 1), date(2025, 12, 31))
+    facts = compute_insight_facts(df, lifetime)
+    year_checklists = insight_fact_by_id(facts, "year_most_checklists")
+    assert year_checklists is not None
+    assert year_checklists.primary_text == "2024"
+    assert year_checklists.metric_value == 2
+    assert year_checklists.label == "Best year for checklists"
+    year_species = insight_fact_by_id(facts, "year_most_species")
+    assert year_species is not None
+    assert year_species.primary_text == "2024"
+    assert year_species.metric_value == 2
+    year_individuals = insight_fact_by_id(facts, "year_most_individuals")
+    assert year_individuals is not None
+    assert year_individuals.primary_text == "2024"
+    assert year_individuals.metric_value == 11
+
+    yearly = compute_insight_facts(df, period_for_year(2024))
+    assert insight_fact_by_id(yearly, "year_most_checklists") is None
+    assert "year_most_checklists" not in peak_fact_ids_for_period_kind("year")
+    assert insight_fact_by_id(yearly, "month_most_checklists") is not None
+
+
+def test_peak_month_and_day_gating():
+    from datetime import date
+
+    from explorer.core.share_summary_compute import (
+        period_for_custom,
+        period_for_lifetime,
+        period_for_month,
+        period_for_week_containing,
+        period_for_year,
+    )
+
+    magpie = dict(common="Australian Magpie", scientific="Gymnorhina tibicen")
+    wagtail = dict(common="Willie Wagtail", scientific="Rhipidura leucophrys")
+    finch = dict(common="Zebra Finch", scientific="Taeniopygia guttata")
+    df = pd.DataFrame(
+        [
+            _peak_row(sid="S1", dt="2025-01-01", count=1, **magpie),
+            _peak_row(sid="S2", dt="2025-01-01", count=2, **wagtail),
+            _peak_row(sid="S3", dt="2025-03-15", count=1, **magpie),
+            _peak_row(sid="S4", dt="2025-03-15", count=1, **wagtail),
+            _peak_row(sid="S5", dt="2025-03-15", count=5, **finch),
+        ]
+    )
+    yearly = compute_insight_facts(df, period_for_year(2025))
+    month = insight_fact_by_id(yearly, "month_most_checklists")
+    assert month is not None
+    assert month.primary_text == "Mar 2025"
+    assert month.metric_value == 3
+    day = insight_fact_by_id(yearly, "day_most_species")
+    assert day is not None
+    assert day.primary_text == "15 Mar 2025"
+    assert day.metric_value == 3
+
+    monthly = compute_insight_facts(df, period_for_month(2025, 3))
+    assert insight_fact_by_id(monthly, "month_most_checklists") is None
+    assert insight_fact_by_id(monthly, "day_most_checklists") is not None
+
+    lifetime = compute_insight_facts(
+        df, period_for_lifetime(date(2025, 1, 1), date(2025, 12, 31))
+    )
+    assert insight_fact_by_id(lifetime, "day_most_checklists") is not None
+    assert insight_fact_by_id(lifetime, "month_most_checklists") is None
+
+    week = compute_insight_facts(df, period_for_week_containing(date(2025, 3, 15)))
+    assert insight_fact_by_id(week, "day_most_checklists") is None
+    custom = compute_insight_facts(
+        df, period_for_custom(date(2025, 3, 1), date(2025, 3, 31))
+    )
+    assert insight_fact_by_id(custom, "day_most_checklists") is None
+
+
+def test_peak_checklists_all_vs_completed_and_tie_earliest():
+    from datetime import date
+
+    from explorer.core.share_summary_compute import period_for_lifetime
+
+    magpie = dict(common="Australian Magpie", scientific="Gymnorhina tibicen")
+    df = pd.DataFrame(
+        [
+            # 2023: 2 all, 2 completed
+            _peak_row(sid="A1", dt="2023-01-01", all_obs=1, **magpie),
+            _peak_row(sid="A2", dt="2023-02-01", all_obs=1, **magpie),
+            # 2024: 3 all, 1 completed — wins all; loses completed
+            _peak_row(sid="B1", dt="2024-01-01", all_obs=1, **magpie),
+            _peak_row(sid="B2", dt="2024-02-01", all_obs=0, **magpie),
+            _peak_row(sid="B3", dt="2024-03-01", all_obs=0, **magpie),
+            # 2025: 2 all, 2 completed — ties 2023 on completed; earliest year wins
+            _peak_row(sid="C1", dt="2025-01-01", all_obs=1, **magpie),
+            _peak_row(sid="C2", dt="2025-02-01", all_obs=1, **magpie),
+        ]
+    )
+    facts = compute_insight_facts(
+        df, period_for_lifetime(date(2023, 1, 1), date(2025, 12, 31))
+    )
+    all_cl = insight_fact_by_id(facts, "year_most_checklists")
+    assert all_cl is not None
+    assert all_cl.primary_text == "2024"
+    assert all_cl.metric_value == 3
+    assert all_cl.peak_tied is False
+
+    completed = insight_fact_by_id(facts, "year_most_completed_checklists")
+    assert completed is not None
+    assert completed.primary_text == "2023"
+    assert completed.metric_value == 2
+    assert completed.peak_tied is True
+    assert format_insight_fact_metric(completed) == "2 completed checklists"
