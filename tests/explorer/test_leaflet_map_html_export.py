@@ -34,7 +34,8 @@ def test_popup_export_html_blocks_javascript_href():
         }
     )
     assert "javascript:" not in html
-    assert "pebird-map-popup__visit-link-text" in html
+    assert '<span class="pebird-map-popup__visit-link-text">bad</span>' in html
+    assert "<a href=" not in html
 
 
 def test_popup_export_html_all_locations_visited():
