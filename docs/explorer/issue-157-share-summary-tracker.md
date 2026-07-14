@@ -565,7 +565,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 - **Empty periods** return zeroed stats object; cards may look sparse — may need “no data” state in UI.
 - Logo SVG is embedded via data URI; PNG export must bundle or inline the same asset.
 - **Playwright on Streamlit Cloud** — verified on Community Cloud ([#345](https://github.com/jimchurches/myebirdstuff/issues/345)); `packages.txt` + lazy Chromium install. Re-test if Playwright or the Cloud Debian image changes.
-- **Chromium reuse across PNG exports** — each export launches a fresh browser today; warm/reuse is a perf follow-up — [#344](https://github.com/jimchurches/myebirdstuff/issues/344).
+- **Chromium reuse across PNG exports** — warm Chromium per calling thread across exports in-process ([#344](https://github.com/jimchurches/myebirdstuff/issues/344)); pages closed after each screenshot; `shutdown_shared_chromium` / `atexit` for process end. Playwright sync is not thread-safe, so sessions are not shared across threads. Local check (tiles square → minimal → spotlight): cold ~0.65s, warm ~0.07–0.08s (~8×).
 - **Phone save behaviour** — long-press / share sheet varies by browser; design app ships secondary download button as fallback.
 
 ### Streamlit Cloud verification ([#345](https://github.com/jimchurches/myebirdstuff/issues/345); was under #275)
@@ -618,5 +618,6 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-07-14 | PNG Cloud verify + Chromium reuse follow-ups filed: [#345](https://github.com/jimchurches/myebirdstuff/issues/345), [#344](https://github.com/jimchurches/myebirdstuff/issues/344) (PR #343 review) |
 | 2026-07-14 | [#345](https://github.com/jimchurches/myebirdstuff/issues/345): `packages.txt` + lazy Chromium install on first PNG export; fix first-click export error UX |
 | 2026-07-14 | [#345](https://github.com/jimchurches/myebirdstuff/issues/345): Streamlit Cloud PNG export verified on live deploy (author) |
+| 2026-07-14 | [#344](https://github.com/jimchurches/myebirdstuff/issues/344): reuse warm Playwright Chromium across PNG exports (per-thread, atexit shutdown) |
 | 2026-07-14 | Archived `social-cards-workflow.md` to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021); module map kept in this tracker |
 | 2026-07-14 | Archived early prototype notes to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964295174); removed stale `issue-157-social-summary-prototype.md` |
