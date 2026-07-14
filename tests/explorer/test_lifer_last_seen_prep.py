@@ -38,8 +38,55 @@ def test_aggregate_lifer_sites_two_locations():
     )
     assert n == 2
     assert set(by_loc.keys()) == {"A", "C"}
-    assert len(by_loc["A"]) == 1
-    assert len(by_loc["C"]) == 1
+    assert by_loc["A"] == [
+        {
+            "scientific_name": "Turdus migratorius",
+            "common_name": "",
+            "is_base_lifer": True,
+            "is_taxon_lifer": False,
+        }
+    ]
+    assert by_loc["C"] == [
+        {
+            "scientific_name": "Anas superciliosa",
+            "common_name": "",
+            "is_base_lifer": True,
+            "is_taxon_lifer": False,
+        }
+    ]
+
+
+def test_prepare_lifer_last_seen_keeps_only_countable_species():
+    scientific_names = [
+        "Anas gracilis",
+        "Anas gracilis rogersi",
+        "Anas sp.",
+        "Anas gracilis x Anas castanea",
+        "Anas gracilis/castanea",
+        "Columba livia",
+    ]
+    df = pd.DataFrame(
+        {
+            "datetime": pd.date_range("2020-01-01", periods=6),
+            "Date": pd.date_range("2020-01-01", periods=6),
+            "Scientific Name": scientific_names,
+            "Common Name": [
+                "Grey Teal",
+                "Grey Teal (rogersi)",
+                "Duck sp.",
+                "Hybrid duck",
+                "Grey Teal / Chestnut Teal",
+                "Rock Pigeon (Domestic type)",
+            ],
+            "Location ID": [f"L{i}" for i in range(6)],
+        }
+    )
+
+    prep = prepare_lifer_last_seen(df, base_species_fn=base_species_for_lifer)
+
+    assert prep.lifer_lookup_df["Scientific Name"].tolist() == scientific_names[:2]
+    assert prep.true_lifer_locations == {"anas gracilis": "L0"}
+    assert prep.true_last_seen_locations == {"anas gracilis": "L1"}
 
 
 def test_prepare_lifer_last_seen_invariants_first_last_consistent():
