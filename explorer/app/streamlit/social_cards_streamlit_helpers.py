@@ -9,6 +9,7 @@ from explorer.core.share_summary_compute import (
     ShareSummaryAllTimeStats,
     ShareSummaryGeoScope,
     ShareSummaryStats,
+    filter_df_by_geo_scope,
 )
 from explorer.core.share_summary_defaults import share_summary_color_scheme_fingerprint
 from explorer.core.share_summary_insight_facts import ShareSummaryInsightFact
@@ -45,6 +46,65 @@ def ordered_custom_date_range(
     if resolved_end < resolved_start:
         return resolved_end, resolved_start, True
     return resolved_start, resolved_end, False
+
+
+def social_cards_dataframe_signature(df: object, *, session_sig: object | None = None) -> object:
+    """Stable-enough dataset token for Social Cards geo caches.
+
+    Prefer the explorer ``EBIRD_DATA_SIG_KEY`` value when available; otherwise fall
+    back to object identity + row count (eBird export is static for a session).
+    """
+    if session_sig is not None:
+        return session_sig
+    if df is None:
+        return ("empty", 0)
+    try:
+        row_count = len(df)  # type: ignore[arg-type]
+    except TypeError:
+        row_count = -1
+    return ("id", id(df), row_count)
+
+
+def resolve_geo_scoped_dataframe(
+    df: object,
+    geo_scope: ShareSummaryGeoScope,
+    *,
+    dataset_sig: object,
+    cache_entry: dict[str, object] | None,
+) -> tuple[object, dict[str, object], bool]:
+    """Return ``(scoped_df, cache_entry, cache_hit)`` keyed by signature + geo token.
+
+    *cache_entry* shape: ``{"key": (dataset_sig, geo_token), "df": DataFrame}``.
+    On a miss, callers should wrap the call in a perf span — this helper filters
+    immediately when *cache_entry* does not match.
+    """
+    cache_key = (dataset_sig, geo_scope.scope_token())
+    if (
+        isinstance(cache_entry, dict)
+        and cache_entry.get("key") == cache_key
+        and "df" in cache_entry
+    ):
+        return cache_entry["df"], cache_entry, True
+    scoped = filter_df_by_geo_scope(df, geo_scope)  # type: ignore[arg-type]
+    entry: dict[str, object] = {"key": cache_key, "df": scoped}
+    return scoped, entry, False
+
+
+def peek_geo_scoped_dataframe_cache(
+    *,
+    dataset_sig: object,
+    geo_scope: ShareSummaryGeoScope,
+    cache_entry: dict[str, object] | None,
+) -> object | None:
+    """Return cached scoped frame when key matches; otherwise ``None``."""
+    cache_key = (dataset_sig, geo_scope.scope_token())
+    if (
+        isinstance(cache_entry, dict)
+        and cache_entry.get("key") == cache_key
+        and "df" in cache_entry
+    ):
+        return cache_entry["df"]
+    return None
 
 
 def card_stat_data_scope(

@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from explorer.app.streamlit.app_constants import EBIRD_DATA_SIG_KEY
 from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.app.streamlit.social_cards_session_keys import (
     APP_SOCIAL_CARDS_KEYS,
@@ -19,13 +20,15 @@ from explorer.app.streamlit.social_cards_sidebar_ui import (
 )
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     ordered_custom_date_range,
+    peek_geo_scoped_dataframe_cache,
+    resolve_geo_scoped_dataframe,
+    social_cards_dataframe_signature,
 )
 from explorer.core.share_summary_compute import (
     PeriodAnchor,
     ShareSummaryGeoScope,
     ShareSummaryPeriod,
     dataset_date_bounds,
-    filter_df_by_geo_scope,
     period_for_custom,
     period_for_lifetime,
     period_for_year,
@@ -36,6 +39,7 @@ from explorer.core.share_summary_compute import (
 SOCIAL_CARDS_DF_SCOPED_SESSION_KEY = "_social_cards_df_scoped"
 SOCIAL_CARDS_GEO_SCOPE_SESSION_KEY = "_social_cards_geo_scope"
 SOCIAL_CARDS_SIDEBAR_SELECTION_KEY = "_social_cards_sidebar_selection"
+SOCIAL_CARDS_GEO_FILTER_CACHE_KEY = "_social_cards_geo_filter_cache"
 
 
 def _card_heading_or_none(text: str) -> str | None:
@@ -155,8 +159,27 @@ def render_social_cards_main_sidebar(df_full: Any) -> None:
         selection = render_sidebar_card_controls(keys)
         st.session_state[SOCIAL_CARDS_SIDEBAR_SELECTION_KEY] = selection
 
-        with perf_span("social_cards.filter_geo_scope"):
-            scoped = filter_df_by_geo_scope(df_full, geo_scope)
+        dataset_sig = social_cards_dataframe_signature(
+            df_full,
+            session_sig=st.session_state.get(EBIRD_DATA_SIG_KEY),
+        )
+        cached_entry = st.session_state.get(SOCIAL_CARDS_GEO_FILTER_CACHE_KEY)
+        if not isinstance(cached_entry, dict):
+            cached_entry = None
+        scoped = peek_geo_scoped_dataframe_cache(
+            dataset_sig=dataset_sig,
+            geo_scope=geo_scope,
+            cache_entry=cached_entry,
+        )
+        if scoped is None:
+            with perf_span("social_cards.filter_geo_scope"):
+                scoped, cache_entry, _ = resolve_geo_scoped_dataframe(
+                    df_full,
+                    geo_scope,
+                    dataset_sig=dataset_sig,
+                    cache_entry=None,
+                )
+            st.session_state[SOCIAL_CARDS_GEO_FILTER_CACHE_KEY] = cache_entry
         st.session_state[SOCIAL_CARDS_DF_SCOPED_SESSION_KEY] = scoped
 
 

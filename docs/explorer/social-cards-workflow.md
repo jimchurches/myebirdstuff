@@ -94,6 +94,7 @@ Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboa
 | `social_cards.compute_insight_facts` | `social_cards_streamlit_html.py` (Interesting Insights layout only) |
 | `social_cards.render_preview` | `social_cards_streamlit_html.py` |
 | `social_cards.png_export` | `social_cards_png_export_ui.py` |
+| `social_cards.filter_geo_scope` | `app_social_cards_sidebar_ui.py` (cache miss only; key = dataset sig + geo token) |
 
 ### `fragment.social_cards` timing (~47k-row export, #328)
 

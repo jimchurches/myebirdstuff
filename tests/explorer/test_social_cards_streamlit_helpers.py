@@ -8,6 +8,7 @@ from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_stat_data_scope_from_session_export,
     ordered_custom_date_range,
     png_export_fingerprint,
+    social_cards_dataframe_signature,
 )
 from explorer.core.share_summary_compute import (
     ShareSummaryAllTimeStats,
@@ -43,6 +44,81 @@ def test_ordered_custom_date_range_swaps_inverted_pair():
         default_end=date(2020, 12, 31),
     )
     assert (start, end, swapped) == (date(2020, 1, 1), date(2020, 12, 31), False)
+
+
+def test_resolve_geo_scoped_dataframe_caches_by_signature_and_token(monkeypatch):
+    import pandas as pd
+
+    from explorer.app.streamlit import social_cards_streamlit_helpers as helpers
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope
+
+    df = pd.DataFrame(
+        {
+            "Submission ID": ["s1", "s2"],
+            "Country": ["Australia", "Indonesia"],
+            "State/Province": ["AU-NSW", "ID-JW"],
+            "Date": ["2025-01-01", "2025-01-02"],
+        }
+    )
+    calls: list[str] = []
+
+    def _counting_filter(frame, scope):
+        calls.append(scope.scope_token())
+        return frame.iloc[:1].copy()
+
+    monkeypatch.setattr(helpers, "filter_df_by_geo_scope", _counting_filter)
+
+    scope = ShareSummaryGeoScope(country_key="AU")
+    scoped, entry, hit = helpers.resolve_geo_scoped_dataframe(
+        df, scope, dataset_sig=("sig", 1), cache_entry=None
+    )
+    assert hit is False
+    assert calls == ["AU"]
+    scoped2, entry2, hit2 = helpers.resolve_geo_scoped_dataframe(
+        df, scope, dataset_sig=("sig", 1), cache_entry=entry
+    )
+    assert hit2 is True
+    assert scoped2 is scoped
+    assert entry2 is entry
+    assert calls == ["AU"]
+
+    # Different geo token forces a miss.
+    helpers.resolve_geo_scoped_dataframe(
+        df,
+        ShareSummaryGeoScope(),
+        dataset_sig=("sig", 1),
+        cache_entry=entry,
+    )
+    assert calls == ["AU", "world"]
+
+    # Different dataset signature forces a miss.
+    helpers.resolve_geo_scoped_dataframe(
+        df, scope, dataset_sig=("sig", 2), cache_entry=entry
+    )
+    assert calls == ["AU", "world", "AU"]
+
+    assert helpers.peek_geo_scoped_dataframe_cache(
+        dataset_sig=("sig", 1),
+        geo_scope=scope,
+        cache_entry=entry,
+    ) is scoped
+    assert (
+        helpers.peek_geo_scoped_dataframe_cache(
+            dataset_sig=("sig", 2),
+            geo_scope=scope,
+            cache_entry=entry,
+        )
+        is None
+    )
+
+
+def test_social_cards_dataframe_signature_prefers_session_sig():
+    assert social_cards_dataframe_signature(None, session_sig=("a", 1, "x")) == (
+        "a",
+        1,
+        "x",
+    )
+    assert social_cards_dataframe_signature(None) == ("empty", 0)
 
 
 def _base_png_fingerprint_kwargs() -> dict:
