@@ -68,7 +68,6 @@ def cached_share_summary_png(
     )
 
 
-
 def centered_card_download_button(
     *,
     label: str,
@@ -236,6 +235,3 @@ def render_lazy_png_export_controls(
             st.session_state[SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY] = fingerprint
             st.session_state[SOCIAL_CARDS_PNG_AUTO_DOWNLOAD_KEY] = True
             _rerun_social_cards_fragment()
-
-
-

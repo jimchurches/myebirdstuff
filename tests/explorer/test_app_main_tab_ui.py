@@ -1,5 +1,6 @@
 """Tests for main dashboard tab selection helpers."""
 
+from contextlib import nullcontext
 from datetime import date
 from types import SimpleNamespace
 
@@ -221,6 +222,95 @@ def test_resolve_social_cards_period_from_app_session_custom_range(monkeypatch):
     assert period.trip_title == "North Coast trip"
     assert state[APP_SOCIAL_CARDS_KEYS.custom_start] == date(2025, 6, 1)
     assert state[APP_SOCIAL_CARDS_KEYS.custom_end] == date(2025, 6, 7)
+
+
+def test_custom_period_controls_report_swapped_dates(monkeypatch):
+    from explorer.app.streamlit import app_social_cards_sidebar_ui as sidebar_ui
+
+    state = _SessionState(
+        {
+            APP_SOCIAL_CARDS_KEYS.custom_start: date(2025, 6, 7),
+            APP_SOCIAL_CARDS_KEYS.custom_end: date(2025, 6, 1),
+        }
+    )
+    _install_session_state(monkeypatch, state)
+    captions: list[str] = []
+    monkeypatch.setattr(sidebar_ui.st, "selectbox", lambda *_args, **_kwargs: "custom")
+    monkeypatch.setattr(
+        sidebar_ui.st,
+        "caption",
+        lambda message: captions.append(message),
+    )
+    monkeypatch.setattr(sidebar_ui.st, "date_input", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(sidebar_ui.st, "text_input", lambda *_args, **_kwargs: None)
+    df = pd.DataFrame({"Date": ["2025-06-01", "2025-06-07"]})
+
+    sidebar_ui._render_period_controls(df, APP_SOCIAL_CARDS_KEYS)
+
+    assert captions == [
+        "Start and end dates were swapped so the range runs forwards."
+    ]
+    assert state[APP_SOCIAL_CARDS_KEYS.custom_start] == date(2025, 6, 1)
+    assert state[APP_SOCIAL_CARDS_KEYS.custom_end] == date(2025, 6, 7)
+
+
+def test_social_cards_sidebar_reuses_geo_filter_for_same_dataset_and_scope(monkeypatch):
+    from explorer.app.streamlit import app_social_cards_sidebar_ui as sidebar_ui
+    from explorer.app.streamlit.app_constants import EBIRD_DATA_SIG_KEY
+    from explorer.core.share_summary_compute import ShareSummaryGeoScope
+
+    first_signature = ("dataset", 1)
+    second_signature = ("dataset", 2)
+    state = _SessionState({EBIRD_DATA_SIG_KEY: first_signature})
+    _install_session_state(monkeypatch, state)
+    scope = ShareSummaryGeoScope(country_key="AU")
+    filtered_frames: list[object] = []
+    filter_calls: list[tuple[object, str]] = []
+
+    def resolve_filter(_df, geo_scope, *, dataset_sig, cache_entry):
+        assert cache_entry is None
+        filtered = object()
+        filtered_frames.append(filtered)
+        filter_calls.append((dataset_sig, geo_scope.scope_token()))
+        return (
+            filtered,
+            {"key": (dataset_sig, geo_scope.scope_token()), "df": filtered},
+            False,
+        )
+
+    monkeypatch.setattr(sidebar_ui.st, "sidebar", nullcontext())
+    monkeypatch.setattr(sidebar_ui.st, "header", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(sidebar_ui.st, "subheader", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(sidebar_ui, "_render_period_controls", lambda *_args: None)
+    monkeypatch.setattr(
+        sidebar_ui,
+        "render_sidebar_geo_scope_controls",
+        lambda *_args: scope,
+    )
+    monkeypatch.setattr(
+        sidebar_ui,
+        "render_sidebar_card_controls",
+        lambda *_args: object(),
+    )
+    monkeypatch.setattr(sidebar_ui, "perf_span", lambda *_args: nullcontext())
+    monkeypatch.setattr(sidebar_ui, "resolve_geo_scoped_dataframe", resolve_filter)
+    df = pd.DataFrame({"Date": ["2025-06-01"]})
+
+    sidebar_ui.render_social_cards_main_sidebar(df)
+    first_scoped = state[sidebar_ui.SOCIAL_CARDS_DF_SCOPED_SESSION_KEY]
+    sidebar_ui.render_social_cards_main_sidebar(df)
+
+    assert filter_calls == [(first_signature, "AU")]
+    assert state[sidebar_ui.SOCIAL_CARDS_DF_SCOPED_SESSION_KEY] is first_scoped
+
+    state[EBIRD_DATA_SIG_KEY] = second_signature
+    sidebar_ui.render_social_cards_main_sidebar(df)
+
+    assert filter_calls == [
+        (first_signature, "AU"),
+        (second_signature, "AU"),
+    ]
+    assert state[sidebar_ui.SOCIAL_CARDS_DF_SCOPED_SESSION_KEY] is filtered_frames[1]
 
 
 def test_resolve_social_cards_period_from_app_session_lifetime(monkeypatch):

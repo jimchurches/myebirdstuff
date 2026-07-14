@@ -51,6 +51,7 @@ _GRID_TILE_LABEL_PX = "20px"
 _GRID_TILE_CELL_PAD = "32px 20px"
 _GRID_TILE_GAP = "20px"
 
+
 def _is_tall(fmt: FormatId, width: int, height: int) -> bool:
     return height > width
 
@@ -643,5 +644,3 @@ def render_share_summary_preview_html(
             scope_label=scope_label,
         )
         return _card_shell(width=width, height=height, inner_html=inner, scale=scale)
-
-

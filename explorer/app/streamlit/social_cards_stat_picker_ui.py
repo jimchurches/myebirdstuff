@@ -379,9 +379,7 @@ def render_card_stat_picker_ui(
     for i in range(ui_rows):
         current = picks[i] if i < len(picks) else ""
         other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
-        options = [""] + [
-            label for label in available_labels if label not in other
-        ]
+        options = [""] + [label for label in available_labels if label not in other]
         current = _sync_card_stat_selectbox_value(
             layout, i, options=options, desired=current, keys=keys
         )
@@ -713,6 +711,3 @@ def render_insight_fact_picker_ui(
         return species_individuals_insight_fact(df, period, species_common)
 
     return resolve_insight_fact(facts, selected_id)
-
-
-

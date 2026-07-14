@@ -45,6 +45,7 @@ from explorer.presentation.share_summary_preview import (
 SOCIAL_CARDS_STATISTICS_LABEL = "Card statistics"
 SOCIAL_CARDS_CURRENT_CARD_LABEL = "Current card"
 
+
 @st.fragment
 def render_current_card_fragment(
     *,
@@ -173,4 +174,3 @@ def render_current_card_fragment(
             mime="image/png",
             help_text="PNG of the current card above.",
         )
-
