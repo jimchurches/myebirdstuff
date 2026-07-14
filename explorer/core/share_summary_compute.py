@@ -310,6 +310,16 @@ def suggest_period_anchor(kind: Literal["year", "month", "week"], reference: dat
     return "current"
 
 
+def dataset_date_bounds(df: pd.DataFrame) -> tuple[date, date] | None:
+    """Inclusive min/max checklist dates in *df*, or ``None`` when no usable dates."""
+    if df.empty or "Date" not in df.columns:
+        return None
+    dates = pd.to_datetime(df["Date"], errors="coerce").dropna()
+    if dates.empty:
+        return None
+    return dates.min().date(), dates.max().date()
+
+
 def period_for_custom(
     start: date,
     end: date,

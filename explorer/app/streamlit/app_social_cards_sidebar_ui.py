@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from explorer.app.streamlit.perf_instrumentation import perf_span
 from explorer.app.streamlit.social_cards_session_keys import (
     APP_SOCIAL_CARDS_KEYS,
     SocialCardsSessionKeys,
@@ -20,6 +21,7 @@ from explorer.core.share_summary_compute import (
     PeriodAnchor,
     ShareSummaryGeoScope,
     ShareSummaryPeriod,
+    dataset_date_bounds,
     filter_df_by_geo_scope,
     period_for_custom,
     period_for_lifetime,
@@ -54,13 +56,12 @@ def _render_period_controls(
     keys: SocialCardsSessionKeys,
 ) -> None:
     """Period pickers for session export (no sample-data toggle)."""
-    dates = pd.to_datetime(df["Date"], errors="coerce").dropna()
-    if dates.empty:
+    bounds = dataset_date_bounds(df)
+    if bounds is None:
         st.caption("No dated checklists in this export.")
         return
 
-    min_d = dates.min().date()
-    max_d = dates.max().date()
+    min_d, max_d = bounds
     reference = date.today()
 
     period_mode = st.selectbox(
@@ -139,7 +140,8 @@ def render_social_cards_main_sidebar(df_full: Any) -> None:
         selection = render_sidebar_card_controls(keys)
         st.session_state[SOCIAL_CARDS_SIDEBAR_SELECTION_KEY] = selection
 
-        scoped = filter_df_by_geo_scope(df_full, geo_scope)
+        with perf_span("social_cards.filter_geo_scope"):
+            scoped = filter_df_by_geo_scope(df_full, geo_scope)
         st.session_state[SOCIAL_CARDS_DF_SCOPED_SESSION_KEY] = scoped
 
 
@@ -150,12 +152,11 @@ def resolve_social_cards_period_from_session(
     """Resolve the selected period object from sidebar session keys."""
     if df_scoped is None or df_scoped.empty:
         return None
-    dates = pd.to_datetime(df_scoped["Date"], errors="coerce").dropna()
-    if dates.empty:
+    bounds = dataset_date_bounds(df_scoped)
+    if bounds is None:
         return None
 
-    min_d = dates.min().date()
-    max_d = dates.max().date()
+    min_d, max_d = bounds
     reference = date.today()
     period_mode = st.session_state.get(keys.period_mode, SOCIAL_CARDS_DEFAULT_PERIOD_MODE)
 
@@ -170,8 +171,6 @@ def resolve_social_cards_period_from_session(
     if period_mode == "custom":
         start = st.session_state.get(keys.custom_start, min_d)
         end = st.session_state.get(keys.custom_end, max_d)
-        if end < start:
-            start, end = end, start
         heading = _card_heading_or_none(
             st.session_state.get(keys.custom_card_heading, "")
         )

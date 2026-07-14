@@ -7,6 +7,7 @@ import pandas as pd
 from explorer.core.share_summary_compute import (
     compute_share_summary_all_time_stats,
     compute_share_summary_stats,
+    dataset_date_bounds,
     format_custom_date_range,
     period_for_custom,
     period_for_lifetime,
@@ -197,6 +198,17 @@ def test_compute_share_summary_stats_empty_period_returns_sparse_stats():
     assert stats.species is None
     assert stats.checklists is None
     assert stats.lifers is None
+
+
+def test_dataset_date_bounds_returns_inclusive_min_max():
+    df = pd.DataFrame(
+        {
+            "Date": ["2024-06-01", "not-a-date", "2020-01-10", "2024-12-31"],
+        }
+    )
+    assert dataset_date_bounds(df) == (date(2020, 1, 10), date(2024, 12, 31))
+    assert dataset_date_bounds(pd.DataFrame({"Date": []})) is None
+    assert dataset_date_bounds(pd.DataFrame({"Country": ["AU"]})) is None
 
 
 def test_period_for_lifetime_uses_full_export_span():
