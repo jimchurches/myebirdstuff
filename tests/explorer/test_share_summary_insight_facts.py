@@ -611,3 +611,14 @@ def test_insight_layout_renders_peak_tie_soft_note():
     )
     assert "Tied with" not in html_clean
     assert 'class="rich-note"' not in html_clean
+
+
+def test_peak_picker_labels_match_card_headings():
+    from explorer.core.share_summary_insight_facts import (
+        INSIGHT_FACT_CARD_LABELS,
+        INSIGHT_FACT_PICKER_LABELS,
+        INSIGHT_PEAK_FACT_IDS,
+    )
+
+    for fact_id in INSIGHT_PEAK_FACT_IDS:
+        assert INSIGHT_FACT_PICKER_LABELS[fact_id] == INSIGHT_FACT_CARD_LABELS[fact_id]

@@ -49,26 +49,7 @@ InsightFactId = Literal[
     "day_most_individuals",
 ]
 
-INSIGHT_FACT_PICKER_LABELS: dict[InsightFactId, str] = {
-    "most_common_checklist_species": "Most common checklist species",
-    "most_individuals_species": "Most individuals of a single species",
-    "biggest_checklist_count": "Biggest single-checklist count",
-    "species_individuals": "Individuals of selected species",
-    "year_most_checklists": "Year with most checklists",
-    "year_most_completed_checklists": "Year with most completed checklists",
-    "year_most_species": "Year with most species",
-    "year_most_individuals": "Year with most individual birds",
-    "month_most_checklists": "Month with most checklists",
-    "month_most_completed_checklists": "Month with most completed checklists",
-    "month_most_species": "Month with most species",
-    "month_most_individuals": "Month with most individual birds",
-    "day_most_checklists": "Day with most checklists",
-    "day_most_completed_checklists": "Day with most completed checklists",
-    "day_most_species": "Day with most species",
-    "day_most_individuals": "Day with most individual birds",
-}
-
-# Card heading for peak facts (layout A: calendar unit as hero). Picker labels stay descriptive.
+# Peak card headings — also used as Insights picker labels (keep in sync by sharing).
 INSIGHT_FACT_CARD_LABELS: dict[InsightFactId, str] = {
     "year_most_checklists": "Most checklists in a year",
     "year_most_completed_checklists": "Most completed checklists in a year",
@@ -82,6 +63,14 @@ INSIGHT_FACT_CARD_LABELS: dict[InsightFactId, str] = {
     "day_most_completed_checklists": "Most completed checklists in a day",
     "day_most_species": "Most species in a day",
     "day_most_individuals": "Most individual birds in a day",
+}
+
+INSIGHT_FACT_PICKER_LABELS: dict[InsightFactId, str] = {
+    "most_common_checklist_species": "Most common checklist species",
+    "most_individuals_species": "Most individuals of a single species",
+    "biggest_checklist_count": "Biggest single-checklist count",
+    "species_individuals": "Individuals of selected species",
+    **INSIGHT_FACT_CARD_LABELS,
 }
 
 INSIGHT_FACTS_REQUIRING_SPECIES: frozenset[InsightFactId] = frozenset(
