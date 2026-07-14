@@ -492,9 +492,13 @@ def test_load_dataframe_upload_happy_path(streamlit_stub) -> None:
             return raw
 
     df, prov, src_label, data_path, base = app_data_loading.load_dataframe(uploaded=_Up())
-    assert df is not None and len(df) > 0
-    assert prov and "Upload:" in prov and _Up.name in prov
-    assert src_label is None and data_path is None
+    assert df is not None
+    assert df.iloc[0]["Submission ID"] == "S100909607"
+    assert df.iloc[0]["Common Name"] == "Eastern Spinebill"
+    assert pd.api.types.is_datetime64_any_dtype(df["Date"])
+    assert prov == f"Upload: **{_Up.name}**"
+    assert src_label is None
+    assert data_path is None
     assert base == _Up.name
 
 
@@ -514,7 +518,7 @@ def test_load_dataframe_upload_error_surfaces_st_error(streamlit_stub, monkeypat
 
     df, *_rest = app_data_loading.load_dataframe(uploaded=_Bad())
     assert df is None
-    assert any("Could not load CSV" in msg for msg in streamlit_stub.error_calls)
+    assert streamlit_stub.error_calls == ["Could not load CSV: forced load failure"]
 
 
 def test_load_dataframe_disk_path_and_labels(streamlit_stub, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -537,7 +541,8 @@ def test_load_dataframe_disk_path_and_labels(streamlit_stub, monkeypatch: pytest
 
     df, prov, src_label, data_path, base = app_data_loading.load_dataframe()
     assert df is not None
-    assert prov and "Disk:" in prov and "/data/MyEBirdData.csv" in prov
+    assert df.to_dict(orient="records") == [{"Submission ID": "x"}]
+    assert prov == "Disk: `/data/MyEBirdData.csv` (_Config Yaml_)"
     assert src_label == "config_yaml"
     assert data_path == "/data/MyEBirdData.csv"
     assert base == "MyEBirdData.csv"
@@ -562,9 +567,15 @@ def test_load_dataframe_falls_back_to_upload_cache(streamlit_stub, monkeypatch: 
     )
 
     raw = _fixture_csv_bytes()
-    df, prov, *_rest = app_data_loading.load_dataframe(upload_cache=(raw, "cached.csv"))
+    df, prov, src_label, data_path, base = app_data_loading.load_dataframe(
+        upload_cache=(raw, "cached.csv")
+    )
     assert df is not None
-    assert prov and "Upload:" in prov and "cached.csv" in prov
+    assert df.to_dict(orient="records") == [{"Submission ID": "cache"}]
+    assert prov == "Upload: **cached.csv**"
+    assert src_label is None
+    assert data_path is None
+    assert base == "cached.csv"
 
 
 def test_load_dataframe_upload_cache_error_surfaces_st_error(
@@ -590,7 +601,7 @@ def test_load_dataframe_upload_cache_error_surfaces_st_error(
 
     df, *_rest = app_data_loading.load_dataframe(upload_cache=(b"not-valid-csv", "cached.csv"))
     assert df is None
-    assert any("Could not load CSV" in msg for msg in streamlit_stub.error_calls)
+    assert streamlit_stub.error_calls == ["Could not load CSV: forced cache load failure"]
 
 
 def test_ensure_streamlit_map_basemap_height_keys_seeds_and_repairs(streamlit_stub) -> None:
