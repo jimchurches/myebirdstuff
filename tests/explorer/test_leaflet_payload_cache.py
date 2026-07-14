@@ -197,6 +197,8 @@ def test_leaflet_payload_cache_store_migrates_legacy_single_entry(
     streamlit_stub,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # Other Streamlit tests may drop/reimport this module; bind and call the
+    # live module object so ``st`` patching matches store/lookup globals.
     import explorer.app.streamlit.app_prep_map_leaflet_caches as cache_module
 
     monkeypatch.setattr(cache_module, "st", streamlit_stub)
@@ -208,12 +210,16 @@ def test_leaflet_payload_cache_store_migrates_legacy_single_entry(
         "geojson": {"features": []},
     }
 
-    leaflet_payload_cache_store(
+    cache_module.leaflet_payload_cache_store(
         session_key,
         ("new",),
         {"revision": "new", "geojson": {"features": [{"id": 1}]}},
         max_entries=2,
     )
 
-    assert leaflet_payload_cache_lookup(session_key, legacy_key)["revision"] == "old"
-    assert leaflet_payload_cache_lookup(session_key, ("new",))["revision"] == "new"
+    assert cache_module.leaflet_payload_cache_lookup(session_key, legacy_key)[
+        "revision"
+    ] == "old"
+    assert cache_module.leaflet_payload_cache_lookup(session_key, ("new",))[
+        "revision"
+    ] == "new"
