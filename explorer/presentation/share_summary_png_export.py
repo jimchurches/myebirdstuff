@@ -7,18 +7,28 @@ Requires the ``playwright`` package and Chromium binaries
 On Streamlit Community Cloud, ``pip install`` alone does not download browsers.
 This module installs Chromium into the user cache on first use when the
 executable is missing (#345). System libraries still need ``packages.txt``.
+
+Chromium is kept warm on a **dedicated worker thread** across exports (#344).
+Playwright's sync API is greenlet-bound: close/screenshot must run on the
+thread that started Playwright. A single worker owns that lifetime so
+``atexit`` / :func:`shutdown_shared_chromium` can tear down safely from any
+thread. Pages are closed after each screenshot.
 """
 
 from __future__ import annotations
 
+import atexit
 import contextlib
 import logging
+import queue
 import re
 import struct
 import subprocess
 import sys
 import threading
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from explorer.core.share_summary_insight_facts import ShareSummaryInsightFact
 from explorer.presentation.share_summary_layouts import render_share_summary_export_html
@@ -41,9 +51,119 @@ _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 _logger = logging.getLogger(__name__)
 
+_T = TypeVar("_T")
+
 # One install attempt per process — avoids install loops if download fails.
 _chromium_install_lock = threading.Lock()
 _chromium_install_attempted = False
+
+
+@dataclass
+class _WarmChromiumSession:
+    """Owns a long-lived ``sync_playwright`` context and Chromium browser."""
+
+    playwright_cm: Any
+    browser: Any
+
+    def is_connected(self) -> bool:
+        try:
+            return bool(self.browser.is_connected())
+        except Exception:
+            return False
+
+    def close(self) -> None:
+        with contextlib.suppress(Exception):
+            self.browser.close()
+        with contextlib.suppress(Exception):
+            self.playwright_cm.__exit__(None, None, None)
+
+
+class _ChromiumWorker:
+    """Single thread that owns Playwright sync greenlets and warm Chromium."""
+
+    def __init__(self) -> None:
+        self._jobs: queue.Queue[Any] = queue.Queue()
+        self._lock = threading.Lock()
+        self._thread: threading.Thread | None = None
+        self._atexit_registered = False
+
+    def _ensure_running(self) -> None:
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+            self._thread = threading.Thread(
+                target=self._run,
+                name="share-summary-chromium",
+                daemon=True,
+            )
+            self._thread.start()
+            if not self._atexit_registered:
+                atexit.register(shutdown_shared_chromium)
+                self._atexit_registered = True
+
+    def run_with_browser(self, fn: Callable[[Any], _T]) -> _T:
+        """Run ``fn(browser)`` on the worker thread; propagate errors."""
+        self._ensure_running()
+        done = threading.Event()
+        outcome: dict[str, Any] = {}
+        self._jobs.put(("call", fn, outcome, done))
+        done.wait()
+        if "error" in outcome:
+            raise outcome["error"]
+        return outcome["value"]
+
+    def shutdown(self) -> None:
+        """Close Chromium on the worker thread, then stop the worker."""
+        with self._lock:
+            thread = self._thread
+            if thread is None or not thread.is_alive():
+                self._thread = None
+                return
+        done = threading.Event()
+        self._jobs.put(("shutdown", done))
+        if not done.wait(timeout=30):
+            _logger.warning("Chromium worker shutdown timed out")
+        thread.join(timeout=5)
+        with self._lock:
+            if self._thread is thread:
+                self._thread = None
+
+    def _run(self) -> None:
+        session: _WarmChromiumSession | None = None
+        try:
+            # Jobs: ("shutdown", done) or ("call", fn, outcome, done).
+            while True:
+                job = self._jobs.get()
+                if job[0] == "shutdown":
+                    done_event: threading.Event = job[1]
+                    if session is not None:
+                        session.close()
+                        session = None
+                    done_event.set()
+                    return
+
+                _, fn, outcome, done_event = job
+                try:
+                    if session is None or not session.is_connected():
+                        if session is not None:
+                            session.close()
+                            session = None
+                        session = _start_warm_chromium_session()
+                    outcome["value"] = fn(session.browser)
+                except BaseException as exc:
+                    outcome["error"] = exc
+                    if session is not None and not session.is_connected():
+                        with contextlib.suppress(Exception):
+                            session.close()
+                        session = None
+                finally:
+                    done_event.set()
+        finally:
+            if session is not None:
+                session.close()
+
+
+_chromium_worker = _ChromiumWorker()
 
 
 def png_dimensions(png_bytes: bytes) -> tuple[int, int]:
@@ -143,17 +263,24 @@ def _raise_launch_failure(exc: BaseException) -> None:
     raise exc
 
 
-@contextlib.contextmanager
-def _launch_chromium():
-    """Launch a short-lived Chromium for one PNG export.
+def _launch_browser(playwright: Any) -> Any:
+    """Launch Chromium, installing binaries once when the executable is missing."""
+    try:
+        return playwright.chromium.launch()
+    except Exception as exc:
+        if not _chromium_executable_missing(exc):
+            _raise_launch_failure(exc)
+        try:
+            _ensure_chromium_installed()
+            return playwright.chromium.launch()
+        except RuntimeError:
+            raise
+        except Exception as retry_exc:
+            _raise_launch_failure(retry_exc)
 
-    A fresh browser per export keeps shutdown simple and avoids leaked
-    headless processes across Streamlit reruns. Warm reuse across exports
-    can land later if batch or rapid-fire export becomes common (#344).
 
-    When binaries are missing (typical after Cloud ``pip install`` only),
-    download Chromium once into the user cache, then retry launch.
-    """
+def _start_warm_chromium_session() -> _WarmChromiumSession:
+    """Start Playwright and launch Chromium (must run on the worker thread)."""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
@@ -161,23 +288,40 @@ def _launch_chromium():
             "Playwright is not installed. Run: pip install playwright && "
             "python -m playwright install chromium"
         ) from exc
-    with sync_playwright() as playwright:
-        try:
-            browser = playwright.chromium.launch()
-        except Exception as exc:
-            if not _chromium_executable_missing(exc):
-                _raise_launch_failure(exc)
-            try:
-                _ensure_chromium_installed()
-                browser = playwright.chromium.launch()
-            except RuntimeError:
-                raise
-            except Exception as retry_exc:
-                _raise_launch_failure(retry_exc)
-        try:
-            yield browser
-        finally:
-            browser.close()
+
+    playwright_cm = sync_playwright()
+    playwright = playwright_cm.__enter__()
+    try:
+        browser = _launch_browser(playwright)
+    except Exception:
+        with contextlib.suppress(Exception):
+            playwright_cm.__exit__(*sys.exc_info())
+        raise
+    return _WarmChromiumSession(playwright_cm=playwright_cm, browser=browser)
+
+
+def shutdown_shared_chromium() -> None:
+    """Close the warm Chromium session on its owning worker thread."""
+    _chromium_worker.shutdown()
+
+
+def _run_with_shared_browser(fn: Callable[[Any], _T]) -> _T:
+    """Execute ``fn(browser)`` on the Chromium worker (tests may patch this)."""
+    return _chromium_worker.run_with_browser(fn)
+
+
+@contextlib.contextmanager
+def _launch_chromium():
+    """Yield a warm Chromium via the dedicated worker (tests / thin wrappers).
+
+    Playwright API calls must stay on the worker thread for real browsers.
+    Prefer :func:`share_summary_to_png_bytes`, which screenshots on that thread.
+    """
+
+    def _identity(browser: Any) -> Any:
+        return browser
+
+    yield _run_with_shared_browser(_identity)
 
 
 def share_summary_to_png_bytes(
@@ -212,20 +356,27 @@ def share_summary_to_png_bytes(
         geo_scope=geo_scope,
         scope_label=scope_label,
     )
-    with _launch_chromium() as browser:
+
+    def _screenshot(browser: Any) -> bytes:
         page = browser.new_page(
             viewport={"width": width, "height": height},
             device_scale_factor=1,
         )
-        page.set_content(html, wait_until="load")
-        return page.screenshot(
-            type="png",
-            clip={"x": 0, "y": 0, "width": width, "height": height},
-        )
+        try:
+            page.set_content(html, wait_until="load")
+            return page.screenshot(
+                type="png",
+                clip={"x": 0, "y": 0, "width": width, "height": height},
+            )
+        finally:
+            page.close()
+
+    return _run_with_shared_browser(_screenshot)
 
 
 __all__ = [
     "png_dimensions",
     "share_summary_png_filename",
     "share_summary_to_png_bytes",
+    "shutdown_shared_chromium",
 ]
