@@ -577,7 +577,7 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | Check | Expected | Status |
 |-------|----------|--------|
 | `pip install playwright` during app deploy | Succeeds (listed in `requirements.txt`) | Assumed OK |
-| System libraries for Chromium | Repo-root `packages.txt` (apt via Community Cloud) | **Shipped** |
+| System libraries for Chromium | Repo-root `packages.txt` (apt via Community Cloud; **package names only** — Cloud does not treat `#` lines as comments) | **Shipped** |
 | Chromium browser binaries | Lazy `python -m playwright install chromium` on first export when executable missing (`share_summary_png_export.py`) | **Shipped** — confirm on live Cloud after deploy |
 | PNG on Social Cards / design app | Download succeeds, or clear warning if still blocked | Error path now fragment-reruns so first click surfaces the message |
 | iOS / Android save/share | Spot-check once Cloud PNG works | **Open** |
