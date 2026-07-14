@@ -18,16 +18,17 @@ Streamlit under `explorer/app/` is **UI only**. Business logic belongs in `explo
 
 **Before adding a literal number, colour, size, bound, or layout knob** in Streamlit or map UI code, ask: would a developer or technical end user want to tune this without reading implementation? If yes → put it in **`explorer/app/streamlit/defaults.py`** (named `UPPER_SNAKE_CASE` constant), then import it.
 
-There is no rigid taxonomy — use judgement. Typical `defaults.py` contents: map pin geometry, colours, opacities, cluster options, legend sizes, zoom/slider bounds, layout widths, debug toggles, active colour-scheme index. Feature-specific card/layout tunables may live in a `explorer/core/*_defaults.py` module (re-exported from `defaults.py` when Streamlit needs them).
+There is no rigid taxonomy — use judgement. Typical `defaults.py` contents: map pin geometry, colours, opacities, cluster options, legend sizes, zoom/slider bounds, layout widths, debug toggles, active colour-scheme index. Feature-specific card/layout tunables may live in an `explorer/core/*_defaults.py` module (re-exported from `defaults.py` when Streamlit needs them).
 
 | Kind | Location |
 |------|----------|
-| **Developer / technical-user tweakables** | `explorer/app/streamlit/defaults.py` |
-| Fixed product copy, tab labels, URLs | `explorer/app/streamlit/streamlit_ui_constants.py` |
+| **Developer / technical-user tweakables** (incl. map marker scheme presets) | `explorer/app/streamlit/defaults.py` |
+| Fixed product copy, tab labels, URLs, spinner *text* | `explorer/app/streamlit/streamlit_ui_constants.py` |
 | Persisted settings schema (YAML-backed) | `explorer/core/settings_schema_defaults.py` |
-| Feature tunables (e.g. share summary) | `explorer/core/*_defaults.py` → often re-exported via `defaults.py` |
+| Feature tunables (e.g. share summary) | `explorer/core/*_defaults.py` → re-exported via `defaults.py` as **façade only** |
+| Map marker scheme *dataclass shapes* | `explorer/core/map_marker_scheme_model.py` |
 
-Do not scatter magic numbers in `explorer/app/` — centralise tunables in `defaults.py` (or the matching `*_defaults.py`). See [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md) § Configuration and [`docs/python-style-guide.md`](docs/python-style-guide.md) § Constants.
+Do not scatter magic numbers in `explorer/app/` — centralise tunables in `defaults.py` (or the matching `*_defaults.py`). Do not “own” re-exported schema/share-summary literals inside `defaults.py`. See [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md) § Defaults and [`docs/python-style-guide.md`](docs/python-style-guide.md) § Constants.
 
 ## Design / playground apps
 

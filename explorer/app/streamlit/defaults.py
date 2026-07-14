@@ -2,27 +2,43 @@
 Developer tweakables for the Streamlit explorer: **sizes, colours, layout bounds, and map behaviour**
 you may edit in one place without hunting through core modules.
 
-**What belongs here**
+**Owned here (edit literals in this file)**
 
 - Marker cluster options, pin **radius / stroke / opacities**, legend dot sizes, popup width
-- Map UI: basemap list/labels (from ``explorer/data/basemaps.yaml``), height slider bounds, view labels, date-filter default; **debug-only map toggles** registered in :func:`debug_defaults_enabled` for CI
-- Theme hex values aligned with ``.streamlit/config.toml``, settings panel width cap
-- Rankings HTML layout width / scroll hint default; spinner CSS cache key suffix when theme CSS changes
+- Map viewport / framing guards (``fit_bounds``, single-point zoom, focused quantiles, species blank view)
+- Map marker colour schemes (``MAP_MARKER_COLOUR_SCHEME_*``) — design-utility target; types live in
+  :mod:`explorer.core.map_marker_scheme_model`
+- Map UI knobs owned locally: height **step** / iframe floor, view labels, date-filter default,
+  session LRU sizes, bird-families dataframe height; **debug-only map toggles** registered in
+  :func:`debug_defaults_enabled` for CI
+- Theme hex values aligned with ``.streamlit/config.toml``, settings panel width cap, and
+  ``SPINNER_THEME_CSS_CACHE_KEY_SUFFIX`` (bump when spinner theme CSS in ``app_constants`` changes)
+- Rankings HTML layout width / scroll hint default; taxonomy coverage extinct-species flag
 
-**What does *not* belong here** (see other modules)
+**Façade only (re-exported; do not treat as owned here — no duplicate literals)**
 
-- **Fixed copy, URLs, emoji lists, tab names** → :mod:`explorer.app.streamlit.streamlit_ui_constants`
-- **Persisted YAML settings schema defaults** (tables, taxonomy locale ranges) →
+- Basemap labels → :mod:`explorer.core.basemap_manifest` / ``explorer/data/basemaps.yaml``
+- Basemap default / options and map height min/max/default → :mod:`explorer.core.settings_schema_defaults`
+- Share-summary schemes, layout stats, subtitles → :mod:`explorer.core.share_summary_defaults`
+
+**What does *not* belong here**
+
+- **Fixed copy, URLs, emoji lists, tab names, spinner *text*** →
+  :mod:`explorer.app.streamlit.streamlit_ui_constants`
+- **Persisted YAML settings schema defaults** (tables, taxonomy locale ranges, pin colour *names*) →
   :mod:`explorer.core.settings_schema_defaults`
+- **Scheme dataclass shapes** (field layout only) → :mod:`explorer.core.map_marker_scheme_model`
 
-Map code under ``explorer/`` imports cluster/pin/theme values from this module where noted in code.
+See ``docs/AI_CONTEXT.md`` § Defaults. Prefer sectioning and comments over large file splits.
 """
 
 from __future__ import annotations
 
-from explorer.core.basemap_manifest import (
-    MAP_BASEMAP_LABELS,  # noqa: F401 — re-export for Streamlit UI
-)
+# isort: off
+# ---------------------------------------------------------------------------
+# Scheme model imports — construction deps for owned MAP_MARKER_COLOUR_SCHEME_* below.
+# Field shapes live in map_marker_scheme_model; preset hex/literals stay in this file.
+# ---------------------------------------------------------------------------
 from explorer.core.map_marker_scheme_model import (
     MapMarkerAllLocationsStyle,
     MapMarkerClusterStyle,
@@ -33,14 +49,22 @@ from explorer.core.map_marker_scheme_model import (
     MapMarkerSpeciesLocationsStyle,
     MapMarkerSpeciesMapBackgroundStyle,
 )
-from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export for Streamlit UI
+
+# ---------------------------------------------------------------------------
+# Re-export façade — owned elsewhere; imported here for a single Streamlit surface.
+# Do not add new literals in this block; edit the defining module instead.
+# ---------------------------------------------------------------------------
+from explorer.core.basemap_manifest import (
+    MAP_BASEMAP_LABELS,  # noqa: F401 — re-export; owned by basemap_manifest / basemaps.yaml
+)
+from explorer.core.settings_schema_defaults import (  # noqa: F401 — re-export; owned by settings schema
     MAP_BASEMAP_DEFAULT,
     MAP_BASEMAP_OPTIONS,
     MAP_HEIGHT_PX_DEFAULT,
     MAP_HEIGHT_PX_MAX,
     MAP_HEIGHT_PX_MIN,
 )
-from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export for Streamlit UI
+from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export; owned by share_summary_defaults
     SHARE_SUMMARY_COLOR_SCHEME_INDEX_DEFAULT,
     SHARE_SUMMARY_COLOR_SCHEMES,
     SHARE_SUMMARY_FOUR_STAT_DEFAULT_STATS,
@@ -61,6 +85,7 @@ from explorer.core.share_summary_defaults import (  # noqa: F401 — re-export f
     share_summary_spotlight_presentation_label,
     share_summary_tiles_presentation_label,
 )
+# isort: on
 
 # ---------------------------------------------------------------------------
 # Marker cluster — default “all locations” map (Leaflet.markercluster)
@@ -161,8 +186,9 @@ MAP_SPECIES_HIDE_ONLY_DEFAULT = True
 MAP_VIEW_LABELS: tuple[str, ...] = ("All locations", "Species locations", "Lifer locations", "Family locations")
 
 # ---------------------------------------------------------------------------
-# Map marker colour schemes (Leaflet circle markers)
-#
+# Map marker colour schemes — owned here (design utility exports into this block).
+# Dataclass shapes: ``map_marker_scheme_model``. Do not duplicate in core.
+# ---------------------------------------------------------------------------
 # Fallback when a scheme has no ``global_defaults.radius_px`` (design utility / migration).
 MAP_MARKER_CIRCLE_RADIUS_PX_FALLBACK = 2
 # Design-utility sliders and pasted preset values clamp to this max; you can set higher radii by
@@ -202,10 +228,8 @@ MAP_MARKER_CLUSTER_HALO_OPACITY_DEFAULT = 0.6
 MAP_MARKER_CLUSTER_BORDER_OPACITY_DEFAULT = 1.0
 MAP_MARKER_CLUSTER_HALO_SPREAD_PX_DEFAULT = 6
 MAP_MARKER_CLUSTER_BORDER_WIDTH_PX_DEFAULT = 2
-#
-# Three presets. Family-map sidebar radio selects the active scheme;
+# Three production presets. Family-map sidebar radio selects the active scheme;
 # ``MAP_MARKER_ACTIVE_COLOUR_SCHEME`` is the default when no UI index is passed (tests).
-# ---------------------------------------------------------------------------
 
 MAP_MARKER_COLOUR_SCHEME_1 = MapMarkerColourScheme(
     display_name='Eucalypt',
@@ -422,7 +446,7 @@ def active_map_marker_colour_scheme(scheme_index: int | None = None) -> MapMarke
 
 
 # ---------------------------------------------------------------------------
-# Layout / theme (Streamlit-only)
+# Layout / theme (Streamlit-only; owned here)
 # ---------------------------------------------------------------------------
 
 SETTINGS_PANEL_MAX_WIDTH_REM = 40
@@ -434,6 +458,8 @@ THEME_MAIN_TAB_HOVER_HEX = "#156248"
 THEME_APP_HEADER_TITLE_HEX = "#1f3d2b"
 THEME_SECONDARY_BG_HEX = "#EEF4F0"
 
+# Cache-bust key for spinner theme CSS (``SPINNER_THEME_CSS`` in ``app_constants``).
+# Stays with theme tweakables — not spinner copy (that lives in ``streamlit_ui_constants``).
 SPINNER_THEME_CSS_CACHE_KEY_SUFFIX = "v19"
 
 # ---------------------------------------------------------------------------
@@ -447,8 +473,6 @@ RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT = "shading"
 # and family/world coverage tables.
 TAXONOMY_INCLUDE_EXTINCT_SPECIES_IN_COVERAGE = False
 
-# Share summary cards (#157): colour schemes and layout stat defaults — see
-# :mod:`explorer.core.share_summary_defaults` (re-exported above; no UI picker yet).
 
 def debug_defaults_enabled() -> list[str]:
     """Return names of debug toggles in this module that are currently ``True``.

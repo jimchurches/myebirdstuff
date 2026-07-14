@@ -365,10 +365,14 @@ if zoom_level < 8:
 
 ### Where constants live
 
-- **Developer tweakables** (map/UI defaults): `explorer/app/streamlit/defaults.py`
+- **Developer tweakables** (map/UI defaults, marker colour scheme *literals*): `explorer/app/streamlit/defaults.py`
 - **Fixed UI strings**: `explorer/app/streamlit/streamlit_ui_constants.py`
 - **Persisted settings schema defaults**: `explorer/core/settings_schema_defaults.py`
+- **Feature-domain defaults** (e.g. share summary): `explorer/core/*_defaults.py` (often re-exported from `defaults.py` as façade only)
+- **Map marker scheme dataclasses** (shapes, not preset hex): `explorer/core/map_marker_scheme_model.py`
 - **Basemaps**: `explorer/data/basemaps.yaml`
+
+See `docs/AI_CONTEXT.md` § Defaults for ownership vs re-export rules.
 
 ---
 
