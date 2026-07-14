@@ -74,7 +74,7 @@ def test_incomplete_checklists_excludes_incidental_and_historical():
     assert keys.index("Incomplete checklists") < keys.index("Completed checklists")
 
 
-def test_compute_and_format_smoke():
+def test_compute_and_format_returns_expected_summary_and_sections():
     df = pd.DataFrame(
         {
             "Submission ID": ["s1", "s1", "s2"],
@@ -94,17 +94,42 @@ def test_compute_and_format_smoke():
     )
     payload = compute_checklist_stats_payload(df, top_n_limit=5)
     assert payload is not None
-    assert payload.n_checklists == 2
-    assert payload.streak >= 1
+    assert (
+        payload.n_checklists,
+        payload.n_species,
+        payload.n_individuals,
+        payload.total_minutes,
+        payload.total_km,
+        payload.streak,
+    ) == (2, 2, 4, 50.0, 1.0, 1)
+    assert payload.rankings["species_individuals"] == [
+        ("Duck", "—", "3"),
+        ("Robin", "—", "1"),
+    ]
     bundle = format_checklist_stats_bundle(
         payload,
         link_urls_fn=lambda _: (None, None),
         scroll_hint=400,
         visible_rows=8,
     )
-    assert "<table" in bundle["stats_html"]
-    assert len(bundle["rankings_sections_top_n"]) == 7
-    assert len(bundle["rankings_sections_other"]) == 6
+    assert "<tr><td>Total checklists</td><td>2</td></tr>" in bundle["stats_html"]
+    assert [title for title, _ in bundle["rankings_sections_top_n"]] == [
+        "Checklist: Longest by time",
+        "Checklist: Longest by distance",
+        "Checklist: Most species",
+        "Checklist: Most individuals",
+        "Location: Most species",
+        "Location: Most individuals",
+        "Location: Most visited",
+    ]
+    assert [title for title, _ in bundle["rankings_sections_other"]] == [
+        "Species: Most individuals",
+        "Species: Most checklists",
+        "Species: Subspecies occurrence",
+        "Species: High counts",
+        "Species: Seen only once",
+        "Species: Not seen in the past year",
+    ]
 
 
 def test_slice_yearly_table_rows():
@@ -209,7 +234,7 @@ def test_strip_yearly_stats_info_icons_removes_span():
     assert out == "Traveling checklists"
 
 
-def test_build_yearly_summary_streamlit_tab_html_dict_smoke():
+def test_build_yearly_summary_streamlit_tabs_have_expected_content():
     """Streamlit yearly tabs: three bodies, no inline info icons, yearly table class."""
     df = pd.DataFrame(
         {
