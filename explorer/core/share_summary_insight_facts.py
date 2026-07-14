@@ -70,18 +70,18 @@ INSIGHT_FACT_PICKER_LABELS: dict[InsightFactId, str] = {
 
 # Card heading for peak facts (layout A: calendar unit as hero). Picker labels stay descriptive.
 INSIGHT_FACT_CARD_LABELS: dict[InsightFactId, str] = {
-    "year_most_checklists": "Best year for checklists",
-    "year_most_completed_checklists": "Best year for completed checklists",
-    "year_most_species": "Best year for species",
-    "year_most_individuals": "Best year for individual birds",
-    "month_most_checklists": "Best month for checklists",
-    "month_most_completed_checklists": "Best month for completed checklists",
-    "month_most_species": "Best month for species",
-    "month_most_individuals": "Best month for individual birds",
-    "day_most_checklists": "Best day for checklists",
-    "day_most_completed_checklists": "Best day for completed checklists",
-    "day_most_species": "Best day for species",
-    "day_most_individuals": "Best day for individual birds",
+    "year_most_checklists": "Most checklists in a year",
+    "year_most_completed_checklists": "Most completed checklists in a year",
+    "year_most_species": "Most species in a year",
+    "year_most_individuals": "Most individual birds in a year",
+    "month_most_checklists": "Most checklists in a month",
+    "month_most_completed_checklists": "Most completed checklists in a month",
+    "month_most_species": "Most species in a month",
+    "month_most_individuals": "Most individual birds in a month",
+    "day_most_checklists": "Most checklists in a day",
+    "day_most_completed_checklists": "Most completed checklists in a day",
+    "day_most_species": "Most species in a day",
+    "day_most_individuals": "Most individual birds in a day",
 }
 
 INSIGHT_FACTS_REQUIRING_SPECIES: frozenset[InsightFactId] = frozenset(

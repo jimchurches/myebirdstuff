@@ -432,7 +432,7 @@ def test_peak_year_facts_lifetime_only():
     assert year_checklists is not None
     assert year_checklists.primary_text == "2024"
     assert year_checklists.metric_value == 2
-    assert year_checklists.label == "Best year for checklists"
+    assert year_checklists.label == "Most checklists in a year"
     year_species = insight_fact_by_id(facts, "year_most_species")
     assert year_species is not None
     assert year_species.primary_text == "2024"
@@ -441,7 +441,7 @@ def test_peak_year_facts_lifetime_only():
     assert year_individuals is not None
     assert year_individuals.primary_text == "2024"
     assert year_individuals.metric_value == 11
-    assert year_individuals.label == "Best year for individual birds"
+    assert year_individuals.label == "Most individual birds in a year"
     assert format_insight_fact_metric(year_individuals) == "11 individual birds"
 
     yearly = compute_insight_facts(df, period_for_year(2024))
@@ -544,7 +544,7 @@ def test_peak_checklists_all_vs_completed_and_tie_earliest():
 def test_format_insight_peak_tie_note_unit_and_plural():
     day_one = ShareSummaryInsightFact(
         fact_id="day_most_checklists",
-        label="Best day for checklists",
+        label="Most checklists in a day",
         primary_text="13 May 2024",
         metric_value=43,
         metric_unit="checklists",
@@ -553,7 +553,7 @@ def test_format_insight_peak_tie_note_unit_and_plural():
     )
     day_many = ShareSummaryInsightFact(
         fact_id="day_most_completed_checklists",
-        label="Best day for completed checklists",
+        label="Most completed checklists in a day",
         primary_text="13 May 2024",
         metric_value=43,
         metric_unit="checklists",
@@ -562,7 +562,7 @@ def test_format_insight_peak_tie_note_unit_and_plural():
     )
     month = ShareSummaryInsightFact(
         fact_id="month_most_species",
-        label="Best month for species",
+        label="Most species in a month",
         primary_text="Mar 2025",
         metric_value=10,
         metric_unit="species",
@@ -580,7 +580,7 @@ def test_insight_layout_renders_peak_tie_soft_note():
     stats = ShareSummaryStats(period_label="Lifetime", period_kind="lifetime")
     fact = ShareSummaryInsightFact(
         fact_id="day_most_completed_checklists",
-        label="Best day for completed checklists",
+        label="Most completed checklists in a day",
         primary_text="13 May 2024",
         metric_value=43,
         metric_unit="checklists",
@@ -598,7 +598,7 @@ def test_insight_layout_renders_peak_tie_soft_note():
 
     untied = ShareSummaryInsightFact(
         fact_id="day_most_completed_checklists",
-        label="Best day for completed checklists",
+        label="Most completed checklists in a day",
         primary_text="13 May 2024",
         metric_value=43,
         metric_unit="checklists",
