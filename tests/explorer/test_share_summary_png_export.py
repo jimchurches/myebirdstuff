@@ -1,8 +1,8 @@
 """Tests for :mod:`explorer.presentation.share_summary_png_export`."""
 
 import sys
+import threading
 import types
-from contextlib import contextmanager
 
 import pytest
 
@@ -96,14 +96,13 @@ def test_share_summary_to_png_bytes_builds_full_size_screenshot(monkeypatch):
             calls["new_page"] = kwargs
             return _Page()
 
-    @contextmanager
-    def _fake_launch_chromium():
-        yield _Browser()
+    def _fake_run_with_shared_browser(fn):
+        return fn(_Browser())
 
     monkeypatch.setattr(
         share_summary_png_export,
-        "_launch_chromium",
-        _fake_launch_chromium,
+        "_run_with_shared_browser",
+        _fake_run_with_shared_browser,
     )
     stats = sample_share_summary_stats(period_label="2025", period_kind="year")
 
@@ -298,6 +297,8 @@ def test_warm_chromium_reused_across_exports(monkeypatch):
 
 def test_shutdown_shared_chromium_closes_warm_browser(monkeypatch):
     closed = {"browser": 0, "playwright": 0}
+    close_thread: dict[str, int] = {}
+    launch_thread: dict[str, int] = {}
 
     class _Browser:
         def is_connected(self):
@@ -305,6 +306,7 @@ def test_shutdown_shared_chromium_closes_warm_browser(monkeypatch):
 
         def close(self):
             closed["browser"] += 1
+            close_thread["tid"] = threading.get_ident()
 
     class _Playwright:
         def __enter__(self):
@@ -319,6 +321,7 @@ def test_shutdown_shared_chromium_closes_warm_browser(monkeypatch):
             return self
 
         def launch(self):
+            launch_thread["tid"] = threading.get_ident()
             return _Browser()
 
     fake_sync_api = types.SimpleNamespace(sync_playwright=lambda: _Playwright())
@@ -327,12 +330,66 @@ def test_shutdown_shared_chromium_closes_warm_browser(monkeypatch):
 
     with share_summary_png_export._launch_chromium() as browser:
         assert browser.is_connected()
+    # Caller thread differs from the Playwright worker; close must run on worker.
+    caller_tid = threading.get_ident()
     shutdown_shared_chromium()
     assert closed == {"browser": 1, "playwright": 1}
+    assert launch_thread["tid"] == close_thread["tid"]
+    assert close_thread["tid"] != caller_tid
 
     # A later export can start a fresh warm session.
     with share_summary_png_export._launch_chromium() as browser_again:
         assert browser_again.is_connected()
+
+
+def test_shutdown_from_other_thread_closes_on_worker(monkeypatch):
+    """Cross-thread shutdown must tear down on the Playwright owner thread (#344)."""
+    closed_on: dict[str, int] = {}
+    launched_on: dict[str, int] = {}
+
+    class _Browser:
+        def is_connected(self):
+            return True
+
+        def close(self):
+            closed_on["tid"] = threading.get_ident()
+
+    class _Playwright:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        @property
+        def chromium(self):
+            return self
+
+        def launch(self):
+            launched_on["tid"] = threading.get_ident()
+            return _Browser()
+
+    fake_sync_api = types.SimpleNamespace(sync_playwright=lambda: _Playwright())
+    monkeypatch.setitem(sys.modules, "playwright", types.ModuleType("playwright"))
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", fake_sync_api)
+
+    with share_summary_png_export._launch_chromium() as browser:
+        assert browser.is_connected()
+
+    errors: list[BaseException] = []
+
+    def _shutdown_elsewhere() -> None:
+        try:
+            shutdown_shared_chromium()
+        except BaseException as exc:  # noqa: BLE001 — capture for assertion
+            errors.append(exc)
+
+    foreign = threading.Thread(target=_shutdown_elsewhere)
+    foreign.start()
+    foreign.join(timeout=5)
+    assert not foreign.is_alive()
+    assert errors == []
+    assert closed_on["tid"] == launched_on["tid"]
 
 
 def test_warm_chromium_restarts_when_disconnected(monkeypatch):
