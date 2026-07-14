@@ -71,7 +71,7 @@ def test_filter_focus_empty_means_all_rows():
     out = filter_location_rows_by_focus_country(
         loc, location_id_to_country=m, focus_country=ALL_LOCATIONS_FOCUS_ALL
     )
-    assert len(out) == 2
+    pd.testing.assert_frame_equal(out, loc)
 
 
 def test_coordinate_pairs_for_viewport_focus():
@@ -129,8 +129,7 @@ def test_coordinate_pairs_focused_viewport_includes_high_observation_country():
         quantile_high=0.99,
         min_observations_full_country=20,
     )
-    assert len(out) == 100
-    assert any(abs(float(lat) - 89.0) < 0.01 for lat, _ in out)
+    assert out == [[i * 0.001, i * 0.001] for i in range(1, 100)] + [[89.0, 179.0]]
 
 
 def test_all_locations_scope_option_values_order():
@@ -174,7 +173,7 @@ def test_leaflet_viewport_recipe_centre_of_gravity_mode():
     assert vp["v"] == 1
     assert vp["mode"] == "center_zoom"
     assert vp["zoom"] == MAP_ALL_LOCATIONS_CENTRE_OF_GRAVITY_ZOOM
-    assert len(vp["center"]) == 2
+    assert vp["center"] == [-35.5, 149.5]
 
 
 def test_leaflet_viewport_recipe_go_to_gps_overrides_scope():

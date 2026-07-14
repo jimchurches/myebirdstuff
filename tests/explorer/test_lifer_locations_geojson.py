@@ -43,7 +43,7 @@ def test_build_lifer_geojson_minimal():
     )
     ctx = prepare_all_locations_map_context(df, full_df=df)
     sch = active_map_marker_colour_scheme(MAP_MARKER_COLOUR_SCHEME_DEFAULT)
-    rev, gj, warn, framing, _metrics = build_lifer_locations_geojson_payload(
+    rev, gj, warn, framing, metrics = build_lifer_locations_geojson_payload(
         full_location_data=ctx["full_location_data"],
         lifer_lookup_df=ctx["lifer_lookup_df"],
         true_lifer_locations=ctx["true_lifer_locations"],
@@ -54,14 +54,37 @@ def test_build_lifer_geojson_minimal():
         revision_extra="{}",
     )
     assert warn is None
-    assert rev is not None
-    assert gj is not None
+    assert isinstance(rev, str) and len(rev) == 24
+    assert gj == {
+        "type": "FeatureCollection",
+        "features": gj["features"],
+    }
     assert len(gj["features"]) == 1
-    props = gj["features"][0]["properties"]
+    feature = gj["features"][0]
+    assert feature["geometry"] == {"type": "Point", "coordinates": [151.0, -33.0]}
+    props = feature["properties"]
     assert props["location_id"] == "L1"
     assert props["name"] == "Patch A"
-    assert "lifer_popup_v1" in props
-    assert props["lifer_popup_v1"]["v"] == 1
-    assert len(props["lifer_popup_v1"]["lines"]) >= 1
-    assert "circle_pin" in props
-    assert len(framing) == 1
+    assert props["lifelist_url"] == "https://ebird.org/lifelist/L1"
+    assert props["pin_kind"] == "lifer"
+    assert props["lifer_popup_v1"] == {
+        "v": 1,
+        "lines": [
+            {
+                "label": "Grey Teal",
+                "date": "2024-06-01",
+                "checklist_href": "https://ebird.org/checklist/S1",
+            }
+        ],
+    }
+    assert set(props["circle_pin"]) == {
+        "stroke_hex",
+        "fill_hex",
+        "radius_px",
+        "stroke_weight",
+        "fill_opacity",
+    }
+    assert framing == [[-33.0, 151.0]]
+    assert metrics["marker_count"] == 1
+    assert metrics["popup_build_count"] == 1
+    assert metrics["popup_build_total_ms"] >= 0.0

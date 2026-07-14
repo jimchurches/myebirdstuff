@@ -20,8 +20,10 @@ def test_evaluate_passes_with_no_vulnerabilities() -> None:
         [{"name": "pandas", "version": "3.0.3", "vulns": []}],
         ignore_until_fix={"PYSEC-2024-277": "joblib"},
     )
-    assert code == 0
-    assert any("OK" in line for line in lines)
+    assert (code, lines) == (
+        0,
+        ["pip-audit policy: OK", "No known vulnerabilities."],
+    )
 
 
 def test_defers_advisory_when_no_fix_versions() -> None:
@@ -42,7 +44,11 @@ def test_defers_advisory_when_no_fix_versions() -> None:
         ignore_until_fix={"PYSEC-2024-277": "joblib"},
     )
     assert code == 0
-    assert any("deferred" in line.lower() for line in lines)
+    assert lines == [
+        "pip-audit policy: OK",
+        "Deferred until fix available:",
+        "  - PYSEC-2024-277 (joblib): deferred — no fix version on PyPI (see SECURITY.md)",
+    ]
 
 
 def test_fails_when_deferred_advisory_has_fix_versions() -> None:
@@ -79,5 +85,35 @@ def test_fails_on_unlisted_vulnerability() -> None:
         ],
         ignore_until_fix={"PYSEC-2024-277": "joblib"},
     )
+    assert (code, lines) == (
+        1,
+        [
+            "pip-audit policy: FAILED",
+            "CVE-2099-0001 (example): reported vulnerability — fix versions: 1.0.1",
+        ],
+    )
+
+
+def test_reports_failures_and_still_deferred_advisories_together() -> None:
+    code, lines = mod.evaluate_audit_report(
+        [
+            {
+                "name": "joblib",
+                "vulns": [{"id": "PYSEC-2024-277", "fix_versions": []}],
+            },
+            {
+                "name": "example",
+                "vulns": [{"id": "CVE-2099-0002", "fix_versions": []}],
+            },
+        ],
+        ignore_until_fix={"PYSEC-2024-277": "joblib"},
+    )
+
     assert code == 1
-    assert any("CVE-2099-0001" in line for line in lines)
+    assert lines == [
+        "pip-audit policy: FAILED",
+        "CVE-2099-0002 (example): reported vulnerability",
+        "",
+        "Still deferred (no fix yet):",
+        "  - PYSEC-2024-277 (joblib): deferred — no fix version on PyPI (see SECURITY.md)",
+    ]

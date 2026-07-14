@@ -14,10 +14,7 @@ from explorer.app.streamlit.app_go_to_gps_ui import (
 def test_parse_google_style_pair_from_issue_comment() -> None:
     raw = "-35.268965820020014, 149.08053613146686"
     pair = parse_lat_lon_pair(raw)
-    assert pair is not None
-    la, lo = pair
-    assert la == pytest.approx(-35.268965820020014)
-    assert lo == pytest.approx(149.08053613146686)
+    assert pair == pytest.approx((-35.268965820020014, 149.08053613146686))
 
 
 def test_parse_lat_lon_pair_rejects_invalid_ranges() -> None:
@@ -27,6 +24,8 @@ def test_parse_lat_lon_pair_rejects_invalid_ranges() -> None:
 
 def test_parse_lat_lon_pair_requires_comma() -> None:
     assert parse_lat_lon_pair("-35.27 149.08") is None
+    assert parse_lat_lon_pair("-35.27, 149.08, 1") is None
+    assert parse_lat_lon_pair("not-a-number, 149.08") is None
 
 
 def test_parse_single_coord_strips_commas() -> None:

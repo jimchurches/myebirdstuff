@@ -26,6 +26,8 @@ def test_load_yaml_settings_rejects_invalid_type(tmp_path):
     p.write_text("tables_lists:\n  rankings_top_n: nope\n", encoding="utf-8")
     cfg, warn = load_yaml_settings(str(p))
     assert warn is not None
+    assert warn.startswith("Invalid settings YAML; using defaults.")
+    assert "valid integer" in warn
     assert cfg["tables_lists"]["rankings_top_n"] == 200
 
 
@@ -59,6 +61,11 @@ def test_write_sparse_preserves_unknown_keys(tmp_path):
     assert raw["map_display"]["popup_sort_order"] == "descending"
     assert raw["map_display"]["map_marker_colour_scheme"] == 2
     assert "tables_lists" not in raw  # defaults omitted
+    assert set(raw) == {"custom", "version", "map_display"}
+    assert set(raw["map_display"]) == {
+        "popup_sort_order",
+        "map_marker_colour_scheme",
+    }
 
 
 def test_config_path_yaml_roundtrip(tmp_path):
@@ -99,6 +106,11 @@ def test_config_path_yaml_roundtrip(tmp_path):
     assert raw["data_folder"] == "/tmp/ebird"
     assert raw["deploy_destination"] == "/tmp/deploy.py"
     assert "explorer_settings" in raw
+    assert set(raw["explorer_settings"]) == {"version", "map_display"}
+    assert set(raw["explorer_settings"]["map_display"]) == {
+        "popup_sort_order",
+        "map_marker_colour_scheme",
+    }
 
     cfg, warn = load_settings_from_config_path(str(p))
     assert warn is None
@@ -147,8 +159,13 @@ def test_settings_data_path_html_includes_config_path_when_given():
         repo_root="/repo",
         config_yaml_abs_path="/repo/config/config_secret.yaml",
     )
-    assert "Configuration file path:" in html_out
-    assert "/repo/config/config_secret.yaml" in html_out
+    assert "<strong>Data file name:</strong> <code>MyEBirdData.csv</code>" in html_out
+    assert "<strong>Data file path:</strong> <code>/data/MyEBirdData.csv</code>" in html_out
+    assert "<strong>Data file loaded by:</strong> Configuration file" in html_out
+    assert (
+        "<strong>Configuration file path:</strong> "
+        "<code>/repo/config/config_secret.yaml</code>"
+    ) in html_out
 
 
 def test_settings_data_path_html_omits_config_path_when_not_passed():
@@ -161,4 +178,5 @@ def test_settings_data_path_html_omits_config_path_when_not_passed():
         repo_root="/repo",
     )
     assert "Configuration file path:" not in html_out
+    assert "<strong>Data file loaded by:</strong> Working directory" in html_out
 

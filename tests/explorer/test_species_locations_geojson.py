@@ -71,9 +71,12 @@ def test_build_species_geojson_with_match_and_background_pin():
         revision_extra="{}",
     )
     assert warn is None
-    assert rev is not None
-    assert gj is not None
-    assert len(gj["features"]) == 2
+    assert rev is not None and len(rev) == 24
+    assert gj["type"] == "FeatureCollection"
+    assert {
+        feature["properties"]["location_id"]: feature["geometry"]["coordinates"]
+        for feature in gj["features"]
+    } == {"L1": [151.0, -33.0], "L2": [152.0, -34.0]}
     props_match = next(
         f["properties"]
         for f in gj["features"]
@@ -89,9 +92,56 @@ def test_build_species_geojson_with_match_and_background_pin():
     )
     assert "popup_v1" in props_bg
     assert "visited" in props_bg["popup_v1"]
-    assert len(framing) == 1
-    assert "Species" in roles
-    assert "Locations" in roles
+    assert framing == [[-33.0, 151.0]]
+    assert roles == {"Species", "Locations"}
+    assert _metrics["marker_count"] == 2
+    assert _metrics["popup_build_count"] == 2
+    assert _metrics["popup_build_total_ms"] >= 0.0
+
+
+def test_build_species_geojson_empty_selection_returns_empty_contract():
+    ctx = prepare_all_locations_map_context(_species_map_df(), full_df=_species_map_df())
+
+    revision, geojson, warning, framing, roles, metrics = (
+        build_species_locations_geojson_payload(
+            **_species_payload_kwargs(ctx, selected_species="")
+        )
+    )
+
+    assert revision is None
+    assert geojson is None
+    assert warning is None
+    assert framing == []
+    assert roles == set()
+    assert metrics == {
+        "marker_count": 0,
+        "popup_build_count": 0,
+        "popup_build_total_ms": 0.0,
+    }
+
+
+def test_build_species_geojson_unknown_species_explains_empty_result():
+    ctx = prepare_all_locations_map_context(_species_map_df(), full_df=_species_map_df())
+
+    revision, geojson, warning, framing, roles, metrics = (
+        build_species_locations_geojson_payload(
+            **_species_payload_kwargs(
+                ctx,
+                selected_species="Missingus birdii",
+            )
+        )
+    )
+
+    assert revision is None
+    assert geojson is None
+    assert warning == (
+        "⚠️ No sightings of 'Missingus birdii' in current data — "
+        "check date range or filters."
+    )
+    assert framing == []
+    assert roles == set()
+    assert metrics["marker_count"] == 0
+    assert metrics["popup_build_count"] == 0
 
 
 def _species_map_df() -> pd.DataFrame:

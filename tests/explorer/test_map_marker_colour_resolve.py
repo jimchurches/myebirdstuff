@@ -2,31 +2,34 @@
 
 from dataclasses import replace
 
-from explorer.app.streamlit.defaults import MAP_MARKER_COLOUR_SCHEME_1, active_map_marker_colour_scheme
+from explorer.app.streamlit.defaults import (
+    MAP_MARKER_COLOUR_SCHEME_1,
+    active_map_marker_colour_scheme,
+)
 from explorer.core.map_marker_colour_resolve import (
     MAP_MARKER_CATCHALL_FILL_HEX,
     MAP_MARKER_CATCHALL_STROKE_HEX,
     MAP_MARKER_SCHEME_DEFAULT_FILL_HEX,
     MAP_MARKER_SCHEME_DEFAULT_STROKE_HEX,
+    family_map_has_highlight_halo,
     family_map_resolved_circle_radius_px,
     family_map_resolved_fill_opacity,
     family_map_resolved_highlight_halo_fill_opacity,
     family_map_resolved_highlight_halo_radius_px,
     family_map_resolved_highlight_halo_stroke_opacity,
     family_map_resolved_highlight_halo_stroke_weight,
-    family_map_has_highlight_halo,
+    family_map_resolved_highlight_pin_stroke_hex,
     is_valid_hex_colour,
     normalize_marker_hex,
     resolve_family_band_colours,
     resolve_family_highlight_halo_fill_hex,
     resolve_family_highlight_halo_stroke_hex,
-    family_map_resolved_highlight_pin_stroke_hex,
     resolve_family_highlight_stroke_hex,
     resolve_location_visit_colours,
     resolve_marker_global_colours,
     resolve_species_map_background_colours,
 )
-
+from explorer.core.map_marker_scheme_model import SchemeColourOverrides
 from tests.colour_scheme_test_utils import BUNDLED_COLOUR_SCHEME_INDICES
 
 
@@ -57,6 +60,40 @@ def test_resolve_species_map_background_colours_valid_for_all_bundled_schemes() 
         f, s = resolve_species_map_background_colours(sch)
         assert is_valid_hex_colour(f)
         assert is_valid_hex_colour(s)
+
+
+def test_location_colour_resolution_prefers_override_then_specific_then_global() -> None:
+    specific = replace(
+        MAP_MARKER_COLOUR_SCHEME_1,
+        all_locations=replace(
+            MAP_MARKER_COLOUR_SCHEME_1.all_locations,
+            fill_hex="#112233",
+            stroke_hex="#445566",
+        ),
+    )
+    assert resolve_location_visit_colours(specific) == ("#112233", "#445566")
+
+    overridden = replace(
+        specific,
+        colour_overrides=SchemeColourOverrides(
+            location_fill_hex="#AABBCC",
+            location_stroke_hex="#DDEEFF",
+        ),
+    )
+    assert resolve_location_visit_colours(overridden) == ("#AABBCC", "#DDEEFF")
+
+    invalid_specific = replace(
+        MAP_MARKER_COLOUR_SCHEME_1,
+        all_locations=replace(
+            MAP_MARKER_COLOUR_SCHEME_1.all_locations,
+            fill_hex="invalid",
+            stroke_hex="invalid",
+        ),
+    )
+    assert resolve_location_visit_colours(invalid_specific) == (
+        MAP_MARKER_COLOUR_SCHEME_1.global_defaults.fill_hex,
+        MAP_MARKER_COLOUR_SCHEME_1.global_defaults.stroke_hex,
+    )
 
 
 def test_is_valid_hex_colour() -> None:

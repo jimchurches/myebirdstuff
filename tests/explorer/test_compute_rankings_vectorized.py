@@ -23,22 +23,40 @@ def _fixture_tables():
     return df, cl, dur_col, dist_col
 
 
-def test_compute_rankings_returns_nonempty_core_sections(_fixture_tables) -> None:
+def test_compute_rankings_returns_expected_fixture_leaders(_fixture_tables) -> None:
     df, cl, dur_col, dist_col = _fixture_tables
     result = compute_rankings(df, cl, limit=200, dur_col=dur_col, dist_col=dist_col)
-    assert len(result["species"]) > 0
-    assert len(result["species_loc"]) > 0
-    assert len(result["visited"]) > 0
+    assert len(result["species"]) == 15
+    assert result["species"][0][0].endswith(">West Belconnen Pond</a>")
+    assert result["species"][0][4] == "21"
+    assert len(result["species_loc"]) == 15
+    assert result["species_loc"][0] == (
+        '<a href="https://ebird.org/lifelist/L2507517" target="_blank">'
+        "West Belconnen Pond</a>",
+        "ACT",
+        "AU",
+        "1",
+        "21",
+    )
+    assert len(result["visited"]) == 15
+    assert result["visited"][0][0].endswith(">Australian National Botanic Gardens</a>")
 
 
 def test_rankings_by_location_species_respects_limit(_fixture_tables) -> None:
     df, cl, _dur, _dist = _fixture_tables
     rows = rankings_by_location(df, cl, "species", lambda x: f"{int(x):,}", limit=5)
-    assert 1 <= len(rows) <= 5
+    assert len(rows) == 5
+    assert [(row[0].partition(">")[2].removesuffix("</a>"), row[4]) for row in rows] == [
+        ("West Belconnen Pond", "21"),
+        ("Lake Richmond", "20"),
+        ("Benoa dekat Jl Telga Waja", "18"),
+        ("Holloways Beach ( -16.851004, 145.73002 )", "17"),
+        ("Keliki ( -8.428716, 115.258034 )", "14"),
+    ]
 
 
 def test_compute_rankings_all_sections_bounded(_fixture_tables) -> None:
     df, cl, dur_col, dist_col = _fixture_tables
     result = compute_rankings(df, cl, limit=10, dur_col=dur_col, dist_col=dist_col)
     for key in ("species", "individuals", "species_loc", "individuals_loc", "visited"):
-        assert len(result[key]) <= 10
+        assert len(result[key]) == 10
