@@ -38,8 +38,8 @@ from explorer.core.share_summary_insight_facts import (
     INSIGHT_FACT_PICKER_LABELS,
     InsightFactId,
     ShareSummaryInsightFact,
-    compute_insight_facts,
     insight_fact_requires_species,
+    species_individuals_insight_fact,
 )
 from explorer.presentation.share_summary_circles_preview import (
     TILES_CIRCLE_CLUSTER_DEFAULT,
@@ -763,12 +763,7 @@ def render_insight_fact_picker_ui(
             key=keys.insight_species,
         )
         species_common = _insight_species_from_session(species_options, keys)
-        refreshed = compute_insight_facts(
-            df,
-            period,
-            species_common=species_common,
-        )
-        return resolve_insight_fact(refreshed, selected_id)
+        return species_individuals_insight_fact(df, period, species_common)
 
     return resolve_insight_fact(facts, selected_id)
 
@@ -961,7 +956,7 @@ def render_current_card_fragment(
     insight_facts: list[ShareSummaryInsightFact],
     insight_species_options: tuple[str, ...],
     df_scoped: pd.DataFrame,
-    resolved_period,
+    resolved_period: ShareSummaryPeriod,
     statistics_label: str = SOCIAL_CARDS_STATISTICS_LABEL,
     current_card_label: str = SOCIAL_CARDS_CURRENT_CARD_LABEL,
     export_button_label: str = "Export card",
@@ -994,6 +989,14 @@ def render_current_card_fragment(
             )
 
     spotlight_label = spotlight_label_from_session(status_metrics, keys)
+
+    if selected_layout == "insight" and resolved_fact is None:
+        if (current_card_label or "").strip():
+            st.subheader(current_card_label)
+        st.info(
+            "No Interesting Insights fact is available for this period and selection."
+        )
+        return
 
     if (current_card_label or "").strip():
         st.subheader(current_card_label)

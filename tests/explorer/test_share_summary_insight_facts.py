@@ -269,3 +269,40 @@ def test_resolve_insight_fact_falls_back_to_default_then_first():
     assert resolve_insight_fact([first_without_default, default], "missing") == default
     assert resolve_insight_fact([first_without_default], "missing") == first_without_default
     assert resolve_insight_fact([], "missing") is None
+
+
+def test_species_individuals_insight_fact_isolates_one_species():
+    from explorer.core.share_summary_compute import period_for_year
+    from explorer.core.share_summary_insight_facts import (
+        species_individuals_insight_fact,
+    )
+
+    df = pd.DataFrame(
+        {
+            "Date": ["2025-01-01", "2025-01-02", "2025-01-03"],
+            "Submission ID": ["s1", "s2", "s3"],
+            "Count": [2, 5, 1],
+            "Common Name": [
+                "Australian Magpie",
+                "Australian Magpie",
+                "Superb Fairywren",
+            ],
+            "Scientific Name": [
+                "Gymnorhina tibicen",
+                "Gymnorhina tibicen",
+                "Malurus cyaneus",
+            ],
+        }
+    )
+    fact = species_individuals_insight_fact(
+        df, period_for_year(2025), "Australian Magpie"
+    )
+    assert fact is not None
+    assert fact.fact_id == "species_individuals"
+    assert fact.primary_text == "Australian Magpie"
+    assert fact.metric_value == 7
+    assert species_individuals_insight_fact(df, period_for_year(2025), "") is None
+    assert (
+        species_individuals_insight_fact(df, period_for_year(2024), "Australian Magpie")
+        is None
+    )

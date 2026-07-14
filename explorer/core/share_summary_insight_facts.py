@@ -164,6 +164,18 @@ def insight_fact_by_id(
     return None
 
 
+def species_individuals_insight_fact(
+    df: pd.DataFrame,
+    period: ShareSummaryPeriod,
+    species_common: str,
+) -> ShareSummaryInsightFact | None:
+    """Individuals total for one species in *period* — avoids recomputing all auto facts."""
+    cleaned = (species_common or "").strip()
+    if not cleaned:
+        return None
+    return _species_individuals_fact(_observations_in_period(df, period), cleaned)
+
+
 def _observations_in_period(
     df: pd.DataFrame, period: ShareSummaryPeriod
 ) -> pd.DataFrame:
