@@ -64,6 +64,12 @@ def share_summary_png_filename(
 
 @contextlib.contextmanager
 def _launch_chromium():
+    """Launch a short-lived Chromium for one PNG export.
+
+    A fresh browser per export keeps shutdown simple and avoids leaked
+    headless processes across Streamlit reruns. Warm reuse across exports
+    can land later if batch or rapid-fire export becomes common.
+    """
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:

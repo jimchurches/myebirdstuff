@@ -114,4 +114,4 @@ Stat picker ↑/↓/✕/Add/Reset and lazy PNG export use fragment-scoped update
 
 See `docs/development.md` § Performance Instrumentation Guardrails for stable stage names.
 
-**PNG on Streamlit Cloud:** headless Chromium availability is not yet verified on a live deploy — see tracker § Streamlit Cloud verification (#275). Graceful `RuntimeError` if Chromium is missing.
+**PNG on Streamlit Cloud:** headless Chromium availability is not yet verified on a live deploy — [#345](https://github.com/jimchurches/myebirdstuff/issues/345). Graceful `RuntimeError` if Chromium is missing. Chromium process reuse across exports is a separate perf follow-up — [#344](https://github.com/jimchurches/myebirdstuff/issues/344).
