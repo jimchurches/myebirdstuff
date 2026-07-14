@@ -1,0 +1,22 @@
+# System libraries for Playwright Chromium (Streamlit Community Cloud apt-get).
+# Cloud does not run `playwright install`; browser binaries are downloaded at
+# first PNG export (see share_summary_png_export.py). These packages satisfy
+# Chromium's shared-library deps on Debian (Community Cloud).
+# See: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/app-dependencies
+libnss3
+libnspr4
+libatk1.0-0
+libatk-bridge2.0-0
+libcups2
+libdrm2
+libatspi2.0-0
+libxcomposite1
+libxdamage1
+libxfixes3
+libxrandr2
+libgbm1
+libxkbcommon0
+libpango-1.0-0
+libcairo2
+libasound2
+libwayland-client0

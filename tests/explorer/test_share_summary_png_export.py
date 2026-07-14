@@ -1,6 +1,8 @@
 """Tests for :mod:`explorer.presentation.share_summary_png_export`."""
 
 from contextlib import contextmanager
+import sys
+import types
 
 import pytest
 
@@ -23,7 +25,14 @@ def chromium_available():
             fmt="square",
         )
     except RuntimeError as exc:
-        if "Chromium is not installed" in str(exc) or "Playwright is not installed" in str(exc):
+        msg = str(exc)
+        if (
+            "Chromium is not installed" in msg
+            or "Chromium is not available" in msg
+            or "Playwright is not installed" in msg
+            or "Failed to install Playwright Chromium" in msg
+            or "packages.txt" in msg
+        ):
             pytest.skip(str(exc))
         raise
 
@@ -104,6 +113,78 @@ def test_share_summary_to_png_bytes_builds_full_size_screenshot(monkeypatch):
         "type": "png",
         "clip": {"x": 0, "y": 0, "width": 1080, "height": 1350},
     }
+
+
+def test_launch_chromium_installs_when_executable_missing(monkeypatch):
+    """Cloud pip-only deploys need a one-shot ``playwright install chromium`` (#345)."""
+    launches = {"n": 0}
+    installs = {"n": 0}
+
+    class _Browser:
+        def close(self):
+            pass
+
+    class _Chromium:
+        def launch(self):
+            launches["n"] += 1
+            if launches["n"] == 1:
+                raise RuntimeError(
+                    "Executable doesn't exist at /tmp/ms-playwright/chromium/chrome"
+                )
+            return _Browser()
+
+    class _Playwright:
+        chromium = _Chromium()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(
+        share_summary_png_export,
+        "_chromium_install_attempted",
+        False,
+    )
+    monkeypatch.setattr(
+        share_summary_png_export,
+        "_install_chromium",
+        lambda: installs.__setitem__("n", installs["n"] + 1),
+    )
+
+    fake_sync_api = types.SimpleNamespace(sync_playwright=lambda: _Playwright())
+    monkeypatch.setitem(sys.modules, "playwright", types.ModuleType("playwright"))
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", fake_sync_api)
+
+    with share_summary_png_export._launch_chromium() as browser:
+        assert isinstance(browser, _Browser)
+
+    assert installs["n"] == 1
+    assert launches["n"] == 2
+
+
+def test_launch_chromium_maps_missing_system_deps(monkeypatch):
+    class _Chromium:
+        def launch(self):
+            raise RuntimeError("Host system is missing dependencies to run browsers.")
+
+    class _Playwright:
+        chromium = _Chromium()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    fake_sync_api = types.SimpleNamespace(sync_playwright=lambda: _Playwright())
+    monkeypatch.setitem(sys.modules, "playwright", types.ModuleType("playwright"))
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", fake_sync_api)
+
+    with pytest.raises(RuntimeError, match="packages.txt"):
+        with share_summary_png_export._launch_chromium():
+            pass
 
 
 @pytest.mark.parametrize(

@@ -572,16 +572,17 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 
 **Local / CI:** `playwright` is a runtime dependency in `requirements.txt`. After `pip install -r requirements.txt`, run `python -m playwright install chromium`. Unit tests in `test_share_summary_png_export.py` assert PNG width/height; CI installs Chromium in the `unit-tests` job.
 
-**Streamlit Cloud (not yet verified on a live deploy) — open checklist lives on [#345](https://github.com/jimchurches/myebirdstuff/issues/345):**
+**Streamlit Cloud — setup shipped for [#345](https://github.com/jimchurches/myebirdstuff/issues/345):**
 
 | Check | Expected | Status |
 |-------|----------|--------|
 | `pip install playwright` during app deploy | Succeeds (listed in `requirements.txt`) | Assumed OK |
-| `playwright install chromium` on Cloud builder | May **not** run automatically — Cloud only runs `pip install` from requirements | **Open — [#345](https://github.com/jimchurches/myebirdstuff/issues/345)** |
-| Headless Chromium launch at runtime | Needs browser binaries on the container filesystem (~100MB+) | **Open — [#345](https://github.com/jimchurches/myebirdstuff/issues/345)** |
-| PNG on Social Cards / design app | Download succeeds, or warning if Chromium missing | Graceful `RuntimeError` message implemented |
+| System libraries for Chromium | Repo-root `packages.txt` (apt via Community Cloud) | **Shipped** |
+| Chromium browser binaries | Lazy `python -m playwright install chromium` on first export when executable missing (`share_summary_png_export.py`) | **Shipped** — confirm on live Cloud after deploy |
+| PNG on Social Cards / design app | Download succeeds, or clear warning if still blocked | Error path now fragment-reruns so first click surfaces the message |
+| iOS / Android save/share | Spot-check once Cloud PNG works | **Open** |
 
-**If Cloud blocks Chromium:** show HTML preview only on Cloud (current behaviour for scaled mockup) and document “PNG export requires local run” until a Pillow fallback or custom Cloud build step is added. Re-test save flow on iOS/Android once a Cloud deploy exists.
+**If Cloud still blocks Chromium** (e.g. newer Playwright needs apt packages unavailable on Community Cloud’s Debian image): show HTML preview only and document “PNG export requires local run” until a Pillow fallback or pinned Playwright version is added. Re-test save flow on iOS/Android once a Cloud deploy succeeds.
 
 ---
 
@@ -615,5 +616,6 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-29 | **#285 Interesting Insights:** separate layout for species/checklist facts; Spotlight restored to stat-only (Classic/Circle); design studio insights + species pickers; countable species picker deferred to main-app port ([#328](https://github.com/jimchurches/myebirdstuff/issues/328)) |
 | 2026-07-01 | **#275 closed** (PNG export design studio); **#276 closed** — superseded by [#323](https://github.com/jimchurches/myebirdstuff/issues/323) epic + port batches [#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328) |
 | 2026-07-14 | PNG Cloud verify + Chromium reuse follow-ups filed: [#345](https://github.com/jimchurches/myebirdstuff/issues/345), [#344](https://github.com/jimchurches/myebirdstuff/issues/344) (PR #343 review) |
+| 2026-07-14 | [#345](https://github.com/jimchurches/myebirdstuff/issues/345): `packages.txt` + lazy Chromium install on first PNG export; fix first-click export error UX |
 | 2026-07-14 | Archived `social-cards-workflow.md` to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021); module map kept in this tracker |
 | 2026-07-14 | Archived early prototype notes to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964295174); removed stale `issue-157-social-summary-prototype.md` |
