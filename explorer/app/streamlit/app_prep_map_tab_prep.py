@@ -77,17 +77,19 @@ def run_tab_prep_spinner_and_sync(
                     high_count_tie_break=hc_tb,
                 )
             with perf_span("prep.cache_sex_notation_by_year"):
-                sex_notation_by_year: dict = cached_sex_notation_by_year(df_full)
+                sex_notation_by_year: dict[str, Any] = cached_sex_notation_by_year(
+                    df_full
+                )
         else:
             maint_full_payload = None
             ranking_lists_families_bundle = {}
-            sex_notation_by_year = {}
+            sex_notation_by_year: dict[str, Any] = {}
 
         with perf_span("prep.tab_session_sync"):
             sync_checklist_stats_tab_session_inputs(checklist_payload)
             sync_ranking_lists_families_bundle(ranking_lists_families_bundle)
             loc_maint = full_location_data_for_maintenance(df_full)
-            incomplete_maint: dict = {}
+            incomplete_maint: dict[str, Any] = {}
             if maint_full_payload is not None:
                 incomplete_maint = maint_full_payload.incomplete_by_year or {}
             sync_maintenance_tab_session_inputs(

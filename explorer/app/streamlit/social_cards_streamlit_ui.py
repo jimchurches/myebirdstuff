@@ -95,6 +95,7 @@ def cached_share_summary_png(
     spotlight_presentation: SpotlightPresentationId = "classic",
     insight_fact: ShareSummaryInsightFact | None = None,
 ) -> bytes:
+    """Cache PNG bytes for share-summary card export."""
     del color_scheme_fingerprint  # cache key only — render reads live scheme by index
     return share_summary_to_png_bytes(
         stats,
@@ -194,14 +195,12 @@ def _ensure_card_stat_picks(
             tiles_presentation=tiles_presentation,
         )
 
-    if (
-        not sanitize_card_stat_picks(
-            list(st.session_state[picks_key]),
-            available=available,
-            max_slots=storage_max,
-        )
-        and defaults
-    ):
+    restored_picks = sanitize_card_stat_picks(
+        list(st.session_state[picks_key]),
+        available=available,
+        max_slots=storage_max,
+    )
+    if not restored_picks and defaults:
         _clear_card_stat_selectbox_keys(layout, keys)
         st.session_state[picks_key] = defaults
         st.session_state[count_key] = default_card_stat_slot_count(
@@ -289,7 +288,7 @@ def _add_stat_to_card_on_click(
     keys: SocialCardsSessionKeys,
     available_stat_count: int,
 ) -> None:
-    """Callback — runs before widgets so selectbox keys can be cleared safely."""
+    """Run before widgets so selectbox keys can be cleared safely."""
     _add_stat_to_card(
         stat_label,
         layout=layout,
@@ -436,7 +435,9 @@ def render_card_stat_picker_ui(
     for i in range(ui_rows):
         current = picks[i] if i < len(picks) else ""
         other = {picks[j] for j in range(len(picks)) if j != i and picks[j]}
-        options = [""] + [lab for lab in available_labels if lab not in other]
+        options = [""] + [
+            label for label in available_labels if label not in other
+        ]
         current = _sync_card_stat_selectbox_value(
             layout, i, options=options, desired=current, keys=keys
         )
@@ -597,6 +598,7 @@ def spotlight_label_from_session(
     status_metrics: list[tuple[str, str]],
     keys: SocialCardsSessionKeys,
 ) -> str:
+    """Resolve spotlight stat label from session, with sensible fallbacks."""
     available = {label for label, _ in status_metrics}
     raw = st.session_state.get(keys.spotlight_label)
     if isinstance(raw, str) and raw.strip() in available:
@@ -609,7 +611,7 @@ def spotlight_label_from_session(
 
 
 def _select_spotlight_stat(stat_label: str, keys: SocialCardsSessionKeys) -> None:
-    """Callback — runs before widgets so the selectbox key can be updated."""
+    """Run before widgets so the selectbox key can be updated."""
     st.session_state[keys.spotlight_label] = stat_label
 
 
@@ -652,6 +654,7 @@ def render_spotlight_stat_picker(
     status_metrics: list[tuple[str, str]],
     keys: SocialCardsSessionKeys,
 ) -> None:
+    """Spotlight layout stat picker and alternate-stat chip strip."""
     labels = [label for label, _ in status_metrics]
     if not labels:
         st.caption("No statistics available for this period.")

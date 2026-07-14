@@ -117,7 +117,7 @@ def render_social_cards_tab_content(
         if insight_species_options and keys.insight_species not in st.session_state:
             st.session_state[keys.insight_species] = insight_species_options[0]
 
-    card_stat_data_scope = card_stat_data_scope_from_session_export(
+    stat_picks_scope = card_stat_data_scope_from_session_export(
         period_kind=stats.period_kind,
         period_label=stats.period_label,
         geo_scope=geo_scope,
@@ -137,7 +137,7 @@ def render_social_cards_tab_content(
             scale=sidebar_selection.scale,
             status_metrics=status_metrics,
             color_scheme_index=sidebar_selection.color_scheme_index,
-            card_stat_data_scope=card_stat_data_scope,
+            card_stat_data_scope=stat_picks_scope,
             scope_label=scope_label,
             geo_scope=geo_scope,
             keys=keys,

@@ -55,7 +55,7 @@ class ShareSummaryInsightFact:
 
 
 def format_insight_fact_metric(fact: ShareSummaryInsightFact) -> str | None:
-    """Formatted optional number line, e.g. ``3,999 checklists``."""
+    """Format the optional metric line, e.g. ``3,999 checklists``."""
     if fact.metric_value is None:
         return None
     formatted = f"{fact.metric_value:,}"
@@ -65,7 +65,7 @@ def format_insight_fact_metric(fact: ShareSummaryInsightFact) -> str | None:
 
 
 def insight_fact_requires_species(fact_id: InsightFactId) -> bool:
-    """True when the picker must show a species selectbox (``species_individuals``)."""
+    """Return whether the picker must show a species selectbox."""
     return fact_id in INSIGHT_FACTS_REQUIRING_SPECIES
 
 
@@ -158,6 +158,7 @@ def insight_fact_by_id(
     facts: list[ShareSummaryInsightFact],
     fact_id: InsightFactId,
 ) -> ShareSummaryInsightFact | None:
+    """Return the first fact matching *fact_id*, or None."""
     for fact in facts:
         if fact.fact_id == fact_id:
             return fact

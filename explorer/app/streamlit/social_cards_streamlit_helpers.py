@@ -81,14 +81,14 @@ def card_stat_data_scope_from_design_source(
 
 
 def period_has_checklist_data(stats: ShareSummaryStats) -> bool:
-    """False when the selected period has no checklists in the loaded export."""
+    """Return whether the selected period has checklists in the loaded export."""
     return stats.checklists is not None and stats.checklists > 0
 
 
 def tiles_circle_cluster_picker(
     layout: LayoutId, tiles_presentation: TilesPresentationId
 ) -> bool:
-    """True when the tiles layout uses circle-cluster presentation."""
+    """Return whether the tiles layout uses circle-cluster presentation."""
     return layout == "tiles" and tiles_presentation == "circles"
 
 
@@ -98,6 +98,7 @@ def card_stat_min_slots(
     *,
     tiles_presentation: TilesPresentationId = "grid",
 ) -> int:
+    """Return minimum stat slots for the layout and format."""
     if layout == "tiles" and not tiles_circle_cluster_picker(
         layout, tiles_presentation
     ):
@@ -114,6 +115,7 @@ def default_card_stat_slot_count(
     fmt: FormatId,
     tiles_presentation: TilesPresentationId = "grid",
 ) -> int:
+    """Return initial stat-row count for a freshly scoped card."""
     if circle_cluster:
         return min(max_slots, TILES_CIRCLE_CLUSTER_DEFAULT)
     if layout == "tiles" and tiles_presentation == "grid":
@@ -130,6 +132,7 @@ def card_stat_max_slots(
     status_metrics: list[tuple[str, str]] | None = None,
     available_stat_count: int | None = None,
 ) -> int:
+    """Return maximum stat slots for the layout, format, and available metrics."""
     if tiles_circle_cluster_picker(layout, tiles_presentation):
         return tiles_circle_cluster_max(fmt)
     count = available_stat_count
@@ -147,6 +150,7 @@ def card_stat_ui_row_count(
     status_metrics: list[tuple[str, str]] | None = None,
     available_stat_count: int | None = None,
 ) -> int:
+    """Clamp slot count to the layout min/max and return UI row count."""
     max_slots = card_stat_max_slots(
         layout,
         fmt,
@@ -166,6 +170,7 @@ def effective_card_stat_labels(
     tiles_presentation: TilesPresentationId = "grid",
     status_metrics: list[tuple[str, str]] | None = None,
 ) -> tuple[str, ...]:
+    """Return non-empty picks trimmed to the layout's max slot count."""
     max_slots = card_stat_max_slots(
         layout,
         fmt,
@@ -181,6 +186,7 @@ def sanitize_card_stat_picks(
     available: frozenset[str],
     max_slots: int,
 ) -> list[str]:
+    """Filter picks to available labels, dedupe, and cap at max_slots."""
     seen: set[str] = set()
     out: list[str] = []
     for raw in picks:
@@ -303,6 +309,7 @@ def card_can_accept_stat(
     tiles_presentation: TilesPresentationId = "grid",
     status_metrics: list[tuple[str, str]] | None = None,
 ) -> bool:
+    """Return whether another stat can be added to the card."""
     max_slots = card_stat_max_slots(
         layout,
         fmt,
