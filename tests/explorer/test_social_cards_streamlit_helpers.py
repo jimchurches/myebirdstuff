@@ -6,6 +6,7 @@ import pytest
 
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_stat_data_scope_from_session_export,
+    ordered_custom_date_range,
     png_export_fingerprint,
 )
 from explorer.core.share_summary_compute import (
@@ -14,6 +15,34 @@ from explorer.core.share_summary_compute import (
     ShareSummaryStats,
 )
 from explorer.core.share_summary_insight_facts import ShareSummaryInsightFact
+
+
+def test_ordered_custom_date_range_swaps_inverted_pair():
+    from datetime import date
+
+    start, end, swapped = ordered_custom_date_range(
+        date(2025, 6, 7),
+        date(2025, 6, 1),
+        default_start=date(2025, 1, 1),
+        default_end=date(2025, 12, 31),
+    )
+    assert (start, end, swapped) == (date(2025, 6, 1), date(2025, 6, 7), True)
+
+    start, end, swapped = ordered_custom_date_range(
+        date(2025, 6, 1),
+        date(2025, 6, 7),
+        default_start=date(2025, 1, 1),
+        default_end=date(2025, 12, 31),
+    )
+    assert (start, end, swapped) == (date(2025, 6, 1), date(2025, 6, 7), False)
+
+    start, end, swapped = ordered_custom_date_range(
+        None,
+        "bad",
+        default_start=date(2020, 1, 1),
+        default_end=date(2020, 12, 31),
+    )
+    assert (start, end, swapped) == (date(2020, 1, 1), date(2020, 12, 31), False)
 
 
 def _base_png_fingerprint_kwargs() -> dict:

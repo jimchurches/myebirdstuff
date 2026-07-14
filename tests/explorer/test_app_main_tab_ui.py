@@ -219,6 +219,8 @@ def test_resolve_social_cards_period_from_app_session_custom_range(monkeypatch):
     assert period.start == date(2025, 6, 1)
     assert period.end == date(2025, 6, 7)
     assert period.trip_title == "North Coast trip"
+    assert state[APP_SOCIAL_CARDS_KEYS.custom_start] == date(2025, 6, 1)
+    assert state[APP_SOCIAL_CARDS_KEYS.custom_end] == date(2025, 6, 7)
 
 
 def test_resolve_social_cards_period_from_app_session_lifetime(monkeypatch):

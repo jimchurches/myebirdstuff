@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from explorer.core.share_summary_compute import (
     PeriodKind,
     ShareSummaryAllTimeStats,
@@ -23,6 +25,26 @@ from explorer.presentation.share_summary_preview import (
     layout_grid_stat_default_count,
     layout_grid_stat_min,
 )
+
+
+def ordered_custom_date_range(
+    start: date | None,
+    end: date | None,
+    *,
+    default_start: date,
+    default_end: date,
+) -> tuple[date, date, bool]:
+    """Return inclusive ``(start, end, swapped)`` with ``start <= end``.
+
+    Non-date values fall back to *default_start* / *default_end*. When the
+    incoming end is before start, the pair is swapped and *swapped* is True so
+    callers can update session state and show feedback.
+    """
+    resolved_start = start if isinstance(start, date) else default_start
+    resolved_end = end if isinstance(end, date) else default_end
+    if resolved_end < resolved_start:
+        return resolved_end, resolved_start, True
+    return resolved_start, resolved_end, False
 
 
 def card_stat_data_scope(

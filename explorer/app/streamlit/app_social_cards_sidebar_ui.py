@@ -17,6 +17,9 @@ from explorer.app.streamlit.social_cards_sidebar_ui import (
     render_sidebar_card_controls,
     render_sidebar_geo_scope_controls,
 )
+from explorer.app.streamlit.social_cards_streamlit_helpers import (
+    ordered_custom_date_range,
+)
 from explorer.core.share_summary_compute import (
     PeriodAnchor,
     ShareSummaryGeoScope,
@@ -101,17 +104,29 @@ def _render_period_controls(
             key=keys.period_anchor,
         )
     elif period_mode == "custom":
+        start, end, swapped = ordered_custom_date_range(
+            st.session_state.get(keys.custom_start),
+            st.session_state.get(keys.custom_end),
+            default_start=min_d,
+            default_end=max_d,
+        )
+        st.session_state[keys.custom_start] = start
+        st.session_state[keys.custom_end] = end
+        if swapped:
+            st.caption(
+                "Start and end dates were swapped so the range runs forwards."
+            )
         st.date_input(
             "Start date",
-            value=min_d,
+            value=start,
             min_value=min_d,
-            max_value=max_d,
+            max_value=end,
             key=keys.custom_start,
         )
         st.date_input(
             "End date",
-            value=max_d,
-            min_value=min_d,
+            value=end,
+            min_value=start,
             max_value=max_d,
             key=keys.custom_end,
         )
@@ -169,8 +184,15 @@ def resolve_social_cards_period_from_session(
     if period_mode == "lifetime":
         return period_for_lifetime(min_d, max_d)
     if period_mode == "custom":
-        start = st.session_state.get(keys.custom_start, min_d)
-        end = st.session_state.get(keys.custom_end, max_d)
+        start, end, swapped = ordered_custom_date_range(
+            st.session_state.get(keys.custom_start, min_d),
+            st.session_state.get(keys.custom_end, max_d),
+            default_start=min_d,
+            default_end=max_d,
+        )
+        if swapped:
+            st.session_state[keys.custom_start] = start
+            st.session_state[keys.custom_end] = end
         heading = _card_heading_or_none(
             st.session_state.get(keys.custom_card_heading, "")
         )

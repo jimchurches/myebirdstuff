@@ -32,6 +32,7 @@ from explorer.app.streamlit.social_cards_sidebar_ui import (
 )
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_stat_data_scope_from_design_source,
+    ordered_custom_date_range,
     period_has_checklist_data,
 )
 from explorer.app.streamlit.social_cards_streamlit_ui import (
@@ -246,14 +247,28 @@ with st.sidebar:
     sample_custom_end: date | None = None
     sample_card_heading = ""
     if period_mode == "custom" and use_sample:
+        sample_start, sample_end, sample_swapped = ordered_custom_date_range(
+            st.session_state.get("design_sample_custom_start"),
+            st.session_state.get("design_sample_custom_end"),
+            default_start=date(2025, 6, 1),
+            default_end=date(2025, 6, 7),
+        )
+        st.session_state["design_sample_custom_start"] = sample_start
+        st.session_state["design_sample_custom_end"] = sample_end
+        if sample_swapped:
+            st.caption(
+                "Start and end dates were swapped so the range runs forwards."
+            )
         sample_custom_start = st.date_input(
             "Start date",
-            value=date(2025, 6, 1),
+            value=sample_start,
+            max_value=sample_end,
             key="design_sample_custom_start",
         )
         sample_custom_end = st.date_input(
             "End date",
-            value=date(2025, 6, 7),
+            value=sample_end,
+            min_value=sample_start,
             key="design_sample_custom_end",
         )
         sample_card_heading = st.text_input(
@@ -337,25 +352,41 @@ if df is not None:
             if start is None or end is None:
                 st.warning("Choose custom dates in the sidebar.")
                 st.stop()
-            if end < start:
-                start, end = end, start
+            start, end, _swapped = ordered_custom_date_range(
+                start,
+                end,
+                default_start=date(2025, 6, 1),
+                default_end=date(2025, 6, 7),
+            )
             period = period_for_custom(
                 start,
                 end,
                 trip_title=_card_heading_or_none(sample_card_heading),
             )
         else:
+            csv_start, csv_end, csv_swapped = ordered_custom_date_range(
+                st.session_state.get("design_csv_custom_start"),
+                st.session_state.get("design_csv_custom_end"),
+                default_start=min_d,
+                default_end=max_d,
+            )
+            st.session_state["design_csv_custom_start"] = csv_start
+            st.session_state["design_csv_custom_end"] = csv_end
+            if csv_swapped:
+                st.sidebar.caption(
+                    "Start and end dates were swapped so the range runs forwards."
+                )
             start = st.sidebar.date_input(
                 "Start date",
-                value=min_d,
+                value=csv_start,
                 min_value=min_d,
-                max_value=max_d,
+                max_value=csv_end,
                 key="design_csv_custom_start",
             )
             end = st.sidebar.date_input(
                 "End date",
-                value=max_d,
-                min_value=min_d,
+                value=csv_end,
+                min_value=csv_start,
                 max_value=max_d,
                 key="design_csv_custom_end",
             )
