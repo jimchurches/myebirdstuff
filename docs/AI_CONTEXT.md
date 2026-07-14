@@ -215,17 +215,17 @@ Do not duplicate HTML in UI code — use shared formatters.
 ### Defaults
 
 - **`explorer/data/basemaps.yaml`** — **Map basemaps** (keys, labels, tile URLs); loaded by `explorer/core/basemap_manifest.py`. Regenerate React assets with `python3 scripts/generate_basemap_assets.py`.
-- **`explorer/app/streamlit/defaults.py`** — **Developer tweakables**: map cluster options, pin **size / stroke / opacity**, legend dot sizes, theme hex, map height slider bounds, layout widths, temporary map debug (live zoom). Edit here to change look/behaviour without hunting core modules.
+- **`explorer/app/streamlit/defaults.py`** — **Developer tweakables** you edit for look/behaviour without hunting core modules: map cluster options, pin **size / stroke / opacity**, viewport/framing guards, **map marker colour scheme presets** (`MAP_MARKER_COLOUR_SCHEME_*`), theme hex, layout widths, cache sizes, temporary map debug (live zoom), spinner **theme CSS** cache-key suffix. Also a **re-export façade** for basemap labels/schema map-height bounds and share-summary defaults — those literals are **not** owned here (edit the defining module; section headers in the file label façade imports).
 
-- **Map marker design utility** — separate Streamlit app (not user-facing): `streamlit run explorer/app/streamlit/design_map_app.py`. Previews roles and exports scheme dicts; see [development.md](development.md#map-marker-colour-design-utility-developers).
+- **Map marker design utility** — separate Streamlit app (not user-facing): `streamlit run explorer/app/streamlit/design_map_app.py`. Previews roles and exports scheme dicts into `defaults.py`; dataclass shapes live in `explorer/core/map_marker_scheme_model.py`. See [development.md](development.md#map-marker-colour-design-utility-developers).
 
-- **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner text and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
+- **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner **text** and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
 - **Map HTML export UX** — Shipped one-click sidebar export; alternative two-button design and browser-risk notes: [docs/explorer/map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) (use if users report export/download failures).
 
-- **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings).
-- **`explorer/core/share_summary_defaults.py`** — **Share-summary card** colour schemes and layout stat defaults (#157); re-exported from `defaults.py` for Streamlit tuning.
+- **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings). Owns `MAP_HEIGHT_PX_{MIN,MAX,DEFAULT}` and basemap default/options used by settings — re-exported from `defaults.py` as façade only.
+- **`explorer/core/share_summary_defaults.py`** — **Share-summary card** colour schemes and layout stat defaults (#157); re-exported from `defaults.py` for a single Streamlit import surface (no duplicate literals in `defaults.py`).
 
-Do not hardcode tunable numbers in UI files; use `defaults.py` (or the matching `explorer/core/*_defaults.py` module) for those.
+Do not hardcode tunable numbers in UI files; use `defaults.py` (or the matching `explorer/core/*_defaults.py` module) for those. Prefer clarifying comments/section headers over large file splits unless an issue explicitly moves a block.
 
 ---
 

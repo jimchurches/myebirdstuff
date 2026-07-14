@@ -22,12 +22,13 @@ There is no rigid taxonomy — use judgement. Typical `defaults.py` contents: ma
 
 | Kind | Location |
 |------|----------|
-| **Developer / technical-user tweakables** | `explorer/app/streamlit/defaults.py` |
-| Fixed product copy, tab labels, URLs | `explorer/app/streamlit/streamlit_ui_constants.py` |
+| **Developer / technical-user tweakables** (incl. map marker scheme presets) | `explorer/app/streamlit/defaults.py` |
+| Fixed product copy, tab labels, URLs, spinner *text* | `explorer/app/streamlit/streamlit_ui_constants.py` |
 | Persisted settings schema (YAML-backed) | `explorer/core/settings_schema_defaults.py` |
-| Feature tunables (e.g. share summary) | `explorer/core/*_defaults.py` → often re-exported via `defaults.py` |
+| Feature tunables (e.g. share summary) | `explorer/core/*_defaults.py` → re-exported via `defaults.py` as **façade only** |
+| Map marker scheme *dataclass shapes* | `explorer/core/map_marker_scheme_model.py` |
 
-Do not scatter magic numbers in `explorer/app/` — centralise tunables in `defaults.py` (or the matching `*_defaults.py`). See [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md) § Configuration and [`docs/python-style-guide.md`](docs/python-style-guide.md) § Constants.
+Do not scatter magic numbers in `explorer/app/` — centralise tunables in `defaults.py` (or the matching `*_defaults.py`). Do not “own” re-exported schema/share-summary literals inside `defaults.py`. See [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md) § Defaults and [`docs/python-style-guide.md`](docs/python-style-guide.md) § Constants.
 
 ## Design / playground apps
 
