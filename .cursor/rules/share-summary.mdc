@@ -19,7 +19,7 @@ File-scoped rule for share-summary work on the Social Cards line. Read linked do
 | Stat computation | [`explorer/core/share_summary_compute.py`](explorer/core/share_summary_compute.py) |
 | Design playground | `streamlit run explorer/app/streamlit/design_share_summary_app.py` |
 | Feature status / roadmap | [`docs/explorer/issue-157-share-summary-tracker.md`](docs/explorer/issue-157-share-summary-tracker.md) |
-| Feature-line workflow | [`docs/explorer/social-cards-workflow.md`](docs/explorer/social-cards-workflow.md) |
+| Archived feature-line workflow | [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021) |
 
 ## Layout slot limits (not one-size-fits-all)
 

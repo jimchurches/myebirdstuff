@@ -17,7 +17,7 @@ Living document for the social media summary feature. Update this file as ideas 
 | — | [#308](https://github.com/jimchurches/myebirdstuff/issues/308) | Dark theme tile contrast (medium lift on Statistics Grid + circle cluster) — merged via `feat/social-cards` |
 | — | [#285](https://github.com/jimchurches/myebirdstuff/issues/285) | Interesting Insights layout — species/checklist facts; Spotlight restored to stat-only — merged via `feat/social-cards` |
 
-**Prototype / integration branch:** `feat/social-cards` — see [social-cards-workflow.md](social-cards-workflow.md)
+**Integration branch:** `feat/social-cards` → `beta-next` via [PR #343](https://github.com/jimchurches/myebirdstuff/pull/343). Feature-line workflow archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021). Early prototype notes archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964295174).
 
 **Design app:**
 
@@ -31,13 +31,13 @@ streamlit run explorer/app/streamlit/design_share_summary_app.py
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Layout mockups (HTML) | **Done (prototype)** | Hero, tiles, minimal, spotlight |
-| Aspect ratios | **Done (prototype)** | Square post, portrait post, story |
-| App logo on card | **Done (prototype)** | Footer banner only (no top-right corner) |
-| Period: yearly | **Done (prototype)** | From CSV or sample data |
-| Period: monthly | **Done (prototype)** | `compute_share_summary_stats` |
-| Period: weekly | **Done (prototype)** | Sun–Sat weeks; title `May 31, 2026 - June 6, 2026` |
-| Period: custom / trip | **Done (prototype)** | Date range + trip title as green subtitle |
+| Layout mockups (HTML) | **Done** | Tiles, minimal list, spotlight, Interesting Insights |
+| Aspect ratios | **Done** | Square post, portrait post, story |
+| App logo on card | **Done** | Footer banner only (no top-right corner) |
+| Period: yearly | **Done** | From CSV or sample data |
+| Period: monthly | **Done** | `compute_share_summary_stats` |
+| Period: weekly | **Done** | Sun–Sat weeks; title `May 31, 2026 - June 6, 2026` |
+| Period: custom / trip | **Done** | Date range + trip title as green subtitle |
 | Longest streak (year/month) | **Agreed** | Summary row when applicable; not week/custom v1 |
 | Birding days | **Done (prototype)** | Unique checklist days; label “Birding days” |
 | Countries | **Done (prototype)** | All period types; default on tiles/minimal; **hidden when geographic scope ≠ World** |
@@ -517,7 +517,9 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | `explorer/core/share_summary_compute.py` | Period definitions + stat computation |
 | `explorer/core/share_summary_defaults.py` | Colour schemes + default stat lists for share cards |
 | `explorer/presentation/share_summary_preview.py` | HTML layouts, footer logo, preview scaling + export HTML |
-| `explorer/presentation/share_summary_png_export.py` | Playwright PNG pipeline + filename helper |
+| `explorer/presentation/share_summary_theme.py` / `_metrics.py` / `_layouts.py` | Card HTML (facade: `share_summary_preview.py`) |
+| `explorer/presentation/share_summary_circles_preview.py` / `_hex_preview.py` / `_png_export.py` | Circles, hex experiments, Playwright PNG |
+| `explorer/app/streamlit/social_cards_stat_picker_ui.py` / `_png_export_ui.py` / `_streamlit_ui.py` / `_streamlit_html.py` | Main-tab Social Cards UI (fragment + helpers) |
 | `explorer/app/streamlit/defaults.py` | Re-exports share-summary defaults for Streamlit tuning |
 | `explorer/app/streamlit/design_share_summary_app.py` | Design studio — sidebar controls + current card preview (mirror for [#323](https://github.com/jimchurches/myebirdstuff/issues/323)) |
 | `explorer/app/streamlit/streamlit_ui_constants.py` | `NOTEBOOK_MAIN_TAB_LABELS` — add **Social Cards** before Settings |
@@ -533,11 +535,11 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 
 | Phase | Branch (example) | Deliverable | Status | Issue |
 |-------|------------------|-------------|--------|-------|
-| 0 | `157-social-summary-prototype` | Design app + tracker + core modules | **Ready to commit/PR** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
-| 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **In PR** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
-| 2 | `feat/social-cards` | Design studio iteration: PNG export, circle layouts, playground, stat picker | **Done on branch** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) (closed) |
-| 3 | `feat/social-cards` | **Social Cards** main tab port (batched) | **In progress** | [#323](https://github.com/jimchurches/myebirdstuff/issues/323) ([#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328)) |
-| 4 | follow-ups | Stat picker/themes in studio; polish on main app | Partial / [#328](https://github.com/jimchurches/myebirdstuff/issues/328) | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
+| 0 | early prototype | Design app + tracker + core modules | **Done** | [#273](https://github.com/jimchurches/myebirdstuff/issues/273) |
+| 1 | `157-share-summary-period-stats` | Harden compute + tests; align with main app data paths | **Done** | [#274](https://github.com/jimchurches/myebirdstuff/issues/274) |
+| 2 | `feat/social-cards` | Design studio iteration: PNG export, circle layouts, playground, stat picker | **Done** | [#275](https://github.com/jimchurches/myebirdstuff/issues/275) (closed) |
+| 3 | `feat/social-cards` | **Social Cards** main tab port (batched) | **Done — merge via [#343](https://github.com/jimchurches/myebirdstuff/pull/343)** | [#323](https://github.com/jimchurches/myebirdstuff/issues/323) ([#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328)) |
+| 4 | follow-ups | Stat picker/themes in studio; polish on main app | **Done on feature line** / Cloud PNG [#345](https://github.com/jimchurches/myebirdstuff/issues/345), Chromium reuse [#344](https://github.com/jimchurches/myebirdstuff/issues/344) | [#277](https://github.com/jimchurches/myebirdstuff/issues/277) |
 
 ---
 
@@ -613,3 +615,5 @@ The explorer is a **browser-based web app**, developed and optimised primarily f
 | 2026-06-29 | **#285 Interesting Insights:** separate layout for species/checklist facts; Spotlight restored to stat-only (Classic/Circle); design studio insights + species pickers; countable species picker deferred to main-app port ([#328](https://github.com/jimchurches/myebirdstuff/issues/328)) |
 | 2026-07-01 | **#275 closed** (PNG export design studio); **#276 closed** — superseded by [#323](https://github.com/jimchurches/myebirdstuff/issues/323) epic + port batches [#324](https://github.com/jimchurches/myebirdstuff/issues/324)–[#328](https://github.com/jimchurches/myebirdstuff/issues/328) |
 | 2026-07-14 | PNG Cloud verify + Chromium reuse follow-ups filed: [#345](https://github.com/jimchurches/myebirdstuff/issues/345), [#344](https://github.com/jimchurches/myebirdstuff/issues/344) (PR #343 review) |
+| 2026-07-14 | Archived `social-cards-workflow.md` to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021); module map kept in this tracker |
+| 2026-07-14 | Archived early prototype notes to [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964295174); removed stale `issue-157-social-summary-prototype.md` |

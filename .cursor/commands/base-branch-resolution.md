@@ -51,9 +51,10 @@ For most work, **PR target = development base**. When an issue names both `## Ba
 
 ## Feature-line pointers
 
-When resolved base is **`feat/social-cards`** (or the issue/body references Social Cards / #157):
+When resolved base is a long-lived feature integration branch (e.g. historically **`feat/social-cards`** for Social Cards / #157):
 
-- Point at `docs/explorer/social-cards-workflow.md` when that file exists on the base branch.
+- Prefer any workflow doc named in the issue body; otherwise follow the issue’s `## Base branch` / `## PR target`.
+- Social Cards feature-line playbook is archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021).
 - PRs target the feature integration branch, not `beta-next`, until a milestone merge.
 
 ---

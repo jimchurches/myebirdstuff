@@ -49,7 +49,7 @@ Summarise briefly:
 - likely files or areas involved
 - any assumptions or risks
 
-When base is `feat/social-cards`, mention `docs/explorer/social-cards-workflow.md` if present on that base.
+When base is a feature integration branch (e.g. historically `feat/social-cards`), mention any workflow doc named in the issue; Social Cards playbook is archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021).
 
 ---
 

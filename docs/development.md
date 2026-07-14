@@ -24,7 +24,7 @@ Slash commands in `.cursor/commands/` automate git and GitHub workflow. Key comm
 | `/nit-fixer` | Standalone aggressive nit pass on PR-touched files |
 | `/code-review` | Large-change review; Nit-Fixer as final step after checklist |
 
-**Base branch resolution:** Commands share logic in [`.cursor/commands/base-branch-resolution.md`](../.cursor/commands/base-branch-resolution.md). When a GitHub issue includes `## Base branch` / `## PR target`, commands read the issue via `gh issue view` instead of defaulting to `beta-next`. Feature-line work (e.g. Social Cards on `feat/social-cards`) is documented in `docs/explorer/social-cards-workflow.md` when present on that branch.
+**Base branch resolution:** Commands share logic in [`.cursor/commands/base-branch-resolution.md`](../.cursor/commands/base-branch-resolution.md). When a GitHub issue includes `## Base branch` / `## PR target`, commands read the issue via `gh issue view` instead of defaulting to `beta-next`. Historical Social Cards feature-line workflow (base `feat/social-cards`) is archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021).
 
 ### Nit-Fixer vs CI vs Sentinel
 
