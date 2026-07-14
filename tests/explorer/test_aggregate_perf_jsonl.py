@@ -9,6 +9,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from tests.explorer.e2e_support import (
+    max_elapsed_ms_by_stage,
+    parse_perf_json_objects_from_log_lines,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _SCRIPT_PATH = REPO_ROOT / "scripts" / "aggregate_perf_jsonl.py"
 
@@ -185,3 +190,30 @@ def test_main_returns_nonzero_for_missing_dir(tmp_path: Path) -> None:
     mod = _load_module()
     rc = mod.main([str(tmp_path / "does_not_exist")])
     assert rc == 2
+
+
+def test_e2e_log_parser_extracts_only_complete_perf_records() -> None:
+    lines = [
+        'INFO prefix {"stage":"prep.one","elapsed_ms":1.5} trailing '
+        '{"stage":"prep.two","elapsed_ms":2}\n',
+        '{"stage":"missing-duration"}\n',
+        'noise {"elapsed_ms":3}\n',
+        '{"stage":"broken","elapsed_ms":\n',
+    ]
+
+    assert parse_perf_json_objects_from_log_lines(lines) == [
+        {"stage": "prep.one", "elapsed_ms": 1.5},
+        {"stage": "prep.two", "elapsed_ms": 2},
+    ]
+
+
+def test_e2e_stage_max_ignores_zero_point_events_and_invalid_durations() -> None:
+    events = [
+        {"stage": "prep.one", "elapsed_ms": 0, "run_kind": "point"},
+        {"stage": "prep.one", "elapsed_ms": "12.5"},
+        {"stage": "prep.one", "elapsed_ms": 9},
+        {"stage": "prep.two", "elapsed_ms": "invalid"},
+        {"elapsed_ms": 100},
+    ]
+
+    assert max_elapsed_ms_by_stage(events) == {"prep.one": 12.5}

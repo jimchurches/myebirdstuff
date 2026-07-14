@@ -140,16 +140,11 @@ def _run_headline_four_map_mode_journey(page: Any) -> None:
     )
     choose_species_by_common_name(page, E2E_FIXTURE_SPECIES_COMMON)
 
-    try:
-        family_label = choose_first_recorded_family(page)
-        wait_for_pebird_map_markup(
-            page,
-            must_contain=map_banner_must_contain(family_label),
-        )
-    except Exception:
-        choose_map_view_mode(page, "Family locations")
-        wait_for_pebird_map_markup(page, must_contain=["pebird-map-banner"])
-        return
+    family_label = choose_first_recorded_family(page)
+    wait_for_pebird_map_markup(
+        page,
+        must_contain=map_banner_must_contain(family_label),
+    )
 
     choose_map_view_mode(page, "Lifer locations")
     wait_for_pebird_map_markup(
