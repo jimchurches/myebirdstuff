@@ -36,7 +36,7 @@ from explorer.presentation.share_summary_circles_preview import (
     place_circle_centers,
     tiles_circle_cluster_max,
 )
-from explorer.presentation.share_summary_preview import (
+from explorer.presentation.share_summary_theme import (
     FORMAT_LABELS,
     FORMAT_PIXELS,
     FormatId,

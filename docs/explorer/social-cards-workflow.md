@@ -68,6 +68,14 @@ Open **one PR**: `feat/social-cards` → `beta-next`, with test plan and tracker
 
 ---
 
+## Module layout (presentation / Streamlit)
+
+| Area | Modules |
+|------|---------|
+| Card HTML | `share_summary_theme.py`, `share_summary_metrics.py`, `share_summary_layouts.py` (facade: `share_summary_preview.py`) |
+| Circles / hex / PNG | `share_summary_circles_preview.py`, `share_summary_hex_preview.py`, `share_summary_png_export.py` |
+| Main-tab UI | `social_cards_stat_picker_ui.py`, `social_cards_png_export_ui.py`, `social_cards_streamlit_ui.py` (fragment), `social_cards_streamlit_html.py` |
+
 ## Related docs
 
 - [issue-157-share-summary-tracker.md](issue-157-share-summary-tracker.md) — feature status
@@ -85,7 +93,7 @@ Social Cards is the **only** main tab lazy-mounted on `tab.open` in `app_dashboa
 | `social_cards.resolve_stats` | `social_cards_streamlit_html.py` |
 | `social_cards.compute_insight_facts` | `social_cards_streamlit_html.py` (Interesting Insights layout only) |
 | `social_cards.render_preview` | `social_cards_streamlit_html.py` |
-| `social_cards.png_export` | `social_cards_streamlit_ui.py` |
+| `social_cards.png_export` | `social_cards_png_export_ui.py` |
 
 ### `fragment.social_cards` timing (~47k-row export, #328)
 

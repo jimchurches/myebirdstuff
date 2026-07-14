@@ -928,7 +928,7 @@ def test_portrait_post_preview_dimensions():
 
 
 def test_colour_or_uses_tile_keys_and_falls_back_to_base_palette():
-    from explorer.presentation.share_summary_preview import (
+    from explorer.presentation.share_summary_theme import (
         _colour_or,
         share_summary_scheme_override,
     )

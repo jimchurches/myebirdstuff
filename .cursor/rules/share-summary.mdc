@@ -14,7 +14,8 @@ File-scoped rule for share-summary work on the Social Cards line. Read linked do
 |-------|----------|
 | Colour schemes, default stat labels | [`explorer/core/share_summary_defaults.py`](explorer/core/share_summary_defaults.py) |
 | Re-exports for Streamlit tuning | [`explorer/app/streamlit/defaults.py`](explorer/app/streamlit/defaults.py) (`SHARE_SUMMARY_*`) |
-| Layout HTML / slot limits | [`explorer/presentation/share_summary_preview.py`](explorer/presentation/share_summary_preview.py) |
+| Layout HTML / slot limits | `share_summary_metrics.py` / `share_summary_layouts.py` (facade: [`share_summary_preview.py`](explorer/presentation/share_summary_preview.py)) |
+| Formats / colour schemes | [`share_summary_theme.py`](explorer/presentation/share_summary_theme.py) |
 | Stat computation | [`explorer/core/share_summary_compute.py`](explorer/core/share_summary_compute.py) |
 | Design playground | `streamlit run explorer/app/streamlit/design_share_summary_app.py` |
 | Feature status / roadmap | [`docs/explorer/issue-157-share-summary-tracker.md`](docs/explorer/issue-157-share-summary-tracker.md) |
@@ -22,7 +23,7 @@ File-scoped rule for share-summary work on the Social Cards line. Read linked do
 
 ## Layout slot limits (not one-size-fits-all)
 
-Use `layout_card_stat_max()` in `share_summary_preview.py` — limits depend on **layout** and **format** (square / portrait / story).
+Use `layout_card_stat_max()` (via `share_summary_preview` / `share_summary_metrics`) — limits depend on **layout** and **format** (square / portrait / story).
 
 | Layout | Stat slots |
 |--------|------------|

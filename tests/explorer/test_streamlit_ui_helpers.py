@@ -687,7 +687,7 @@ def test_inject_auto_click_streamlit_download_js_uses_iframe_with_label_and_pare
 
 
 def test_lazy_png_export_cache_clears_stale_bytes(streamlit_stub) -> None:
-    ui = importlib.import_module("explorer.app.streamlit.social_cards_streamlit_ui")
+    ui = importlib.import_module("explorer.app.streamlit.social_cards_png_export_ui")
     st = streamlit_stub
     old_fingerprint = ("old",)
     new_fingerprint = ("new",)

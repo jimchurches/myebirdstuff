@@ -13,13 +13,13 @@ import struct
 from typing import TYPE_CHECKING
 
 from explorer.core.share_summary_insight_facts import ShareSummaryInsightFact
-from explorer.presentation.share_summary_preview import (
+from explorer.presentation.share_summary_layouts import render_share_summary_export_html
+from explorer.presentation.share_summary_theme import (
     _FORMAT_PX,
     FormatId,
     LayoutId,
     SpotlightPresentationId,
     TilesPresentationId,
-    render_share_summary_export_html,
 )
 
 if TYPE_CHECKING:

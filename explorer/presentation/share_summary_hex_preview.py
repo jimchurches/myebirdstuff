@@ -21,18 +21,20 @@ from explorer.core.share_summary_compute import (
     ShareSummaryGeoScope,
     ShareSummaryStats,
 )
-from explorer.presentation.share_summary_preview import (
-    _FORMAT_PX,
-    FormatId,
+from explorer.presentation.share_summary_layouts import (
     _card_shell,
-    _color_scheme_context,
-    _colour,
-    _esc,
     _footer_block,
     _footer_pad,
     _header_block,
     _layout_subtitle,
     _resolve_card_stat_pairs,
+)
+from explorer.presentation.share_summary_theme import (
+    _FORMAT_PX,
+    FormatId,
+    _color_scheme_context,
+    _colour,
+    _esc,
 )
 
 HEX_GRID_EXPERIMENTAL_NOTICE = (

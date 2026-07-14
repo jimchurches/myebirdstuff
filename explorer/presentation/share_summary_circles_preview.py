@@ -16,20 +16,25 @@ from explorer.core.share_summary_compute import (
     ShareSummaryStats,
 )
 from explorer.core.share_summary_defaults import SHARE_SUMMARY_STORY_MAX_STATS
-from explorer.presentation.share_summary_preview import (
-    _FORMAT_PX,
-    FormatId,
+from explorer.presentation.share_summary_layouts import (
     _card_shell,
-    _color_scheme_context,
-    _colour,
-    _colour_or,
-    _esc,
     _footer_block,
     _footer_pad,
     _header_block,
     _layout_subtitle,
     _resolve_card_stat_pairs,
+)
+from explorer.presentation.share_summary_metrics import (
+    _metrics_lookup,
     spotlight_pair_for_label,
+)
+from explorer.presentation.share_summary_theme import (
+    _FORMAT_PX,
+    FormatId,
+    _color_scheme_context,
+    _colour,
+    _colour_or,
+    _esc,
 )
 
 CircleVariantId = Literal[
@@ -533,8 +538,6 @@ def _metrics_lookup_for_story_slots(
     all_time: ShareSummaryAllTimeStats | None = None,
     geo_scope: ShareSummaryGeoScope | None = None,
 ) -> dict[str, str]:
-    from explorer.presentation.share_summary_preview import _metrics_lookup
-
     return _metrics_lookup(stats, all_time=all_time, geo_scope=geo_scope)
 
 
