@@ -78,9 +78,9 @@ python3 -m ruff check explorer/
 python3 -m pytest tests/ -q -m "not e2e"
 ```
 
-Prefer a **narrower** pytest path when the diff is clearly isolated (e.g. `tests/path/to/test_module.py`). Fold failures into the review; Nit-Fixer addresses mechanical failures in Step 4b.
+Prefer a **narrower** pytest path when the diff is clearly isolated (e.g. `tests/path/to/test_module.py`). Fold quality-gate failures into the review; Nit-Fixer addresses mechanical nits and lint in Step 4b.
 
-**Docs / config only:** skip pytest unless the change affects runtime behaviour.
+**Docs / commands only:** skip pytest unless the change affects runtime behaviour.
 
 ---
 
