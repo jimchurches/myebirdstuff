@@ -71,6 +71,7 @@ def test_apply_dataset_signature_change_clears_leaflet_caches(
     from explorer.app.streamlit.app_constants import (
         ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
         EBIRD_DATA_SIG_KEY,
+        FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
         LEAFLET_EXPORT_HTML_CACHE_KEY,
         LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
         SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
@@ -92,6 +93,9 @@ def test_apply_dataset_signature_change_clears_leaflet_caches(
     )
     st.session_state[LIFER_LEAFLET_PAYLOAD_CACHE_KEY] = OrderedDict()
     st.session_state[SPECIES_LEAFLET_PAYLOAD_CACHE_KEY] = OrderedDict()
+    st.session_state[FAMILY_LEAFLET_PAYLOAD_CACHE_KEY] = OrderedDict(
+        [(("family",), {"revision": "family-old"})]
+    )
     st.session_state[LEAFLET_EXPORT_HTML_CACHE_KEY] = OrderedDict()
 
     assert apply_dataset_signature_for_map_caches(df_b, "disk") is True
@@ -99,6 +103,7 @@ def test_apply_dataset_signature_change_clears_leaflet_caches(
     assert ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert LIFER_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert SPECIES_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
+    assert FAMILY_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert LEAFLET_EXPORT_HTML_CACHE_KEY not in st.session_state
 
 
@@ -158,7 +163,9 @@ def test_leaflet_payload_cache_miss_when_revision_extra_changes(streamlit_stub) 
         {"revision": "off", "geojson": {"type": "FeatureCollection", "features": []}},
         max_entries=ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     )
-    assert leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_off) is not None
+    assert leaflet_payload_cache_lookup(
+        ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_off
+    )["revision"] == "off"
     assert leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_on) is None
 
 

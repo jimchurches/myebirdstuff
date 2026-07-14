@@ -149,8 +149,14 @@ def test_leaflet_payload_cache_lru_evicts_oldest_when_over_max(
         max_entries=max_entries,
     )
     assert leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is None
-    assert leaflet_payload_cache_lookup(session_key, ("b", mode_id)) is not None
-    assert leaflet_payload_cache_lookup(session_key, ("c", mode_id)) is not None
+    assert leaflet_payload_cache_lookup(session_key, ("b", mode_id)) == {
+        "revision": "2",
+        "geojson": {},
+    }
+    assert leaflet_payload_cache_lookup(session_key, ("c", mode_id)) == {
+        "revision": "3",
+        "geojson": {},
+    }
 
 
 @pytest.mark.parametrize(
@@ -176,12 +182,38 @@ def test_leaflet_payload_cache_hit_moves_entry_to_mru_end(
         {"revision": "2", "geojson": {}},
         max_entries=max_entries,
     )
-    assert leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is not None
+    assert leaflet_payload_cache_lookup(session_key, ("a", mode_id))["revision"] == "1"
     leaflet_payload_cache_store(
         session_key,
         ("c", mode_id),
         {"revision": "3", "geojson": {}},
         max_entries=max_entries,
     )
-    assert leaflet_payload_cache_lookup(session_key, ("a", mode_id)) is not None
+    assert leaflet_payload_cache_lookup(session_key, ("a", mode_id))["revision"] == "1"
     assert leaflet_payload_cache_lookup(session_key, ("b", mode_id)) is None
+
+
+def test_leaflet_payload_cache_store_migrates_legacy_single_entry(
+    streamlit_stub,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import explorer.app.streamlit.app_prep_map_leaflet_caches as cache_module
+
+    monkeypatch.setattr(cache_module, "st", streamlit_stub)
+    session_key = ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY
+    legacy_key = ("legacy",)
+    streamlit_stub.session_state[session_key] = {
+        "payload_cache_key": legacy_key,
+        "revision": "old",
+        "geojson": {"features": []},
+    }
+
+    leaflet_payload_cache_store(
+        session_key,
+        ("new",),
+        {"revision": "new", "geojson": {"features": [{"id": 1}]}},
+        max_entries=2,
+    )
+
+    assert leaflet_payload_cache_lookup(session_key, legacy_key)["revision"] == "old"
+    assert leaflet_payload_cache_lookup(session_key, ("new",))["revision"] == "new"
