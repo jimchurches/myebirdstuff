@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from explorer.app.streamlit.social_cards_streamlit_helpers import (
     card_stat_data_scope_from_session_export,
     png_export_fingerprint,
@@ -78,6 +80,44 @@ def test_png_export_fingerprint_changes_when_visible_stat_value_changes():
     )
 
     assert fp_a != fp_b
+
+
+@pytest.mark.parametrize(
+    ("field", "changed_value"),
+    [
+        ("layout", "minimal"),
+        ("fmt", "story"),
+        ("spotlight_label", "Lifers"),
+        (
+            "all_time",
+            ShareSummaryAllTimeStats(
+                observed_species_taxa=43,
+                total_species_taxa=10_800,
+                world_bird_coverage_pct=0.40,
+            ),
+        ),
+        ("color_scheme_index", 1),
+        ("scope_label", "Australia"),
+        ("geo_scope", ShareSummaryGeoScope(country_key="AU")),
+        ("tiles_presentation", "circles"),
+        ("spotlight_presentation", "circle"),
+    ],
+)
+def test_png_export_fingerprint_changes_for_every_render_control(
+    field,
+    changed_value,
+):
+    base_kwargs = _base_png_fingerprint_kwargs()
+    base = png_export_fingerprint(
+        **base_kwargs,
+        card_stat_labels=("Species", "Checklists"),
+    )
+    changed = png_export_fingerprint(
+        **{**base_kwargs, field: changed_value},
+        card_stat_labels=("Species", "Checklists"),
+    )
+
+    assert changed != base
 
 
 def test_png_export_fingerprint_changes_when_scheme_values_change(monkeypatch):

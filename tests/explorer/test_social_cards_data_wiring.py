@@ -118,6 +118,39 @@ def test_resolve_social_cards_stats_skips_all_time_when_geo_scoped():
     assert all_time is None
 
 
+def test_resolve_social_cards_stats_uses_full_export_for_geo_lifers():
+    df_full = pd.DataFrame(
+        {
+            "Date": ["2024-06-01", "2026-01-10", "2026-01-11"],
+            "Submission ID": ["s1", "s2", "s3"],
+            "Count": [1, 1, 1],
+            "Country": ["Indonesia", "Australia", "Australia"],
+            "State/Province": ["ID-JW", "AU-NSW", "AU-NSW"],
+            "Common Name": ["Grey Teal", "Grey Teal", "Superb Fairywren"],
+            "Scientific Name": [
+                "Anas gracilis",
+                "Anas gracilis",
+                "Malurus cyaneus",
+            ],
+        }
+    )
+    df_scoped = df_full.iloc[[1, 2]].copy()
+    scope = ShareSummaryGeoScope(country_key="AU")
+
+    stats, all_time = resolve_social_cards_stats(
+        df_full=df_full,
+        df_scoped=df_scoped,
+        period=period_for_year(2026),
+        geo_scope=scope,
+        rankings_bundle=None,
+    )
+
+    assert stats is not None
+    assert stats.lifers == 1
+    assert stats.region_lifers == 2
+    assert all_time is None
+
+
 def test_world_taxonomy_bundle_status_pending_when_bundle_missing():
     assert world_taxonomy_bundle_status(None) == "pending"
 
