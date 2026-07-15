@@ -206,10 +206,8 @@ def species_common_names_in_period(
     countable = frame.dropna(subset=["_base"])
     if countable.empty:
         return ()
-    countable = countable.copy()
-    countable["_parent_common"] = countable["Common Name"].map(parent_common_name)
     names = (
-        countable.groupby("_base", sort=False)["_parent_common"]
+        countable.groupby("_base", sort=False)["Common Name"]
         .agg(most_frequent_parent_common)
         .dropna()
         .astype(str)

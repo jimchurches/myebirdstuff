@@ -1,9 +1,9 @@
 """
 Species-related pure logic for Personal eBird Explorer.
 
-Functions for species filtering, countable-species normalisation, and
-base-species extraction. All functions are pure (explicit inputs/outputs,
-no widget or UI state dependencies).
+Functions for species filtering, countable-species normalisation,
+base-species extraction, and parent common-name roll-up. All functions are pure
+(explicit inputs/outputs, no widget or UI state dependencies).
 """
 
 import pandas as pd
@@ -86,6 +86,13 @@ def most_frequent_parent_common(common_names: pd.Series) -> str:
     Each value is stripped to its parent via :func:`parent_common_name` (so
     subspecies labels roll up), then empty strings are dropped. Used by
     rankings aggregations and Interesting Insights display names.
+
+    Args:
+        common_names: Raw or parent-level common name values.
+
+    Returns:
+        The mode parent-level name, or ``""`` when the series is empty or
+        every value strips to empty.
     """
     parents = common_names.map(parent_common_name)
     parents = parents.astype(str).str.strip()
