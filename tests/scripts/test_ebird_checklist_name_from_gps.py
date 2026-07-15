@@ -54,6 +54,33 @@ def test_fetch_geocode_sends_coordinates_and_rejects_api_failure(monkeypatch) ->
     )
 
 
+def test_main_clipboard_path_still_works_with_lazy_pyperclip_import(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    clipboard = Mock()
+    clipboard.paste.return_value = "-35.339578, 148.923133"
+    monkeypatch.setitem(sys.modules, "pyperclip", clipboard)
+    monkeypatch.setattr(sys, "argv", ["eBirdChecklistNameFromGPS.py", "--clipboard"])
+    monkeypatch.setattr(mod, "load_api_key", Mock(return_value="secret"))
+    resolve_location = Mock(return_value="Paddy's River")
+    monkeypatch.setattr(mod, "resolve_location", resolve_location)
+
+    mod.main()
+
+    output = "Paddy's River ( -35.339578, 148.923133 )"
+    assert capsys.readouterr().out.strip() == output
+    clipboard.paste.assert_called_once_with()
+    clipboard.copy.assert_called_once_with(output)
+    resolve_location.assert_called_once_with(
+        -35.339578,
+        148.923133,
+        api_key="secret",
+        debug=False,
+        include_json=False,
+    )
+
+
 def test_embedded_geocode_cases_resolve_to_expected_names() -> None:
     cases = json.loads(_FIXTURE.read_text(encoding="utf-8"))
     checked = 0

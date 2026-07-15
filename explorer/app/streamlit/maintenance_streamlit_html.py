@@ -83,7 +83,9 @@ def run_maintenance_streamlit_tab_fragment() -> None:
         data = st.session_state.get(MAINTENANCE_TAB_SYNC_KEY)
         if not data:
             return
-        tax = (st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY) or "").strip() or DEFAULT_TAXONOMY_LOCALE
+        tax = (
+            st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY) or ""
+        ).strip() or DEFAULT_TAXONOMY_LOCALE
         species_url_fn = cached_species_url_fn(tax)
         render_maintenance_streamlit_tab(
             data["loc_df"],
@@ -120,11 +122,15 @@ def _render_gps_name_expander() -> None:
             MAINTENANCE_GPS_NAME_RESOLVE_BUTTON_LABEL,
             key=STREAMLIT_GPS_NAME_RESOLVE_BTN_KEY,
         ):
-            coord_text = str(st.session_state.get(STREAMLIT_GPS_NAME_COORDS_KEY, "")).strip()
+            coord_text = str(
+                st.session_state.get(STREAMLIT_GPS_NAME_COORDS_KEY, "")
+            ).strip()
             session_key = (
                 ""
                 if yaml_key
-                else str(st.session_state.get(STREAMLIT_GPS_NAME_API_KEY_KEY, "")).strip()
+                else str(
+                    st.session_state.get(STREAMLIT_GPS_NAME_API_KEY_KEY, "")
+                ).strip()
             )
             try:
                 api_key = load_google_geocode_api_key(
@@ -132,9 +138,7 @@ def _render_gps_name_expander() -> None:
                     override=session_key or None,
                 )
                 formatted = resolve_formatted_location_name(coord_text, api_key)
-            except ValueError as exc:
-                st.error(str(exc))
-            except RuntimeError as exc:
+            except (ValueError, RuntimeError) as exc:
                 st.error(str(exc))
             else:
                 # Selectable plain text for manual copy into eBird (no clipboard automation).
@@ -192,7 +196,9 @@ def render_maintenance_streamlit_tab(
 
     with tab_loc:
         with perf_span("maintenance.map_duplicate_scan"):
-            exact_rows, near_pairs = cached_map_maintenance_data(loc_df, close_location_meters)
+            exact_rows, near_pairs = cached_map_maintenance_data(
+                loc_df, close_location_meters
+            )
         intro, exact_body, close_body = map_maintenance_table_sections_from_data(
             exact_rows, near_pairs, close_location_meters
         )

@@ -1092,6 +1092,11 @@ def main() -> None:
             )
         )
 
+    # Normal CLI use always reads from or writes to the clipboard. Keep this
+    # import after offline test-file mode so Explorer can import naming helpers
+    # without requiring clipboard support.
+    import pyperclip
+
     # 1) Get coordinate text from clipboard or argv tokens
     if args.clipboard:
         coord_text = pyperclip.paste()

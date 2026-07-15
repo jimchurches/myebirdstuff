@@ -150,7 +150,9 @@ def gps_name_from_coords_intro_html() -> str:
   </div>"""
 
 
-def map_maintenance_exact_duplicates_body_html(exact_rows: List[Tuple[Any, ...]]) -> str:
+def map_maintenance_exact_duplicates_body_html(
+    exact_rows: List[Tuple[Any, ...]],
+) -> str:
     """Table HTML for exact duplicate locations (one ``get_map_maintenance_data`` result)."""
     if not exact_rows:
         return """
@@ -175,7 +177,9 @@ def map_maintenance_exact_duplicates_body_html(exact_rows: List[Tuple[Any, ...]]
   </table>"""
 
 
-def map_maintenance_close_locations_body_html(near_pairs: List[Any], threshold_m: int) -> str:
+def map_maintenance_close_locations_body_html(
+    near_pairs: List[Any], threshold_m: int
+) -> str:
     """One table per close pair (or per group if a pair list ever has >2 rows); same columns/styling each."""
     if not near_pairs:
         return f"""
@@ -194,12 +198,13 @@ def map_maintenance_close_locations_body_html(near_pairs: List[Any], threshold_m
         )
         return (
             f'<table class="{MAINTENANCE_PAIR_TABLE_CLASSES}">'
-            '<thead><tr><th>Location</th><th>Latitude/Longitude</th></tr></thead>'
+            "<thead><tr><th>Location</th><th>Latitude/Longitude</th></tr></thead>"
             f"<tbody>{pair_rows}</tbody></table>"
         )
 
     blocks = "".join(
-        f'<div class="maint-close-pair-wrap">{_one_pair_table(pair)}</div>' for pair in near_pairs
+        f'<div class="maint-close-pair-wrap">{_one_pair_table(pair)}</div>'
+        for pair in near_pairs
     )
     return f"""
   <p class="maint-html-caption">Locations within {threshold_m} m of each other (excluding exact duplicates).</p>
@@ -220,7 +225,9 @@ def map_maintenance_table_sections_from_data(
     return intro, exact, close_
 
 
-def map_maintenance_table_sections_html(loc_df: pd.DataFrame, threshold_m: int) -> Tuple[str, str, str]:
+def map_maintenance_table_sections_html(
+    loc_df: pd.DataFrame, threshold_m: int
+) -> Tuple[str, str, str]:
     """Location maintenance: intro + exact-duplicates block + close-locations block (inner HTML only).
 
     Single call to :func:`get_map_maintenance_data` for exact and near-duplicate rows.
@@ -231,7 +238,9 @@ def map_maintenance_table_sections_html(loc_df: pd.DataFrame, threshold_m: int) 
 
 def format_map_maintenance_html(loc_df: pd.DataFrame, threshold_m: int) -> str:
     """Build HTML for Map maintenance: exact duplicates and close-location pairs (accordion)."""
-    intro, exact_dup_content, close_loc_content = map_maintenance_table_sections_html(loc_df, threshold_m)
+    intro, exact_dup_content, close_loc_content = map_maintenance_table_sections_html(
+        loc_df, threshold_m
+    )
     return f"""
 <style>{MAP_MAINTENANCE_CSS}</style>
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
@@ -256,7 +265,7 @@ def sex_notation_intro_html() -> str:
   <div class="maint-html-blurb">
     Some checklists contain shorthand sex or age notation (for example <code>MF</code>, <code>MFFF</code>, or <code>MMF??F</code>) entered in the
     field notes. These should ideally be converted into the structured Age/Sex table on the eBird website. The following lists identify
-    checklists where this shorthand was detected.  The detection is delberately conservative and may miss some cases.
+    checklists where this shorthand was detected.  The detection is deliberately conservative and may miss some cases.
   </div>"""
 
 
@@ -315,7 +324,9 @@ def format_sex_notation_maintenance_html(
     sections = []
     for y, items in iter_sex_notation_years_desc(sex_notation_by_year):
         table = sex_notation_year_table_html(y, items, species_url_fn=species_url_fn)
-        sections.append(f"<details><summary>{y} ({len(items)})</summary>{table}</details>")
+        sections.append(
+            f"<details><summary>{y} ({len(items)})</summary>{table}</details>"
+        )
     return f"""
 <style>{MAINTENANCE_YEAR_SECTION_CSS}</style>
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
@@ -341,7 +352,9 @@ def incomplete_checklists_intro_html() -> str:
   </div>"""
 
 
-def incomplete_checklists_year_table_html(year: Any, items: List[Tuple[Any, ...]]) -> str:
+def incomplete_checklists_year_table_html(
+    year: Any, items: List[Tuple[Any, ...]]
+) -> str:
     """HTML table for one year's incomplete checklist rows (no wrapper)."""
     rows = []
     for sid, date_str, loc in items:
@@ -365,7 +378,9 @@ def iter_incomplete_checklists_years_desc(
         yield y, incomplete_by_year[y]
 
 
-def format_incomplete_checklists_maintenance_html(incomplete_by_year: Dict[Any, List[Tuple[Any, ...]]]) -> str:
+def format_incomplete_checklists_maintenance_html(
+    incomplete_by_year: Dict[Any, List[Tuple[Any, ...]]],
+) -> str:
     """HTML for incomplete travelling/stationary checklists by year (accordion)."""
     if not incomplete_by_year:
         return ""
@@ -373,7 +388,9 @@ def format_incomplete_checklists_maintenance_html(incomplete_by_year: Dict[Any, 
     sections = []
     for y, items in iter_incomplete_checklists_years_desc(incomplete_by_year):
         table = incomplete_checklists_year_table_html(y, items)
-        sections.append(f"<details><summary>{y} ({len(items)})</summary>{table}</details>")
+        sections.append(
+            f"<details><summary>{y} ({len(items)})</summary>{table}</details>"
+        )
     return f"""
 <style>{MAINTENANCE_YEAR_SECTION_CSS}</style>
 <div style="font-family:sans-serif;font-size:13px;line-height:1.6;max-width:800px;">
