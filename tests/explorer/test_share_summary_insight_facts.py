@@ -7,6 +7,7 @@ from explorer.core.share_summary_insight_facts import (
     ShareSummaryInsightFact,
     compute_insight_facts,
     format_insight_fact_metric,
+    format_insight_peak_tie_note,
     insight_fact_by_id,
     species_common_names_in_period,
 )
@@ -146,6 +147,29 @@ def test_species_common_names_in_period_excludes_non_countable():
     assert names == ("Australian Magpie",)
 
 
+def test_species_common_names_in_period_rolls_up_subspecies():
+    df = pd.DataFrame(
+        [
+            _row(
+                sid="S1",
+                dt="2025-01-01",
+                common="Australian Boobook",
+                scientific="Ninox boobook",
+                count=100,
+            ),
+            _row(
+                sid="S2",
+                dt="2025-02-01",
+                common="Australian Boobook (Australian)",
+                scientific="Ninox boobook boobook",
+                count=67,
+            ),
+        ]
+    )
+    names = species_common_names_in_period(df, period_for_year(2025))
+    assert names == ("Australian Boobook",)
+
+
 def test_insight_layout_renders():
     from explorer.core.share_summary_compute import ShareSummaryStats
     from explorer.core.share_summary_defaults import (
@@ -155,7 +179,7 @@ def test_insight_layout_renders():
     stats = ShareSummaryStats(period_label="2025", period_kind="year")
     fact = ShareSummaryInsightFact(
         fact_id="most_common_checklist_species",
-        label="Most common checklist species",
+        label="Species seen on the most checklists",
         primary_text="Australian Magpie",
         metric_value=3999,
         metric_unit="checklists",
@@ -168,7 +192,7 @@ def test_insight_layout_renders():
     )
     assert SHARE_SUMMARY_LAYOUT_SUBTITLE_INSIGHT in html
     assert "<h1" in html
-    assert "Most common checklist species" in html
+    assert "Species seen on the most checklists" in html
     assert "Australian Magpie" in html
     assert "3,999 checklists" in html
     assert "linear-gradient(145deg" in html
@@ -233,14 +257,14 @@ def test_resolve_insight_fact_uses_requested_id():
     facts = [
         ShareSummaryInsightFact(
             fact_id="most_common_checklist_species",
-            label="Most common checklist species",
+            label="Species seen on the most checklists",
             primary_text="Magpie",
             metric_value=1,
             metric_unit="checklists",
         ),
         ShareSummaryInsightFact(
             fact_id="most_individuals_species",
-            label="Most individuals of a single species",
+            label="Most-recorded species",
             primary_text="Shearwater",
             metric_value=100,
             metric_unit="individuals",
@@ -254,7 +278,7 @@ def test_resolve_insight_fact_uses_requested_id():
 def test_resolve_insight_fact_falls_back_to_default_then_first():
     default = ShareSummaryInsightFact(
         fact_id="most_common_checklist_species",
-        label="Most common checklist species",
+        label="Species seen on the most checklists",
         primary_text="Magpie",
         metric_value=1,
         metric_unit="checklists",
@@ -306,3 +330,428 @@ def test_species_individuals_insight_fact_isolates_one_species():
         species_individuals_insight_fact(df, period_for_year(2024), "Australian Magpie")
         is None
     )
+
+
+def test_most_common_checklist_species_display_rolls_up_subspecies():
+    """Subspecies-majority common names still show the parent on the card (#334)."""
+    df = pd.DataFrame(
+        [
+            _row(
+                sid="S1",
+                dt="2025-01-01",
+                common="Australian Magpie (Black-backed)",
+                scientific="Gymnorhina tibicen tibicen",
+            ),
+            _row(
+                sid="S2",
+                dt="2025-02-01",
+                common="Australian Magpie (Black-backed)",
+                scientific="Gymnorhina tibicen tibicen",
+            ),
+            _row(
+                sid="S3",
+                dt="2025-03-01",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+            ),
+            _row(
+                sid="S4",
+                dt="2025-04-01",
+                common="Willie Wagtail",
+                scientific="Rhipidura leucophrys",
+            ),
+        ]
+    )
+    facts = compute_insight_facts(df, period_for_year(2025))
+    top = insight_fact_by_id(facts, "most_common_checklist_species")
+    assert top is not None
+    assert top.primary_text == "Australian Magpie"
+    assert top.metric_value == 3
+    assert "(" not in top.primary_text
+
+
+def test_species_individuals_insight_fact_rolls_up_subspecies():
+    from explorer.core.share_summary_compute import period_for_year
+    from explorer.core.share_summary_insight_facts import (
+        species_individuals_insight_fact,
+    )
+
+    df = pd.DataFrame(
+        {
+            "Date": ["2025-01-01", "2025-01-02", "2025-01-03"],
+            "Submission ID": ["s1", "s2", "s3"],
+            "Count": [100, 67, 1],
+            "Common Name": [
+                "Australian Boobook",
+                "Australian Boobook (Australian)",
+                "Superb Fairywren",
+            ],
+            "Scientific Name": [
+                "Ninox boobook",
+                "Ninox boobook boobook",
+                "Malurus cyaneus",
+            ],
+        }
+    )
+    fact = species_individuals_insight_fact(
+        df, period_for_year(2025), "Australian Boobook"
+    )
+    assert fact is not None
+    assert fact.primary_text == "Australian Boobook"
+    assert fact.metric_value == 167
+
+
+def _peak_row(
+    *,
+    sid: str,
+    dt: str,
+    common: str,
+    count: int = 1,
+    all_obs: str | int = 1,
+    scientific: str | None = None,
+) -> dict:
+    return {
+        "Submission ID": sid,
+        "Date": dt,
+        "Scientific Name": scientific or common,
+        "Common Name": common,
+        "Count": count,
+        "All Obs Reported": all_obs,
+        "Location ID": "L1",
+        "Location": "Test location",
+        "Country": "AU",
+    }
+
+
+def test_peak_year_facts_lifetime_only():
+    from datetime import date
+
+    from explorer.core.share_summary_compute import (
+        period_for_lifetime,
+        period_for_year,
+    )
+    from explorer.core.share_summary_insight_facts import peak_fact_ids_for_period_kind
+
+    df = pd.DataFrame(
+        [
+            _peak_row(
+                sid="S1",
+                dt="2023-01-01",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+                count=1,
+            ),
+            _peak_row(
+                sid="S2",
+                dt="2024-01-01",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+                count=1,
+            ),
+            _peak_row(
+                sid="S3",
+                dt="2024-06-01",
+                common="Willie Wagtail",
+                scientific="Rhipidura leucophrys",
+                count=10,
+            ),
+            _peak_row(
+                sid="S4",
+                dt="2025-01-01",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+                count=1,
+            ),
+        ]
+    )
+    lifetime = period_for_lifetime(date(2023, 1, 1), date(2025, 12, 31))
+    facts = compute_insight_facts(df, lifetime)
+    year_checklists = insight_fact_by_id(facts, "year_most_checklists")
+    assert year_checklists is not None
+    assert year_checklists.primary_text == "2024"
+    assert year_checklists.metric_value == 2
+    assert year_checklists.label == "Most checklists in a year"
+    year_species = insight_fact_by_id(facts, "year_most_species")
+    assert year_species is not None
+    assert year_species.primary_text == "2024"
+    assert year_species.metric_value == 2
+    year_individuals = insight_fact_by_id(facts, "year_most_individuals")
+    assert year_individuals is not None
+    assert year_individuals.primary_text == "2024"
+    assert year_individuals.metric_value == 11
+    assert year_individuals.label == "Most individual birds in a year"
+    assert format_insight_fact_metric(year_individuals) == "11 individual birds"
+
+    yearly = compute_insight_facts(df, period_for_year(2024))
+    assert insight_fact_by_id(yearly, "year_most_checklists") is None
+    assert "year_most_checklists" not in peak_fact_ids_for_period_kind("year")
+    assert insight_fact_by_id(yearly, "month_most_checklists") is not None
+
+
+def test_peak_month_and_day_gating():
+    from datetime import date
+
+    from explorer.core.share_summary_compute import (
+        period_for_custom,
+        period_for_lifetime,
+        period_for_month,
+        period_for_week_containing,
+        period_for_year,
+    )
+
+    magpie = dict(common="Australian Magpie", scientific="Gymnorhina tibicen")
+    wagtail = dict(common="Willie Wagtail", scientific="Rhipidura leucophrys")
+    finch = dict(common="Zebra Finch", scientific="Taeniopygia guttata")
+    df = pd.DataFrame(
+        [
+            _peak_row(sid="S1", dt="2025-01-01", count=1, **magpie),
+            _peak_row(sid="S2", dt="2025-01-01", count=2, **wagtail),
+            _peak_row(sid="S3", dt="2025-03-15", count=1, **magpie),
+            _peak_row(sid="S4", dt="2025-03-15", count=1, **wagtail),
+            _peak_row(sid="S5", dt="2025-03-15", count=5, **finch),
+            _peak_row(
+                sid="S3",
+                dt="2025-03-15",
+                common="duck sp.",
+                scientific="Anas sp.",
+                count=999,
+            ),
+        ]
+    )
+    yearly = compute_insight_facts(df, period_for_year(2025))
+    expected_month_metrics = {
+        "month_most_checklists": 3,
+        "month_most_completed_checklists": 3,
+        "month_most_species": 3,
+        "month_most_individuals": 7,
+    }
+    for fact_id, expected_metric in expected_month_metrics.items():
+        fact = insight_fact_by_id(yearly, fact_id)
+        assert fact is not None
+        assert fact.primary_text == "Mar 2025"
+        assert fact.metric_value == expected_metric
+
+    expected_day_metrics = {
+        "day_most_checklists": 3,
+        "day_most_completed_checklists": 3,
+        "day_most_species": 3,
+        "day_most_individuals": 7,
+    }
+    for fact_id, expected_metric in expected_day_metrics.items():
+        fact = insight_fact_by_id(yearly, fact_id)
+        assert fact is not None
+        assert fact.primary_text == "15 Mar 2025"
+        assert fact.metric_value == expected_metric
+
+    monthly = compute_insight_facts(df, period_for_month(2025, 3))
+    assert insight_fact_by_id(monthly, "month_most_checklists") is None
+    assert insight_fact_by_id(monthly, "day_most_checklists") is not None
+
+    lifetime = compute_insight_facts(
+        df, period_for_lifetime(date(2025, 1, 1), date(2025, 12, 31))
+    )
+    assert insight_fact_by_id(lifetime, "day_most_checklists") is not None
+    assert insight_fact_by_id(lifetime, "month_most_checklists") is None
+
+    week = compute_insight_facts(df, period_for_week_containing(date(2025, 3, 15)))
+    assert insight_fact_by_id(week, "day_most_checklists") is None
+    custom = compute_insight_facts(
+        df, period_for_custom(date(2025, 3, 1), date(2025, 3, 31))
+    )
+    assert insight_fact_by_id(custom, "day_most_checklists") is None
+
+
+def test_peak_period_gating_returns_exact_fact_sets():
+    from datetime import date
+
+    from explorer.core.share_summary_compute import (
+        period_for_custom,
+        period_for_lifetime,
+        period_for_month,
+        period_for_week_containing,
+    )
+    from explorer.core.share_summary_insight_facts import INSIGHT_PEAK_FACT_IDS
+
+    df = pd.DataFrame(
+        [
+            _peak_row(
+                sid="S1",
+                dt="2025-03-15",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+            )
+        ]
+    )
+    expected_by_period = {
+        period_for_lifetime(date(2025, 1, 1), date(2025, 12, 31)): {
+            "year_most_checklists",
+            "year_most_completed_checklists",
+            "year_most_species",
+            "year_most_individuals",
+            "day_most_checklists",
+            "day_most_completed_checklists",
+            "day_most_species",
+            "day_most_individuals",
+        },
+        period_for_year(2025): {
+            "month_most_checklists",
+            "month_most_completed_checklists",
+            "month_most_species",
+            "month_most_individuals",
+            "day_most_checklists",
+            "day_most_completed_checklists",
+            "day_most_species",
+            "day_most_individuals",
+        },
+        period_for_month(2025, 3): {
+            "day_most_checklists",
+            "day_most_completed_checklists",
+            "day_most_species",
+            "day_most_individuals",
+        },
+        period_for_week_containing(date(2025, 3, 15)): set(),
+        period_for_custom(date(2025, 3, 1), date(2025, 3, 31)): set(),
+    }
+    peak_fact_ids = set(INSIGHT_PEAK_FACT_IDS)
+
+    for period, expected_ids in expected_by_period.items():
+        facts = compute_insight_facts(df, period)
+        actual_ids = {fact.fact_id for fact in facts} & peak_fact_ids
+        assert actual_ids == expected_ids
+
+
+def test_peak_checklists_all_vs_completed_and_tie_earliest():
+    from datetime import date
+
+    from explorer.core.share_summary_compute import period_for_lifetime
+
+    magpie = dict(common="Australian Magpie", scientific="Gymnorhina tibicen")
+    df = pd.DataFrame(
+        [
+            # 2023: 2 all, 2 completed
+            _peak_row(sid="A1", dt="2023-01-01", all_obs=1, **magpie),
+            _peak_row(sid="A2", dt="2023-02-01", all_obs=1, **magpie),
+            # 2024: 3 all, 1 completed — wins all; loses completed
+            _peak_row(sid="B1", dt="2024-01-01", all_obs=1, **magpie),
+            _peak_row(sid="B2", dt="2024-02-01", all_obs=0, **magpie),
+            _peak_row(sid="B3", dt="2024-03-01", all_obs=0, **magpie),
+            # 2025: 2 all, 2 completed — ties 2023 on completed; earliest year wins
+            _peak_row(sid="C1", dt="2025-01-01", all_obs=1, **magpie),
+            _peak_row(sid="C2", dt="2025-02-01", all_obs=1, **magpie),
+        ]
+    )
+    facts = compute_insight_facts(
+        df, period_for_lifetime(date(2023, 1, 1), date(2025, 12, 31))
+    )
+    all_cl = insight_fact_by_id(facts, "year_most_checklists")
+    assert all_cl is not None
+    assert all_cl.primary_text == "2024"
+    assert all_cl.metric_value == 3
+    assert all_cl.peak_tied is False
+
+    completed = insight_fact_by_id(facts, "year_most_completed_checklists")
+    assert completed is not None
+    assert completed.primary_text == "2023"
+    assert completed.metric_value == 2
+    assert completed.peak_tied is True
+    assert completed.peak_tie_count == 2
+    assert format_insight_fact_metric(completed) == "2 checklists"
+    assert format_insight_peak_tie_note(completed) == "Tied with 1 other year"
+    assert format_insight_peak_tie_note(all_cl) is None
+
+
+def test_format_insight_peak_tie_note_unit_and_plural():
+    day_one = ShareSummaryInsightFact(
+        fact_id="day_most_checklists",
+        label="Most checklists in a day",
+        primary_text="13 May 2024",
+        metric_value=43,
+        metric_unit="checklists",
+        peak_tied=True,
+        peak_tie_count=2,
+    )
+    day_many = ShareSummaryInsightFact(
+        fact_id="day_most_completed_checklists",
+        label="Most completed checklists in a day",
+        primary_text="13 May 2024",
+        metric_value=43,
+        metric_unit="checklists",
+        peak_tied=True,
+        peak_tie_count=3,
+    )
+    month = ShareSummaryInsightFact(
+        fact_id="month_most_species",
+        label="Most species in a month",
+        primary_text="Mar 2025",
+        metric_value=10,
+        metric_unit="species",
+        peak_tied=True,
+        peak_tie_count=4,
+    )
+    assert format_insight_peak_tie_note(day_one) == "Tied with 1 other day"
+    assert format_insight_peak_tie_note(day_many) == "Tied with 2 other days"
+    assert format_insight_peak_tie_note(month) == "Tied with 3 other months"
+
+
+def test_insight_layout_renders_peak_tie_soft_note():
+    from explorer.core.share_summary_compute import ShareSummaryStats
+
+    stats = ShareSummaryStats(period_label="Lifetime", period_kind="lifetime")
+    fact = ShareSummaryInsightFact(
+        fact_id="day_most_completed_checklists",
+        label="Most completed checklists in a day",
+        primary_text="13 May 2024",
+        metric_value=43,
+        metric_unit="checklists",
+        peak_tied=True,
+        peak_tie_count=3,
+    )
+    html = render_share_summary_preview_html(
+        stats,
+        layout="insight",
+        insight_fact=fact,
+        fmt="story",
+    )
+    assert "Tied with 2 other days" in html
+    assert 'class="rich-note"' in html
+
+    untied = ShareSummaryInsightFact(
+        fact_id="day_most_completed_checklists",
+        label="Most completed checklists in a day",
+        primary_text="13 May 2024",
+        metric_value=43,
+        metric_unit="checklists",
+    )
+    html_clean = render_share_summary_preview_html(
+        stats,
+        layout="insight",
+        insight_fact=untied,
+        fmt="story",
+    )
+    assert "Tied with" not in html_clean
+    assert 'class="rich-note"' not in html_clean
+
+
+def test_peak_picker_labels_match_card_headings():
+    from explorer.core.share_summary_insight_facts import (
+        INSIGHT_FACT_CARD_LABELS,
+        INSIGHT_FACT_PICKER_LABELS,
+    )
+
+    expected_labels = {
+        "year_most_checklists": "Most checklists in a year",
+        "year_most_completed_checklists": "Most completed checklists in a year",
+        "year_most_species": "Most species in a year",
+        "year_most_individuals": "Most individual birds in a year",
+        "month_most_checklists": "Most checklists in a month",
+        "month_most_completed_checklists": "Most completed checklists in a month",
+        "month_most_species": "Most species in a month",
+        "month_most_individuals": "Most individual birds in a month",
+        "day_most_checklists": "Most checklists in a day",
+        "day_most_completed_checklists": "Most completed checklists in a day",
+        "day_most_species": "Most species in a day",
+        "day_most_individuals": "Most individual birds in a day",
+    }
+    assert INSIGHT_FACT_CARD_LABELS == expected_labels
+    for fact_id, expected_label in expected_labels.items():
+        assert INSIGHT_FACT_PICKER_LABELS[fact_id] == expected_label

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pandas as pd
 import streamlit as st
 
@@ -30,6 +32,8 @@ from explorer.core.share_summary_defaults import (
 )
 from explorer.core.share_summary_insight_facts import (
     INSIGHT_FACT_PICKER_LABELS,
+    INSIGHT_LEGACY_AUTO_FACT_IDS,
+    INSIGHT_PEAK_FACT_IDS,
     InsightFactId,
     ShareSummaryInsightFact,
     insight_fact_requires_species,
@@ -630,19 +634,19 @@ def _insight_fact_options(
     *,
     species_options: tuple[str, ...] = (),
 ) -> list[tuple[InsightFactId, str]]:
-    auto_ids: tuple[InsightFactId, ...] = (
-        "most_common_checklist_species",
-        "most_individuals_species",
-        "biggest_checklist_count",
-    )
+    """Legacy auto facts and selected-species first; peak period facts below (#334)."""
+    present = {f.fact_id for f in facts}
     options: list[tuple[InsightFactId, str]] = []
-    for fact_id in auto_ids:
-        if any(f.fact_id == fact_id for f in facts):
+    for fact_id in INSIGHT_LEGACY_AUTO_FACT_IDS:
+        if fact_id in present:
             options.append((fact_id, INSIGHT_FACT_PICKER_LABELS[fact_id]))
     if species_options:
         options.append(
             ("species_individuals", INSIGHT_FACT_PICKER_LABELS["species_individuals"])
         )
+    for fact_id in INSIGHT_PEAK_FACT_IDS:
+        if fact_id in present:
+            options.append((fact_id, INSIGHT_FACT_PICKER_LABELS[fact_id]))
     return options
 
 
@@ -652,8 +656,8 @@ def _insight_fact_id_from_session(
 ) -> InsightFactId:
     valid = {fact_id for fact_id, _ in options}
     raw = st.session_state.get(keys.insight_fact, SHARE_SUMMARY_INSIGHT_FACT_DEFAULT)
-    if raw in valid:
-        return raw  # type: ignore[return-value]
+    if isinstance(raw, str) and raw in valid:
+        return cast(InsightFactId, raw)
     if SHARE_SUMMARY_INSIGHT_FACT_DEFAULT in valid:
         return SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
     return options[0][0] if options else SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
@@ -691,7 +695,6 @@ def render_insight_fact_picker_ui(
         format_func=lambda fid: INSIGHT_FACT_PICKER_LABELS[fid],
         index=fact_ids.index(current_id) if current_id in fact_ids else 0,
         key=keys.insight_fact,
-        help="Species- and checklist-derived highlights for Interesting Insights cards.",
     )
     selected_id = _insight_fact_id_from_session(options, keys)
 

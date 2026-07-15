@@ -19,6 +19,7 @@ from explorer.core.share_summary_insight_facts import (
     InsightFactId,
     ShareSummaryInsightFact,
     format_insight_fact_metric,
+    format_insight_peak_tie_note,
     insight_fact_by_id,
 )
 from explorer.presentation.share_summary_metrics import (
@@ -346,10 +347,11 @@ def _layout_insight(
     insight_fact: ShareSummaryInsightFact,
     scope_label: str | None = None,
 ) -> str:
-    """Interesting Insights — label, species/text focus, optional metric."""
+    """Interesting Insights — label, hero text, optional metric, and peak-tie note."""
     pad_bottom = _footer_pad(fmt, width, height)
     spec = rich_fact_layout_spec(fmt)
     metric = format_insight_fact_metric(insight_fact)
+    tie_note = format_insight_peak_tie_note(insight_fact)
     label_css = rich_fact_line_style_css(
         spec.label,
         colour=_colour(spec.label.color_role),
@@ -367,6 +369,13 @@ def _layout_insight(
         metric_line = (
             f'<div class="rich-metric" style="{metric_css}">{_esc(metric)}</div>'
         )
+    note_line = ""
+    if tie_note:
+        note_css = rich_fact_line_style_css(
+            spec.note,
+            colour=_colour(spec.note.color_role),
+        )
+        note_line = f'<div class="rich-note" style="{note_css}">{_esc(tie_note)}</div>'
     offset = spec.block_offset_y_px
     transform = f"transform:translateY({offset}px);" if offset else ""
     tile_css = ""
@@ -382,7 +391,7 @@ def _layout_insight(
     inner_block = (
         f'<div class="rich-label" style="{label_css}">{_esc(insight_fact.label)}</div>'
         f'<div class="rich-primary" style="{primary_css};word-wrap:break-word;">'
-        f"{_esc(insight_fact.primary_text)}</div>{metric_line}"
+        f"{_esc(insight_fact.primary_text)}</div>{metric_line}{note_line}"
     )
     if tile_css:
         inner_block = f'<div style="{tile_css}">{inner_block}</div>'

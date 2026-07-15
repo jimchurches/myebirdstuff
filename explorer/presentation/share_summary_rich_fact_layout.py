@@ -14,7 +14,7 @@ ColorRole = Literal["text", "muted", "accent"]
 
 @dataclass(frozen=True)
 class RichFactLineStyle:
-    """One line in the rich-fact content block (label, primary, or metric)."""
+    """One line in the rich-fact content block (label, primary, metric, or tie note)."""
 
     font_size_px: int
     font_weight: int
@@ -31,13 +31,16 @@ class RichFactLayoutSpec:
     label: RichFactLineStyle
     primary: RichFactLineStyle
     metric: RichFactLineStyle
+    note: RichFactLineStyle
     block_offset_y_px: int = 0
     max_width_px: int = 920
     tile_frame: bool = True
 
 
-def _shared_rich_fact_line_styles() -> tuple[RichFactLineStyle, RichFactLineStyle, RichFactLineStyle]:
-    """Shared Interesting Insights line typography (label, primary, metric)."""
+def _shared_rich_fact_line_styles() -> tuple[
+    RichFactLineStyle, RichFactLineStyle, RichFactLineStyle, RichFactLineStyle
+]:
+    """Shared Interesting Insights line typography (label, primary, metric, note)."""
     return (
         RichFactLineStyle(
             font_size_px=52,
@@ -59,35 +62,46 @@ def _shared_rich_fact_line_styles() -> tuple[RichFactLineStyle, RichFactLineStyl
             line_height=1.1,
             margin_top_px=48,
         ),
+        # Peak-tie soft note (#334) — smaller muted line under the metric.
+        RichFactLineStyle(
+            font_size_px=32,
+            font_weight=500,
+            color_role="muted",
+            line_height=1.25,
+            margin_top_px=28,
+        ),
     )
 
 
 def _story_spec() -> RichFactLayoutSpec:
-    label, primary, metric = _shared_rich_fact_line_styles()
+    label, primary, metric, note = _shared_rich_fact_line_styles()
     return RichFactLayoutSpec(
         label=label,
         primary=primary,
         metric=metric,
+        note=note,
         block_offset_y_px=-220,
     )
 
 
 def _portrait_spec() -> RichFactLayoutSpec:
-    label, primary, metric = _shared_rich_fact_line_styles()
+    label, primary, metric, note = _shared_rich_fact_line_styles()
     return RichFactLayoutSpec(
         label=label,
         primary=primary,
         metric=metric,
+        note=note,
         block_offset_y_px=-160,
     )
 
 
 def _square_spec() -> RichFactLayoutSpec:
-    label, primary, metric = _shared_rich_fact_line_styles()
+    label, primary, metric, note = _shared_rich_fact_line_styles()
     return RichFactLayoutSpec(
         label=label,
         primary=primary,
         metric=metric,
+        note=note,
         block_offset_y_px=-110,
     )
 

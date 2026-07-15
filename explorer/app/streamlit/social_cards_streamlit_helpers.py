@@ -48,7 +48,9 @@ def ordered_custom_date_range(
     return resolved_start, resolved_end, False
 
 
-def social_cards_dataframe_signature(df: object, *, session_sig: object | None = None) -> object:
+def social_cards_dataframe_signature(
+    df: object, *, session_sig: object | None = None
+) -> object:
     """Stable-enough dataset token for Social Cards geo caches.
 
     Prefer the explorer ``EBIRD_DATA_SIG_KEY`` value when available; otherwise fall
@@ -364,6 +366,8 @@ def png_export_fingerprint(
             insight_fact.primary_text,
             insight_fact.metric_value,
             insight_fact.metric_unit,
+            insight_fact.peak_tied,
+            insight_fact.peak_tie_count,
         )
     return (
         stats_token,

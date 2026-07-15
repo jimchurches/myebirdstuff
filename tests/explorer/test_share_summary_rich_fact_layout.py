@@ -17,6 +17,9 @@ def test_rich_fact_layout_spec_shared_typography():
         assert spec.primary.font_size_px == 60
         assert spec.metric.font_size_px == 46
         assert spec.metric.margin_top_px == 48
+        assert spec.note.font_size_px == 32
+        assert spec.note.color_role == "muted"
+        assert spec.note.margin_top_px == 28
 
 
 def test_rich_fact_layout_spec_block_offset_by_format():
