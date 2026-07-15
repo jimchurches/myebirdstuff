@@ -38,10 +38,12 @@ def test_parse_coords_rejects_missing_or_out_of_range_values(text: str) -> None:
 
 
 def test_fetch_geocode_sends_coordinates_and_rejects_api_failure(monkeypatch) -> None:
+    import requests
+
     response = Mock()
     response.json.return_value = {"status": "ZERO_RESULTS", "results": []}
     get = Mock(return_value=response)
-    monkeypatch.setattr(mod.requests, "get", get)
+    monkeypatch.setattr(requests, "get", get)
 
     with pytest.raises(RuntimeError, match="Geocode failed: ZERO_RESULTS"):
         mod.fetch_geocode(-35.1, 149.2, "secret")
@@ -49,6 +51,33 @@ def test_fetch_geocode_sends_coordinates_and_rejects_api_failure(monkeypatch) ->
     get.assert_called_once_with(
         "https://maps.googleapis.com/maps/api/geocode/json",
         params={"latlng": "-35.1,149.2", "key": "secret"},
+    )
+
+
+def test_main_clipboard_path_still_works_with_lazy_pyperclip_import(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    clipboard = Mock()
+    clipboard.paste.return_value = "-35.339578, 148.923133"
+    monkeypatch.setitem(sys.modules, "pyperclip", clipboard)
+    monkeypatch.setattr(sys, "argv", ["eBirdChecklistNameFromGPS.py", "--clipboard"])
+    monkeypatch.setattr(mod, "load_api_key", Mock(return_value="secret"))
+    resolve_location = Mock(return_value="Paddy's River")
+    monkeypatch.setattr(mod, "resolve_location", resolve_location)
+
+    mod.main()
+
+    output = "Paddy's River ( -35.339578, 148.923133 )"
+    assert capsys.readouterr().out.strip() == output
+    clipboard.paste.assert_called_once_with()
+    clipboard.copy.assert_called_once_with(output)
+    resolve_location.assert_called_once_with(
+        -35.339578,
+        148.923133,
+        api_key="secret",
+        debug=False,
+        include_json=False,
     )
 
 

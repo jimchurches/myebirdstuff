@@ -243,8 +243,11 @@ Streamlit UI
   - internal test function
   - standalone test file
 - Used by UI.Vision macros
+- Streamlit Maintenance → **Create location name from GPS** reuses this script’s naming helpers
+  (`explorer/core/gps_location_name.py`) — keep core calculation / format logic aligned
 
 ⚠️ Changes here affect automation workflows
+⚠️ Do not fork naming rules in the Explorer; change the script and verify both paths
 
 ---
 

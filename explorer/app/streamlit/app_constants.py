@@ -32,7 +32,9 @@ from explorer.presentation.checklist_stats_display import (
 STREAMLIT_APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = str(STREAMLIT_APP_DIR.parent.parent.parent)
 
-DEFAULT_EBIRD_FILENAME = os.environ.get("STREAMLIT_EBIRD_DATA_FILE", DEFAULT_EBIRD_DATA_FILENAME)
+DEFAULT_EBIRD_FILENAME = os.environ.get(
+    "STREAMLIT_EBIRD_DATA_FILE", DEFAULT_EBIRD_DATA_FILENAME
+)
 
 MAP_VIEW_LABEL_TO_MODE = {
     "All locations": "all",
@@ -145,6 +147,10 @@ CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY = "_streamlit_checklist_stats_work_payload"
 # Ranking & Lists HTML sections + Bird Families coverage tables (full-export prep).
 RANKING_LISTS_FAMILIES_BUNDLE_KEY = "_streamlit_ranking_lists_families_bundle"
 MAINTENANCE_TAB_SYNC_KEY = "_streamlit_maintenance_tab_sync"
+# Maintenance → Create location name from GPS (#357)
+STREAMLIT_GPS_NAME_API_KEY_KEY = "_streamlit_gps_name_api_key"
+STREAMLIT_GPS_NAME_COORDS_KEY = "_streamlit_gps_name_coords"
+STREAMLIT_GPS_NAME_RESOLVE_BTN_KEY = "_streamlit_gps_name_resolve_btn"
 
 # "Show full history" toggles.
 STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY = "streamlit_yearly_summary_show_full"
@@ -167,20 +173,34 @@ STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_KEY = "streamlit_map_cluster_all_locations"
 # All locations map: fit all / centre of gravity / per-country fit scope control.
 STREAMLIT_ALL_LOCATIONS_SCOPE_KEY = "streamlit_all_locations_scope"
 # Blank-map viewport recipe (session only): derived from all-data All locations scope (non-country).
-STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY = "_streamlit_blank_map_default_viewport_recipe"
+STREAMLIT_BLANK_MAP_DEFAULT_VIEWPORT_RECIPE_KEY = (
+    "_streamlit_blank_map_default_viewport_recipe"
+)
 # Settings → Apply map settings: defer syncing this key until next run (before sidebar widget; refs Streamlit widget rules).
-STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY = "_streamlit_map_cluster_apply_from_settings_pending"
+STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_APPLY_PENDING_KEY = (
+    "_streamlit_map_cluster_apply_from_settings_pending"
+)
 # Persisted default: Settings form + Save settings / YAML (may differ from runtime after sidebar).
-STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY = "streamlit_map_cluster_all_locations_saved"
+STREAMLIT_MAP_CLUSTER_ALL_LOCATIONS_SAVED_KEY = (
+    "streamlit_map_cluster_all_locations_saved"
+)
 
 # Basemap: persisted default + sidebar session override (Option A for #139).
-STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY = "_streamlit_map_basemap_apply_from_settings_pending"
+STREAMLIT_MAP_BASEMAP_APPLY_PENDING_KEY = (
+    "_streamlit_map_basemap_apply_from_settings_pending"
+)
 STREAMLIT_MAP_BASEMAP_SAVED_KEY = "streamlit_map_basemap_saved"
-STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY = "_streamlit_map_height_apply_from_settings_pending"
+STREAMLIT_MAP_HEIGHT_PX_APPLY_PENDING_KEY = (
+    "_streamlit_map_height_apply_from_settings_pending"
+)
 STREAMLIT_MAP_HEIGHT_PX_SAVED_KEY = "streamlit_map_height_px_saved"
 # Map marker palette (1–3): persisted default + sidebar radio; Settings → Save defers apply.
-STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY = "_streamlit_map_marker_colour_scheme_apply_pending"
-STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY = "streamlit_map_marker_colour_scheme_saved"
+STREAMLIT_MAP_MARKER_COLOUR_SCHEME_APPLY_PENDING_KEY = (
+    "_streamlit_map_marker_colour_scheme_apply_pending"
+)
+STREAMLIT_MAP_MARKER_COLOUR_SCHEME_SAVED_KEY = (
+    "streamlit_map_marker_colour_scheme_saved"
+)
 
 SESSION_PREV_EFFECTIVE_BASEMAP_KEY = "_streamlit_prev_effective_basemap"
 

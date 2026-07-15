@@ -36,6 +36,11 @@ This repository contains more than just the Streamlit app.
   - internal test function
   - separate test file
 - This script is also used by automation workflows
+- **Keep naming in sync with Streamlit:** Maintenance → Location Maintenance → **Create location name from GPS**
+  (`explorer/core/gps_location_name.py`) reuses this script’s parse / resolve / format logic.
+  Do **not** fork ranking or naming rules in the Explorer — change the script, then verify both
+  the script offline fixtures and the adapter tests. Output format remains
+  `Locality ( lat, long )` (Explorer omits clipboard copy only).
 
 ### UI.Vision Macros
 - Browser automation macros for eBird workflows
@@ -279,6 +284,8 @@ Instrumentation added in #179 is part of the developer toolkit and should stay a
 ### GPS Script
 - has its own internal test function
 - also includes standalone test file
+- Explorer Maintenance **Create location name from GPS** must stay aligned with this script’s core naming
+  (thin adapter in `explorer/core/gps_location_name.py` — see Repository Scope above)
 
 Guidelines:
 
@@ -312,7 +319,7 @@ Do not change without discussion:
 - data loading pipeline
 - caching model
 - map rendering structure
-- GPS script behaviour (used by automation)
+- GPS script behaviour (used by automation; also SSOT for Maintenance → Create location name from GPS)
 - UI.Vision macros (external workflow dependencies)
 
 ---
