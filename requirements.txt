@@ -12,7 +12,7 @@ scikit-learn>=1.9.0,<2
 pycountry>=26.2.16
 PyYAML>=6.0.3,<7
 # Google Geocoding for Maintenance → Create location name from GPS (also used by scripts/eBirdChecklistNameFromGPS.py)
-requests>=2.32.0,<3
+requests>=2.34.2,<3
 
 # Streamlit app deps
 streamlit>=1.59.2
