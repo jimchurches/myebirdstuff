@@ -15,7 +15,7 @@ import pandas as pd
 
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.species_family import build_base_species_to_family_map
-from explorer.core.species_logic import countable_species_vectorized
+from explorer.core.species_logic import countable_species_vectorized, parent_common_name
 
 # ---------------------------------------------------------------------------
 # Shared utility
@@ -36,6 +36,16 @@ def safe_count(x):
         return int(x)
     except (ValueError, TypeError):
         return 0
+
+
+def _most_frequent_parent_common(common_names: pd.Series) -> str:
+    """Most frequent parent-species common name (subspecies labels strip to parent)."""
+    parents = common_names.map(parent_common_name)
+    parents = parents.astype(str).str.strip()
+    parents = parents[parents != ""]
+    if parents.empty:
+        return ""
+    return str(parents.value_counts().index[0])
 
 
 def format_observed_count_for_map_popup(raw) -> str:
@@ -437,14 +447,14 @@ def rankings_by_individuals(df_obs, limit):
     df_s["_count"] = df_s["Count"].apply(safe_count)
     by_base = df_s.groupby("_base").agg(
         total=("_count", "sum"),
-        common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+        common_name=("Common Name", _most_frequent_parent_common),
     ).reset_index()
     by_base = by_base.sort_values(by=["total", "_base"], ascending=[False, True])
     if limit is not None:
         by_base = by_base.head(limit)
     rows = []
     for _, r in by_base.iterrows():
-        name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
+        name = r["common_name"] if pd.notna(r["common_name"]) and r["common_name"] else r["_base"]
         rows.append((str(name), "—", f"{int(r['total']):,}"))
     return rows
 
@@ -458,14 +468,14 @@ def rankings_by_checklists(df_obs, limit):
     df_s = df_s.dropna(subset=["_base"])
     by_base = df_s.groupby("_base").agg(
         n_checklists=("Submission ID", "nunique"),
-        common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+        common_name=("Common Name", _most_frequent_parent_common),
     ).reset_index()
     by_base = by_base.sort_values(by=["n_checklists", "_base"], ascending=[False, True])
     if limit is not None:
         by_base = by_base.head(limit)
     rows = []
     for _, r in by_base.iterrows():
-        name = r["common_name"] if pd.notna(r["common_name"]) else r["_base"]
+        name = r["common_name"] if pd.notna(r["common_name"]) and r["common_name"] else r["_base"]
         rows.append((str(name), "—", f"{int(r['n_checklists']):,}"))
     return rows
 
@@ -641,7 +651,7 @@ def rankings_seen_once(df_obs, limit=None):
     by_base = df_s.groupby("_base").agg(
         n_checklists=("Submission ID", "nunique"),
         checklist_count=("_count", "sum"),
-        common_name=("Common Name", lambda s: s.value_counts().index[0] if len(s) > 0 else ""),
+        common_name=("Common Name", _most_frequent_parent_common),
         Location=("Location", "first"),
         Location_ID=("Location ID", "first"),
         Submission_ID=("Submission ID", "first"),
@@ -724,7 +734,10 @@ def rankings_high_counts(df_obs, tie_break="last", sort_mode="total_count"):
             ascending=[tie_mode == "first", True],
         )
         r = top.iloc[0]
-        name = r["Common Name"] if pd.notna(r.get("Common Name")) else _base
+        raw_common = r.get("Common Name")
+        name = parent_common_name(raw_common) if pd.notna(raw_common) else ""
+        if not name:
+            name = str(_base)
         lid = r.get("Location ID")
         loc = r.get("Location", "")
         sid = r.get("Submission ID")

@@ -268,6 +268,26 @@ class TestRankingsByIndividuals:
         assert len(rows) == 1
         assert rows[0][0] == "Grey Teal"
 
+    def test_display_name_rolls_up_subspecies_common_name(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Gymnorhina tibicen tibicen",
+                    "Common Name": "Australian Magpie (Black-backed)",
+                    "Count": 50,
+                },
+                {
+                    "Scientific Name": "Gymnorhina tibicen",
+                    "Common Name": "Australian Magpie",
+                    "Count": 10,
+                },
+            ]
+        )
+        rows = rankings_by_individuals(df, limit=10)
+        assert len(rows) == 1
+        assert rows[0][0] == "Australian Magpie"
+        assert rows[0][2] == "60"
+
 
 class TestRankingsByChecklists:
     def test_two_checklists_same_species(self):
@@ -278,6 +298,35 @@ class TestRankingsByChecklists:
         rows = rankings_by_checklists(df, limit=10)
         assert len(rows) == 1
         assert rows[0][2] == "2"
+
+    def test_display_name_rolls_up_subspecies_common_name(self):
+        """Counts already merge by base sci; display must not keep subspecies labels."""
+        df = _obs_df(
+            [
+                {
+                    "Submission ID": "S1",
+                    "Scientific Name": "Gymnorhina tibicen tibicen",
+                    "Common Name": "Australian Magpie (Black-backed)",
+                    "Count": 1,
+                },
+                {
+                    "Submission ID": "S2",
+                    "Scientific Name": "Gymnorhina tibicen tibicen",
+                    "Common Name": "Australian Magpie (Black-backed)",
+                    "Count": 1,
+                },
+                {
+                    "Submission ID": "S3",
+                    "Scientific Name": "Gymnorhina tibicen",
+                    "Common Name": "Australian Magpie",
+                    "Count": 1,
+                },
+            ]
+        )
+        rows = rankings_by_checklists(df, limit=10)
+        assert len(rows) == 1
+        assert rows[0][0] == "Australian Magpie"
+        assert rows[0][2] == "3"
 
 
 class TestRankingsSubspecies:
@@ -331,6 +380,22 @@ class TestRankingsByVisits:
 
 
 class TestRankingsHighCounts:
+    def test_display_name_rolls_up_subspecies_common_name(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Gymnorhina tibicen tibicen",
+                    "Common Name": "Australian Magpie (Black-backed)",
+                    "Submission ID": "S1",
+                    "Count": 40,
+                },
+            ]
+        )
+        rows = rankings_high_counts(df)
+        assert len(rows) == 1
+        assert rows[0][0] == "Australian Magpie"
+        assert rows[0][5] == "40"
+
     def test_picks_last_by_default_when_tied(self):
         df = _obs_df(
             [

@@ -332,6 +332,44 @@ def test_species_individuals_insight_fact_isolates_one_species():
     )
 
 
+def test_most_common_checklist_species_display_rolls_up_subspecies():
+    """Subspecies-majority common names still show the parent on the card (#334)."""
+    df = pd.DataFrame(
+        [
+            _row(
+                sid="S1",
+                dt="2025-01-01",
+                common="Australian Magpie (Black-backed)",
+                scientific="Gymnorhina tibicen tibicen",
+            ),
+            _row(
+                sid="S2",
+                dt="2025-02-01",
+                common="Australian Magpie (Black-backed)",
+                scientific="Gymnorhina tibicen tibicen",
+            ),
+            _row(
+                sid="S3",
+                dt="2025-03-01",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+            ),
+            _row(
+                sid="S4",
+                dt="2025-04-01",
+                common="Willie Wagtail",
+                scientific="Rhipidura leucophrys",
+            ),
+        ]
+    )
+    facts = compute_insight_facts(df, period_for_year(2025))
+    top = insight_fact_by_id(facts, "most_common_checklist_species")
+    assert top is not None
+    assert top.primary_text == "Australian Magpie"
+    assert top.metric_value == 3
+    assert "(" not in top.primary_text
+
+
 def test_species_individuals_insight_fact_rolls_up_subspecies():
     from explorer.core.share_summary_compute import period_for_year
     from explorer.core.share_summary_insight_facts import (
