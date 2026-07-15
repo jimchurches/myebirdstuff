@@ -179,7 +179,7 @@ def test_insight_layout_renders():
     stats = ShareSummaryStats(period_label="2025", period_kind="year")
     fact = ShareSummaryInsightFact(
         fact_id="most_common_checklist_species",
-        label="Most common checklist species",
+        label="Species seen on the most checklists",
         primary_text="Australian Magpie",
         metric_value=3999,
         metric_unit="checklists",
@@ -192,7 +192,7 @@ def test_insight_layout_renders():
     )
     assert SHARE_SUMMARY_LAYOUT_SUBTITLE_INSIGHT in html
     assert "<h1" in html
-    assert "Most common checklist species" in html
+    assert "Species seen on the most checklists" in html
     assert "Australian Magpie" in html
     assert "3,999 checklists" in html
     assert "linear-gradient(145deg" in html
@@ -257,7 +257,7 @@ def test_resolve_insight_fact_uses_requested_id():
     facts = [
         ShareSummaryInsightFact(
             fact_id="most_common_checklist_species",
-            label="Most common checklist species",
+            label="Species seen on the most checklists",
             primary_text="Magpie",
             metric_value=1,
             metric_unit="checklists",
@@ -278,7 +278,7 @@ def test_resolve_insight_fact_uses_requested_id():
 def test_resolve_insight_fact_falls_back_to_default_then_first():
     default = ShareSummaryInsightFact(
         fact_id="most_common_checklist_species",
-        label="Most common checklist species",
+        label="Species seen on the most checklists",
         primary_text="Magpie",
         metric_value=1,
         metric_unit="checklists",
