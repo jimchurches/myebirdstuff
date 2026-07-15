@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pandas as pd
 import streamlit as st
 
@@ -654,8 +656,8 @@ def _insight_fact_id_from_session(
 ) -> InsightFactId:
     valid = {fact_id for fact_id, _ in options}
     raw = st.session_state.get(keys.insight_fact, SHARE_SUMMARY_INSIGHT_FACT_DEFAULT)
-    if raw in valid:
-        return raw  # type: ignore[return-value]
+    if isinstance(raw, str) and raw in valid:
+        return cast(InsightFactId, raw)
     if SHARE_SUMMARY_INSIGHT_FACT_DEFAULT in valid:
         return SHARE_SUMMARY_INSIGHT_FACT_DEFAULT
     return options[0][0] if options else SHARE_SUMMARY_INSIGHT_FACT_DEFAULT

@@ -509,17 +509,39 @@ def test_peak_month_and_day_gating():
             _peak_row(sid="S3", dt="2025-03-15", count=1, **magpie),
             _peak_row(sid="S4", dt="2025-03-15", count=1, **wagtail),
             _peak_row(sid="S5", dt="2025-03-15", count=5, **finch),
+            _peak_row(
+                sid="S3",
+                dt="2025-03-15",
+                common="duck sp.",
+                scientific="Anas sp.",
+                count=999,
+            ),
         ]
     )
     yearly = compute_insight_facts(df, period_for_year(2025))
-    month = insight_fact_by_id(yearly, "month_most_checklists")
-    assert month is not None
-    assert month.primary_text == "Mar 2025"
-    assert month.metric_value == 3
-    day = insight_fact_by_id(yearly, "day_most_species")
-    assert day is not None
-    assert day.primary_text == "15 Mar 2025"
-    assert day.metric_value == 3
+    expected_month_metrics = {
+        "month_most_checklists": 3,
+        "month_most_completed_checklists": 3,
+        "month_most_species": 3,
+        "month_most_individuals": 7,
+    }
+    for fact_id, expected_metric in expected_month_metrics.items():
+        fact = insight_fact_by_id(yearly, fact_id)
+        assert fact is not None
+        assert fact.primary_text == "Mar 2025"
+        assert fact.metric_value == expected_metric
+
+    expected_day_metrics = {
+        "day_most_checklists": 3,
+        "day_most_completed_checklists": 3,
+        "day_most_species": 3,
+        "day_most_individuals": 7,
+    }
+    for fact_id, expected_metric in expected_day_metrics.items():
+        fact = insight_fact_by_id(yearly, fact_id)
+        assert fact is not None
+        assert fact.primary_text == "15 Mar 2025"
+        assert fact.metric_value == expected_metric
 
     monthly = compute_insight_facts(df, period_for_month(2025, 3))
     assert insight_fact_by_id(monthly, "month_most_checklists") is None
@@ -537,6 +559,65 @@ def test_peak_month_and_day_gating():
         df, period_for_custom(date(2025, 3, 1), date(2025, 3, 31))
     )
     assert insight_fact_by_id(custom, "day_most_checklists") is None
+
+
+def test_peak_period_gating_returns_exact_fact_sets():
+    from datetime import date
+
+    from explorer.core.share_summary_compute import (
+        period_for_custom,
+        period_for_lifetime,
+        period_for_month,
+        period_for_week_containing,
+    )
+    from explorer.core.share_summary_insight_facts import INSIGHT_PEAK_FACT_IDS
+
+    df = pd.DataFrame(
+        [
+            _peak_row(
+                sid="S1",
+                dt="2025-03-15",
+                common="Australian Magpie",
+                scientific="Gymnorhina tibicen",
+            )
+        ]
+    )
+    expected_by_period = {
+        period_for_lifetime(date(2025, 1, 1), date(2025, 12, 31)): {
+            "year_most_checklists",
+            "year_most_completed_checklists",
+            "year_most_species",
+            "year_most_individuals",
+            "day_most_checklists",
+            "day_most_completed_checklists",
+            "day_most_species",
+            "day_most_individuals",
+        },
+        period_for_year(2025): {
+            "month_most_checklists",
+            "month_most_completed_checklists",
+            "month_most_species",
+            "month_most_individuals",
+            "day_most_checklists",
+            "day_most_completed_checklists",
+            "day_most_species",
+            "day_most_individuals",
+        },
+        period_for_month(2025, 3): {
+            "day_most_checklists",
+            "day_most_completed_checklists",
+            "day_most_species",
+            "day_most_individuals",
+        },
+        period_for_week_containing(date(2025, 3, 15)): set(),
+        period_for_custom(date(2025, 3, 1), date(2025, 3, 31)): set(),
+    }
+    peak_fact_ids = set(INSIGHT_PEAK_FACT_IDS)
+
+    for period, expected_ids in expected_by_period.items():
+        facts = compute_insight_facts(df, period)
+        actual_ids = {fact.fact_id for fact in facts} & peak_fact_ids
+        assert actual_ids == expected_ids
 
 
 def test_peak_checklists_all_vs_completed_and_tie_earliest():
@@ -655,8 +736,22 @@ def test_peak_picker_labels_match_card_headings():
     from explorer.core.share_summary_insight_facts import (
         INSIGHT_FACT_CARD_LABELS,
         INSIGHT_FACT_PICKER_LABELS,
-        INSIGHT_PEAK_FACT_IDS,
     )
 
-    for fact_id in INSIGHT_PEAK_FACT_IDS:
-        assert INSIGHT_FACT_PICKER_LABELS[fact_id] == INSIGHT_FACT_CARD_LABELS[fact_id]
+    expected_labels = {
+        "year_most_checklists": "Most checklists in a year",
+        "year_most_completed_checklists": "Most completed checklists in a year",
+        "year_most_species": "Most species in a year",
+        "year_most_individuals": "Most individual birds in a year",
+        "month_most_checklists": "Most checklists in a month",
+        "month_most_completed_checklists": "Most completed checklists in a month",
+        "month_most_species": "Most species in a month",
+        "month_most_individuals": "Most individual birds in a month",
+        "day_most_checklists": "Most checklists in a day",
+        "day_most_completed_checklists": "Most completed checklists in a day",
+        "day_most_species": "Most species in a day",
+        "day_most_individuals": "Most individual birds in a day",
+    }
+    assert INSIGHT_FACT_CARD_LABELS == expected_labels
+    for fact_id, expected_label in expected_labels.items():
+        assert INSIGHT_FACT_PICKER_LABELS[fact_id] == expected_label

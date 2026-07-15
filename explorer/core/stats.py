@@ -21,6 +21,7 @@ from explorer.core.species_logic import countable_species_vectorized, parent_com
 # Shared utility
 # ---------------------------------------------------------------------------
 
+
 def safe_count(x):
     """Parse an eBird count value to int.
 
@@ -86,6 +87,7 @@ def format_observed_count_for_map_popup(raw) -> str:
 # Region helpers
 # ---------------------------------------------------------------------------
 
+
 def region_column(df, prefer_country=True):
     """Return the first column name present in *df* for region (country/state).
 
@@ -93,7 +95,13 @@ def region_column(df, prefer_country=True):
     """
     cols_lower = {c.strip().lower(): c for c in df.columns}
     candidates_country = ("country", "country name", "country code", "countrycode")
-    candidates_region = ("state/province", "state", "state_province", "province", "county")
+    candidates_region = (
+        "state/province",
+        "state",
+        "state_province",
+        "province",
+        "county",
+    )
     if prefer_country:
         for key in candidates_country:
             if key in cols_lower:
@@ -127,6 +135,7 @@ def format_region_parts(value):
 # ---------------------------------------------------------------------------
 # Longest streak
 # ---------------------------------------------------------------------------
+
 
 def _row_lid_str(row) -> str:
     """Normalize Location ID from a checklist row for lifelist URLs."""
@@ -219,13 +228,21 @@ def longest_streak(unique_dates, cl):
         end_m = cl_copy[cl_copy["_d"] == last_d]
         sort_col = "datetime" if "datetime" in cl_copy.columns else None
         if not start_m.empty:
-            start_sorted = start_m.sort_values(sort_col) if sort_col and start_m[sort_col].notna().any() else start_m
+            start_sorted = (
+                start_m.sort_values(sort_col)
+                if sort_col and start_m[sort_col].notna().any()
+                else start_m
+            )
             start_row = start_sorted.iloc[0]
             streak_start_loc = _row_loc_str(start_row)
             streak_start_sid = str(start_row.get("Submission ID", ""))
             streak_start_lid = _row_lid_str(start_row)
         if not end_m.empty:
-            end_sorted = end_m.sort_values(sort_col) if sort_col and end_m[sort_col].notna().any() else end_m
+            end_sorted = (
+                end_m.sort_values(sort_col)
+                if sort_col and end_m[sort_col].notna().any()
+                else end_m
+            )
             end_row = end_sorted.iloc[-1]
             streak_end_loc = _row_loc_str(end_row)
             streak_end_sid = str(end_row.get("Submission ID", ""))
@@ -254,8 +271,11 @@ _INCIDENTAL_PROTOCOL_PATTERN = "incidental|casual observation"
 
 def protocol_excludes_timed_birding(protocol: pd.Series) -> pd.Series:
     """True for protocols excluded from timed birding totals (incidental/historical/casual)."""
-    return protocol.astype(str).str.strip().str.lower().str.contains(
-        _PROTOCOL_EXCL_TIMED_BIRDING, na=False, regex=True
+    return (
+        protocol.astype(str)
+        .str.strip()
+        .str.lower()
+        .str.contains(_PROTOCOL_EXCL_TIMED_BIRDING, na=False, regex=True)
     )
 
 
@@ -338,7 +358,10 @@ def sum_shared_checklist_minutes(cl: pd.DataFrame, dur_col: str) -> float:
 # Ranking helpers
 # ---------------------------------------------------------------------------
 
-def _countable_species_nunique_by_group(df_obs: pd.DataFrame, group_col: str, value_name: str) -> pd.DataFrame:
+
+def _countable_species_nunique_by_group(
+    df_obs: pd.DataFrame, group_col: str, value_name: str
+) -> pd.DataFrame:
     """Distinct countable base species per *group_col* (vectorized; replaces per-group ``apply``)."""
     empty = pd.DataFrame(columns=[group_col, value_name])
     if df_obs.empty or group_col not in df_obs.columns:
@@ -348,21 +371,31 @@ def _countable_species_nunique_by_group(df_obs: pd.DataFrame, group_col: str, va
     counted = work.dropna(subset=["_base"])
     if counted.empty:
         return empty
-    out = counted.groupby(group_col, sort=False)["_base"].nunique().reset_index(name=value_name)
+    out = (
+        counted.groupby(group_col, sort=False)["_base"]
+        .nunique()
+        .reset_index(name=value_name)
+    )
     return out
 
 
-def _individuals_sum_by_group(df_obs: pd.DataFrame, group_col: str, value_name: str) -> pd.DataFrame:
+def _individuals_sum_by_group(
+    df_obs: pd.DataFrame, group_col: str, value_name: str
+) -> pd.DataFrame:
     """Sum of parsed ``Count`` values per *group_col* (vectorized)."""
     empty = pd.DataFrame(columns=[group_col, value_name])
     if df_obs.empty or group_col not in df_obs.columns:
         return empty
     work = df_obs[[group_col, "Count"]].copy()
     work["_nind"] = work["Count"].apply(safe_count)
-    return work.groupby(group_col, sort=False)["_nind"].sum().reset_index(name=value_name)
+    return (
+        work.groupby(group_col, sort=False)["_nind"].sum().reset_index(name=value_name)
+    )
 
 
-def rankings_by_value(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt, limit):
+def rankings_by_value(
+    df_sub, value_col, date_col, loc_col, loc_id_col, sid_col, fmt, limit
+):
     """Top N by value desc, date asc; ties show oldest.
 
     Returns list of (loc_link, state_str, country_str, dt_link, val).
@@ -386,8 +419,16 @@ def rankings_by_value(df_sub, value_col, date_col, loc_col, loc_id_col, sid_col,
         sid = r.get(sid_col, "")
         lid = r.get(loc_id_col, "")
         val = fmt(r[value_col])
-        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
-        dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
+        loc_link = (
+            f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>'
+            if lid
+            else loc
+        )
+        dt_link = (
+            f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>'
+            if sid
+            else dt_str
+        )
         state_str = ""
         country_str = ""
         if reg_col and reg_col in r.index:
@@ -410,30 +451,56 @@ def rankings_by_location(df_obs, cl_sub, mode, fmt, limit):
     else:
         agg = _individuals_sum_by_group(df_obs, "Location ID", "_val")
     dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
-    loc_info = cl_sub.groupby("Location ID").agg(
-        Location=("Location", "first"),
-        Checklists=("Submission ID", "nunique"),
-    ).reset_index()
+    loc_info = (
+        cl_sub.groupby("Location ID")
+        .agg(
+            Location=("Location", "first"),
+            Checklists=("Submission ID", "nunique"),
+        )
+        .reset_index()
+    )
     reg_col = region_column(cl_sub, prefer_country=True)
     if reg_col:
         loc_info = loc_info.merge(
             cl_sub.groupby("Location ID")[reg_col].first().reset_index(),
-            on="Location ID", how="left",
+            on="Location ID",
+            how="left",
         )
-    first_dates = cl_sub.groupby("Location ID")[dt_col].min().reset_index().rename(columns={dt_col: "_first"})
-    merged = agg.merge(loc_info, on="Location ID", how="inner").merge(first_dates, on="Location ID", how="left")
-    merged = merged.sort_values(by=["_val", "_first", "Location"], ascending=[False, True, True]).head(limit)
+    first_dates = (
+        cl_sub.groupby("Location ID")[dt_col]
+        .min()
+        .reset_index()
+        .rename(columns={dt_col: "_first"})
+    )
+    merged = agg.merge(loc_info, on="Location ID", how="inner").merge(
+        first_dates, on="Location ID", how="left"
+    )
+    merged = merged.sort_values(
+        by=["_val", "_first", "Location"], ascending=[False, True, True]
+    ).head(limit)
     rows = []
     for _, r in merged.iterrows():
         lid = r["Location ID"]
-        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
+        loc_link = (
+            f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{r["Location"]}</a>'
+            if lid
+            else r["Location"]
+        )
         state_str = ""
         country_str = ""
         if reg_col and reg_col in merged.columns:
             country, state = format_region_parts(r.get(reg_col))
             state_str = state if state else ""
             country_str = country if country else ""
-        rows.append((loc_link, state_str, country_str, f"{int(r['Checklists']):,}", fmt(r["_val"])))
+        rows.append(
+            (
+                loc_link,
+                state_str,
+                country_str,
+                f"{int(r['Checklists']):,}",
+                fmt(r["_val"]),
+            )
+        )
     return rows
 
 
@@ -445,16 +512,24 @@ def rankings_by_individuals(df_obs, limit):
     df_s["_base"] = countable_species_vectorized(df_s)
     df_s = df_s.dropna(subset=["_base"])
     df_s["_count"] = df_s["Count"].apply(safe_count)
-    by_base = df_s.groupby("_base").agg(
-        total=("_count", "sum"),
-        common_name=("Common Name", _most_frequent_parent_common),
-    ).reset_index()
+    by_base = (
+        df_s.groupby("_base")
+        .agg(
+            total=("_count", "sum"),
+            common_name=("Common Name", _most_frequent_parent_common),
+        )
+        .reset_index()
+    )
     by_base = by_base.sort_values(by=["total", "_base"], ascending=[False, True])
     if limit is not None:
         by_base = by_base.head(limit)
     rows = []
     for _, r in by_base.iterrows():
-        name = r["common_name"] if pd.notna(r["common_name"]) and r["common_name"] else r["_base"]
+        name = (
+            r["common_name"]
+            if pd.notna(r["common_name"]) and r["common_name"]
+            else r["_base"]
+        )
         rows.append((str(name), "—", f"{int(r['total']):,}"))
     return rows
 
@@ -466,16 +541,24 @@ def rankings_by_checklists(df_obs, limit):
     df_s = df_obs.copy()
     df_s["_base"] = countable_species_vectorized(df_s)
     df_s = df_s.dropna(subset=["_base"])
-    by_base = df_s.groupby("_base").agg(
-        n_checklists=("Submission ID", "nunique"),
-        common_name=("Common Name", _most_frequent_parent_common),
-    ).reset_index()
+    by_base = (
+        df_s.groupby("_base")
+        .agg(
+            n_checklists=("Submission ID", "nunique"),
+            common_name=("Common Name", _most_frequent_parent_common),
+        )
+        .reset_index()
+    )
     by_base = by_base.sort_values(by=["n_checklists", "_base"], ascending=[False, True])
     if limit is not None:
         by_base = by_base.head(limit)
     rows = []
     for _, r in by_base.iterrows():
-        name = r["common_name"] if pd.notna(r["common_name"]) and r["common_name"] else r["_base"]
+        name = (
+            r["common_name"]
+            if pd.notna(r["common_name"]) and r["common_name"]
+            else r["_base"]
+        )
         rows.append((str(name), "—", f"{int(r['n_checklists']):,}"))
     return rows
 
@@ -514,11 +597,19 @@ def rankings_subspecies_hierarchical(df_obs, limit=None):
     common = df["Common Name"].fillna("").astype(str).str.strip()
 
     # Exclude spuhs, hybrids, domestic types, and species-level slash taxa
-    spuh = sci.str.contains(r" sp\.", case=False, na=False) | sci.str.lower().str.endswith(" sp")
-    hybrid = sci.str.contains(" x ", na=False) | common.str.lower().str.contains(r"\(hybrid\)", na=False)
-    domestic = common.str.contains("Domestic", na=False) | common.str.contains(r"\(Domestic type\)", na=False)
+    spuh = sci.str.contains(
+        r" sp\.", case=False, na=False
+    ) | sci.str.lower().str.endswith(" sp")
+    hybrid = sci.str.contains(" x ", na=False) | common.str.lower().str.contains(
+        r"\(hybrid\)", na=False
+    )
+    domestic = common.str.contains("Domestic", na=False) | common.str.contains(
+        r"\(Domestic type\)", na=False
+    )
     parts = sci.str.split()
-    species_level_slash = parts.apply(lambda p: len(p) > 1 and "/" in str(p[1]) if isinstance(p, list) else False)
+    species_level_slash = parts.apply(
+        lambda p: len(p) > 1 and "/" in str(p[1]) if isinstance(p, list) else False
+    )
 
     keep_valid = ~spuh & ~hybrid & ~domestic & ~species_level_slash
     if not keep_valid.any():
@@ -542,14 +633,6 @@ def rankings_subspecies_hierarchical(df_obs, limit=None):
     df["_is_subspecies"] = is_sub
     df["_count"] = df["Count"].apply(safe_count)
 
-    # Common-name normalisation: parent species common name = before " ("
-    def _species_common_from_common(name: str) -> str:
-        s = (name or "").strip()
-        if not s:
-            return ""
-        idx = s.find(" (")
-        return s[:idx] if idx != -1 else s
-
     def _subspecies_label_from_common(name: str) -> str:
         s = (name or "").strip()
         if not s:
@@ -560,7 +643,7 @@ def rankings_subspecies_hierarchical(df_obs, limit=None):
             return s[start + 2 : end].strip()
         return s
 
-    df["_species_common_base"] = common.apply(_species_common_from_common)
+    df["_species_common_base"] = common.map(parent_common_name)
     df["_sub_label"] = common.apply(_subspecies_label_from_common)
 
     species_blocks = []
@@ -575,7 +658,9 @@ def rankings_subspecies_hierarchical(df_obs, limit=None):
 
         # Species-level rows (recorded without subspecies)
         g_species_only = g[~g["_is_subspecies"]]
-        species_only_count = int(g_species_only["_count"].sum()) if not g_species_only.empty else 0
+        species_only_count = (
+            int(g_species_only["_count"].sum()) if not g_species_only.empty else 0
+        )
 
         # Subspecies aggregation by full scientific name
         subspecies_rows = []
@@ -583,7 +668,9 @@ def rankings_subspecies_hierarchical(df_obs, limit=None):
             total_ind = int(sg["_count"].sum())
             # Pick a representative common name for this subspecies
             common_vals = sg["Common Name"].dropna().astype(str)
-            common_full = common_vals.value_counts().index[0] if not common_vals.empty else ""
+            common_full = (
+                common_vals.value_counts().index[0] if not common_vals.empty else ""
+            )
             label = _subspecies_label_from_common(common_full) or common_full
             subspecies_rows.append(
                 {
@@ -610,7 +697,9 @@ def rankings_subspecies_hierarchical(df_obs, limit=None):
             species_common = base_common_vals.value_counts().index[0]
         else:
             # Fallback to any common name in the group
-            species_common = g["Common Name"].dropna().astype(str).value_counts().index[0]
+            species_common = (
+                g["Common Name"].dropna().astype(str).value_counts().index[0]
+            )
 
         species_blocks.append(
             {
@@ -648,15 +737,19 @@ def rankings_seen_once(df_obs, limit=None):
     df_s = df_s.dropna(subset=["_base"])
     df_s["_count"] = df_s["Count"].apply(safe_count)
     dt_col = "datetime" if "datetime" in df_s.columns else "Date"
-    by_base = df_s.groupby("_base").agg(
-        n_checklists=("Submission ID", "nunique"),
-        checklist_count=("_count", "sum"),
-        common_name=("Common Name", _most_frequent_parent_common),
-        Location=("Location", "first"),
-        Location_ID=("Location ID", "first"),
-        Submission_ID=("Submission ID", "first"),
-        _dt=(dt_col, "first"),
-    ).reset_index()
+    by_base = (
+        df_s.groupby("_base")
+        .agg(
+            n_checklists=("Submission ID", "nunique"),
+            checklist_count=("_count", "sum"),
+            common_name=("Common Name", _most_frequent_parent_common),
+            Location=("Location", "first"),
+            Location_ID=("Location ID", "first"),
+            Submission_ID=("Submission ID", "first"),
+            _dt=(dt_col, "first"),
+        )
+        .reset_index()
+    )
     reg_col = region_column(df_s, prefer_country=True)
     if reg_col:
         region_by_base = (
@@ -677,15 +770,32 @@ def rankings_seen_once(df_obs, limit=None):
         sid = r.get("Submission_ID")
         dt = r.get("_dt")
         dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
-        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
-        dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
+        loc_link = (
+            f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>'
+            if lid
+            else loc
+        )
+        dt_link = (
+            f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>'
+            if sid
+            else dt_str
+        )
         state_str = ""
         country_str = ""
         if "_region" in r.index:
             country, state = format_region_parts(r.get("_region"))
             state_str = state if state else ""
             country_str = country if country else ""
-        rows.append((str(name), loc_link, state_str, country_str, dt_link, f"{int(r['checklist_count']):,}"))
+        rows.append(
+            (
+                str(name),
+                loc_link,
+                state_str,
+                country_str,
+                dt_link,
+                f"{int(r['checklist_count']):,}",
+            )
+        )
     return rows
 
 
@@ -743,15 +853,25 @@ def rankings_high_counts(df_obs, tie_break="last", sort_mode="total_count"):
         sid = r.get("Submission ID")
         dt = r.get("_dt")
         dt_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
-        loc_link = f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>' if lid else loc
-        dt_link = f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>' if sid else dt_str
+        loc_link = (
+            f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>'
+            if lid
+            else loc
+        )
+        dt_link = (
+            f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>'
+            if sid
+            else dt_str
+        )
         state_str = ""
         country_str = ""
         if reg_col and reg_col in r.index:
             country, state = format_region_parts(r.get(reg_col))
             state_str = state if state else ""
             country_str = country if country else ""
-        rows.append((str(name), loc_link, state_str, country_str, dt_link, f"{max_count:,}"))
+        rows.append(
+            (str(name), loc_link, state_str, country_str, dt_link, f"{max_count:,}")
+        )
 
     if sort_key_mode == "alphabetical":
         rows.sort(key=lambda x: str(x[0]).lower())
@@ -775,39 +895,75 @@ def rankings_by_visits(cl_sub, limit):
     dt_col = "datetime" if "datetime" in cl_sub.columns else "Date"
     first_idx = cl_sub.groupby("Location ID")[dt_col].idxmin().dropna()
     last_idx = cl_sub.groupby("Location ID")[dt_col].idxmax().dropna()
-    first_rows = cl_sub.loc[first_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
-        columns={dt_col: "First", "Submission ID": "First_SID"}
+    first_rows = cl_sub.loc[
+        first_idx, ["Location ID", "Location", dt_col, "Submission ID"]
+    ].rename(columns={dt_col: "First", "Submission ID": "First_SID"})
+    last_rows = cl_sub.loc[
+        last_idx, ["Location ID", "Location", dt_col, "Submission ID"]
+    ].rename(columns={dt_col: "Last", "Submission ID": "Last_SID"})
+    vc = (
+        cl_sub.groupby("Location ID")
+        .agg(Count=("Submission ID", "nunique"))
+        .reset_index()
     )
-    last_rows = cl_sub.loc[last_idx, ["Location ID", "Location", dt_col, "Submission ID"]].rename(
-        columns={dt_col: "Last", "Submission ID": "Last_SID"}
+    vc = vc.merge(first_rows, on="Location ID").merge(
+        last_rows[["Location ID", "Last", "Last_SID"]], on="Location ID"
     )
-    vc = cl_sub.groupby("Location ID").agg(Count=("Submission ID", "nunique")).reset_index()
-    vc = vc.merge(first_rows, on="Location ID").merge(last_rows[["Location ID", "Last", "Last_SID"]], on="Location ID")
     reg_col = region_column(cl_sub, prefer_country=True)
     if reg_col:
         vc = vc.merge(
             cl_sub.groupby("Location ID")[reg_col].first().reset_index(),
-            on="Location ID", how="left",
+            on="Location ID",
+            how="left",
         )
     vc = vc.sort_values(by=["Count", "First"], ascending=[False, True]).head(limit)
     rows = []
     for _, r in vc.iterrows():
         lid = r["Location ID"]
         # Link location names to the user’s mychecklists view for that hotspot.
-        loc_link = f'<a href="https://ebird.org/mychecklists/{lid}" target="_blank">{r["Location"]}</a>' if lid else r["Location"]
+        loc_link = (
+            f'<a href="https://ebird.org/mychecklists/{lid}" target="_blank">{r["Location"]}</a>'
+            if lid
+            else r["Location"]
+        )
         state_str = ""
         country_str = ""
         if reg_col and reg_col in vc.columns:
             country, state = format_region_parts(r.get(reg_col))
             state_str = state if state else ""
             country_str = country if country else ""
-        first_str = pd.Timestamp(r["First"]).strftime("%d %b %Y %H:%M") if pd.notna(r["First"]) else "—"
-        last_str = pd.Timestamp(r["Last"]).strftime("%d %b %Y %H:%M") if pd.notna(r["Last"]) else "—"
+        first_str = (
+            pd.Timestamp(r["First"]).strftime("%d %b %Y %H:%M")
+            if pd.notna(r["First"])
+            else "—"
+        )
+        last_str = (
+            pd.Timestamp(r["Last"]).strftime("%d %b %Y %H:%M")
+            if pd.notna(r["Last"])
+            else "—"
+        )
         first_sid = r.get("First_SID")
         last_sid = r.get("Last_SID")
-        first_link = f'<a href="https://ebird.org/checklist/{first_sid}" target="_blank">{first_str}</a>' if pd.notna(first_sid) and first_sid else first_str
-        last_link = f'<a href="https://ebird.org/checklist/{last_sid}" target="_blank">{last_str}</a>' if pd.notna(last_sid) and last_sid else last_str
-        rows.append((loc_link, state_str, country_str, first_link, last_link, f"{int(r['Count']):,}"))
+        first_link = (
+            f'<a href="https://ebird.org/checklist/{first_sid}" target="_blank">{first_str}</a>'
+            if pd.notna(first_sid) and first_sid
+            else first_str
+        )
+        last_link = (
+            f'<a href="https://ebird.org/checklist/{last_sid}" target="_blank">{last_str}</a>'
+            if pd.notna(last_sid) and last_sid
+            else last_str
+        )
+        rows.append(
+            (
+                loc_link,
+                state_str,
+                country_str,
+                first_link,
+                last_link,
+                f"{int(r['Count']):,}",
+            )
+        )
     return rows
 
 
@@ -854,7 +1010,11 @@ def rankings_not_seen_recently(df_obs, reference_date=None):
         common = r.get("Common Name")
         name = str(common) if pd.notna(common) else str(r["_base"])
         sid = r.get("Submission ID")
-        dt_str = pd.Timestamp(r["_dt"]).strftime("%d %b %Y %H:%M") if pd.notna(r["_dt"]) else "—"
+        dt_str = (
+            pd.Timestamp(r["_dt"]).strftime("%d %b %Y %H:%M")
+            if pd.notna(r["_dt"])
+            else "—"
+        )
         if sid:
             last_link = (
                 f'<a href="https://ebird.org/checklist/{sid}" target="_blank" rel="noopener noreferrer">'
@@ -894,7 +1054,9 @@ def rankings_not_seen_recently_in_country(df_obs, cl, country_key, reference_dat
     ck_series = checklist_country_keys(cl2)
     cl2 = cl2.copy()
     cl2["_country_key"] = ck_series
-    sid_map = cl2.drop_duplicates(subset=["Submission ID"]).set_index("Submission ID")["_country_key"]
+    sid_map = cl2.drop_duplicates(subset=["Submission ID"]).set_index("Submission ID")[
+        "_country_key"
+    ]
     obs_key = df_obs["Submission ID"].map(sid_map)
     sub = df_obs[obs_key == country_key].copy()
     return rankings_not_seen_recently(sub, reference_date=reference_date)
@@ -903,6 +1065,7 @@ def rankings_not_seen_recently_in_country(df_obs, cl, country_key, reference_dat
 # ---------------------------------------------------------------------------
 # Rankings orchestrator
 # ---------------------------------------------------------------------------
+
 
 def compute_rankings(
     df,
@@ -919,27 +1082,93 @@ def compute_rankings(
     """
     cl_with_dur = cl.dropna(subset=[dur_col]).copy() if dur_col else pd.DataFrame()
     if dur_col and not cl_with_dur.empty:
-        cl_with_dur["_dur"] = pd.to_numeric(cl_with_dur[dur_col], errors="coerce").fillna(0)
+        cl_with_dur["_dur"] = pd.to_numeric(
+            cl_with_dur[dur_col], errors="coerce"
+        ).fillna(0)
     cl_with_dist = cl.dropna(subset=[dist_col]).copy() if dist_col else pd.DataFrame()
     if dist_col and not cl_with_dist.empty:
-        cl_with_dist["_dist"] = pd.to_numeric(cl_with_dist[dist_col], errors="coerce").fillna(0)
+        cl_with_dist["_dist"] = pd.to_numeric(
+            cl_with_dist[dist_col], errors="coerce"
+        ).fillna(0)
     if df.empty:
-        return {k: [] for k in ("time", "dist", "species", "individuals",
-                                 "species_loc", "individuals_loc", "visited",
-                                 "species_individuals", "species_checklists",
-                                 "species_high_counts", "seen_once", "subspecies", "not_seen_recently")}
+        return {
+            k: []
+            for k in (
+                "time",
+                "dist",
+                "species",
+                "individuals",
+                "species_loc",
+                "individuals_loc",
+                "visited",
+                "species_individuals",
+                "species_checklists",
+                "species_high_counts",
+                "seen_once",
+                "subspecies",
+                "not_seen_recently",
+            )
+        }
     species_per_cl = _countable_species_nunique_by_group(df, "Submission ID", "_nsp")
     ind_per_cl = _individuals_sum_by_group(df, "Submission ID", "_nind")
     cl_species = cl.merge(species_per_cl, on="Submission ID", how="inner")
     cl_individuals = cl.merge(ind_per_cl, on="Submission ID", how="inner")
 
     return {
-        "time": rankings_by_value(cl_with_dur, "_dur", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(round(x))} min", limit) if dur_col and not cl_with_dur.empty else [],
-        "dist": rankings_by_value(cl_with_dist, "_dist", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{x:,.2f} km", limit) if dist_col and not cl_with_dist.empty else [],
-        "species": rankings_by_value(cl_species, "_nsp", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}", limit) if not cl_species.empty else [],
-        "individuals": rankings_by_value(cl_individuals, "_nind", "Date", "Location", "Location ID", "Submission ID", lambda x: f"{int(x):,}", limit) if not cl_individuals.empty else [],
-        "species_loc": rankings_by_location(df, cl, "species", lambda x: f"{int(x):,}", limit),
-        "individuals_loc": rankings_by_location(df, cl, "individuals", lambda x: f"{int(x):,}", limit),
+        "time": rankings_by_value(
+            cl_with_dur,
+            "_dur",
+            "Date",
+            "Location",
+            "Location ID",
+            "Submission ID",
+            lambda x: f"{int(round(x))} min",
+            limit,
+        )
+        if dur_col and not cl_with_dur.empty
+        else [],
+        "dist": rankings_by_value(
+            cl_with_dist,
+            "_dist",
+            "Date",
+            "Location",
+            "Location ID",
+            "Submission ID",
+            lambda x: f"{x:,.2f} km",
+            limit,
+        )
+        if dist_col and not cl_with_dist.empty
+        else [],
+        "species": rankings_by_value(
+            cl_species,
+            "_nsp",
+            "Date",
+            "Location",
+            "Location ID",
+            "Submission ID",
+            lambda x: f"{int(x):,}",
+            limit,
+        )
+        if not cl_species.empty
+        else [],
+        "individuals": rankings_by_value(
+            cl_individuals,
+            "_nind",
+            "Date",
+            "Location",
+            "Location ID",
+            "Submission ID",
+            lambda x: f"{int(x):,}",
+            limit,
+        )
+        if not cl_individuals.empty
+        else [],
+        "species_loc": rankings_by_location(
+            df, cl, "species", lambda x: f"{int(x):,}", limit
+        ),
+        "individuals_loc": rankings_by_location(
+            df, cl, "individuals", lambda x: f"{int(x):,}", limit
+        ),
         "visited": rankings_by_visits(cl, limit),
         "species_individuals": rankings_by_individuals(df, limit=None),
         "species_checklists": rankings_by_checklists(df, limit=None),
@@ -958,7 +1187,10 @@ def compute_rankings(
 # Yearly summary
 # ---------------------------------------------------------------------------
 
-def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | None = None):
+
+def yearly_summary_stats(
+    df, cl, dur_col, dist_col, *, taxonomy_locale: str | None = None
+):
     """Compute per-year stats.
 
     Returns (years_sorted, rows, incomplete_by_year).
@@ -983,23 +1215,47 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
 
     has_protocol = "Protocol" in df.columns
     has_all_obs = "All Obs Reported" in df.columns
-    proto_lower = cl["Protocol"].astype(str).str.strip().str.lower() if has_protocol else None
-    traveling_mask = proto_lower.str.contains("traveling|travelling", na=False) if has_protocol else pd.Series(False, index=cl.index)
-    stationary_mask = proto_lower.str.contains("stationary", na=False) if has_protocol else pd.Series(False, index=cl.index)
+    proto_lower = (
+        cl["Protocol"].astype(str).str.strip().str.lower() if has_protocol else None
+    )
+    traveling_mask = (
+        proto_lower.str.contains("traveling|travelling", na=False)
+        if has_protocol
+        else pd.Series(False, index=cl.index)
+    )
+    stationary_mask = (
+        proto_lower.str.contains("stationary", na=False)
+        if has_protocol
+        else pd.Series(False, index=cl.index)
+    )
     _incidental = incidental_checklist_mask(cl)
-    incidental_mask = _incidental if _incidental is not None else pd.Series(False, index=cl.index)
+    incidental_mask = (
+        _incidental if _incidental is not None else pd.Series(False, index=cl.index)
+    )
     completed_mask = pd.Series(True, index=cl.index)
     if has_all_obs:
         a = cl["All Obs Reported"]
         completed_mask = a.notna() & (
-            (pd.to_numeric(a, errors="coerce") == 1) |
-            (a.astype(str).str.strip().str.upper().isin(["TRUE", "YES", "Y"]))
+            (pd.to_numeric(a, errors="coerce") == 1)
+            | (a.astype(str).str.strip().str.upper().isin(["TRUE", "YES", "Y"]))
         )
-    traveling_complete = traveling_mask & completed_mask if has_protocol else traveling_mask
-    stationary_complete = stationary_mask & completed_mask if has_protocol else stationary_mask
-    incomplete_not_incidental = ~completed_mask & ~incidental_mask if has_all_obs and has_protocol else pd.Series(False, index=cl.index)
+    traveling_complete = (
+        traveling_mask & completed_mask if has_protocol else traveling_mask
+    )
+    stationary_complete = (
+        stationary_mask & completed_mask if has_protocol else stationary_mask
+    )
+    incomplete_not_incidental = (
+        ~completed_mask & ~incidental_mask
+        if has_all_obs and has_protocol
+        else pd.Series(False, index=cl.index)
+    )
     incomplete_hint = _html.escape("Incomplete checklists not counted.", quote=True)
-    info_icon = f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{incomplete_hint}</span></span>' if has_all_obs else ""
+    info_icon = (
+        f' <span class="stats-info-icon"><span class="stats-info-glyph">&#9432;</span><span class="stats-info-tooltip">{incomplete_hint}</span></span>'
+        if has_all_obs
+        else ""
+    )
 
     # Working columns (not eBird export): _base = countable species key; _count = numeric Count; _family only on temporary copies below for the families row.
     sp_series = countable_species_vectorized(df_with_yr)
@@ -1051,7 +1307,10 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         completed = cl[completed_mask]
         by_yr = completed.groupby("_year").size()
         vals_comp = [int(by_yr.get(y, 0)) for y in years_sorted]
-        row_completed_checklists = ("Completed checklists", [f"{v:,}" for v in vals_comp])
+        row_completed_checklists = (
+            "Completed checklists",
+            [f"{v:,}" for v in vals_comp],
+        )
     else:
         row_completed_checklists = ("Completed checklists", ["—"] * len(years_sorted))
 
@@ -1059,7 +1318,10 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     if has_all_obs and has_protocol:
         inc_count = cl[incomplete_not_incidental].groupby("_year").size()
         vals_inc = [int(inc_count.get(y, 0)) for y in years_sorted]
-        row_incomplete_checklists = ("Incomplete checklists", [f"{v:,}" for v in vals_inc])
+        row_incomplete_checklists = (
+            "Incomplete checklists",
+            [f"{v:,}" for v in vals_inc],
+        )
     else:
         row_incomplete_checklists = ("Incomplete checklists", ["—"] * len(years_sorted))
 
@@ -1067,7 +1329,10 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     if has_protocol:
         trav_count = cl[traveling_complete].groupby("_year").size()
         vals_trav = [int(trav_count.get(y, 0)) for y in years_sorted]
-        row_traveling_checklists = (f"Traveling checklists{info_icon}", [f"{v:,}" for v in vals_trav])
+        row_traveling_checklists = (
+            f"Traveling checklists{info_icon}",
+            [f"{v:,}" for v in vals_trav],
+        )
     else:
         row_traveling_checklists = ("Traveling checklists", ["—"] * len(years_sorted))
 
@@ -1075,7 +1340,10 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     if has_protocol:
         stat_count = cl[stationary_complete].groupby("_year").size()
         vals_stat = [int(stat_count.get(y, 0)) for y in years_sorted]
-        row_stationary_checklists = (f"Stationary checklists{info_icon}", [f"{v:,}" for v in vals_stat])
+        row_stationary_checklists = (
+            f"Stationary checklists{info_icon}",
+            [f"{v:,}" for v in vals_stat],
+        )
     else:
         row_stationary_checklists = ("Stationary checklists", ["—"] * len(years_sorted))
 
@@ -1083,7 +1351,10 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
     if has_protocol:
         inc_count = cl[incidental_mask].groupby("_year").size()
         vals_inc2 = [int(inc_count.get(y, 0)) for y in years_sorted]
-        row_incidental_checklists = ("Incidental checklists", [f"{v:,}" for v in vals_inc2])
+        row_incidental_checklists = (
+            "Incidental checklists",
+            [f"{v:,}" for v in vals_inc2],
+        )
     else:
         row_incidental_checklists = ("Incidental checklists", ["—"] * len(years_sorted))
 
@@ -1097,13 +1368,21 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         shared_sub["_date"] = shared_sub["Date"].dt.normalize()
         by_yr_days = shared_sub.groupby("_year")["_date"].nunique()
         vals_days_bo = [int(by_yr_days.get(y, 0)) for y in years_sorted]
-        row_days_birding_with_others = ("Days birding with others", [f"{v:,}" for v in vals_days_bo])
+        row_days_birding_with_others = (
+            "Days birding with others",
+            [f"{v:,}" for v in vals_days_bo],
+        )
     else:
         row_shared_checklists = ("Shared checklists", ["—"] * len(years_sorted))
-        row_days_birding_with_others = ("Days birding with others", ["—"] * len(years_sorted))
+        row_days_birding_with_others = (
+            "Days birding with others",
+            ["—"] * len(years_sorted),
+        )
 
     # Days with checklist
-    by_yr_dates = cl.groupby("_year")["Date"].apply(lambda s: s.dt.normalize().nunique())
+    by_yr_dates = cl.groupby("_year")["Date"].apply(
+        lambda s: s.dt.normalize().nunique()
+    )
     vals_dwc = [int(by_yr_dates.get(y, 0)) for y in years_sorted]
     row_days_with_checklist = ("Days with checklist", [f"{v:,}" for v in vals_dwc])
 
@@ -1119,7 +1398,10 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         timed["_year"] = timed["Date"].dt.year
         by_yr_min = timed.groupby("_year")["_dur"].sum()
         vals_hours = [by_yr_min.get(y, 0) / 60 for y in years_sorted]
-        row_total_birding_hours = ("Total birding hours", [f"{v:.1f}" if v else "—" for v in vals_hours])
+        row_total_birding_hours = (
+            "Total birding hours",
+            [f"{v:.1f}" if v else "—" for v in vals_hours],
+        )
     else:
         row_total_birding_hours = ("Total birding hours", ["—"] * len(years_sorted))
 
@@ -1128,7 +1410,10 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         cl["_dist"] = pd.to_numeric(cl[dist_col], errors="coerce").fillna(0)
         by_yr_km = cl.groupby("_year")["_dist"].sum()
         vals_km_tot = [by_yr_km.get(y, 0) for y in years_sorted]
-        row_total_distance_km = ("Total distance (km)", [f"{v:,.1f}" if v else "—" for v in vals_km_tot])
+        row_total_distance_km = (
+            "Total distance (km)",
+            [f"{v:,.1f}" if v else "—" for v in vals_km_tot],
+        )
     else:
         row_total_distance_km = ("Total distance (km)", ["—"] * len(years_sorted))
 
@@ -1168,12 +1453,25 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         n_trav = trav.groupby("_year").size()
         vals_km = [by_yr.get(y, 0) for y in years_sorted]
         vals_n = [int(n_trav.get(y, 0)) for y in years_sorted]
-        rows.append((f"Traveling checklist: Total distance (km){info_icon}", [f"{v:,.1f}" if v else "—" for v in vals_km]))
-        avg_dist = ["—" if n == 0 else f"{(vals_km[i] / n):.1f}" for i, n in enumerate(vals_n)]
-        rows.append((f"Traveling checklist: Average distance (km){info_icon}", avg_dist))
+        rows.append(
+            (
+                f"Traveling checklist: Total distance (km){info_icon}",
+                [f"{v:,.1f}" if v else "—" for v in vals_km],
+            )
+        )
+        avg_dist = [
+            "—" if n == 0 else f"{(vals_km[i] / n):.1f}" for i, n in enumerate(vals_n)
+        ]
+        rows.append(
+            (f"Traveling checklist: Average distance (km){info_icon}", avg_dist)
+        )
     else:
-        rows.append(("Traveling checklist: Total distance (km)", ["—"] * len(years_sorted)))
-        rows.append(("Traveling checklist: Average distance (km)", ["—"] * len(years_sorted)))
+        rows.append(
+            ("Traveling checklist: Total distance (km)", ["—"] * len(years_sorted))
+        )
+        rows.append(
+            ("Traveling checklist: Average distance (km)", ["—"] * len(years_sorted))
+        )
 
     # 19–20. Traveling checklist: Total hours, Average minutes
     if dur_col and has_protocol:
@@ -1184,8 +1482,15 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         n_trav = trav.groupby("_year").size()
         vals_min = [by_yr_min.get(y, 0) for y in years_sorted]
         vals_n = [int(n_trav.get(y, 0)) for y in years_sorted]
-        rows.append((f"Traveling checklist: Total hours{info_icon}", [f"{v / 60:.1f}" if v else "—" for v in vals_min]))
-        avg_min = ["—" if n == 0 else f"{vals_min[i] / n:.1f}" for i, n in enumerate(vals_n)]
+        rows.append(
+            (
+                f"Traveling checklist: Total hours{info_icon}",
+                [f"{v / 60:.1f}" if v else "—" for v in vals_min],
+            )
+        )
+        avg_min = [
+            "—" if n == 0 else f"{vals_min[i] / n:.1f}" for i, n in enumerate(vals_n)
+        ]
         rows.append((f"Traveling checklist: Average minutes{info_icon}", avg_min))
     else:
         rows.append(("Traveling checklist: Total hours", ["—"] * len(years_sorted)))
@@ -1204,7 +1509,11 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
                 sp_means.append("—")
                 ind_means.append("—")
             else:
-                sp_per_cl = o.dropna(subset=["_base"]).groupby("Submission ID")["_base"].nunique()
+                sp_per_cl = (
+                    o.dropna(subset=["_base"])
+                    .groupby("Submission ID")["_base"]
+                    .nunique()
+                )
                 ind_per_cl = o.groupby("Submission ID")["_count"].sum()
                 sp_means.append(f"{sp_per_cl.mean():.1f}" if len(sp_per_cl) else "—")
                 ind_means.append(f"{ind_per_cl.mean():.1f}" if len(ind_per_cl) else "—")
@@ -1212,7 +1521,9 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         rows.append((f"Traveling checklist: Average individuals{info_icon}", ind_means))
     else:
         rows.append(("Traveling checklist: Average species", ["—"] * len(years_sorted)))
-        rows.append(("Traveling checklist: Average individuals", ["—"] * len(years_sorted)))
+        rows.append(
+            ("Traveling checklist: Average individuals", ["—"] * len(years_sorted))
+        )
 
     # 21–24. Stationary checklist stats
     if has_protocol and dur_col:
@@ -1227,12 +1538,18 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
                 sp_means.append("—")
                 ind_means.append("—")
             else:
-                sp_per_cl = o.dropna(subset=["_base"]).groupby("Submission ID")["_base"].nunique()
+                sp_per_cl = (
+                    o.dropna(subset=["_base"])
+                    .groupby("Submission ID")["_base"]
+                    .nunique()
+                )
                 ind_per_cl = o.groupby("Submission ID")["_count"].sum()
                 sp_means.append(f"{sp_per_cl.mean():.1f}" if len(sp_per_cl) else "—")
                 ind_means.append(f"{ind_per_cl.mean():.1f}" if len(ind_per_cl) else "—")
         rows.append((f"Stationary checklist: Average species{info_icon}", sp_means))
-        rows.append((f"Stationary checklist: Average individuals{info_icon}", ind_means))
+        rows.append(
+            (f"Stationary checklist: Average individuals{info_icon}", ind_means)
+        )
         stat_cl = stat_cl.dropna(subset=[dur_col]).copy()
         stat_cl["_year"] = stat_cl["Date"].dt.year
         stat_cl["_min"] = pd.to_numeric(stat_cl[dur_col], errors="coerce").fillna(0)
@@ -1240,14 +1557,27 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
         n_stat = stat_cl.groupby("_year").size()
         vals_min = [by_yr_min.get(y, 0) for y in years_sorted]
         vals_n = [int(n_stat.get(y, 0)) for y in years_sorted]
-        rows.append((f"Stationary checklist: Total hours{info_icon}", [f"{v / 60:.1f}" if v else "—" for v in vals_min]))
-        avg_min = ["—" if n == 0 else f"{vals_min[i] / n:.1f}" for i, n in enumerate(vals_n)]
+        rows.append(
+            (
+                f"Stationary checklist: Total hours{info_icon}",
+                [f"{v / 60:.1f}" if v else "—" for v in vals_min],
+            )
+        )
+        avg_min = [
+            "—" if n == 0 else f"{vals_min[i] / n:.1f}" for i, n in enumerate(vals_n)
+        ]
         rows.append((f"Stationary checklist: Average minutes{info_icon}", avg_min))
     else:
-        rows.append(("Stationary checklist: Average species", ["—"] * len(years_sorted)))
-        rows.append(("Stationary checklist: Average individuals", ["—"] * len(years_sorted)))
+        rows.append(
+            ("Stationary checklist: Average species", ["—"] * len(years_sorted))
+        )
+        rows.append(
+            ("Stationary checklist: Average individuals", ["—"] * len(years_sorted))
+        )
         rows.append(("Stationary checklist: Total hours", ["—"] * len(years_sorted)))
-        rows.append(("Stationary checklist: Average minutes", ["—"] * len(years_sorted)))
+        rows.append(
+            ("Stationary checklist: Average minutes", ["—"] * len(years_sorted))
+        )
 
     # Incomplete checklists by year
     incomplete_by_year = {}
@@ -1262,7 +1592,9 @@ def yearly_summary_stats(df, cl, dur_col, dist_col, *, taxonomy_locale: str | No
                 sid = r.get("Submission ID")
                 dt = r.get(use_dt_col)
                 loc = r.get("Location") or ""
-                date_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+                date_str = (
+                    pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+                )
                 list_y.append((sid, date_str, str(loc)))
             if list_y:
                 incomplete_by_year[int(y)] = list_y
@@ -1424,7 +1756,9 @@ def country_summary_stats(df, cl):
             vals_cl.append(f"{sum(vals_cl_i):,}")
         rows.append(("Total checklists", vals_cl))
 
-        by_yr_dates = cl_c.groupby("_year")["Date"].apply(lambda s: s.dt.normalize().nunique())
+        by_yr_dates = cl_c.groupby("_year")["Date"].apply(
+            lambda s: s.dt.normalize().nunique()
+        )
         vals_days_i = [int(by_yr_dates.get(y, 0)) for y in years_sorted]
         vals_days = [f"{v:,}" for v in vals_days_i]
         if multi_year:
@@ -1449,6 +1783,7 @@ def country_summary_stats(df, cl):
 # ---------------------------------------------------------------------------
 # Sex notation in checklist comments (maintenance report)
 # ---------------------------------------------------------------------------
+
 
 def _observation_details_is_sex_notation(s: str) -> bool:
     """True if the whole field looks like sex/age shorthand (conservative heuristics).
@@ -1490,7 +1825,14 @@ def get_sex_notation_by_year(df):
     col = df["Observation Details"].astype(str).str.strip()
     mask = col.ne("") & col.ne("nan") & col.apply(_observation_details_is_sex_notation)
     use_dt = "datetime" if "datetime" in df.columns else "Date"
-    cols = ["Date", "Submission ID", "Location", "Common Name", "Protocol", "Observation Details"]
+    cols = [
+        "Date",
+        "Submission ID",
+        "Location",
+        "Common Name",
+        "Protocol",
+        "Observation Details",
+    ]
     if use_dt in df.columns:
         cols = [use_dt] + cols
     sub = df.loc[mask, cols].copy()
@@ -1504,7 +1846,9 @@ def get_sex_notation_by_year(df):
         for _, r in rows.iterrows():
             sid = r.get("Submission ID")
             dt = r.get(use_dt)
-            date_str = pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+            date_str = (
+                pd.Timestamp(dt).strftime("%d %b %Y %H:%M") if pd.notna(dt) else "—"
+            )
             loc = str(r.get("Location") or "")
             species = str(r.get("Common Name") or "")
             protocol = str(r.get("Protocol") or "")

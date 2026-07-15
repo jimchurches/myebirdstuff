@@ -347,7 +347,7 @@ def _layout_insight(
     insight_fact: ShareSummaryInsightFact,
     scope_label: str | None = None,
 ) -> str:
-    """Interesting Insights — label, species/text focus, optional metric."""
+    """Interesting Insights — label, hero text, optional metric, and peak-tie note."""
     pad_bottom = _footer_pad(fmt, width, height)
     spec = rich_fact_layout_spec(fmt)
     metric = format_insight_fact_metric(insight_fact)
@@ -375,9 +375,7 @@ def _layout_insight(
             spec.note,
             colour=_colour(spec.note.color_role),
         )
-        note_line = (
-            f'<div class="rich-note" style="{note_css}">{_esc(tie_note)}</div>'
-        )
+        note_line = f'<div class="rich-note" style="{note_css}">{_esc(tie_note)}</div>'
     offset = spec.block_offset_y_px
     transform = f"transform:translateY({offset}px);" if offset else ""
     tile_css = ""

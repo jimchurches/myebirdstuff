@@ -17,6 +17,7 @@ File-scoped rule for share-summary work on the Social Cards line. Read linked do
 | Layout HTML / slot limits | `share_summary_metrics.py` / `share_summary_layouts.py` (facade: [`share_summary_preview.py`](explorer/presentation/share_summary_preview.py)) |
 | Formats / colour schemes | [`share_summary_theme.py`](explorer/presentation/share_summary_theme.py) |
 | Stat computation | [`explorer/core/share_summary_compute.py`](explorer/core/share_summary_compute.py) |
+| Interesting Insights facts (incl. peak year/month/day) | [`explorer/core/share_summary_insight_facts.py`](explorer/core/share_summary_insight_facts.py) |
 | Design playground | `streamlit run explorer/app/streamlit/design_share_summary_app.py` |
 | Archived feature-line workflow | [#157 comment](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021) |
 

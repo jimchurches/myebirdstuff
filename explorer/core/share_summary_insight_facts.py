@@ -9,6 +9,7 @@ Presentation reads :class:`ShareSummaryInsightFact` via
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
@@ -24,6 +25,7 @@ from explorer.core.share_summary_compute import (
 )
 from explorer.core.species_logic import countable_species_vectorized, parent_common_name
 from explorer.core.stats import (
+    _most_frequent_parent_common,
     rankings_by_checklists,
     rankings_by_individuals,
     rankings_high_counts,
@@ -205,7 +207,7 @@ def species_common_names_in_period(
     countable["_parent_common"] = countable["Common Name"].map(parent_common_name)
     names = (
         countable.groupby("_base", sort=False)["_parent_common"]
-        .agg(lambda s: s.value_counts().index[0] if len(s) > 0 else "")
+        .agg(_most_frequent_parent_common)
         .dropna()
         .astype(str)
         .str.strip()
@@ -390,7 +392,9 @@ def _prepare_species_obs(obs: pd.DataFrame) -> pd.DataFrame:
         return obs.iloc[0:0].copy()
     frame = obs.copy()
     frame["_base"] = countable_species_vectorized(frame)
-    frame["_count"] = frame["Count"].apply(safe_count) if "Count" in frame.columns else 0
+    frame["_count"] = (
+        frame["Count"].apply(safe_count) if "Count" in frame.columns else 0
+    )
     return frame
 
 
@@ -441,7 +445,9 @@ def _peak_unit_for_fact(fact_id: InsightFactId) -> Literal["year", "month", "day
     return "day"
 
 
-def _primary_formatter(unit: Literal["year", "month", "day"]):
+def _primary_formatter(
+    unit: Literal["year", "month", "day"],
+) -> Callable[[object], str]:
     if unit == "year":
 
         def _fmt_year(key: object) -> str:
@@ -468,9 +474,7 @@ def _primary_formatter(unit: Literal["year", "month", "day"]):
     return _fmt_day
 
 
-def _unit_keys(
-    dates: pd.Series, unit: Literal["year", "month", "day"]
-) -> pd.Series:
+def _unit_keys(dates: pd.Series, unit: Literal["year", "month", "day"]) -> pd.Series:
     if unit == "year":
         return dates.dt.year
     if unit == "month":
@@ -528,7 +532,7 @@ def _peak_from_series(
     counts: pd.Series,
     *,
     metric_unit: str,
-    format_key,
+    format_key: Callable[[object], str],
 ) -> ShareSummaryInsightFact | None:
     if counts.empty:
         return None
