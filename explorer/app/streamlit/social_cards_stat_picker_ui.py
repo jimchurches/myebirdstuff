@@ -693,7 +693,6 @@ def render_insight_fact_picker_ui(
         format_func=lambda fid: INSIGHT_FACT_PICKER_LABELS[fid],
         index=fact_ids.index(current_id) if current_id in fact_ids else 0,
         key=keys.insight_fact,
-        help="Species- and checklist-derived highlights for Interesting Insights cards.",
     )
     selected_id = _insight_fact_id_from_session(options, keys)
 
