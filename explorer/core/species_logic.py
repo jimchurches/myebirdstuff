@@ -80,6 +80,21 @@ def parent_common_name(common_name: object) -> str:
     return s[:idx] if idx != -1 else s
 
 
+def most_frequent_parent_common(common_names: pd.Series) -> str:
+    """Return the most frequent parent-species common name in a series.
+
+    Each value is stripped to its parent via :func:`parent_common_name` (so
+    subspecies labels roll up), then empty strings are dropped. Used by
+    rankings aggregations and Interesting Insights display names.
+    """
+    parents = common_names.map(parent_common_name)
+    parents = parents.astype(str).str.strip()
+    parents = parents[parents != ""]
+    if parents.empty:
+        return ""
+    return str(parents.value_counts().index[0])
+
+
 def base_species_for_lifer(sci_name):
     """Extract base species (genus + species, lowercased) from a scientific name.
 

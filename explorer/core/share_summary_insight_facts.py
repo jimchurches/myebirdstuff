@@ -23,9 +23,12 @@ from explorer.core.share_summary_compute import (
     _fmt_short_date,
     _mask_in_period,
 )
-from explorer.core.species_logic import countable_species_vectorized, parent_common_name
+from explorer.core.species_logic import (
+    countable_species_vectorized,
+    most_frequent_parent_common,
+    parent_common_name,
+)
 from explorer.core.stats import (
-    _most_frequent_parent_common,
     rankings_by_checklists,
     rankings_by_individuals,
     rankings_high_counts,
@@ -207,7 +210,7 @@ def species_common_names_in_period(
     countable["_parent_common"] = countable["Common Name"].map(parent_common_name)
     names = (
         countable.groupby("_base", sort=False)["_parent_common"]
-        .agg(_most_frequent_parent_common)
+        .agg(most_frequent_parent_common)
         .dropna()
         .astype(str)
         .str.strip()
