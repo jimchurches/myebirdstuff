@@ -7,6 +7,7 @@ from explorer.core.species_logic import (
     is_countable,
     countable_species_vectorized,
     base_species_for_lifer,
+    most_frequent_parent_common,
     parent_common_name,
 )
 
@@ -27,6 +28,27 @@ def test_parent_common_name_strips_subspecies_qualifier():
     assert parent_common_name("Australian Boobook (Australian)") == "Australian Boobook"
     assert parent_common_name("Australian Boobook") == "Australian Boobook"
     assert parent_common_name("") == ""
+
+
+def test_most_frequent_parent_common_rolls_up_subspecies():
+    names = pd.Series(
+        [
+            "Australian Boobook (Australian)",
+            "Australian Boobook (Tasmanian)",
+            "Australian Boobook",
+            "Grey Teal",
+        ]
+    )
+    assert most_frequent_parent_common(names) == "Australian Boobook"
+
+
+def test_most_frequent_parent_common_ignores_empty():
+    names = pd.Series(["", "   ", "Grey Teal", None])
+    assert most_frequent_parent_common(names) == "Grey Teal"
+
+
+def test_most_frequent_parent_common_empty_series():
+    assert most_frequent_parent_common(pd.Series(dtype=object)) == ""
 
 
 def test_base_species_name_none():

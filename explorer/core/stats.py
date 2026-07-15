@@ -15,7 +15,11 @@ import pandas as pd
 
 from explorer.core.settings_schema_defaults import TAXONOMY_LOCALE_DEFAULT
 from explorer.core.species_family import build_base_species_to_family_map
-from explorer.core.species_logic import countable_species_vectorized, parent_common_name
+from explorer.core.species_logic import (
+    countable_species_vectorized,
+    most_frequent_parent_common,
+    parent_common_name,
+)
 
 # ---------------------------------------------------------------------------
 # Shared utility
@@ -37,16 +41,6 @@ def safe_count(x):
         return int(x)
     except (ValueError, TypeError):
         return 0
-
-
-def _most_frequent_parent_common(common_names: pd.Series) -> str:
-    """Most frequent parent-species common name (subspecies labels strip to parent)."""
-    parents = common_names.map(parent_common_name)
-    parents = parents.astype(str).str.strip()
-    parents = parents[parents != ""]
-    if parents.empty:
-        return ""
-    return str(parents.value_counts().index[0])
 
 
 def format_observed_count_for_map_popup(raw) -> str:
@@ -516,7 +510,7 @@ def rankings_by_individuals(df_obs, limit):
         df_s.groupby("_base")
         .agg(
             total=("_count", "sum"),
-            common_name=("Common Name", _most_frequent_parent_common),
+            common_name=("Common Name", most_frequent_parent_common),
         )
         .reset_index()
     )
@@ -545,7 +539,7 @@ def rankings_by_checklists(df_obs, limit):
         df_s.groupby("_base")
         .agg(
             n_checklists=("Submission ID", "nunique"),
-            common_name=("Common Name", _most_frequent_parent_common),
+            common_name=("Common Name", most_frequent_parent_common),
         )
         .reset_index()
     )
@@ -742,7 +736,7 @@ def rankings_seen_once(df_obs, limit=None):
         .agg(
             n_checklists=("Submission ID", "nunique"),
             checklist_count=("_count", "sum"),
-            common_name=("Common Name", _most_frequent_parent_common),
+            common_name=("Common Name", most_frequent_parent_common),
             Location=("Location", "first"),
             Location_ID=("Location ID", "first"),
             Submission_ID=("Submission ID", "first"),
