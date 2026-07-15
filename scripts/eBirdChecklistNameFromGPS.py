@@ -103,9 +103,9 @@ import sys
 from datetime import date
 from typing import List, Optional, Tuple
 
-# External packages: pip install requests pyperclip
-import pyperclip
-import requests
+# External packages: pip install requests pyperclip.
+# Imported lazily so explorer can reuse naming helpers without always needing
+# clipboard support (pyperclip) at import time.
 
 # ------------------------------------------------------------
 # API key loader
@@ -206,6 +206,8 @@ def fetch_geocode(
     debug: bool = False,
     include_json: bool = False,
 ) -> dict:
+    import requests
+
     url = "https://maps.googleapis.com/maps/api/geocode/json"
     params = {
         "latlng": f"{lat},{lng}",
@@ -569,6 +571,10 @@ def _is_valid_display_name(name: str) -> bool:
 
 # ------------------------------------------------------------
 # Naming logic
+#
+# SSOT for eBird-style locality names. Streamlit Maintenance → Create location name from GPS
+# reuses these helpers via explorer/core/gps_location_name.py — do not fork the
+# ranking or format rules there. See docs/AI_CONTEXT.md (GPS Location Script).
 # ------------------------------------------------------------
 
 
@@ -914,6 +920,8 @@ def format_location_string(
 
 
 def copy_to_clipboard(text: str):
+    import pyperclip
+
     pyperclip.copy(text)
 
 

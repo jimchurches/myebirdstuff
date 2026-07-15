@@ -135,3 +135,15 @@ INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
 # Optional “Support this project” (Buy Me a Coffee). Override or hide with env ``STREAMLIT_BUYMEACOFFEE_URL``
 # (set to ``""`` in the environment to hide the block when the constant would otherwise show)
 BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/jimchurches"
+
+# ---------------------------------------------------------------------------
+# Maintenance → Location Maintenance → Create location name from GPS (#357)
+# ---------------------------------------------------------------------------
+
+MAINTENANCE_GPS_NAME_EXPANDER_LABEL = "Create location name from GPS"
+MAINTENANCE_GPS_NAME_API_KEY_LABEL = "Google API key"
+MAINTENANCE_GPS_NAME_API_KEY_PLACEHOLDER = "Paste key for this session only"
+MAINTENANCE_GPS_NAME_INPUT_LABEL = "Coordinates"
+MAINTENANCE_GPS_NAME_INPUT_PLACEHOLDER = "-35.339578, 148.923133"
+MAINTENANCE_GPS_NAME_RESOLVE_BUTTON_LABEL = "Resolve name"
+

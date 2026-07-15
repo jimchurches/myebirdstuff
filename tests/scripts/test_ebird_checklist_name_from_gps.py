@@ -38,10 +38,12 @@ def test_parse_coords_rejects_missing_or_out_of_range_values(text: str) -> None:
 
 
 def test_fetch_geocode_sends_coordinates_and_rejects_api_failure(monkeypatch) -> None:
+    import requests
+
     response = Mock()
     response.json.return_value = {"status": "ZERO_RESULTS", "results": []}
     get = Mock(return_value=response)
-    monkeypatch.setattr(mod.requests, "get", get)
+    monkeypatch.setattr(requests, "get", get)
 
     with pytest.raises(RuntimeError, match="Geocode failed: ZERO_RESULTS"):
         mod.fetch_geocode(-35.1, 149.2, "secret")

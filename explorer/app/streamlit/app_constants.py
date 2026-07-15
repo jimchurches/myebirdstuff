@@ -145,6 +145,9 @@ CHECKLIST_STATS_TAB_WORK_PAYLOAD_KEY = "_streamlit_checklist_stats_work_payload"
 # Ranking & Lists HTML sections + Bird Families coverage tables (full-export prep).
 RANKING_LISTS_FAMILIES_BUNDLE_KEY = "_streamlit_ranking_lists_families_bundle"
 MAINTENANCE_TAB_SYNC_KEY = "_streamlit_maintenance_tab_sync"
+STREAMLIT_GPS_NAME_API_KEY_KEY = "_streamlit_gps_name_api_key"
+STREAMLIT_GPS_NAME_COORDS_KEY = "_streamlit_gps_name_coords"
+STREAMLIT_GPS_NAME_RESOLVE_BTN_KEY = "_streamlit_gps_name_resolve_btn"
 
 # "Show full history" toggles.
 STREAMLIT_YEARLY_SUMMARY_SHOW_FULL_KEY = "streamlit_yearly_summary_show_full"

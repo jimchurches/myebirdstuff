@@ -138,6 +138,18 @@ def map_maintenance_intro_html() -> str:
   </div>"""
 
 
+def gps_name_from_coords_intro_html() -> str:
+    """Help copy for Maintenance → Create location name from GPS (inside the tool expander)."""
+    return """
+  <div class="maint-html-blurb">
+    <p>Turn decimal GPS coordinates into an eBird-style location name in the format <code>Locality name ( latitude, longitude )</code>, for example <code>Sutton ( -35.172194, 149.224916 )</code>.</p>
+    <p>This experimental tool reflects the author’s preferred way of naming non-hotspot locations. It is mainly designed for occasional use in the field, while travelling, or on a device where the project’s standalone GPS script and UI.Vision tools are not available. It is a little more manual than those tools, but provides a useful fallback through the hosted Explorer.</p>
+    <p>A Google Maps API key is required. See the project documentation for the GPS naming script for setup details. When running the project locally, the key can be saved in the YAML configuration. For field use, storing the key in a password manager can make it easier to fill here. Keys entered in the hosted app are used for the current browser session only and are not saved by the Explorer.</p>
+    <p>The naming rules are strongly influenced by Australian locality conventions. They have also been tested in parts of Indonesia, India and Spain, but not more broadly. Future versions may allow some control over how location names are constructed.</p>
+    <p>Select and copy the resolved result into eBird manually.</p>
+  </div>"""
+
+
 def map_maintenance_exact_duplicates_body_html(exact_rows: List[Tuple[Any, ...]]) -> str:
     """Table HTML for exact duplicate locations (one ``get_map_maintenance_data`` result)."""
     if not exact_rows:
