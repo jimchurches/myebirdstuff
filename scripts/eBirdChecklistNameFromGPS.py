@@ -199,6 +199,9 @@ def parse_coords_from_text(text: str) -> Tuple[float, float, int, int]:
 # ------------------------------------------------------------
 
 
+GEOCODE_REQUEST_TIMEOUT_SECONDS = 15
+
+
 def fetch_geocode(
     lat: float,
     lng: float,
@@ -213,8 +216,21 @@ def fetch_geocode(
         "latlng": f"{lat},{lng}",
         "key": api_key,
     }
-    response = requests.get(url, params=params)
-    data = response.json()
+    # Wrap network/JSON failures in RuntimeError with a safe message: raw
+    # requests exceptions can embed the full request URL, which contains the
+    # API key, and callers (CLI and Streamlit Maintenance) display the message.
+    try:
+        response = requests.get(
+            url, params=params, timeout=GEOCODE_REQUEST_TIMEOUT_SECONDS
+        )
+        data = response.json()
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            f"Geocode request failed ({type(exc).__name__}). "
+            "Check your network connection and try again."
+        ) from exc
+    except ValueError as exc:
+        raise RuntimeError("Geocode response was not valid JSON.") from exc
 
     if debug and include_json:
         print(json.dumps(data, indent=2))

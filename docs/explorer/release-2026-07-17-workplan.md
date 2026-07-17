@@ -11,8 +11,6 @@
 
 ---
 
-
-
 ## Quick facts
 
 
@@ -29,11 +27,7 @@
 
 ---
 
-
-
 ## Decisions (locked 2026-07-16)
-
-
 
 ### Close / epic policy
 
@@ -47,8 +41,6 @@
 | Engineering `pending-merge` issues           | **Close all**; notes = one short headline only (not a laundry list)                               |
 
 
-
-
 ### Version & process
 
 
@@ -57,8 +49,6 @@
 | Merge day    | **2026-07-17**                                                                                 |
 | Version bump | **Now** (file already set to `2026-07-17`; commit when resuming)                               |
 | Release PR   | **Draft first** (avoid running CI too often); mark ready after notes/close-list/review settled |
-
-
 
 
 ### Release notes tone
@@ -72,8 +62,6 @@
 | “What’s next” section | **None** — mood-driven; #332 will be fixed or worked around later                                                                              |
 
 
-
-
 ### Still open when resuming (optional preferences)
 
 - Review depth (full `/code-review` vs focused Social Cards + GPS + Maintenance)
@@ -82,11 +70,7 @@
 
 ---
 
-
-
 ## Close-list vs keep-open
-
-
 
 ### Keep open (do **not** put in `Closes`)
 
@@ -95,8 +79,6 @@
 | -------- | ---------------------------------------------------------------------- |
 | **#332** | Known bug: Social Cards preview/export mismatch — **in release notes** |
 | **#342** | Optional enhancement: persist Social Cards prefs in YAML — deferred    |
-
-
 
 
 ### Close on merge (`Closes #…`) — all current open `pending-merge` (2026-07-16)
@@ -146,11 +128,7 @@ Re-fetch tomorrow in case the list changed; then paste into the PR body.
 
 ---
 
-
-
 ## Phase checklist
-
-
 
 ### Phase 0 — Scope & close-list
 
@@ -162,8 +140,6 @@ Re-fetch tomorrow in case the list changed; then paste into the PR body.
 - [ ] Quick orphan scan for missing `pending-merge` issues
 
 ---
-
-
 
 ### Phase 1 — Version bump
 
@@ -181,8 +157,6 @@ chore: bump explorer build version to 2026-07-17
 (Optionally commit the workplan in the same commit or a tiny docs commit — your call tomorrow.)
 
 ---
-
-
 
 ### Phase 2 — Draft release notes
 
@@ -205,7 +179,7 @@ Scratch draft (ready for PR body / GitHub Release):
 
 This release adds a new **Social Cards** tab — turn your personal eBird data
 into shareable summary images for a year in review, a busy month, a trip, or
-your whole birding life so far.
+your whole eBird birding life so far.
 
 Pick a period and place, choose a layout and theme, tune which stats appear,
 then export a PNG sized for a square post, portrait feed, or story.
@@ -253,38 +227,46 @@ No settings migration is required for this release.
 
 ---
 
-
-
 ### Phase 3 — Open release PR (**draft**)
 
-- [ ] Version bump committed + `beta-next` pushed
-- [ ] Quality gate:  
-  `python3 -m ruff check explorer/`  
-  `python3 -m pytest tests/ -q`
-- [ ] Confirm title + base `main` with human
-- [ ] Open **draft** PR: base `main`, head `beta-next` (defer ready until notes/close-list settled)
-- [ ] PR body includes full **Closes #…** list from Phase 0
-- [ ] Suggested title: `Release 2026-07-17: Social Cards tab and Interesting Insights`
+- [x] Version bump committed + `beta-next` pushed
+- [x] Quality gate:  
+  `python3 -m ruff check explorer/` — passed  
+  `python3 -m pytest tests/ -q` — 955 passed, 11 skipped
+- [x] Confirm title + base `main` with human
+- [x] Open **draft** PR: base `main`, head `beta-next` (defer ready until notes/close-list settled)
+- [x] PR body includes full **Closes #…** list from Phase 0 (30 issues)
 - [ ] When ready: undraft → wait for CI green
 
-**PR URL:** *TBD*
+**PR URL:** https://github.com/jimchurches/myebirdstuff/pull/360
 
 ---
-
-
 
 ### Phase 4 — Deep review
 
-Promotion review (prefer `/code-review`; confirm depth on resume).
+Targeted parallel promotion review (not a single full `/code-review` over ~29k lines).
 
-- [ ] Agree review depth
-- [ ] Run review; stop on blockers
+- [x] Agree review depth — targeted parallel (Social Cards / GPS / cross-cutting)
+- [x] Run review; stop on blockers — **no blockers**; should-fix list below
+- [x] Decide which should-fixes land before undraft vs post-merge follow-ups — **all four fixed pre-undraft** (option A)
 - [ ] Optional smoke: Social Cards + Insights + GPS + Maintenance GPS tool
-- [ ] Do not re-litigate every engineering-only PR unless a problem appears
+- [ ] Post-merge Cloud smoke: app boots + one PNG export (cross-cutting recommendation)
+
+**Verdict:** Ready to undraft — hardening patch landed; quality gate green (957 passed, 11 skipped).
+
+**Should-fix (from the three lanes) — all fixed 2026-07-17:**
+
+1. [x] Social Cards empty-period: compute now returns `checklists=0` so the “No checklists…” card renders from real data (+ regression test)
+2. [x] Social Cards PNG export UI: catches all export exceptions (Playwright `Error` included), keeps warning/rerun path
+3. [x] GPS: `fetch_geocode` timeout (15 s) + wraps `RequestException`/JSON errors in key-safe `RuntimeError` (+ no-key-leak test)
+4. [x] World-scope geo filter returns a copy — session cache never aliases the canonical export (+ identity test)
+5. [ ] Cloud PNG post-merge smoke remains a release gate (not a code change)
+
+**Known / accepted:** #332 preview vs export mismatch (called out in notes).
+
+**Nits (optional):** layout/aspect selectbox keys; Chromium install wait timeout; dead `feat/social-cards` CI filter; ACT allowlist pattern notes.
 
 ---
-
-
 
 ### Phase 5 — Merge to `main`
 
@@ -294,8 +276,6 @@ Promotion review (prefer `/code-review`; confirm depth on resume).
 - [ ] Optional: tidy `pending-merge` on closed issues
 
 ---
-
-
 
 ### Phase 6 — Tag & publish GitHub Release
 
@@ -307,8 +287,6 @@ Promotion review (prefer `/code-review`; confirm depth on resume).
 
 ---
 
-
-
 ### Phase 7 — Post-release hygiene
 
 - [ ] Streamlit Cloud / deploy on `main` confirmed (if using Cloud)
@@ -318,8 +296,6 @@ Promotion review (prefer `/code-review`; confirm depth on resume).
 
 ---
 
-
-
 ## Suggested order when resuming (tomorrow)
 
 1. Re-fetch `pending-merge` + orphan check (Phase 0)
@@ -328,8 +304,6 @@ Promotion review (prefer `/code-review`; confirm depth on resume).
 4. Review → undraft → merge day Phases 4–7
 
 ---
-
-
 
 ## Resume prompt (paste into chat)
 
@@ -344,8 +318,6 @@ to main. Do not undraft or merge until I confirm.
 ```
 
 ---
-
-
 
 ## Related
 

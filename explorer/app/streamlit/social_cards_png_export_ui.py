@@ -226,7 +226,9 @@ def render_lazy_png_export_controls(
                             spotlight_presentation=spotlight_presentation,
                             resolved_fact=resolved_fact,
                         )
-            except RuntimeError as exc:
+            # Broad on purpose: Playwright raises its own Error (not RuntimeError)
+            # for screenshot/page failures; all must land on the warning path.
+            except Exception as exc:  # noqa: BLE001
                 st.session_state[SOCIAL_CARDS_PNG_EXPORT_ERROR_KEY] = str(exc)
                 st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_BYTES_KEY, None)
                 st.session_state.pop(SOCIAL_CARDS_PNG_EXPORT_FINGERPRINT_KEY, None)

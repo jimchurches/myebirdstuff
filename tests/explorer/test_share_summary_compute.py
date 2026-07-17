@@ -196,8 +196,19 @@ def test_compute_share_summary_stats_empty_period_returns_sparse_stats():
     assert stats.period_label == "2026"
     assert stats.period_kind == "year"
     assert stats.species is None
-    assert stats.checklists is None
+    # 0 (not None) so the preview's empty-period card triggers from real data.
+    assert stats.checklists == 0
     assert stats.lifers is None
+
+
+def test_compute_empty_period_stats_render_dedicated_empty_card():
+    from explorer.presentation.share_summary_preview import render_share_summary_preview_html
+
+    df = pd.DataFrame([_row(sid="S1", dt="2025-01-10", species="Species a")])
+    stats = compute_share_summary_stats(df, period_for_year(2026))
+    assert stats is not None
+    html = render_share_summary_preview_html(stats, layout="tiles", fmt="square")
+    assert "No checklists in this period" in html
 
 
 def test_dataset_date_bounds_returns_inclusive_min_max():
@@ -460,6 +471,8 @@ def test_geo_scope_world_leaves_df_unchanged():
     out = filter_df_by_geo_scope(df, ShareSummaryGeoScope())
     assert len(out) == len(df)
     assert list(out["Submission ID"]) == list(df["Submission ID"])
+    # Must be a copy, not an alias — callers store the result in session caches.
+    assert out is not df
 
 
 def test_geo_scope_is_country_only():

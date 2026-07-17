@@ -194,9 +194,13 @@ def geo_region_options_for_country(
 
 
 def filter_df_by_geo_scope(df: pd.DataFrame, scope: ShareSummaryGeoScope) -> pd.DataFrame:
-    """Return sighting rows whose checklists fall in *scope*."""
+    """Return sighting rows whose checklists fall in *scope*.
+
+    Always returns a new frame — callers store the result in session caches, and
+    aliasing the canonical export there would break the static-dataframe invariant.
+    """
     if df.empty or scope.is_world:
-        return df
+        return df.copy()
     if "Submission ID" not in df.columns:
         return df.iloc[0:0].copy()
     ck = str(scope.country_key or "").strip()
@@ -503,10 +507,13 @@ def compute_share_summary_stats(
         region_lifers = _region_lifers_in_period(df, period) if geo_constrained else None
         if period.kind == "lifetime":
             region_lifers = None
+        # checklists=0 (not None) so the preview renders the dedicated
+        # "No checklists in this period" card for genuinely empty periods.
         return ShareSummaryStats(
             period_label=period.label,
             period_kind=period.kind,
             trip_title=period.trip_title,
+            checklists=0,
             region_lifers=region_lifers if geo_constrained else None,
         )
 

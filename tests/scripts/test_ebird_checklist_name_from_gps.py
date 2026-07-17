@@ -51,7 +51,22 @@ def test_fetch_geocode_sends_coordinates_and_rejects_api_failure(monkeypatch) ->
     get.assert_called_once_with(
         "https://maps.googleapis.com/maps/api/geocode/json",
         params={"latlng": "-35.1,149.2", "key": "secret"},
+        timeout=mod.GEOCODE_REQUEST_TIMEOUT_SECONDS,
     )
+
+
+def test_fetch_geocode_wraps_network_failure_without_leaking_url(monkeypatch) -> None:
+    import requests
+
+    get = Mock(side_effect=requests.ConnectionError("boom http://x?key=secret"))
+    monkeypatch.setattr(requests, "get", get)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        mod.fetch_geocode(-35.1, 149.2, "secret")
+
+    # The message shown to users must never contain the API key or request URL.
+    assert "secret" not in str(excinfo.value)
+    assert "ConnectionError" in str(excinfo.value)
 
 
 def test_main_clipboard_path_still_works_with_lazy_pyperclip_import(
