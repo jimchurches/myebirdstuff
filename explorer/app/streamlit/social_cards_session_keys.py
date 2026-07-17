@@ -31,6 +31,14 @@ class SocialCardsSessionKeys:
         return f"{self.prefix}_insight_species"
 
     @property
+    def layout(self) -> str:
+        return f"{self.prefix}_layout"
+
+    @property
+    def aspect_format(self) -> str:
+        return f"{self.prefix}_aspect_format"
+
+    @property
     def color_theme(self) -> str:
         return f"{self.prefix}_color_theme"
 

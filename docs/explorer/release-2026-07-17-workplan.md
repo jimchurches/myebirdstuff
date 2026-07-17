@@ -236,7 +236,7 @@ No settings migration is required for this release.
 - [x] Confirm title + base `main` with human
 - [x] Open **draft** PR: base `main`, head `beta-next` (defer ready until notes/close-list settled)
 - [x] PR body includes full **Closes #…** list from Phase 0 (30 issues)
-- [ ] When ready: undraft → wait for CI green
+- [x] When ready: undraft (done 2026-07-17) → wait for CI green
 
 **PR URL:** https://github.com/jimchurches/myebirdstuff/pull/360
 
@@ -264,7 +264,7 @@ Targeted parallel promotion review (not a single full `/code-review` over ~29k l
 
 **Known / accepted:** #332 preview vs export mismatch (called out in notes).
 
-**Nits (optional):** layout/aspect selectbox keys; Chromium install wait timeout; dead `feat/social-cards` CI filter; ACT allowlist pattern notes.
+**Nits (optional) — all fixed 2026-07-17:** layout/aspect selectbox keys (namespaced session keys); Chromium install timeout (300 s, key-safe message); dead `feat/social-cards` CI filter removed from `tests.yml`; ACT allowlist promoted to module constants with extension notes.
 
 ---
 

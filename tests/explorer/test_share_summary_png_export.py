@@ -152,6 +152,7 @@ def test_install_chromium_runs_playwright_module(monkeypatch):
                 "capture_output": True,
                 "text": True,
                 "check": False,
+                "timeout": share_summary_png_export._CHROMIUM_INSTALL_TIMEOUT_SECONDS,
             },
         )
     ]

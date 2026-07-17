@@ -57,6 +57,10 @@ _T = TypeVar("_T")
 _chromium_install_lock = threading.Lock()
 _chromium_install_attempted = False
 
+# Bounds the Chromium download so a stalled connection cannot hang the export
+# thread forever (~170 MB download; generous for slow Cloud egress).
+_CHROMIUM_INSTALL_TIMEOUT_SECONDS = 300
+
 
 @dataclass
 class _WarmChromiumSession:
@@ -203,12 +207,20 @@ def _chromium_executable_missing(exc: BaseException) -> bool:
 def _install_chromium() -> None:
     """Download Playwright Chromium into the user cache (no apt / no sudo)."""
     _logger.info("Installing Playwright Chromium for share-summary PNG export")
-    result = subprocess.run(
-        [sys.executable, "-m", "playwright", "install", "chromium"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_CHROMIUM_INSTALL_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            "Timed out installing Playwright Chromium for PNG export "
+            f"(waited {_CHROMIUM_INSTALL_TIMEOUT_SECONDS}s). "
+            "Check the network connection and try Export again."
+        ) from exc
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()
         # Prefer the last Error: line from Playwright's downloader over full logs.

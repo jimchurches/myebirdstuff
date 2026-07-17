@@ -323,6 +323,25 @@ _LOCATION_TYPE_ORDER = {
     "APPROXIMATE": 1,
 }
 
+# ACT results with bounds smaller than this are treated as suburb-sized localities.
+_ACT_SUBURB_AREA_THRESHOLD = 0.01
+
+# Allowlist of ACT districts that must beat a postcode-supplied locality. Rural
+# postcodes (2611 etc.) attach a neighbouring locality (e.g. Coree, Uriarra
+# Village) to points that are really inside one of these districts.
+# To extend: reproduce with `--debug` (shows the ranking), confirm the containing
+# district is being outranked by a postal_code locality, add the district name
+# here, then re-run the embedded test file
+# (`--testfile tests/fixtures/gps_checklistName_testing.json`).
+_ACT_DISTRICTS_OVER_POSTCODE_LOCALITY = (
+    "Canberra Central",
+    "Weston Creek",
+    "Cotter River",
+    "Belconnen",
+    "Stromlo",
+    "Paddys River",
+)
+
 
 def _result_has_name_component(result: dict) -> bool:
     """True if result has at least one locality or neighborhood in address_components."""
@@ -451,28 +470,18 @@ def _result_sort_key(
                 )
                 if not locality_in_district or district_is_creek:
                     plus_penalty = 1
-        ACT_SUBURB_AREA_THRESHOLD = 0.01
         suburb_sized_locality = (
             has_locality
-            and area < ACT_SUBURB_AREA_THRESHOLD
+            and area < _ACT_SUBURB_AREA_THRESHOLD
             and "postal_code" not in result_types
         )
         # Postal_code results can still supply a valid locality (e.g. Harman in 2600); prefer it over
-        # neighborhood unless a containing district we want should win (list) or the neighborhood is
-        # more specific (smaller area), e.g. Jerrabomberra over Harman when point is in Jerrabomberra.
-        # Rural ACT districts where postcode 2611/etc. attach a neighbouring locality
-        # (e.g. Coree, Uriarra Village) that must not beat the containing district.
-        ACT_DISTRICTS_OVER_POSTCODE_LOCALITY = (
-            "Canberra Central",
-            "Weston Creek",
-            "Cotter River",
-            "Belconnen",
-            "Stromlo",
-            "Paddys River",
-        )
+        # neighborhood unless a containing district we want should win (allowlist above) or the
+        # neighborhood is more specific (smaller area), e.g. Jerrabomberra over Harman when point
+        # is in Jerrabomberra.
         postcode_localities = result.get("postcode_localities") or []
         postcode_preferred_over_district = act_has_containing_neighborhood and any(
-            nn in ACT_DISTRICTS_OVER_POSTCODE_LOCALITY for nn in neighborhood_names
+            nn in _ACT_DISTRICTS_OVER_POSTCODE_LOCALITY for nn in neighborhood_names
         )
         neighborhood_more_specific_than_postcode = (
             act_min_neighborhood_area is not None and area > act_min_neighborhood_area

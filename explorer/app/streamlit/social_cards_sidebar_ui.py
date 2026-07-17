@@ -135,6 +135,7 @@ def render_sidebar_card_controls(
         "Layout",
         options=["tiles", "minimal", "spotlight", "insight"],
         format_func=share_summary_layout_label,
+        key=keys.layout,
     )
     tiles_presentation: TilesPresentationId = "grid"
     if selected_layout == "tiles":
@@ -158,6 +159,7 @@ def render_sidebar_card_controls(
         "Aspect ratio",
         options=["square", "portrait_post", "story"],
         format_func=lambda x: FORMAT_LABELS[x],
+        key=keys.aspect_format,
     )
     color_theme_id = st.selectbox(
         "Theme",
