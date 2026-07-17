@@ -465,18 +465,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         )
     work_df = ws.df
 
-    if not social_cards_tab:
-        render_map_sidebar(df_full, work_df=work_df)
-
-    hide_non_matching_locations = False
-    species_pick_common: str | None = None
-    species_pick_sci = ""
-    family_name = ""
-    family_highlight_base = ""
-    scheme_sel = st.session_state.get(STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY, 1)
-    family_colour_scheme = int(scheme_sel if scheme_sel is not None else 1)
-    map_height = int(st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_KEY, MAP_HEIGHT_PX_DEFAULT))
-
+    # Species session prep must run BEFORE the sidebar renders: the searchbox
+    # fragment renders nothing when SESSION_SPECIES_IX_KEY is absent, and the
+    # stale-search-key clearing must not run under an already-rendered fragment
+    # (#362 — species search controls disappeared in the 2026-07-17 release).
     _prev_mv = st.session_state.get(SESSION_PREV_MAP_VIEW_KEY)
     if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
         st.session_state.pop(SESSION_SPECIES_SEARCH_KEY, None)
@@ -509,6 +501,19 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
             st.session_state[SESSION_SPECIES_IX_SIG_KEY] = _ix_sig
         st.session_state[SESSION_SPECIES_WS_KEY] = ws
 
+    if not social_cards_tab:
+        render_map_sidebar(df_full, work_df=work_df)
+
+    hide_non_matching_locations = False
+    species_pick_common: str | None = None
+    species_pick_sci = ""
+    family_name = ""
+    family_highlight_base = ""
+    scheme_sel = st.session_state.get(STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY, 1)
+    family_colour_scheme = int(scheme_sel if scheme_sel is not None else 1)
+    map_height = int(st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_KEY, MAP_HEIGHT_PX_DEFAULT))
+
+    if map_view_mode == "species":
         hide_non_matching_locations = bool(
             st.session_state.get(STREAMLIT_SPECIES_HIDE_ONLY_KEY, MAP_SPECIES_HIDE_ONLY_DEFAULT)
         )
