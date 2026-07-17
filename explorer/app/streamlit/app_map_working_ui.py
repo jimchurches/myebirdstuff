@@ -117,9 +117,9 @@ def _all_locations_leaflet_embed_active(session_state: Any) -> bool:
 def invalidate_map_embed_cache(*, bump_mount_nonce: bool = True) -> None:
     """Bump Leaflet component mount nonce and clear export HTML when map chrome changes."""
     if bump_mount_nonce:
-        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
-        ) + 1
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = (
+            int(st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)) + 1
+        )
     st.session_state.pop(EXPLORER_MAP_HTML_BYTES_KEY, None)
     st.session_state.pop(LEAFLET_EXPORT_RECIPE_KEY, None)
     st.session_state.pop(LEAFLET_EXPORT_BUILT_CACHE_KEY, None)
@@ -150,7 +150,9 @@ class MapWorkingContext:
 
 def _effective_map_style() -> str:
     """Basemap key from session, falling back to saved/default when invalid."""
-    saved_basemap = st.session_state.get(STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_OPTIONS[0])
+    saved_basemap = st.session_state.get(
+        STREAMLIT_MAP_BASEMAP_SAVED_KEY, MAP_BASEMAP_OPTIONS[0]
+    )
     if saved_basemap not in MAP_BASEMAP_OPTIONS:
         saved_basemap = MAP_BASEMAP_OPTIONS[0]
     override = st.session_state.get(STREAMLIT_MAP_BASEMAP_KEY, saved_basemap)
@@ -161,7 +163,9 @@ def _effective_map_style() -> str:
 
 def _map_view_from_session() -> tuple[str, str, bool, bool]:
     """Map view label/mode and lifer/family flags from session (legacy label migration)."""
-    map_view_label = st.session_state.get(STREAMLIT_MAP_VIEW_LABEL_KEY, MAP_VIEW_LABELS[0])
+    map_view_label = st.session_state.get(
+        STREAMLIT_MAP_VIEW_LABEL_KEY, MAP_VIEW_LABELS[0]
+    )
     if map_view_label == "Selected species":
         map_view_label = "Species locations"
     map_view_mode = MAP_VIEW_LABEL_TO_MODE.get(map_view_label, "all")
@@ -183,7 +187,9 @@ def _date_filter_from_session(
         st.session_state[STREAMLIT_MAP_DATE_FILTER_KEY] = bool(
             st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT)
         )
-    date_filter_on_effective = bool(st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False))
+    date_filter_on_effective = bool(
+        st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False)
+    )
     if not date_filter_on_effective:
         return False, None
     d_inception, today = date_inception_to_today_default(df_full)
@@ -225,7 +231,9 @@ def render_map_sidebar(df_full: Any, *, work_df: Any) -> None:
         else:
             if STREAMLIT_MAP_DATE_FILTER_KEY not in st.session_state:
                 st.session_state[STREAMLIT_MAP_DATE_FILTER_KEY] = bool(
-                    st.session_state.get(PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT)
+                    st.session_state.get(
+                        PERSIST_MAP_DATE_FILTER_KEY, MAP_DATE_FILTER_DEFAULT
+                    )
                 )
             if st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False):
                 if STREAMLIT_MAP_DATE_RANGE_KEY not in st.session_state:
@@ -243,10 +251,16 @@ def render_map_sidebar(df_full: Any, *, work_df: Any) -> None:
             if date_filter_on_effective:
                 d_inception, today = date_inception_to_today_default(df_full)
                 if STREAMLIT_MAP_DATE_RANGE_KEY not in st.session_state:
-                    st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = (d_inception, today)
+                    st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = (
+                        d_inception,
+                        today,
+                    )
                 rng = st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY]
                 if not isinstance(rng, tuple) or len(rng) != 2:
-                    st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = (d_inception, today)
+                    st.session_state[STREAMLIT_MAP_DATE_RANGE_KEY] = (
+                        d_inception,
+                        today,
+                    )
                 else:
                     r0 = max(min(rng[0], today), d_inception)
                     r1 = max(min(rng[1], today), d_inception)
@@ -265,14 +279,20 @@ def render_map_sidebar(df_full: Any, *, work_df: Any) -> None:
                 else:
                     st.caption(MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION)
 
-            date_filter_on_effective = bool(st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False))
+            date_filter_on_effective = bool(
+                st.session_state.get(STREAMLIT_MAP_DATE_FILTER_KEY, False)
+            )
             date_range_sel = (
                 st.session_state.get(STREAMLIT_MAP_DATE_RANGE_KEY)
                 if date_filter_on_effective
                 else None
             )
             st.session_state[PERSIST_MAP_DATE_FILTER_KEY] = date_filter_on_effective
-            if date_filter_on_effective and isinstance(date_range_sel, tuple) and len(date_range_sel) == 2:
+            if (
+                date_filter_on_effective
+                and isinstance(date_range_sel, tuple)
+                and len(date_range_sel) == 2
+            ):
                 st.session_state[PERSIST_MAP_DATE_RANGE_KEY] = date_range_sel
 
         if map_view_mode == "all":
@@ -289,7 +309,9 @@ def render_map_sidebar(df_full: Any, *, work_df: Any) -> None:
             _scope_opts = all_locations_scope_option_values(work_df)
             _cur_scope = st.session_state.get(STREAMLIT_ALL_LOCATIONS_SCOPE_KEY)
             if _cur_scope not in _scope_opts:
-                st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = ALL_LOCATIONS_SCOPE_FOCUSED
+                st.session_state[STREAMLIT_ALL_LOCATIONS_SCOPE_KEY] = (
+                    ALL_LOCATIONS_SCOPE_FOCUSED
+                )
             st.selectbox(
                 "Map focus",
                 options=_scope_opts,
@@ -322,7 +344,9 @@ def render_map_sidebar(df_full: Any, *, work_df: Any) -> None:
             st.markdown("**Species**")
             species_searchbox_fragment()
             if STREAMLIT_SPECIES_HIDE_ONLY_KEY not in st.session_state:
-                st.session_state[STREAMLIT_SPECIES_HIDE_ONLY_KEY] = MAP_SPECIES_HIDE_ONLY_DEFAULT
+                st.session_state[STREAMLIT_SPECIES_HIDE_ONLY_KEY] = (
+                    MAP_SPECIES_HIDE_ONLY_DEFAULT
+                )
             st.toggle(
                 "Show only selected species",
                 key=STREAMLIT_SPECIES_HIDE_ONLY_KEY,
@@ -366,9 +390,11 @@ def render_map_sidebar(df_full: Any, *, work_df: Any) -> None:
                     st.selectbox(
                         "Highlight species (optional)",
                         options=[""] + bases,
-                        format_func=lambda b: "— None —"
-                        if b == ""
-                        else (base_to_common.get(str(b).strip().lower()) or b),
+                        format_func=lambda b: (
+                            "— None —"
+                            if b == ""
+                            else (base_to_common.get(str(b).strip().lower()) or b)
+                        ),
                         key=STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY,
                     )
                 else:
@@ -441,7 +467,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         render_social_cards_main_sidebar(df_full)
 
     map_style = _effective_map_style()
-    _map_view_label, map_view_mode, is_lifer_view, is_family_view = _map_view_from_session()
+    _map_view_label, map_view_mode, is_lifer_view, is_family_view = (
+        _map_view_from_session()
+    )
     date_filter_on_effective, date_range_sel = _date_filter_from_session(
         df_full,
         is_lifer_view=is_lifer_view,
@@ -469,36 +497,42 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     # fragment renders nothing when SESSION_SPECIES_IX_KEY is absent, and the
     # stale-search-key clearing must not run under an already-rendered fragment
     # (#362 — species search controls disappeared in the 2026-07-17 release).
-    _prev_mv = st.session_state.get(SESSION_PREV_MAP_VIEW_KEY)
-    if map_view_mode == "species" and _prev_mv is not None and _prev_mv != "species":
-        st.session_state.pop(SESSION_SPECIES_SEARCH_KEY, None)
-        _n = int(st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0))
-        st.session_state.pop(f"{SESSION_SPECIES_SEARCH_KEY}__v{_n}", None)
-        st.session_state.pop(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, None)
-
+    prev_map_view_mode = st.session_state.get(SESSION_PREV_MAP_VIEW_KEY)
     if map_view_mode == "species":
+        if prev_map_view_mode is not None and prev_map_view_mode != "species":
+            st.session_state.pop(SESSION_SPECIES_SEARCH_KEY, None)
+            remount_nonce = int(
+                st.session_state.get(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, 0)
+            )
+            st.session_state.pop(
+                f"{SESSION_SPECIES_SEARCH_KEY}__v{remount_nonce}", None
+            )
+            st.session_state.pop(SESSION_SPECIES_SEARCH_REMOUNT_NONCE_KEY, None)
+
         if not st.session_state.get(SESSION_SPECIES_PICK_KEY):
-            _pc = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
-            if _pc:
-                st.session_state[SESSION_SPECIES_PICK_KEY] = str(_pc).strip()
+            persisted_common = st.session_state.get(PERSIST_SPECIES_COMMON_KEY)
+            if persisted_common:
+                st.session_state[SESSION_SPECIES_PICK_KEY] = str(
+                    persisted_common
+                ).strip()
 
         tax_loc = (
             str(st.session_state.get(STREAMLIT_TAXONOMY_LOCALE_KEY, "")).strip()
             or DEFAULT_TAXONOMY_LOCALE
         )
-        _ix_sig = (
+        index_signature = (
             SPECIES_WHOOSH_INDEX_VERSION,
             len(ws.species_list),
             st.session_state.get(EBIRD_DATA_SIG_KEY),
             tax_loc,
         )
-        if st.session_state.get(SESSION_SPECIES_IX_SIG_KEY) != _ix_sig:
+        if st.session_state.get(SESSION_SPECIES_IX_SIG_KEY) != index_signature:
             st.session_state[SESSION_SPECIES_IX_KEY] = build_ram_species_whoosh_index(
                 ws.species_list,
                 ws.name_map,
                 taxonomy_locale=tax_loc,
             )
-            st.session_state[SESSION_SPECIES_IX_SIG_KEY] = _ix_sig
+            st.session_state[SESSION_SPECIES_IX_SIG_KEY] = index_signature
         st.session_state[SESSION_SPECIES_WS_KEY] = ws
 
     if not social_cards_tab:
@@ -511,11 +545,15 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
     family_highlight_base = ""
     scheme_sel = st.session_state.get(STREAMLIT_MAP_MARKER_COLOUR_SCHEME_KEY, 1)
     family_colour_scheme = int(scheme_sel if scheme_sel is not None else 1)
-    map_height = int(st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_KEY, MAP_HEIGHT_PX_DEFAULT))
+    map_height = int(
+        st.session_state.get(STREAMLIT_MAP_HEIGHT_PX_KEY, MAP_HEIGHT_PX_DEFAULT)
+    )
 
     if map_view_mode == "species":
         hide_non_matching_locations = bool(
-            st.session_state.get(STREAMLIT_SPECIES_HIDE_ONLY_KEY, MAP_SPECIES_HIDE_ONLY_DEFAULT)
+            st.session_state.get(
+                STREAMLIT_SPECIES_HIDE_ONLY_KEY, MAP_SPECIES_HIDE_ONLY_DEFAULT
+            )
         )
 
         species_pick_common = st.session_state.get(SESSION_SPECIES_PICK_KEY)
@@ -530,7 +568,9 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         st.session_state.pop(SESSION_SPECIES_PICK_KEY, None)
 
     if map_view_mode == "families":
-        family_name = str(st.session_state.get(STREAMLIT_FAMILY_MAP_FAMILY_KEY, "") or "")
+        family_name = str(
+            st.session_state.get(STREAMLIT_FAMILY_MAP_FAMILY_KEY, "") or ""
+        )
         family_highlight_base = str(
             st.session_state.get(STREAMLIT_FAMILY_MAP_HIGHLIGHT_KEY, "") or ""
         )
@@ -541,10 +581,10 @@ def render_map_sidebar_and_working_set(df_full: Any) -> MapWorkingContext:
         if not _all_locations_leaflet_embed_active(st.session_state):
             invalidate_map_embed_cache()
 
-    if _prev_mv is not None and _prev_mv != map_view_mode:
-        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = int(
-            st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)
-        ) + 1
+    if prev_map_view_mode is not None and prev_map_view_mode != map_view_mode:
+        st.session_state[LEAFLET_MAP_MOUNT_NONCE_KEY] = (
+            int(st.session_state.get(LEAFLET_MAP_MOUNT_NONCE_KEY, 0)) + 1
+        )
 
     st.session_state[SESSION_PREV_MAP_VIEW_KEY] = map_view_mode
 
