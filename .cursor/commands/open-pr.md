@@ -4,13 +4,14 @@ You are creating a pull request for myebirdstuff following this repo’s workflo
 
 ## Branching model (important)
 
-- main = stable / current beta (live)
-- beta-next = integration branch for upcoming release
-- Feature/bug branches are created from beta-next
-- PRs are normally:
-  → feature branch → beta-next
+- `main` = stable / current beta (live)
+- `beta-next` = default integration branch for upcoming release
+- Feature integration lines (e.g. `feat/social-cards`) receive PRs from issue branches on that line
+- PRs are normally: issue branch → **`beta-next`**, unless the issue specifies another **PR target**
 
-Only target main if explicitly instructed.
+Only target `main` if explicitly instructed.
+
+**PR base** must follow **[base branch resolution](base-branch-resolution.md)** — read the linked issue; do not always use `beta-next`.
 
 ---
 
@@ -32,9 +33,11 @@ Before doing anything:
 1. Detect linked issues from:
    - branch name (e.g. 123-fix-map-bug)
    - commit messages
-2. Summarise:
+2. Apply **[base branch resolution](base-branch-resolution.md)** to determine **PR base / target**.
+3. Summarise:
    - what problem is being solved
    - what areas of the code are affected
+   - **resolved PR base**
 
 If unclear, ask before proceeding.
 
@@ -107,10 +110,10 @@ Ask for network permission if required.
 
 Use GitHub CLI if available:
 
-gh pr create --base beta-next --head <branch> --title "..." --body-file ...
+gh pr create --base <resolved-pr-base> --head <branch> --title "..." --body-file ...
 
 Defaults:
-- base = beta-next
+- base = **resolved PR target** from Step 2 (often `beta-next`; may be `feat/social-cards` or other)
 - head = current branch
 
 If CLI fails:

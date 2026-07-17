@@ -8,13 +8,7 @@ Perform a thorough code review that verifies functionality, maintainability, and
 security before approving a change. Focus on architecture, readability,
 performance implications, and provide actionable suggestions for improvement.
 
-For **myebirdstuff**, skim `docs/AI_CONTEXT.md` for repo guardrails (Streamlit vs core, caching, dataframe usage) and call out anything that conflicts.
-
-The AI_CONTEXT.md document gives more context including the following mindset statement:
-
-> Write Python the way a highly regarded engineer who loves teaching would want it written:
-> neat, easy to read, efficient where it matters, and easy to follow.
-
+For **myebirdstuff**, read **`docs/AI_CONTEXT.md`** for repo guardrails (Streamlit vs core, caching, dataframe usage) and **`docs/python-style-guide.md`** for the guiding mindset and full Python style standard. The style guide is the single source of truth for naming, comments, docstrings, and related expectations — apply it pragmatically, not as strict compliance with the Google Python Style Guide.
 
 ## Steps
 
@@ -26,27 +20,28 @@ The AI_CONTEXT.md document gives more context including the following mindset st
     - Identify the scope of files and features impacted
     - Note any assumptions or questions to clarify with the author
 2. **Validate functionality**
-    - Confirm the code delivers the intended behavior
+    - Confirm the code delivers the intended behaviour
     - Exercise edge cases or guard conditions mentally or by running locally
     - Check error handling paths and logging for clarity
 3. **Assess quality**
-    - Ensure functions are focused, names are descriptive, and code is readable
+    - Ensure functions are focused, names are descriptive, and code is readable — apply `docs/python-style-guide.md` as the reference, not every Google Python Style Guide rule
     - Watch for duplication, dead code, or missing tests
     - Verify documentation and comments reflect the latest changes
+    - Do not flag pre-existing code that pre-dates the style guide for wholesale rewrite; gentle local improvements (a renamed variable, an improved docstring) in code already being changed are encouraged
 4. **Review security and risk**
     - Look for injection points, insecure defaults, or missing validation
     - Confirm secrets or credentials are not exposed
     - Evaluate performance or scalability impacts of the change
 5. **Identify in-scope TODO and other unfinished work**
     - Look for unfinished work (`TODO`, `FIXME`, commented-out code paths, missing tests for new behaviour)
-    - **Review-first:** default to listing gaps and suggested follow-ups; only apply trivial fixes in-repo if the author clearly wants that in the same session
+    - **Review-first:** list gaps and suggested follow-ups for architecture and behaviour concerns
     - If the unfinished work is not minor or is deliberately left for later, ask how to proceed and suggest a GitHub issue so it is not lost
 
 ## Review Checklist
 
 ### Functionality
 
-- [ ] Intended behavior works and matches requirements
+- [ ] Intended behaviour works and matches requirements
 - [ ] Edge cases handled gracefully
 - [ ] Error handling is appropriate and informative
 
@@ -62,14 +57,30 @@ The AI_CONTEXT.md document gives more context including the following mindset st
 ### Security & Safety
 
 - [ ] No obvious security vulnerabilities introduced
-- [ ] Inputs validated and outputs sanitized
+- [ ] Inputs validated and outputs sanitised
 - [ ] Sensitive data handled correctly
+
+## Nit-Fixer (always — final step)
+
+After steps 0–5 and the Review Checklist above, **always** run **[Nit-Fixer](nit-fixer.md)** on the change set vs merge target:
+
+- Nit-Fixer fixes mechanical and readability nits in touched files (see it, fix it within caps)
+- Architecture findings and design recommendations stay in the review output — Nit-Fixer does **not** implement them
+- Nit-Fixer does **not** edit test files; note missing tests in the review, do not ask Nit-Fixer to add them
+- Fixes stay unstaged; author runs `/commit-work`
+
+Include in your review summary:
+
+- Verdict and fixes applied (or skipped reason)
+- Remaining out-of-scope nits
+- Checks rerun after Nit-Fixer
+- Reminder: review `git diff`, then `/commit-work`
 
 ## Additional Review Notes
 
 - Architecture and design decisions considered
 - Performance bottlenecks or regressions assessed
-- Coding standards and best practices followed
+- Coding standards followed — reference `docs/python-style-guide.md` for this project's standard
 - Resource management, error handling, and logging reviewed
 - Suggested alternatives, additional test cases, or documentation updates captured
 - **PR hygiene:** commit message / issue linkage, migration or config notes for other contributors, anything that should live in the PR description rather than only in chat
@@ -78,6 +89,7 @@ The AI_CONTEXT.md document gives more context including the following mindset st
 
 - Not a substitute for CI or human reviewers when policy requires them
 - Not an instruction to rewrite large areas unless the review explicitly recommends it and the author agrees
+- Not a replacement for Test Integrity Sentinel — use `/pr-review` Step 4 when test honesty is the primary concern
 
 Provide constructive feedback with concrete examples and actionable guidance for
 the author.

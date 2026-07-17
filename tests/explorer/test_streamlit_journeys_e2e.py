@@ -64,7 +64,11 @@ def test_journey_species_locations_mode_shows_awaiting_selection_banner(
         page.goto(streamlit_app_url, wait_until="domcontentloaded")
         page.get_by_text("Personal eBird Explorer").wait_for(timeout=20000)
         choose_map_view_mode(page, "Species locations")
-        wait_for_pebird_map_markup(
+        html = wait_for_pebird_map_markup(
             page,
-            must_contain=['class="pebird-map-banner__title">Species locations</span>'],
+            must_contain=[
+                'class="pebird-map-banner__title">Species locations</span>',
+                "Select a species in the sidebar to load the map data",
+            ],
         )
+        assert "Select a species in the sidebar to load the map data" in html

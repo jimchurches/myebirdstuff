@@ -18,7 +18,7 @@ and tab fragments. Orchestration phases are documented in
 :mod:`explorer.app.streamlit.app_orchestration`.
 
 **Main tabs:** Map, Checklist Statistics, Ranking & Lists, Bird Families, Yearly Summary,
-Country, Maintenance, Settings. Map prep runs first in a sidebar bottom ``st.spinner`` (see
+Country, Social Cards, Maintenance, Settings. Map prep runs first in a sidebar bottom ``st.spinner`` (see
 :mod:`explorer.app.streamlit.app_prep_map_ui`). Data tabs use ``@st.fragment`` where possible so
 control changes avoid rerunning the full map pipeline.
 
@@ -49,7 +49,9 @@ if _REPO_ROOT not in sys.path:
 from explorer.app.streamlit.app_landing_ui import (  # noqa: E402
     load_dataframe_after_landing,
 )
-from explorer.app.streamlit.app_map_working_ui import render_map_sidebar_and_working_set  # noqa: E402
+from explorer.app.streamlit.app_map_working_ui import (
+    render_map_sidebar_and_working_set,  # noqa: E402
+)
 from explorer.app.streamlit.app_orchestration import (  # noqa: E402
     bootstrap_session_after_csv_load,
     bootstrap_streamlit_page,
@@ -58,6 +60,8 @@ from explorer.app.streamlit.app_orchestration import (  # noqa: E402
     init_session_defaults_before_data_load,
     render_dashboard_shell,
 )
+
+
 def main() -> None:
     """Thin orchestration entrypoint; see :mod:`explorer.app.streamlit.app_orchestration` for phase docs."""
     bootstrap_streamlit_page()

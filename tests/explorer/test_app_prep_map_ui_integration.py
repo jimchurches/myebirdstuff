@@ -11,7 +11,10 @@ import pandas as pd
 import pytest
 
 from tests.explorer.test_streamlit_map_prep import _tiny_df
-from tests.explorer.test_streamlit_ui_helpers import _drop_submodule, _install_streamlit_stub
+from tests.explorer.test_streamlit_ui_helpers import (
+    _drop_submodule,
+    _install_streamlit_stub,
+)
 
 
 @pytest.fixture
@@ -68,11 +71,14 @@ def test_apply_dataset_signature_change_clears_leaflet_caches(
     from explorer.app.streamlit.app_constants import (
         ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
         EBIRD_DATA_SIG_KEY,
+        FAMILY_LEAFLET_PAYLOAD_CACHE_KEY,
         LEAFLET_EXPORT_HTML_CACHE_KEY,
         LIFER_LEAFLET_PAYLOAD_CACHE_KEY,
         SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
     )
-    from explorer.app.streamlit.app_prep_map_ui import apply_dataset_signature_for_map_caches
+    from explorer.app.streamlit.app_prep_map_ui import (
+        apply_dataset_signature_for_map_caches,
+    )
 
     st = streamlit_stub
     df_a = _tiny_df()
@@ -87,6 +93,9 @@ def test_apply_dataset_signature_change_clears_leaflet_caches(
     )
     st.session_state[LIFER_LEAFLET_PAYLOAD_CACHE_KEY] = OrderedDict()
     st.session_state[SPECIES_LEAFLET_PAYLOAD_CACHE_KEY] = OrderedDict()
+    st.session_state[FAMILY_LEAFLET_PAYLOAD_CACHE_KEY] = OrderedDict(
+        [(("family",), {"revision": "family-old"})]
+    )
     st.session_state[LEAFLET_EXPORT_HTML_CACHE_KEY] = OrderedDict()
 
     assert apply_dataset_signature_for_map_caches(df_b, "disk") is True
@@ -94,6 +103,7 @@ def test_apply_dataset_signature_change_clears_leaflet_caches(
     assert ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert LIFER_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert SPECIES_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
+    assert FAMILY_LEAFLET_PAYLOAD_CACHE_KEY not in st.session_state
     assert LEAFLET_EXPORT_HTML_CACHE_KEY not in st.session_state
 
 
@@ -104,7 +114,9 @@ def test_apply_dataset_signature_unchanged_preserves_leaflet_cache(
         ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
         EBIRD_DATA_SIG_KEY,
     )
-    from explorer.app.streamlit.app_prep_map_ui import apply_dataset_signature_for_map_caches
+    from explorer.app.streamlit.app_prep_map_ui import (
+        apply_dataset_signature_for_map_caches,
+    )
     from explorer.core.map_prep import data_signature_for_caches
 
     st = streamlit_stub
@@ -120,12 +132,16 @@ def test_apply_dataset_signature_unchanged_preserves_leaflet_cache(
 
 def test_leaflet_payload_cache_miss_when_revision_extra_changes(streamlit_stub) -> None:
     from explorer.app.streamlit.app_caches import leaflet_payload_cache_key
-    from explorer.app.streamlit.app_constants import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY
+    from explorer.app.streamlit.app_constants import (
+        ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
+    )
     from explorer.app.streamlit.app_prep_map_leaflet_caches import (
         leaflet_payload_cache_lookup,
         leaflet_payload_cache_store,
     )
-    from explorer.app.streamlit.defaults import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
+    from explorer.app.streamlit.defaults import (
+        ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    )
 
     df = _tiny_df()
     payload_ck = leaflet_payload_cache_key(
@@ -147,17 +163,23 @@ def test_leaflet_payload_cache_miss_when_revision_extra_changes(streamlit_stub) 
         {"revision": "off", "geojson": {"type": "FeatureCollection", "features": []}},
         max_entries=ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
     )
-    assert leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_off) is not None
+    assert leaflet_payload_cache_lookup(
+        ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_off
+    )["revision"] == "off"
     assert leaflet_payload_cache_lookup(ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY, key_on) is None
 
 
 def test_all_locations_payload_cache_hit_flips_false_then_true(streamlit_stub) -> None:
-    from explorer.app.streamlit.app_constants import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY
+    from explorer.app.streamlit.app_constants import (
+        ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_KEY,
+    )
     from explorer.app.streamlit.app_prep_map_leaflet_caches import (
         leaflet_payload_cache_lookup,
         leaflet_payload_cache_store,
     )
-    from explorer.app.streamlit.defaults import ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES
+    from explorer.app.streamlit.defaults import (
+        ALL_LOCATIONS_LEAFLET_PAYLOAD_CACHE_MAX_ENTRIES,
+    )
 
     key = ("integration", "rev")
     entry = {
@@ -313,3 +335,67 @@ def test_render_prep_with_explorer_perf_off_does_not_break(streamlit_stub, monke
     from explorer.app.streamlit.streamlit_ui_constants import MAP_PREP_SPINNER_TEXT
 
     assert MAP_PREP_SPINNER_TEXT in st.spinner_calls
+
+
+def test_social_cards_prep_uses_single_interesting_spinner(
+    streamlit_stub, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Social Cards skips map prep and must not nest a second st.spinner (#328)."""
+    from explorer.app.streamlit import app_map_ui, app_prep_map_ui
+    from explorer.app.streamlit.streamlit_ui_constants import (
+        SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT,
+        TAB_PREP_SPINNER_TEXT,
+    )
+
+    st = streamlit_stub
+    _seed_prep_session_defaults(st)
+    monkeypatch.setattr(app_prep_map_ui, "is_social_cards_main_tab", lambda: True)
+    monkeypatch.setattr(
+        app_prep_map_ui,
+        "prepare_all_locations_map_context",
+        lambda *_args, **_kwargs: pytest.fail("Social Cards must skip Leaflet map prep"),
+    )
+
+    import explorer.app.streamlit.app_prep_map_tab_prep as app_prep_map_tab_prep
+
+    _patch_tab_prep_caches(monkeypatch, app_prep_map_tab_prep)
+    monkeypatch.setattr(app_map_ui, "sidebar_bottom_slot_start", lambda: None)
+    monkeypatch.setattr(app_map_ui, "sidebar_bottom_slot_end", lambda: None)
+    monkeypatch.setattr(app_map_ui, "place_spinner_emoji_strip", lambda: st.empty())
+    monkeypatch.setattr(app_map_ui, "sidebar_footer_links", lambda **_k: None)
+
+    class _TabCtx:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> bool:
+            return False
+
+    df = _tiny_df()
+    app_prep_map_ui.render_prep_spinner_and_map_tab(
+        tab_map=_TabCtx(),
+        work_df=df,
+        df_full=df,
+        provenance="disk",
+        tax_locale_effective="en",
+        map_height=400,
+        map_style="default",
+        map_view_mode="all",
+        is_lifer_view=False,
+        date_filter_banner="",
+        species_pick_common=None,
+        species_pick_sci="",
+        family_name="",
+        family_highlight_base="",
+        family_colour_scheme=0,
+        hide_non_matching_locations=False,
+        popup_sort_order="date_desc",
+        popup_scroll_hint="",
+        mark_lifer=False,
+        mark_last_seen=False,
+        species_url_fn=lambda *_a, **_k: "",
+    )
+
+    assert st.spinner_calls == [SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT]
+    assert SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT == "Doing interesting things with your eBird data"
+    assert TAB_PREP_SPINNER_TEXT not in st.spinner_calls

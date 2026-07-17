@@ -4,7 +4,7 @@
 ## Do NOT commit your local config file (`config_secret.yaml` and `config.yaml` are gitignored).
 ##
 ## This config is used by:
-## - Streamlit Explorer (`data_folder`)
+## - Streamlit Explorer (`data_folder`; also `google_api_key` for Maintenance → Create location name from GPS)
 ## - `scripts/eBirdChecklistNameFromGPS.py` (Google reverse-geocode -> `google_api_key`)
 ## - `scripts/deploy_to_live.py` (deploy target path -> `deploy_destination`)
 ##
@@ -12,7 +12,10 @@
 ## when you click **Save settings** in the Explorer.
 ##
 
-# Google Geocoding API key (required for `scripts/eBirdChecklistNameFromGPS.py`).
+# Google Geocoding API key (GPS script + Explorer Maintenance → Create location name from GPS).
+# Prefer config_secret.yaml. Never commit real keys (this file is a template only;
+# config_secret.yaml / config.yaml are gitignored). If the Explorer finds no key
+# here, Create location name from GPS shows a session-only paste field.
 google_api_key: "REPLACE_WITH_YOUR_KEY"
 
 # Folder containing your "My eBird Data" CSV (used for auto-load when running locally).

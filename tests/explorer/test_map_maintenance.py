@@ -18,13 +18,11 @@ def test_exact_duplicates_detected():
         "Longitude": [149.0, 149.0],
     })
     exact_rows, near_pairs = get_map_maintenance_data(data, threshold_m=10)
-    assert len(exact_rows) == 2
-    names = {row[0] for row in exact_rows}
-    assert names == {"Alpha", "Alpha duplicate"}
-    for _, _, count, lat, lon in exact_rows:
-        assert count == 2
-        assert lat == -35.0
-        assert lon == 149.0
+    assert set(exact_rows) == {
+        ("Alpha", "L1", 2, -35.0, 149.0),
+        ("Alpha duplicate", "L2", 2, -35.0, 149.0),
+    }
+    assert near_pairs == []
 
 
 def test_exact_duplicates_same_name_listed_once():
@@ -69,8 +67,13 @@ def test_near_duplicates_within_threshold():
     })
     exact_rows, near_pairs = get_map_maintenance_data(data, threshold_m=10)
     assert exact_rows == []
-    assert len(near_pairs) == 1
-    assert {near_pairs[0][0][0], near_pairs[0][1][0]} == {"L1", "L2"}
+    assert {
+        (location_id, name, latitude, longitude)
+        for location_id, name, latitude, longitude in near_pairs[0]
+    } == {
+        ("L1", "Bravo", -35.001, 149.001),
+        ("L2", "Bravo-near", -35.00105, 149.00105),
+    }
 
 
 def test_near_duplicates_beyond_threshold():

@@ -27,8 +27,7 @@ def test_whoosh_suggestions_ranking():
         w.add_document(common_name=name, scientific_name="", taxonomy_group="")
     w.commit()
     out = whoosh_species_suggestions(ix, "gre", max_options=6, min_query_len=3)
-    assert len(out) >= 1
-    assert all(isinstance(s, str) for s in out)
+    assert out == ["Green Pygmy-goose", "Great Egret", "Great Cormorant"]
 
 
 def test_whoosh_species_suggestions_matches_scientific_name():
@@ -58,8 +57,7 @@ def test_whoosh_species_suggestions_uses_taxonomy_group_helper_weight():
     )
     w.commit()
     out = whoosh_species_suggestions(ix, "aus", min_query_len=3)
-    assert out
-    assert "Scarlet Robin" in out
+    assert out == ["Australian Pipit", "Scarlet Robin"]
 
 
 def test_whoosh_species_suggestions_has_no_synthetic_group_rows():
@@ -96,7 +94,6 @@ def test_whoosh_species_suggestions_prefers_multi_token_coverage():
     )
     w.commit()
     out = whoosh_species_suggestions(ix, "aus rob", min_query_len=3)
-    assert out
     assert out[0] == "Eastern Yellow Robin"
 
 
@@ -115,7 +112,6 @@ def test_whoosh_species_suggestions_prefers_common_name_token_over_sci_only():
     )
     w.commit()
     out = whoosh_species_suggestions(ix, "austr", min_query_len=3)
-    assert out
     assert out[0] == "Australian Pipit"
 
 
@@ -134,7 +130,6 @@ def test_whoosh_species_suggestions_deprioritizes_spuh_sp_suffix():
     )
     w.commit()
     out = whoosh_species_suggestions(ix, "aus tree", min_query_len=3)
-    assert out
     assert out[0] == "Brown Treecreeper"
 
 
@@ -153,7 +148,6 @@ def test_whoosh_species_suggestions_deprioritizes_trailing_paren_subspecies_form
     )
     w.commit()
     out = whoosh_species_suggestions(ix, "east yell rob", min_query_len=3)
-    assert out
     assert out[0] == "Eastern Yellow Robin"
 
 

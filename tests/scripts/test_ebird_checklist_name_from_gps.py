@@ -1,0 +1,122 @@
+"""Offline tests for the standalone GPS checklist-name resolver."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from unittest.mock import Mock
+
+import pytest
+
+_REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_REPO / "scripts"))
+
+import eBirdChecklistNameFromGPS as mod  # noqa: E402
+
+_FIXTURE = _REPO / "tests/fixtures/gps_checklistName_testing.json"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("-35.327454,148.860410", (-35.327454, 148.860410, 6, 6)),
+        ("Place ( -35.5, 149.1250 )", (-35.5, 149.125, 1, 4)),
+        ("149.1250 -35.5", (-35.5, 149.125, 1, 4)),
+    ],
+)
+def test_parse_coords_accepts_supported_formats(
+    text: str, expected: tuple[float, float, int, int]
+) -> None:
+    assert mod.parse_coords_from_text(text) == expected
+
+
+@pytest.mark.parametrize("text", ["", "latitude only: -35.2", "91, 181"])
+def test_parse_coords_rejects_missing_or_out_of_range_values(text: str) -> None:
+    with pytest.raises(ValueError):
+        mod.parse_coords_from_text(text)
+
+
+def test_fetch_geocode_sends_coordinates_and_rejects_api_failure(monkeypatch) -> None:
+    import requests
+
+    response = Mock()
+    response.json.return_value = {"status": "ZERO_RESULTS", "results": []}
+    get = Mock(return_value=response)
+    monkeypatch.setattr(requests, "get", get)
+
+    with pytest.raises(RuntimeError, match="Geocode failed: ZERO_RESULTS"):
+        mod.fetch_geocode(-35.1, 149.2, "secret")
+
+    get.assert_called_once_with(
+        "https://maps.googleapis.com/maps/api/geocode/json",
+        params={"latlng": "-35.1,149.2", "key": "secret"},
+        timeout=mod.GEOCODE_REQUEST_TIMEOUT_SECONDS,
+    )
+
+
+def test_fetch_geocode_wraps_network_failure_without_leaking_url(monkeypatch) -> None:
+    import requests
+
+    get = Mock(side_effect=requests.ConnectionError("boom http://x?key=secret"))
+    monkeypatch.setattr(requests, "get", get)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        mod.fetch_geocode(-35.1, 149.2, "secret")
+
+    # The message shown to users must never contain the API key or request URL.
+    assert "secret" not in str(excinfo.value)
+    assert "ConnectionError" in str(excinfo.value)
+
+
+def test_main_clipboard_path_still_works_with_lazy_pyperclip_import(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    clipboard = Mock()
+    clipboard.paste.return_value = "-35.339578, 148.923133"
+    monkeypatch.setitem(sys.modules, "pyperclip", clipboard)
+    monkeypatch.setattr(sys, "argv", ["eBirdChecklistNameFromGPS.py", "--clipboard"])
+    monkeypatch.setattr(mod, "load_api_key", Mock(return_value="secret"))
+    resolve_location = Mock(return_value="Paddy's River")
+    monkeypatch.setattr(mod, "resolve_location", resolve_location)
+
+    mod.main()
+
+    output = "Paddy's River ( -35.339578, 148.923133 )"
+    assert capsys.readouterr().out.strip() == output
+    clipboard.paste.assert_called_once_with()
+    clipboard.copy.assert_called_once_with(output)
+    resolve_location.assert_called_once_with(
+        -35.339578,
+        148.923133,
+        api_key="secret",
+        debug=False,
+        include_json=False,
+    )
+
+
+def test_embedded_geocode_cases_resolve_to_expected_names() -> None:
+    cases = json.loads(_FIXTURE.read_text(encoding="utf-8"))
+    checked = 0
+
+    for case in cases:
+        if not case.get("expected") or not case.get("geocode_json"):
+            continue
+        actual = mod.resolve_location_from_data(
+            case["geocode_json"], float(case["lat"]), float(case["lng"])
+        )
+        assert actual.casefold() == case["expected"].strip().casefold(), case.get(
+            "name"
+        )
+        checked += 1
+
+    assert cases, "GPS fixture must contain offline cases"
+    assert checked == len(cases), "every GPS fixture case must be complete and asserted"
+
+
+def test_format_location_string_limits_precision_and_trims_zeroes() -> None:
+    assert (
+        mod.format_location_string("Canberra", -35.5000004, 149.125, 1, 3)
+        == "Canberra ( -35.5, 149.125 )"
+    )

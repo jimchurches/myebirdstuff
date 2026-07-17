@@ -12,7 +12,6 @@ import pandas as pd
 
 from explorer.core.checklist_stats_compute import protocol_display_name
 
-
 # Columns required for the explorer to work; missing any of these raises a clear ValueError at load time.
 REQUIRED_COLUMNS = [
     "Date",

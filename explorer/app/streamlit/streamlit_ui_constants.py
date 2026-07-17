@@ -43,9 +43,7 @@ MAP_DATE_FILTER_ALL_LOCATIONS_CAPTION = (
     "Only locations with checklists in this date range are shown on the map."
 )
 # **Species locations** only (two lines).
-MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION = (
-    "Only sightings in this date range are shown on the map and in species search results."
-)
+MAP_DATE_FILTER_SPECIES_SIGHTINGS_CAPTION = "Only sightings in this date range are shown on the map and in species search results."
 MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION = (
     "Lifer and last-seen markers use your all-time first and last records. "
     "These markers appear only when the relevant checklist falls within the selected date range."
@@ -55,6 +53,8 @@ MAP_DATE_FILTER_SPECIES_MARKERS_CAPTION = (
 # Main tab strip (``st.tabs`` order)
 # ---------------------------------------------------------------------------
 
+SOCIAL_CARDS_TAB_LABEL = "Social Cards"
+
 NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Map",
     "Checklist Statistics",
@@ -62,6 +62,7 @@ NOTEBOOK_MAIN_TAB_LABELS: tuple[str, ...] = (
     "Bird Families",
     "Yearly Summary",
     "Country",
+    SOCIAL_CARDS_TAB_LABEL,
     "Maintenance",
     "Settings",
 )
@@ -75,6 +76,8 @@ CHECKLIST_STATS_SPINNER_TEXT = "Doing interesting things with your eBird data"
 # Map-first prep: Leaflet embed before heavy checklist/rankings caches so the map can paint sooner.
 MAP_PREP_SPINNER_TEXT = "Building map…"
 TAB_PREP_SPINNER_TEXT = "Preparing checklist, rankings, and other tabs…"
+# Social Cards skips map prep; classic sidebar copy (one spinner for taxonomy/stats warm-up).
+SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT = CHECKLIST_STATS_SPINNER_TEXT
 
 CHECKLIST_STATS_SPINNER_EMOJIS: tuple[str, ...] = (
     "🐣",
@@ -125,8 +128,21 @@ def explorer_readme_github_url() -> str:
     from explorer.core.repo_git import explorer_readme_github_page_url
 
     return explorer_readme_github_page_url(GITHUB_REPO_URL)
+
+
 INSTAGRAM_PROFILE_URL = "https://www.instagram.com/jimchurches/"
 
 # Optional “Support this project” (Buy Me a Coffee). Override or hide with env ``STREAMLIT_BUYMEACOFFEE_URL``
 # (set to ``""`` in the environment to hide the block when the constant would otherwise show)
 BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/jimchurches"
+
+# ---------------------------------------------------------------------------
+# Maintenance → Location Maintenance → Create location name from GPS (#357)
+# ---------------------------------------------------------------------------
+
+MAINTENANCE_GPS_NAME_EXPANDER_LABEL = "Create location name from GPS"
+MAINTENANCE_GPS_NAME_API_KEY_LABEL = "Google API key"
+MAINTENANCE_GPS_NAME_API_KEY_PLACEHOLDER = "Paste key for this session only"
+MAINTENANCE_GPS_NAME_INPUT_LABEL = "Coordinates"
+MAINTENANCE_GPS_NAME_INPUT_PLACEHOLDER = "-35.339578, 148.923133"
+MAINTENANCE_GPS_NAME_RESOLVE_BUTTON_LABEL = "Resolve name"

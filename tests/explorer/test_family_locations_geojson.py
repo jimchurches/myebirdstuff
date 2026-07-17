@@ -79,17 +79,23 @@ def test_build_family_geojson_pins_and_highlight_framing():
         fit_bounds_highlight_only=True,
         revision_extra="{}",
     )
-    assert rev is not None
-    assert gj is not None
+    assert isinstance(rev, str) and len(rev) == 24
+    assert gj["type"] == "FeatureCollection"
     assert len(gj["features"]) == 2
     assert hl_framed is True
-    assert len(framing) == 1
+    assert framing == [[-34.0, 150.0]]
     hl_feat = next(f for f in gj["features"] if f["properties"]["location_id"] == "L2")
-    assert "family_popup_v1" in hl_feat["properties"]
-    assert hl_feat["properties"]["family_popup_v1"]["v"] == 1
-    assert len(hl_feat["properties"]["family_popup_v1"]["species_lines"]) == 1
+    assert hl_feat["geometry"] == {"type": "Point", "coordinates": [150.0, -34.0]}
+    assert hl_feat["properties"]["lifelist_url"] == "https://ebird.org/lifelist/L2"
+    assert hl_feat["properties"]["family_popup_v1"] == {
+        "v": 1,
+        "species_lines": [{"name": "C", "species_href": ""}],
+    }
     fill, stroke, _sw = family_map_marker_style(pins[1], style=sch)
     assert hl_feat["properties"]["circle_pin"]["fill_hex"] == fill
     assert hl_feat["properties"]["circle_pin"]["stroke_hex"] == stroke
+    assert metrics["marker_count"] == 2
+    assert metrics["popup_build_count"] == 2
+    assert metrics["popup_build_total_ms"] >= 0.0
     # Highlight pin drawn after normal (later feature = on top in Leaflet order).
     assert gj["features"][-1]["properties"]["location_id"] == "L2"

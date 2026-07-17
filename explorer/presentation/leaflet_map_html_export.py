@@ -16,7 +16,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-from explorer.core.basemap_manifest import MAP_BASEMAP_DEFAULT, basemap_tile_layers_for_export
+from explorer.core.basemap_manifest import (
+    MAP_BASEMAP_DEFAULT,
+    basemap_tile_layers_for_export,
+)
 from explorer.presentation.popup_v1_export_html import enrich_geojson_for_export
 
 _STATIC = Path(__file__).resolve().parent / "static"

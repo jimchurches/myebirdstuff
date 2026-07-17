@@ -37,7 +37,9 @@ def test_map_default_view_with_config_shows_all_locations_banner(streamlit_app_u
 
         sidebar = page.locator('[data-testid="stSidebar"]')
         expect(sidebar.get_by_text("Map view")).to_be_visible()
-        expect(sidebar.get_by_text("All locations")).to_be_visible()
+        # Streamlit 1.59+ BaseWeb select: selected option is an ARIA value on the
+        # combobox, not a plain text node — so get_by_text("All locations") flakes.
+        expect(sidebar.get_by_role("combobox", name="Map view")).to_be_visible()
 
         wait_for_pebird_map_markup(
             page,

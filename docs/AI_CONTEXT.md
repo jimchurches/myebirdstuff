@@ -36,6 +36,11 @@ This repository contains more than just the Streamlit app.
   - internal test function
   - separate test file
 - This script is also used by automation workflows
+- **Keep naming in sync with Streamlit:** Maintenance → Location Maintenance → **Create location name from GPS**
+  (`explorer/core/gps_location_name.py`) reuses this script’s parse / resolve / format logic.
+  Do **not** fork ranking or naming rules in the Explorer — change the script, then verify both
+  the script offline fixtures and the adapter tests. Output format remains
+  `Locality ( lat, long )` (Explorer omits clipboard copy only).
 
 ### UI.Vision Macros
 - Browser automation macros for eBird workflows
@@ -43,6 +48,23 @@ This repository contains more than just the Streamlit app.
   - creating/editing checklists
   - applying formatted location names
 - These depend on the GPS script for location naming
+
+---
+
+## Python Style Guide
+
+**[`docs/python-style-guide.md`](python-style-guide.md) is the single source of truth for Python style, readability, naming, comments, docstrings, and related code review expectations in this project.**
+
+Read it before writing or reviewing Python in this repository.
+
+The short version:
+
+- Prefer clear names over abbreviations.
+- Keep functions small and single-purpose.
+- Write comments that explain *why*, not *what*.
+- Use docstrings for all public functions and modules.
+- Do not hardcode magic values — give them names in the right constants file.
+- Do not rewrite working code purely for style compliance.
 
 ---
 
@@ -91,6 +113,8 @@ Preserve cache correctness.
 - Code should be easy to understand later
 - Avoid unnecessary abstraction or optimisation
 
+See **[`docs/python-style-guide.md`](python-style-guide.md)** for concrete guidance on naming, comments, functions, and docstrings.
+
 ---
 
 ### 5.5. Code as if you are being mentored (and graded)
@@ -111,10 +135,7 @@ Expectations (the “marking rubric”):
 - Choose the simplest design that keeps the UI thin and the logic testable.
 - Optimise only when necessary, and do it transparently (measure → change → re-check).
 
-Mindset:
-
-> Write Python the way a highly regarded engineer who loves teaching would want it written:
-> neat, easy to read, efficient where it matters, and easy to follow.
+See **[`docs/python-style-guide.md`](python-style-guide.md)** for the full project standard, including the guiding mindset.
 
 ---
 
@@ -199,16 +220,17 @@ Do not duplicate HTML in UI code — use shared formatters.
 ### Defaults
 
 - **`explorer/data/basemaps.yaml`** — **Map basemaps** (keys, labels, tile URLs); loaded by `explorer/core/basemap_manifest.py`. Regenerate React assets with `python3 scripts/generate_basemap_assets.py`.
-- **`explorer/app/streamlit/defaults.py`** — **Developer tweakables**: map cluster options, pin **size / stroke / opacity**, legend dot sizes, theme hex, map height slider bounds, layout widths, temporary map debug (live zoom). Edit here to change look/behaviour without hunting core modules.
+- **`explorer/app/streamlit/defaults.py`** — **Developer tweakables** you edit for look/behaviour without hunting core modules: map cluster options, pin **size / stroke / opacity**, viewport/framing guards, **map marker colour scheme presets** (`MAP_MARKER_COLOUR_SCHEME_*`), theme hex, layout widths, cache sizes, temporary map debug (live zoom), spinner **theme CSS** cache-key suffix. Also a **re-export façade** for basemap labels/schema map-height bounds and share-summary defaults — those literals are **not** owned here (edit the defining module; section headers in the file label façade imports).
 
-- **Map marker design utility** — separate Streamlit app (not user-facing): `streamlit run explorer/app/streamlit/design_map_app.py`. Previews roles and exports scheme dicts; see [development.md](development.md#map-marker-colour-design-utility-developers).
+- **Map marker design utility** — separate Streamlit app (not user-facing): `streamlit run explorer/app/streamlit/design_map_app.py`. Previews roles and exports scheme dicts into `defaults.py`; dataclass shapes live in `explorer/core/map_marker_scheme_model.py`. See [development.md](development.md#map-marker-colour-design-utility-developers).
 
-- **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner text and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
+- **`explorer/app/streamlit/streamlit_ui_constants.py`** — **Fixed UI content**: tab labels, species-search widget strings, spinner **text** and emoji list, export filename, sidebar footer URLs. Not “tweak colour/size” defaults.
 - **Map HTML export UX** — Shipped one-click sidebar export; alternative two-button design and browser-risk notes: [docs/explorer/map-html-export-ux-alternative.md](explorer/map-html-export-ux-alternative.md) (use if users report export/download failures).
 
-- **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings).
+- **`explorer/core/settings_schema_defaults.py`** — **Persisted YAML settings schema** defaults (tables, rankings bounds, taxonomy locale, maintenance distance, pin **colour** names allowed in settings). Owns `MAP_HEIGHT_PX_{MIN,MAX,DEFAULT}` and basemap default/options used by settings — re-exported from `defaults.py` as façade only.
+- **`explorer/core/share_summary_defaults.py`** — **Share-summary card** colour schemes and layout stat defaults (#157); re-exported from `defaults.py` for a single Streamlit import surface (no duplicate literals in `defaults.py`).
 
-Do not hardcode tunable numbers in UI files; use `defaults.py` for those.
+Do not hardcode tunable numbers in UI files; use `defaults.py` (or the matching `explorer/core/*_defaults.py` module) for those. Prefer clarifying comments/section headers over large file splits unless an issue explicitly moves a block.
 
 ---
 
@@ -262,6 +284,8 @@ Instrumentation added in #179 is part of the developer toolkit and should stay a
 ### GPS Script
 - has its own internal test function
 - also includes standalone test file
+- Explorer Maintenance **Create location name from GPS** must stay aligned with this script’s core naming
+  (thin adapter in `explorer/core/gps_location_name.py` — see Repository Scope above)
 
 Guidelines:
 
@@ -295,7 +319,7 @@ Do not change without discussion:
 - data loading pipeline
 - caching model
 - map rendering structure
-- GPS script behaviour (used by automation)
+- GPS script behaviour (used by automation; also SSOT for Maintenance → Create location name from GPS)
 - UI.Vision macros (external workflow dependencies)
 
 ---

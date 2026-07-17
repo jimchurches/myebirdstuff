@@ -18,13 +18,19 @@ from explorer.app.streamlit.app_constants import (
     LEAFLET_EXPORT_BUILT_CACHE_KEY,
     LEAFLET_EXPORT_RECIPE_KEY,
 )
+from explorer.app.streamlit.app_main_tab_ui import is_social_cards_main_tab
 from explorer.app.streamlit.app_map_ui import (
     place_spinner_emoji_strip,
     sidebar_bottom_slot_end,
     sidebar_bottom_slot_start,
+    sidebar_footer_links,
 )
-from explorer.app.streamlit.app_prep_map_blank_viewport import seed_blank_map_default_viewport_recipe
-from explorer.app.streamlit.app_prep_map_leaflet_caches import apply_dataset_signature_for_map_caches
+from explorer.app.streamlit.app_prep_map_blank_viewport import (
+    seed_blank_map_default_viewport_recipe,
+)
+from explorer.app.streamlit.app_prep_map_leaflet_caches import (
+    apply_dataset_signature_for_map_caches,
+)
 from explorer.app.streamlit.app_prep_map_leaflet_modes import (
     prep_family_leaflet_mode,
     prep_standard_map_leaflet_modes,
@@ -36,8 +42,12 @@ from explorer.app.streamlit.app_prep_map_map_tab import (
 )
 from explorer.app.streamlit.app_prep_map_tab_prep import run_tab_prep_spinner_and_sync
 from explorer.app.streamlit.app_prep_map_types import LeafletMapPrepBundle
-from explorer.app.streamlit.streamlit_ui_constants import MAP_PREP_SPINNER_TEXT
 from explorer.app.streamlit.perf_instrumentation import perf_span
+from explorer.app.streamlit.streamlit_ui_constants import (
+    MAP_PREP_SPINNER_TEXT,
+    SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT,
+    TAB_PREP_SPINNER_TEXT,
+)
 from explorer.components.all_locations_map import (
     render_all_locations_map_component,  # noqa: F401 — re-export for integration tests
 )
@@ -76,11 +86,40 @@ def render_prep_spinner_and_map_tab(
     mark_last_seen: bool,
     species_url_fn: Callable[..., str],
 ) -> None:
-    """Run map prep first (spinner), then heavy tab caches + session sync (second spinner)."""
+    """Run map prep first (spinner), then heavy tab caches + session sync (second spinner).
+
+    On the Social Cards tab, skip Leaflet map prep (map is not visible) and only warm
+    checklist/rankings caches — sidebar layout/format/period changes then avoid ~1s+ of
+    map work (those widgets still full-rerun the app on current Streamlit).
+    """
+    if is_social_cards_main_tab():
+        # Single spinner only — do not nest ``run_tab_prep_spinner_and_sync``'s spinner.
+        # Emoji strip sits outside the spinner so Map ↔ Social switches share one keyed slot.
+        with st.sidebar:
+            sidebar_bottom_slot_start()
+            _spinner_emoji_placeholder = place_spinner_emoji_strip()
+            with st.spinner(SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT):
+                with perf_span("prep.data_signature"):
+                    apply_dataset_signature_for_map_caches(
+                        df_full, provenance, data_abs_path=data_abs_path
+                    )
+                run_tab_prep_spinner_and_sync(
+                    work_df=work_df,
+                    df_full=df_full,
+                    tax_locale_effective=tax_locale_effective,
+                    tab_prep_spinner_text=SOCIAL_CARDS_TAB_PREP_SPINNER_TEXT,
+                    show_spinner=False,
+                )
+            _spinner_emoji_placeholder.empty()
+            sidebar_footer_links(leading_divider=True)
+            sidebar_bottom_slot_end()
+        return
+
     with st.sidebar:
         sidebar_bottom_slot_start()
+        # Emoji outside both sequential spinners so map→tab-prep does not remount a second strip.
+        _spinner_emoji_placeholder = place_spinner_emoji_strip()
         with st.spinner(MAP_PREP_SPINNER_TEXT):
-            _spinner_emoji_placeholder = place_spinner_emoji_strip()
             with perf_span("prep.data_signature"):
                 apply_dataset_signature_for_map_caches(
                     df_full, provenance, data_abs_path=data_abs_path
@@ -160,6 +199,7 @@ def render_prep_spinner_and_map_tab(
             work_df=work_df,
             df_full=df_full,
             tax_locale_effective=tax_locale_effective,
+            tab_prep_spinner_text=TAB_PREP_SPINNER_TEXT,
         )
 
         _spinner_emoji_placeholder.empty()

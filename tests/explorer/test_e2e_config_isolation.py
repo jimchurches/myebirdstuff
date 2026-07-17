@@ -68,5 +68,8 @@ def test_build_explorer_candidate_dirs_honours_explorer_config_dir(tmp_path, mon
     monkeypatch.setenv(EXPLORER_CONFIG_DIR_ENV, str(isolated_config))
     folders, sources = build_explorer_candidate_dirs(repo_root=str(repo), cwd=str(tmp_path / "cwd"))
     path, folder, src = resolve_ebird_data_file("MyEBirdData.csv", folders, sources)
+    assert folders == [os.path.normpath(str(data_dir)), os.path.normpath(str(tmp_path / "cwd"))]
+    assert sources == ["config", "cwd"]
+    assert os.path.normpath(path) == os.path.normpath(str(data_dir / "MyEBirdData.csv"))
     assert os.path.normpath(folder) == os.path.normpath(str(data_dir))
     assert src == "config"

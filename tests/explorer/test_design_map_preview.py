@@ -158,15 +158,23 @@ def test_build_design_preview_geojson_all_locations_includes_seq_cluster_demo() 
     clustered = [f for f in gj["features"] if not f["properties"].get("skip_cluster")]
     standalone = [f for f in gj["features"] if f["properties"].get("skip_cluster")]
     assert len(clustered) == 7 + 45 + 120
-    assert len(standalone) > 0
+    role_rows = sum(1 for row in PREVIEW_MARKER_ROWS if MAP_SCOPE_ALL_LOCATIONS in row.map_scopes)
+    assert len(standalone) == role_rows * DESIGN_PREVIEW_MARKER_COPY_COUNT
+    assert {feature["type"] for feature in gj["features"]} == {"Feature"}
+    assert {feature["geometry"]["type"] for feature in gj["features"]} == {"Point"}
+    location_ids = [feature["properties"]["location_id"] for feature in gj["features"]]
+    assert len(location_ids) == len(set(location_ids))
+    assert all(feature["properties"]["name"].startswith("SEQ cluster demo") for feature in clustered)
 
 
 def test_build_design_preview_leaflet_bundle_revision_changes_with_nonce() -> None:
     cfg = scheme_seed_config(2, preview_scope=MAP_SCOPE_FAMILY_LOCATIONS)
     a = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=1)
+    same = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=1)
     b = build_design_preview_leaflet_bundle(cfg, position_seed=1, render_nonce=2)
+    assert a["revision"] == same["revision"]
+    assert a["geojson"] == same["geojson"]
     assert a["revision"] != b["revision"]
-    assert len(a["legend_html"]) > 20
     assert "pebird-map-legend" in a["legend_html"]
     assert a["viewport"]["mode"] == "center_zoom"
     assert a["cluster_options"]["enabled"] is False

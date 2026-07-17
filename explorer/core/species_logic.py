@@ -1,17 +1,17 @@
 """
 Species-related pure logic for Personal eBird Explorer.
 
-Functions for species filtering, countable-species normalisation, and
-base-species extraction. All functions are pure (explicit inputs/outputs,
-no widget or UI state dependencies).
+Functions for species filtering, countable-species normalisation,
+base-species extraction, and parent common-name roll-up. All functions are pure
+(explicit inputs/outputs, no widget or UI state dependencies).
 """
 
 import pandas as pd
 
-
 # ---------------------------------------------------------------------------
 # Shared building blocks
 # ---------------------------------------------------------------------------
+
 
 def base_species_name(sci_name):
     """Extract base species (genus + species, lowercased) from a scientific name.
@@ -66,6 +66,42 @@ def is_countable(sci_name, common_name):
 # Higher-level functions
 # ---------------------------------------------------------------------------
 
+
+def parent_common_name(common_name: object) -> str:
+    """Return species-level common name by stripping a trailing parenthetical qualifier.
+
+    Matches Bird Families / rankings subspecies grouping: e.g.
+    ``Australian Boobook (Australian)`` → ``Australian Boobook``.
+    """
+    s = (str(common_name) if not pd.isna(common_name) else "").strip()
+    if not s:
+        return ""
+    idx = s.find(" (")
+    return s[:idx] if idx != -1 else s
+
+
+def most_frequent_parent_common(common_names: pd.Series) -> str:
+    """Return the most frequent parent-species common name in a series.
+
+    Each value is stripped to its parent via :func:`parent_common_name` (so
+    subspecies labels roll up), then empty strings are dropped. Used by
+    rankings aggregations and Interesting Insights display names.
+
+    Args:
+        common_names: Raw or parent-level common name values.
+
+    Returns:
+        The mode parent-level name, or ``""`` when the series is empty or
+        every value strips to empty.
+    """
+    parents = common_names.map(parent_common_name)
+    parents = parents.astype(str).str.strip()
+    parents = parents[parents != ""]
+    if parents.empty:
+        return ""
+    return str(parents.value_counts().index[0])
+
+
 def base_species_for_lifer(sci_name):
     """Extract base species (genus + species, lowercased) from a scientific name.
 
@@ -85,13 +121,27 @@ def countable_species_vectorized(df):
     common = df["Common Name"].fillna("").astype(str).str.strip()
     if sci.empty:
         return pd.Series(dtype="object")
-    spuh = sci.str.contains(r" sp\.", case=False, na=False) | sci.str.lower().str.endswith(" sp")
-    hybrid = sci.str.contains(" x ", na=False) | common.str.lower().str.contains(r"\(hybrid\)", na=False)
-    domestic = common.str.contains("Domestic", na=False) | common.str.contains(r"\(Domestic type\)", na=False)
+    spuh = sci.str.contains(
+        r" sp\.", case=False, na=False
+    ) | sci.str.lower().str.endswith(" sp")
+    hybrid = sci.str.contains(" x ", na=False) | common.str.lower().str.contains(
+        r"\(hybrid\)", na=False
+    )
+    domestic = common.str.contains("Domestic", na=False) | common.str.contains(
+        r"\(Domestic type\)", na=False
+    )
     parts = sci.str.split(expand=True)
     has_two_parts = 1 in parts.columns
-    slash = parts[1].str.contains("/", na=False) if has_two_parts else pd.Series(False, index=df.index)
-    too_short = (parts[0].isna() | parts[1].isna()) if has_two_parts else pd.Series(True, index=df.index)
+    slash = (
+        parts[1].str.contains("/", na=False)
+        if has_two_parts
+        else pd.Series(False, index=df.index)
+    )
+    too_short = (
+        (parts[0].isna() | parts[1].isna())
+        if has_two_parts
+        else pd.Series(True, index=df.index)
+    )
     exclude = spuh | hybrid | domestic | slash | too_short
     if has_two_parts:
         base = parts[0].str.lower() + " " + parts[1].str.lower()
@@ -111,16 +161,20 @@ def filter_species(df, base_species):
     base_species = base_species.lower().strip()
     if "/" in base_species:
         return df[df["Scientific Name"].str.lower() == base_species]
-    filtered_df = df[df["Scientific Name"].fillna("").str.lower().str.startswith(base_species)]
+    filtered_df = df[
+        df["Scientific Name"].fillna("").str.lower().str.startswith(base_species)
+    ]
 
     def is_species_level_slash(sci_name):
         sn = (sci_name or "").lower()
         if "/" not in sn:
             return False
-        rest = sn[len(base_species):].lstrip()
+        rest = sn[len(base_species) :].lstrip()
         return rest.startswith("/")
 
-    mask = filtered_df["Scientific Name"].fillna("").apply(
-        lambda s: not is_species_level_slash(s)
+    mask = (
+        filtered_df["Scientific Name"]
+        .fillna("")
+        .apply(lambda s: not is_species_level_slash(s))
     )
     return filtered_df[mask]

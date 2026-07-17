@@ -8,6 +8,60 @@ For AI-assisted coding, see **[AI_CONTEXT.md](AI_CONTEXT.md)** and follow those 
 
 ---
 
+# Cursor workflow commands
+
+Slash commands in `.cursor/commands/` automate git and GitHub workflow. Key commands:
+
+| Command | Purpose |
+|---------|---------|
+| `/start-issue-work` | Read issue, resolve base branch, create dev branch |
+| `/create-dev-branch` | Create issue branch from resolved base (default `beta-next`) |
+| `/commit-work` | Stage, lint, commit with repo message format |
+| `/finish-issue-work` | Post-implementation: quality gate → push → open PR |
+| `/open-pr` | Push and open PR with correct **PR target** |
+| `/merge-pr` | Merge feature branch into target integration branch |
+| `/pr-review` | Pre-merge review: Sentinel (when needed) + Nit-Fixer + verdict |
+| `/nit-fixer` | Standalone aggressive nit pass on PR-touched files |
+| `/code-review` | Large-change review; Nit-Fixer as final step after checklist |
+
+**Base branch resolution:** Commands share logic in [`.cursor/commands/base-branch-resolution.md`](../.cursor/commands/base-branch-resolution.md). When a GitHub issue includes `## Base branch` / `## PR target`, commands read the issue via `gh issue view` instead of defaulting to `beta-next`. Historical Social Cards feature-line workflow (base `feat/social-cards`) is archived on [#157](https://github.com/jimchurches/myebirdstuff/issues/157#issuecomment-4964282021).
+
+### Nit-Fixer vs CI vs Sentinel
+
+Manual, command-driven pre-merge polish ([#299](https://github.com/jimchurches/myebirdstuff/issues/299)) — not a PR-triggered bot.
+
+| Actor | Role |
+|-------|------|
+| **CI** | Authoritative pass/fail gate (`tests.yml`, ruff, hygiene) |
+| **Test Integrity Sentinel** (`/pr-review` Step 4) | Test honesty on changed tests and behaviour |
+| **Nit-Fixer** (`/nit-fixer`, `/pr-review` Step 4b, `/code-review` final step) | See-it-fix-it mechanical and readability fixes in PR-touched files; leaves changes unstaged for `/commit-work`; never edits test files |
+
+Full guardrails: [`.cursor/commands/nit-fixer.md`](../.cursor/commands/nit-fixer.md).
+
+**Trial after merge:** run `/nit-fixer` or `/pr-review` on 2–3 real PRs; tune prompt caps if needed ([#299](https://github.com/jimchurches/myebirdstuff/issues/299)).
+
+### Nit-Fixer vs CI vs Sentinel
+
+Manual, command-driven pre-merge polish ([#299](https://github.com/jimchurches/myebirdstuff/issues/299)) — not a PR-triggered bot.
+
+| Actor | Role |
+|-------|------|
+| **CI** | Authoritative pass/fail gate (`tests.yml`, ruff, hygiene) |
+| **Test Integrity Sentinel** (`/pr-review` Step 4) | Test honesty on changed tests and behaviour |
+| **Nit-Fixer** (`/nit-fixer`, `/pr-review` Step 4b, `/code-review` final step) | See-it-fix-it mechanical and readability fixes in PR-touched files; leaves changes unstaged for `/commit-work`; never edits test files |
+
+Full guardrails: [`.cursor/commands/nit-fixer.md`](../.cursor/commands/nit-fixer.md).
+
+**Trial after merge:** run `/nit-fixer` or `/pr-review` on 2–3 real PRs; tune prompt caps if needed ([#299](https://github.com/jimchurches/myebirdstuff/issues/299)).
+
+## Cursor project rules
+
+**Rules** in [`.cursor/rules/`](../.cursor/rules/) are persistent instructions injected automatically into Agent/Chat (by file `globs` or `alwaysApply`). They complement commands above: rules = instincts, commands = workflows.
+
+See **[cursor-rules.md](cursor-rules.md)** for the v1 rule set, format, and when to add more.
+
+---
+
 # Overview
 
 This repository contains:
@@ -36,6 +90,45 @@ We **do not** bump the documented interpreter just to stay on the newest Python 
 **When upgrading** (for example to 3.13 or later) makes sense: a dependency requires it, you need a language or standard-library feature not available on 3.12, or you have time to run the full test suite and verify Streamlit on a branch before merging.
 
 Patch releases within the same minor line (for example 3.12.3 vs 3.12.7) are fine and do not require doc changes.
+
+---
+
+## Dependabot auto-approve
+
+Low-risk Dependabot PRs are approved (and auto-merged when enabled) by GitHub Actions — not by Cursor or other AI tools. Workflow: [`.github/workflows/dependabot-auto-approve.yml`](../.github/workflows/dependabot-auto-approve.yml). Dependabot config: [`.github/dependabot.yml`](../.github/dependabot.yml).
+
+### What is auto-approved
+
+All of the following must hold:
+
+1. **Author** is `dependabot[bot]`.
+2. **Update type** is patch or minor (`version-update:semver-patch` or `version-update:semver-minor` via `dependabot/fetch-metadata`). Grouped PRs use the highest semver change in the group.
+3. **Changed files** are only dependency-related paths:
+   - `requirements.txt` / `requirements-*.txt`
+   - `pyproject.toml`, `uv.lock`, `poetry.lock`
+   - `package.json` / `package-lock.json` (any directory)
+   - `.github/workflows/*.yml` / `.yaml` (GitHub Actions version pins)
+4. **Python CI** (`.github/workflows/tests.yml`) has completed **successfully** for the PR head SHA.
+
+When eligible, the workflow approves as `github-actions[bot]` and enables **squash auto-merge** (merge still waits on branch protection / required checks).
+
+### What stays manual
+
+- Major version updates
+- Any PR that touches files outside the allowlist (including application code)
+- Failed or incomplete Python CI
+- Non-Dependabot pull requests
+- Anything that needs new secrets or broad new permissions (out of scope for this gate)
+
+**Note:** AI summarisation of non-auto-approved Dependabot PRs is a possible later enhancement; it is **not** part of the approval decision path.
+
+### Permissions and safety notes
+
+- The workflow uses `pull_request_target` so it can write reviews / enable auto-merge (Dependabot-triggered `pull_request` workflows get a read-only `GITHUB_TOKEN`).
+- Explicit permissions: `contents: write`, `pull-requests: write`, `actions: read`.
+- It never checks out or executes code from the PR head; it only inspects metadata, the PR file list, and Python CI status.
+- Repository **Settings → General → Pull Requests → Allow auto-merge** must be enabled for the auto-merge step to succeed. Approval still applies if auto-merge cannot be enabled.
+- If branch protection requires reviews from specific users/teams (or "approval of the most recent reviewable push"), a `GITHUB_TOKEN` approval may not satisfy those rules — use a fine-grained PAT or GitHub App token only if you deliberately change the workflow for that.
 
 ---
 
@@ -150,8 +243,11 @@ Streamlit UI
   - internal test function
   - standalone test file
 - Used by UI.Vision macros
+- Streamlit Maintenance → **Create location name from GPS** reuses this script’s naming helpers
+  (`explorer/core/gps_location_name.py`) — keep core calculation / format logic aligned
 
 ⚠️ Changes here affect automation workflows
+⚠️ Do not fork naming rules in the Explorer; change the script and verify both paths
 
 ---
 

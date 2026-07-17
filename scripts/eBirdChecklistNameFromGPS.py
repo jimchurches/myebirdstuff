@@ -76,7 +76,8 @@ ACT (Australian Capital Territory)
   best-matching result, then uses locality (suburb) if present else neighborhood
   (district). Plus_code-only results are deprioritised so that open land (e.g. a
   reserve in Belconnen) yields the district (Belconnen) rather than a grid cell
-  labelled with a neighbouring suburb.
+  labelled with a neighbouring suburb. When adjacent rural district bounds overlap,
+  the more interior containing district wins (e.g. Paddys River over Coree).
 
 Jurisdictions
 -------------
@@ -100,13 +101,11 @@ import json
 import re
 import sys
 from datetime import date
+from typing import List, Optional, Tuple
 
-# External packages: pip install requests pyperclip
-import requests
-import pyperclip
-
-from typing import Tuple, List, Optional
-
+# External packages: pip install requests pyperclip.
+# Imported lazily so explorer can reuse naming helpers without always needing
+# clipboard support (pyperclip) at import time.
 
 # ------------------------------------------------------------
 # API key loader
@@ -168,7 +167,9 @@ def parse_coords_from_text(text: str) -> Tuple[float, float, int, int]:
     # Find ints or decimals with optional sign
     nums = re.findall(r"[+-]?\d{1,3}(?:\.\d+)?", text)
     if len(nums) < 2:
-        raise ValueError(f"Could not find two numbers to use as coordinates in: {text!r}")
+        raise ValueError(
+            f"Could not find two numbers to use as coordinates in: {text!r}"
+        )
 
     lat_str, lng_str = nums[0], nums[1]
 
@@ -186,10 +187,11 @@ def parse_coords_from_text(text: str) -> Tuple[float, float, int, int]:
         lat_dp, lng_dp = lng_dp, lat_dp
 
     if not (-90 <= lat <= 90 and -180 <= lng <= 180):
-        raise ValueError(f"Extracted values out of range: lat={lat}, lng={lng} from {text!r}")
+        raise ValueError(
+            f"Extracted values out of range: lat={lat}, lng={lng} from {text!r}"
+        )
 
     return lat, lng, lat_dp, lng_dp
-
 
 
 # ------------------------------------------------------------
@@ -197,14 +199,38 @@ def parse_coords_from_text(text: str) -> Tuple[float, float, int, int]:
 # ------------------------------------------------------------
 
 
-def fetch_geocode(lat: float, lng: float, api_key: str, debug: bool = False, include_json: bool = False) -> dict:
+GEOCODE_REQUEST_TIMEOUT_SECONDS = 15
+
+
+def fetch_geocode(
+    lat: float,
+    lng: float,
+    api_key: str,
+    debug: bool = False,
+    include_json: bool = False,
+) -> dict:
+    import requests
+
     url = "https://maps.googleapis.com/maps/api/geocode/json"
     params = {
         "latlng": f"{lat},{lng}",
         "key": api_key,
     }
-    response = requests.get(url, params=params)
-    data = response.json()
+    # Wrap network/JSON failures in RuntimeError with a safe message: raw
+    # requests exceptions can embed the full request URL, which contains the
+    # API key, and callers (CLI and Streamlit Maintenance) display the message.
+    try:
+        response = requests.get(
+            url, params=params, timeout=GEOCODE_REQUEST_TIMEOUT_SECONDS
+        )
+        data = response.json()
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            f"Geocode request failed ({type(exc).__name__}). "
+            "Check your network connection and try again."
+        ) from exc
+    except ValueError as exc:
+        raise RuntimeError("Geocode response was not valid JSON.") from exc
 
     if debug and include_json:
         print(json.dumps(data, indent=2))
@@ -218,6 +244,7 @@ def fetch_geocode(lat: float, lng: float, api_key: str, debug: bool = False, inc
 # ------------------------------------------------------------
 # Geometry helpers (for ranking which result best matches the point)
 # ------------------------------------------------------------
+
 
 def _bounds_contain_point(bounds: dict, lat: float, lng: float) -> bool:
     """True if (lat, lng) is inside bounds (northeast/southwest)."""
@@ -249,6 +276,33 @@ def _bounds_area(bounds: dict) -> float:
     return lat_span * lng_span
 
 
+def _bounds_interior_distance(bounds: dict, lat: float, lng: float) -> float:
+    """
+    Minimum distance (degrees) from (lat, lng) to the nearest edge of bounds.
+
+    Used in ACT when Google neighborhood bounding boxes for adjacent rural
+    districts overlap: prefer the district where the point is more interior
+    (e.g. Paddys River over Coree near their shared border).
+    """
+    if not bounds:
+        return 0.0
+    ne = bounds.get("northeast", {})
+    sw = bounds.get("southwest", {})
+    try:
+        ne_lat = float(ne.get("lat"))
+        sw_lat = float(sw.get("lat"))
+        ne_lng = float(ne.get("lng"))
+        sw_lng = float(sw.get("lng"))
+    except (TypeError, ValueError):
+        return 0.0
+    # ACT latitudes are negative; northeast.lat is the northern edge.
+    north = max(ne_lat, sw_lat)
+    south = min(ne_lat, sw_lat)
+    east = max(ne_lng, sw_lng)
+    west = min(ne_lng, sw_lng)
+    return min(north - lat, lat - south, east - lng, lng - west)
+
+
 def _distance_sq_to_result_location(result: dict, lat: float, lng: float) -> float:
     """Squared distance (degrees²) from (lat, lng) to the result's geometry.location. For ACT tie-break."""
     geom = result.get("geometry", {})
@@ -268,6 +322,25 @@ _LOCATION_TYPE_ORDER = {
     "GEOMETRIC_CENTER": 2,
     "APPROXIMATE": 1,
 }
+
+# ACT results with bounds smaller than this are treated as suburb-sized localities.
+_ACT_SUBURB_AREA_THRESHOLD = 0.01
+
+# Allowlist of ACT districts that must beat a postcode-supplied locality. Rural
+# postcodes (2611 etc.) attach a neighbouring locality (e.g. Coree, Uriarra
+# Village) to points that are really inside one of these districts.
+# To extend: reproduce with `--debug` (shows the ranking), confirm the containing
+# district is being outranked by a postal_code locality, add the district name
+# here, then re-run the embedded test file
+# (`--testfile tests/fixtures/gps_checklistName_testing.json`).
+_ACT_DISTRICTS_OVER_POSTCODE_LOCALITY = (
+    "Canberra Central",
+    "Weston Creek",
+    "Cotter River",
+    "Belconnen",
+    "Stromlo",
+    "Paddys River",
+)
 
 
 def _result_has_name_component(result: dict) -> bool:
@@ -361,18 +434,24 @@ def _result_sort_key(
         plus_only = _result_is_plus_code_only(result)
         dist_sq = _distance_sq_to_result_location(result, lat, lng)
         result_types = result.get("types", [])
-        is_specific_address = "street_address" in result_types or "premise" in result_types
+        is_specific_address = (
+            "street_address" in result_types or "premise" in result_types
+        )
         has_locality = _result_has_locality(result)
         has_neighborhood_only = _result_has_neighborhood_only(result)
         locality_name = _result_locality_name(result)
         neighborhood_names = act_containing_neighborhood_names or []
         # Locality is "wrong" when from plus_code, route, or establishment/POI that's across the border;
         # also street_address with very small viewport (single building) when point is in another district.
-        is_establishment_or_poi = "establishment" in result_types or "point_of_interest" in result_types
+        is_establishment_or_poi = (
+            "establishment" in result_types or "point_of_interest" in result_types
+        )
         route_result = "route" in result_types
         small_street = is_specific_address and area < 0.0001  # single-building viewport
         locality_wrong_for_district = (
-            has_locality and act_has_containing_neighborhood and locality_name is not None
+            has_locality
+            and act_has_containing_neighborhood
+            and locality_name is not None
             and not any(locality_name in nn for nn in neighborhood_names)
             and (plus_only or is_establishment_or_poi or route_result or small_street)
         )
@@ -383,21 +462,26 @@ def _result_sort_key(
             if dist_sq >= 1e-10:
                 plus_penalty = 1
             elif act_has_containing_neighborhood and locality_name is not None:
-                locality_in_district = any(locality_name in nn for nn in neighborhood_names)
-                district_is_creek = any(nn == locality_name + " Creek" for nn in neighborhood_names)
+                locality_in_district = any(
+                    locality_name in nn for nn in neighborhood_names
+                )
+                district_is_creek = any(
+                    nn == locality_name + " Creek" for nn in neighborhood_names
+                )
                 if not locality_in_district or district_is_creek:
                     plus_penalty = 1
-        ACT_SUBURB_AREA_THRESHOLD = 0.01
         suburb_sized_locality = (
-            has_locality and area < ACT_SUBURB_AREA_THRESHOLD and "postal_code" not in result_types
+            has_locality
+            and area < _ACT_SUBURB_AREA_THRESHOLD
+            and "postal_code" not in result_types
         )
         # Postal_code results can still supply a valid locality (e.g. Harman in 2600); prefer it over
-        # neighborhood unless a containing district we want should win (list) or the neighborhood is
-        # more specific (smaller area), e.g. Jerrabomberra over Harman when point is in Jerrabomberra.
-        ACT_DISTRICTS_OVER_POSTCODE_LOCALITY = ("Canberra Central", "Weston Creek", "Cotter River", "Belconnen", "Stromlo")
+        # neighborhood unless a containing district we want should win (allowlist above) or the
+        # neighborhood is more specific (smaller area), e.g. Jerrabomberra over Harman when point
+        # is in Jerrabomberra.
         postcode_localities = result.get("postcode_localities") or []
-        postcode_preferred_over_district = (
-            act_has_containing_neighborhood and any(nn in ACT_DISTRICTS_OVER_POSTCODE_LOCALITY for nn in neighborhood_names)
+        postcode_preferred_over_district = act_has_containing_neighborhood and any(
+            nn in _ACT_DISTRICTS_OVER_POSTCODE_LOCALITY for nn in neighborhood_names
         )
         neighborhood_more_specific_than_postcode = (
             act_min_neighborhood_area is not None and area > act_min_neighborhood_area
@@ -405,23 +489,38 @@ def _result_sort_key(
         # Prefer neighborhood over postcode only when some result had wrong locality (route/establishment/etc.);
         # otherwise keep preferring postcode locality (e.g. Harman over Jerrabomberra when point is in Harman).
         prefer_neighborhood_over_postcode = (
-            act_has_containing_neighborhood and neighborhood_more_specific_than_postcode and act_any_wrong_locality_result
+            act_has_containing_neighborhood
+            and neighborhood_more_specific_than_postcode
+            and act_any_wrong_locality_result
         )
         valid_postcode_locality = (
-            has_locality and "postal_code" in result_types and locality_name in postcode_localities
+            has_locality
+            and "postal_code" in result_types
+            and locality_name in postcode_localities
             and not postcode_preferred_over_district
             and not prefer_neighborhood_over_postcode
         )
-        is_specific_effective = is_specific_address or (plus_only and dist_sq < 1e-10 and act_has_containing_real_suburb)
+        is_specific_effective = is_specific_address or (
+            plus_only and dist_sq < 1e-10 and act_has_containing_real_suburb
+        )
+        # Overlapping rural district bounds: prefer the district where the point is more interior.
+        interior = (
+            _bounds_interior_distance(bounds, lat, lng) if contains and bounds else 0.0
+        )
         return (
             0 if has_name else 1,
             0 if contains else 1,
-            1 if locality_wrong_for_district else 0,  # prefer district over wrong locality (34, 42, 43)
+            1
+            if locality_wrong_for_district
+            else 0,  # prefer district over wrong locality (34, 42, 43)
             plus_penalty,
             0 if is_specific_effective else 1,
             0 if suburb_sized_locality else 1,  # suburb first
-            0 if valid_postcode_locality else 1,  # then postcode locality (e.g. Harman) over district
-            0 if has_neighborhood_only else 1,   # then district (neighborhood-only)
+            0
+            if valid_postcode_locality
+            else 1,  # then postcode locality (e.g. Harman) over district
+            0 if has_neighborhood_only else 1,  # then district (neighborhood-only)
+            -interior,
             dist_sq,
             area,
             -type_rank,
@@ -432,7 +531,13 @@ def _result_sort_key(
     if country_code and country_code.upper() == "ID":
         has_admin4 = _result_has_component_type(result, "administrative_area_level_4")
         has_any_name = has_name or has_admin4
-        return (0 if has_any_name else 1, 0 if has_admin4 else 1, 0 if contains else 1, area, -type_rank)
+        return (
+            0 if has_any_name else 1,
+            0 if has_admin4 else 1,
+            0 if contains else 1,
+            area,
+            -type_rank,
+        )
 
     # India (IN): use simple key (no route/locality preference) so plus_code/locality wins over route at borders.
     if country_code and country_code.upper() == "IN":
@@ -449,7 +554,13 @@ def _result_sort_key(
             or _result_has_component_type(result, "neighborhood")
         )
         has_any_name = has_name or has_es_preferred
-        return (0 if has_any_name else 1, 0 if has_es_preferred else 1, 0 if contains else 1, area, -type_rank)
+        return (
+            0 if has_any_name else 1,
+            0 if has_es_preferred else 1,
+            0 if contains else 1,
+            area,
+            -type_rank,
+        )
 
     # Default (Australia etc.): always deprioritize route; prefer locality/admin over road data.
     # Route results carry locality names attached to roads (e.g. Fraser Range on Eyre Hwy); we prefer
@@ -485,7 +596,12 @@ def _is_valid_display_name(name: str) -> bool:
 
 # ------------------------------------------------------------
 # Naming logic
+#
+# SSOT for eBird-style locality names. Streamlit Maintenance → Create location name from GPS
+# reuses these helpers via explorer/core/gps_location_name.py — do not fork the
+# ranking or format rules there. See docs/AI_CONTEXT.md (GPS Location Script).
 # ------------------------------------------------------------
+
 
 def _get_name_from_result_act(result: dict) -> Optional[str]:
     """
@@ -556,7 +672,9 @@ def _detect_country_code(data: dict) -> Optional[str]:
     return None
 
 
-def _get_name_from_result_general(result: dict, country_code: Optional[str] = None) -> Optional[str]:
+def _get_name_from_result_general(
+    result: dict, country_code: Optional[str] = None
+) -> Optional[str]:
     """
     Extract best name by type priority. Uses jurisdiction override when provided
     (e.g. Spain → admin3 first, Indonesia → admin4 first), else default order.
@@ -575,7 +693,9 @@ def _get_name_from_result_general(result: dict, country_code: Optional[str] = No
     return None
 
 
-def _result_debug_summary(result: dict, in_act: bool, country_code: Optional[str]) -> str:
+def _result_debug_summary(
+    result: dict, in_act: bool, country_code: Optional[str]
+) -> str:
     """One-line summary of result for debug: types and name we'd extract."""
     parts = []
     types = result.get("types", [])
@@ -607,11 +727,20 @@ def _print_debug_ranking(
     for i, r in enumerate(sorted_results[:20], 1):
         key = sort_key_fn(r)
         summary = _result_debug_summary(r, in_act, country_code)
-        name = _get_name_from_result_act(r) if (in_act and _is_act_result(r)) else _get_name_from_result_general(r, country_code=country_code)
-        print(f"  {i:2}. {name or '(no name)'}  key={key}  [{summary}]", file=sys.stderr)
+        name = (
+            _get_name_from_result_act(r)
+            if (in_act and _is_act_result(r))
+            else _get_name_from_result_general(r, country_code=country_code)
+        )
+        print(
+            f"  {i:2}. {name or '(no name)'}  key={key}  [{summary}]", file=sys.stderr
+        )
     print(f"Chosen: {chosen_name or 'Unknown'}", file=sys.stderr)
     if in_act:
-        print("(ACT mode: first result with a name from ACT candidates, or fallback to any result)", file=sys.stderr)
+        print(
+            "(ACT mode: first result with a name from ACT candidates, or fallback to any result)",
+            file=sys.stderr,
+        )
     print("", file=sys.stderr)
 
 
@@ -695,7 +824,11 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
                 continue
             has_loc = _result_has_locality(r)
             loc_name = _result_locality_name(r)
-            if not has_loc or loc_name is None or any(loc_name in nn for nn in neighborhood_names):
+            if (
+                not has_loc
+                or loc_name is None
+                or any(loc_name in nn for nn in neighborhood_names)
+            ):
                 continue
             t = r.get("types", [])
             is_poi = "establishment" in t or "point_of_interest" in t
@@ -753,9 +886,16 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
 
     if debug:
         _print_debug_ranking(
-            sorted_results, lat, lng, in_act, country_code,
-            act_has_containing_neighborhood, act_containing_neighborhood_names, act_has_containing_real_suburb,
-            sort_key_fn, chosen_name,
+            sorted_results,
+            lat,
+            lng,
+            in_act,
+            country_code,
+            act_has_containing_neighborhood,
+            act_containing_neighborhood_names,
+            act_has_containing_real_suburb,
+            sort_key_fn,
+            chosen_name,
         )
 
     if chosen_name is not None:
@@ -763,12 +903,20 @@ def extract_best_name(data: dict, lat: float, lng: float, debug: bool = False) -
     return "Unknown"
 
 
-def resolve_location(lat: float, lng: float, api_key: str, debug: bool = False, include_json: bool = False) -> str:
+def resolve_location(
+    lat: float,
+    lng: float,
+    api_key: str,
+    debug: bool = False,
+    include_json: bool = False,
+) -> str:
     data = fetch_geocode(lat, lng, api_key, debug=debug, include_json=include_json)
     return extract_best_name(data, lat, lng, debug)
 
 
-def resolve_location_from_data(data: dict, lat: float, lng: float, debug: bool = False) -> str:
+def resolve_location_from_data(
+    data: dict, lat: float, lng: float, debug: bool = False
+) -> str:
     """
     Resolve location using already-fetched geocode JSON.
     Used by testfile mode to avoid live API calls.
@@ -782,11 +930,7 @@ def resolve_location_from_data(data: dict, lat: float, lng: float, debug: bool =
 
 
 def format_location_string(
-    name: str,
-    lat: float,
-    lng: float,
-    lat_dp: int,
-    lng_dp: int
+    name: str, lat: float, lng: float, lat_dp: int, lng_dp: int
 ) -> str:
     # Up to 6 decimal places, no trailing zeros
     lat_str = f"{lat:.6f}".rstrip("0").rstrip(".")
@@ -801,6 +945,8 @@ def format_location_string(
 
 
 def copy_to_clipboard(text: str):
+    import pyperclip
+
     pyperclip.copy(text)
 
 
@@ -810,7 +956,11 @@ def copy_to_clipboard(text: str):
 
 
 def run_test_file(
-    testfile: str, api_key: str, debug: bool = False, live: bool = False, include_json: bool = False
+    testfile: str,
+    api_key: str,
+    debug: bool = False,
+    live: bool = False,
+    include_json: bool = False,
 ) -> int:
     """
     Run resolver tests from a JSON file.
@@ -850,34 +1000,40 @@ def run_test_file(
 
         # Skip cases with empty or non-numeric lat/lng (e.g. placeholder test data).
         try:
-            if lat is None or lng is None or str(lat).strip() == "" or str(lng).strip() == "":
+            if (
+                lat is None
+                or lng is None
+                or str(lat).strip() == ""
+                or str(lng).strip() == ""
+            ):
                 raise ValueError("empty lat/lng")
             float(lat)
             float(lng)
         except (ValueError, TypeError):
-            print(f"Test {i:02} SKIP (invalid or empty lat/lng; add coordinates and geocode_json)")
+            print(
+                f"Test {i:02} SKIP (invalid or empty lat/lng; add coordinates and geocode_json)"
+            )
             skipped += 1
             continue
 
         try:
             if live:
                 # --live means: always call the API, ignore embedded geocode_json
-                name = resolve_location(lat, lng, api_key, debug=debug, include_json=include_json)
+                name = resolve_location(
+                    lat, lng, api_key, debug=debug, include_json=include_json
+                )
 
             else:
                 # non-live means: must have embedded geocode_json
                 geocode_json = case.get("geocode_json")
                 if not geocode_json:
-                    print(f"Test {i:02} ERROR missing 'geocode_json' (run with --live to fetch from API)")
+                    print(
+                        f"Test {i:02} ERROR missing 'geocode_json' (run with --live to fetch from API)"
+                    )
                     failed += 1
                     continue
 
-                name = resolve_location_from_data(
-                    geocode_json,
-                    lat,
-                    lng,
-                    debug
-                )
+                name = resolve_location_from_data(geocode_json, lat, lng, debug)
 
         except Exception as e:
             print(f"Test {i:02} ERROR resolving location: {e}")
@@ -906,6 +1062,7 @@ def run_test_file(
 # Main
 # ------------------------------------------------------------
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Resolve a GPS point to an eBird-friendly location name."
@@ -914,9 +1071,11 @@ def main() -> None:
     parser.add_argument(
         "coords",
         nargs="*",
-        help="Coordinates: lat,lng or lat lng (quotes optional). Also accepts full formatted text."
+        help="Coordinates: lat,lng or lat lng (quotes optional). Also accepts full formatted text.",
     )
-    parser.add_argument("--clipboard", action="store_true", help="Read coordinates from clipboard.")
+    parser.add_argument(
+        "--clipboard", action="store_true", help="Read coordinates from clipboard."
+    )
     parser.add_argument(
         "--debug",
         action="store_true",
@@ -958,6 +1117,11 @@ def main() -> None:
             )
         )
 
+    # Normal CLI use always reads from or writes to the clipboard. Keep this
+    # import after offline test-file mode so Explorer can import naming helpers
+    # without requiring clipboard support.
+    import pyperclip
+
     # 1) Get coordinate text from clipboard or argv tokens
     if args.clipboard:
         coord_text = pyperclip.paste()
@@ -994,7 +1158,9 @@ def main() -> None:
         return
 
     # 3) Resolve + format output (always 6 decimal places for lat/lng in output)
-    name = resolve_location(lat, lng, api_key=api_key, debug=args.debug, include_json=args.includejson)
+    name = resolve_location(
+        lat, lng, api_key=api_key, debug=args.debug, include_json=args.includejson
+    )
     output = format_location_string(name, lat, lng, 6, 6)
 
     print(output)

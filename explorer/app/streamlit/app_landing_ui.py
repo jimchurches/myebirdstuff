@@ -17,9 +17,11 @@ from explorer.app.streamlit.app_constants import (
 )
 from explorer.app.streamlit.app_data_loading import load_dataframe
 from explorer.app.streamlit.app_map_ui import sidebar_footer_links
-from explorer.app.streamlit.explorer_update_notice import render_explorer_update_notice_landing
-from explorer.app.streamlit.streamlit_ui_constants import explorer_readme_github_url
+from explorer.app.streamlit.explorer_update_notice import (
+    render_explorer_update_notice_landing,
+)
 from explorer.app.streamlit.streamlit_theme import inject_app_header_css
+from explorer.app.streamlit.streamlit_ui_constants import explorer_readme_github_url
 
 _APP_LOGO_SVG = Path(REPO_ROOT) / "docs" / "explorer" / "assets" / "personal-ebird-explorer-logo.svg"
 _HOSTED_NOTICE_ENV_KEY = "STREAMLIT_SHOW_HOSTED_PERFORMANCE_NOTICE"

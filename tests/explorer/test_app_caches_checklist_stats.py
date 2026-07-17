@@ -39,7 +39,7 @@ def _clear_checklist_stats_cache() -> None:
 
 def test_working_and_full_export_share_one_compute_when_args_match(monkeypatch: pytest.MonkeyPatch) -> None:
     """Default settings: full export uses same top_n/high-count defaults as the Checklist tab."""
-    compute_calls = 0
+    compute_calls: list[tuple[pd.DataFrame, int, str, str, str | None]] = []
 
     def counting_compute(
         df: pd.DataFrame,
@@ -49,8 +49,9 @@ def test_working_and_full_export_share_one_compute_when_args_match(monkeypatch: 
         high_count_tie_break: str = "last",
         taxonomy_locale: str | None = None,
     ) -> ChecklistStatsPayload | None:
-        nonlocal compute_calls
-        compute_calls += 1
+        compute_calls.append(
+            (df, top_n_limit, high_count_sort, high_count_tie_break, taxonomy_locale)
+        )
         return ChecklistStatsPayload(
             n_checklists=1,
             n_species=1,
@@ -101,15 +102,22 @@ def test_working_and_full_export_share_one_compute_when_args_match(monkeypatch: 
         locale,
     )
 
-    assert compute_calls == 1
+    assert compute_calls == [
+        (
+            df,
+            CHECKLIST_STATS_TOP_N_TABLE_LIMIT,
+            "total_count",
+            "last",
+            locale,
+        )
+    ]
 
 
 def test_full_export_recomputes_when_top_n_differs(monkeypatch: pytest.MonkeyPatch) -> None:
-    compute_calls = 0
+    compute_calls: list[tuple[tuple, dict]] = []
 
-    def counting_compute(*_a, **_k) -> ChecklistStatsPayload | None:
-        nonlocal compute_calls
-        compute_calls += 1
+    def counting_compute(*args, **kwargs) -> ChecklistStatsPayload | None:
+        compute_calls.append((args, kwargs))
         return None
 
     monkeypatch.setattr(app_caches, "compute_checklist_stats_payload", counting_compute)
@@ -119,4 +127,19 @@ def test_full_export_recomputes_when_top_n_differs(monkeypatch: pytest.MonkeyPat
     app_caches.cached_checklist_stats_payload(df, locale)
     app_caches.cached_full_export_checklist_stats_payload(df, 50, "total_count", "last", locale)
 
-    assert compute_calls == 2
+    assert [call_args[1] for call_args, _ in compute_calls] == [
+        CHECKLIST_STATS_TOP_N_TABLE_LIMIT,
+        50,
+    ]
+    assert [kwargs for _, kwargs in compute_calls] == [
+        {
+            "high_count_sort": "total_count",
+            "high_count_tie_break": "last",
+            "taxonomy_locale": locale,
+        },
+        {
+            "high_count_sort": "total_count",
+            "high_count_tie_break": "last",
+            "taxonomy_locale": locale,
+        },
+    ]

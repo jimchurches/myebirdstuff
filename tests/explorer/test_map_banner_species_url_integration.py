@@ -128,9 +128,12 @@ def test_species_map_prep_banner_includes_ebird_species_link(
 
     assert hint is None
     assert bundle.use_species_leaflet is True
-    assert 'href="https://ebird.org/species/grtea"' in (
-        bundle.all_locations_leaflet_banner_html or ""
-    )
+    banner = bundle.all_locations_leaflet_banner_html or ""
+    assert (
+        '<span class="pebird-map-banner__title"><a '
+        'href="https://ebird.org/species/grtea"'
+    ) in banner
+    assert 'target="_blank" rel="noopener noreferrer">Grey Teal</a>' in banner
 
 
 def test_family_map_prep_highlight_banner_includes_ebird_species_link(
@@ -167,3 +170,4 @@ def test_family_map_prep_highlight_banner_includes_ebird_species_link(
     assert bundle.use_family_leaflet is True
     banner = bundle.all_locations_leaflet_banner_html or ""
     assert 'href="https://ebird.org/species/rufwhi1"' in banner
+    assert 'target="_blank" rel="noopener noreferrer">Rufous Whistler</a>' in banner

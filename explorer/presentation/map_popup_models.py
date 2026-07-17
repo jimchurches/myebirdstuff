@@ -6,12 +6,15 @@ work can render from the same model.
 
 from __future__ import annotations
 
+import html as html_module
 from dataclasses import dataclass
 
-import html as html_module
-
-from explorer.presentation.map_popup_heading_text import prevent_orphan_closing_punctuation
-from explorer.presentation.map_ui_constants import SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS
+from explorer.presentation.map_popup_heading_text import (
+    prevent_orphan_closing_punctuation,
+)
+from explorer.presentation.map_ui_constants import (
+    SPECIES_MAP_POPUP_OPEN_VISIT_LIST_MAX_CHECKLISTS,
+)
 from explorer.presentation.stats_html_helpers import esc_text
 
 

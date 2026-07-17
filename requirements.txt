@@ -8,15 +8,20 @@ pandas>=3.0.3,<4
 
 # Core deps
 whoosh
-scikit-learn>=1.8.0,<2
+scikit-learn>=1.9.0,<2
 pycountry>=26.2.16
 PyYAML>=6.0.3,<7
+# Google Geocoding for Maintenance → Create location name from GPS (also used by scripts/eBirdChecklistNameFromGPS.py)
+requests>=2.32.0,<3
 
 # Streamlit app deps
-streamlit>=1.58.0
+streamlit>=1.59.2
 watchdog>=6.0.0,<7  # efficient file watching on reload (Streamlit falls back to polling without it)
 streamlit-searchbox>=0.1.24
 pydantic>=2.13.4,<3
+
+# Share-summary PNG export (headless Chromium screenshot)
+playwright>=1.61.0,<2
 
 # Testing
 pytest
@@ -25,4 +30,4 @@ pytest-cov>=7.1.0,<8
 Pygments>=2.20.0
 
 # Linting (CI + local; ruff checks explorer/ — see ruff.toml)
-ruff>=0.15.15,<1
+ruff>=0.15.21,<1

@@ -17,11 +17,21 @@ def test_build_all_locations_geojson_payload_emits_build_metrics() -> None:
             "Longitude": [145.0, 146.0],
         }
     )
-    _rev, gj, metrics = build_all_locations_geojson_payload(
+    revision, gj, metrics = build_all_locations_geojson_payload(
         loc_df,
         checklist_counts_by_location={"loc1": 1, "loc2": 0},
     )
-    assert len(gj["features"]) == 2
+    assert revision is not None and len(revision) == 24
+    assert gj["type"] == "FeatureCollection"
+    assert {
+        feature["properties"]["location_id"]: feature["geometry"]["coordinates"]
+        for feature in gj["features"]
+    } == {"loc1": [145.0, -37.0], "loc2": [146.0, -38.0]}
+    assert set(metrics) == {
+        "marker_count",
+        "popup_build_count",
+        "popup_build_total_ms",
+    }
     assert metrics["marker_count"] == 2
     assert metrics["popup_build_count"] == 0
     assert metrics["popup_build_total_ms"] >= 0.0
@@ -36,3 +46,4 @@ def test_merge_leaflet_build_metrics_into_perf_extra() -> None:
     assert extra["marker_count"] == 3
     assert extra["popup_build_count"] == 2
     assert extra["popup_build_total_ms"] == 1.235
+    assert extra["payload_cache_hit"] is False

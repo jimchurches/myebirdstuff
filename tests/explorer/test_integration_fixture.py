@@ -266,19 +266,35 @@ def test_integration_near_duplicate_detection(fixture_checklists):
 
 def test_integration_filter_species_returns_expected_rows(fixture_df):
     """Filter for a known species returns expected row count and locations."""
-    # Grey Teal appears in baseline_act_2023_hybrid (West Belconnen Pond)
     filtered = filter_species(fixture_df, "Anas gracilis")
-    assert len(filtered) >= 1
-    assert "Anas gracilis" in filtered["Scientific Name"].values
-    assert filtered["Location ID"].nunique() >= 1
+    assert filtered[
+        ["Scientific Name", "Location ID", "Submission ID"]
+    ].to_dict("records") == [
+        {
+            "Scientific Name": "Anas gracilis",
+            "Location ID": "L2507517",
+            "Submission ID": "S127638172",
+        },
+        {
+            "Scientific Name": "Anas gracilis",
+            "Location ID": "L2453113",
+            "Submission ID": "S292896870",
+        },
+    ]
 
 
 def test_integration_filter_species_slash_exact_match(fixture_df):
     """Filter with slash (species-level) matches only that taxon."""
-    # Fixture has "Egretta/Ardea sp." in incomplete_bali_2024
     filtered = filter_species(fixture_df, "egretta/ardea sp.")
-    assert len(filtered) >= 1
-    assert filtered["Scientific Name"].str.lower().str.contains("egretta/ardea", na=False).all()
+    assert filtered[
+        ["Scientific Name", "Location ID", "Submission ID"]
+    ].to_dict("records") == [
+        {
+            "Scientific Name": "Egretta/Ardea sp.",
+            "Location ID": "L5527554",
+            "Submission ID": "S188648387",
+        }
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -299,7 +315,7 @@ def test_integration_full_pipeline_headline_numbers(fixture_df, fixture_checklis
     years_list, yearly_rows, _ = yearly_summary_stats(
         fixture_df, fixture_checklists, dur_col, dist_col
     )
-    assert len(rankings["time"]) > 0
+    assert rankings["time"][0][4] == "131 min"
     idx_lifers = next(i for i, (label, _) in enumerate(yearly_rows) if label == "Lifers")
     lifer_vals = yearly_rows[idx_lifers][1]
     for i, yr in enumerate(years_list):
@@ -325,14 +341,13 @@ def test_integration_compute_rankings_returns_expected_structure(fixture_df, fix
         "seen_once",
         "species_individuals",
         "species_checklists",
+        "species_high_counts",
         "subspecies",
         "not_seen_recently",
     }
-    for k in expected_keys:
-        assert k in rankings, f"missing key {k}"
-    assert len(rankings["time"]) > 0
-    assert len(rankings["species_loc"]) > 0
-    assert len(rankings["not_seen_recently"]) > 0
+    assert set(rankings) == expected_keys
+    assert rankings["time"][0][4] == "131 min"
+    assert rankings["species_loc"][0][4] == "21"
     assert "ebird.org/checklist/" in rankings["not_seen_recently"][0][1]
 
 
@@ -343,7 +358,7 @@ def test_integration_yearly_summary_stats_structure(fixture_df, fixture_checklis
     years_list, yearly_rows, incomplete_by_year = yearly_summary_stats(
         fixture_df, fixture_checklists, dur_col, dist_col
     )
-    assert len(years_list) >= 1
+    assert years_list == sorted(EXPECTED_COUNTABLE_BY_YEAR)
     labels = [r[0] for r in yearly_rows]
     assert "Total species" in labels
     assert "Lifers" in labels
@@ -417,7 +432,7 @@ def test_integration_malformed_time_in_temp_copy():
             df.to_csv(f.name, index=False, encoding="utf-8")
             loaded = load_dataset(f.name)
             # With unparseable time, that row gets NaT in datetime (date+time parse fails)
-            assert loaded["datetime"].isna().sum() >= 1
+            assert loaded["datetime"].isna().sum() == 1
         finally:
             os.unlink(f.name)
 
@@ -452,7 +467,7 @@ def test_integration_blank_date_in_temp_copy():
             df.to_csv(f.name, index=False, encoding="utf-8")
             loaded = load_dataset(f.name)
             # That row should have NaT in datetime
-            assert loaded["datetime"].isna().sum() >= 1
+            assert loaded["datetime"].isna().sum() == 1
         finally:
             os.unlink(f.name)
 

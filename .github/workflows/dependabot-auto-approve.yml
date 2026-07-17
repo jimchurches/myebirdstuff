@@ -1,0 +1,169 @@
+# Auto-approve low-risk Dependabot PRs after Python CI succeeds.
+# See docs/development.md § Dependabot auto-approve.
+#
+# Uses pull_request_target so the workflow token can write reviews / enable
+# auto-merge (Dependabot-triggered pull_request runs get a read-only token).
+# This workflow never checks out or executes code from the PR head.
+
+name: Dependabot auto-approve
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: dependabot-auto-approve-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-approve:
+    name: Auto-approve low-risk Dependabot PR
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Evaluate update risk
+        id: risk
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+        run: |
+          set -euo pipefail
+          case "${UPDATE_TYPE}" in
+            version-update:semver-patch|version-update:semver-minor)
+              echo "eligible=true" >> "${GITHUB_OUTPUT}"
+              echo "Update type ${UPDATE_TYPE} is eligible for auto-approve."
+              ;;
+            *)
+              echo "eligible=false" >> "${GITHUB_OUTPUT}"
+              echo "Skipping auto-approve: update-type=${UPDATE_TYPE:-<empty>} (majors and unknown types stay manual)."
+              ;;
+          esac
+
+      - name: Verify changed files are dependency-related only
+        if: steps.risk.outputs.eligible == 'true'
+        id: files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # Conservative allowlist — anything else requires manual review.
+          allowed_regex='^(requirements(-[A-Za-z0-9._-]+)?\.txt|pyproject\.toml|uv\.lock|poetry\.lock|(.*/)?package(-lock)?\.json|\.github/workflows/[^/]+\.ya?ml)$'
+
+          mapfile -t changed_files < <(
+            gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/files" --paginate \
+              --jq '.[].filename'
+          )
+
+          if [[ ${#changed_files[@]} -eq 0 ]]; then
+            echo "eligible=false" >> "${GITHUB_OUTPUT}"
+            echo "Skipping auto-approve: PR reports no changed files."
+            exit 0
+          fi
+
+          unexpected=()
+          for path in "${changed_files[@]}"; do
+            if [[ ! "${path}" =~ ${allowed_regex} ]]; then
+              unexpected+=("${path}")
+            fi
+          done
+
+          if [[ ${#unexpected[@]} -gt 0 ]]; then
+            echo "eligible=false" >> "${GITHUB_OUTPUT}"
+            echo "Skipping auto-approve: unexpected paths:"
+            printf '  - %s\n' "${unexpected[@]}"
+            exit 0
+          fi
+
+          echo "eligible=true" >> "${GITHUB_OUTPUT}"
+          echo "All changed files are on the dependency allowlist:"
+          printf '  - %s\n' "${changed_files[@]}"
+
+      - name: Wait for Python CI
+        if: steps.risk.outputs.eligible == 'true' && steps.files.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # Wait only for the "Python CI" workflow (tests.yml), not this job,
+          # so we do not deadlock on our own check.
+          echo "Waiting for Python CI on ${HEAD_SHA}..."
+          for _ in $(seq 1 90); do
+            run_json="$(
+              gh run list \
+                --workflow "Python CI" \
+                --commit "${HEAD_SHA}" \
+                --limit 1 \
+                --json status,conclusion,databaseId,url \
+                --jq '.[0] // empty'
+            )"
+
+            if [[ -z "${run_json}" ]]; then
+              echo "Python CI has not started yet; retrying..."
+              sleep 20
+              continue
+            fi
+
+            status="$(jq -r '.status' <<<"${run_json}")"
+            conclusion="$(jq -r '.conclusion // empty' <<<"${run_json}")"
+            url="$(jq -r '.url' <<<"${run_json}")"
+            echo "Python CI status=${status} conclusion=${conclusion:-none} (${url})"
+
+            if [[ "${status}" == "completed" ]]; then
+              if [[ "${conclusion}" == "success" ]]; then
+                echo "Python CI succeeded."
+                exit 0
+              fi
+              echo "::error::Python CI did not succeed (conclusion=${conclusion}). Not auto-approving."
+              exit 1
+            fi
+
+            sleep 20
+          done
+
+          echo "::error::Timed out waiting for Python CI (≈30 minutes)."
+          exit 1
+
+      - name: Approve and enable auto-merge
+        if: steps.risk.outputs.eligible == 'true' && steps.files.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+        run: |
+          set -euo pipefail
+
+          review_decision="$(
+            gh pr view "${PR_URL}" --json reviewDecision --jq '.reviewDecision // empty'
+          )"
+          if [[ "${review_decision}" == "APPROVED" ]]; then
+            echo "PR already approved; skipping duplicate approval."
+          else
+            body="$(printf '%s\n' \
+              'Auto-approved low-risk Dependabot update after Python CI passed.' \
+              '' \
+              "- update-type: ${UPDATE_TYPE}" \
+              "- dependencies: ${DEPENDENCY_NAMES}" \
+              '' \
+              'Policy: patch/minor only; dependency-related files only; majors and unexpected paths stay manual. See docs/development.md.')"
+            gh pr review "${PR_URL}" --approve --body "${body}"
+            echo "Approved ${PR_URL}"
+          fi
+
+          if gh pr merge --auto --squash "${PR_URL}"; then
+            echo "Enabled auto-merge (squash) for ${PR_URL}"
+          else
+            echo "::warning::Could not enable auto-merge. Approval still stands — enable auto-merge in repo settings if desired."
+          fi

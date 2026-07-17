@@ -15,7 +15,6 @@ Thresholds and matching behaviour:
 import numpy as np
 import pandas as pd
 
-
 EARTH_RADIUS_M = 6_371_000
 
 

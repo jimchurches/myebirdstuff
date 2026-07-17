@@ -26,18 +26,20 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from explorer.presentation.checklist_stats_display import format_checklist_stats_bundle
-from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
-
 from explorer.app.streamlit.app_caches import cached_full_export_checklist_stats_payload
 from explorer.app.streamlit.app_constants import RANKING_LISTS_FAMILIES_BUNDLE_KEY
 from explorer.app.streamlit.bird_families_streamlit_html import (
     WORLD_SPECIES_COVERAGE_SECTION_KEY,
     attach_group_coverage_to_bundle,
 )
+from explorer.app.streamlit.defaults import (
+    RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT,
+    RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX,
+)
 from explorer.app.streamlit.perf_instrumentation import perf_fragment
-from explorer.app.streamlit.defaults import RANKINGS_BUNDLE_SCROLL_HINT_DEFAULT, RANKINGS_TABLE_LAYOUT_MAX_WIDTH_PX
 from explorer.app.streamlit.streamlit_theme import inject_streamlit_checklist_css
+from explorer.core.taxonomy import get_species_and_lifelist_urls, load_taxonomy
+from explorer.presentation.checklist_stats_display import format_checklist_stats_bundle
 
 _STREAMLIT_TABLE_SCOPE = "streamlit-checklist-html-ab"
 _RANKINGS_SCOPE_EXTRA = "streamlit-rankings-html"

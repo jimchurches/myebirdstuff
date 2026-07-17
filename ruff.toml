@@ -1,11 +1,13 @@
 # Ruff — https://docs.astral.sh/ruff/
 # CI runs: ruff check explorer/
+# Python style standard: docs/python-style-guide.md
 
 target-version = "py312"
 
 [lint]
-# Pyflakes + pycodestyle (no isort in CI yet — import order varies across modules).
-select = ["E", "F", "W"]
+# Pyflakes + pycodestyle + isort.
+# Import order standard is described in docs/python-style-guide.md (Imports section).
+select = ["E", "F", "W", "I"]
 # Long lines are common in docstrings and Streamlit markup; a stricter wrap pass can be a follow-up.
 ignore = ["E501"]
 
@@ -13,3 +15,4 @@ ignore = ["E501"]
 # Entrypoint prepends repo root to sys.path before package imports (refs #70).
 "explorer/app/streamlit/app.py" = ["E402"]
 "explorer/app/streamlit/design_map_app.py" = ["E402"]
+"explorer/app/streamlit/design_share_summary_app.py" = ["E402"]

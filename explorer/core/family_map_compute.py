@@ -14,14 +14,15 @@ block immediately after :data:`UNMAPPED_FAMILY_LABEL`.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Iterable
 
 import pandas as pd
 
 from explorer.core.species_logic import countable_species_vectorized, filter_species
 from explorer.core.stats import safe_count
+
 UNMAPPED_FAMILY_LABEL = "Unmapped"
 
 # Family-map work frame — internal columns (leading underscore; not from the eBird CSV):

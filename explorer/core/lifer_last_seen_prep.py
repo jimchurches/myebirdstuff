@@ -25,6 +25,8 @@ import pandas as pd
 
 from explorer.core.species_logic import (
     base_species_for_lifer as _default_base_species_for_lifer,
+)
+from explorer.core.species_logic import (
     countable_species_vectorized,
 )
 

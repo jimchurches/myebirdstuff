@@ -20,10 +20,23 @@ def test_basemap_manifest_options_labels_and_tiles():
     )
 
     entries = get_basemap_entries()
-    assert len(entries) >= 5
+    assert tuple(entry.key for entry in entries) == (
+        "default",
+        "voyager",
+        "carto",
+        "esri_topo",
+        "google",
+    )
+    assert tuple(entry.label for entry in entries) == (
+        "Default (OpenStreetMap)",
+        "CARTO Voyager",
+        "CartoDB Positron",
+        "Esri World Topo",
+        "Google Hybrid",
+    )
     assert MAP_BASEMAP_OPTIONS == tuple(e.key for e in entries)
-    assert MAP_BASEMAP_DEFAULT in MAP_BASEMAP_OPTIONS
-    assert list(MAP_BASEMAP_LABELS) == list(MAP_BASEMAP_OPTIONS)
+    assert MAP_BASEMAP_DEFAULT == "default"
+    assert MAP_BASEMAP_LABELS == {entry.key: entry.label for entry in entries}
 
     component = basemap_tile_layers_for_component()
     export = basemap_tile_layers_for_export()
@@ -32,6 +45,8 @@ def test_basemap_manifest_options_labels_and_tiles():
         assert key in export
         assert component[key]["url"] == export[key]["url"]
         assert component[key]["opts"]["maxZoom"] == export[key]["opts"]["maxZoom"]
+        assert component[key]["opts"]["attribution"]
+        assert export[key]["opts"]["attribution"]
 
 
 def test_generated_map_assets_are_fresh():

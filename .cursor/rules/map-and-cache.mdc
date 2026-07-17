@@ -1,0 +1,29 @@
+---
+description: Map stack and caching — Leaflet component, GeoJSON builders, static dataframe assumptions
+globs: explorer/components/all_locations_map/**,explorer/core/*_locations_geojson.py,explorer/core/map_*.py,explorer/app/streamlit/app_prep_map*.py,explorer/presentation/map_*.py,explorer/presentation/leaflet*.py
+alwaysApply: false
+---
+
+# Map and cache
+
+Production maps use the **Leaflet custom component** (`explorer/components/all_locations_map/`) — not Folium. Read [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md) § Architecture and [`docs/development.md`](docs/development.md) § Map architecture.
+
+## Data and caching
+
+- The main dataframe is **static during runtime** — do not mutate it; caching assumes this.
+- Map prep uses session LRU keys (`leaflet_payload_cache_key`, mode `revision_extra` in `app_prep_map_ui.py`). Preserve cache correctness when changing grouping, filtering, or popup generation.
+- Popup payloads are **structured** (`popup_v1` in GeoJSON properties) — not per-pin HTML strings in Python.
+
+## Frontend build assets
+
+After editing TypeScript/CSS in `frontend/src/`:
+
+```bash
+python3 scripts/build_all_locations_map_frontend.py
+```
+
+Committed `frontend/build/` is required at runtime (no Node on users' machines). Do not commit Finder duplicates — CI runs `scripts/prune_finder_duplicates.py --check`.
+
+## Performance instrumentation
+
+`EXPLORER_PERF` tooling is intentional and off by default — keep stage names stable; see `docs/development.md` § Performance Instrumentation Guardrails.

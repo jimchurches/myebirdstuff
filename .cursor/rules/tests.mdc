@@ -1,0 +1,26 @@
+---
+description: Test conventions — behaviour over trivia; markers; when to add tests for bug fixes
+globs: tests/**/*.py
+alwaysApply: false
+---
+
+# Tests
+
+See [`tests/README.md`](tests/README.md) for venv setup, markers, and run commands. Policy summary in [`docs/development.md`](docs/development.md) § Testing.
+
+## Principles
+
+- Assert **behaviour**, not implementation trivia or private attribute names.
+- When fixing a production bug, **add or strengthen** a test in the same change when practical.
+- Prefer focused, table-driven tests for fragile logic (taxonomy, grouping, colour resolution).
+- Avoid broad Streamlit wiring or HTML snapshot tests that inflate coverage without signal.
+
+## Markers and layers
+
+- Default: `pytest tests/ -v` (unit/integration — same core path as CI).
+- Browser E2E: `@pytest.mark.e2e` — opt-in (`pytest -m e2e`).
+- Map component frontend: Jest in `explorer/components/all_locations_map/frontend/` (see `tests/README.md`).
+
+## Environment
+
+Use repo-root `.venv/` (Python 3.12). CI matches `requirements.txt`.

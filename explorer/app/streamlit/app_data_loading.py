@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
-import io
 import hashlib
+import io
 import os
 from typing import Any
 
 import pandas as pd
 import streamlit as st
 
-from explorer.core.data_loader import load_dataset
-from explorer.core.explorer_paths import build_explorer_candidate_dirs, resolve_ebird_data_file
-
 from explorer.app.streamlit.app_constants import DEFAULT_EBIRD_FILENAME, REPO_ROOT
 from explorer.app.streamlit.perf_instrumentation import perf_span
+from explorer.core.data_loader import load_dataset
+from explorer.core.explorer_paths import (
+    build_explorer_candidate_dirs,
+    resolve_ebird_data_file,
+)
 
 
 @st.cache_data(show_spinner=False)

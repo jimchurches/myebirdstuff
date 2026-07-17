@@ -28,6 +28,7 @@ from explorer.app.streamlit.app_constants import (
     SPECIES_LEAFLET_PAYLOAD_CACHE_KEY,
 )
 from explorer.app.streamlit.app_map_ui import inject_auto_click_streamlit_download_js
+from explorer.app.streamlit.defaults import LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES
 from explorer.app.streamlit.perf_instrumentation import perf_record_point, perf_span
 from explorer.app.streamlit.streamlit_ui_constants import MAP_EXPORT_HTML_FILENAME
 from explorer.core.map_prep import data_signature_for_caches
@@ -35,7 +36,6 @@ from explorer.presentation.leaflet_map_export_cache import leaflet_export_html_c
 from explorer.presentation.leaflet_map_html_export import leaflet_map_to_html_bytes
 from explorer.presentation.map_renderer import map_overlay_theme_stylesheet
 
-from explorer.app.streamlit.defaults import LEAFLET_EXPORT_HTML_CACHE_MAX_ENTRIES
 
 def leaflet_export_html_cache_lookup(cache_key: tuple[str, ...]) -> bytes | None:
     cached = st.session_state.get(LEAFLET_EXPORT_HTML_CACHE_KEY)
