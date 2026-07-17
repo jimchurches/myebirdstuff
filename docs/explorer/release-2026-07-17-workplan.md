@@ -11,48 +11,68 @@
 
 ---
 
+
+
 ## Quick facts
 
-| Item | Value |
-|------|--------|
-| Working branch | `beta-next` |
-| Approx commits `main`..`beta-next` | ~327 (as of 2026-07-16) |
-| Embedded build version **file** | `2026-07-17` — **bumped locally; commit + push still needed** |
-| Release id / Git tag | `2026-07-17` |
-| Label for “done, awaiting main” | **`pending-merge`** |
-| Prior release PR | [#264](https://github.com/jimchurches/myebirdstuff/pull/264) — `beta-next` → `main` |
-| Prior GitHub Release | [2026-06-01](https://github.com/jimchurches/myebirdstuff/releases/tag/2026-06-01) |
+
+| Item                               | Value                                                                               |
+| ---------------------------------- | ----------------------------------------------------------------------------------- |
+| Working branch                     | `beta-next`                                                                         |
+| Approx commits `main`..`beta-next` | ~327 (as of 2026-07-16)                                                             |
+| Embedded build version **file**    | `2026-07-17` — **bumped locally; commit + push still needed**                       |
+| Release id / Git tag               | `2026-07-17`                                                                        |
+| Label for “done, awaiting main”    | `pending-merge`                                                                     |
+| Prior release PR                   | [#264](https://github.com/jimchurches/myebirdstuff/pull/264) — `beta-next` → `main` |
+| Prior GitHub Release               | [2026-06-01](https://github.com/jimchurches/myebirdstuff/releases/tag/2026-06-01)   |
+
 
 ---
 
+
+
 ## Decisions (locked 2026-07-16)
+
+
 
 ### Close / epic policy
 
-| Decision | Answer |
-|----------|--------|
-| **#157** (Social Cards epic) | **Close** with this release — MVP / feature v1.0 done. Later polish = new bug/enhancement issues. |
-| Related `pending-merge` (incl. Social Cards) | **Close all** via release PR `Closes #…` list |
-| **#332** | **Keep open** — known issue / bug; call out in release notes |
-| **#342** | **Keep open** — optional enhancement (persist prefs); not bothering yet |
-| Engineering `pending-merge` issues | **Close all**; notes = one short headline only (not a laundry list) |
+
+| Decision                                     | Answer                                                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **#157** (Social Cards epic)                 | **Close** with this release — MVP / feature v1.0 done. Later polish = new bug/enhancement issues. |
+| Related `pending-merge` (incl. Social Cards) | **Close all** via release PR `Closes #…` list                                                     |
+| **#332**                                     | **Keep open** — known issue / bug; call out in release notes                                      |
+| **#342**                                     | **Keep open** — optional enhancement (persist prefs); not bothering yet                           |
+| Engineering `pending-merge` issues           | **Close all**; notes = one short headline only (not a laundry list)                               |
+
+
+
 
 ### Version & process
 
-| Decision | Answer |
-|----------|--------|
-| Merge day | **2026-07-17** |
-| Version bump | **Now** (file already set to `2026-07-17`; commit when resuming) |
-| Release PR | **Draft first** (avoid running CI too often); mark ready after notes/close-list/review settled |
+
+| Decision     | Answer                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| Merge day    | **2026-07-17**                                                                                 |
+| Version bump | **Now** (file already set to `2026-07-17`; commit when resuming)                               |
+| Release PR   | **Draft first** (avoid running CI too often); mark ready after notes/close-list/review settled |
+
+
+
 
 ### Release notes tone
 
-| Decision | Answer |
-|----------|--------|
-| Audience | End users, biased to **power users / code-aware** readers (not only “what’s new for friends”) |
-| Interesting Insights | **In this release** — part of Social Cards / Insights v1.0; not deferred |
-| Engineering | Simple note, e.g. *various developer- and agent-focused engineering updates* / *improved workflows and project documentation* — headlines only |
-| “What’s next” section | **None** — mood-driven; #332 will be fixed or worked around later |
+
+| Decision              | Answer                                                                                                                                         |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Audience              | End users, biased to **power users / code-aware** readers (not only “what’s new for friends”)                                                  |
+| Interesting Insights  | **In this release** — part of Social Cards / Insights v1.0; not deferred                                                                       |
+| Engineering           | Simple note, e.g. *various developer- and agent-focused engineering updates* / *improved workflows and project documentation* — headlines only |
+| “What’s next” section | **None** — mood-driven; #332 will be fixed or worked around later                                                                              |
+
+
+
 
 ### Still open when resuming (optional preferences)
 
@@ -62,14 +82,22 @@
 
 ---
 
+
+
 ## Close-list vs keep-open
+
+
 
 ### Keep open (do **not** put in `Closes`)
 
-| Issue | Why |
-|-------|-----|
+
+| Issue    | Why                                                                    |
+| -------- | ---------------------------------------------------------------------- |
 | **#332** | Known bug: Social Cards preview/export mismatch — **in release notes** |
-| **#342** | Optional enhancement: persist Social Cards prefs in YAML — deferred |
+| **#342** | Optional enhancement: persist Social Cards prefs in YAML — deferred    |
+
+
+
 
 ### Close on merge (`Closes #…`) — all current open `pending-merge` (2026-07-16)
 
@@ -118,7 +146,11 @@ Re-fetch tomorrow in case the list changed; then paste into the PR body.
 
 ---
 
+
+
 ## Phase checklist
+
+
 
 ### Phase 0 — Scope & close-list
 
@@ -131,12 +163,14 @@ Re-fetch tomorrow in case the list changed; then paste into the PR body.
 
 ---
 
+
+
 ### Phase 1 — Version bump
 
 - [x] Update `explorer/app/streamlit/explorer_build_version.txt` → `2026-07-17`
-- [ ] Commit on `beta-next` (intentional release prep — confirm message, then `/commit-work` or ask agent)
-- [ ] Push `beta-next`
-- [ ] Spot-check related version tests if desired
+- [x] Commit on `beta-next` (intentional release prep — confirm message, then `/commit-work` or ask agent)
+- [x] Push `beta-next`
+- [x] Spot-check related version tests if desired
 
 Suggested commit message:
 
@@ -148,55 +182,64 @@ chore: bump explorer build version to 2026-07-17
 
 ---
 
+
+
 ### Phase 2 — Draft release notes
 
 Audience: end users with a power-user / code-aware bias. Social Cards–led; no laundry list of PRs. No “what’s next.”
 
-- [ ] **Overview** — Social Cards tab v1.0; shareable summary images from personal eBird data
-- [ ] **Highlights — Social Cards** — headlines of what the tab does
-- [ ] **Highlights — Interesting Insights** — peak year/month/day (and related) facts; v1.0 complete, more later
-- [ ] **Known issue** — preview vs export can differ — #332
-- [ ] **Also in this release** (short bullets):
-  - [ ] GPS checklist location-name fix
-  - [ ] Maintenance: create location name from GPS
-  - [ ] Streamlit / dependency bumps (if worth a line)
-- [ ] **Under the hood / engineering** — one short blurb, e.g. improved developer/agent workflows and project documentation (do not enumerate commands/skills)
-- [ ] **Upgrade notes** — none unless Cloud PNG / self-host note is useful
+- [x] **Overview** — user-focused sell of Social Cards (shareable summary images; no “v1.0” framing)
+- [x] **Highlights — Social Cards** — periods/geo, layouts (incl. Interesting Insights), stats, PNG export + themes/formats/Cloud
+- [x] **Known issue** — preview vs export can differ — #332
+- [x] **Also in this release** (short bullets):
+  - [x] GPS checklist location-name fix
+  - [x] Maintenance: create location name from GPS
+  - [x] Streamlit / dependency bumps (if worth a line)
+- [x] **Under the hood / engineering** — one short blurb, e.g. improved developer/agent workflows and project documentation (do not enumerate commands/skills)
+- [x] **Upgrade notes** — none unless Cloud PNG / self-host note is useful
 
-Scratch draft:
+Scratch draft (ready for PR body / GitHub Release):
 
 ```markdown
 ## Overview
 
-This release introduces **Social Cards** as a first-class Explorer tab — a v1.0
-feature for turning your personal eBird data into shareable summary images
-(e.g. year / month / trip-style cards). Further polish will arrive as separate
-issues over time.
+This release adds a new **Social Cards** tab — turn your personal eBird data
+into shareable summary images for a year in review, a busy month, a trip, or
+your whole birding life so far.
+
+Pick a period and place, choose a layout and theme, tune which stats appear,
+then export a PNG sized for a square post, portrait feed, or story.
 
 ## Highlights
 
 ### Social Cards
 
-- New **Social Cards** tab for building and exporting shareable summary cards
-  from your personal eBird data.
-- (Add 2–4 user-facing bullets: periods, layouts, PNG export, Cloud support, etc.)
-
-### Interesting Insights
-
-- Peak period facts (year / month / day) and related insight cards — complete
-  for Insights v1.0; more fact types may follow later.
+- New **Social Cards** tab for building and exporting shareable birding summary
+  cards from your eBird export.
+- Scope by **Lifetime**, **Year**, **Month**, **Week**, or a **custom date range**
+  (with an optional trip-style heading). Narrow further by **country** and
+  **region** when you want a local card.
+- Four layouts: **Statistics Tiles** (grid or circle cluster), **Statistics
+  List**, **Spotlight** (one hero stat), and **Interesting Insights** (fact
+  cards such as most-recorded species, biggest single-checklist count, and peak
+  year / month / day facts).
+- Choose and reorder the stats on the card — species, lifers, checklists,
+  birding days, distance, streaks, taxonomy coverage, and more.
+- Export a **PNG** in **Square**, **Portrait**, or **Story** size, in **Light**
+  or **Dark** theme. One-click export works on Streamlit Community Cloud as well
+  as locally.
 
 ### Known issue
 
 Preview and exported Social Cards can differ slightly (especially statistics
-grid tiles). See #332 — fix or workaround planned separately; this does not
-block using the feature.
+grid tiles). See #332 — this does not block using the feature; a fix or
+workaround will follow separately.
 
 ## Also in this release
 
 - GPS checklist location-name bug fix
 - Maintenance tab: create a location name from GPS coordinates
-- Dependency / Streamlit updates (as applicable)
+- Dependency / Streamlit updates
 
 ## Under the hood
 
@@ -210,6 +253,8 @@ No settings migration is required for this release.
 
 ---
 
+
+
 ### Phase 3 — Open release PR (**draft**)
 
 - [ ] Version bump committed + `beta-next` pushed
@@ -222,9 +267,11 @@ No settings migration is required for this release.
 - [ ] Suggested title: `Release 2026-07-17: Social Cards tab and Interesting Insights`
 - [ ] When ready: undraft → wait for CI green
 
-**PR URL:** _TBD_
+**PR URL:** *TBD*
 
 ---
+
+
 
 ### Phase 4 — Deep review
 
@@ -237,6 +284,8 @@ Promotion review (prefer `/code-review`; confirm depth on resume).
 
 ---
 
+
+
 ### Phase 5 — Merge to `main`
 
 - [ ] Merge release PR (confirm merge-commit vs other; prior releases merged `beta-next`)
@@ -246,15 +295,19 @@ Promotion review (prefer `/code-review`; confirm depth on resume).
 
 ---
 
+
+
 ### Phase 6 — Tag & publish GitHub Release
 
 - [ ] Tag `main` as `2026-07-17` (calver, no `v` prefix)
 - [ ] Publish release notes (from Phase 2; `gh release create` or GitHub UI)
 - [ ] Sanity: in-app update notice sees newer remote tag vs embedded `2026-07-17`
 
-**Release URL:** _TBD_
+**Release URL:** *TBD*
 
 ---
+
+
 
 ### Phase 7 — Post-release hygiene
 
@@ -265,6 +318,8 @@ Promotion review (prefer `/code-review`; confirm depth on resume).
 
 ---
 
+
+
 ## Suggested order when resuming (tomorrow)
 
 1. Re-fetch `pending-merge` + orphan check (Phase 0)
@@ -273,6 +328,8 @@ Promotion review (prefer `/code-review`; confirm depth on resume).
 4. Review → undraft → merge day Phases 4–7
 
 ---
+
+
 
 ## Resume prompt (paste into chat)
 
@@ -288,6 +345,8 @@ to main. Do not undraft or merge until I confirm.
 
 ---
 
+
+
 ## Related
 
 - Prior PR body: `gh pr view 264`
@@ -295,3 +354,4 @@ to main. Do not undraft or merge until I confirm.
 - Label meaning: `.cursor/commands/merge-pr.md`
 - Version: `explorer/app/streamlit/explorer_build_version.txt` · `explorer_build_version.py`
 - Guardrails: `docs/AI_CONTEXT.md`
+
