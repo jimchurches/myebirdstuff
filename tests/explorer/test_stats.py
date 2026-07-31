@@ -1,6 +1,7 @@
 """Tests for explorer.core.stats module."""
 
 import pandas as pd
+import pytest
 
 from explorer.core.stats import (
     checklist_country_keys,
@@ -16,6 +17,8 @@ from explorer.core.stats import (
     rankings_by_checklists,
     rankings_subspecies_hierarchical,
     rankings_seen_once,
+    rankings_heard_only_species,
+    observation_details_has_heard_only,
     rankings_by_visits,
     rankings_not_seen_recently,
     rankings_not_seen_recently_in_country,
@@ -364,6 +367,146 @@ class TestRankingsSeenOnce:
         assert "Chestnut Teal" in rows[0][0]
 
 
+class TestHeardOnlyMatching:
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Heard only",
+            "Heard only.",
+            "heard only",
+            "HEARD ONLY.",
+            "Six birds calling and counted. Heard only",
+            "Six birds calling and counted. Heard only.",
+            "Heard only. Count is an estimate based on birds that could be clearly separated by time and location.",
+        ],
+    )
+    def test_standalone_heard_only_matches(self, text):
+        assert observation_details_has_heard_only(text) is True
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Several birds seen, mostly heard only.",
+            "H",
+            "HO",
+            "Heard",
+            "heard only sometimes",
+            "",
+            None,
+        ],
+    )
+    def test_non_standalone_or_abbreviation_does_not_match(self, text):
+        assert observation_details_has_heard_only(text) is False
+
+
+class TestRankingsHeardOnlySpecies:
+    def test_missing_observation_details_column_returns_empty(self):
+        df = _obs_df([{"Scientific Name": "Anas gracilis", "Common Name": "Grey Teal"}])
+        assert rankings_heard_only_species(df) == []
+
+    def test_species_included_when_every_record_is_heard_only(self):
+        df = _obs_df(
+            [
+                {
+                    "Submission ID": "S1",
+                    "Scientific Name": "Ninox novaeseelandiae",
+                    "Common Name": "Southern Boobook",
+                    "Observation Details": "Heard only",
+                    "Date": pd.Timestamp("2024-01-01"),
+                    "Location": "Park A",
+                    "Location ID": "L_A",
+                },
+                {
+                    "Submission ID": "S2",
+                    "Scientific Name": "Ninox novaeseelandiae",
+                    "Common Name": "Southern Boobook",
+                    "Observation Details": "Six birds calling. Heard only.",
+                    "Date": pd.Timestamp("2025-06-01"),
+                    "Location": "Park B",
+                    "Location ID": "L_B",
+                },
+            ]
+        )
+        rows = rankings_heard_only_species(df)
+        assert len(rows) == 1
+        assert rows[0][0] == "Southern Boobook"
+        assert "Park B" in rows[0][1]
+        assert "S2" in rows[0][4]
+        assert rows[0][5] == "2"
+
+    def test_species_excluded_when_any_record_lacks_notation(self):
+        df = _obs_df(
+            [
+                {
+                    "Submission ID": "S1",
+                    "Scientific Name": "Ninox novaeseelandiae",
+                    "Common Name": "Southern Boobook",
+                    "Observation Details": "Heard only",
+                },
+                {
+                    "Submission ID": "S2",
+                    "Scientific Name": "Ninox novaeseelandiae",
+                    "Common Name": "Southern Boobook",
+                    "Observation Details": "Seen well",
+                },
+            ]
+        )
+        assert rankings_heard_only_species(df) == []
+
+    def test_seen_subspecies_record_excludes_parent_species(self):
+        """All records for a base species include its subspecies observations."""
+        df = _obs_df(
+            [
+                {
+                    "Submission ID": "S1",
+                    "Scientific Name": "Gymnorhina tibicen",
+                    "Common Name": "Australian Magpie",
+                    "Observation Details": "Heard only",
+                },
+                {
+                    "Submission ID": "S2",
+                    "Scientific Name": "Gymnorhina tibicen tibicen",
+                    "Common Name": "Australian Magpie (Black-backed)",
+                    "Observation Details": "Seen well",
+                },
+            ]
+        )
+        assert rankings_heard_only_species(df) == []
+
+    def test_mid_sentence_heard_only_does_not_qualify_record(self):
+        df = _obs_df(
+            [
+                {
+                    "Scientific Name": "Ninox novaeseelandiae",
+                    "Common Name": "Southern Boobook",
+                    "Observation Details": "Several birds seen, mostly heard only.",
+                },
+            ]
+        )
+        assert rankings_heard_only_species(df) == []
+
+    def test_seen_species_does_not_block_unrelated_heard_only_species(self):
+        df = _obs_df(
+            [
+                {
+                    "Submission ID": "S1",
+                    "Scientific Name": "Anas gracilis",
+                    "Common Name": "Grey Teal",
+                    "Observation Details": "",
+                },
+                {
+                    "Submission ID": "S2",
+                    "Scientific Name": "Ninox novaeseelandiae",
+                    "Common Name": "Southern Boobook",
+                    "Observation Details": "Heard only.",
+                },
+            ]
+        )
+        rows = rankings_heard_only_species(df)
+        assert len(rows) == 1
+        assert rows[0][0] == "Southern Boobook"
+
+
 class TestRankingsByVisits:
     def test_most_visited(self):
         cl = pd.DataFrame({
@@ -568,7 +711,8 @@ class TestComputeRankings:
         cl["Date"] = pd.to_datetime(cl["Date"])
         result = compute_rankings(df, cl, limit=10, dur_col=None, dist_col=None)
         expected_keys = {"time", "dist", "species", "individuals", "species_loc", "individuals_loc",
-                         "visited", "species_individuals", "species_checklists", "species_high_counts", "seen_once", "subspecies",
+                         "visited", "species_individuals", "species_checklists", "species_high_counts", "seen_once",
+                         "heard_only", "subspecies",
                          "not_seen_recently"}
         assert set(result.keys()) == expected_keys
 

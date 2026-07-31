@@ -13,10 +13,12 @@ Species-group coverage lives on the **Bird Families** main tab
 **Top N** and **visible rows** come from **Settings → Tables & lists** (session keys
 ``streamlit_rankings_top_n``, ``streamlit_rankings_visible_rows``). **Top Lists** tables
 include a narrow leading **Rank** column with soft accent styling. **Species: Coverage**
-is the first expander under **Interesting Lists**. **Species: Not seen in the past year** is the
-last expander under Interesting Lists; it lists countable species with no observation in the trailing
-twelve months on the **full export** and is not Top-N–capped. A hint points to the **Country** tab
-for the in-country, working-set–scoped variant.
+is the first expander under **Interesting Lists**. **Species: Only heard but never seen** lists
+countable species whose every Observation Details note is a standalone ``Heard only`` (#370).
+**Species: Not seen in the past year** is the last expander under Interesting Lists; it
+lists countable species with no observation in the trailing twelve months on the **full
+export** and is not Top-N–capped. A hint points to the **Country** tab for the in-country,
+working-set–scoped variant.
 """
 
 from __future__ import annotations

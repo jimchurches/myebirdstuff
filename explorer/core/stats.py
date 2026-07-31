@@ -9,6 +9,7 @@ contract the UI expects; separating them would be a redesign.
 """
 
 import html as _html
+import re
 
 import numpy as np
 import pandas as pd
@@ -793,6 +794,154 @@ def rankings_seen_once(df_obs, limit=None):
     return rows
 
 
+# Standalone sentence: "Heard only" / "Heard only." — not mid-sentence phrases (#370).
+_HEARD_ONLY_STANDALONE_RE = re.compile(
+    r"(?:^|(?<=[.!?])\s+)heard only(?:\.(?=\s|$)|(?=\s*$))",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def observation_details_has_heard_only(text) -> bool:
+    """True when Observation Details contains a standalone ``Heard only`` sentence.
+
+    Matches case-insensitively when ``Heard only`` is the whole comment, ends with a
+    period, follows another sentence, or is followed by further sentences. Does not
+    match when the words appear mid-sentence (e.g. ``mostly heard only``).
+    """
+    try:
+        if pd.isna(text):
+            return False
+    except (TypeError, ValueError):
+        if text is None:
+            return False
+    s = str(text).strip()
+    if not s or s.lower() == "nan":
+        return False
+    return bool(_HEARD_ONLY_STANDALONE_RE.search(s))
+
+
+def _heard_only_species_totals(df_s):
+    """Return base-species aggregates where every observation row is standalone ``Heard only``."""
+    df_s["_heard_only"] = df_s["Observation Details"].map(observation_details_has_heard_only)
+    by_base = (
+        df_s.groupby("_base", sort=False)
+        .agg(
+            n_records=("_base", "size"),
+            n_heard=("_heard_only", "sum"),
+            common_name=("Common Name", most_frequent_parent_common),
+        )
+        .reset_index()
+    )
+    return by_base[by_base["n_records"] == by_base["n_heard"]].copy()
+
+
+def _last_observation_by_base(df_s, dt_col):
+    """Pick the most recent observation row per base species (by datetime when available)."""
+    if dt_col in df_s.columns:
+        df_s = df_s.assign(_dt=pd.to_datetime(df_s[dt_col], errors="coerce"))
+        last_idx = df_s.groupby("_base")["_dt"].idxmax().dropna()
+        last_rows = df_s.loc[last_idx] if len(last_idx) else df_s.iloc[0:0]
+    else:
+        last_rows = df_s.groupby("_base", sort=False).first().reset_index()
+
+    last_by_base = last_rows.set_index("_base") if not last_rows.empty else pd.DataFrame()
+    if not last_by_base.empty and last_by_base.index.has_duplicates:
+        last_by_base = last_by_base[~last_by_base.index.duplicated(keep="last")]
+    return df_s, last_by_base
+
+
+def _last_observation_row_for_base(base, last_by_base, df_s):
+    """Return one observation row for *base* (most recent when indexed, else first match)."""
+    if base in last_by_base.index:
+        last = last_by_base.loc[base]
+        if isinstance(last, pd.DataFrame):
+            return last.iloc[-1]
+        return last
+    return df_s.loc[df_s["_base"] == base].iloc[0]
+
+
+def _rankings_row_links_from_observation(last, dt_col, reg_col):
+    """Build location/date HTML links and region strings from one observation row."""
+    lid = last.get("Location ID")
+    loc = last.get("Location", "")
+    sid = last.get("Submission ID")
+    if isinstance(last, pd.Series) and "_dt" in last.index:
+        dt = last.get("_dt")
+    else:
+        dt = last.get(dt_col) if dt_col in getattr(last, "index", []) else None
+    dt_str = (
+        pd.Timestamp(dt).strftime("%d %b %Y %H:%M")
+        if dt is not None and pd.notna(dt)
+        else "—"
+    )
+    loc_link = (
+        f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>'
+        if lid
+        else loc
+    )
+    dt_link = (
+        f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>'
+        if sid
+        else dt_str
+    )
+    state_str = ""
+    country_str = ""
+    if reg_col and reg_col in getattr(last, "index", []):
+        country, state = format_region_parts(last.get(reg_col))
+        state_str = state if state else ""
+        country_str = country if country else ""
+    return loc_link, state_str, country_str, dt_link
+
+
+def rankings_heard_only_species(df_obs):
+    """Countable species where every observation record is marked standalone ``Heard only``.
+
+    Uses the eBird export ``Observation Details`` column. A species appears only when
+    it has at least one record and **every** countable record for that base species
+    matches :func:`observation_details_has_heard_only`.
+
+    Returns rows ``(species, location_link, state, country, last_heard_link, records)``
+    sorted by common name. *last_heard_link* is the most recent observation date/time
+    linking to that checklist; *records* is the observation-row count.
+    """
+    if df_obs.empty or "Observation Details" not in df_obs.columns:
+        return []
+    df_s = df_obs.copy()
+    df_s["_base"] = countable_species_vectorized(df_s)
+    df_s = df_s.dropna(subset=["_base"])
+    if df_s.empty:
+        return []
+
+    heard_only = _heard_only_species_totals(df_s)
+    if heard_only.empty:
+        return []
+
+    dt_col = "datetime" if "datetime" in df_s.columns else "Date"
+    df_s, last_by_base = _last_observation_by_base(df_s, dt_col)
+    reg_col = region_column(df_s, prefer_country=True)
+    heard_only = heard_only.sort_values("common_name", kind="mergesort")
+
+    rows = []
+    for _, r in heard_only.iterrows():
+        base = r["_base"]
+        name = r["common_name"] if pd.notna(r["common_name"]) else base
+        last = _last_observation_row_for_base(base, last_by_base, df_s)
+        loc_link, state_str, country_str, dt_link = _rankings_row_links_from_observation(
+            last, dt_col, reg_col
+        )
+        rows.append(
+            (
+                str(name),
+                loc_link,
+                state_str,
+                country_str,
+                dt_link,
+                f"{int(r['n_records']):,}",
+            )
+        )
+    return rows
+
+
 def rankings_high_counts(df_obs, tie_break="last", sort_mode="total_count"):
     """Highest checklist count per countable species.
 
@@ -1099,6 +1248,7 @@ def compute_rankings(
                 "species_checklists",
                 "species_high_counts",
                 "seen_once",
+                "heard_only",
                 "subspecies",
                 "not_seen_recently",
             )
@@ -1172,6 +1322,7 @@ def compute_rankings(
             sort_mode=high_count_sort,
         ),
         "seen_once": rankings_seen_once(df, limit=None),
+        "heard_only": rankings_heard_only_species(df),
         "subspecies": rankings_subspecies_hierarchical(df, limit=None),
         "not_seen_recently": rankings_not_seen_recently(df),
     }

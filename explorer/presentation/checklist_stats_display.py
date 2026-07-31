@@ -20,6 +20,7 @@ from explorer.core.constants import (
 )
 from explorer.core.region_display import country_for_display
 from explorer.presentation.rankings_display import (
+    rankings_heard_only_species_table,
     rankings_high_counts_table,
     rankings_not_seen_recently_table,
     rankings_seen_once_table,
@@ -36,6 +37,20 @@ LinkUrlsFn = Optional[Callable[[str], Tuple[Optional[str], Optional[str]]]]
 _NOT_SEEN_RECENTLY_COUNTRY_TAB_HINT_HTML = (
     f'<p style="margin:0 0 10px;font-size:12px;line-height:1.5;max-width:52rem;color:{THEME_PRIMARY_HEX};">'
     "An equivalent country-specific list can be found on the <strong>Country</strong> tab."
+    "</p>"
+)
+
+# Explains matching rules under the Only heard but never seen table (#370).
+# Same muted caption style as Species: Coverage / yearly footnotes (not a blue info banner).
+# Placed inside the table scroll area (after rows) so it scrolls with content.
+_HEARD_ONLY_SPECIES_NOTE_HTML = (
+    '<p class="heard-only-about-note" style="margin:10px 0 8px;color:#6b7280;font-size:12px;'
+    'line-height:1.5;max-width:52rem;">'
+    "<strong>About this list:</strong> "
+    "These are birds you’ve heard but never seen. A species is included when every "
+    "observation in eBird has ‘Heard only’ written as a separate note in the observation "
+    "details (e.g. ‘Heard only’ or ‘Six birds calling. Heard only’). "
+    "Phrases such as ‘mostly heard only’ and abbreviations such as “H” or “HO” don’t count."
     "</p>"
 )
 
@@ -690,7 +705,8 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   text-align: right !important;
   font-variant-numeric: tabular-nums;
 }}
-.streamlit-checklist-html-ab .stats-tbl.seen-once-tbl td:last-child {{
+.streamlit-checklist-html-ab .stats-tbl.seen-once-tbl td:last-child,
+.streamlit-checklist-html-ab .stats-tbl.heard-only-tbl td:last-child {{
   text-align: right;
   font-weight: 600;
 }}
@@ -1482,6 +1498,17 @@ def format_checklist_stats_bundle(
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
                 link_urls_fn=link_urls_fn,
+            ),
+        ),
+        (
+            "Species: Only heard but never seen",
+            rankings_heard_only_species_table(
+                rankings["heard_only"],
+                include_heading=False,
+                scroll_hint=scroll_hint,
+                visible_rows=visible_rows,
+                link_urls_fn=link_urls_fn,
+                footer_html=_HEARD_ONLY_SPECIES_NOTE_HTML,
             ),
         ),
         (
