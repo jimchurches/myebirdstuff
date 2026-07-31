@@ -81,7 +81,8 @@ _STAT_SPECS: tuple[_StatSpec, ...] = (
     _StatSpec("longest_streak", "Longest streak (days)"),
     _StatSpec("birding_hours", "Birding hours", decimals=1),
     _StatSpec("distance_km", "Total distance (km)", decimals=1),
-    _StatSpec("shared_checklists", "Shared checklists", hide_if_zero=True),
+    # Observers > 1 in the CSV — not eBird's "shared with another account" glyph.
+    _StatSpec("shared_checklists", "Checklists with others", hide_if_zero=True),
     _StatSpec(
         "days_birding_with_others", "Days birding with others", hide_if_zero=True
     ),
@@ -161,7 +162,7 @@ _SUMMARY_STATUS_ORDER: tuple[str, ...] = (
     "Total checklists",
     "Completed checklists",
     "Incidental checklists",
-    "Shared checklists",
+    "Checklists with others",
     "Unique locations",
     "Countries",
     "Birding hours",

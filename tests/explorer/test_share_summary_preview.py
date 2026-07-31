@@ -144,7 +144,7 @@ def test_tiles_grid_uses_uniform_cell_sizing_across_formats():
     )
     labels_fourteen = labels_twelve + (
         "Total distance (km)",
-        "Shared checklists",
+        "Checklists with others",
     )
     square = render_share_summary_preview_html(
         stats, layout="tiles", fmt="square", card_stat_labels=labels_six
@@ -167,7 +167,7 @@ def test_tiles_grid_uses_uniform_cell_sizing_across_formats():
         assert "padding:32px 20px" in html
         assert "gap:20px" in html
     assert story_fourteen.count('font-size:52px;font-weight:700;">') == 14
-    assert "Shared checklists" in story_fourteen
+    assert "Checklists with others" in story_fourteen
     assert 'font-size:40px;font-weight:700;">' not in story_six
     assert 'font-size:40px;font-weight:700;">' not in story_twelve
 
@@ -299,7 +299,7 @@ def test_summary_status_metrics_preferred_order():
         "Total checklists",
         "Completed checklists",
         "Incidental checklists",
-        "Shared checklists",
+        "Checklists with others",
         "Unique locations",
         "Countries",
         "Birding hours",
@@ -814,7 +814,7 @@ def test_stat_pairs_hide_zero_shared_stats_and_geo_scope_countries():
     )
     world_labels = [label for label, _ in stat_pairs(stats)]
     assert "Countries" in world_labels
-    assert "Shared checklists" not in world_labels
+    assert "Checklists with others" not in world_labels
     assert "Days birding with others" not in world_labels
 
     regional_labels = [

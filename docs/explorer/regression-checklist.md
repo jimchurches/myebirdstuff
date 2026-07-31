@@ -38,7 +38,7 @@ Run before merging refactor branches to `main`.
   - Traveling / stationary / incidental counts
   - Completed / incomplete checklists
   - Days with checklist / cumulative days eBird on
-  - Shared checklists / days birding with others
+  - Checklists with others / days birding with others
 
 ## Country
 - Per-country accordions load (export needs `Country` and/or `State/Province`); headings in **A–Z** order by display name (`Unknown` last)
