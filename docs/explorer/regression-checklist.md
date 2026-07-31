@@ -49,7 +49,8 @@ Run before merging refactor branches to `main`.
 ## Ranking & Lists
 - Ranking & Lists load (nested **Top Lists** / **Interesting Lists** only)
 - **Interesting Lists:** **Species: Coverage** is the first expander (#262); table shows species in eBird taxonomy, observed species, and observed %; footnote mentions extinct-species handling
-- Species tables (Most individuals, Most checklists, Subspecies occurrence, Seen only once) render correctly
+- Species tables (Most individuals, Most checklists, Subspecies occurrence, High counts, Seen only once, Heard-only species, Not seen in the past year) render correctly
+- **Heard-only species:** blue banner under the table explains standalone “Heard only” matching; only species with that note on every record appear
 - Links work (locations and checklists)
 
 ## Bird Families

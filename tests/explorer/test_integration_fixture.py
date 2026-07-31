@@ -339,6 +339,7 @@ def test_integration_compute_rankings_returns_expected_structure(fixture_df, fix
         "individuals_loc",
         "visited",
         "seen_once",
+        "heard_only",
         "species_individuals",
         "species_checklists",
         "species_high_counts",

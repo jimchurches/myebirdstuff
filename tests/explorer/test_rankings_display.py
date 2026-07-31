@@ -7,6 +7,7 @@ from explorer.presentation.rankings_display import (
     rankings_table_with_rank,
     rankings_visited_table,
     rankings_seen_once_table,
+    rankings_heard_only_species_table,
     rankings_subspecies_hierarchical_table,
 )
 
@@ -152,6 +153,29 @@ def test_rankings_seen_once_table_empty_no_data():
     out = rankings_seen_once_table([], include_heading=True)
     assert "No data." in out
     assert "Seen only once" in out
+
+
+def test_rankings_heard_only_species_table_headers_and_links():
+    """Heard-only table includes expected headers and species link."""
+    out = rankings_heard_only_species_table(
+        [
+            (
+                "Southern Boobook",
+                '<a href="https://ebird.org/lifelist/L1">Park</a>',
+                "NSW",
+                "AU",
+                '<a href="https://ebird.org/checklist/S1">01 Jan 2025 06:00</a>',
+                "2",
+            )
+        ],
+        include_heading=False,
+        link_urls_fn=lambda _name: ("https://ebird.org/species/souboo1", None),
+    )
+    assert "Last heard" in out
+    assert "Records" in out
+    assert "Southern Boobook" in out
+    assert 'href="https://ebird.org/species/souboo1"' in out
+    assert "heard-only-tbl" in out
 
 
 def test_rankings_table_with_rank_species_url_fn_injects_links():

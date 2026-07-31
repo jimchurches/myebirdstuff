@@ -128,6 +128,7 @@ def test_compute_and_format_returns_expected_summary_and_sections():
         "Species: Subspecies occurrence",
         "Species: High counts",
         "Species: Seen only once",
+        "Heard-only species",
         "Species: Not seen in the past year",
     ]
 
