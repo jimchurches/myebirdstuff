@@ -195,14 +195,12 @@ def test_rankings_heard_only_footer_scrolls_inside_table_area():
         include_heading=False,
         footer_html=footer,
     )
-    assert "rankings-scroll-inner" in out
-    assert out.index("heard-only-tbl") < out.index("heard-only-about-note")
-    assert out.index("rankings-scroll-inner") < out.index("heard-only-about-note")
-    # Note precedes the closing of the scroll-inner div (before absolute shades).
     inner_start = out.index("rankings-scroll-inner")
+    inner_end = out.index("</div>", inner_start)
+    table_at = out.index("heard-only-tbl", inner_start)
     note_at = out.index("heard-only-about-note")
-    assert "</div>" in out[note_at:]
-    assert note_at < out.index("rankings-scroll-shade", inner_start)
+
+    assert inner_start < table_at < note_at < inner_end
 
 
 def test_rankings_table_with_rank_species_url_fn_injects_links():

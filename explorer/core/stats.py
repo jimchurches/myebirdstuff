@@ -808,17 +808,89 @@ def observation_details_has_heard_only(text) -> bool:
     period, follows another sentence, or is followed by further sentences. Does not
     match when the words appear mid-sentence (e.g. ``mostly heard only``).
     """
-    if text is None or (isinstance(text, float) and pd.isna(text)):
-        return False
     try:
         if pd.isna(text):
             return False
     except (TypeError, ValueError):
-        pass
+        if text is None:
+            return False
     s = str(text).strip()
     if not s or s.lower() == "nan":
         return False
     return bool(_HEARD_ONLY_STANDALONE_RE.search(s))
+
+
+def _heard_only_species_totals(df_s):
+    """Return base-species aggregates where every observation row is standalone ``Heard only``."""
+    df_s["_heard_only"] = df_s["Observation Details"].map(observation_details_has_heard_only)
+    by_base = (
+        df_s.groupby("_base", sort=False)
+        .agg(
+            n_records=("_base", "size"),
+            n_heard=("_heard_only", "sum"),
+            common_name=("Common Name", most_frequent_parent_common),
+        )
+        .reset_index()
+    )
+    return by_base[by_base["n_records"] == by_base["n_heard"]].copy()
+
+
+def _last_observation_by_base(df_s, dt_col):
+    """Pick the most recent observation row per base species (by datetime when available)."""
+    if dt_col in df_s.columns:
+        df_s = df_s.assign(_dt=pd.to_datetime(df_s[dt_col], errors="coerce"))
+        last_idx = df_s.groupby("_base")["_dt"].idxmax().dropna()
+        last_rows = df_s.loc[last_idx] if len(last_idx) else df_s.iloc[0:0]
+    else:
+        last_rows = df_s.groupby("_base", sort=False).first().reset_index()
+
+    last_by_base = last_rows.set_index("_base") if not last_rows.empty else pd.DataFrame()
+    if not last_by_base.empty and last_by_base.index.has_duplicates:
+        last_by_base = last_by_base[~last_by_base.index.duplicated(keep="last")]
+    return df_s, last_by_base
+
+
+def _last_observation_row_for_base(base, last_by_base, df_s):
+    """Return one observation row for *base* (most recent when indexed, else first match)."""
+    if base in last_by_base.index:
+        last = last_by_base.loc[base]
+        if isinstance(last, pd.DataFrame):
+            return last.iloc[-1]
+        return last
+    return df_s.loc[df_s["_base"] == base].iloc[0]
+
+
+def _rankings_row_links_from_observation(last, dt_col, reg_col):
+    """Build location/date HTML links and region strings from one observation row."""
+    lid = last.get("Location ID")
+    loc = last.get("Location", "")
+    sid = last.get("Submission ID")
+    if isinstance(last, pd.Series) and "_dt" in last.index:
+        dt = last.get("_dt")
+    else:
+        dt = last.get(dt_col) if dt_col in getattr(last, "index", []) else None
+    dt_str = (
+        pd.Timestamp(dt).strftime("%d %b %Y %H:%M")
+        if dt is not None and pd.notna(dt)
+        else "—"
+    )
+    loc_link = (
+        f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>'
+        if lid
+        else loc
+    )
+    dt_link = (
+        f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>'
+        if sid
+        else dt_str
+    )
+    state_str = ""
+    country_str = ""
+    if reg_col and reg_col in getattr(last, "index", []):
+        country, state = format_region_parts(last.get(reg_col))
+        state_str = state if state else ""
+        country_str = country if country else ""
+    return loc_link, state_str, country_str, dt_link
 
 
 def rankings_heard_only_species(df_obs):
@@ -840,75 +912,23 @@ def rankings_heard_only_species(df_obs):
     if df_s.empty:
         return []
 
-    details = df_s["Observation Details"]
-    df_s["_heard_only"] = details.map(observation_details_has_heard_only)
-    by_base = (
-        df_s.groupby("_base", sort=False)
-        .agg(
-            n_records=("_base", "size"),
-            n_heard=("_heard_only", "sum"),
-            common_name=("Common Name", most_frequent_parent_common),
-        )
-        .reset_index()
-    )
-    heard_only = by_base[by_base["n_records"] == by_base["n_heard"]].copy()
+    heard_only = _heard_only_species_totals(df_s)
     if heard_only.empty:
         return []
 
     dt_col = "datetime" if "datetime" in df_s.columns else "Date"
-    if dt_col in df_s.columns:
-        df_s = df_s.assign(_dt=pd.to_datetime(df_s[dt_col], errors="coerce"))
-        last_idx = df_s.groupby("_base")["_dt"].idxmax().dropna()
-        last_rows = df_s.loc[last_idx] if len(last_idx) else df_s.iloc[0:0]
-    else:
-        last_rows = df_s.groupby("_base", sort=False).first().reset_index()
-
-    last_by_base = last_rows.set_index("_base") if not last_rows.empty else pd.DataFrame()
-    if not last_by_base.empty and last_by_base.index.has_duplicates:
-        last_by_base = last_by_base[~last_by_base.index.duplicated(keep="last")]
-    heard_only = heard_only.sort_values("common_name", kind="mergesort")
-
+    df_s, last_by_base = _last_observation_by_base(df_s, dt_col)
     reg_col = region_column(df_s, prefer_country=True)
+    heard_only = heard_only.sort_values("common_name", kind="mergesort")
 
     rows = []
     for _, r in heard_only.iterrows():
         base = r["_base"]
         name = r["common_name"] if pd.notna(r["common_name"]) else base
-        if base in last_by_base.index:
-            last = last_by_base.loc[base]
-            if isinstance(last, pd.DataFrame):
-                last = last.iloc[-1]
-        else:
-            last = df_s.loc[df_s["_base"] == base].iloc[0]
-
-        lid = last.get("Location ID")
-        loc = last.get("Location", "")
-        sid = last.get("Submission ID")
-        if isinstance(last, pd.Series) and "_dt" in last.index:
-            dt = last.get("_dt")
-        else:
-            dt = last.get(dt_col) if dt_col in getattr(last, "index", []) else None
-        dt_str = (
-            pd.Timestamp(dt).strftime("%d %b %Y %H:%M")
-            if dt is not None and pd.notna(dt)
-            else "—"
+        last = _last_observation_row_for_base(base, last_by_base, df_s)
+        loc_link, state_str, country_str, dt_link = _rankings_row_links_from_observation(
+            last, dt_col, reg_col
         )
-        loc_link = (
-            f'<a href="https://ebird.org/lifelist/{lid}" target="_blank">{loc}</a>'
-            if lid
-            else loc
-        )
-        dt_link = (
-            f'<a href="https://ebird.org/checklist/{sid}" target="_blank">{dt_str}</a>'
-            if sid
-            else dt_str
-        )
-        state_str = ""
-        country_str = ""
-        if reg_col and reg_col in getattr(last, "index", []):
-            country, state = format_region_parts(last.get(reg_col))
-            state_str = state if state else ""
-            country_str = country if country else ""
         rows.append(
             (
                 str(name),

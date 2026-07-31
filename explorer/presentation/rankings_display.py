@@ -397,6 +397,7 @@ def rankings_heard_only_species_table(
     include_heading=True,
     scroll_hint="shading",
     visible_rows=16,
+    species_url_fn=None,
     link_urls_fn=None,
     footer_html="",
 ):
@@ -416,7 +417,12 @@ def rankings_heard_only_species_table(
         return empty + (footer_html or "")
     rows_html = []
     for r in rows:
-        species_url = link_urls_fn(r[0])[0] if link_urls_fn else None
+        if link_urls_fn:
+            species_url = link_urls_fn(r[0])[0]
+        elif species_url_fn:
+            species_url = species_url_fn(r[0])
+        else:
+            species_url = None
         species_cell = (
             td_html(a_external(species_url, r[0], rel="noopener"))
             if species_url
@@ -450,9 +456,10 @@ def rankings_heard_only_species_table(
         + "</tr></thead><tbody>"
         f"{body}</tbody></table>"
     )
-    return rankings_scroll_wrapper(
+    scroll_wrapper = rankings_scroll_wrapper(
         tbl, scroll_hint, visible_rows, after_table_html=footer_html or ""
     )
+    return scroll_wrapper
 
 
 def rankings_high_counts_table(
