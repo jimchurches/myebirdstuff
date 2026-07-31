@@ -49,7 +49,7 @@ _HEARD_ONLY_SPECIES_NOTE_HTML = (
     "<strong>About this list:</strong> "
     "These are birds you’ve heard but never seen. A species is included when every "
     "observation in eBird has ‘Heard only’ written as a separate note in the observation "
-    "details (e.g. ‘Heard only’ or ‘Six birds calling. Heard only’).  "
+    "details (e.g. ‘Heard only’ or ‘Six birds calling. Heard only’). "
     "Phrases such as ‘mostly heard only’ and abbreviations such as “H” or “HO” don’t count."
     "</p>"
 )
@@ -705,7 +705,8 @@ def _streamlit_checklist_html_tab_css(*, blue_theme: bool) -> str:
   text-align: right !important;
   font-variant-numeric: tabular-nums;
 }}
-.streamlit-checklist-html-ab .stats-tbl.seen-once-tbl td:last-child {{
+.streamlit-checklist-html-ab .stats-tbl.seen-once-tbl td:last-child,
+.streamlit-checklist-html-ab .stats-tbl.heard-only-tbl td:last-child {{
   text-align: right;
   font-weight: 600;
 }}

@@ -453,6 +453,26 @@ class TestRankingsHeardOnlySpecies:
         )
         assert rankings_heard_only_species(df) == []
 
+    def test_seen_subspecies_record_excludes_parent_species(self):
+        """All records for a base species include its subspecies observations."""
+        df = _obs_df(
+            [
+                {
+                    "Submission ID": "S1",
+                    "Scientific Name": "Gymnorhina tibicen",
+                    "Common Name": "Australian Magpie",
+                    "Observation Details": "Heard only",
+                },
+                {
+                    "Submission ID": "S2",
+                    "Scientific Name": "Gymnorhina tibicen tibicen",
+                    "Common Name": "Australian Magpie (Black-backed)",
+                    "Observation Details": "Seen well",
+                },
+            ]
+        )
+        assert rankings_heard_only_species(df) == []
+
     def test_mid_sentence_heard_only_does_not_qualify_record(self):
         df = _obs_df(
             [
