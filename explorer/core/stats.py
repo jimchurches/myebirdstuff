@@ -340,7 +340,7 @@ def shared_checklist_stats(
 
 
 def sum_shared_checklist_minutes(cl: pd.DataFrame, dur_col: str) -> float:
-    """Sum duration minutes for shared checklists (observers > 1)."""
+    """Sum duration minutes for checklists with others (observers > 1)."""
     shared_rows = shared_checklist_rows(cl)
     if shared_rows is None or shared_rows.empty:
         return 0.0
