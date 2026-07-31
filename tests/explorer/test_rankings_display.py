@@ -178,6 +178,33 @@ def test_rankings_heard_only_species_table_headers_and_links():
     assert "heard-only-tbl" in out
 
 
+def test_rankings_heard_only_footer_scrolls_inside_table_area():
+    """About-note footer is inside the scroll area after the table rows."""
+    footer = '<p class="heard-only-about-note">About this list:</p>'
+    out = rankings_heard_only_species_table(
+        [
+            (
+                "Southern Boobook",
+                "Park",
+                "NSW",
+                "AU",
+                "01 Jan 2025 06:00",
+                "1",
+            )
+        ],
+        include_heading=False,
+        footer_html=footer,
+    )
+    assert "rankings-scroll-inner" in out
+    assert out.index("heard-only-tbl") < out.index("heard-only-about-note")
+    assert out.index("rankings-scroll-inner") < out.index("heard-only-about-note")
+    # Note precedes the closing of the scroll-inner div (before absolute shades).
+    inner_start = out.index("rankings-scroll-inner")
+    note_at = out.index("heard-only-about-note")
+    assert "</div>" in out[note_at:]
+    assert note_at < out.index("rankings-scroll-shade", inner_start)
+
+
 def test_rankings_table_with_rank_species_url_fn_injects_links():
     """When species_url_fn is provided and returns a URL, species name is linked."""
     def url_fn(name):

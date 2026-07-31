@@ -54,12 +54,15 @@ def _omit_placeholder_middle_column(headers_3col, rows_3col) -> bool:
     return True
 
 
-def rankings_scroll_wrapper(table_html, scroll_hint, visible_rows):
+def rankings_scroll_wrapper(table_html, scroll_hint, visible_rows, after_table_html=""):
     """Wrap table HTML in scrollable div with shading hints. Pure CSS (ipywidgets HTML does not run scripts).
 
     Top and bottom fades when ``scroll_hint`` is ``"shading"`` or ``"both"``. Padding on
     ``.rankings-scroll-inner`` (CSS) offsets the table slightly so the top gradient is less harsh on
     the header row. Scroll-position–aware shading would need JavaScript.
+
+    *after_table_html*: optional markup placed after the table **inside** the scroll area so it
+    scrolls with the rows (e.g. a footnote), rather than staying pinned under the viewport.
     """
     max_h = visible_rows * 38  # ~38px per row
     shade_css = "position:absolute;left:0;right:0;height:24px;pointer-events:none;z-index:5;"
@@ -67,10 +70,12 @@ def rankings_scroll_wrapper(table_html, scroll_hint, visible_rows):
     bot_shade = f'<div class="rankings-scroll-shade-bot" style="{shade_css}bottom:0;background:linear-gradient(to top,rgba(255,255,255,0.95),transparent);"></div>'
     show_shade = scroll_hint in ("shading", "both")
     shades = (top_shade + bot_shade) if show_shade else ""
+    after = after_table_html or ""
     return f"""
 <div class="rankings-scroll-wrapper" style="position:relative;">
   <div class="rankings-scroll-inner" style="max-height:{max_h}px;overflow-y:auto;">
     {table_html}
+    {after}
   </div>
   {shades}
 </div>"""
@@ -393,18 +398,22 @@ def rankings_heard_only_species_table(
     scroll_hint="shading",
     visible_rows=16,
     link_urls_fn=None,
+    footer_html="",
 ):
     """6-column table: Species | Location | State | Country | Last heard | Records.
 
     Rows come from :func:`explorer.core.stats.rankings_heard_only_species`.
+    *footer_html* is rendered after the table inside the scroll area so it scrolls with
+    the rows instead of staying pinned under the viewport.
     """
     if not rows:
         no_data = "<p style='margin:4px 0;color:#666;'>No data.</p>"
-        return (
-            f"<h4 style='margin:0 0 8px;'>Heard-only species</h4>{no_data}"
+        empty = (
+            f"<h4 style='margin:0 0 8px;'>Species: Only heard but never seen</h4>{no_data}"
             if include_heading
             else no_data
         )
+        return empty + (footer_html or "")
     rows_html = []
     for r in rows:
         species_url = link_urls_fn(r[0])[0] if link_urls_fn else None
@@ -441,7 +450,9 @@ def rankings_heard_only_species_table(
         + "</tr></thead><tbody>"
         f"{body}</tbody></table>"
     )
-    return rankings_scroll_wrapper(tbl, scroll_hint, visible_rows)
+    return rankings_scroll_wrapper(
+        tbl, scroll_hint, visible_rows, after_table_html=footer_html or ""
+    )
 
 
 def rankings_high_counts_table(

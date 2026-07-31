@@ -40,17 +40,18 @@ _NOT_SEEN_RECENTLY_COUNTRY_TAB_HINT_HTML = (
     "</p>"
 )
 
-# Explains matching rules under the Heard-only species table (#370). Blue info-style banner.
-_HEARD_ONLY_SPECIES_BANNER_HTML = (
-    '<div style="margin:12px 0 0;padding:10px 14px;background:#e8f4fc;'
-    "border-left:4px solid #1c83e1;border-radius:4px;font-size:12px;line-height:1.5;"
-    'color:#0c4a6e;max-width:52rem;">'
+# Explains matching rules under the Only heard but never seen table (#370).
+# Same muted caption style as Species: Coverage / yearly footnotes (not a blue info banner).
+# Placed inside the table scroll area (after rows) so it scrolls with content.
+_HEARD_ONLY_SPECIES_NOTE_HTML = (
+    '<p class="heard-only-about-note" style="margin:10px 0 8px;color:#6b7280;font-size:12px;'
+    'line-height:1.5;max-width:52rem;">'
     "<strong>About this list:</strong> "
     "These are birds you’ve heard but never seen. A species is included when every "
     "observation in eBird has ‘Heard only’ written as a separate note in the observation "
     "details (e.g. ‘Heard only’ or ‘Six birds calling. Heard only’).  "
     "Phrases such as ‘mostly heard only’ and abbreviations such as “H” or “HO” don’t count."
-    "</div>"
+    "</p>"
 )
 
 
@@ -1499,15 +1500,15 @@ def format_checklist_stats_bundle(
             ),
         ),
         (
-            "Heard-only species",
+            "Species: Only heard but never seen",
             rankings_heard_only_species_table(
                 rankings["heard_only"],
                 include_heading=False,
                 scroll_hint=scroll_hint,
                 visible_rows=visible_rows,
                 link_urls_fn=link_urls_fn,
-            )
-            + _HEARD_ONLY_SPECIES_BANNER_HTML,
+                footer_html=_HEARD_ONLY_SPECIES_NOTE_HTML,
+            ),
         ),
         (
             "Species: Not seen in the past year",

@@ -62,15 +62,26 @@ def test_rankings_interesting_lists_includes_high_counts_before_seen_once():
     titles = [t for t, _ in stats["rankings_sections_other"]]
     assert "Species: High counts" in titles
     assert "Species: Seen only once" in titles
-    assert "Heard-only species" in titles
+    assert "Species: Only heard but never seen" in titles
     assert titles.index("Species: High counts") < titles.index("Species: Seen only once")
-    assert titles.index("Species: Seen only once") < titles.index("Heard-only species")
-    assert titles.index("Heard-only species") < titles.index("Species: Not seen in the past year")
-    heard_html = next(html for t, html in stats["rankings_sections_other"] if t == "Heard-only species")
+    assert titles.index("Species: Seen only once") < titles.index(
+        "Species: Only heard but never seen"
+    )
+    assert titles.index("Species: Only heard but never seen") < titles.index(
+        "Species: Not seen in the past year"
+    )
+    heard_html = next(
+        html
+        for t, html in stats["rankings_sections_other"]
+        if t == "Species: Only heard but never seen"
+    )
     assert "About this list:" in heard_html
     assert "<strong>About this list:</strong>" in heard_html
     assert "Heard only" in heard_html
     assert "don’t count" in heard_html
+    assert "heard-only-about-note" in heard_html
+    assert "background:#e8f4fc" not in heard_html
+    assert "border-left:4px solid #1c83e1" not in heard_html
 
 
 def test_compute_checklist_stats_repeated_species_and_multi_year():
