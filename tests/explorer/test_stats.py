@@ -776,7 +776,7 @@ class TestYearlySummaryStats:
             "Traveling checklists",
             "Stationary checklists",
             "Incidental checklists",
-            "Shared checklists",
+            "Checklists with others",
             "Days with checklist",
             "Days birding with others",
             "Cumulative days eBird on",

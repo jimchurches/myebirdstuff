@@ -342,6 +342,38 @@ def test_shared_checklists_and_days_birding_with_others():
     assert stats.days_birding_with_others == 2
 
 
+def test_checklists_with_others_counts_observers_gt_one_not_ebird_share_glyph():
+    """Solo-observer checklists are excluded even when eBird UI may show a share glyph.
+
+    MyEBirdData has no share-with-account column; the metric is observers > 1
+    and is labelled "Checklists with others" (see #373 / Warribee trip).
+    """
+    rows = [
+        _row(sid=f"S_shared_{i}", dt="2026-07-26", species=f"Sp {i}", observers=3)
+        for i in range(54)
+    ]
+    rows.extend(
+        [
+            _row(sid="S_solo_1", dt="2026-07-26", species="Solo a", observers=1),
+            _row(sid="S_solo_2", dt="2026-07-26", species="Solo b", observers=1),
+            _row(sid="S_solo_3", dt="2026-07-26", species="Solo c", observers=1),
+            _row(sid="S_solo_4", dt="2026-07-27", species="Solo d", observers=1),
+            _row(sid="S_solo_5", dt="2026-07-27", species="Solo e", observers=1),
+            _row(sid="S_solo_6", dt="2026-07-28", species="Solo f", observers=1),
+            _row(sid="S_solo_7", dt="2026-07-28", species="Solo g", observers=1),
+        ]
+    )
+    stats = compute_share_summary_stats(
+        pd.DataFrame(rows), period_for_custom(date(2026, 7, 26), date(2026, 7, 28))
+    )
+    assert stats is not None
+    assert stats.checklists == 61
+    assert stats.shared_checklists == 54
+    labels = dict(summary_status_metrics(stats))
+    assert labels["Checklists with others"] == "54"
+    assert "Shared checklists" not in labels
+
+
 def test_shared_stats_none_without_observers_column():
     row = _row(sid="S1", dt="2025-06-01", species="Species a")
     del row["Number of Observers"]

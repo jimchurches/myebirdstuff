@@ -833,7 +833,7 @@ def checklist_stats_streamlit_tab_sections_html(payload: ChecklistStatsPayload) 
         ("Days with a checklist", f"{payload.n_days_with_checklist:,}"),
     ]
     others_rows: List[Tuple[str, str]] = [
-        ("Shared checklists", f"{payload.n_shared:,}"),
+        ("Checklists with others", f"{payload.n_shared:,}"),
         ("Minutes eBirding with others", f"{payload.shared_minutes:,.0f}"),
         ("Hours eBirding with others", f"{payload.shared_hours:,.2f}"),
         ("Days birding with others", f"{payload.n_days_birding_with_others:,}"),

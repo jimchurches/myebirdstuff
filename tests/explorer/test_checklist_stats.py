@@ -51,6 +51,8 @@ def test_compute_checklist_stats_returns_expected_keys():
     assert "<tr><td>Total checklists</td><td>1</td></tr>" in html
     assert "<tr><td>Total species</td><td>1</td></tr>" in html
     assert "<tr><td>Total individuals</td><td>3</td></tr>" in html
+    assert "<tr><td>Checklists with others</td><td>1</td></tr>" in html
+    assert "Shared checklists" not in html
 
     # Total Distance table: single checklist with 1.5 km traveled
     assert "<tr><td>Kilometers traveled</td><td>1.50</td></tr>" in html

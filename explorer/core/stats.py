@@ -301,6 +301,9 @@ def sum_timed_birding_minutes(cl: pd.DataFrame, dur_col: str) -> float:
 def shared_checklist_rows(cl: pd.DataFrame) -> pd.DataFrame | None:
     """Rows in deduped checklist *cl* where Number of Observers > 1.
 
+    This is "birding with others" in the export, not eBird's share-with-another-account
+    glyph (the MyEBirdData CSV has no column for that).
+
     Returns ``None`` when the observers column is missing; empty frame when none qualify.
     """
     if "Number of Observers" not in cl.columns:
@@ -337,7 +340,7 @@ def shared_checklist_stats(
 
 
 def sum_shared_checklist_minutes(cl: pd.DataFrame, dur_col: str) -> float:
-    """Sum duration minutes for shared checklists (observers > 1)."""
+    """Sum duration minutes for checklists with others (observers > 1)."""
     shared_rows = shared_checklist_rows(cl)
     if shared_rows is None or shared_rows.empty:
         return 0.0
@@ -1503,12 +1506,15 @@ def yearly_summary_stats(
     else:
         row_incidental_checklists = ("Incidental checklists", ["—"] * len(years_sorted))
 
-    # Shared checklists / Days birding with others
+    # Observers > 1 / Days birding with others (not eBird share-account glyph)
     shared_sub = shared_checklist_rows(cl)
     if shared_sub is not None and not shared_sub.empty:
         by_yr_shared = shared_sub.groupby("_year").size()
         vals_shared = [int(by_yr_shared.get(y, 0)) for y in years_sorted]
-        row_shared_checklists = ("Shared checklists", [f"{v:,}" for v in vals_shared])
+        row_shared_checklists = (
+            "Checklists with others",
+            [f"{v:,}" for v in vals_shared],
+        )
         shared_sub = shared_sub.copy()
         shared_sub["_date"] = shared_sub["Date"].dt.normalize()
         by_yr_days = shared_sub.groupby("_year")["_date"].nunique()
@@ -1518,7 +1524,10 @@ def yearly_summary_stats(
             [f"{v:,}" for v in vals_days_bo],
         )
     else:
-        row_shared_checklists = ("Shared checklists", ["—"] * len(years_sorted))
+        row_shared_checklists = (
+            "Checklists with others",
+            ["—"] * len(years_sorted),
+        )
         row_days_birding_with_others = (
             "Days birding with others",
             ["—"] * len(years_sorted),
